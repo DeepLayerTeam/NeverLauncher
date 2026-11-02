@@ -301,3 +301,55 @@ func TestContentOptionalRelocationRequiresManualResolution0445(t *testing.T) {
 		t.Fatalf("unsafe optional relocation accepted: %v %+v", err, p)
 	}
 }
+
+// A modded import must pin the exact loader build in both the versioned
+// Profile v2 snapshot and the workspace's Minecraft launch metadata. The
+// source ZIP is never allowed to guess a loader build from arbitrary JAR names.
+func TestContentModdedLaunchAndOptionalMaterialization0493(t *testing.T) {
+	profile := strings.Replace(profileFixture, `"update":["minecraft.jar"]`, `"update":["minecraft.jar","mods"]`, 1)
+	profile = strings.Replace(profile, `"classPath":["minecraft.jar"]`, `"classPath":["minecraft.jar","libraries/forge-loader.jar"]`, 1)
+	profile = strings.Replace(profile, `"limited":false`, `"limited":false,"updateOptional":[{"name":"Map Overlay","mark":true,"actions":[{"type":"file","files":{"mods/map-overlay.jar":""}}]}]`, 1)
+	raw, saved := testZip(t, map[string]string{
+		"profiles/forge.json":                profile,
+		"updates/forge/minecraft.jar":        "game-library-v1",
+		"updates/forge/mods/worldgen.jar":    "worldgen-v1",
+		"updates/forge/mods/map-overlay.jar": "optional-v1",
+		"libraries/forge-loader.jar":         "forge-loader-v1",
+		"updates/other/mods/private.jar":     "foreign-profile",
+	})
+	ctx := context.Background()
+	blocked, err := Prepare(ctx, bytes.NewReader(raw), int64(len(raw)), saved, "profiles/forge.json", "project", "forge", "Forge", "forge")
+	if err != nil || blocked.Ready || !strings.Contains(strings.Join(blocked.Blockers, ";"), "exact loader version") {
+		t.Fatalf("missing loader version was accepted: %v %+v", err, blocked.Blockers)
+	}
+	plan, err := Prepare(ctx, bytes.NewReader(raw), int64(len(raw)), saved, "profiles/forge.json", "project", "forge", "Forge", "forge", "49.0.38")
+	if err != nil || !plan.Ready || plan.Optional == nil || !plan.Optional.Ready {
+		t.Fatalf("modded import rejected: %v %+v", err, plan.Blockers)
+	}
+	if plan.Profile.Profile.LoaderVersion != "49.0.38" || plan.Profile.Profile.MinecraftVersion != "1.20.4" || plan.Profile.Profile.JavaMajor != 17 || plan.Profile.Settings.Minecraft.LoaderVersion != "49.0.38" {
+		t.Fatalf("launch metadata was not pinned: %+v", plan.Profile)
+	}
+	if len(plan.Files) != 4 || plan.FilesSHA256 == "" {
+		t.Fatalf("mods, libraries and optionals were lost: %+v", plan.Files)
+	}
+	reader, err := NewReader(bytes.NewReader(raw), int64(len(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range plan.Files {
+		actual, err := reader.ReadVerified(ctx, file)
+		if err != nil || len(actual) == 0 {
+			t.Fatalf("cannot materialize %s: %v", file.TargetPath, err)
+		}
+		if file.TargetPath == "mods/map-overlay.jar" && file.Ownership != "optional" {
+			t.Fatal("optional ownership lost")
+		}
+		if strings.Contains(file.SourcePath, "other") {
+			t.Fatal("other profile leaked into import")
+		}
+	}
+	bad, err := Prepare(ctx, bytes.NewReader(raw), int64(len(raw)), saved, "profiles/forge.json", "project", "forge", "Forge", "forge", "../malicious")
+	if err != nil || bad.Ready {
+		t.Fatalf("unsafe version accepted: %v %+v", err, bad.Blockers)
+	}
+}

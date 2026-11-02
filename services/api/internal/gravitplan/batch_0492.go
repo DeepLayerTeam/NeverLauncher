@@ -99,7 +99,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 	}
 	mapped, ids := make(map[string]bool), make(map[string]bool)
 	for _, d := range destinations {
-		if !available[d.ProfilePath] || mapped[d.ProfilePath] || d.ProfileID == "" || d.ProfileName == "" || d.Loader == "" || d.Channel == "" || d.Version == "" || len(d.ProfileID) > 128 || len(d.ProfileName) > 120 || len(d.Channel) > 128 || len(d.Version) > 128 || len(d.Loader) > 24 {
+		if !available[d.ProfilePath] || mapped[d.ProfilePath] || d.ProfileID == "" || d.ProfileName == "" || d.Loader == "" || (d.Loader != "vanilla" && d.LoaderVersion == "") || d.Channel == "" || d.Version == "" || len(d.ProfileID) > 128 || len(d.ProfileName) > 120 || len(d.Channel) > 128 || len(d.Version) > 128 || len(d.Loader) > 24 || len(d.LoaderVersion) > 128 {
 			return out, errors.New("invalid, duplicated or unmapped source profile")
 		}
 		id := strings.ToLower(d.ProfileID)
@@ -115,7 +115,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 			return out, err
 		}
 		row := ProfileResult0492{Destination: d, Status: "blocked", Blockers: []string{}, Dependencies: []Dependency0492{}}
-		content, err := gc.PreparePinned(ctx, source, size, inventory, d.ProfilePath, project, d.ProfileID, d.ProfileName, d.Loader)
+		content, err := gc.PreparePinned(ctx, source, size, inventory, d.ProfilePath, project, d.ProfileID, d.ProfileName, d.Loader, d.LoaderVersion)
 		if err != nil {
 			row.Blockers = append(row.Blockers, "conversion failed: "+err.Error())
 		} else {

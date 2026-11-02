@@ -214,7 +214,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 422, "module inspection failed: "+e.Error())
 		return
 	}
-	content, e := gc.Prepare(r.Context(), f, n, saved, path, run.ProjectID, id, name, loader)
+	content, e := gc.Prepare(r.Context(), f, n, saved, path, run.ProjectID, id, name, loader, strings.TrimSpace(r.Header.Get("X-Loader-Version")))
 	if e != nil {
 		writeError(w, 422, "content preview failed: "+e.Error())
 		return
@@ -239,7 +239,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 503, "target snapshot unavailable")
 		return
 	}
-	d := gp.Destination{ProfilePath: path, ProfileID: id, ProfileName: name, Loader: loader, Channel: channel, Version: version}
+	d := gp.Destination{ProfilePath: path, ProfileID: id, ProfileName: name, Loader: loader, LoaderVersion: strings.TrimSpace(r.Header.Get("X-Loader-Version")), Channel: channel, Version: version}
 	p, e := gp.Build(run.ID, run.ProjectID, target, d, saved, compat, modules, content, existing[id], ids)
 	if e != nil {
 		writeError(w, 422, "cannot calculate migration plan: "+e.Error())

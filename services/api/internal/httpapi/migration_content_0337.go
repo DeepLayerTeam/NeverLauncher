@@ -72,7 +72,7 @@ func migrationContentResponse0337(plan gc.Plan, ws repository.BuildWorkspace, va
 			staged++
 		}
 	}
-	return map[string]any{"plan": plan, "workspaceId": ws.ID, "workspaceRevision": ws.Revision, "state": ws.State, "stagedFiles": staged, "totalFiles": len(plan.Files), "complete": staged == len(plan.Files) && (ws.State == "staged" || ws.State == "built") && valid, "validation": validation, "buildWorkspaceUrl": "/api/v1/build-workspaces/" + ws.ID}
+	return map[string]any{"plan": plan, "workspaceId": ws.ID, "workspaceRevision": ws.Revision, "state": ws.State, "stagedFiles": staged, "totalFiles": len(plan.Files), "complete": staged == len(plan.Files) && len(ws.Files) == len(plan.Files) && (ws.State == "staged" || ws.State == "built") && valid, "validation": validation, "buildWorkspaceUrl": "/api/v1/build-workspaces/" + ws.ID}
 }
 func (s Server) migrationContentPreview0337(w http.ResponseWriter, r *http.Request) {
 	s.migrationContentApply0337(w, r, false)
@@ -166,7 +166,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		writeJSON(w, 200, map[string]any{"data": plan})
 		return
 	}
-	if err := s.migrationCheckContentPlan0442(r.Context(), run.ID, r.Header.Get("X-Migration-Plan-SHA256"), gp.Destination{ProfilePath: profilePath, ProfileID: profileID, ProfileName: name, Loader: loader, Channel: channel, Version: version}, plan); err != nil {
+	if err := s.migrationCheckContentPlan0442(r.Context(), run.ID, r.Header.Get("X-Migration-Plan-SHA256"), gp.Destination{ProfilePath: profilePath, ProfileID: profileID, ProfileName: name, Loader: loader, LoaderVersion: strings.TrimSpace(r.Header.Get("X-Loader-Version")), Channel: channel, Version: version}, plan); err != nil {
 		migrationHTTPError0331(w, mw.ErrConflict)
 		return
 	}

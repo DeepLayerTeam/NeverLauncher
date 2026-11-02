@@ -19,12 +19,13 @@ import (
 const Format = "launcher.gravit-migration-plan.v1"
 
 type Destination struct {
-	ProfilePath string `json:"profilePath"`
-	ProfileID   string `json:"profileId"`
-	ProfileName string `json:"profileName"`
-	Loader      string `json:"loader"`
-	Channel     string `json:"channel"`
-	Version     string `json:"version"`
+	ProfilePath   string `json:"profilePath"`
+	ProfileID     string `json:"profileId"`
+	ProfileName   string `json:"profileName"`
+	Loader        string `json:"loader"`
+	LoaderVersion string `json:"loaderVersion,omitempty"`
+	Channel       string `json:"channel"`
+	Version       string `json:"version"`
 }
 type Item struct {
 	Kind   string `json:"kind"`
@@ -93,7 +94,7 @@ func Verify(p Plan) error {
 	return nil
 }
 func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c gd.Report, m gm.Report, content gc.Plan, targetProfileExists bool, identities IdentityPreview) (Plan, error) {
-	if runID == "" || projectID == "" || len(targetSHA) != 64 || v.Format != inv.Format || c.Format != "launcher.gravit-compatibility.v1" || m.Format != gm.Format || v.SourceSHA256 != c.SourceSHA256 || v.SourceSHA256 != m.SourceSHA256 || v.ManifestSHA256 != m.InventorySHA256 || content.SourceSHA256 != v.SourceSHA256 || content.InventorySHA256 != v.ManifestSHA256 || content.ProfilePath != d.ProfilePath || content.Profile.Profile.ID != d.ProfileID || content.Profile.Profile.ProjectID != projectID {
+	if runID == "" || projectID == "" || len(targetSHA) != 64 || v.Format != inv.Format || c.Format != "launcher.gravit-compatibility.v1" || m.Format != gm.Format || v.SourceSHA256 != c.SourceSHA256 || v.SourceSHA256 != m.SourceSHA256 || v.ManifestSHA256 != m.InventorySHA256 || content.SourceSHA256 != v.SourceSHA256 || content.InventorySHA256 != v.ManifestSHA256 || content.ProfilePath != d.ProfilePath || content.Profile.Profile.ID != d.ProfileID || content.Profile.Profile.ProjectID != projectID || content.Profile.Settings.Minecraft.LoaderVersion != d.LoaderVersion {
 		return Plan{}, errors.New("source, target or content preview mismatch")
 	}
 	if _, e := v.Manifest(); e != nil {

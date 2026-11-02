@@ -210,7 +210,7 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 // selects ONE profile's client tree and shared libraries/assets. Files from
 // other profiles, launchserver, auth, wrappers, keys and custom modules are
 // never copied into a client workspace.
-func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string) (Plan, error) {
+func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string, exactLoaderVersion ...string) (Plan, error) {
 	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
 	actual, e := inv.Inspect(ctx, src, size, saved.SourceSHA256)
 	if e != nil {
@@ -219,14 +219,14 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 	if actual.SourceBytes != saved.SourceBytes || actual.ManifestSHA256 != saved.ManifestSHA256 {
 		return out, errors.New("source differs from committed inventory")
 	}
-	return PreparePinned(ctx, src, size, saved, profilePath, projectID, profileID, name, loader)
+	return PreparePinned(ctx, src, size, saved, profilePath, projectID, profileID, name, loader, exactLoaderVersion...)
 }
 
 // PreparePinned converts one profile after the caller has fully verified the
 // immutable source bytes with gravitinventory.Inspect and compared the manifest
 // to the committed run. It is for the multi-profile dry-run operating on an
 // unlinked, private, closed-for-writing spool only. Actual imports use Prepare.
-func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string) (Plan, error) {
+func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string, exactLoaderVersion ...string) (Plan, error) {
 	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
 	if size != saved.SourceBytes || saved.ManifestSHA256 == "" {
 		return out, errors.New("unverified source snapshot")
@@ -285,6 +285,32 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	converted, e := model.ConvertGravitProfile02210(clean, projectID, profileID, name, loader)
 	if e != nil {
 		return out, e
+	}
+	// Gravit ClientProfile does not identify the loader build. The operator
+	// supplies its exact version, which is pinned to both immutable Profile v2
+	// and the release's Minecraft manifest. Never guess Forge/Fabric build
+	// from a client JAR or claim a generic loader is launchable.
+	loaderVersion := ""
+	if len(exactLoaderVersion) > 1 {
+		return out, errors.New("only one exact loader version is allowed")
+	}
+	if len(exactLoaderVersion) == 1 {
+		loaderVersion = exactLoaderVersion[0]
+	}
+	converted.Profile.MinecraftVersion = converted.Settings.Minecraft.Version
+	converted.Profile.JavaMajor = converted.Settings.Runtime.Java.MajorVersion
+	converted.Profile.LoaderVersion = loaderVersion
+	converted.Settings.Minecraft.LoaderVersion = loaderVersion
+	if loader != "vanilla" && loaderVersion == "" {
+		out.Blockers = append(out.Blockers, "exact loader version required for "+loader)
+	}
+	if loader == "vanilla" && loaderVersion != "" {
+		out.Blockers = append(out.Blockers, "vanilla profile cannot declare loader version")
+	}
+	if normalized, normalizeErr := model.NormalizeProfileV2(converted.Profile); normalizeErr != nil {
+		out.Blockers = append(out.Blockers, "launch profile invalid: "+normalizeErr.Error())
+	} else {
+		converted.Profile = normalized
 	}
 	out.Profile = converted
 	// A source profile may carry supported manually-reviewed server references;

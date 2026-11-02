@@ -17,7 +17,7 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|rollback-plan|rollback-commit|rollback-status|report|report-review|report-review-status|generate-keys")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|dry-run-all|verify-dry-run-all|import-content-all|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|rollback-plan|rollback-commit|rollback-status|report|report-review|report-review-status|generate-keys")
 	}
 	command := args[0]
 	if command == "report" || command == "report-review" || command == "report-review-status" {
@@ -37,6 +37,9 @@ func handleMigrationWorkflow0331(args []string) error {
 	}
 	if command == "generate-keys" {
 		return generateNeverMigrationKeys0336(flagValue(args, "--output", ""))
+	}
+	if command == "import-content-all" {
+		return migrationImportAll0493(args)
 	}
 	if command == "dry-run-all" || command == "verify-dry-run-all" {
 		backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
@@ -120,7 +123,7 @@ func handleMigrationWorkflow0331(args []string) error {
 			} else {
 				path += "/preview"
 			}
-			return postMigrationContent0337(path, token, flagValue(args, "--source", ""), id, pp, flagValue(args, "--profile-id", ""), flagValue(args, "--name", ""), flagValue(args, "--loader", ""), flagValue(args, "--channel", "stable"), flagValue(args, "--version", ""), out, apply)
+			return postMigrationContent0337(path, token, flagValue(args, "--source", ""), id, pp, flagValue(args, "--profile-id", ""), flagValue(args, "--name", ""), flagValue(args, "--loader", ""), flagValue(args, "--channel", "stable"), flagValue(args, "--version", ""), out, apply, flagValue(args, "--plan-sha256", ""), flagValue(args, "--loader-version", ""))
 		}
 		if command == "security" || command == "preview-security" || command == "activate-security" {
 			path += "/security"

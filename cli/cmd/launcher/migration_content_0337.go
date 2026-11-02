@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,9 +14,17 @@ import (
 	"time"
 )
 
-func postMigrationContent0337(endpoint, token, source, run, profilePath, profileID, name, loader, channel, version, out string, commit bool) error {
+func postMigrationContent0337(endpoint, token, source, run, profilePath, profileID, name, loader, channel, version, out string, commit bool, planSHA, loaderVersion string) error {
 	if source == "" || profilePath == "" || profileID == "" || loader == "" || channel == "" || version == "" {
 		return errors.New("--source --profile-path --profile-id --loader --channel --version required")
+	}
+	if commit {
+		if len(planSHA) != 64 {
+			return errors.New("content import requires a pinned --plan-sha256 from dry-run")
+		}
+		if _, err := hex.DecodeString(planSHA); err != nil {
+			return errors.New("invalid migration plan SHA-256")
+		}
 	}
 	u, e := url.Parse(endpoint)
 	if e != nil {
@@ -46,11 +55,12 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	r.ContentLength = st.Size()
 	r.Header.Set("Content-Type", "application/zip")
 	r.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
-	for k, v := range map[string]string{"X-Gravit-Profile-Path": profilePath, "X-Profile-ID": profileID, "X-Profile-Name": name, "X-Loader": loader, "X-Channel": channel, "X-Version": version} {
+	for k, v := range map[string]string{"X-Gravit-Profile-Path": profilePath, "X-Profile-ID": profileID, "X-Profile-Name": name, "X-Loader": loader, "X-Loader-Version": loaderVersion, "X-Channel": channel, "X-Version": version} {
 		r.Header.Set(k, v)
 	}
 	if commit {
 		r.Header.Set("X-Migration-Content-Confirm", run)
+		r.Header.Set("X-Migration-Plan-SHA256", planSHA)
 	}
 	client := &http.Client{Timeout: 45 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, e := client.Do(r)
@@ -74,6 +84,19 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	}
 	if response.StatusCode != 200 {
 		return fmt.Errorf("content migration HTTP %d: %s", response.StatusCode, string(raw))
+	}
+	if commit {
+		var result struct {
+			Data struct {
+				Complete bool `json:"complete"`
+				Plan     struct {
+					FilesSHA256 string `json:"filesSha256"`
+				} `json:"plan"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(raw, &result); err != nil || !result.Data.Complete || len(result.Data.Plan.FilesSHA256) != 64 {
+			return errors.New("Backend did not confirm a complete, validated content workspace")
+		}
 	}
 	if out == "" {
 		var rendered []byte

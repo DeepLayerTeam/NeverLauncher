@@ -21,12 +21,13 @@ import (
 // calculator. Recomputing the digest catches report edits, not only stale
 // hashes. No third-party cryptographic trust is inferred from an unkeyed hash.
 type gravDest0492 struct {
-	ProfilePath string `json:"profilePath"`
-	ProfileID   string `json:"profileId"`
-	ProfileName string `json:"profileName"`
-	Loader      string `json:"loader"`
-	Channel     string `json:"channel"`
-	Version     string `json:"version"`
+	ProfilePath   string `json:"profilePath"`
+	ProfileID     string `json:"profileId"`
+	ProfileName   string `json:"profileName"`
+	Loader        string `json:"loader"`
+	LoaderVersion string `json:"loaderVersion,omitempty"`
+	Channel       string `json:"channel"`
+	Version       string `json:"version"`
 }
 type gravDependency0492 struct {
 	Component string `json:"component"`
@@ -105,12 +106,13 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	// Encode canonical, validated mapping to avoid header injection or sensitive
 	// arbitrary raw file data being forwarded by accident.
 	var rows []struct {
-		ProfilePath string `json:"profilePath"`
-		ProfileID   string `json:"profileId"`
-		ProfileName string `json:"profileName"`
-		Loader      string `json:"loader"`
-		Channel     string `json:"channel"`
-		Version     string `json:"version"`
+		ProfilePath   string `json:"profilePath"`
+		ProfileID     string `json:"profileId"`
+		ProfileName   string `json:"profileName"`
+		Loader        string `json:"loader"`
+		LoaderVersion string `json:"loaderVersion,omitempty"`
+		Channel       string `json:"channel"`
+		Version       string `json:"version"`
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
