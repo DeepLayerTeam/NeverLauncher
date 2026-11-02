@@ -15,7 +15,7 @@ import tarfile
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[2]
-CONTRACT=ROOT/'reproducibility/primary-payload-0.46.2.json'
+CONTRACT=ROOT/'reproducibility/primary-payload-0.47.0.json'
 
 
 def secure_name(name: str) -> None:

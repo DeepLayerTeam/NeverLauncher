@@ -1,0 +1,224 @@
+name: NeverLauncher 0.47.0 independent unsigned build
+
+# A manual, separate production verification. Never substitute the synthetic
+# unit fixtures or job success for the two independently signed release reports.
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: 'Exact 40-character release commit; must equal checkout HEAD'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: ${{ matrix.builder }} native ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        builder: [builder-a, builder-b]
+        target: [windows, linux-x64, linux-arm64, macos]
+        include:
+          - target: windows
+            runner: windows-2022
+          - target: linux-x64
+            runner: ubuntu-24.04
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: macos
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 110
+    env:
+      LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY }}
+      LAUNCHER_UNSIGNED_ONLY: '1' 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify exact source, lockfiles and tool inputs
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "$(git status --porcelain --untracked-files=normal)"
+          python -m pip install --disable-pip-version-check 'cryptography>=43,<47'
+          python scripts/release/inputs_guard_0461.py verify
+          test "$(cat VERSION)" = '0.47.0'
+      - name: Native Linux dependencies
+        if: startsWith(matrix.target, 'linux')
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - name: Build actual unsigned payload on native runner
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          LAUNCHER_UNSIGNED_OUTPUT_DIR: ${{ github.workspace }}/dist/unsigned-0.47.0
+          # Internal detached signing/manifest keys are deliberately NOT
+          # considered evidence of reproducible binaries. The unsigned
+          # packaging runs before OS signatures are produced.
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            windows)
+              pwsh -NoProfile -File scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
+              ;;
+            macos)
+              bash scripts/release/build-macos-production.sh --allow-ad-hoc
+              ;;
+            linux-x64)
+              bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.47.0" --expected-arch x64
+              ;;
+            linux-arm64)
+              bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.47.0" --expected-arch arm64
+              ;;
+            *) exit 2 ;;
+          esac
+          python scripts/release/inputs_guard_0461.py verify
+      - name: Upload actual unsigned target packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-0470-${{ matrix.builder }}-${{ matrix.target }}-${{ github.sha }}
+          path: dist/unsigned-0.47.0/*
+          if-no-files-found: error
+          retention-days: 30
+
+  independent-capture:
+    name: Capture and sign ${{ matrix.builder }} from actual native jobs
+    needs: [native]
+    strategy:
+      matrix:
+        builder: [builder-a, builder-b]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unsigned-0470-${{ matrix.builder }}-*-${{ github.sha }}
+          merge-multiple: true
+          path: dist/repro-bundle
+      - name: Capture complete six-target unsigned payload
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source_commit }}
+          BUILDER: ${{ matrix.builder }}
+          BUILD_KEY: ${{ matrix.builder == 'builder-a' && secrets.LAUNCHER_REPRO_BUILDER_A_PRIVATE_KEY_PEM || secrets.LAUNCHER_REPRO_BUILDER_B_PRIVATE_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'cryptography>=43,<47'
+          python scripts/release/inputs_guard_0461.py verify
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          python scripts/release/reproducible_0470.py capture \
+            --bundle dist/repro-bundle --builder "$BUILDER" \
+            --runner "github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${BUILDER}" \
+            --commit "$EXPECTED_SHA" --out /tmp/unsigned-0470.json
+          test -n "$BUILD_KEY"
+          printf '%s\n' "$BUILD_KEY" > /tmp/unsigned-operator-key.pem
+          chmod 600 /tmp/unsigned-operator-key.pem
+          python scripts/release/reproducible_0470.py sign \
+            --report /tmp/unsigned-0470.json --private-key /tmp/unsigned-operator-key.pem \
+            --out /tmp/unsigned-0470.sig
+          shred -u /tmp/unsigned-operator-key.pem || rm -f /tmp/unsigned-operator-key.pem
+          mkdir -p dist/repro-capture
+          cp /tmp/unsigned-0470.json /tmp/unsigned-0470.sig dist/repro-capture/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-capture-${{ matrix.builder }}-${{ github.sha }}
+          path: dist/repro-capture/*
+          if-no-files-found: error
+          retention-days: 30
+
+  independent-compare:
+    name: Verify both signed captures against all six actual unsigned archives
+    needs: [independent-capture]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unsigned-0470-builder-a-*-${{ github.sha }}
+          merge-multiple: true
+          path: dist/a
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unsigned-0470-builder-b-*-${{ github.sha }}
+          merge-multiple: true
+          path: dist/b
+      - uses: actions/download-artifact@v4
+        with:
+          name: reproducibility-capture-builder-a-${{ github.sha }}
+          path: dist/reports/a
+      - uses: actions/download-artifact@v4
+        with:
+          name: reproducibility-capture-builder-b-${{ github.sha }}
+          path: dist/reports/b
+      - name: Strict six-target comparison with two independent trust anchors
+        shell: bash
+        env:
+          A_PUB: ${{ vars.LAUNCHER_REPRO_BUILDER_A_PUBLIC_KEY_PEM }}
+          B_PUB: ${{ vars.LAUNCHER_REPRO_BUILDER_B_PUBLIC_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'cryptography>=43,<47'
+          python scripts/release/inputs_guard_0461.py verify
+          test -n "$A_PUB" && test -n "$B_PUB"
+          printf '%s\n' "$A_PUB" > /tmp/repro-a.pem
+          printf '%s\n' "$B_PUB" > /tmp/repro-b.pem
+          mkdir -p dist/independent-evidence
+          python scripts/release/reproducible_0470.py compare \
+            --a-report dist/reports/a/unsigned-0470.json \
+            --a-sig dist/reports/a/unsigned-0470.sig --a-key /tmp/repro-a.pem --a-dir dist/a \
+            --b-report dist/reports/b/unsigned-0470.json \
+            --b-sig dist/reports/b/unsigned-0470.sig --b-key /tmp/repro-b.pem --b-dir dist/b \
+            --out dist/independent-evidence/REPRODUCIBILITY_COMPARISON_0470.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-comparison-${{ github.sha }}
+          path: dist/independent-evidence/REPRODUCIBILITY_COMPARISON_0470.json
+          if-no-files-found: error
+          retention-days: 30
+
+  # Independent operator/native-signing approval is deliberately NOT minted by
+  # this workflow; an external native signer must approve final signed packages.
+  release-readiness:
+    name: Reproducibility inputs present (not GA sign-off)
+    needs: [independent-compare]
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo 'Unsigned builds captured; independent compare and native-signing approval are mandatory before release sign/publish.'

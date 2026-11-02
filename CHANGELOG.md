@@ -1,3 +1,11 @@
+## 0.47.0 — Independent unsigned reproduction and native release evidence gates (source candidate; GA BLOCKED)
+
+- Export actual compiled unsigned Windows/Linux/macOS x64/ARM64 binaries into deterministic target archives *before* OS signing or delegated package signatures; keep unsigned-only mode separate from production-signing mode.
+- Verify every archive and every member from two independent builder cohorts, enforce real executable architectures and mandatory components, reject missing files/symlinks/duplicate paths, and re-read output rather than trusting a manifest.
+- Require distinct Ed25519-signed builder reports, identical source/input baselines and package hashes, independently authenticated native approval and exact signed release manifest binding. Existing release Ed25519, Authenticode, codesign/notarization and external operations gates remain in force.
+- Add manually dispatched eight-native-job reproducibility workflow (two cohorts × four native runner groups), comparison receipts, strict required-CI regression, and actual Go CLI two-directory rebuild regression. Native verifier runs actual `signtool`/Windows trust checks, macOS codesign/Gatekeeper/stapler checks, and CLI release Ed25519 verification; independent operator must sign actual per-target receipts before final approval.
+- **GA BLOCKED:** Source patch cannot provide Windows/macOS/ARM64 native output, notarization credentials, external operator approval or the second independent complete build result in this environment. They are not marked PASS or included as fictitious files.
+
 ## 0.46.2 — Binary delivery integrity and signed staged acceptance (candidate; GA blocked)
 
 - Production release now parses all six real platform archives and checks PE64/ELF64/Mach-O CPU type, expected executables, embedded Windows/Linux component hashes and finalized macOS executable hashes. Forged archive names and missing/wrong-architecture executables fail closed; this does not substitute for OS signature verification.

@@ -1532,10 +1532,32 @@ jobs:
           python3 scripts/release/inputs_guard_0461.py verify
           git diff --exit-code -- apps/admin/package-lock.json apps/desktop/package-lock.json sdk/api/go/go.mod sdk/api/typescript
 
+  reproducibility-tools-0470:
+    name: Deterministic packer and independent-verification regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify locked inputs and fail-closed reproducibility implementation
+        run: |
+          python3 -m pip install --disable-pip-version-check 'cryptography>=43,<47'
+          python3 scripts/release/inputs_guard_0461.py verify
+          python3 -m unittest discover -s scripts/release -p 'test_reproducible_0470.py'
+          python3 -m unittest discover -s scripts/release -p 'test_canonical_zip_0461.py'
+          python3 -m unittest discover -s scripts/release -p 'test_unsigned_package_0470.py'
+          python3 -m unittest discover -s scripts/release -p 'test_native_verify_0470.py'
+          python3 scripts/release/check_go_repro_0470.py
+          python3 scripts/version/manage.py check
+
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}
-    needs: [sdk-http-contracts, minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, guard-windows, guard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, guard-windows-adversarial, guard-windows-adversarial-certificate, release-ga-policy]
+    needs: [reproducibility-tools-0470, sdk-http-contracts, minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, guard-windows, guard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, guard-windows-adversarial, guard-windows-adversarial-certificate, release-ga-policy]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

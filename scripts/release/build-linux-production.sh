@@ -69,6 +69,25 @@ chmod 0755 \
   "${OUT_DIR}/launcher-cli-linux-${ARCH}" \
   "${OUT_DIR}/launcher-api-linux-${ARCH}"
 
+# Preserve actual unsigned executables before Linux package manifests and
+# delegated signatures are applied. Reproducible tar/gzip is independent of
+# filesystem timestamps, UID, current username or output directory.
+if [[ "${VERSION}" == "0.47.0" ]]; then
+  UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
+  python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \
+    --platform linux --arch "${ARCH}" --out-dir "${UNSIGNED_DIR}" \
+    --file "launcher/launcher-cli=${OUT_DIR}/launcher-cli-linux-${ARCH}" \
+    --file "launcher/launcher-api=${OUT_DIR}/launcher-api-linux-${ARCH}" \
+    --file "launcher/launcher-desktop=${OUT_DIR}/launcher-desktop-linux-${ARCH}" \
+    --file "launcher/guard=${OUT_DIR}/guard-linux-${ARCH}" \
+    --file "launcher/runtime=${OUT_DIR}/runtime-linux-${ARCH}"
+fi
+
+if [[ "${VERSION}" == "0.47.0" && "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
+  echo "Launcher ${VERSION} Linux ${ARCH} unsigned executable payload captured"
+  exit 0
+fi
+
 python3 "${ROOT_DIR}/scripts/release/linux-package.py" \
   --out "${OUT_DIR}" --version "${VERSION}" --architecture "${ARCH}"
 

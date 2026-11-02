@@ -40,6 +40,24 @@ SOURCE_COMMIT="${LAUNCHER_SOURCE_COMMIT:-}"
 PUBLIC_RELEASE_BASE_URL="${LAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/Launcher/releases/download/v${VERSION}}"
 export LAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
+# 0.47.0 may only advance from unsigned staging if a second independent
+# builder has produced all six exact packages and BOTH builders have signed
+# actual-file captures with distinct pinned Ed25519 attestation identities.
+release_from_0470() {
+  [[ "$(printf '%s\n' '0.47.0' "${VERSION}" | sort -V | head -n1)" == '0.47.0' ]]
+}
+if release_from_0470; then
+  for name in \
+    LAUNCHER_REPRO_A_REPORT LAUNCHER_REPRO_A_SIG LAUNCHER_REPRO_A_KEY LAUNCHER_REPRO_A_DIR \
+    LAUNCHER_REPRO_B_REPORT LAUNCHER_REPRO_B_SIG LAUNCHER_REPRO_B_KEY LAUNCHER_REPRO_B_DIR \
+    LAUNCHER_REPRO_NATIVE_APPROVAL LAUNCHER_REPRO_NATIVE_APPROVAL_SIG LAUNCHER_REPRO_NATIVE_APPROVAL_KEY LAUNCHER_REPRO_NATIVE_REPORTS_DIR; do
+    [[ -n "${!name:-}" ]] || {
+      echo "0.47.0 BLOCKED: missing ${name}; independent reproduction/native signing is mandatory" >&2
+      exit 2
+    }
+  done
+fi
+
 # 0.25.0 is GA only if a different, authorized CI attestation key has
 # cryptographically certified all six real platform installers and the actual
 # optional-components lifecycle. Perform this check before erasing any output.
@@ -925,6 +943,14 @@ if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --out "${OUT_DIR}/DELIVERY_VERIFIED_0462.json" || exit 2
 fi
+if release_from_0470; then
+  python3 "${ROOT_DIR}/scripts/release/reproducible_0470.py" compare \
+    --a-report "${LAUNCHER_REPRO_A_REPORT}" --a-sig "${LAUNCHER_REPRO_A_SIG}" \
+    --a-key "${LAUNCHER_REPRO_A_KEY}" --a-dir "${LAUNCHER_REPRO_A_DIR}" \
+    --b-report "${LAUNCHER_REPRO_B_REPORT}" --b-sig "${LAUNCHER_REPRO_B_SIG}" \
+    --b-key "${LAUNCHER_REPRO_B_KEY}" --b-dir "${LAUNCHER_REPRO_B_DIR}" \
+    --out "${OUT_DIR}/REPRODUCIBILITY_COMPARISON_0470.json" || exit 2
+fi
 "${RELEASE_CLI}" "${release_build_args[@]}"
 if release_from_0462; then
   # Check that the release manifest explicitly enumerates the exact six bytes.
@@ -984,6 +1010,21 @@ log "Строгая проверка required artifacts/checksums/Ed25519 trust 
 if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
+fi
+# Only after release sign+verify has authenticated the final manifest can
+# an independent native operator bind *actual signed bytes* to both builders'
+# reproducible unsigned bytes. The approval has a THIRD trusted Ed25519 key.
+# Link evidence stays separately operator-authenticated (never silently
+# inserted into an already Ed25519-signed release manifest).
+if release_from_0470; then
+  python3 "${ROOT_DIR}/scripts/release/reproducible_0470.py" link \
+    --comparison "${OUT_DIR}/REPRODUCIBILITY_COMPARISON_0470.json" \
+    --approval "${LAUNCHER_REPRO_NATIVE_APPROVAL}" \
+    --approval-sig "${LAUNCHER_REPRO_NATIVE_APPROVAL_SIG}" \
+    --approval-key "${LAUNCHER_REPRO_NATIVE_APPROVAL_KEY}" \
+    --a-key "${LAUNCHER_REPRO_A_KEY}" --b-key "${LAUNCHER_REPRO_B_KEY}" \
+    --signed-dir "${OUT_DIR}" --native-reports-dir "${LAUNCHER_REPRO_NATIVE_REPORTS_DIR}" \
+    --out "${OUT_DIR}/REPRODUCIBILITY_LINK_0470.json" || exit 2
 fi
 if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   [[ -s "${OUT_DIR}/${GA_RECEIPT}" && -s "${OUT_DIR}/${GA_APPROVAL}" && -s "${OUT_DIR}/${GA_SIGNATURE}" ]] || {

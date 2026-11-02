@@ -104,6 +104,23 @@ for arch in x64 arm64; do
 </dict></plist>
 EOF_PLIST
 
+  # Export the exact built, unsigned thin Mach-O binaries before codesign.
+  # This package has a stable ordering/timestamp and is independently compared.
+  if [[ "${VERSION}" == "0.47.0" ]]; then
+    UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
+    python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \
+      --platform macos --arch "${arch}" --out-dir "${UNSIGNED_DIR}" \
+      --file "Launcher.app/Contents/MacOS/launcher-desktop=${MACOS_DIR}/launcher-desktop" \
+      --file "Launcher.app/Contents/Helpers/guard=${HELPERS_DIR}/guard" \
+      --file "Launcher.app/Contents/Helpers/runtime=${HELPERS_DIR}/runtime" \
+      --file "Launcher.app/Contents/Helpers/launcher-cli=${HELPERS_DIR}/launcher-cli" \
+      --file "Launcher.app/Contents/Info.plist=${APP_ROOT}/Contents/Info.plist"
+  fi
+
+  if [[ "${VERSION}" == "0.47.0" && "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
+    continue
+  fi
+
   # Сначала подписывайте вложенные вспомогательные утилиты. Не подписывайте
   # Contents/MacOS/launcher-desktop напрямую внутри .app: codesign воспринимает
   # основной исполняемый файл как сам пакет и требует предварительной подписи всех
@@ -181,6 +198,11 @@ PY
   ditto -c -k --sequesterRsrc --keepParent "${APP_ROOT}" "${FINAL_ZIP}"
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${FINAL_ZIP}"
 done
+
+if [[ "${VERSION}" == "0.47.0" && "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
+  echo "Launcher ${VERSION} macOS unsigned x64+ARM64 binaries captured before codesign"
+  exit 0
+fi
 
 GENERATED_AT="$(python3 - <<'PY'
 from datetime import datetime, timezone

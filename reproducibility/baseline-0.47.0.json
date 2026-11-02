@@ -1,0 +1,1010 @@
+{
+  "files": {
+    ".github/workflows/account-device-recovery-0435.yml": {
+      "sha256": "e399f4345c83dbc945ba24013d085d63bb6eee4e03729b687c318ed4994346c0",
+      "size": 4244
+    },
+    ".github/workflows/adapter-lifecycle-02711.yml": {
+      "sha256": "74eb4cf822e8ef9fb48263e28ddb38f3b3dc84bc2f1d7c2c0fa8f828d0c6d6e4",
+      "size": 1841
+    },
+    ".github/workflows/admin-hardening-02112.yml": {
+      "sha256": "5254da97bc5561a99041d2261c10d370fea62c3854dd6191faaf813a9aacee6e",
+      "size": 2297
+    },
+    ".github/workflows/admin-official-provider-02611.yml": {
+      "sha256": "eff55541fd478c4cd682aa4e4eda213b7af17800248b06ed5c4a9848e52fbb8a",
+      "size": 1747
+    },
+    ".github/workflows/adversarial-security-03114.yml": {
+      "sha256": "a264dc36a25fe3399ddb32ca01a1316adb578ebae30790801a6ebf6df318a768",
+      "size": 4516
+    },
+    ".github/workflows/api-sdk-freeze-04512.yml": {
+      "sha256": "ec1744600171d9dde821e863970c5d11e2c2998ee3d696d9120eaaaf4ac90383",
+      "size": 2191
+    },
+    ".github/workflows/arm64-game-integration-04313.yml": {
+      "sha256": "f729a73f927c306cc197c9e179bb72ec8cda02cc7d61d1bd7e9adbcb68593784",
+      "size": 4708
+    },
+    ".github/workflows/auth-migration-compat-02911.yml": {
+      "sha256": "d0ff17ec05674da1726072b541676f4c11c91f271f322f52fd6f97ce51600bea",
+      "size": 4502
+    },
+    ".github/workflows/auth-platform-protection-ga-0300.yml": {
+      "sha256": "dad8872c1cd2f2634fd1f7af3488a1c783a493cf89c6389b7da7831c022193ed",
+      "size": 7015
+    },
+    ".github/workflows/auth-provider-wizard-02910.yml": {
+      "sha256": "b73857f59bfb4086e59ffd594da40dedfa402ea3f2250db1b7f7566f13e6fe86",
+      "size": 2834
+    },
+    ".github/workflows/auth-sdk-conformance-0292.yml": {
+      "sha256": "1cd92d87d271718eaaba4c8f3c38c5edb827606575f8939e6ee52ed8bb578a6c",
+      "size": 2259
+    },
+    ".github/workflows/authlib-classloader-compatibility-0279.yml": {
+      "sha256": "64eb86f75c5dfa8627814bac59a174f89d9097c2e84917d9f2d8f62f8caff49f",
+      "size": 1766
+    },
+    ".github/workflows/authlib-serverbridge-0287.yml": {
+      "sha256": "9a299f2f9336ec940eb426f5b635e9d26ae17e6fce188677b3a55f05f46541d7",
+      "size": 1486
+    },
+    ".github/workflows/branding-studio-0355.yml": {
+      "sha256": "370c0b9e7375786ae09a46b42b1edafe8f781cfe4a1c6f0534485d7b45244840",
+      "size": 2053
+    },
+    ".github/workflows/browser-oauth-pkce-0263.yml": {
+      "sha256": "50b4e2c2765401a32f00547ca92a50a2b6f15ef97f6d67425989da21743ff711",
+      "size": 2394
+    },
+    ".github/workflows/capacity-03215.yml": {
+      "sha256": "2486d73bd096968bb3ead1a320c4840f7701b013315aceaf3fb70806f8e27b27",
+      "size": 1908
+    },
+    ".github/workflows/certification-02313.yml": {
+      "sha256": "39f4cd75a4422a020e0bc1a487193e55090de91956d07ebe30a39e1ee9b04064",
+      "size": 2511
+    },
+    ".github/workflows/certification-02413.yml": {
+      "sha256": "a6561b2bbf889c168990f3eaac755ba33df7e399caf401ead9861261f42c0a53",
+      "size": 8103
+    },
+    ".github/workflows/chaos-dr-03512.yml": {
+      "sha256": "e1cb35c59610700d3521f8b389b6ece02953824da644b5780025c3f70a07a354",
+      "size": 3455
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "3953f1494f923a7e83f32933a0a49a368a9ae03fdb9e14dc03b722980ea848d8",
+      "size": 89230
+    },
+    ".github/workflows/client-factory-0271.yml": {
+      "sha256": "426f67a6a1ed351d0666d2f6dd0d43e9d6b20f92b0e492eac7752df55d4175e6",
+      "size": 1350
+    },
+    ".github/workflows/client-factory-ga-0280-checks.yml": {
+      "sha256": "2bb8a342a4cad4a064e677111689f84b803244c62a6c1ab00346548f729d5f2b",
+      "size": 2604
+    },
+    ".github/workflows/client-factory-ga-0280.yml": {
+      "sha256": "327f43801febf441c1e3c1588b87032a03fe420c7152f45a8cd0309b9d23bb91",
+      "size": 8344
+    },
+    ".github/workflows/codeql.yml": {
+      "sha256": "f659bee967b817c3f3538c9c9fdfe02c99efc0b0600d5726763bc9f1ae16ea27",
+      "size": 1050
+    },
+    ".github/workflows/compatibility.yml": {
+      "sha256": "9fffcbea9d5d64ceb38bdd520a2d332addc924feab12b7a0b4d85ef9ccc2d2d3",
+      "size": 25220
+    },
+    ".github/workflows/component-upgrade-0458.yml": {
+      "sha256": "83c7c9b13e5ec6fefbec005a4c4879004a13deb51aa54464626c3f77d50fb646",
+      "size": 2310
+    },
+    ".github/workflows/database-upgrade-0457.yml": {
+      "sha256": "d9c3d59c1f697cf27f9caab1f4ad378580b24f5086a76c25f0df6f481a6271f6",
+      "size": 2016
+    },
+    ".github/workflows/dependency-review.yml": {
+      "sha256": "939ed20ee4ecc2e4b633d65de5a29be990eb3c99405a9396cc1bdcbc93c7364e",
+      "size": 407
+    },
+    ".github/workflows/deployment-modes-0328.yml": {
+      "sha256": "5b8b251154696a8bf6e36d01ad5c4edd61942b5dcd10c98f027326814599b28e",
+      "size": 1858
+    },
+    ".github/workflows/desktop-accessibility-0357.yml": {
+      "sha256": "5a7bc471186f584a6eb4e8c019468c8683483032d4c1040e6a74ec6fb475f845",
+      "size": 1434
+    },
+    ".github/workflows/desktop-authentication-02610.yml": {
+      "sha256": "192590ba0c0d17b23712a764f4308cb44e8ccc0e8d04c36ec485111308727080",
+      "size": 970
+    },
+    ".github/workflows/desktop-migrations-0359.yml": {
+      "sha256": "1ef96287509afdf791b65f229e492425b4dccc9b03a02b4c3eac989c75637db3",
+      "size": 1631
+    },
+    ".github/workflows/desktop-offline-policy-0358.yml": {
+      "sha256": "32b075cd5a81bee3a8951543c448c6aa603b9b5bb671c556aa9f2011f1d6b2ef",
+      "size": 1602
+    },
+    ".github/workflows/desktop-workspace-0353.yml": {
+      "sha256": "371ef11d661932c7c1bc31479184cff2bf2a6d0b7b00e918be9603a5ac261354",
+      "size": 1253
+    },
+    ".github/workflows/device-code-fallback-0264.yml": {
+      "sha256": "b0b2eedc1bfb3f3d26a18210f647a57281e55bf9d8bd74d3ef3c88c34f0aa438",
+      "size": 2524
+    },
+    ".github/workflows/device-guard-os-isolation-ga-0320.yml": {
+      "sha256": "7a1aea3ce1d3bac5541b8542b4da65bdb181daadb5afb0545eb6aefc8e00a61e",
+      "size": 7854
+    },
+    ".github/workflows/device-trust.yml": {
+      "sha256": "1372ca8ae540c2f79fe0dbe66a425ade5084a633f7527808ee974603d28a780b",
+      "size": 6656
+    },
+    ".github/workflows/devtools-test-isolation-03010.yml": {
+      "sha256": "6c338690fa54b0106dd0356f83e41881f4d6417bf85bda5c93696e126b2cba90",
+      "size": 2418
+    },
+    ".github/workflows/diagnostics-sentry-0309.yml": {
+      "sha256": "2425729de8fbffa5d1e8e192b664b115d882ce7ea3ac4b203818f35d229c9a8d",
+      "size": 2177
+    },
+    ".github/workflows/diagnostics-support-03510.yml": {
+      "sha256": "094d9ed383c8a0b2c8567574f034d8f4f3edb63e86daf44805160856cb13caef",
+      "size": 2374
+    },
+    ".github/workflows/discord-lan-0308.yml": {
+      "sha256": "df11cfa0e92c4e8e70d48ff9cd02dd1c7ffbf7b75aff81a7de561604d5810358",
+      "size": 2460
+    },
+    ".github/workflows/docs.yml": {
+      "sha256": "c11f8d1d4581d8ca6a3c08d507195203e5a8cfa394c44f7951a09ec3998af216",
+      "size": 2772
+    },
+    ".github/workflows/download-reliability-0354.yml": {
+      "sha256": "7541ba0600b206d30ebb1e0007a222e75d99f610f378c399f9bffcc8b81edd22",
+      "size": 1375
+    },
+    ".github/workflows/embedded-installer-0329.yml": {
+      "sha256": "0e59850e0cb286018c0bfcbeda620d430c0f86eb5ff85d49f45803aa5622fd47",
+      "size": 1426
+    },
+    ".github/workflows/extension-real-acceptance-04212.yml": {
+      "sha256": "ad7e997b71e520d8b8af7cee5b4cb4fd1f231568ddcfb7abb36b934612fe52fd",
+      "size": 4413
+    },
+    ".github/workflows/extension-resource-enforcement-03113.yml": {
+      "sha256": "83868e0431c0750c8654668c05d6e3bc034d6b115ea2178bd20e764a927f0c5f",
+      "size": 2822
+    },
+    ".github/workflows/extensions-ga-0210.yml": {
+      "sha256": "cea51c0a004762b22efffc4aa4f9aaf0d41c60650fd1d9154fcfe74f5abfb4c5",
+      "size": 5327
+    },
+    ".github/workflows/extensions-trust-recovery-02012.yml": {
+      "sha256": "3ece59e76f3fbb74a89376de34d12c9e98a63d988270f4ea426adef150989656",
+      "size": 3465
+    },
+    ".github/workflows/game-world-backup-02810.yml": {
+      "sha256": "7ace7fbdaa282a0583ffcdb69132c05f2a544a3f2fd6e4b8dd9ef01331943d99",
+      "size": 1636
+    },
+    ".github/workflows/global-session-revocation-0297.yml": {
+      "sha256": "9e696b44e4d0484117264693b909914367f5bd6019bb754e1a2e28596cfbb913",
+      "size": 2566
+    },
+    ".github/workflows/gravit-auth-migration-0335.yml": {
+      "sha256": "21253672c35e0c9fafa9603af8fd3c35b0043f67f7ce5f4331388fe467a20f8e",
+      "size": 2955
+    },
+    ".github/workflows/gravit-compat-0307.yml": {
+      "sha256": "8f03df4b83fd0b9a399720e987ea31479e6705e18d8446ef6f7ceaf284e2e6f7",
+      "size": 3099
+    },
+    ".github/workflows/gravit-compatibility-0332.yml": {
+      "sha256": "e360975764c467e29d3cfb880ba5f051822b0850597c59ca5f3e575097eb1b60",
+      "size": 2458
+    },
+    ".github/workflows/gravit-content-migration-0337.yml": {
+      "sha256": "fdec2b405bee1a977c1230bdd4d3dbcec48deb576ddeec15ba9bcbd37e044a1d",
+      "size": 2628
+    },
+    ".github/workflows/gravit-cutover-03311.yml": {
+      "sha256": "764fa210352c6f0436d6fda8f725b8b11daa844fd754cc4c2025ca5f2c1a217a",
+      "size": 2399
+    },
+    ".github/workflows/gravit-identity-0334.yml": {
+      "sha256": "5359b2df36270603abc8abd53509dcc175bacf71ed9a3a70e0fd355b849fc6b9",
+      "size": 2746
+    },
+    ".github/workflows/gravit-migration-ga-0340.yml": {
+      "sha256": "eea4fed68b99c4400eafd77c88ea85b4a798633439df8389cfd4df25f03ae416",
+      "size": 9755
+    },
+    ".github/workflows/gravit-migration-reports-03313.yml": {
+      "sha256": "d3e9716f7b04e475734d6edf0f49db946511b73f699d9615edbcd1358e271df9",
+      "size": 2726
+    },
+    ".github/workflows/gravit-modules-0338.yml": {
+      "sha256": "7658a65cfb49f58d17afb15e31de169f2a38a82f42f6c26765b5149dff52de6d",
+      "size": 2558
+    },
+    ".github/workflows/gravit-operational-rollback-03312.yml": {
+      "sha256": "523ddf861753adfc08435af7abe8f6282cb9c21ca0619388abee05c81a3ff165",
+      "size": 2595
+    },
+    ".github/workflows/gravit-rehearsal-03310.yml": {
+      "sha256": "bf1e431c172c02d573b1f07281795726371d52a90b9536b4c641c23d0f9eb5e0",
+      "size": 2017
+    },
+    ".github/workflows/gravit-security-migration-0336.yml": {
+      "sha256": "1a81b63b3aba7dccbbacb55193bd3e2d57139c57f7f27a68c2ff15dbeb19dfd5",
+      "size": 2679
+    },
+    ".github/workflows/gravit-source-inventory-0333.yml": {
+      "sha256": "64a1888213bb4a3580fd3d18ad6cb17d5d64e11ec70b05780c48f1153a89f23c",
+      "size": 2863
+    },
+    ".github/workflows/gravit-source-port-04211.yml": {
+      "sha256": "dd754e197d1fceee3dd87d98bede13e5fd8cc31fb6e9348d284f630d2e109ec5",
+      "size": 3955
+    },
+    ".github/workflows/gravit-textures-02510.yml": {
+      "sha256": "a2904776210745c037d3543c1f7833d8bbd333f36fb9738501d74a2ff58890af",
+      "size": 1294
+    },
+    ".github/workflows/guard-game-lifetime-0438.yml": {
+      "sha256": "21cb2cbc2705445b3ae25b060f40b3228ea97ff71304d62670c15736a6f8cb1a",
+      "size": 2688
+    },
+    ".github/workflows/guard-runtime-integrity-0437.yml": {
+      "sha256": "14519bd9126b16369360b9ae09e4a161f048af7dd57957ff1defca708dc9bc55",
+      "size": 1103
+    },
+    ".github/workflows/guard-runtime-trust-0317.yml": {
+      "sha256": "b7ffb29e3cad4e33f9a5de93156b2d90871eb00e4faffa81d5842f57ce391536",
+      "size": 1893
+    },
+    ".github/workflows/host-services-systemd-02811.yml": {
+      "sha256": "191121657269b55538b79dcd73e2237f088305b25e5f0df9e9e601f27f6dfe15",
+      "size": 1766
+    },
+    ".github/workflows/hwid-risk-recovery-0299.yml": {
+      "sha256": "3db5f378916855b3ce1365dd450eb28e78ebf85fc961fbafae9bab948b49c16e",
+      "size": 2825
+    },
+    ".github/workflows/integration-0461.yml": {
+      "sha256": "ec3d1ee3a8e35775331db7da1673d7408a2e5eb9254ad938c3895d033ef98cdb",
+      "size": 4545
+    },
+    ".github/workflows/integration-certification-03012.yml": {
+      "sha256": "f68fcf662e3f1301501884e1348727fd5f624cfeacd4fb0c7252db8aa4bd9aea",
+      "size": 4801
+    },
+    ".github/workflows/isolated-build-worker-0273.yml": {
+      "sha256": "b69708503a1a344bad498ceb547d196fbcda62cf61820af8ae1305120612e989",
+      "size": 1842
+    },
+    ".github/workflows/java-extension-host-0304.yml": {
+      "sha256": "525d7d8266369ffbc64750aa3cfca39998ffb82a06537a06fb2de8e68be91f1e",
+      "size": 4603
+    },
+    ".github/workflows/java-extension-manager-0305.yml": {
+      "sha256": "aefe4675685b0c3c90472b011de50638ee32141af4c256ad600994bbbd59b72c",
+      "size": 3166
+    },
+    ".github/workflows/java-sdk-core-0302.yml": {
+      "sha256": "399061ebababbc5d4daf78f5c33b1363a52c474e659a09dc23dc5ebcc6835760",
+      "size": 2749
+    },
+    ".github/workflows/java-sdk-module-parity-ga-0310.yml": {
+      "sha256": "44c6fa0ad81bcd34f19f2d4ec456cb7ae499a46f604025b84acdbba23ff1447b",
+      "size": 5337
+    },
+    ".github/workflows/java-sdk-runtime-0303.yml": {
+      "sha256": "73e22f0bfe005bef046d400fb1ce396ca609a87964e5eb3ee1ef7a2f6513a44f",
+      "size": 4327
+    },
+    ".github/workflows/legacy-client-adapters-0278.yml": {
+      "sha256": "a405499ccb400500563472ab3265f6b777a1ff9d4351e91e1911115ae300434b",
+      "size": 1612
+    },
+    ".github/workflows/linux-arm64-native-sandbox-0439.yml": {
+      "sha256": "fd084ad1331fda76fed104c52a6963501a2a07d6f02f5dcb39e5477377557cc1",
+      "size": 2725
+    },
+    ".github/workflows/linux-native-extension-sandbox-0319.yml": {
+      "sha256": "e8fb443e0844b33a65ad38bedb56926203ff9db54bcc1b17a48d4f3bbccdadf2",
+      "size": 1393
+    },
+    ".github/workflows/linux-tpm-attestation-0314.yml": {
+      "sha256": "195fed78e97ce6ae1decdef52fb3fed6da135399d2ab0dfde92af160667ebb5c",
+      "size": 1694
+    },
+    ".github/workflows/local-auth-fileauth-rehash-0295.yml": {
+      "sha256": "fc5b290347de6c973da2a1d5ee451e4dec6bbc926b3199eccdae7062a0dc083a",
+      "size": 3102
+    },
+    ".github/workflows/macos-device-trust-recovery-0316.yml": {
+      "sha256": "6a721447691819cd6b8e14c755e1d61ac88883a56ef9edccf0015163ed814908",
+      "size": 1870
+    },
+    ".github/workflows/macos-production-delivery.yml": {
+      "sha256": "09def628af296c1d4e01946798211531553b34e88ea9a329f11a9a67c2a7de26",
+      "size": 7618
+    },
+    ".github/workflows/macos-sandbox-native-04311.yml": {
+      "sha256": "9b7fd8d9535208032bae908b59891db34bfc66811a3f6c6cc6a9dd06b09d8c08",
+      "size": 4596
+    },
+    ".github/workflows/macos-signed-sandbox-helper-03112.yml": {
+      "sha256": "a33ba871b590040b32960c232a764e3ae3f387c2a88bb8134dfe25b2923e147d",
+      "size": 2418
+    },
+    ".github/workflows/managed-jre-production-delivery.yml": {
+      "sha256": "2b36aed20672af08151c1be42bd752caecb5bf6f28eef3b98c696076bca2624d",
+      "size": 2792
+    },
+    ".github/workflows/manual-artifacts-permission-gates-0276.yml": {
+      "sha256": "90846b625430e81c9b9a8f707f249ebc549c04fec7e0a35c4e982785a508dc84",
+      "size": 1703
+    },
+    ".github/workflows/measured-boot-pcr-0315.yml": {
+      "sha256": "cbd4825eb6b469338c0b8529ae717972da4aadda5c8a4c5c8d6752480ed400a6",
+      "size": 2789
+    },
+    ".github/workflows/migration-center-0331.yml": {
+      "sha256": "6f20046d39173a84e611224a028ba020ad54529c1414e247c70ec48700c2411e",
+      "size": 2224
+    },
+    ".github/workflows/mirrorhelper-command-parity-0274.yml": {
+      "sha256": "6cfc7f808f81886c45ebc9d8b9a464cdc771f4f3af9a53ffaf652ded26c49fb9",
+      "size": 1784
+    },
+    ".github/workflows/modern-loader-adapters-0272.yml": {
+      "sha256": "a5ef102f7e74c7dfb117cf9ac26db7767fb4e38b698d04f4dd331636376bc4f3",
+      "size": 1915
+    },
+    ".github/workflows/modpack-import-engine-0275.yml": {
+      "sha256": "1954befed2d3a392a3eab3e3f0543aaf4c1efc6a2b94c234057455f07d1670e5",
+      "size": 1613
+    },
+    ".github/workflows/module-parity-0301.yml": {
+      "sha256": "07df4be431d2fddd13b77749c0a503e9f5de7d4ef4acc48a21c545ecf15617fa",
+      "size": 2552
+    },
+    ".github/workflows/module-parity-completion-03011.yml": {
+      "sha256": "33e6283c0c96c549b48f7758d53f3a6dbf58adce10916e411e63017a980b1547",
+      "size": 3582
+    },
+    ".github/workflows/multi-account-lifecycle-0267.yml": {
+      "sha256": "6adfc4a3b27061bc0767e1fe1a92ad74b375b24ce70e94c33cb13cc6b7bef68b",
+      "size": 2277
+    },
+    ".github/workflows/multi-node-ha-0455.yml": {
+      "sha256": "23502e5210177e43196b5a54c97c03b154fbee376817254b032f7267829b0f6a",
+      "size": 3233
+    },
+    ".github/workflows/native-extension-revocation-04312.yml": {
+      "sha256": "c101ec6cb88b75cdbf04231777e21fcab10a7a416fd50c284136a6b54e05d78a",
+      "size": 2778
+    },
+    ".github/workflows/native-game-acceptance-04314.yml": {
+      "sha256": "a3b5d8e66dcec7942f09643bafc56e89c2cc0becc4d306922aa4163b27f67c5b",
+      "size": 2741
+    },
+    ".github/workflows/native-installers.yml": {
+      "sha256": "a1c450a1864befe4be5c145c67ba1a2521a73eaf1c50901650498319a3c96119",
+      "size": 7340
+    },
+    ".github/workflows/native-official-identity-0262.yml": {
+      "sha256": "5ee546e0bd16e38ff3f5be873e7ddbbf6afceadde849cb511fc71fc4735ce517",
+      "size": 1681
+    },
+    ".github/workflows/native-provider-exchange-0265.yml": {
+      "sha256": "23afd9100e78b21ce32bdb406dcc5a01e2e33e3f63f76b75cae4c5004d5be190",
+      "size": 2559
+    },
+    ".github/workflows/native-runtime-v10-03410.yml": {
+      "sha256": "8b82a421089f9701ab2340ebcebcf37199127e7f2391adfce4f6b96a699666ef",
+      "size": 7679
+    },
+    ".github/workflows/observability-0459.yml": {
+      "sha256": "5bf089c39850075b813d4b50a847350ffa938dfae5d1dc9ee9b97f0b6a5c43e7",
+      "size": 3089
+    },
+    ".github/workflows/official-compatibility-02612.yml": {
+      "sha256": "57c792b2042a99b675f0b894c8a32c4cab394c3ec7e32e1af42831f1503eaf73",
+      "size": 6138
+    },
+    ".github/workflows/official-game-launch-0269.yml": {
+      "sha256": "bcaa79ad76f8fa2991789616e4452f39d0075dd2876a418996fdddc00766c6a2",
+      "size": 1883
+    },
+    ".github/workflows/official-java-verification-0266.yml": {
+      "sha256": "bca87a7efa378643f555e9e2b3978b9d54add6692cb26f575b695c891ca041cd",
+      "size": 2057
+    },
+    ".github/workflows/official-linking-0268.yml": {
+      "sha256": "29447b74649e265e0614a9c54a5dd268bb0cf058de346fb4da666408797556bb",
+      "size": 3094
+    },
+    ".github/workflows/official-provider-poc-0261.yml": {
+      "sha256": "f810e0531d4e3bc3477c2115b6009d1c8f6ca50329dd92a21dccae1938e40694",
+      "size": 1400
+    },
+    ".github/workflows/operations-delivery-0460.yml": {
+      "sha256": "95effba2235d1e9c556e629118b468f112f7217d7daeba88430277c936e91252",
+      "size": 2314
+    },
+    ".github/workflows/owner-lifecycle-03513.yml": {
+      "sha256": "de45df954bf08be56e4622758fd7683a6fa4a0b98c0e9e52a5e195585a40e33f",
+      "size": 2763
+    },
+    ".github/workflows/performance-03511.yml": {
+      "sha256": "d3f8d0a8e7889f07197b9ced2c80490413a7a4f5614e748929c18f550060a0f8",
+      "size": 3798
+    },
+    ".github/workflows/player-migration-0339.yml": {
+      "sha256": "7257795aba68d7fbd99665dc6be3b124b73c671001c7e5a8a0321b16ee7e6575",
+      "size": 1483
+    },
+    ".github/workflows/prestarter.yml": {
+      "sha256": "17d02b5a52a3d08088e15500c5a6c3e260e3468f34efc59ab833b5d4460f34ed",
+      "size": 1752
+    },
+    ".github/workflows/production-deployment-03213.yml": {
+      "sha256": "4bf897cedf1d2d703c3d0ed1abbdf20f42a78598639ae03553935ea0cabf76b0",
+      "size": 2932
+    },
+    ".github/workflows/production-rc-03216.yml": {
+      "sha256": "75b8c23a4dbad34ac011f375a95a0c337629604cae0729ba6f3cd9abb9a9d9e3",
+      "size": 5423
+    },
+    ".github/workflows/production-release-candidate.yml": {
+      "sha256": "f264faf1496fb82a2f951d7b9a69057f71b53b6ae1072fc110c43db514c0c427",
+      "size": 62285
+    },
+    ".github/workflows/production-single-node-ga-0330.yml": {
+      "sha256": "7f4171ed1fde3ba8078d29eaa9daf8706a9619dc8fbf9a87c695766dc1f82264",
+      "size": 1322
+    },
+    ".github/workflows/protection-sdk-policy-0298.yml": {
+      "sha256": "08299a5f82b28ded2151712b768640b7c584c618b4cf6dca993f1106e4188293",
+      "size": 2096
+    },
+    ".github/workflows/provider-routing-linking-0293.yml": {
+      "sha256": "42a41469fe9d2c5d490456bf92aeb341812d2e7fea4ffbd15c9fd235cea40000",
+      "size": 3243
+    },
+    ".github/workflows/provider-runtime-parity-0296.yml": {
+      "sha256": "02c9002b65c67aad0fdbf53fb1f39ea168312876cad82863c222bc6fd4fab881",
+      "size": 3962
+    },
+    ".github/workflows/public-production-delivery.yml": {
+      "sha256": "1a14decdf4577bef444ed7d3b4b496a90478c53e92f1d8c60d287794dc1ad070",
+      "size": 5125
+    },
+    ".github/workflows/release-bom-03214.yml": {
+      "sha256": "01cfe8c2eda419583028408455c0c21fd76a75579460b96c3f4cee6bb58a0054",
+      "size": 1957
+    },
+    ".github/workflows/release-candidate-03514.yml": {
+      "sha256": "c8c964fa7e8813c81616e975dc2b2c86554a26835f45e2d3b57fca9417df6e34",
+      "size": 9244
+    },
+    ".github/workflows/reproducibility-0470.yml": {
+      "sha256": "a07e620c7d0f4988954c63041757aa60b889eb892f971bfa768759e719260299",
+      "size": 9127
+    },
+    ".github/workflows/runtime-acceptance-0350.yml": {
+      "sha256": "1cd90d4d8c53653e2f99655768e71dd44af28af3e62c3cffc9c731f57d76acf4",
+      "size": 3250
+    },
+    ".github/workflows/runtime-e2e-certification-02712.yml": {
+      "sha256": "245193052d5dd1e85364cf8bff8ec07613f546f4aec38e16f1343db3792fdc69",
+      "size": 6528
+    },
+    ".github/workflows/scoped-extension-brokers-03110.yml": {
+      "sha256": "d490b24f45a98ce87f35278c6c2040d1ab0ee5e7faada29a2aee4cef2ef1e850",
+      "size": 1520
+    },
+    ".github/workflows/security-real-auth-e2e-02912.yml": {
+      "sha256": "080633fdf68eb5e391460ae09f0fbc06c01da6c47a7ced1f55c8836f2b19d5c5",
+      "size": 4128
+    },
+    ".github/workflows/security-sandbox-0356.yml": {
+      "sha256": "0f8a3c4389910e50e6886809f7723f397711c470e7eca58f689f1ad90a2e12b4",
+      "size": 2008
+    },
+    ".github/workflows/security.yml": {
+      "sha256": "f1d98ba3ad3c80405962a22388e7c4b28ff18f576ca88e97fed00f6d9cb73f92",
+      "size": 926
+    },
+    ".github/workflows/serverbridge-adapter-capabilities-0286.yml": {
+      "sha256": "729ff0af84da4f900089d43532ee4a1cd4ce84b8565ddd7436fd7b896cd6106a",
+      "size": 2629
+    },
+    ".github/workflows/serverbridge-operator-02812.yml": {
+      "sha256": "5200f9d0ae24e8b97f23abe55c4b2bb62d39b8540582537247c961ba337424ce",
+      "size": 1514
+    },
+    ".github/workflows/shared-libraries-assets-natives-0277.yml": {
+      "sha256": "6506e62717f3e87b8cbda8d376f7aee18cc9ddbaf0bf103a4ff5171601bac922",
+      "size": 1894
+    },
+    ".github/workflows/signed-extension-sandbox-policy-0318.yml": {
+      "sha256": "45822a21ed9b93be8561ca630520439464ec1880192ce0acbc438e1acb2f9300",
+      "size": 1767
+    },
+    ".github/workflows/signed-first-run-0352.yml": {
+      "sha256": "e52ea282b024e7ac9262ae22f3ce9c44bf950ad0f7d7dde7d1b6f37a9cf393ae",
+      "size": 1783
+    },
+    ".github/workflows/sql-mapping-legacy-hash-0294.yml": {
+      "sha256": "651f563c998ccaf22346a24f8dff6b2b64fd7777f8bf63e1f9f6749f62dd03c9",
+      "size": 2810
+    },
+    ".github/workflows/sqlite-auth-0323.yml": {
+      "sha256": "79a6495a22a4e387495d09fd01c9b9ad830678b25d30af88f7b5f823ef991d70",
+      "size": 2936
+    },
+    ".github/workflows/sqlite-backup-03210.yml": {
+      "sha256": "55424bbe4f8f2863421b6e1ccfe3ff601b1bdeaf62ac425419dba4421a604e08",
+      "size": 3733
+    },
+    ".github/workflows/sqlite-coordinator-0327.yml": {
+      "sha256": "204a1e55bf421be146960cca70235db7782d8a7e8613fc65976d3825fd787159",
+      "size": 1966
+    },
+    ".github/workflows/sqlite-core-0322.yml": {
+      "sha256": "bc1b28ba8fce6ef698c1160c7382412d2b4df577d660704e2f8e189fdb73b040",
+      "size": 3153
+    },
+    ".github/workflows/sqlite-dep00-0321.yml": {
+      "sha256": "f2d2400aa937a70a90b24f4f60247ad75a1a06e797ea4be3033cb957b234454a",
+      "size": 1616
+    },
+    ".github/workflows/sqlite-durable-0325.yml": {
+      "sha256": "c45002ceeb975bb187e38dba0680473e464047a4ef36d7985828b2cd51d7a5d8",
+      "size": 4746
+    },
+    ".github/workflows/sqlite-full-state-0326.yml": {
+      "sha256": "1f023def9a618ecd639a80f5a54991b51a669d9ca96a8cdbb00d0ceb54e83528",
+      "size": 2519
+    },
+    ".github/workflows/sqlite-postgresql-transfer-03211.yml": {
+      "sha256": "5af900027fd387b838fd66bc021dec491abb9002bada5ac5964c747adeba67a6",
+      "size": 3978
+    },
+    ".github/workflows/sqlite-replay-join-0324.yml": {
+      "sha256": "4437fb50528a096c5bd66c9ca4455a1a305d15f83a8c4cbe4f91aeb6a9217d97",
+      "size": 2958
+    },
+    ".github/workflows/stable-runtime-gate-0341.yml": {
+      "sha256": "f20687170fda7c1460e0f72334b57751c389be3b1b14766e1942da012ac2a8b8",
+      "size": 2372
+    },
+    ".github/workflows/staged-package-runtime-0342.yml": {
+      "sha256": "35de75c0b72dfe2298009a57aee48cf1c5f11c76f9f6be4701f79a79053058ec",
+      "size": 10794
+    },
+    ".github/workflows/standard-network-growth-03212.yml": {
+      "sha256": "c62f91f7d0f2a5902da65a45baa596418a9b92131d99332e8f4bdab24964c157",
+      "size": 2367
+    },
+    ".github/workflows/texture-certification-02512.yml": {
+      "sha256": "66fc706560c32bb7eb5d638d50f83072414772b247378dceeeab4cbd056137f6",
+      "size": 7133
+    },
+    ".github/workflows/texture-lifecycle-02511.yml": {
+      "sha256": "f587e6b4dd2d1d7d0bf30a49062c92b04917130ee14061d8787187b3eeaf2317",
+      "size": 1647
+    },
+    ".github/workflows/tpm-certify-verifier-0312.yml": {
+      "sha256": "3a3d65d439151a67c11d48edf8d37116cd1a5476ef401517d791d7a14dcf0fd0",
+      "size": 1070
+    },
+    ".github/workflows/tpm-hardware-evidence-0436.yml": {
+      "sha256": "3372edc714b8bb5db8ff9b09b7f5ea7f48873761097b475f4305d7683b6c6573",
+      "size": 4530
+    },
+    ".github/workflows/trust-isolation-baseline-0311.yml": {
+      "sha256": "a75bfca704af7249b500de858c7d391b0873733cb7a65cae0b7ad25ad479f31b",
+      "size": 1921
+    },
+    ".github/workflows/trusted-jvm-agent-0306.yml": {
+      "sha256": "326c251ce1aa3fbaa7a6040535f6858c6707a2610291165320bcecdea3e2f9c9",
+      "size": 2052
+    },
+    ".github/workflows/user-acceptance-0351.yml": {
+      "sha256": "5803f7f96e6b8632cb219bb3ec9e8f607b380cac0d232730ebf71b1b2452818f",
+      "size": 2418
+    },
+    ".github/workflows/validation-attestor-0345.yml": {
+      "sha256": "32b3255f27b3059f4c37a78b9a5d86ddf6d386ee384caac58fadf09500467a05",
+      "size": 3033
+    },
+    ".github/workflows/visual-client-factory-02710.yml": {
+      "sha256": "d11f5dd9730f8c0a26d61fbb2fb4e0a16f0fa5d1611e42625572e964566bf952",
+      "size": 2609
+    },
+    ".github/workflows/windows-extension-sandbox-03111.yml": {
+      "sha256": "6d65d276ff4d3ca1e312b8de0c7b7da0edd78df5430495d09755279035c11bbd",
+      "size": 3372
+    },
+    ".github/workflows/windows-production-delivery.yml": {
+      "sha256": "72be2a114b8cd886f1c6409d09ae0dd66c58481c53b1e39cfca0568c99548ada",
+      "size": 5711
+    },
+    ".github/workflows/windows-tpm-key-attestation-0313.yml": {
+      "sha256": "6b27c59a706b31b24d1c9ea131e291cce197eb56d20a9f90cd6eaebe7a964e3b",
+      "size": 1158
+    },
+    "VERSION": {
+      "sha256": "ce0ae25b92cad1efa474eb0605bcb1160f6913aed259c1057035987a67f31ae4",
+      "size": 7
+    },
+    "apps/admin/package-lock.json": {
+      "sha256": "eeb6162367bbb9009b708fa56b15ca304753014dca1ea4c0297738d24cdf4f6b",
+      "size": 30181
+    },
+    "apps/admin/package.json": {
+      "sha256": "ac9acc8e5a0abd6b702b1bd43edbb42f0dace751f2ed0bbda1a3b04da7406ead",
+      "size": 488
+    },
+    "apps/desktop/package-lock.json": {
+      "sha256": "13594208d6b289411eeef81ea16425b60e1f3714d657eb21ff2401c831569302",
+      "size": 30711
+    },
+    "apps/desktop/package.json": {
+      "sha256": "8e2679749646328b7951282985f74f32b7563c7aa29dc1b3ff63d327ec8c8364",
+      "size": 3755
+    },
+    "apps/desktop/src-tauri/Cargo.toml": {
+      "sha256": "a9e345bf04c5fef5c2246073df7a8dd8b0143e1e5b7c20a931e5e4b292a85932",
+      "size": 1461
+    },
+    "cli/cmd/launcher/release_commands.go": {
+      "sha256": "6a3c02cfc799f28a909a677c23f938c7ff2d000dbe410123d6ea96bceddaa6cc",
+      "size": 74180
+    },
+    "cli/cmd/launcher/templates/production/docker-compose.yml": {
+      "sha256": "e1fad29b03258e2bd34778d536d781306251bc927712bcd617228b4efe1212ff",
+      "size": 7609
+    },
+    "cli/cmd/launcher/templates/production/env.production.example": {
+      "sha256": "c363153bd6864a9ac22781fddfaa43a57259ffd868e2b41aae66f6f32158116d",
+      "size": 7219
+    },
+    "cli/cmd/launcher/templates/production/nginx.conf": {
+      "sha256": "2620dac58b1c4b7ed6d5ad035a840f3e179142c7ede4d53037b0d5c4c38d1043",
+      "size": 2732
+    },
+    "cli/go.mod": {
+      "sha256": "b424cc4ce08130d52788bda84a843b32801676069e7aadea6b8d571bc8f110b2",
+      "size": 48
+    },
+    "deploy/production/docker-compose.yml": {
+      "sha256": "e1fad29b03258e2bd34778d536d781306251bc927712bcd617228b4efe1212ff",
+      "size": 7609
+    },
+    "deploy/production/env.production.example": {
+      "sha256": "c363153bd6864a9ac22781fddfaa43a57259ffd868e2b41aae66f6f32158116d",
+      "size": 7219
+    },
+    "deploy/production/nginx.conf": {
+      "sha256": "2620dac58b1c4b7ed6d5ad035a840f3e179142c7ede4d53037b0d5c4c38d1043",
+      "size": 2732
+    },
+    "examples/extensions/backend-health/backend/go.mod": {
+      "sha256": "c435ecac25e134fc2aeec381b9c10ec2484bf79cd075936b078e4ec64972b8ac",
+      "size": 115
+    },
+    "examples/extensions/cli-status/cli/go.mod": {
+      "sha256": "37c2a896a493fcf28495cbc17db216ee6cca665d73acdc0fddb300ea9bcd2e00",
+      "size": 107
+    },
+    "installer/go.mod": {
+      "sha256": "ac8364b092ffef92d51dd3b7594b0e8c431094acd3d7548b8edf3c2f2167fa51",
+      "size": 56
+    },
+    "plugins/bridge-common/build.gradle.kts": {
+      "sha256": "c4b0a587a5da66c746105861058e5806b47dae8c7fee160761050b6f77fbba3c",
+      "size": 889
+    },
+    "plugins/bukkit-bridge/build.gradle.kts": {
+      "sha256": "cf8c08ef76478a8d16775c9f318870112475ea17040b6112d4681f58c667a519",
+      "size": 887
+    },
+    "plugins/bukkit-family-common/build.gradle.kts": {
+      "sha256": "1a2d0a1b6d6e04c51977ce58b14cc6aeab1ad0126ef1fa6c4b61bf113b804db0",
+      "size": 278
+    },
+    "plugins/bungee-family-common/build.gradle.kts": {
+      "sha256": "25698f88fa5b1a7322a111f858a4084a74a6bf66e5f7e2be41a2dd2959dad344",
+      "size": 283
+    },
+    "plugins/bungeecord-bridge/build.gradle.kts": {
+      "sha256": "db9989f885fb255c2a9273b3bc5de9c22b3250739f7787b274c6926b86766664",
+      "size": 804
+    },
+    "plugins/fabric-bridge/build.gradle.kts": {
+      "sha256": "431a73307346f82c2c71ed0cfe3f1f1b8a3132f1c3b6e8baacd5a6235750ec12",
+      "size": 956
+    },
+    "plugins/folia-bridge/build.gradle.kts": {
+      "sha256": "8bbe2c7729af75693d082ceed28284aa88509cc8619611f2a01c2957f8cd7e14",
+      "size": 886
+    },
+    "plugins/forge-bridge/build.gradle.kts": {
+      "sha256": "1a88444343a2902c02180c7ae2a6449cb3187d9020e4b7562fd3460553fa0490",
+      "size": 1408
+    },
+    "plugins/modloader-family-common/build.gradle.kts": {
+      "sha256": "ed9afa17d1fbe21142e9b616524292280bd3f8e933332a4d01f109e01e17fd5a",
+      "size": 260
+    },
+    "plugins/neoforge-bridge/build.gradle.kts": {
+      "sha256": "9dc80ec0f5179b9e71e4fcde92e814f13798d92efb54cd824409cfafc69e33a6",
+      "size": 1326
+    },
+    "plugins/paper-bridge/build.gradle.kts": {
+      "sha256": "accf22919fde8a70d8b5ccc524feccaecc6e74a18d7832990e23274174916488",
+      "size": 886
+    },
+    "plugins/proxy-family-common/build.gradle.kts": {
+      "sha256": "1036ecc0b534da5419b994d7a69e8eca26dde7c6fc0799e849f41c452c62fc27",
+      "size": 214
+    },
+    "plugins/purpur-bridge/build.gradle.kts": {
+      "sha256": "be94bcdd273a77f35934fe8df491124eceabcb1d3a40a04c34f9e7b09a6b0c54",
+      "size": 887
+    },
+    "plugins/quilt-bridge/build.gradle.kts": {
+      "sha256": "c6e9208667fcb61c65a1393339a94068e21a20c341df159eff22869e53936b77",
+      "size": 1802
+    },
+    "plugins/spigot-bridge/build.gradle.kts": {
+      "sha256": "f34399163400dc60f341a000fae6eef60072f54a0e3f0fbfdc5c5ec8f7de9fca",
+      "size": 887
+    },
+    "plugins/sponge-bridge/build.gradle.kts": {
+      "sha256": "6f36e8f00010e5d4689bb48914181c979c59c04ad2c7513949a9f80e8187c38f",
+      "size": 1132
+    },
+    "plugins/vanilla-bridge/build.gradle.kts": {
+      "sha256": "2fa3fafc0b1608ed3cf700d3cf5d93658391ce6eeda5681b2d1dc59933988752",
+      "size": 1072
+    },
+    "plugins/velocity-bridge/build.gradle.kts": {
+      "sha256": "692a0c077c69b36f6c0a03c72a946f085577539a505227dd8dced110b98225b7",
+      "size": 852
+    },
+    "plugins/waterfall-bridge/build.gradle.kts": {
+      "sha256": "2f70badc68d8b2269116a47ff69d090fe08b0699599cd328891fcdf8db0ed8c0",
+      "size": 803
+    },
+    "prestarter/go.mod": {
+      "sha256": "8e295fbb8c4382ceac845542e4c4c91663049af2b5ae90d5c41bd239e4f225b2",
+      "size": 61
+    },
+    "reproducibility/primary-payload-0.47.0.json": {
+      "sha256": "f1573de4965a39b9e792010966e602cd73b5fea9178de2e0e4098b1b8367e109",
+      "size": 612
+    },
+    "runtime/guard-debug-probe/Cargo.toml": {
+      "sha256": "66de164152d9a0ce4563f7ea0a38640b83c00a273c43c1f7fc2965af9c3e9441",
+      "size": 451
+    },
+    "runtime/guard-jvm-probe/Cargo.toml": {
+      "sha256": "fa2547a82478bd14257f6a82488b73607e63af1aeae7380e0a7b23d389198bbc",
+      "size": 412
+    },
+    "runtime/guard-memory-probe/Cargo.toml": {
+      "sha256": "4628634b2d868b5b361a6231c69bf0420746ccdca9e5d0df184a1ea55afe5ffe",
+      "size": 414
+    },
+    "runtime/guard-sensor/Cargo.toml": {
+      "sha256": "44caf26d74a4bfa2baa59b817178042c88719dc65b278c92e9fa071cdb161cd1",
+      "size": 423
+    },
+    "runtime/guard-thread-probe/Cargo.toml": {
+      "sha256": "da0f50762df55e698f06746456753577bf551f24985dec5d3644ce5f8b71dc24",
+      "size": 414
+    },
+    "runtime/runtime/Cargo.toml": {
+      "sha256": "8de41fb55365b5fba73904fd423f384d064854d4d645126539e8ac0faf14a8bc",
+      "size": 1326
+    },
+    "schemas/openapi.yaml": {
+      "sha256": "65cd6516c3ade84a9d1627dc22397918c4a9968bef081ce5c13ed54d37b41aa7",
+      "size": 673216
+    },
+    "scripts/build/bridge-plugins.sh": {
+      "sha256": "450cf672e288a2b2d3627362c0832c51995e8e84d5faff98812ffb26eb313023",
+      "size": 13778
+    },
+    "scripts/ci/required_jobs_0363.py": {
+      "sha256": "4c8943d20d30df888bffc4bb05a529e62551ae26f20ee41f806ae17cbf7ab534",
+      "size": 6619
+    },
+    "scripts/operations/operations_ga_0460.py": {
+      "sha256": "d24d06d51232f0a322ddebe86918b89ecea368ad6207ad772cdbf5cd71d03851",
+      "size": 13782
+    },
+    "scripts/release/build-linux-production.sh": {
+      "sha256": "926ab2f1f8285d4c383eb7c214770c2fff9a31eb99f74e9d49260c4b7cbccacf",
+      "size": 4123
+    },
+    "scripts/release/build-macos-production.sh": {
+      "sha256": "de7af08db8274847a5e612458b4a60d4067aa1e0916f185d75775dc150ec37f4",
+      "size": 12629
+    },
+    "scripts/release/build-release.sh": {
+      "sha256": "50678213d3caa66a94e3127d007c8159d8b39af094d537574df377e4a79b4bb3",
+      "size": 53061
+    },
+    "scripts/release/build-windows-desktop.ps1": {
+      "sha256": "3f0f6943b914a311a89f8b09c10a3c135360d163be09a1fac89d72ce7002237c",
+      "size": 31700
+    },
+    "scripts/release/canonical_zip_0461.py": {
+      "sha256": "3782baa652b0892d1398498015e30160f5433619495279c20ecdf49ae4ca99a5",
+      "size": 3676
+    },
+    "scripts/release/check_go_repro_0470.py": {
+      "sha256": "85bbb529f6a87c3062979167ec70a8036da96474e4a0dc4151763ac637045b7b",
+      "size": 1794
+    },
+    "scripts/release/check_payload_0461.py": {
+      "sha256": "da499459d476259f7f13fa677412efeae41bb42547908fd8792acfd03bab85c8",
+      "size": 3622
+    },
+    "scripts/release/delivery_verify_0462.py": {
+      "sha256": "0b31b48f186f02ac903a2471cb45c1d5c3d0ffaad663e7e34bc0bc9bc2981255",
+      "size": 11843
+    },
+    "scripts/release/inputs_guard_0461.py": {
+      "sha256": "bc0a58eefad3959e7070120af3ec1fc802da214b54743bd7f8ff3fd8940ee9c7",
+      "size": 5826
+    },
+    "scripts/release/native_verify_0470.py": {
+      "sha256": "7ab9150448d35b6681b19ed0216e04ab204118c69e204450fe48ffcf8729210c",
+      "size": 8320
+    },
+    "scripts/release/publish_0370.py": {
+      "sha256": "8c70c1b4c14bb7957176db063bd4622177d3da9a97625597ca9aaa98882b1eb6",
+      "size": 24685
+    },
+    "scripts/release/reproducible_0470.py": {
+      "sha256": "5b032b0f9a75899d5ac0a54bd65cd20a379a56c768f7e8472b8b2970a1068317",
+      "size": 20461
+    },
+    "scripts/release/source-package.py": {
+      "sha256": "8eb89af3a6f885396b14c24db00fed66ccf0824c6d0c40b0df0190f3598319f4",
+      "size": 5135
+    },
+    "scripts/release/staged_accept_0462.py": {
+      "sha256": "8c3334d88397e31509b78c7960675dd5897b9480f6dc95ed4613258145a913bf",
+      "size": 6282
+    },
+    "scripts/release/test_gate_retention_0463.py": {
+      "sha256": "acefb594f96020fddaeaf3614ce07b1477e543761f66c0d6635c70ca1489f64d",
+      "size": 1110
+    },
+    "scripts/release/test_native_verify_0470.py": {
+      "sha256": "6c7393e68845686c76d58f3d44099219f4027aaea89d70c539594c6cadb87149",
+      "size": 1373
+    },
+    "scripts/release/test_reproducible_0470.py": {
+      "sha256": "347fca94bbfc5f8aa87e986e80633fce00c6a86042f0120ffef5aa18ccae1804",
+      "size": 8741
+    },
+    "scripts/release/test_unsigned_package_0470.py": {
+      "sha256": "251630f52b8e9d18e11a657af5df9c96ac49e53965d6c2d76428d82ffce3e509",
+      "size": 2520
+    },
+    "scripts/release/unsigned_package_0470.py": {
+      "sha256": "24e81a9212b7df73d56ccab8be06c224229ecdafe6fb7414b1734ddf117f1a9e",
+      "size": 5534
+    },
+    "scripts/release/zip-dir.py": {
+      "sha256": "b23390e27121ab326d7a3925aeb0bafef0586508f7e7f691c69db116636427f3",
+      "size": 900
+    },
+    "scripts/smoke/offline/device-trust-e2e-matrix-0129.py": {
+      "sha256": "bf1fa8b8e61b0c7d3d63cee2db0a837b422cfd26b1f95e222b970ade2bca6f27",
+      "size": 8741
+    },
+    "scripts/smoke/offline/guard-windows-adversarial-ci-01811.py": {
+      "sha256": "5a1badbff0a6f7ec4206c87b46c44ba27cc956711bb83f2eb65ea3f8d48d1ec2",
+      "size": 5547
+    },
+    "scripts/smoke/offline/notarized-macos-x64-arm64-0154.py": {
+      "sha256": "2cc1c28adbfe679bd05dbc5f8e0791bd8e096107493f36865339b9a048f9c3ea",
+      "size": 7603
+    },
+    "scripts/smoke/offline/repository-policy.py": {
+      "sha256": "51e43d03067603d7cf1260b7bf70bacc6b1a46c2c11636dfb89754011be9da5b",
+      "size": 269288
+    },
+    "scripts/smoke/offline/serverbridge-forge-neoforge-0147.py": {
+      "sha256": "d852a6d712bcb766b0a091a1720f37e9ec2f779a3f642f67a18cc1b5ecf2297a",
+      "size": 10481
+    },
+    "scripts/smoke/offline/session-device-risk-0126.py": {
+      "sha256": "8c95c79e599aa0e3ef8913094ac744b4763c0f5d35f54a7fb56f15323f5dad93",
+      "size": 4739
+    },
+    "scripts/version/manage.py": {
+      "sha256": "cc2421b39fd75b8a7497a6262ca54b07fafc2421e2cb97a20ad35a6fc1951433",
+      "size": 6969
+    },
+    "sdk/admin/typescript/package.json": {
+      "sha256": "65e5130808b6926456fe3f56b5ca655144acce978da2fc44a3e631515f47df75",
+      "size": 490
+    },
+    "sdk/api/go/client.go": {
+      "sha256": "434454c3ef197b2c91448189db7580fd69b144f17373eaf731453f0a0840473b",
+      "size": 12831
+    },
+    "sdk/api/go/go.mod": {
+      "sha256": "35f5c2019c305ddb486c0fb61c71479869c147a4447280a7ec3f0cbf0fe7ca92",
+      "size": 55
+    },
+    "sdk/api/go/stream_0463_test.go": {
+      "sha256": "a49dd1721f0ecc0890c8cd8614f6cb6e5e1f973b3d2f6bc7e175192ef1d58b0c",
+      "size": 4193
+    },
+    "sdk/api/typescript/client.ts": {
+      "sha256": "76e2b64688f8b07d37d4de933d2c57e9cba88ca6871328dd962f61a87b328f5e",
+      "size": 8145
+    },
+    "sdk/api/typescript/package.json": {
+      "sha256": "6fb97a64c206af2b2dfb747eb1d5bd004581e73257de8a547f0e01d4e53f4666",
+      "size": 414
+    },
+    "sdk/backend/go/go.mod": {
+      "sha256": "3d150e4bcc9479a1738a3cebb97b535719d22948beac8a7625a5de2853581eec",
+      "size": 59
+    },
+    "sdk/cli/go/go.mod": {
+      "sha256": "71ddf3103a1b619f5df351428bb9a281297125d6c2e7f56b59ec98759a19699e",
+      "size": 55
+    },
+    "sdk/desktop/rust/Cargo.toml": {
+      "sha256": "ca55499c021b5bf597f21f2cfaf6f799e2aee421ca3030ed0870c7b5c2e978d5",
+      "size": 184
+    },
+    "sdk/desktop/typescript/package.json": {
+      "sha256": "6bab157a76009748aa0900c2e38bf4ccb573af4e9834404706a40b4cd566312d",
+      "size": 496
+    },
+    "services/api/go.mod": {
+      "sha256": "5fbf3ffad9ea314d52acd4d02452e54f207f91fcd016fba058e25d2aed8fb9d4",
+      "size": 1535
+    },
+    "services/api/go.sum": {
+      "sha256": "8defcb38b9bf27c4f0acc1a09a104123fc2ede5d7c1245bd878810d46e087d88",
+      "size": 5519
+    },
+    "settings.gradle.kts": {
+      "sha256": "98aaca12745e6cfa6ad610c3f409ccd2eaa73e0e90ba9f6098b03d25b4243120",
+      "size": 1531
+    },
+    "tools/migration-ga/go.mod": {
+      "sha256": "9ae640a04bc416ecc7805daf8d4ba1ad93837102a9b0351ecacae7b4fd132573",
+      "size": 65
+    }
+  },
+  "release": "0.47.0",
+  "schema": "neverlauncher.input-baseline.v1"
+}
