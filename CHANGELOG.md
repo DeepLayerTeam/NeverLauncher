@@ -1,3 +1,11 @@
+## 0.47.3 — SQLite Core to live SQLRepository import (source candidate; GA validation pending)
+
+- Extend `sqlitepg` with an explicit offline `sqlite-to-postgres-live` command that materializes verified SQLite Core 327 rows in **actual** SQLRepository PostgreSQL tables, not just the 03211 staging schema. The existing immutable staging import remains available and unchanged.
+- Map projects, profile history/digests, channels, signed release manifests, channel heads, source role permissions, users/password hashes with canonical local login identities, project role bindings and complete audit fields. Rebuild file metadata and ordered mirrors from signed manifests; keep external file bytes outside the scope of this milestone.
+- Enforce a pristine, fully migrated PostgreSQL destination, preserve original SQLite backup, verify staging row SHA-256 and counts, reject unsupported nonempty durable/auth/bridge/extension tables, enforce auth epoch safety, and atomically reconcile foreign keys and write an import receipt. No silent partial import or implicit cutover.
+- Store `files.mirrors` as JSONB in the new forward-only migration 0115, and use it in SQLRepository AddFile/ListFiles. Historical SQL migration files are unchanged. Add isolated actual-PostgreSQL migration/read-back regression and focused conversion tests.
+- **Validation:** Go 1.27.3 and PostgreSQL service are unavailable in the current environment; no successful live migration or full CI is claimed. `readyForBackendCutover` remains false until 0.47.4/0.47.5 service-state and storage migration is performed and independently verified.
+
 ## 0.47.2 — Verified SQLite legacy schema upgrades (source candidate, GA validation pending)
 
 - Core 322–326 → 327: validate known predecessor tables, critical column types and persisted project/profile/auth associations before changing any data. Reconcile already-present 327 profile columns without duplicate ALTER, execute SQL changes and final record validation atomically. Existing historical SQL migrations remain unchanged. Correct the historical `minecraft_sessions` index/table namespace collision at DDL execution time without rewriting the old SQL migration.

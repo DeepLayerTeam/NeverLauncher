@@ -403,7 +403,7 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text, ownership FROM files WHERE project_id = $1`
+	query := `SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text, ownership, mirrors::text FROM files WHERE project_id = $1`
 	args := []any{projectID}
 	if versionID != "" {
 		query += ` AND version_id = $2`
@@ -418,12 +418,15 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 	var result []model.FileObject
 	for rows.Next() {
 		var item model.FileObject
-		var targetOSRaw string
-		if err := rows.Scan(&item.ID, &item.ProjectID, &item.VersionID, &item.Path, &item.Size, &item.SHA256, &item.URL, &item.Required, &item.Executable, &targetOSRaw, &item.Ownership); err != nil {
+		var targetOSRaw, mirrorsRaw string
+		if err := rows.Scan(&item.ID, &item.ProjectID, &item.VersionID, &item.Path, &item.Size, &item.SHA256, &item.URL, &item.Required, &item.Executable, &targetOSRaw, &item.Ownership, &mirrorsRaw); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(targetOSRaw), &item.TargetOS); err != nil {
 			return nil, fmt.Errorf("files.target_os повреждён для %s: %w", item.Path, err)
+		}
+		if err := json.Unmarshal([]byte(mirrorsRaw), &item.Mirrors); err != nil {
+			return nil, fmt.Errorf("files.mirrors повреждён для %s: %w", item.Path, err)
 		}
 		result = append(result, item)
 	}
@@ -1328,9 +1331,17 @@ func (r *SQLRepository) AddFile(file model.FileObject) (model.FileObject, error)
 	if err != nil {
 		return model.FileObject{}, err
 	}
-	if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os, ownership)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)
-ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED.sha256, url=EXCLUDED.url, required=EXCLUDED.required, executable=EXCLUDED.executable, target_os=EXCLUDED.target_os, ownership=EXCLUDED.ownership`, file.ID, file.ProjectID, file.VersionID, file.Path, file.Size, file.SHA256, file.URL, file.Required, file.Executable, string(targetOSRaw), file.Ownership); err != nil {
+	mirrorList := file.Mirrors
+	if mirrorList == nil {
+		mirrorList = []string{}
+	}
+	mirrorsRaw, err := json.Marshal(mirrorList)
+	if err != nil {
+		return model.FileObject{}, err
+	}
+	if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os, ownership, mirrors)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::text::jsonb,$11,$12::text::jsonb)
+ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED.sha256, url=EXCLUDED.url, required=EXCLUDED.required, executable=EXCLUDED.executable, target_os=EXCLUDED.target_os, ownership=EXCLUDED.ownership, mirrors=EXCLUDED.mirrors`, file.ID, file.ProjectID, file.VersionID, file.Path, file.Size, file.SHA256, file.URL, file.Required, file.Executable, string(targetOSRaw), file.Ownership, string(mirrorsRaw)); err != nil {
 		return model.FileObject{}, err
 	}
 	var manifest model.Manifest

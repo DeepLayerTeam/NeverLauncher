@@ -47,3 +47,12 @@ The `launcher_sqlite_import_03211` schema includes immutable row mirrors and the
 - Import/export is **not** a conflict merge, active-session migration, credential reissuance, filesystem snapshot without stopping writers, HA migration or a PostgreSQL production backend switch.
 - A true live SQLite → PostgreSQL → SQLite backend cutover still requires mapping and verifying every active HTTP Repository and runtime store, a service maintenance window, fencing, dual-mode application acceptance, and reverse failover tests. Do not claim this production gate passed based solely on the offline transfer.
 - Required CI runs actual PostgreSQL and modernc SQLite integration tests, including import/reverse export, hash parity, immutable-table enforcement, missing/duplicate target rejection, and reconstruction of both SQLite databases plus binary files. The checked-in tests require the repository's Go toolchain and an isolated PostgreSQL fixture.
+
+## New in 0.47.3: live SQLRepository data import
+
+The existing `sqlite-to-postgres --ack-staging-only` command documented above
+remains an **immutable quarantine** transfer. For the separate, explicit offline
+SQLite Core → **live PostgreSQL Repository** conversion, see
+[`sqlite-postgres-live-0473.md`](sqlite-postgres-live-0473.md). It requires a
+pristine, fully migrated PostgreSQL schema, rejects unsupported active security
+and durable state, and is **not** an automatic Backend cutover.
