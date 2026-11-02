@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "2.0",
+  "id": "org.example.java-developer",
+  "name": "Java Developer SDK 0.48.12 Example",
+  "version": "0.48.12",
+  "publisher": "NeverLauncher Examples",
+  "api": "1.0",
+  "targets": [
+    {
+      "kind": "backend",
+      "entrypoint": "backend/workspace.jar"
+    },
+    {
+      "kind": "admin",
+      "entrypoint": "admin/index.html"
+    },
+    {
+      "kind": "desktop",
+      "entrypoint": "desktop/index.html"
+    },
+    {
+      "kind": "cli",
+      "entrypoint": "cli/workspace.jar"
+    }
+  ],
+  "permissions": [
+    "ui:contribute",
+    "desktop:contribute",
+    "cli:contribute",
+    "storage:read",
+    "storage:write"
+  ],
+  "admin": {
+    "pages": [
+      {
+        "id": "main",
+        "title": "Java controls"
+      }
+    ],
+    "navigation": [
+      {
+        "id": "main-nav",
+        "label": "Java controls",
+        "pageId": "main"
+      }
+    ],
+    "actions": [
+      {
+        "id": "refresh",
+        "label": "Refresh via Java",
+        "pageId": "main",
+        "placement": "toolbar"
+      }
+    ]
+  },
+  "desktop": {
+    "pages": [
+      {
+        "id": "main",
+        "title": "Java controls"
+      }
+    ],
+    "navigation": [
+      {
+        "id": "main-nav",
+        "label": "Java controls",
+        "pageId": "main"
+      }
+    ],
+    "actions": [
+      {
+        "id": "refresh",
+        "label": "Refresh via Java",
+        "pageId": "main",
+        "placement": "toolbar"
+      }
+    ]
+  },
+  "cli": {
+    "namespace": "java-developer",
+    "commands": [
+      {
+        "name": "status",
+        "description": "Read the Java extension runtime state"
+      }
+    ]
+  }
+}

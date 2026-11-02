@@ -1,3 +1,11 @@
+## 0.48.12 — Java Developer Experience & independent SDK consumer (source release; GA pending)
+
+- Publish reproducible local Maven artifacts for the Java SDK Core, Gravit compatibility adapter and 452-operation Java HTTP API client: actual Java 17 binary/source/Javadoc JARs, dependency-aware Maven POMs, SHA-256 and SHA-512 checksums. Ship the built offline Maven repository with the source distribution.
+- Provide Maven and Gradle examples consuming those binary artifacts rather than internal `build/classes`. Supply an executable developer-extension package assembler using the public SDK and existing signed-package layout.
+- Verify SDK distribution through real `java -jar` lifecycle, authenticated Host HTTP callbacks, Admin/Desktop actions, persisted/validated settings, independent CLI invocation, failed authorization and shutdown. Add adversarial artifact integrity tests and a deterministic two-staging-repository hash comparison.
+- Add Java 17/21 × Linux/Windows/macOS CI test jobs with Maven/Gradle compilation and independent evidence. Fix Java HTTP SDK script classpath portability for Windows. Document exact compatibility evidence and release blockers.
+- **Source release, not production GA:** local OpenJDK 21 checks completed; external JDK 17/Windows/macOS CI, real installed signature/RBAC tests, Go 1.27.3 integration, native OS sandbox certification, PostgreSQL cutover and Minecraft E2E have not been independently accepted. Existing release gates remain closed.
+
 ## 0.48.11 — Security & Isolation Hardening (working source, OS acceptance pending)
 
 - Bound Java JVM heap (40%), metaspace (20%), direct memory (10%) and code cache (10%) independently of the existing process-tree RSS / process count supervisor. Require at least 256 MiB for a JVM target. Disable HotSpot attach and crash core dumps. This is defense in depth, **not an OS sandbox**.

@@ -22,6 +22,7 @@ GROUP = "ru.launcher"
 MODULES = {
     "launcher-java-sdk-core": "sdk/java/core",
     "launcher-gravit-compat": "sdk/java/gravit-compat",
+    "neverlauncher-api-sdk": "sdk/java/http-client",
 }
 VERSION = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
 EPOCH = (1980, 1, 1, 0, 0, 0)
@@ -92,7 +93,7 @@ def pom(name: str, version: str) -> bytes:
     ET.SubElement(
         license, "url"
     ).text = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-    if name == "launcher-gravit-compat":
+    if name in ("launcher-gravit-compat", "neverlauncher-api-sdk"):
         deps = ET.SubElement(project, "dependencies")
         dep = ET.SubElement(deps, "dependency")
         for tag, val in [
@@ -160,7 +161,7 @@ def publish(output: Path, *, build: bool = True) -> dict[str, Path]:
                 "-d",
                 str(docs),
             ]
-            if name == "launcher-gravit-compat":
+            if name in ("launcher-gravit-compat", "neverlauncher-api-sdk"):
                 core = (
                     staging
                     / "maven"
@@ -194,15 +195,17 @@ def publish(output: Path, *, build: bool = True) -> dict[str, Path]:
         smoke = staging / "Consumer.java"
         smoke.write_text("""import ru.launcher.sdk.core.SemVer;
 import pro.gravit.utils.Version;
+import ru.neverlauncher.api.NeverLauncherAPI;
 public final class Consumer {
   public static void main(String[] args) {
-    if (!SemVer.parse("0.31.0").matches("^0.31.0")) throw new AssertionError("SemVer");
+    if (!SemVer.parse("{version}").matches("^{version}")) throw new AssertionError("SemVer");
     if (!new Version(1, 2, 3, Version.Type.RELEASE).getVersionString().equals("1.2.3.0"))
       throw new AssertionError("adapter API");
+    if (!NeverLauncherAPI.CONTRACT_VERSION.equals("1.0.0")) throw new AssertionError("HTTP API");
     System.out.println("Launcher Java public SDK consumer OK");
   }
 }
-""")
+""".replace("{version}", version))
         jars = [
             str(
                 staging

@@ -1,0 +1,90 @@
+name: Java Developer Experience 0.48.12 — real external SDK consumers
+on:
+  push:
+    paths:
+      - 'sdk/java/**'
+      - 'scripts/ga/java_sdk_ga_0310.py'
+      - 'scripts/java/*04812.py'
+      - 'examples/extensions/java-developer-04812/**'
+      - 'examples/extensions/java-ui/test-runner.py'
+      - 'dist/java-sdk/**'
+      - 'VERSION'
+      - '.github/workflows/java-developer-experience-04812.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/**'
+      - 'scripts/ga/java_sdk_ga_0310.py'
+      - 'scripts/java/*04812.py'
+      - 'examples/extensions/java-developer-04812/**'
+      - 'examples/extensions/java-ui/test-runner.py'
+      - 'dist/java-sdk/**'
+      - '.github/workflows/java-developer-experience-04812.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  external-consumer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2022]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+      - name: Build and test Java SDK directly from sources
+        shell: bash
+        run: |
+          sh sdk/java/core/build.sh test
+          sh sdk/java/gravit-compat/build.sh test
+          sh sdk/java/http-client/build.sh test
+      - name: Rebuild Maven artifacts from compiled SDK and exercise public ABI
+        shell: bash
+        run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output "$RUNNER_TEMP/sdk-04812"
+      - name: Verify external consumer and live JVM Host callbacks
+        shell: bash
+        run: |
+          python3 scripts/java/test_developer_e2e_04812.py
+          python3 scripts/java/developer_e2e_04812.py --sdk-repo "$RUNNER_TEMP/sdk-04812/maven" --report java-developer-evidence.json
+      - name: Compile same public SDK consumer using Maven
+        shell: bash
+        run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml package
+      - name: Compile same public SDK consumer using Gradle
+        shell: bash
+        run: gradle --no-daemon -p examples/extensions/java-developer-04812 classes
+      - name: Cross-platform SDK version validation
+        shell: bash
+        run: python3 scripts/version/manage.py check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: java-developer-evidence-${{ matrix.os }}-${{ matrix.java }}
+          path: java-developer-evidence.json
+          if-no-files-found: warn
+  publication-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: sh sdk/java/core/build.sh && sh sdk/java/gravit-compat/build.sh && sh sdk/java/http-client/build.sh
+      - name: Two independent staging directories produce identical published SDK bytes
+        shell: bash
+        run: |
+          python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output sdk-staging-a
+          python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output sdk-staging-b
+          python3 scripts/java/compare_sdk_repos_04812.py sdk-staging-a/maven sdk-staging-b/maven

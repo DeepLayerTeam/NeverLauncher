@@ -3,6 +3,7 @@
 import http.server
 import json
 import os
+import sys
 from pathlib import Path
 import signal
 import subprocess
@@ -14,6 +15,8 @@ import urllib.request
 ROOT=Path(__file__).resolve().parent
 TOKEN="java-ui-host-test"
 CALLBACK_TOKEN="java-ui-callback-test"
+MANIFEST=Path(sys.argv[2]).resolve() if len(sys.argv)>=3 else ROOT/"launcher-extension.json"
+EXPECTED=json.loads(MANIFEST.read_text())
 class Host(http.server.BaseHTTPRequestHandler):
     callback=None
     ready=0
@@ -26,12 +29,12 @@ class Host(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.headers.get("Authorization")!="Bearer "+TOKEN:return self.send(401,{"error":"forbidden"})
         if self.path!="/v1/manifest":return self.send(404,{"error":"not found"})
-        return self.send(200,json.loads((ROOT/"launcher-extension.json").read_text()))
+        return self.send(200,EXPECTED)
     def do_POST(self):
         if self.headers.get("Authorization")!="Bearer "+TOKEN:return self.send(401,{"error":"forbidden"})
         data=json.loads(self.rfile.read(int(self.headers.get("Content-Length",0))))
         if self.path=="/v1/hello":
-            assert data["extensionId"]=="org.example.java-ui"
+            assert data["extensionId"]==EXPECTED["id"]
             Host.callback=data.get("callbackUrl")
             return self.send(200,{"protocolVersion":"1.0","extensionApiVersion":"1.0","instanceId":"java-ui-1","heartbeatTimeoutSeconds":9,
                 "capabilities":["runtime.config.get","runtime.config.put"],"events":[]})
@@ -59,14 +62,14 @@ def env(server,target):
     data=os.environ.copy();data.update({"LAUNCHER_EXTENSION_HOST_URL":"http://127.0.0.1:"+str(server.server_port),
         "LAUNCHER_EXTENSION_HOST_TOKEN":TOKEN,"LAUNCHER_EXTENSION_CALLBACK_TOKEN":CALLBACK_TOKEN,
         "LAUNCHER_EXTENSION_HOST_PROTOCOL":"1.0","LAUNCHER_EXTENSION_API_VERSION":"1.0",
-        "LAUNCHER_EXTENSION_INSTANCE_ID":"java-ui-1","LAUNCHER_EXTENSION_ID":"org.example.java-ui",
-        "LAUNCHER_EXTENSION_VERSION":"0.1.0","LAUNCHER_EXTENSION_TARGET":target})
+        "LAUNCHER_EXTENSION_INSTANCE_ID":"java-ui-1","LAUNCHER_EXTENSION_ID":EXPECTED["id"],
+        "LAUNCHER_EXTENSION_VERSION":EXPECTED["version"],"LAUNCHER_EXTENSION_TARGET":target})
     return data
 
 if __name__=="__main__":
     server=http.server.ThreadingHTTPServer(("127.0.0.1",0),Host)
     threading.Thread(target=server.serve_forever,daemon=True).start()
-    jar=ROOT/"build/package/backend/workspace.jar"
+    jar=Path(sys.argv[1]).resolve() if len(sys.argv)>=2 else ROOT/"build/package/backend/workspace.jar"
     assert jar.is_file(),"run build.sh first"
     proc=subprocess.Popen(["java","-jar",str(jar)],env=env(server,"backend"),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
@@ -92,7 +95,7 @@ if __name__=="__main__":
         assert status==200 and body["result"]["state"]=="RUNNING"
         cli=subprocess.run(["java","-jar",str(jar),"status"],env=env(server,"cli"),capture_output=True,text=True,timeout=15)
         assert cli.returncode==0,(cli.stderr,cli.stdout)
-        assert json.loads(cli.stdout)["extension"]=="org.example.java-ui",cli.stdout
+        assert json.loads(cli.stdout)["extension"]==EXPECTED["id"],cli.stdout
         print("PASS: real Java JAR, Admin/Desktop callbacks, settings via Host broker, CLI, denied actions and auth")
     finally:
         if proc.poll() is None:proc.send_signal(signal.SIGTERM)
