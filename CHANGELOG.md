@@ -1,3 +1,11 @@
+## 0.48.8 — ServerBridge Java Integration (source changes; independent GA pending)
+
+- Connect typed Java ServerBridge services to the existing authenticated Go Host broker and PostgreSQL v3 store: project-scoped node listings, status, pending-ticket advisory checks and durable command enqueue/status.
+- Permit only a closed set of game-control operations; enforce signed adapter capabilities, active runtime/epoch, verified integrity, fresh heartbeat, project scope and independent `serverbridge:read` plus game-domain permissions. Forbid console/shutdown/host commands through Java.
+- Reuse the ServerBridge command store's persistent idempotency, request digests, audit, runtime fencing, lease/ACK and result states. An enqueue result is not proof of execution; never issue join-ticket credentials or bypass official Minecraft authentication.
+- Preserve the source project ID when publishing the existing `serverbridge.event.received` event to fix project-scoped subscription delivery; expose it through the durable Java RuntimeEvents listener; at-least-once semantics and post-callback live permission enforcement remain in Go EventBus.
+- Add Java authenticated HTTP regressions, Go broker tests, adapter/payload/response-redaction tests, JDK 17/21 workflow and documentation. Local Java 21 suite passes; full Go 1.27.3, signed-package, PostgreSQL and real Minecraft adapter E2E acceptance remain unverified. Existing release gates remain intact.
+
 ## 0.48.7 — Advanced Java Events & Hooks (source changes; GA pending)
 
 - Extend the running Java RuntimeEvents with typed metadata, event-triggered async jobs and explicit fail-closed `HookDecision` handlers, preserving existing listeners and Host Protocol 1.0. Persistent retries and DLQ still use the established Go EventBus, not a shadow in-memory task queue.

@@ -1623,7 +1623,8 @@ func (s *Supervisor) allowedCapabilities(st *processState) []string {
 		{"storage:read", "runtime.config.get"}, {"storage:write", "runtime.config.put"}, {"storage:write", "runtime.config.delete"}, {"storage:read", "runtime.storage.get"}, {"storage:write", "runtime.storage.put"}, {"storage:write", "runtime.storage.delete"},
 		{"project:read", "project.get"}, {"project:read", "project.list"}, {"project:read", "profile.list"}, {"project:read", "profile.get"},
 		{"release:read", "channel.list"}, {"release:read", "channel.get"}, {"release:read", "release.list"}, {"release:read", "release.get"}, {"release:read", "release.page"},
-		{"project:read", "job.get"}, {"storage:read", "storage.read"},
+		{"project:read", "job.get"}, {"serverbridge:read", "bridge.servers"}, {"serverbridge:read", "bridge.server"}, {"serverbridge:read", "bridge.access.ticket"},
+		{"serverbridge:read", "bridge.command.get"}, {"storage:read", "storage.read"},
 		{"telemetry:write", "telemetry.emit"}, {"http:outbound", "http.fetch"}, {"secrets:read", "secret.get"},
 		{"storage:read", "fs.read"}, {"storage:write", "fs.write"},
 	}
@@ -1652,6 +1653,16 @@ func (s *Supervisor) allowedCapabilities(st *processState) []string {
 			caps = append(caps, item.capability)
 		}
 	}
+	// The command capability is negotiated when any allowed game-domain grant
+	// exists. Per-command authorization is still mandatory on every request.
+	if ok, err := s.permissionAllowed0207(context.Background(), st, "serverbridge:read", projectID); err == nil && ok {
+		for _, permission := range []string{"gameserver:broadcast", "gameserver:moderate", "gameserver:save", "gameserver:traffic"} {
+			if granted, e := s.permissionAllowed0207(context.Background(), st, permission, projectID); e == nil && granted {
+				caps = append(caps, "bridge.command.create")
+				break
+			}
+		}
+	}
 	sort.Strings(caps)
 	return caps
 }
@@ -1667,22 +1678,29 @@ func (s *Supervisor) requirePermission(st *processState, p string) bool {
 }
 
 type capabilityRequest struct {
-	ProjectID  string            `json:"projectId,omitempty"`
-	Version    string            `json:"version,omitempty"`
-	Path       string            `json:"path,omitempty"`
-	Name       string            `json:"name,omitempty"`
-	Method     string            `json:"method,omitempty"`
-	URL        string            `json:"url,omitempty"`
-	Headers    map[string]string `json:"headers,omitempty"`
-	BodyBase64 string            `json:"bodyBase64,omitempty"`
-	SecretName string            `json:"secretName,omitempty"`
-	Key        string            `json:"key,omitempty"`
-	Value      json.RawMessage   `json:"value,omitempty"`
-	ProfileID  string            `json:"profileId,omitempty"`
-	Offset     int               `json:"offset,omitempty"`
-	Limit      int               `json:"limit,omitempty"`
-	Event      string            `json:"event,omitempty"`
-	Status     string            `json:"status,omitempty"`
+	ProjectID        string            `json:"projectId,omitempty"`
+	Version          string            `json:"version,omitempty"`
+	Path             string            `json:"path,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	Method           string            `json:"method,omitempty"`
+	URL              string            `json:"url,omitempty"`
+	Headers          map[string]string `json:"headers,omitempty"`
+	BodyBase64       string            `json:"bodyBase64,omitempty"`
+	SecretName       string            `json:"secretName,omitempty"`
+	Key              string            `json:"key,omitempty"`
+	Value            json.RawMessage   `json:"value,omitempty"`
+	ProfileID        string            `json:"profileId,omitempty"`
+	Offset           int               `json:"offset,omitempty"`
+	Limit            int               `json:"limit,omitempty"`
+	ServerID         string            `json:"serverId,omitempty"`
+	CommandID        string            `json:"commandId,omitempty"`
+	Username         string            `json:"username,omitempty"`
+	CommandType      string            `json:"commandType,omitempty"`
+	Payload          map[string]string `json:"payload,omitempty"`
+	IdempotencyKey   string            `json:"idempotencyKey,omitempty"`
+	ExpiresInSeconds int               `json:"expiresInSeconds,omitempty"`
+	Event            string            `json:"event,omitempty"`
+	Status           string            `json:"status,omitempty"`
 }
 
 func (s *Supervisor) scopedProject(st *processState, projectID string) (string, error) {
@@ -1713,6 +1731,8 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		return s.executeRuntime0303(ctx, st, capName, req)
 	case "project.list", "profile.list", "profile.get", "channel.list", "channel.get", "release.get", "release.page", "job.get":
 		return s.executeBackendService0484(ctx, st, capName, req)
+	case "bridge.servers", "bridge.server", "bridge.access.ticket", "bridge.command.create", "bridge.command.get":
+		return s.executeBridge0488(ctx, st, capName, req)
 	case "host.health":
 		return capabilityResult0205{value: map[string]any{"status": s.statusOf(st)}, status: http.StatusOK}
 	case "extension.self":

@@ -477,8 +477,8 @@ func (b *Bus) StorageWritten(ctx context.Context, p StoragePayload) error {
 	_, _, err := b.Publish(ctx, PublishInput{Type: "storage.file-written", ProjectID: p.ProjectID, AggregateType: "storage", AggregateID: p.ProjectID + ":" + p.VersionID + ":" + p.Path, OrderingKey: "storage:" + p.ProjectID + ":" + p.VersionID, IdempotencyKey: "written:" + p.ProjectID + ":" + p.VersionID + ":" + p.Path + ":" + p.SHA256, Source: "httpapi", Payload: p})
 	return err
 }
-func (b *Bus) ServerBridgeReceived(ctx context.Context, serverID, runtimeID string, e model.ServerBridgeEvent) error {
-	_, _, err := b.Publish(ctx, PublishInput{Type: "serverbridge.event.received", AggregateType: "serverbridge", AggregateID: serverID, OrderingKey: "serverbridge:" + serverID + ":" + runtimeID, IdempotencyKey: "bridge:" + serverID + ":" + e.EventID, Source: "serverbridge", Payload: ServerBridgePayload{ServerID: serverID, RuntimeID: runtimeID, Event: e}, OccurredAt: time.UnixMilli(e.OccurredAtUnixMillis).UTC()})
+func (b *Bus) ServerBridgeReceived(ctx context.Context, projectID, serverID, runtimeID string, e model.ServerBridgeEvent) error {
+	_, _, err := b.Publish(ctx, PublishInput{Type: "serverbridge.event.received", ProjectID: projectID, AggregateType: "serverbridge", AggregateID: serverID, OrderingKey: "serverbridge:" + serverID + ":" + runtimeID, IdempotencyKey: "bridge:" + serverID + ":" + e.EventID, Source: "serverbridge", Payload: ServerBridgePayload{ServerID: serverID, RuntimeID: runtimeID, Event: e}, OccurredAt: time.UnixMilli(e.OccurredAtUnixMillis).UTC()})
 	return err
 }
 func (b *Bus) AuditCreated(ctx context.Context, e model.AuditEvent) error {

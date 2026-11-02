@@ -18,6 +18,8 @@ func (s *Supervisor) revalidateCapability04312(ctx context.Context, st *processS
 	}
 	var permission string
 	switch name {
+	case "bridge.servers", "bridge.server", "bridge.access.ticket", "bridge.command.create", "bridge.command.get":
+		return s.revalidateBridge0488(ctx, st, name, req)
 	case "host.health", "extension.self":
 		return nil
 	case "project.get", "project.list", "profile.list", "profile.get", "job.get":

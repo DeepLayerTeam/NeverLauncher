@@ -159,7 +159,7 @@ func (s Server) serverBridgeEventStream0194(w http.ResponseWriter, r *http.Reque
 	}
 	if s.EventBus != nil {
 		for _, event := range events {
-			s.logEventError0206("serverbridge.event.received", s.EventBus.ServerBridgeReceived(r.Context(), server.ID, runtimeID, event))
+			s.logEventError0206("serverbridge.event.received", s.EventBus.ServerBridgeReceived(r.Context(), server.ProjectID, server.ID, runtimeID, event))
 		}
 	}
 	if s.State.ServerBridge.backendV2() == nil {

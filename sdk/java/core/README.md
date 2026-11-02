@@ -170,3 +170,16 @@ aggregate, ordering and idempotency metadata. The Go EventBus owns lease, retry
 and dead-letter state. Permanent failures use `RuntimeEvents.PermanentFailure`;
 other callback failures request retry. **Do not assume exactly-once external
 effects**. See `docs/extensions/java-events-hooks-0487.md`.
+
+
+### 0.48.8 ServerBridge Java Integration
+
+`context.runtime().serverBridge()` exposes real, permission-scoped ServerBridge
+v3 project nodes, live status, advisory pre-existing join-ticket checks,
+commands persisted through the authenticated Go broker, status polling and
+typed durable server event callbacks. Commands remain subject to the existing
+signed adapter capabilities, runtime fencing, game-domain RBAC and PostgreSQL
+idempotency. `server.console` and `server.shutdown` are not exposed to Java.
+Actual Minecraft session admission is unchanged. Details and tests:
+`docs/extensions/java-serverbridge-0488.md` and
+`sh sdk/java/core/build.sh test`.
