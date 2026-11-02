@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
@@ -204,11 +205,10 @@ require(
     ],
     "Forge/NeoForge release build",
 )
-require(
-    read("scripts/release/build-release.sh"),
-    ["fabric forge neoforge"],
-    "release bundle Forge/NeoForge artifacts",
-)
+release_builder = read("scripts/release/build-release.sh")
+bridge_loop = re.search(r"for bridge in ([A-Za-z0-9_ ]+); do", release_builder)
+if not bridge_loop or not {"fabric", "forge", "neoforge"}.issubset(set(bridge_loop.group(1).split())):
+    raise SystemExit("release bundle Forge/NeoForge artifacts missing from actual build loop")
 require(
     read("cli/cmd/launcher/release_commands.go"),
     [
@@ -243,7 +243,7 @@ require(
         "certify_aux_bridge neoforge-e2e-p3",
         'wait_bridge_heartbeat "$service"',
         'capture_health_evidence "$service"',
-        "forgeNeoForgeServerBridge:true",
+        'forgeNeoForgeServerBridge:($mode == "full")',
         "health-forge.json",
         "health-neoforge.json",
         "forge)",

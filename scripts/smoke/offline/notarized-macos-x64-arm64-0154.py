@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import subprocess
+import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -90,11 +91,17 @@ if min(helper_sign, manifest_build, app_sign) < 0 or not (
     )
 
 packager = read("scripts/release/macos-package.py")
+# Read the real CPU mapping as Python literals, regardless of formatting.
+tree = ast.parse(packager)
+arches = None
+for node in tree.body:
+    if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "ARCHES" for t in node.targets):
+        arches = ast.literal_eval(node.value)
+if not isinstance(arches, dict) or {name: arches.get(name, {}).get("cpu") for name in ("x64", "arm64")} != {"x64": 0x01000007, "arm64": 0x0100000C}:
+    raise SystemExit("macOS packager lost mandatory Mach-O CPU architecture constants")
 require(
     packager,
     [
-        '"x64": {"cpu": 0x01000007',
-        '"arm64": {"cpu": 0x0100000C',
         "LC_CODE_SIGNATURE",
         "MACOS_PACKAGE_MANIFEST_",
         "MACOS_NOTARIZATION_EVIDENCE.json",

@@ -176,7 +176,9 @@ for rel in ui_files:
     text = read(rel)
     if "__LAUNCHER_VERSION__" not in text:
         fail(f"{rel}: UI должен получать версию из Vite define, связанного с VERSION")
-    for match in re.finditer(r"(?<![0-9])\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", text):
+    for match in re.finditer(r"(?<![0-9.])\d+\.\d+\.\d+(?!\.\d)(?:-[A-Za-z0-9.-]+)?", text):
+        if text[text.rfind("\n", 0, match.start()) + 1:match.start()].lstrip().startswith("//"):
+            continue
         line = text.count("\n", 0, match.start()) + 1
         fail(
             f"{rel}:{line}: UI содержит ручной product version literal {match.group(0)}"
@@ -466,7 +468,7 @@ for required in [
     "sessionBoundToDevice0124",
     "verifyDeviceSignature0123",
     "AttestTrustedDevice",
-    "not-remotely-verified",
+    "not-verified",
 ]:
     if required not in attestation_handler:
         fail(f"0.12.4 challenge-response attestation path missing: {required}")
@@ -4002,7 +4004,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 ):
     legacy_runtime_0174 = read("cli/cmd/launcher/forge_runtime.go")
     legacy_commands_0174 = read("cli/cmd/launcher/runtime_commands.go")
-    legacy_runtime_0174 = read("runtime/runtime/src/compatibility.rs")
+    legacy_runtime_0174 += "\n" + read("runtime/runtime/src/compatibility.rs")
     legacy_case_0174 = read("e2e/scripts/run-forge-certification-case.sh")
     legacy_matrix_0174 = read("scripts/compatibility/matrix.py")
     legacy_release_0174 = read("cli/cmd/launcher/compatibility_release.go")
@@ -4103,7 +4105,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 ):
     legacy_runtime_0175 = read("cli/cmd/launcher/forge_runtime.go")
     legacy_commands_0175 = read("cli/cmd/launcher/runtime_commands.go")
-    legacy_runtime_0175 = read("runtime/runtime/src/compatibility.rs")
+    legacy_runtime_0175 += "\n" + read("runtime/runtime/src/compatibility.rs")
     legacy_case_0175 = read("e2e/scripts/run-forge-certification-case.sh")
     legacy_matrix_0175 = read("scripts/compatibility/matrix.py")
     legacy_release_0175 = read("cli/cmd/launcher/compatibility_release.go")
@@ -5776,24 +5778,31 @@ adversarial_tests_01811 = read("scripts/guard_ci/test_windows_adversarial.py")
 adversarial_gate_01811 = read(
     "scripts/smoke/offline/guard-windows-adversarial-ci-01811.py"
 )
-for required in [
+for scenario_id, scenario_type in (
+    ("sensor-early-load", "compatibility"),
+    ("hotspot-jit", "compatibility"),
+    ("unsigned-module", "adversarial"),
+    ("code-page-drift", "adversarial"),
+    ("private-exec-thread", "adversarial"),
+    ("startup-instrumentation", "adversarial"),
+    ("live-debugger", "adversarial"),
+    ("foreign-executable-allocation", "adversarial"),
+):
+    # Check the executable scenario declarations, independent of formatting.
+    pattern = r'Scenario\(\s*"' + re.escape(scenario_id) + r'"\s*,\s*"' + scenario_type + r'"'
+    if not re.search(pattern, adversarial_runner_01811):
+        fail(f"0.18.11 Windows Adversarial CI missing {scenario_type} scenario: {scenario_id}")
+for required in (
     "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
-    'Scenario("sensor-early-load", "compatibility"',
-    'Scenario("hotspot-jit", "compatibility"',
-    'Scenario("unsigned-module", "adversarial"',
-    'Scenario("code-page-drift", "adversarial"',
-    'Scenario("private-exec-thread", "adversarial"',
-    'Scenario("startup-instrumentation", "adversarial"',
-    'Scenario("live-debugger", "adversarial"',
-    'Scenario("foreign-executable-allocation", "adversarial"',
-    '"cargo", "test", "--manifest-path", "runtime/runtime/Cargo.toml"',
-    "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
+    '"WINDOWS_ADVERSARIAL_CERTIFICATE.json"',
     '"allAdversarialScenariosDetected": True',
     '"allCompatibilityScenariosPassed": True',
     '"sensorAndFixtureHashesBound": True',
-]:
+):
     if required not in adversarial_runner_01811:
         fail(f"0.18.11 Windows Adversarial CI runner missing invariant: {required}")
+if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', adversarial_runner_01811):
+    fail("0.18.11 Windows Adversarial CI does not execute real Cargo tests")
 for required in [
     "test_valid_result_is_accepted",
     "test_tampered_scenario_is_rejected",

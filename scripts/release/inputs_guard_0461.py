@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release baseline guard for actual tool input files in the 0.46.2 tree.
+"""Release baseline guard for actual tool input files in the 0.46.3 tree.
 
 This is deliberately a *source-input* guard, not a false claim that native
 compilers, network packages or output binaries were independently verified.
@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-BASELINE = ROOT/'reproducibility'/'baseline-0.46.2.json'
+BASELINE = ROOT/'reproducibility'/'baseline-0.46.3.json'
 SOURCES = (
     'VERSION', 'schemas/openapi.yaml',
     'scripts/release/inputs_guard_0461.py',
@@ -30,6 +30,22 @@ SOURCES = (
     'cli/cmd/launcher/release_commands.go',
     'reproducibility/primary-payload-0.46.2.json',
     'scripts/build/bridge-plugins.sh',
+    'sdk/api/go/client.go', 'sdk/api/go/stream_0463_test.go',
+    'sdk/api/typescript/client.ts',
+    'scripts/smoke/offline/repository-policy.py',
+    'scripts/smoke/offline/device-trust-e2e-matrix-0129.py',
+    'scripts/smoke/offline/session-device-risk-0126.py',
+    'scripts/smoke/offline/notarized-macos-x64-arm64-0154.py',
+    'scripts/smoke/offline/serverbridge-forge-neoforge-0147.py',
+    'scripts/smoke/offline/guard-windows-adversarial-ci-01811.py',
+    'scripts/ci/required_jobs_0363.py',
+    'scripts/release/test_gate_retention_0463.py',
+    'deploy/production/docker-compose.yml',
+    'deploy/production/nginx.conf',
+    'deploy/production/env.production.example',
+    'cli/cmd/launcher/templates/production/docker-compose.yml',
+    'cli/cmd/launcher/templates/production/nginx.conf',
+    'cli/cmd/launcher/templates/production/env.production.example',
 )
 SUFFIXES = ('go.mod', 'go.sum', 'Cargo.toml', 'Cargo.lock', 'package.json',
             'package-lock.json', 'npm-shrinkwrap.json', 'gradle.lockfile',
@@ -72,7 +88,7 @@ def record() -> dict:
 
 
 def verify(snapshot: dict, current: dict) -> None:
-    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != '0.46.2':
+    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != '0.46.3':
         raise ValueError('unrecognized input baseline or release')
     if current != snapshot:
         old = snapshot.get('files', {})
@@ -88,7 +104,7 @@ def main():
     try:
         snapshot=record()
         if args.mode=='freeze':
-            if snapshot['release'] != '0.46.2': raise ValueError('wrong release')
+            if snapshot['release'] != '0.46.3': raise ValueError('wrong release')
             BASELINE.write_text(json.dumps(snapshot, indent=2, sort_keys=True)+'\n',encoding='utf8')
             print(f'frozen {len(snapshot["files"])} real source inputs')
         else:

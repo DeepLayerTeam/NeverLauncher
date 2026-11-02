@@ -127,7 +127,7 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 		}
 		req.Header.Set("Idempotency-Key", key)
 	}
-	result, err := c.HTTP.Do(req)
+	result, err := c.doNoRedirect(req)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.doNoRedirect(req)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 	if idempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
 	}
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.doNoRedirect(req)
 	if err != nil {
 		return nil, err
 	}
@@ -260,4 +260,118 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 		return nil, &APIError{Status: resp.StatusCode, Code: e.Code, Message: message, RequestID: resp.Header.Get("X-Correlation-ID")}
 	}
 	return data, nil
+}
+
+// CallStream transfers an OpenAPI operation's request and response without
+// buffering the successful response. Multipart bodies can be supplied via a
+// streaming io.Reader; callers own requestReader and responseWriter.
+// A response limit of 0 uses the default 1 GiB cap. The caller must discard
+// a partially written destination if an error is returned.
+func (c *Client) CallStream(ctx context.Context, operationID string, params map[string]string, query url.Values, requestReader io.Reader, contentType string, responseWriter io.Writer, maxResponseBytes int64, idempotencyKey string) (int64, error) {
+	op, ok := Operations[operationID]
+	if !ok {
+		return 0, fmt.Errorf("unknown OpenAPI operation: %s", operationID)
+	}
+	path, err := Path(op.Path, params)
+	if err != nil {
+		return 0, err
+	}
+	return c.RequestStream(ctx, op.Method, path, query, requestReader, contentType, responseWriter, maxResponseBytes, idempotencyKey)
+}
+
+// RequestStream prevents cross-origin redirects even if a caller provided an
+// http.Client with redirect-following enabled. It does not alter that client.
+func (c *Client) RequestStream(ctx context.Context, method, path string, query url.Values, requestReader io.Reader, contentType string, responseWriter io.Writer, maxResponseBytes int64, key string) (int64, error) {
+	if c == nil || c.HTTP == nil {
+		return 0, errors.New("uninitialized client")
+	}
+	if !strings.HasPrefix(path, "/api/v1/") && path != "/health" && path != "/ready" && path != "/metrics" && !strings.HasPrefix(path, "/api/profiles/minecraft") && !strings.HasPrefix(path, "/api/user/profile/") && !strings.HasPrefix(path, "/authserver/") && !strings.HasPrefix(path, "/sessionserver/") {
+		return 0, errors.New("route outside supported OpenAPI v1")
+	}
+	if strings.Contains(path, "?") || strings.Contains(path, "#") || strings.Contains(path, "..") || strings.HasPrefix(path, "//") {
+		return 0, errors.New("unsafe request path")
+	}
+	if key != "" && strings.ContainsAny(key, "\r\n") {
+		return 0, errors.New("invalid idempotency key")
+	}
+	if maxResponseBytes == 0 {
+		maxResponseBytes = 1 << 30
+	}
+	if maxResponseBytes < 0 || maxResponseBytes > 1<<30 {
+		return 0, errors.New("invalid response limit (max 1 GiB)")
+	}
+	if responseWriter == nil {
+		return 0, errors.New("response writer required")
+	}
+	target := c.BaseURL + path
+	if len(query) > 0 {
+		target += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, method, target, requestReader)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Accept", "*/*")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	if key != "" {
+		req.Header.Set("Idempotency-Key", key)
+	}
+	resp, err := c.doNoRedirect(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Do not leak an authorization token to a redirect target, and do not
+		// parse attacker-controlled unbounded error responses.
+		data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytesForError+1))
+		if err != nil {
+			return 0, err
+		}
+		if len(data) > maxResponseBytesForError {
+			return 0, errors.New("API error response too large")
+		}
+		var parsed struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+			Error   string `json:"error"`
+		}
+		_ = json.Unmarshal(data, &parsed)
+		message := parsed.Message
+		if message == "" {
+			message = parsed.Error
+		}
+		if message == "" {
+			message = http.StatusText(resp.StatusCode)
+		}
+		return 0, &APIError{Status: resp.StatusCode, Code: parsed.Code, Message: message, RequestID: resp.Header.Get("X-Correlation-ID")}
+	}
+	if resp.ContentLength > maxResponseBytes {
+		return 0, errors.New("API stream exceeds configured size limit")
+	}
+	// LimitReader(max+1) detects a chunked response larger than announced;
+	// no full-response allocation is performed.
+	n, err := io.Copy(responseWriter, io.LimitReader(resp.Body, maxResponseBytes+1))
+	if err != nil {
+		return n, err
+	}
+	if n > maxResponseBytes {
+		return n, errors.New("API stream exceeds configured size limit")
+	}
+	return n, nil
+}
+
+const maxResponseBytesForError = 1 << 20
+
+// doNoRedirect protects bearer credentials and prevents treating a cross-origin
+// redirect as an API response. A caller-supplied client cannot override it.
+func (c *Client) doNoRedirect(req *http.Request) (*http.Response, error) {
+	client := *c.HTTP
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return client.Do(req)
 }

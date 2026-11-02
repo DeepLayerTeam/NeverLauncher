@@ -746,7 +746,7 @@ jobs:
           OPS_TRUSTED_PEM: ${{ vars.NL_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_PEM }}
         run: |
           set -euo pipefail
-          if [[ "$(cat VERSION)" != '0.46.2' ]]; then exit 0; fi
+          if [[ "$(cat VERSION)" != '0.46.3' ]]; then exit 0; fi
           test -n "$OPS_JSON_B64" && test -n "$OPS_SIG_B64" && test -n "$OPS_TRUSTED_PEM" || {
             echo '0.46.0 GA BLOCKED: second-operator signed evidence not supplied to protected production environment' >&2; exit 2;
           }
@@ -1127,7 +1127,7 @@ jobs:
           OPS_TRUSTED_PEM: ${{ vars.NL_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_PEM }}
         run: |
           set -euo pipefail
-          if [[ "$(cat VERSION)" != '0.46.2' ]]; then exit 0; fi
+          if [[ "$(cat VERSION)" != '0.46.3' ]]; then exit 0; fi
           test -n "$OPS_TRUSTED_PEM" || { echo '0.46.0 GA BLOCKED: public operations verification key missing' >&2; exit 2; }
           umask 077
           printf '%s\n' "$OPS_TRUSTED_PEM" > "$RUNNER_TEMP/nl-ops-ga.pub"

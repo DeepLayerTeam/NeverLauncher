@@ -1,4 +1,4 @@
-name: NeverLauncher 0.46.2 release integrity
+name: NeverLauncher 0.46.3 integration integrity
 on:
   push:
     paths:
@@ -6,10 +6,13 @@ on:
       - 'reproducibility/**'
       - 'scripts/release/**'
       - 'scripts/operations/**'
-      - 'sdk/api/typescript/**'
+      - 'sdk/api/**'
+      - 'cli/**'
+      - 'deploy/production/**'
       - 'apps/desktop/**'
       - 'apps/admin/**'
       - 'services/api/**'
+      - 'scripts/smoke/offline/repository-policy.py'
       - '.github/workflows/integration-0461.yml'
   pull_request:
     paths:
@@ -17,10 +20,13 @@ on:
       - 'reproducibility/**'
       - 'scripts/release/**'
       - 'scripts/operations/**'
-      - 'sdk/api/typescript/**'
+      - 'sdk/api/**'
+      - 'cli/**'
+      - 'deploy/production/**'
       - 'apps/desktop/**'
       - 'apps/admin/**'
       - 'services/api/**'
+      - 'scripts/smoke/offline/repository-policy.py'
       - '.github/workflows/integration-0461.yml'
   workflow_dispatch:
 permissions:
@@ -36,11 +42,13 @@ jobs:
       - name: Verify input baseline and synchronized version
         run: |
           python3 scripts/version/manage.py check
+          python3 scripts/smoke/offline/repository-policy.py
           python3 scripts/release/inputs_guard_0461.py verify
       - name: Run actual release format and drift tests
         run: |
           python3 -m unittest discover -s scripts/release -p 'test_*0461.py' -v
           python3 -m unittest discover -s scripts/release -p 'test_delivery_verify_0462.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_gate_retention_0463.py' -v
           python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -v
           python3 scripts/release/inputs_guard_0461.py verify
       - name: Exercise real Operations GA signing and rejection cases
@@ -73,6 +81,24 @@ jobs:
           npm run test:components
           npm run test:textures
       - name: Verify npm locks were not changed
+        if: always()
+        run: python3 scripts/release/inputs_guard_0461.py verify
+  sdk-go-conformance:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: sdk/api/go/go.mod
+          cache: false
+      - name: Build real Go SDK and run streaming/binary/redirect tests with race detector
+        working-directory: sdk/api/go
+        env:
+          GOFLAGS: -mod=readonly
+        run: go test -race ./...
+      - name: Verify build inputs remained unchanged
         if: always()
         run: python3 scripts/release/inputs_guard_0461.py verify
   go-release-modules:

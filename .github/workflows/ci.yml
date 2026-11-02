@@ -1499,10 +1499,43 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  sdk-http-contracts:
+    name: HTTP SDK v1 JSON/binary/streaming, exact-commit source inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run actual streaming and redirect regressions with Go race detector
+        working-directory: sdk/api/go
+        env:
+          GOFLAGS: -mod=readonly
+        run: go test -race ./...
+      - name: Install pinned TypeScript compiler without lockfile changes
+        working-directory: apps/desktop
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Typecheck and run real HTTP client regressions
+        run: |
+          ./apps/desktop/node_modules/.bin/tsc -p sdk/api/typescript/tsconfig.json
+          node --test sdk/api/typescript/test/*.test.mjs
+      - name: Verify source and lockfile integrity
+        if: always()
+        run: |
+          python3 scripts/release/inputs_guard_0461.py verify
+          git diff --exit-code -- apps/admin/package-lock.json apps/desktop/package-lock.json sdk/api/go/go.mod sdk/api/typescript
+
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}
-    needs: [minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, guard-windows, guard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, guard-windows-adversarial, guard-windows-adversarial-certificate, release-ga-policy]
+    needs: [sdk-http-contracts, minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, guard-windows, guard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, guard-windows-adversarial, guard-windows-adversarial-certificate, release-ga-policy]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

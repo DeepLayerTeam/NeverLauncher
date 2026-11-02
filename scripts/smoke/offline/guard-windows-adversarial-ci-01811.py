@@ -29,31 +29,36 @@ if version_tuple(version) < (0, 18, 11):
     raise SystemExit(f"Windows Adversarial CI gate requires >=0.18.11, got {version}")
 
 runner = read("scripts/guard_ci/windows_adversarial.py")
-require(
-    runner,
-    "scripts/guard_ci/windows_adversarial.py",
-    [
-        "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
-        'Scenario("sensor-early-load", "compatibility"',
-        'Scenario("trusted-module-lifecycle", "compatibility"',
-        'Scenario("continuous-cross-check", "compatibility"',
-        'Scenario("job-bound-process-tree", "compatibility"',
-        'Scenario("hotspot-jit", "compatibility"',
-        'Scenario("unsigned-module", "adversarial"',
-        'Scenario("code-page-drift", "adversarial"',
-        'Scenario("private-exec-thread", "adversarial"',
-        'Scenario("startup-instrumentation", "adversarial"',
-        'Scenario("live-debugger", "adversarial"',
-        'Scenario("foreign-executable-allocation", "adversarial"',
-        '"cargo", "test", "--manifest-path", "runtime/runtime/Cargo.toml"',
-        '"evidenceRootSha256"',
-        '"allAdversarialScenariosDetected": True',
-        '"allCompatibilityScenariosPassed": True',
-        '"sensorAndFixtureHashesBound": True',
-        "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
-        "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification",
-    ],
+# Scenario declarations are multiline in the production runner; keep the exact
+# IDs, classes and Java/Cargo requirement without comparing whitespace.
+required_scenarios = (
+    ("sensor-early-load", "compatibility"),
+    ("trusted-module-lifecycle", "compatibility"),
+    ("continuous-cross-check", "compatibility"),
+    ("job-bound-process-tree", "compatibility"),
+    ("hotspot-jit", "compatibility"),
+    ("unsigned-module", "adversarial"),
+    ("code-page-drift", "adversarial"),
+    ("private-exec-thread", "adversarial"),
+    ("startup-instrumentation", "adversarial"),
+    ("live-debugger", "adversarial"),
+    ("foreign-executable-allocation", "adversarial"),
 )
+for name, kind in required_scenarios:
+    expression = r'Scenario\(\s*"' + re.escape(name) + r'"\s*,\s*"' + kind + r'"'
+    if not re.search(expression, runner):
+        raise SystemExit(f"Windows Adversarial CI: missing {kind} scenario: {name}")
+require(runner, "scripts/guard_ci/windows_adversarial.py", [
+    "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
+    '"evidenceRootSha256"',
+    '"allAdversarialScenariosDetected": True',
+    '"allCompatibilityScenariosPassed": True',
+    '"sensorAndFixtureHashesBound": True',
+    "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
+    "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification",
+])
+if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', runner):
+    raise SystemExit("Windows Adversarial CI: live Rust/Cargo test command missing")
 
 unit_tests = read("scripts/guard_ci/test_windows_adversarial.py")
 require(

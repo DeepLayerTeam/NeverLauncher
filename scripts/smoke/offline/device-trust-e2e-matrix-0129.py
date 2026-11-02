@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -35,23 +36,29 @@ targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version or targets.get("schemaVersion") != "1.0":
     raise SystemExit("Device Trust target document version/schema mismatch")
 rows = targets.get("targets")
-if not isinstance(rows, list) or len(rows) != 4:
-    raise SystemExit(
-        "public Device Trust matrix must define exactly four required Device Trust targets"
-    )
+if not isinstance(rows, list) or len(rows) < 4:
+    raise SystemExit("public Device Trust matrix is missing mandatory baseline targets")
 if any(row.get("required") is not True for row in rows):
     raise SystemExit("every Device Trust target must be required")
 if any("status" in row or "passed" in row for row in rows):
     raise SystemExit("Device Trust targets must not contain editable pass/fail state")
 expected = {
     "postgres-protocol-linux-x64": ("protocol-e2e", "linux"),
-    "native-linux": ("native-tests", "linux"),
-    "native-windows": ("native-tests", "windows"),
-    "native-macos": ("native-tests", "macos"),
+    "native-linux-x64": ("native-tests", "linux"),
+    "native-linux-arm64": ("native-tests", "linux"),
+    "native-windows-x64": ("native-tests", "windows"),
+    "native-windows-arm64": ("native-tests", "windows"),
+    "native-macos-x64": ("native-tests", "macos"),
+    "native-macos-arm64": ("native-tests", "macos"),
 }
 actual = {str(row.get("id")): (row.get("kind"), row.get("os")) for row in rows}
-if actual != expected:
-    raise SystemExit(f"unexpected public Device Trust targets: {actual!r}")
+if len(actual) != len(rows):
+    raise SystemExit("duplicate Device Trust target ID")
+for target_id, identity in expected.items():
+    if actual.get(target_id) != identity:
+        raise SystemExit(f"missing or changed mandatory Device Trust baseline target: {target_id}")
+# New required targets are validated by scripts/device_trust/matrix.py as well;
+# this historical gate must not reject legitimately expanded security coverage.
 
 matrix = read("scripts/device_trust/matrix.py")
 require(
@@ -134,11 +141,12 @@ require(
         "Ed25519",
         "p256",
         "der_ecdsa_to_p1363",
-        '"openssl", "pkeyutl"',
-        '"openssl", "dgst"',
     ],
     "E2E crypto helper",
 )
+for command in ("pkeyutl", "dgst"):
+    if not re.search(r'"openssl"\s*,\s*"' + command + r'"', crypto):
+        raise SystemExit(f"E2E crypto helper missing actual openssl {command} invocation")
 crypto_tests = read("e2e/scripts/test_device_trust_crypto.py")
 require(
     crypto_tests,

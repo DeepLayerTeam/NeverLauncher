@@ -352,7 +352,7 @@ def validate(
         try:
             verify_bundle(bundle, True)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise Blocked('0.46.2 delivery binary inspection failed') from exc
+            raise Blocked('0.46.2+ delivery binary inspection failed') from exc
     if parsed(version)[0] >= (0, 46, 0):
         # Publication cannot be authorized by a stale pre-0.46 CLI. Verify
         # independent operational acceptance against trusted keys in this
@@ -516,7 +516,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
                 try:
                     verify_bundle(remote, True)
                 except (OSError, ValueError, KeyError, TypeError) as exc:
-                    raise Blocked('0.46.2 remote draft binary inspection failed') from exc
+                    raise Blocked('0.46.2+ remote draft binary inspection failed') from exc
         # Gate publication on a second complete server-side release inspection.
         metadata = json.loads(
             github(

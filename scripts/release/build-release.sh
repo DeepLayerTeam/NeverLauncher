@@ -8,9 +8,14 @@ if [[ -n "${1:-}" && "$1" != "${CANONICAL_VERSION}" ]]; then
   exit 2
 fi
 VERSION="${CANONICAL_VERSION}"
+# Apply real binary inspection and frozen-input gates to every subsequent
+# release. A version bump must never disable previously mandatory checks.
+release_from_0462() {
+  [[ "$(printf '%s\n' '0.46.2' "${VERSION}" | sort -V | head -n1)" == '0.46.2' ]]
+}
 # Fail before modifying any release output when checked-in build inputs drift.
 # The same guard is executed after CI builds to detect lockfile mutation.
-if [[ "${VERSION}" == "0.46.2" ]]; then
+if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
 fi
 OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
@@ -916,12 +921,12 @@ if [[ "$(printf '%s\n' '0.46.0' "${VERSION}" | sort -V | head -n1)" == '0.46.0' 
 fi
 # 0.46.2: inspect the complete *actual* six target packages and persist
 # the checked exact-byte inventory BEFORE the signed release manifest is built.
-if [[ "${VERSION}" == "0.46.2" ]]; then
+if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --out "${OUT_DIR}/DELIVERY_VERIFIED_0462.json" || exit 2
 fi
 "${RELEASE_CLI}" "${release_build_args[@]}"
-if [[ "${VERSION}" == "0.46.2" ]]; then
+if release_from_0462; then
   # Check that the release manifest explicitly enumerates the exact six bytes.
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
@@ -965,7 +970,7 @@ if [[ "$(printf '%s\n' '0.45.11' "${VERSION}" | sort -V | head -n1)" == '0.45.11
   "${RELEASE_CLI}" release distribution-verify "${OUT_DIR}"
 fi
 
-if [[ "${VERSION}" == "0.46.2" ]]; then
+if release_from_0462; then
   # Verify actual, not declared, final installer bytes before authorizing signature.
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
@@ -976,7 +981,7 @@ log "Ed25519 release signing"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
 "${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
-if [[ "${VERSION}" == "0.46.2" ]]; then
+if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
 fi
@@ -1007,7 +1012,7 @@ else
   log "Certification evidence не передан: bundle не является publishable release"
 fi
 
-if [[ "${VERSION}" == "0.46.2" ]]; then
+if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
 fi
 log "Каталог production-релиза готов: ${OUT_DIR}"

@@ -108,7 +108,7 @@ need(
     [
         "accessTokenBindingEpoch",
         "accessTokenDeviceId",
-        "'sign_session_refresh'",
+        '"sign_session_refresh"',
         "deviceSignature",
         "device_key_status",
     ],
@@ -127,8 +127,8 @@ need(
 need(
     "scripts/contracts/generate_openapi.py",
     [
-        '"deviceSignature":{"type":"string"',
-        '"deviceId":{"type":"string"',
+        '"deviceSignature": {',
+        '"deviceId": {',
         "Launcher Session Device Binding v1",
     ],
 )

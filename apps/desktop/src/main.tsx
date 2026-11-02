@@ -4473,7 +4473,7 @@ function App() {
     }
   }
 
-  // 0.35.2: every step runs existing production API/native code. A failure
+  // Every step runs existing production API/native code. A failure
   // stops the wizard. No UI flag can substitute for native file verification.
   async function prepareFirstRun0352() {
     const p = signedProvisioning0352;
@@ -4587,7 +4587,7 @@ function App() {
     } catch (error) {
       setStage("failed");
       setFirstRunError0352(`Подготовка отклонена: ${String(error)}`);
-      log(`0.35.2 first run: ${String(error)}`);
+      log(`First run: ${String(error)}`);
     } finally {
       setFirstRunBusy0352(false);
     }
@@ -4683,7 +4683,7 @@ function App() {
       setFirstRunError0352(
         `Установка не завершена: ${String(error)}. Используйте повторную попытку.`,
       );
-      log(`0.35.2 install: ${String(error)}`);
+      log(`Installer: ${String(error)}`);
     } finally {
       setFirstRunBusy0352(false);
       setTransferBusy(false);
@@ -5271,7 +5271,7 @@ function App() {
             )}
             {screen === "auth" && /(Win|Linux)/i.test(navigator.platform) && (
               <section className="panel">
-                <h3>Windows/Linux TPM Key Attestation (0.31.4)</h3>
+                <h3>Windows/Linux TPM Key Attestation</h3>
                 <p>
                   TPM2_Certify для существующего зарегистрированного P-256
                   ключа. AK должен быть заранее выпущен доверенным TPM
@@ -5331,7 +5331,7 @@ function App() {
                     : "Подтвердить TPM-происхождение"}
                 </button>
                 <p role="status">{tpmStatus0313}</p>
-                <h4>Measured Boot / PCR Verification (0.31.5)</h4>
+                <h4>Measured Boot / PCR Verification</h4>
                 <p>
                   Отдельная проверка TPM Quote и разрешённых PCR через серверную
                   политику. Требуется ранее подтверждённый TPM Certify в этой же

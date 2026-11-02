@@ -16,12 +16,12 @@ class OperationsGATests(unittest.TestCase):
         self.bundle=self.root/'bundle';self.bundle.mkdir()
         self.reports={}
         now=datetime.now(timezone.utc).isoformat()
-        base={'schema':1,'status':'passed','release':'0.46.2','startedUtc':now,'completedUtc':now,
+        base={'schema':1,'status':'passed','release':'0.46.3','startedUtc':now,'completedUtc':now,
               'secondOperator':'operator2','firstOperator':'operator1',
               'machineFingerprint':'a'*64,'scope':'live execution of existing operational commands; no inferred cross-host certification'}
-        upgrade={**base,'stage':'upgrade-standard','from':'0.45.14','to':'0.46.2',
+        upgrade={**base,'stage':'upgrade-standard','from':'0.45.14','to':'0.46.3',
                  'backupManifestSha256':'b'*64,'identity':{'oldProjectId':'original','oldAdminLogin':'verified','oldProjectRead':'verified'}}
-        install={**base,'stage':'install-standard','installedVersion':'0.46.2'}
+        install={**base,'stage':'install-standard','installedVersion':'0.46.3'}
         self.put('install-standard',install)
         self.put('upgrade-standard',upgrade)
         restore={**base,'stage':'restore-standard','machineFingerprint':'c'*64,'sourceHostFingerprint':'a'*64,
@@ -37,9 +37,9 @@ class OperationsGATests(unittest.TestCase):
                               ('darwin','x64','macos-x64.zip'),('darwin','arm64','macos-arm64.zip')]:
             # Actual names required by the release contract, bytes supplied by
             # caller; test fixtures are not platform-certified installers.
-            if os=='linux': filename=f'launcher-linux-{arch}-0.46.2.tar.gz'
-            elif os=='windows':filename=f'launcher-desktop-0.46.2-windows-{arch}.zip'
-            else:filename=f'launcher-desktop-0.46.2-macos-{arch}.zip'
+            if os=='linux': filename=f'launcher-linux-{arch}-0.46.3.tar.gz'
+            elif os=='windows':filename=f'launcher-desktop-0.46.3-windows-{arch}.zip'
+            else:filename=f'launcher-desktop-0.46.3-macos-{arch}.zip'
             (self.bundle/filename).write_bytes((os+arch).encode())
 
     def put(self,name,data):
@@ -56,13 +56,13 @@ class OperationsGATests(unittest.TestCase):
         self.assertEqual(len(result['stageReceipts']),4)
         first=result['targets']['windows-x64']
         self.assertEqual(first['sha256'],ga.operational.sha(self.bundle/first['name']))
-        self.assertEqual(result['version'],'0.46.2')
+        self.assertEqual(result['version'],'0.46.3')
 
     def test_rejects_missing_package_and_symlink(self):
-        target=self.bundle/'launcher-desktop-0.46.2-windows-x64.zip'
+        target=self.bundle/'launcher-desktop-0.46.3-windows-x64.zip'
         target.unlink()
         with self.assertRaisesRegex(ValueError,'missing or unsafe'):self.attest()
-        target.symlink_to(self.bundle/'launcher-desktop-0.46.2-windows-arm64.zip')
+        target.symlink_to(self.bundle/'launcher-desktop-0.46.3-windows-arm64.zip')
         with self.assertRaisesRegex(ValueError,'missing or unsafe'):self.attest()
 
     def test_rejects_partial_failover(self):
@@ -107,7 +107,7 @@ class OperationsGATests(unittest.TestCase):
         raw=(self.evidence/'OPERATIONS_GA_0460.json').read_bytes()
         sig=base64.b64decode((self.evidence/'OPERATIONS_GA_0460.sig').read_text().strip())
         key.public_key().verify(sig,ga.DOMAIN+raw)
-        version='0.46.2'
+        version='0.46.3'
         import hashlib
         h=lambda b:hashlib.sha256(b).hexdigest()
         bom={'components':[{'sourceFile':'schemas/openapi.yaml',
@@ -128,7 +128,7 @@ class OperationsGATests(unittest.TestCase):
             serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
         self.assertEqual(ga.verify_public(self.bundle,operator_pub,release_pub)['status'],'verified')
         # Tampering with final installer bytes must be a hard rejection.
-        pkg=self.bundle/'launcher-desktop-0.46.2-windows-x64.zip'
+        pkg=self.bundle/'launcher-desktop-0.46.3-windows-x64.zip'
         pkg.write_bytes(b'different')
         with self.assertRaisesRegex(ValueError,'not independently approved'):
             ga.verify_public(self.bundle,operator_pub,release_pub)
