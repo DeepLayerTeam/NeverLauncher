@@ -163,6 +163,7 @@ class Operator0475Tests(unittest.TestCase):
     def test_safe_rollback_recovers_env_without_replacing_database(self):
         op = self.operator()
         op.init_workdir()
+        op.a.http_db = str(self.http)
         op.state["completed"] = ["preflight", "backup", "freeze"]
         op.save()
         op.original_env.write_bytes(self.source_env.read_bytes())

@@ -1,0 +1,70 @@
+name: SQLite to PostgreSQL migration failure recovery 0.47.7
+on:
+  push:
+    paths:
+      - 'scripts/operations/sqlite_pg_cutover_0475.py'
+      - 'scripts/operations/test_sqlite_pg_cutover_0475.py'
+      - 'scripts/operations/test_sqlite_pg_recovery_0477.py'
+      - 'services/api/internal/sqlitepg/**'
+      - '.github/workflows/sqlite-pg-recovery-0477.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-fault-injection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run real SQLite backups, WAL and injected operator faults
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest \
+            scripts.operations.test_sqlite_pg_cutover_0475 \
+            scripts.operations.test_sqlite_pg_recovery_0477 \
+            scripts.operations.test_legacy_upgrade_0476 -v
+          python3 -m py_compile \
+            scripts/operations/sqlite_pg_cutover_0475.py \
+            scripts/operations/test_sqlite_pg_recovery_0477.py
+          python3 scripts/version/manage.py check
+  sqlrepository-import-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: isolated-test-only
+          POSTGRES_DB: neverlauncher_live_0477
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_live_0477"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      LAUNCHER_PG_LIVE_TEST_DSN: postgres://neverlauncher_test:isolated-test-only@127.0.0.1:5432/neverlauncher_live_0477?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - name: Download and verify locked module dependencies
+        run: |
+          go mod download
+          go mod verify
+      - name: Run SQLite-to-real-SQLRepository migration and file corruption tests
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=20m -v ./internal/sqlitepg
+          go vet ./internal/sqlitepg

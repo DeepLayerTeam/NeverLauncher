@@ -8,13 +8,13 @@ is implemented and tested. Never infer PostgreSQL readiness from a staging row.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
-import shutil
 import sqlite3
 import stat
 import subprocess
@@ -73,6 +73,102 @@ def write_secure(path: Path, payload: bytes):
     finally:
         if os.path.exists(temp):
             os.unlink(temp)
+
+
+def enough_space(path: Path, required_bytes: int, reason: str):
+    """Fail before destructive work, reserving 20% + 64 MiB for WAL/metadata.
+
+    A full filesystem can cause an SQLite online backup or filesystem copy to
+    fail half-way through. This is a *preflight*, not a substitute for checking
+    and fsyncing the actual result. Check the filesystem containing the target.
+    """
+    if required_bytes < 0:
+        raise CutoverError("invalid storage size estimate")
+    where = path
+    while not where.exists():
+        where = where.parent
+    stats = os.statvfs(where)
+    available = stats.f_bavail * stats.f_frsize
+    reserve = max(64 * 1024 * 1024, (required_bytes + 4) // 5)
+    if available < required_bytes + reserve:
+        raise CutoverError(f"insufficient disk space for {reason}: need {required_bytes + reserve} bytes, have {available}")
+
+
+def sqlite_size_on_disk(path: Path) -> int:
+    private_file(path)
+    total = path.stat().st_size
+    for suffix in ("-wal", "-shm"):
+        sibling = Path(str(path) + suffix)
+        if sibling.exists():
+            refuse_symlink(sibling)
+            st = sibling.stat()
+            if not stat.S_ISREG(st.st_mode):
+                raise CutoverError("unsafe SQLite sidecar")
+            total += st.st_size
+    return total
+
+
+def storage_fingerprint(root: Path) -> tuple[str, int, int]:
+    """Hash every local blob and its relative name; reject symlink/device input.
+
+    Called before and after copying, including during resume. Merely comparing
+    file counts does not detect same-size/same-count source mutations.
+    """
+    refuse_symlink(root)
+    if not root.is_dir():
+        raise CutoverError("source local storage root must exist")
+    digest = hashlib.sha256()
+    count = total = 0
+    for folder, dirs, files in os.walk(root, followlinks=False):
+        for name in sorted(dirs):
+            part = Path(folder) / name
+            mode = part.lstat().st_mode
+            if not stat.S_ISDIR(mode):
+                raise CutoverError("non-directory or symlink inside source storage")
+        dirs.sort()
+        for name in sorted(files):
+            part = Path(folder) / name
+            before = part.lstat()
+            if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+                raise CutoverError("unsafe source storage blob (link or special file)")
+            relative = part.relative_to(root).as_posix().encode("utf-8")
+            fd = os.open(part, os.O_RDONLY | os.O_NOFOLLOW)
+            with os.fdopen(fd, "rb") as stream:
+                opened = os.fstat(stream.fileno())
+                if (before.st_ino, before.st_dev) != (opened.st_ino, opened.st_dev):
+                    raise CutoverError("source storage path replaced before reading")
+                content_sha = hashlib.sha256()
+                for buf in iter(lambda: stream.read(1024 * 1024), b""):
+                    content_sha.update(buf)
+                after_open = os.fstat(stream.fileno())
+            after = part.lstat()
+            if (before.st_ino, before.st_dev, before.st_size, before.st_mtime_ns) != (after.st_ino, after.st_dev, after.st_size, after.st_mtime_ns) or (opened.st_size, opened.st_mtime_ns) != (after_open.st_size, after_open.st_mtime_ns):
+                raise CutoverError("source file changed during fingerprint")
+            digest.update(len(relative).to_bytes(8, "big"))
+            digest.update(relative)
+            digest.update(before.st_size.to_bytes(8, "big"))
+            digest.update(content_sha.digest())
+            total += before.st_size
+            count += 1
+    return digest.hexdigest(), count, total
+
+
+def check_stage_chain(state: dict):
+    """Only a prefix of durable stage receipts may be replayed after a crash."""
+    completed = state.get("completed")
+    if not isinstance(completed, list) or completed != list(STAGES[:len(completed)]):
+        raise CutoverError("corrupt or out-of-order migration stage journal")
+    receipts = state.get("receipts", {})
+    if not isinstance(receipts, dict):
+        raise CutoverError("corrupt migration receipts")
+    if any(stage not in completed for stage in receipts):
+        raise CutoverError("receipt for uncommitted migration stage")
+    if state.get("importOutcomeUnknown") and "import" in completed:
+        raise CutoverError("contradictory import completion receipt")
+    if state.get("writeBoundaryCrossed") and "verify" not in completed:
+        raise CutoverError("unsafe write-boundary journal without verification; automatic rollback forbidden")
+    if "cutover" in completed and not state.get("writeBoundaryCrossed"):
+        raise CutoverError("cutover recorded without write boundary; automatic rollback forbidden")
 
 
 def sha256_file(path: Path):
@@ -159,7 +255,7 @@ def validate_sqlite_backup(path: Path):
         raise CutoverError("SQLite backup missing")
     private_file(path)
     uri = path.resolve().as_uri() + "?mode=ro"
-    with sqlite3.connect(uri, uri=True, timeout=10) as db:
+    with closing(sqlite3.connect(uri, uri=True, timeout=10)) as db:
         check = db.execute("PRAGMA integrity_check").fetchall()
         if check != [("ok",)]:
             raise CutoverError("SQLite backup integrity_check failed")
@@ -171,7 +267,7 @@ def validate_sqlite_backup(path: Path):
 def verify_http_snapshot(path: Path):
     """Validate the committed HTTP snapshot, not just SQLite page integrity."""
     private_file(path)
-    with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) as db:
+    with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         exists = db.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='http_repository_state_0372'").fetchone()[0]
         if exists != 1:
             raise CutoverError("HTTP Repository snapshot table missing")
@@ -206,13 +302,13 @@ def sqlite_backup(source_name: str, dest: Path):
     uri = source.resolve().as_uri() + "?mode=ro"
     # SQLite online backup API captures a single transactionally consistent
     # database, including committed WAL pages. Never copy just its .db file.
-    with sqlite3.connect(uri, uri=True, timeout=20) as src:
+    with closing(sqlite3.connect(uri, uri=True, timeout=20)) as src:
         if src.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
             raise CutoverError("source SQLite integrity check failed")
         fd = os.open(dest, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         os.close(fd)
         try:
-            with sqlite3.connect(str(dest)) as target:
+            with closing(sqlite3.connect(str(dest))) as target:
                 src.backup(target)
             validate_sqlite_backup(dest)
             with dest.open("rb") as stream:
@@ -226,7 +322,8 @@ def sqlite_backup(source_name: str, dest: Path):
 class Operator:
     def __init__(self, args):
         self.a = args
-        self.work = Path(args.work_dir).resolve()
+        # Do not resolve away a symlink before refuse_symlink checks it.
+        self.work = Path(os.path.abspath(args.work_dir))
         self.state_path = self.work / "state.json"
         self.journal_path = self.work / "stages.jsonl"
         self.backup = self.work / "core-frozen.db"
@@ -247,8 +344,11 @@ class Operator:
         if self.state_path.exists():
             private_file(self.state_path)
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise CutoverError("invalid persisted cutover journal")
             if data.get("format") != self.state["format"]:
                 raise CutoverError("unknown journal format")
+            check_stage_chain(data)
             self.state = data
         else:
             write_secure(self.state_path, json.dumps(self.state, sort_keys=True).encode())
@@ -266,8 +366,11 @@ class Operator:
         write_secure(self.state_path, json.dumps(self.state, indent=2, sort_keys=True).encode())
 
     def stage(self, name, fn):
+        check_stage_chain(self.state)
         if name in self.state["completed"]:
             return
+        if name != STAGES[len(self.state["completed"])]:
+            raise CutoverError("migration stages must run in order")
         self.log(name, "started")
         try:
             result = fn() or {}
@@ -316,12 +419,21 @@ class Operator:
             raise CutoverError("--http-db must exactly match current SQLite Backend DSN")
         for source in (self.a.core_db, self.a.http_db):
             private_file(Path(source))
+        # Independent preflight + frozen copies of Core, one frozen HTTP and
+        # one optional Coordinator copy; include WAL and guard headroom.
+        required = 2 * sqlite_size_on_disk(Path(self.a.core_db)) + sqlite_size_on_disk(Path(self.a.http_db))
+        if self.a.coordinator_db:
+            required += sqlite_size_on_disk(Path(self.a.coordinator_db))
+        enough_space(self.work, required, "SQLite backups")
         if self.a.coordinator_db:
             private_file(Path(self.a.coordinator_db))
         if cfg.get("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") and cfg["LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"] != self.a.coordinator_db:
             raise CutoverError("Coordinator path must be explicitly supplied and match the source configuration")
-        if os.path.samefile(self.a.core_db, self.a.http_db):
-            raise CutoverError("SQLite Core and HTTP databases are distinct; refusing mixed formats")
+        sources = [self.a.core_db, self.a.http_db]
+        if self.a.coordinator_db:
+            sources.append(self.a.coordinator_db)
+        if len({Path(v).resolve() for v in sources}) != len(sources):
+            raise CutoverError("SQLite Core, HTTP and Coordinator must be separate databases")
         # THIS IS A HARD INCOMPATIBILITY in 0.47.4. It must not be bypassed
         # even when an HTTP snapshot appears empty: private auth, coordinator,
         # signing, install and runtime metadata have no canonical PG mapping.
@@ -330,10 +442,13 @@ class Operator:
         return {"corePresent": True, "httpMigrationSupported": False}
 
     def do_backup(self):
-        shutil.copyfile(self.a.source_env, self.original_env)
-        os.chmod(self.original_env, 0o600)
-        with self.original_env.open("rb") as source:
-            os.fsync(source.fileno())
+        private_file(Path(self.a.source_env))
+        if self.original_env.exists():
+            private_file(self.original_env)
+            if sha256_file(self.original_env) != sha256_file(Path(self.a.source_env)):
+                raise CutoverError("previous original environment backup differs")
+        else:
+            write_secure(self.original_env, Path(self.a.source_env).read_bytes())
         self.state["sourceEnvSHA256"] = sha256_file(Path(self.a.source_env))
         self.save()
         result = run_cmd([self.a.launcher_sqlite, "pre-upgrade", "--db", self.a.core_db, "--backup", str(self.early_backup)], env=self.env)
@@ -351,6 +466,10 @@ class Operator:
 
     def frozen_backup(self):
         self.inactive()
+        if self.backup.exists() or self.http_backup.exists() or self.coordinator_backup.exists():
+            # An interrupted physical backup must never be reused as complete.
+            # Preserve evidence; require manual resolution rather than overwrite.
+            raise CutoverError("incomplete frozen backup files exist; inspect before retry")
         if sha256_file(Path(self.a.source_env)) != self.state.get("sourceEnvSHA256"):
             raise CutoverError("service configuration changed since preflight")
         # HTTP and Coordinator are not silently dropped. Back up and verify
@@ -390,12 +509,28 @@ class Operator:
         self.inactive()
         if not self.a.storage_source or not self.a.storage_target:
             raise CutoverError("distinct local source/target storage roots required")
-        if Path(self.a.storage_source).resolve() == Path(self.a.storage_target).resolve():
-            raise CutoverError("source storage must differ from PostgreSQL storage")
+        src = Path(self.a.storage_source)
+        dst = Path(self.a.storage_target)
+        if not src.is_absolute() or not dst.is_absolute():
+            raise CutoverError("source and target storage roots must be absolute")
+        src_path, dst_path = src.resolve(), dst.resolve()
+        if (src_path == dst_path or src_path.is_relative_to(dst_path)
+                or dst_path.is_relative_to(src_path)):
+            raise CutoverError("source and PostgreSQL storage must be disjoint trees")
+        if self.work.is_relative_to(src_path) or self.work.is_relative_to(dst_path):
+            raise CutoverError("private migration journal must not be inside storage")
+        refuse_symlink(dst)
+        before, count, size = storage_fingerprint(src)
+        enough_space(dst, size, "verified local blob copy")
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-files", "--source-root", self.a.storage_source, "--target-root", self.a.storage_target, "--ack-offline"], env=self.env)
         if not report.get("verified") or report.get("sourceSha256") != self.state["sourceSHA256"]:
             raise CutoverError("file-copy receipt invalid")
-        return {"verified": True, "objects": report["checked"]}
+        after, after_count, after_size = storage_fingerprint(src)
+        if (after, after_count, after_size) != (before, count, size):
+            raise CutoverError("source blobs changed during PostgreSQL copy")
+        if int(report.get("checked", -1)) < 0 or not report.get("catalogSha256"):
+            raise CutoverError("file-copy result missing verified catalog digest")
+        return {"verified": True, "objects": report["checked"], "sourceStorageSHA256": after, "sourceStorageObjects": count, "catalogSha256": report["catalogSha256"]}
 
     def verify(self):
         self.inactive()
@@ -414,14 +549,17 @@ class Operator:
         verdict = self.state.get("receipts", {}).get("verify", {})
         if not verdict.get("readyForBackendCutover") or not self.state.get("cutoverSupported"):
             raise CutoverError("unsafe cutover blocked: HTTP/Coordinator state not migrated; Core receipt is not approval")
-        # Future-compatible path: only reachable when all upstream gates are
-        # implemented. Atomic environment switch; original remains recoverable.
-        change_env(Path(self.a.source_env), self.env[self.a.dsn_env], "postgres", self.a.storage_target)
-        self.state["writeBoundaryCrossed"] = True  # service may write upon start
+        # The recovery barrier MUST reach durable storage before env rewrite.
+        # A crash between config replacement and flag persistence otherwise
+        # permits an unsafe SQLite rollback after PG may have accepted writes.
+        self.state["writeBoundaryCrossed"] = True
         self.save()
-        code, _ = self.service("start", self.a.units[0])
-        if code:
-            raise CutoverError("PostgreSQL backend did not start: write outcome requires investigation")
+        self.log("cutover", "write_boundary_armed")
+        change_env(Path(self.a.source_env), self.env[self.a.dsn_env], "postgres", self.a.storage_target)
+        for unit in self.a.units:
+            code, _ = self.service("start", unit)
+            if code:
+                raise CutoverError("PostgreSQL writer failed to start: check write outcome before rollback")
         return {"backendStarted": True}
 
     def health_check(self):
@@ -432,7 +570,10 @@ class Operator:
         with urllib.request.urlopen(request, timeout=10) as response:
             if response.status != 200:
                 raise CutoverError("Backend health status is not 200")
-        return {"backendHealth": True, "ownerInteractiveLoginVerified": False}
+        # /ready proves only process liveness. Production acceptance requires
+        # an actual owner login and project operation; never mark the complete
+        # pipeline successful based solely on an HTTP 200.
+        raise CutoverError("Backend responded but owner login/project operation was not verified; keep PostgreSQL writers stopped")
 
     def run(self):
         self.init_workdir()
@@ -444,6 +585,7 @@ class Operator:
                     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError as exc:
                     raise CutoverError("operator is already running") from exc
+                check_stage_chain(self.state)
                 if self.state.get("rolledBack"):
                     raise CutoverError("previous operation rolled back; use a fresh work directory")
                 if self.state.get("importOutcomeUnknown"):
@@ -453,6 +595,15 @@ class Operator:
                     self.stage(stage, function)
                 return self.state
         except Exception:
+            # If any PostgreSQL writer could have started, STOP all declared
+            # units but never claim that stopping makes stale-DB rollback safe.
+            if self.state.get("writeBoundaryCrossed"):
+                for unit in self.a.units:
+                    try:
+                        self.service("stop", unit)
+                    except Exception:
+                        pass
+                self.log("post_cutover_fault", "writes_unknown_rollback_blocked")
             # The lock above has been released before restarting SQLite.
             # PostgreSQL is still isolated until the write boundary is crossed.
             if ("backup" in self.state.get("completed", []) and
@@ -470,6 +621,11 @@ class Operator:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             if self.state.get("writeBoundaryCrossed"):
                 raise CutoverError("writes may have reached PostgreSQL; automatic rollback forbidden")
+            if self.state.get("importOutcomeUnknown"):
+                # SQLRepository import may be committed, but the old source
+                # remains authoritative until cutover. Never delete PG data or
+                # retry import as part of SQLite recovery.
+                self.log("rollback", "isolated_postgres_commit_unknown")
             # An abrupt termination after systemctl stop but before the phase
             # receipt is still safely recoverable if all units are inactive.
             if "backup" not in self.state["completed"]:
@@ -478,17 +634,33 @@ class Operator:
             private_file(self.original_env)
             # We have never modified the source databases. Validate the frozen
             # independent backup before restoring the original service config.
-            if self.backup.exists():
+            if "frozen_backup" in self.state["completed"]:
+                # A completed backup receipt must always pass independent
+                # verification. On an interrupted backup stage, incomplete
+                # files are forensic evidence, NOT an input to source recovery.
                 validate_sqlite_backup(self.http_backup)
-                if self.coordinator_backup.exists():
+                if self.a.coordinator_db:
                     validate_sqlite_backup(self.coordinator_backup)
                 result = run_cmd([self.a.launcher_sqlite, "backup-verify", "--backup", str(self.backup)], env=self.env)
                 if result.get("manifest", {}).get("sha256") != self.state.get("sourceSHA256"):
                     raise CutoverError("source backup damaged; rollback blocked")
+            elif any(path.exists() for path in (self.backup, self.http_backup, self.coordinator_backup)):
+                self.log("rollback", "partial_frozen_backups_ignored_source_only")
+            # Verify all old sources are still readable; never overwrite a
+            # source DB merely because the independently copied backup exists.
+            for source in [self.a.core_db, self.a.http_db, *([self.a.coordinator_db] if self.a.coordinator_db else [])]:
+                private_file(Path(source))
+                validate_sqlite_backup(Path(source))
             write_secure(Path(self.a.source_env), self.original_env.read_bytes())
-            code, _ = self.service("start", self.a.units[0])
-            if code:
-                raise CutoverError("SQLite backend restart failed")
+            for unit in self.a.units:
+                code, _ = self.service("start", unit)
+                if code:
+                    for stopped in self.a.units:
+                        try:
+                            self.service("stop", stopped)
+                        except Exception:
+                            pass
+                    raise CutoverError("SQLite service restart failed; services stopped for investigation")
             self.state["rolledBack"] = True
             self.save()
             self.log("rollback", "completed")

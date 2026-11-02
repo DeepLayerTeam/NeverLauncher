@@ -1,3 +1,12 @@
+## 0.47.7 — SQLite→PostgreSQL migration failure recovery and fail-closed rollback (source patch; GA pending)
+
+- Harden the offline systemd cutover operator with WAL-inclusive disk-space preflight, immutable interrupted-backup detection, secure SHA-256 inventory of LocalStorage objects before and after verified copying, and rejection of incomplete file catalog receipts.
+- Persist the possible-PostgreSQL-writes barrier **before** changing Backend configuration; stop all declared services on post-cutover failures, never silently revert the source when new PG writes might exist.
+- Validate persisted ordered migration stage receipts on resume; preserve unknown COMMIT outcome to prevent unsafe repeat imports after PostgreSQL failure. Validate all SQLite source databases before rollback, restart every declared writer unit and refuse to claim recovery if any restart fails.
+- Keep SQLite on-disk source state untouched; reject corrupted backup, changed blob, mismatched MFA key and unique-ID failures instead of reporting success. Preserve forensic artifacts for incomplete copy/import.
+- Add real on-disk SQLite/backup tests plus operator fault injection and isolated PostgreSQL CI workflow. Extend legacy native updater target acceptance to 0.47.7; synchronize version metadata.
+- **Not certified for production PG cutover:** translation of independent HTTP Repository/Coordinator/Extensions is still incomplete; the existing `readyForBackendCutover` gate remains closed. Go 1.27.3/PostgreSQL integration and systemd service E2E must pass independently; tested faults do not imply all possible failures have been covered.
+
 ## 0.47.6 — Legacy in-place upgrade operator (source implementation; cross-version GA E2E pending)
 
 - Add executable legacy upgrade operator that detects existing installation versions for Standard Backend Compose, Linux host binaries, Desktop/Runtime/Guard component-state and Prestarter generation records. Unsupported or unknown layouts are refused instead of being overwritten with first-install defaults. Prestarter source SemVer is pinned when not derivable from installed native client state.
