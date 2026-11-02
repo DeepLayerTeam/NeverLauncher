@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import zipfile
+from canonical_zip_0461 import write_zip
 from pathlib import Path
 
 ap = argparse.ArgumentParser()
@@ -13,12 +13,15 @@ out = Path(ns.output).resolve()
 if not src.is_dir():
     raise SystemExit(f"directory missing: {src}")
 out.parent.mkdir(parents=True, exist_ok=True)
-with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-    for path in sorted(src.rglob("*")):
-        if path.is_symlink():
-            raise SystemExit(f"symlink forbidden in release directory: {path}")
-        if path.is_file():
-            rel = path.relative_to(src).as_posix()
-            arc = f"{ns.prefix.rstrip('/')}/{rel}" if ns.prefix else rel
-            zf.write(path, arc)
+if out.is_relative_to(src):
+    raise SystemExit("release directory ZIP output must be outside source")
+members = []
+for path in sorted(src.rglob("*")):
+    if path.is_symlink():
+        raise SystemExit(f"symlink forbidden in release directory: {path}")
+    if path.is_file():
+        rel = path.relative_to(src).as_posix()
+        arc = f"{ns.prefix.rstrip('/')}/{rel}" if ns.prefix else rel
+        members.append((rel, arc))
+write_zip(src, out, members)
 print(out)

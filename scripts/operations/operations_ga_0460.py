@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Sign actual four-stage operational acceptance for a staged six-platform release.
 
-Run ONLY after independently executing 0.45.14 install, upgrade, restore and
+Run ONLY after independently executing the required install, upgrade, restore and
 failover on actual hosts. This tool verifies those receipts and reads final
 package bytes. Signature verification and authorization also run in the Go
 release signer/verifier; this utility cannot grant release status by itself.
@@ -22,6 +22,8 @@ from cryptography.exceptions import InvalidSignature
 import independent_accept_04514 as operational
 
 ROOT = Path(__file__).resolve().parents[2]
+# Stable 0.46-series signature domain and evidence filenames. Version is signed inside
+# the document; retaining the domain preserves verification of historical 0.46.0.
 DOMAIN = b'neverlauncher.operations-ga.0460.v1\x00'
 NAMES = ('install-standard', 'upgrade-standard', 'restore-standard', 'failover-network-ha')
 SHA = re.compile(r'^[0-9a-f]{64}$')
@@ -51,7 +53,7 @@ def package_hash(path: Path):
 def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
     version = (ROOT / 'VERSION').read_text().strip()
     require(COMMIT.fullmatch(commit) is not None, 'invalid source commit')
-    require(version == '0.46.0', 'attestation only allowed for version 0.46.0')
+    require(version in ('0.46.0', '0.46.1'), 'unsupported operations acceptance version')
     records = {name: operational.read_receipt(path, name) for name, path in receipts.items()}
     args = argparse.Namespace(install_receipt=receipts[NAMES[0]], upgrade_receipt=receipts[NAMES[1]],
                               restore_receipt=receipts[NAMES[2]], failover_receipt=receipts[NAMES[3]])

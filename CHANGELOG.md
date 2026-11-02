@@ -1,3 +1,15 @@
+## 0.46.1 — Integration fixes and verified input baseline (work-in-progress certification)
+
+- TypeScript HTTP SDK: working JSON/text/byte/stream response handling, bounded downloads, structured HTTP errors and redirect refusal; real Node HTTP regression tests added.
+- Desktop: explicit bundler module resolution in isolated TypeScript regression scripts to avoid deprecated implicit Node10 resolution with TypeScript 6.
+- Release ZIP/source packaging: canonical entry order, timestamps, regular-file enforcement, symlink refusal and repeatable byte-for-byte local test output.
+- Release acceptance: same Ed25519 verification domain and six-package independent operator acceptance, now permitting 0.46.1 documents while rejecting receipts from 0.46.0 for the new version.
+- Real Gradle Bridge packaging: select the exact versioned artifact instead of an arbitrary first JAR.
+- Build inputs: 214 source-input hashes, drift-blocking verification used in the release script and CI; primary six-target package inspection emits hashes only for actual staged files.
+- Version metadata synchronized for Runtime, Desktop, matrices and deployment templates. No change to trust roots, TLS, release signatures, replay or operator requirements.
+
+**Certification:** local targeted tests do not certify a full release. Native macOS LC_UUID, full Go 1.27.3 and Rust builds, independent host acceptance and the complete repository-policy/required CI matrix remain unverified or blocked. No GA status is asserted.
+
 # Changelog
 
 ## 0.46.0 — Operations & Delivery GA release gates (2026-11-01)

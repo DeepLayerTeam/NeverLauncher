@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
-import zipfile
+from canonical_zip_0461 import write_zip
 from pathlib import Path
 
 TOP_FILES = {
@@ -39,6 +39,7 @@ TOP_DIRS = {
     "examples",
     "tools",
     "docs",
+    "reproducibility",
 }
 EXCLUDED_PARTS = {
     ".git",
@@ -47,6 +48,7 @@ EXCLUDED_PARTS = {
     "dist",
     ".launcher",
     "build",
+    "build-tests",
     ".gradle",
     "__pycache__",
     ".pytest_cache",
@@ -179,11 +181,7 @@ def main() -> int:
     if not files:
         raise SystemExit("source allowlist пуст")
     out.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(
-        out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
-    ) as zf:
-        for rel in files:
-            zf.write(root / rel, rel)
+    write_zip(root, out, [(rel, rel) for rel in files])
     if ns.list_file:
         Path(ns.list_file).write_text("\n".join(files) + "\n", encoding="utf-8")
     print(f"source-package: {len(files)} allowlisted files -> {out}")

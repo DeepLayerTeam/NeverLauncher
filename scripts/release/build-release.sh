@@ -8,6 +8,11 @@ if [[ -n "${1:-}" && "$1" != "${CANONICAL_VERSION}" ]]; then
   exit 2
 fi
 VERSION="${CANONICAL_VERSION}"
+# Fail before modifying any release output when checked-in build inputs drift.
+# The same guard is executed after CI builds to detect lockfile mutation.
+if [[ "${VERSION}" == "0.46.1" ]]; then
+  python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
+fi
 OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
 WORK_DIR="${ROOT_DIR}/dist/.release-${VERSION}"
 PRIVATE_KEY="${LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
@@ -949,6 +954,12 @@ if [[ "$(printf '%s\n' '0.45.11' "${VERSION}" | sort -V | head -n1)" == '0.45.11
   "${RELEASE_CLI}" release distribution-verify "${OUT_DIR}"
 fi
 
+if [[ "${VERSION}" == "0.46.1" ]]; then
+  # Verify actual, not declared, final installer bytes before authorizing signature.
+  python3 "${ROOT_DIR}/scripts/release/check_payload_0461.py" "${OUT_DIR}" >/dev/null || exit 2
+  python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
+fi
+
 log "Ed25519 release signing"
 "${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 
@@ -981,4 +992,7 @@ else
   log "Certification evidence не передан: bundle не является publishable release"
 fi
 
+if [[ "${VERSION}" == "0.46.1" ]]; then
+  python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
+fi
 log "Каталог production-релиза готов: ${OUT_DIR}"
