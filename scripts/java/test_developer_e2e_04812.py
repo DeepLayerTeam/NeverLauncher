@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 import shutil
+import os
 import tempfile
 import unittest
 
@@ -15,7 +16,7 @@ spec.loader.exec_module(mod)
 class JavaArtifactHardeningTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.repo = mod.ROOT / 'dist/java-sdk/maven'
+        cls.repo = Path(os.environ.get('LAUNCHER_JAVA_SDK_REPO', mod.ROOT / 'dist/java-sdk/maven'))
         if not cls.repo.is_dir():
             raise RuntimeError('publish SDK artifacts before running this suite')
 

@@ -3,10 +3,10 @@
  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.example</groupId><artifactId>neverlauncher-developer-extension</artifactId><version>0.48.12</version>
-  <properties><maven.compiler.release>17</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
-  <repositories><repository><id>neverlauncher-local</id><url>file://${project.basedir}/../../../dist/java-sdk/maven</url></repository></repositories>
+  <properties><neverlauncher.sdk.version>0.48.12</neverlauncher.sdk.version><neverlauncher.sdk.repo>file://${project.basedir}/../../../dist/java-sdk/maven</neverlauncher.sdk.repo><maven.compiler.release>17</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
+  <repositories><repository><id>neverlauncher-local</id><url>${neverlauncher.sdk.repo}</url></repository></repositories>
   <dependencies>
-    <dependency><groupId>ru.launcher</groupId><artifactId>launcher-java-sdk-core</artifactId><version>0.48.12</version><scope>provided</scope></dependency>
+    <dependency><groupId>ru.launcher</groupId><artifactId>launcher-java-sdk-core</artifactId><version>${neverlauncher.sdk.version}</version><scope>provided</scope></dependency>
   </dependencies>
   <build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version><configuration><release>17</release></configuration></plugin></plugins></build>
 </project>

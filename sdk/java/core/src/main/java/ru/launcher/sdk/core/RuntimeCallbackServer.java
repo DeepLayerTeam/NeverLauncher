@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Loopback-only, authenticated and bounded callback/RPC server, running inside the JVM. */
 public final class RuntimeCallbackServer implements AutoCloseable {
@@ -21,6 +22,9 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     private final String token;
     private final RuntimeServices services;
     private final Supplier<String> lifecycleState;
+    // Revocation and JVM teardown must stop accepting work *before* resources close.
+    private final AtomicBoolean accepting=new AtomicBoolean(true);
+    private final Set<Future<?>> pending=ConcurrentHashMap.newKeySet();
     private final ThreadPoolExecutor workers=pool("neverext-rpc-http",8,16);
     private final ThreadPoolExecutor handlers=pool("neverext-rpc-handler",4,8);
     private static ThreadPoolExecutor pool(String name,int threads,int queued){
@@ -41,6 +45,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     public String url(){return "http://127.0.0.1:"+server.getAddress().getPort();}
     private void handle(HttpExchange exchange,String kind){
         try {
+            if(!accepting.get()){respond(exchange,503,Map.of("error","extension shutting down"));return;}
             if(!exchange.getRemoteAddress().getAddress().isLoopbackAddress()){respond(exchange,403,Map.of("error","loopback required"));return;}
             String header=exchange.getRequestHeaders().getFirst("Authorization");
             byte[] expected=("Bearer "+token).getBytes(StandardCharsets.UTF_8);
@@ -61,13 +66,25 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 String id=Json.string(data,"requestId",true);
                 if(id.length()>64||!id.matches("[a-zA-Z0-9_-]+")){respond(exchange,400,Map.of("error","invalid RPC request id"));return;}
             }
+            // A callback arriving after STOPPING must never commit new mutations.
+            // Health remains readable so the supervisor can diagnose a draining process.
+            String method=kind.equals("rpc")?Json.string(data,"method",true):"";
+            if(!"health".equals(method) && !"RUNNING".equals(lifecycleState.get())){
+                respond(exchange,503,Map.of("error","extension is not running"));return;
+            }
             Future<Object> future;
-            try{future=handlers.submit(()->dispatch(kind,data));}
+            try{future=handlers.submit(()->{
+                if(!accepting.get() || (!"health".equals(method) && !"RUNNING".equals(lifecycleState.get())))
+                    throw new IllegalStateException("extension is stopping");
+                return dispatch(kind,data);
+            });pending.add(future);if(!accepting.get())future.cancel(true);}
             catch(RejectedExecutionException ex){respond(exchange,503,Map.of("error","callback queue full"));return;}
             try{respond(exchange,200,future.get(millis,TimeUnit.MILLISECONDS));}
             catch(TimeoutException ex){future.cancel(true);respond(exchange,504,Map.of("error","callback deadline exceeded"));}
+            catch(CancellationException ex){respond(exchange,503,Map.of("error","callback cancelled during shutdown"));}
             catch(ExecutionException ex){
                 Throwable cause=ex.getCause();
+                if(!accepting.get()){respond(exchange,503,Map.of("error","extension shutting down"));return;}
                 if(kind.equals("events")){
                     if(cause instanceof RuntimeEvents.PermanentFailure || cause instanceof IllegalArgumentException){
                         respond(exchange,422,Map.of("code","EVENT_REJECTED","error","event rejected permanently"));
@@ -79,6 +96,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 }else respond(exchange,422,Map.of("error",cause.getClass().getSimpleName()));
             }
             catch(InterruptedException ex){Thread.currentThread().interrupt();future.cancel(true);respond(exchange,503,Map.of("error","interrupted"));}
+            finally{pending.remove(future);}
         }catch(Exception e){try{respond(exchange,400,Map.of("error","invalid callback"));}catch(IOException ignored){}}finally{exchange.close();}
     }
     private Object dispatch(String kind,Map<String,Object> data)throws Exception{
@@ -94,7 +112,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             case "health" -> {
                 if(!params.isEmpty())throw new IllegalArgumentException("health does not take parameters");
                 String state=lifecycleState.get();
-                result=Map.of("state",state,"responsive",true);
+                result=Map.of("state",state,"responsive","RUNNING".equals(state));
             }
             case "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke" -> result=services.identity().dispatch(method,params);
             case "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare" -> result=services.content().dispatch(method,params);
@@ -120,5 +138,9 @@ public final class RuntimeCallbackServer implements AutoCloseable {
         exchange.getResponseHeaders().set("Content-Type","application/json");
         exchange.sendResponseHeaders(status,bytes.length);try(OutputStream out=exchange.getResponseBody()){out.write(bytes);}
     }
-    @Override public void close(){server.stop(0);workers.shutdownNow();handlers.shutdownNow();}
+    @Override public void close(){
+        if(!accepting.compareAndSet(true,false))return;
+        for(Future<?> work:pending)work.cancel(true);
+        server.stop(0);workers.shutdownNow();handlers.shutdownNow();
+    }
 }

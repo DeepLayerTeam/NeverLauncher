@@ -1,3 +1,10 @@
+## 0.49.0 — Deep Java Platform (working source improvements; production GA BLOCKED)
+
+- Reject stale Java Extension Host callbacks before RUNNING or after STOPPING, cancel outstanding work on shutdown, prevent new mutations during draining and rotate callback credentials on host restart. Add real loopback HTTP regression tests for concurrent lifecycle transitions.
+- Compile and execute three independent Java extensions (Admin/Desktop/CLI, Content SPI, Java SPI with isolated nested dependency) against the **published** 0.49.0 SDK binary, not source-tree classes. Each runs as a real JVM subprocess with authenticated Host callbacks and CLI tests; the local Go Host implementation is simulated.
+- Fix the 0.48.12 Maven/Gradle public-SDK CI wiring: the pipeline now publishes to the path consumed by integrity tests and consumer builds and passes the live SDK version. Add Java 17/21 conformance workflow and document the unfulfilled production acceptance gates.
+- **0.49.0 GA is not certified:** true signed installation, PostgreSQL crash/upgrade/rollback, Go RBAC revocation, OS sandbox on all targets, real Minecraft E2E and independently signed production release acceptance remain outstanding. Source version is not a GA approval.
+
 ## 0.48.12 — Java Developer Experience & independent SDK consumer (source release; GA pending)
 
 - Publish reproducible local Maven artifacts for the Java SDK Core, Gravit compatibility adapter and 452-operation Java HTTP API client: actual Java 17 binary/source/Javadoc JARs, dependency-aware Maven POMs, SHA-256 and SHA-512 checksums. Ship the built offline Maven repository with the source distribution.

@@ -51,18 +51,18 @@ jobs:
           sh sdk/java/http-client/build.sh test
       - name: Rebuild Maven artifacts from compiled SDK and exercise public ABI
         shell: bash
-        run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output "$RUNNER_TEMP/sdk-04812"
+        run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
       - name: Verify external consumer and live JVM Host callbacks
         shell: bash
         run: |
           python3 scripts/java/test_developer_e2e_04812.py
-          python3 scripts/java/developer_e2e_04812.py --sdk-repo "$RUNNER_TEMP/sdk-04812/maven" --report java-developer-evidence.json
+          python3 scripts/java/developer_e2e_04812.py --sdk-repo dist/java-sdk/maven --report java-developer-evidence.json
       - name: Compile same public SDK consumer using Maven
         shell: bash
-        run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml package
+        run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml -Dneverlauncher.sdk.version="$(cat VERSION)" package
       - name: Compile same public SDK consumer using Gradle
         shell: bash
-        run: gradle --no-daemon -p examples/extensions/java-developer-04812 classes
+        run: gradle --no-daemon -p examples/extensions/java-developer-04812 -PneverLauncherSdkVersion="$(cat VERSION)" classes
       - name: Cross-platform SDK version validation
         shell: bash
         run: python3 scripts/version/manage.py check
