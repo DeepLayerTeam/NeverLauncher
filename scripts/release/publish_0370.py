@@ -613,10 +613,15 @@ def main() -> int:
             cli=Path(a.cli),
             trust_state=Path(a.trust_state),
         )
+        # 0.48.1 changes executable Java code, but does not certify the
+        # inherited, externally gated 0.48.0 SQLite/PostgreSQL cutover.
+        # Fail closed: changing VERSION must not bypass those release gates.
+        if a.version == "0.48.1":
+            raise Blocked("0.48.1 release requires fresh, commit-bound independent migration, legacy, game and signed-delivery GA admission; 0.48.0 evidence cannot certify new executable bytes")
         if a.version == "0.48.0":
             require(all((a.ga0480_evidence_dir, a.ga0480_approval,
                          a.ga0480_signature, a.ga0480_trusted_key)),
-                    "0.48.0 requires independent signed live migration, real game and legacy GA evidence")
+                    "0.48.x requires independent signed live migration, real game and legacy GA evidence")
             from ga_gate_0480 import gate as ga0480_gate
             evidence_root = Path(a.ga0480_evidence_dir)
             ga0480_gate(evidence_root, Path(a.ga0480_approval),

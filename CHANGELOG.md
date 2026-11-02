@@ -1,3 +1,12 @@
+## 0.48.1 — Java SDK / JVM Host stabilization (source release; external GA pending)
+
+- Fix production Java ExtensionLifecycle deadlocks: lifecycle state no longer holds its monitor while executing third-party start/stop callbacks; concurrent startup cancellation and shutdown complete within caller deadlines. Duplicate stop requests wait for the in-progress stop callback rather than releasing host services too early. Timed-out, noncooperative extension code is interrupted, marked failed and remains subject to process-supervisor termination.
+- Harden authenticated SDK-to-Go HostSession RPC: enforce the one-MiB response limit during streaming with a bounded Java 17 Flow subscriber (including stalled-body request deadlines); require `ok=true` heartbeat acknowledgements and use a heartbeat request timeout derived from the negotiated host interval. Failed heartbeats revoke session health.
+- Repair the real Java HTTP Client SDK compiler stall. Generate 452 OpenAPI operations as normal map insertions instead of one huge `Map.ofEntries` type-inference expression; preserve generated-registry drift validation and operation/route parity.
+- Add real loopback HTTP and concurrent lifecycle regression tests (startup cancellation, duplicate stop, stop deadline, oversized response, heartbeat rejection, authenticated RPC and timed-out handlers). Existing executable Java host / lifecycle subprocess tests continue to cover hello, ready, callbacks, CLI, heartbeat and POSIX shutdown.
+- Preserve fail-closed production publication: 0.48.1 executable changes cannot bypass 0.48.0's mandatory independently certified live database cutover, old-install upgrade, Minecraft, and signed-bundle evidence by incrementing VERSION alone. The actual 0.48.1 public GA release is **not** independently certified by this source patch.
+- Verified locally with OpenJDK 21 (`javac --release 17`), Java SDK Core, REST HTTP Client SDK, both Java subprocess E2E tests, OpenAPI generator/validator and release-admission unit tests. JDK 17 execution and Go supervisor race tests are configured in CI, but **not executed locally** (Go 1.27.3 is unavailable in this offline environment). External GA and native OS signing remain pending.
+
 ## 0.48.0 — Storage Migration / Legacy Upgrade independent admission (GA blocked pending real cutover)
 
 - Advance canonical component and installer version to 0.48.0, accept previously installed 0.47.8 native CLI and preserve independent `.previous-0480` rollback binaries. Extend the real historical upgrade matrix through 0.47.8.

@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
@@ -81,7 +84,14 @@ public final class HostSession implements AutoCloseable {
         eventProtocol=version==null?"":"1.0";
         connected=true;
         long period=Math.max(1,n.longValue()/3);
-        timer.scheduleWithFixedDelay(()->{try{post("/v1/heartbeat",Map.of());}catch(Exception e){healthy=false;close();}},period,period,TimeUnit.SECONDS);
+        long requestMillis=Math.max(500,Math.min(3000,n.longValue()*1000/3));
+        timer.scheduleWithFixedDelay(()->{
+            if(closed.get())return;
+            try{
+                Map<String,Object> ack=send("POST","/v1/heartbeat",Map.of(),200,Duration.ofMillis(requestMillis));
+                if(!Boolean.TRUE.equals(ack.get("ok")))throw new IOException("host rejected heartbeat acknowledgement");
+            }catch(Exception e){healthy=false;close();}
+        },period,period,TimeUnit.SECONDS);
     }
     private static Set<String> parseNames(Object raw,String field)throws IOException {
         if(raw==null)return Set.of();
@@ -123,22 +133,54 @@ public final class HostSession implements AutoCloseable {
     private Map<String,Object> post(String path,Object payload) throws IOException,InterruptedException {return postExpect(path,payload,200);}
     private Map<String,Object> postExpect(String path,Object payload,int status) throws IOException,InterruptedException {return send("POST",path,payload,status);}
     private Map<String,Object> send(String method,String path,Object payload,int status) throws IOException,InterruptedException {
+        return send(method,path,payload,status,Duration.ofSeconds(3));
+    }
+    private Map<String,Object> send(String method,String path,Object payload,int status,Duration timeout) throws IOException,InterruptedException {
         String body=payload==null?"":Json.encode(payload);
-        HttpRequest.Builder builder=HttpRequest.newBuilder(origin.resolve(path)).timeout(Duration.ofSeconds(3)).header("Authorization","Bearer "+token).header("Content-Type","application/json");
+        HttpRequest.Builder builder=HttpRequest.newBuilder(origin.resolve(path)).timeout(timeout).header("Authorization","Bearer "+token).header("Content-Type","application/json");
         HttpRequest request=builder.method(method,payload==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body,StandardCharsets.UTF_8)).build();
-        HttpResponse<String> response=http.send(request,HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if(response.body().length()>1_048_576)throw new IOException("oversized host response");
+        // A streaming BodySubscriber enforces the limit before buffering beyond
+        // 1 MiB; unlike ofInputStream(), the request deadline covers body I/O.
+        HttpResponse<byte[]> response=http.send(request,info->new BoundedBody(1_048_576));
+        String responseBody=new String(response.body(),StandardCharsets.UTF_8);
         if(response.statusCode()!=status){
             String code="HOST_HTTP_"+response.statusCode();
             try{
-                Map<String,Object> fault=Json.object(Json.parse(response.body()));
+                Map<String,Object> fault=Json.object(Json.parse(responseBody));
                 Object value=fault.get("code");
                 if(value instanceof String v&&v.matches("[A-Z][A-Z0-9_]{2,63}"))code=v;
             }catch(IllegalArgumentException ignored){/* original 0.42.0 Go host uses plaintext http.Error */}
             throw new HostError(response.statusCode(),code,"host request "+path+" failed with HTTP "+response.statusCode()+" ("+code+")");
         }
-        if(response.body().isEmpty())return Map.of();
-        return Json.object(Json.parse(response.body()));
+        if(responseBody.isEmpty())return Map.of();
+        return Json.object(Json.parse(responseBody));
+    }
+    private static final class BoundedBody implements HttpResponse.BodySubscriber<byte[]> {
+        private final CompletableFuture<byte[]> completion=new CompletableFuture<>();
+        private final ByteArrayOutputStream content=new ByteArrayOutputStream();
+        private final int limit;
+        private Flow.Subscription subscription;
+        private boolean done;
+        BoundedBody(int limit){this.limit=limit;}
+        @Override public CompletionStage<byte[]> getBody(){return completion;}
+        @Override public void onSubscribe(Flow.Subscription next){
+            subscription=next;next.request(1);
+        }
+        @Override public void onNext(List<ByteBuffer> chunks){
+            if(done)return;
+            for(ByteBuffer chunk:chunks){
+                if(chunk.remaining()>limit-content.size()){
+                    done=true;subscription.cancel();
+                    completion.completeExceptionally(new IOException("oversized host response"));
+                    return;
+                }
+                byte[] bytes=new byte[chunk.remaining()];chunk.get(bytes);
+                content.write(bytes,0,bytes.length);
+            }
+            subscription.request(1);
+        }
+        @Override public void onError(Throwable cause){done=true;completion.completeExceptionally(cause);}
+        @Override public void onComplete(){done=true;completion.complete(content.toByteArray());}
     }
     public static final class HostError extends IOException {
         private final int status;
