@@ -23,6 +23,7 @@ pub mod managed_java;
 pub mod guard_ipc;
 pub mod guard_inventory_0501;
 pub mod guard_compatibility_0502;
+mod guarded_trusted_launch_0503;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
@@ -963,10 +964,12 @@ pub async fn certify_vanilla_compatibility(
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
+    // The signed launcher environment policy clears inherited variables.
+    // Prepare Guard *after* this step so its authenticated pipe/secret reach JVM.
+    apply_launch_command_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("Vanilla certification заблокирован Guard Sensor: {err}"))?;
-    apply_launch_command_0223(&mut command, &plan);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
@@ -1130,14 +1133,32 @@ pub async fn launch_with_timeout_matching_authenticated(
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
+    // Native (modern loader) path: use the same signed Trusted JVM package
+    // as legacy ClientFactory. Keep the temporary premain configuration alive
+    // until the child has exited; Drop removes it on every error path.
+    // A Java module entrypoint cannot be forwarded through a classpath wrapper.
+    if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
+        return Err("Guard Trusted JVM requires a classpath Minecraft main; module entrypoint is unsupported".into());
+    }
+    let _trusted = guarded_trusted_launch_0503::prepare(root, &manifest.project_id,
+        &manifest.minecraft.version, &manifest.minecraft.loader, &plan.main_class)?;
+    if let Some(ref trusted) = _trusted {
+        // A signed Guard policy, not modded metadata or mutable JVM flags,
+        // authorizes the exact agent and its JVM transformation owners.
+        plan.jvm_args.push(trusted.agent_arg.clone());
+        plan.main_class = trusted.main_class.clone();
+        writeln!(log_file, "Guard policy digest: {}", trusted.policy_digest).map_err(|e| e.to_string())?;
+    }
     guard_compatibility_0502::enforce_launch(root, &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
-    #[cfg(windows)]
-    let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
-        .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
+    // env_clear removes caller-controlled options first; Guard Sensor then
+    // injects its fresh authenticated IPC endpoint/secret without being erased.
     apply_launch_command_0223(&mut command, &plan);
+    #[cfg(windows)]
+    let mut sensor_bootstrap = windows_sensor::prepare_sensor_command_for_game(&mut command, root)
+        .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))

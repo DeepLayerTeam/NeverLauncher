@@ -54,5 +54,7 @@ jobs:
       - name: Offline sign/key generation tests
         working-directory: cli
         run: go test ./cmd/guard-policy-sign -count=1
-      - name: Native Rust policy unit tests and compile
-        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
+      - name: Native Rust Guard policy and real Trusted JVM launch integration
+        run: |
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib guarded_trusted_launch_0503

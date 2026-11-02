@@ -28,7 +28,7 @@ mod imp {
     use hmac::{Hmac, Mac};
     use rand::{rngs::OsRng, RngCore};
     use sha2::Sha256;
-    use std::{ffi::{OsStr, OsString}, path::PathBuf};
+    use std::{ffi::{OsStr, OsString}, path::{Path, PathBuf}};
     use subtle::ConstantTimeEq;
     use tokio::{
         io::AsyncReadExt,
@@ -154,7 +154,7 @@ mod imp {
         }
     }
 
-    fn validate_startup_instrumentation_boundary(command: &Command) -> Result<(), String> {
+    fn validate_startup_instrumentation_boundary(command: &Command, verified_root: Option<&Path>) -> Result<(), String> {
         for arg in command.as_std().get_args() {
             let argument = arg.to_string_lossy();
             if let Some(label) = forbidden_instrumentation_token(&argument) {
@@ -162,7 +162,11 @@ mod imp {
                 // trusted Java plugin. Verify the exact pinned JAR and live
                 // signed Guard epoch before permitting this one startup flag.
                 if label == "-javaagent" {
-                    let root = command.as_std().get_current_dir()
+                    // Minecraft's working directory may differ from the
+                    // signed installation root. The release launch caller
+                    // passes the verified root explicitly, not an environment
+                    // variable controlled by the JVM or a mod.
+                    let root = verified_root.or_else(|| command.as_std().get_current_dir())
                         .ok_or("Guard compatibility Java agent requires an explicit game root")?;
                     if crate::guard_compatibility_0502::authorize_agent(root, &argument)? {
                         continue;
@@ -188,8 +192,9 @@ mod imp {
     fn prepare_sensor_command_for_path(
         command: &mut Command,
         sensor_path: PathBuf,
+        verified_root: Option<&Path>,
     ) -> Result<WindowsSensorBootstrap, String> {
-        validate_startup_instrumentation_boundary(command)?;
+        validate_startup_instrumentation_boundary(command, verified_root)?;
         let metadata = std::fs::symlink_metadata(&sensor_path).map_err(|err| {
             format!("Guard Sensor DLL is unavailable {}: {err}", sensor_path.display())
         })?;
@@ -224,14 +229,19 @@ mod imp {
     }
 
     pub fn prepare_sensor_command(command: &mut Command) -> Result<WindowsSensorBootstrap, String> {
-        prepare_sensor_command_for_path(command, resolve_sensor_path()?)
+        prepare_sensor_command_for_path(command, resolve_sensor_path()?, None)
+    }
+    /// Native Minecraft launcher: authorize a pinned JVM agent against the
+    /// signed client root, even when gameDirectory points elsewhere.
+    pub fn prepare_sensor_command_for_game(command: &mut Command, root: &Path) -> Result<WindowsSensorBootstrap, String> {
+        prepare_sensor_command_for_path(command, resolve_sensor_path()?, Some(root))
     }
 
     pub fn prepare_sensor_command_with_path(
         command: &mut Command,
         sensor_path: PathBuf,
     ) -> Result<WindowsSensorBootstrap, String> {
-        prepare_sensor_command_for_path(command, sensor_path)
+        prepare_sensor_command_for_path(command, sensor_path, None)
     }
 
     impl WindowsSensorBootstrap {
@@ -332,7 +342,7 @@ mod imp {
 
 #[cfg(windows)]
 pub use imp::{
-    authenticate_sensor_or_kill, prepare_sensor_command, prepare_sensor_command_with_path,
+    authenticate_sensor_or_kill, prepare_sensor_command, prepare_sensor_command_for_game, prepare_sensor_command_with_path,
     WindowsSensorBootstrap, WindowsSensorSession,
 };
 

@@ -238,6 +238,10 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 			Kind: "java-plugin", Path: trustedRoot0306 + "/releases/" + record.PackageSHA256 + "/plugins/" + plugin.Name, SHA256: plugin.SHA256,
 		})
 	}
+	// An actual installed mod is part of the same signed launch scope.
+	// The Java process is never spawned when a different mod appears.
+	approvedMod := artifact0502(t, root, "mod", "mods/approved.jar", "fixture-mod-0503")
+	p.Artifacts = append(p.Artifacts, approvedMod)
 	p.Transformations = []guardCompatTransform0502{{ID: "net.minecraft.client.Minecraft", OwnerSHA256: record.Plugins[0].SHA256}}
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err != nil {
 		t.Fatal(err)
@@ -248,6 +252,14 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 			return "", err
 		}
 		defer cleanup()
+		var plugins []string
+		for _, item := range record.Plugins {
+			plugins = append(plugins, filepath.Join(root, filepath.FromSlash(trustedRoot0306+"/releases/"+record.PackageSHA256+"/plugins/"+item.Name)))
+		}
+		agentPath := filepath.Join(root, filepath.FromSlash(trustedRoot0306+"/releases/"+record.PackageSHA256+"/agent.jar"))
+		if err := guardCompatValidateLaunch0502(root, p.ProjectID, p.Minecraft, p.Loader, []string{agentPath}, plugins); err != nil {
+			return "", err
+		}
 		args := append([]string{"-Dlauncher.trusted.test.transform=true", "-Dlauncher.trusted.game.log=" + filepath.Join(t.TempDir(), "game.log")}, flags...)
 		args = append(args, "-cp", filepath.Join(example, "build", "game.jar"), main, "hello world", "arg2")
 		cmd := exec.Command("java", args...)
@@ -256,7 +268,17 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 		return string(output), err
 	}
 	if output, err := run(); err != nil {
-		t.Fatalf("allowed class transform killed JVM: %v %s", err, output)
+		t.Fatalf("allowed mod+agent JVM launch failed: %v %s", err, output)
+	}
+	intruder := filepath.Join(root, "mods", "unknown.jar")
+	if err := os.WriteFile(intruder, []byte("unapproved"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := run(); err == nil || !strings.Contains(err.Error(), "unauthorized") {
+		t.Fatalf("unknown mod reached Java spawn: %v %s", err, output)
+	}
+	if err := os.Remove(intruder); err != nil {
+		t.Fatal(err)
 	}
 	// Upgrade to an equally valid signed policy that authorizes NO transformations.
 	p.Epoch = 2

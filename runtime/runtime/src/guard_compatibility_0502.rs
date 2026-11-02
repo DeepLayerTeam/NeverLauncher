@@ -33,7 +33,7 @@ struct Policy {
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
 struct Floor { epoch:u64,digest:String,root_sha256:String }
-struct Verified { policy:Policy }
+struct Verified { policy:Policy, digest:String }
 
 fn sha(bytes:&[u8])->String{hex::encode(Sha256::digest(bytes))}
 fn is_sha(s:&str)->bool{s.len()==64 && s.bytes().all(|b|b.is_ascii_hexdigit() && !b.is_ascii_uppercase())}
@@ -124,8 +124,40 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
    return Err("Guard compatibility root change, rollback or equivocation".into())
   }
  }
- Ok(Some(Verified{policy:p}))
+ Ok(Some(Verified{policy:p,digest:sha(&payload)}))
 }
+/// A scoped, verified operator policy exposed only to the native Trusted JVM bridge.
+/// Artifacts are SHA-256 checked again immediately before spawn.
+pub struct GamePolicy0503 { policy:Policy, digest:String }
+impl GamePolicy0503 {
+ pub fn digest(&self)->&str { &self.digest }
+ pub fn authorize(&self,root:&Path,kind:&str,relative_path:&str,digest:&str)->Result<(),String> {
+  let artifact=self.policy.artifacts.iter().find(|a|a.kind==kind && a.path==relative_path && a.sha256==digest)
+   .ok_or_else(||format!("Guard compatibility {kind} not signed for this game: {relative_path}"))?;
+  if self.policy.revoked_digests.contains(&artifact.sha256){return Err("Guard compatibility trusted code revoked".into())}
+  validate_safe_path(root,&artifact.path,512*1024*1024)?;
+  if actual_sha(&root.join(&artifact.path))?!=artifact.sha256{return Err("Guard compatibility trusted code digest changed".into())}
+  Ok(())
+ }
+ pub fn transforms(&self,owners:&HashSet<String>)->Result<Vec<(String,String)>,String>{
+  let mut allowed=Vec::new();
+  for t in &self.policy.transformations {
+   if self.policy.revoked_transformations.contains(&t.id) || self.policy.revoked_digests.contains(&t.owner_sha256) || !owners.contains(&t.owner_sha256){
+    return Err(format!("Guard compatibility unapproved/revoked trusted transformation: {}",t.id))
+   }
+   allowed.push((t.id.clone(),t.owner_sha256.clone()));
+  }
+  Ok(allowed)
+ }
+}
+pub fn verified_for_game(root:&Path,project:&str,minecraft:&str,loader:&str)->Result<Option<GamePolicy0503>,String>{
+ let Some(v)=load(root)? else{return Ok(None)};
+ if v.policy.project_id!=project || v.policy.minecraft!=minecraft || !v.policy.loader.eq_ignore_ascii_case(loader) {
+  return Err("Guard compatibility trusted game scope mismatch".into())
+ }
+ Ok(Some(GamePolicy0503{policy:v.policy,digest:v.digest}))
+}
+
 fn validate_safe_path(root:&Path,rel:&str,max:u64)->Result<(),String>{
  if !relative(rel){return Err("Guard compatibility invalid path".into())}
  let mut path=root.to_path_buf();

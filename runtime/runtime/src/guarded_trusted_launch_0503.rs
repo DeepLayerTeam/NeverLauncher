@@ -1,0 +1,254 @@
+//! Native Minecraft runtime bridge for the already installed, signed Trusted JVM package.
+//! The independent operator-signed Guard policy authorizes exact agent/plugin bytes;
+//! this module never treats a mutable active.json record as a trust anchor.
+use crate::guard_compatibility_0502;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use rand::{rngs::OsRng, RngCore};
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
+use std::{collections::HashSet, fs::{self, File, OpenOptions}, io::{Read, Write}, path::{Path, PathBuf}};
+
+const ACTIVE: &str = ".launcher/trusted-jvm/active.json";
+const ROOT: &str = ".launcher/trusted-jvm";
+const WRAPPER: &str = "ru.launcher.trusted.MinecraftMain";
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Active {
+    schema_version: String,
+    package_sha256: String,
+    agent_sha256: String,
+    approved_access: String,
+    plugins: Vec<ActivePlugin>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ActivePlugin { name: String, sha256: String }
+
+pub struct GuardedTrustedLaunch0503 {
+    config: PathBuf,
+    pub agent_arg: String,
+    pub main_class: String,
+    pub policy_digest: String,
+}
+impl Drop for GuardedTrustedLaunch0503 {
+    fn drop(&mut self) { let _ = fs::remove_file(&self.config); }
+}
+
+fn is_digest(s: &str) -> bool {
+    s.len() == 64 && s.as_bytes().iter().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(b))
+}
+fn plugin_name(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 180 && s.ends_with(".jar") &&
+        !s.chars().any(|c| matches!(c, '/' | '\\' | ':' | '\r' | '\n' | '\0')) && s != ".jar"
+}
+fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String> {
+    // The native Runtime does not reinterpret mutable active.json as a signed
+    // extension manifest: independently verify the installed .nlext bytes.
+    // The external Guard policy remains the launch authorization for JARs.
+    let mut current = root.to_path_buf();
+    for part in format!("{release}/signed.nlext").split('/') {
+        current.push(part);
+        let md = fs::symlink_metadata(&current).map_err(|e| format!("Guard Trusted JVM package missing: {e}"))?;
+        if md.file_type().is_symlink() { return Err("Guard Trusted JVM package path symlink".into()) }
+    }
+    let md = fs::metadata(&current).map_err(|e| e.to_string())?;
+    if !md.is_file() || md.len() == 0 || md.len() > 256 * 1024 * 1024 { return Err("Guard Trusted JVM signed package size/type invalid".into()) }
+    let mut src = File::open(&current).map_err(|e| e.to_string())?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 65536];
+    loop {
+        let n = src.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break }
+        hasher.update(&buf[..n]);
+    }
+    if hex::encode(hasher.finalize()) != digest { return Err("Guard Trusted JVM signed package SHA-256 differs from active identity".into()) }
+    Ok(())
+}
+fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String, String)]) -> Result<String, String> {
+    if !main.contains('.') || !main.split('.').all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')) {
+        return Err("Guard Trusted JVM invalid Minecraft main class".into());
+    }
+    if plugins.len() > 32 || transforms.len() > 4096 { return Err("Guard Trusted JVM plugin/transform limit exceeded".into()) }
+    let mut text = format!("main={}\nguard.policy.active=true\ntransform.count={}\n", STANDARD.encode(main), transforms.len());
+    for (i, (class, owner)) in transforms.iter().enumerate() {
+        if !is_digest(owner) { return Err("Guard Trusted JVM transform owner digest invalid".into()) }
+        text.push_str(&format!("transform.{i}.owner={owner}\ntransform.{i}.class={}\n", STANDARD.encode(class)));
+    }
+    text.push_str(&format!("count={}\n", plugins.len()));
+    for (i, (path, digest)) in plugins.iter().enumerate() {
+        if !is_digest(digest) { return Err("Guard Trusted JVM plugin digest invalid".into()) }
+        text.push_str(&format!("plugin.{i}={}\nplugin.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));
+    }
+    Ok(text)
+}
+
+/// If a trusted JVM package is installed, require the full signed Guard policy
+/// and bind its agent, plugins, transformations and game scope before Java spawn.
+/// Absence of the package keeps vanilla/ordinary loader launch unchanged.
+pub fn prepare(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str) -> Result<Option<GuardedTrustedLaunch0503>, String> {
+    let canonical_root = fs::canonicalize(root).map_err(|e| format!("Guard Trusted JVM client root: {e}"))?;
+    let root = canonical_root.as_path();
+    let active = root.join(ACTIVE);
+    let meta = match fs::symlink_metadata(&active) {
+        Ok(m) => m,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(format!("Guard Trusted JVM active record: {e}")),
+    };
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 8192 {
+        return Err("Guard Trusted JVM active record not a bounded regular file".into());
+    }
+    let rec: Active = serde_json::from_slice(&fs::read(&active).map_err(|e| e.to_string())?).map_err(|e| format!("Guard Trusted JVM active record invalid: {e}"))?;
+    if rec.schema_version != "launcher.trusted-jvm.v1" || rec.approved_access != "full-minecraft-jvm" ||
+        !is_digest(&rec.package_sha256) || !is_digest(&rec.agent_sha256) || rec.plugins.len() > 16 {
+        return Err("Guard Trusted JVM active record has invalid identity/permission".into());
+    }
+    let signed = guard_compatibility_0502::verified_for_game(root, project, minecraft, loader)?
+        .ok_or("Guard Trusted JVM installed without mandatory signed compatibility policy")?;
+    let release = format!("{ROOT}/releases/{}", rec.package_sha256);
+    check_package(root, &release, &rec.package_sha256)?;
+    let agent_rel = format!("{release}/agent.jar");
+    signed.authorize(root, "java-agent", &agent_rel, &rec.agent_sha256)?;
+    let mut plugins = Vec::new();
+    let mut approved_plugins = HashSet::new();
+    for plugin in rec.plugins {
+        if !plugin_name(&plugin.name) || !is_digest(&plugin.sha256) || !approved_plugins.insert(plugin.sha256.clone()) {
+            return Err("Guard Trusted JVM duplicate or invalid plugin".into());
+        }
+        let rel = format!("{release}/plugins/{}", plugin.name);
+        signed.authorize(root, "java-plugin", &rel, &plugin.sha256)?;
+        let absolute = root.join(&rel).canonicalize().map_err(|e| e.to_string())?;
+        plugins.push((absolute, plugin.sha256));
+    }
+    // Every transformation must belong to an installed, authorized plugin.
+    let transforms = signed.transforms(&approved_plugins)?;
+    // Recheck all policy artifacts, not only trusted ones, before preparing
+    // the JVM. The final native Guard pre-spawn gate repeats these checks.
+    guard_compatibility_0502::enforce_launch(root, project, minecraft, loader, &[])?;
+    let config = config_text(original_main, &plugins, &transforms)?;
+    let dir = root.join(ROOT);
+    let mut random = [0u8; 16]; OsRng.fill_bytes(&mut random);
+    let name = dir.join(format!(".guard-launch-{}.properties", hex::encode(random)));
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
+    let mut file = options.open(&name).map_err(|e| format!("Guard Trusted JVM launch config create: {e}"))?;
+    if let Err(e) = file.write_all(config.as_bytes()).and_then(|_| file.sync_all()) {
+        let _ = fs::remove_file(&name);
+        return Err(format!("Guard Trusted JVM launch config write: {e}"));
+    }
+    drop(file);
+    let agent = root.join(&agent_rel).canonicalize().map_err(|e| { let _ = fs::remove_file(&name); e.to_string() })?;
+    Ok(Some(GuardedTrustedLaunch0503 {
+        config: name.clone(),
+        agent_arg: format!("-javaagent:{}={}", agent.display(), name.display()),
+        main_class: WRAPPER.into(),
+        policy_digest: signed.digest().to_string(),
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test] fn rejects_bad_names_and_identity() {
+        for s in ["../hook.jar", "other\\hook.jar", "nojar", "x.jar\nX=1", ".jar"] { assert!(!plugin_name(s)); }
+        assert!(plugin_name("trusted-hook.jar"));
+        assert!(config_text("com.example.Client", &[], &[]).unwrap().contains("guard.policy.active=true"));
+        assert!(config_text("bad class", &[], &[]).is_err());
+        assert!(config_text("Main", &[], &[]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod signed_launch_tests {
+    use super::*;
+    use ed25519_dalek::{Signer, SigningKey};
+    use serde_json::json;
+    use sha2::{Digest, Sha256};
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn sha(bytes: &[u8]) -> String { hex::encode(Sha256::digest(bytes)) }
+    fn create(root: &Path, path: &str, bytes: &[u8]) {
+        let file = root.join(path);
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(file, bytes).unwrap();
+    }
+    fn policy_fixture(root: &Path, anchor: &Path, revoked: bool) -> String {
+        let key = SigningKey::from_bytes(&[17u8; 32]);
+        fs::write(anchor, hex::encode(key.verifying_key().to_bytes())).unwrap();
+        let package_hash = sha(b"trusted-package");
+        let agent = b"agent-JAR-fixed-contents";
+        let plugin = b"plugin-JAR-fixed-contents";
+        create(root, &format!("{ROOT}/releases/{package_hash}/signed.nlext"), b"trusted-package");
+        let agent_path = format!("{ROOT}/releases/{package_hash}/agent.jar");
+        let plugin_path = format!("{ROOT}/releases/{package_hash}/plugins/hook.jar");
+        create(root, &agent_path, agent);
+        create(root, &plugin_path, plugin);
+        create(root, "mods/approved.jar", b"approved-mod");
+        create(root, ACTIVE, serde_json::to_string(&json!({
+            "schemaVersion":"launcher.trusted-jvm.v1",
+            "packageSha256":package_hash,
+            "agentSha256":sha(agent),
+            "approvedAccess":"full-minecraft-jvm",
+            "plugins":[{"name":"hook.jar","sha256":sha(plugin)}]
+        })).unwrap().as_bytes());
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+        let payload = serde_json::to_vec(&json!({
+            "schemaVersion":"launcher.guard-compatibility.v1", "projectId":"project-1", "minecraft":"1.20.1", "loader":"fabric",
+            "epoch":2, "issuedAt":now-60, "expiresAt":now+3600,
+            "artifacts":[
+                {"kind":"java-agent","path":agent_path,"sha256":sha(agent)},
+                {"kind":"java-plugin","path":plugin_path,"sha256":sha(plugin)},
+                {"kind":"mod","path":"mods/approved.jar","sha256":sha(b"approved-mod")}
+            ],
+            "transformations":[{"id":"net.minecraft.client.Minecraft","ownerSha256":sha(plugin)}],
+            "revokedDigests":if revoked { vec![sha(agent)] } else { vec![] },
+            "revokedTransformations":[]
+        })).unwrap();
+        let mut message = b"NeverLauncher-Guard-Compatibility-v1\n".to_vec();
+        message.extend_from_slice(&payload);
+        create(root, ".launcher/guard/compatibility.json", serde_json::to_string(&json!({
+            "schemaVersion":"launcher.guard-compatibility.v1", "payload":STANDARD.encode(&payload),
+            "signature":hex::encode(key.sign(&message).to_bytes())
+        })).unwrap().as_bytes());
+        create(root, ".launcher/guard/accepted.json", serde_json::to_string(&json!({
+            "epoch":2, "digest":sha(&payload), "rootSha256":sha(&key.verifying_key().to_bytes())
+        })).unwrap().as_bytes());
+        agent_path
+    }
+    #[test]
+    fn native_modded_agent_prepare_enforces_real_signed_policy() {
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        let _guard = ENV_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap();
+        let mut random = [0u8; 16]; OsRng.fill_bytes(&mut random);
+        let base = std::env::temp_dir().join(format!("nl-0503-test-{}", hex::encode(random)));
+        let root = base.join("game");
+        fs::create_dir_all(&root).unwrap();
+        let key = base.join("public.hex");
+        let agent_rel = policy_fixture(&root, &key, false);
+        let old = std::env::var_os("LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE");
+        std::env::set_var("LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE", &key);
+        let accepted = prepare(&root, "project-1", "1.20.1", "fabric", "net.minecraft.client.main.Main").unwrap().unwrap();
+        let file = accepted.agent_arg.split_once('=').unwrap().1.to_string();
+        let props = fs::read_to_string(&file).unwrap();
+        assert!(props.contains("transform.count=1"));
+        assert!(props.contains("plugin.0.sha256="));
+        assert!(accepted.agent_arg.contains("agent.jar"));
+        assert_eq!(accepted.main_class, WRAPPER);
+        drop(accepted);
+        assert!(!Path::new(&file).exists());
+        assert!(prepare(&root, "project-2", "1.20.1", "fabric", "com.example.Game").is_err());
+        create(&root, "mods/injected.jar", b"unexpected mod");
+        assert!(prepare(&root, "project-1", "1.20.1", "fabric", "com.example.Game").is_err());
+        fs::remove_file(root.join("mods/injected.jar")).unwrap();
+        create(&root, &agent_rel, b"tampered");
+        assert!(prepare(&root, "project-1", "1.20.1", "fabric", "com.example.Game").is_err());
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        policy_fixture(&root, &key, true);
+        assert!(prepare(&root, "project-1", "1.20.1", "fabric", "com.example.Game").is_err());
+        match old { Some(v) => std::env::set_var("LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE", v), None => std::env::remove_var("LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE") }
+        let _ = fs::remove_dir_all(&base);
+    }
+}
