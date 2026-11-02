@@ -88,7 +88,14 @@ func (p *securityPostgres111) finishTOTPEnrollment(userID, code string) bool {
 
 func (p *securityPostgres111) disableTOTP(userID, code string) bool {
 	rec, err := p.loadMFA(userID)
-	if err != nil || !rec.Enabled || !verifyTOTPCode902(rec.ActiveSecret, code, time.Now().UTC()) {
+	if err != nil || !rec.Enabled {
+		return false
+	}
+	if handled, accepted := p.consumeImportedTOTP0474(userID, code, rec.ActiveSecret); handled {
+		if !accepted {
+			return false
+		}
+	} else if !verifyTOTPCode902(rec.ActiveSecret, code, time.Now().UTC()) {
 		return false
 	}
 	rec.Enabled = false
@@ -112,7 +119,11 @@ func (p *securityPostgres111) verifySecondFactor(userID, totp, recovery string) 
 	if !rec.Enabled {
 		return true, "mfa-not-enabled"
 	}
-	if verifyTOTPCode902(rec.ActiveSecret, totp, time.Now().UTC()) {
+	if handled, ok := p.consumeImportedTOTP0474(userID, totp, rec.ActiveSecret); handled {
+		if ok {
+			return true, "totp-ok"
+		}
+	} else if verifyTOTPCode902(rec.ActiveSecret, totp, time.Now().UTC()) {
 		return true, "totp-ok"
 	}
 	if p.consumeRecoveryCode(userID, recovery) {

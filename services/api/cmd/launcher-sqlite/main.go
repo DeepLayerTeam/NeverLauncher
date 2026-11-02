@@ -23,6 +23,9 @@ func run(args []string) int {
 	if len(args) > 0 && args[0] == "postgres-to-sqlite" {
 		return runPGExport(args[1:])
 	}
+	if len(args) > 0 && args[0] == "sqlite-to-postgres-files" {
+		return runPGFiles0474(args[1:])
+	}
 	if len(args) > 0 && args[0] == "sqlite-to-postgres-live" {
 		return runPGLive0473(args[1:])
 	}

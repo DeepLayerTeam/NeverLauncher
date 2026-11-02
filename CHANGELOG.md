@@ -1,3 +1,12 @@
+## 0.47.4 — SQLite Core durable state to PostgreSQL and verified offline storage (source candidate; production acceptance unverified)
+
+- Extend the existing verified staging-to-SQLRepository import to transfer authentication sessions, refresh families/tokens, TOTP/recovery, Minecraft identity/session history, security tombstones, durable jobs/attempts/scope leases/outbox, ServerBridge node identities, replay nonces, join tickets, runtime fencing and control-command history in a single PostgreSQL transaction. Reject invalid source hashes, broken relationships and unhandled nonempty source tables rather than reporting success.
+- Require source private SQLite Core MFA key and the destination HTTP API secret for enabled/pending TOTP; use authenticated AES-256-GCM Core decryption and the existing PostgreSQL encrypted envelope. Preserve recovery-code hashes and state, and enforce one-time monotonic TOTP steps for imported users.
+- Add an offline LocalStorage/S3 file-copy operator command that reads verified manifest file metadata, checks each source and destination object's SHA-256 and byte count, rejects unsafe paths/symlinks and conflicting targets, detects catalog mutations and emits a verified file-copy receipt. Retain existing local content on retries.
+- Invalidate old sessions, refresh/access tokens and join tickets; fence active worker/bridge runtime generations; preserve leases, source states and idempotency history for reconciliation.
+- Add crypto-rewrap and storage verification regression tests and extend the isolated PostgreSQL integration scenario with MFA, session revocation, durable state and ServerBridge.
+- **Production acceptance pending:** complete HTTP/Coordinator/extension/device/publication parity, runtime builds, real service E2E, live PostgreSQL integration and old-versus-new operation matching are not certified. Nonempty unsupported extension state fails closed. No cutover is authorized by this patch (`readyForBackendCutover=false`). Go 1.27.3 and PostgreSQL tests were unavailable here.
+
 ## 0.47.3 — SQLite Core to live SQLRepository import (source candidate; GA validation pending)
 
 - Extend `sqlitepg` with an explicit offline `sqlite-to-postgres-live` command that materializes verified SQLite Core 327 rows in **actual** SQLRepository PostgreSQL tables, not just the 03211 staging schema. The existing immutable staging import remains available and unchanged.

@@ -29,13 +29,16 @@ type LiveTable0473 struct {
 	Rows        int64  `json:"rows"`
 }
 type LiveReport0473 struct {
-	Format          string          `json:"format"`
-	SourceSHA256    string          `json:"sourceSha256"`
-	SQLiteSchema    int             `json:"sqliteSchema"`
-	LiveTables      []LiveTable0473 `json:"liveTables"`
-	Files           int64           `json:"files"`
-	LocalIdentities int64           `json:"localIdentities"`
-	Verified        bool            `json:"verified"`
+	Format                  string          `json:"format"`
+	SourceSHA256            string          `json:"sourceSha256"`
+	SQLiteSchema            int             `json:"sqliteSchema"`
+	LiveTables              []LiveTable0473 `json:"liveTables"`
+	Files                   int64           `json:"files"`
+	LocalIdentities         int64           `json:"localIdentities"`
+	StateVersion            string          `json:"stateVersion,omitempty"`
+	ReauthenticatedSessions int64           `json:"reauthenticatedSessions"`
+	FencedLeases            int64           `json:"fencedLeases"`
+	Verified                bool            `json:"verified"`
 	// Full cutover additionally requires service data/storage migration (0.47.4-0.47.5).
 	ReadyForBackendCutover bool `json:"readyForBackendCutover"`
 }
@@ -523,6 +526,12 @@ func verifyFK0473(ctx context.Context, tx pgx.Tx) error {
 // an empty destination, and ZERO non-mappable source state. Entire operation,
 // including receipt and FK checks, is atomic; no table is left half-filled.
 func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, error) {
+	return PopulateLiveWithMFA0474(ctx, postgresDSN, MFASecrets0474{})
+}
+
+// PopulateLiveWithMFA0474 preserves enabled MFA by cryptographically rewrapping
+// each AES-GCM seed. Import is atomic; a missing key causes a full rollback.
+func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASecrets0474) (LiveReport0473, error) {
 	report := LiveReport0473{Format: liveImportVersion0473}
 	if strings.TrimSpace(postgresDSN) == "" {
 		return report, errors.New("PostgreSQL DSN required")
@@ -575,6 +584,9 @@ func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, 
 	for _, rule := range rules {
 		allow[rule.source] = true
 	}
+	for _, rule := range stateRules0474() {
+		allow[rule.source] = true
+	}
 	// Fail closed on unexpected/duplicated staged table declarations and data.
 	// This includes deleted/mutated records in tables not selected for import.
 	seen := map[string]bool{}
@@ -623,6 +635,9 @@ func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, 
 			return report, fmt.Errorf("missing required staging table %s", rule.source)
 		}
 	}
+	if err = prepareState0474(ctx, tx); err != nil {
+		return report, err
+	}
 	for _, rule := range rules {
 		expected, _ := tableReport0473(original, rule.source)
 		if rule.source == "roles" {
@@ -644,9 +659,10 @@ func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, 
 					dst["published_at"] = time.Time{}
 				}
 				if rule.source == "users" {
-					if epoch, ok := row["auth_epoch"].(int64); !ok || epoch != 1 {
-						return fmt.Errorf("user auth_epoch %v cannot be represented in SQLRepository; refusing unsafe security downgrade", row["auth_epoch"])
+					if epoch, ok := row["auth_epoch"].(int64); !ok || epoch < 1 {
+						return fmt.Errorf("invalid user auth_epoch %v", row["auth_epoch"])
 					}
+					dst["core_auth_epoch_0474"] = row["auth_epoch"]
 					dst["project_roles"] = "{}"
 				}
 				e = insert0473(ctx, tx, rule.target, dst, append(append([]string(nil), rule.columns...), func() []string {
@@ -656,7 +672,7 @@ func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, 
 						dst["published_at"] = time.Time{}
 					}
 					if rule.source == "users" {
-						return []string{"project_roles"}
+						return []string{"project_roles", "core_auth_epoch_0474"}
 					}
 					return nil
 				}()...))
@@ -682,6 +698,16 @@ func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, 
 				return report, err
 			}
 		}
+	}
+	if err = moveState0474(ctx, tx, original, &report, keys); err != nil {
+		return report, err
+	}
+	report.StateVersion = stateVersion0474
+	if err = tx.QueryRow(ctx, `SELECT count(*) FROM auth_sessions WHERE core_original_status_0474='active' AND status='revoked'`).Scan(&report.ReauthenticatedSessions); err != nil {
+		return report, err
+	}
+	if err = tx.QueryRow(ctx, `SELECT count(*) FROM durable_scope_leases`).Scan(&report.FencedLeases); err != nil {
+		return report, err
 	}
 	if report.Files, err = fileRows0473(ctx, tx); err != nil {
 		return report, fmt.Errorf("manifest file import: %w", err)
