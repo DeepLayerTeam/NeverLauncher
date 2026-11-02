@@ -345,6 +345,14 @@ def validate(
         "release manifest version/commit mismatch",
     )
     files = file_set(bundle)
+    if parsed(version)[0] >= (0, 46, 2):
+        # Independent binary-format and inner-package hash verification is
+        # required before any network write, not just the outer ZIP checksum.
+        from delivery_verify_0462 import verify_bundle
+        try:
+            verify_bundle(bundle, True)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise Blocked('0.46.2 delivery binary inspection failed') from exc
     if parsed(version)[0] >= (0, 46, 0):
         # Publication cannot be authorized by a stale pre-0.46 CLI. Verify
         # independent operational acceptance against trusted keys in this
@@ -503,6 +511,12 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
                     and sha(remote / name) == digest,
                     "remote GitHub asset bytes mismatch: " + name,
                 )
+            if parsed(version)[0] >= (0, 46, 2):
+                from delivery_verify_0462 import verify_bundle
+                try:
+                    verify_bundle(remote, True)
+                except (OSError, ValueError, KeyError, TypeError) as exc:
+                    raise Blocked('0.46.2 remote draft binary inspection failed') from exc
         # Gate publication on a second complete server-side release inspection.
         metadata = json.loads(
             github(

@@ -1331,6 +1331,11 @@ func releaseArtifacts(ver string) []string {
 	if operationsGARequired0460(ver) {
 		artifacts = append(artifacts, operationsGAFile0460, operationsGASig0460)
 	}
+	// Real checked six-platform package inventory is part of the signed
+	// mandatory artifact set, not a free-floating manifest-first declaration.
+	if compatibilityVersionAtLeast(ver, 0, 46, 2) {
+		artifacts = append(artifacts, "DELIVERY_VERIFIED_0462.json")
+	}
 	if gaTargetsRequired0361(ver) {
 		artifacts = append(artifacts, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
 	}

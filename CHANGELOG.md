@@ -1,3 +1,13 @@
+## 0.46.2 — Binary delivery integrity and signed staged acceptance (candidate; GA blocked)
+
+- Production release now parses all six real platform archives and checks PE64/ELF64/Mach-O CPU type, expected executables, embedded Windows/Linux component hashes and finalized macOS executable hashes. Forged archive names and missing/wrong-architecture executables fail closed; this does not substitute for OS signature verification.
+- `DELIVERY_VERIFIED_0462.json` is populated from actual staged package bytes before release manifest creation and is a mandatory, hashed release asset. The manifest is checked again against exact archive SHA-256 values before and after Ed25519 signing.
+- GitHub draft publication re-downloads every uploaded asset and re-checks the six package contents before making the release public. Added a separate HTTPS staging/CDN round-trip verifier with an externally pinned trust root and production CLI signature/distribution checks.
+- Operations GA signs and validates version-specific 0.46.2 attestations without changing historical Ed25519 signing domains. Production workflow now requires the corresponding independent operator material. Windows/macOS CI toolchain selection follows the backend Go requirement instead of a stale Go version.
+- Regression coverage: wrong CPU, unsigned-looking headers, missing components, altered hashes, invalid staging origins, source input drift, Operations Ed25519 and GitHub publication. Baseline source-input hashes re-frozen for this exact source version.
+
+**Important:** This source patch does not contain compiled or independently certified Windows/macOS/ARM64 release assets. Full six-platform CI, OS signing/notarization, actual hosted-download E2E and live Minecraft acceptance require the corresponding runners, credentials, staged packages and real service environment. They were not executed here; GA remains blocked. The new verifier refuses to manufacture a success receipt from a missing bundle.
+
 ## 0.46.1 — Integration fixes and verified input baseline (work-in-progress certification)
 
 - TypeScript HTTP SDK: working JSON/text/byte/stream response handling, bounded downloads, structured HTTP errors and redirect refusal; real Node HTTP regression tests added.

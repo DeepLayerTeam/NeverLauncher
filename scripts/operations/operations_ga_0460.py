@@ -53,7 +53,7 @@ def package_hash(path: Path):
 def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
     version = (ROOT / 'VERSION').read_text().strip()
     require(COMMIT.fullmatch(commit) is not None, 'invalid source commit')
-    require(version in ('0.46.0', '0.46.1'), 'unsupported operations acceptance version')
+    require(version in ('0.46.0', '0.46.1', '0.46.2'), 'unsupported operations acceptance version')
     records = {name: operational.read_receipt(path, name) for name, path in receipts.items()}
     args = argparse.Namespace(install_receipt=receipts[NAMES[0]], upgrade_receipt=receipts[NAMES[1]],
                               restore_receipt=receipts[NAMES[2]], failover_receipt=receipts[NAMES[3]])

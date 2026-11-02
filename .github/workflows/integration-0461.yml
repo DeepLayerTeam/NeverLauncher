@@ -1,4 +1,4 @@
-name: NeverLauncher 0.46.1 integration integrity
+name: NeverLauncher 0.46.2 release integrity
 on:
   push:
     paths:
@@ -40,7 +40,13 @@ jobs:
       - name: Run actual release format and drift tests
         run: |
           python3 -m unittest discover -s scripts/release -p 'test_*0461.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_delivery_verify_0462.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -v
           python3 scripts/release/inputs_guard_0461.py verify
+      - name: Exercise real Operations GA signing and rejection cases
+        run: |
+          python3 -m pip install 'cryptography==46.0.4'
+          python3 -m unittest discover -s scripts/operations -p 'test_operations_ga_0460.py' -v
       - name: Production first-run TLS and ownership regression
         run: python3 -m unittest discover -s scripts/install -p test_production_first_run_0451.py -v
       - name: Verify no source input drift after tests

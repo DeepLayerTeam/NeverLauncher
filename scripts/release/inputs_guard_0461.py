@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release baseline guard for actual tool input files in the 0.46.1 tree.
+"""Release baseline guard for actual tool input files in the 0.46.2 tree.
 
 This is deliberately a *source-input* guard, not a false claim that native
 compilers, network packages or output binaries were independently verified.
@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-BASELINE = ROOT/'reproducibility'/'baseline-0.46.1.json'
+BASELINE = ROOT/'reproducibility'/'baseline-0.46.2.json'
 SOURCES = (
     'VERSION', 'schemas/openapi.yaml',
     'scripts/release/inputs_guard_0461.py',
@@ -22,6 +22,13 @@ SOURCES = (
     'scripts/release/source-package.py',
     'scripts/release/canonical_zip_0461.py',
     'scripts/release/build-release.sh',
+    'scripts/release/delivery_verify_0462.py',
+    'scripts/release/staged_accept_0462.py',
+    'scripts/release/check_payload_0461.py',
+    'scripts/release/publish_0370.py',
+    'scripts/operations/operations_ga_0460.py',
+    'cli/cmd/launcher/release_commands.go',
+    'reproducibility/primary-payload-0.46.2.json',
     'scripts/build/bridge-plugins.sh',
 )
 SUFFIXES = ('go.mod', 'go.sum', 'Cargo.toml', 'Cargo.lock', 'package.json',
@@ -65,7 +72,7 @@ def record() -> dict:
 
 
 def verify(snapshot: dict, current: dict) -> None:
-    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != '0.46.1':
+    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != '0.46.2':
         raise ValueError('unrecognized input baseline or release')
     if current != snapshot:
         old = snapshot.get('files', {})
@@ -81,7 +88,7 @@ def main():
     try:
         snapshot=record()
         if args.mode=='freeze':
-            if snapshot['release'] != '0.46.1': raise ValueError('wrong release')
+            if snapshot['release'] != '0.46.2': raise ValueError('wrong release')
             BASELINE.write_text(json.dumps(snapshot, indent=2, sort_keys=True)+'\n',encoding='utf8')
             print(f'frozen {len(snapshot["files"])} real source inputs')
         else:
