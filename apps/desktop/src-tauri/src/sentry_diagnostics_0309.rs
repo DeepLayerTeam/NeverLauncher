@@ -59,7 +59,11 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
     let head = json!({"event_id":uuid,"dsn":dest.dsn});
     let item = json!({"type":"event"});
     let envelope = format!("{}\n{}\n{}\n", head, item, report);
-    let response = reqwest::Client::builder().timeout(Duration::from_secs(3)).build().map_err(|_|"cannot create diagnostics client")?
+    let response = reqwest::Client::builder()
+      // The ingest origin is operator configured. A 30x response must not
+      // forward the envelope or X-Sentry-Auth header to another origin.
+      .redirect(reqwest::redirect::Policy::none())
+      .timeout(Duration::from_secs(3)).build().map_err(|_|"cannot create diagnostics client")?
       .post(&dest.ingest).header("Content-Type","application/x-sentry-envelope")
       .header("X-Sentry-Auth",format!("Sentry sentry_version=7,sentry_client=launcher.desktop/0.30.9,sentry_key={}",dest.key))
       .body(envelope).send().await.map_err(|_|"diagnostic transport failed")?;

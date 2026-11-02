@@ -1116,14 +1116,30 @@ func remoteCall0284(args []string) error {
 func remoteServeManaged0428(ctx context.Context, server *http.Server, listener net.Listener) error {
 	finished := make(chan error, 1)
 	go func() { finished <- server.Serve(listener) }()
+	// A bound TLS listener is the earliest point at which systemd may consider
+	// this agent READY. No host command is dispatched by this notification.
+	if err := remoteServiceReady0498(); err != nil {
+		_ = server.Close()
+		<-finished
+		return fmt.Errorf("remote systemd readiness failed: %w", err)
+	}
+	watchdogCtx, stopWatchdog := context.WithCancel(context.Background())
+	defer stopWatchdog()
+	remoteServiceWatchdog0498(watchdogCtx)
 	select {
 	case err := <-finished:
+		// If the listener dies before a shutdown request, report failure so
+		// systemd restarts this control-plane service instead of marking it clean.
+		if ctx.Err() == nil {
+			return fmt.Errorf("RemoteControl HTTPS listener stopped unexpectedly: %w", err)
+		}
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
 		return err
 	case <-ctx.Done():
 	}
+	remoteServiceStopping0498()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {

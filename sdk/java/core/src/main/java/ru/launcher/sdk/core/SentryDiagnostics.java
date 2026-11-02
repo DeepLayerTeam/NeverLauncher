@@ -80,6 +80,6 @@ public final class SentryDiagnostics {
             .header("Content-Type","application/x-sentry-envelope")
             .header("X-Sentry-Auth","Sentry sentry_version=7,sentry_client=launcher.jvm/0.31.0,sentry_key="+dest.key)
             .POST(HttpRequest.BodyPublishers.ofString(envelope)).build();
-        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build().send(request,HttpResponse.BodyHandlers.discarding());
+        HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(Duration.ofSeconds(2)).build().send(request,HttpResponse.BodyHandlers.discarding());
     }
 }

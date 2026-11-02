@@ -69,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"{env} is required for a real upload")
     if args.jvm_mapping and (
         not args.mapping_uuid
-        or not re.fullmatch(r"[0-9a-fA-F-]{32,36}", args.mapping_uuid)
+        or not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", args.mapping_uuid)
         or not args.jvm_jar
     ):
         parser.error(
@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
                 names = [
                     name
                     for name in bundle.namelist()
-                    if name.endswith("sentry-debug-meta.properties")
+                    if name == "META-INF/sentry-debug-meta.properties"
                 ]
                 if len(names) != 1 or bundle.getinfo(names[0]).file_size > 65536:
                     parser.error(

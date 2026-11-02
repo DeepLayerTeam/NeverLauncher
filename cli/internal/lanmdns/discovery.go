@@ -101,6 +101,11 @@ func announceMessage(name string, port int, fingerprint string, ips []net.IP, tt
 	b.Write(make([]byte, 12))
 	p := b.Bytes()
 	binary.BigEndian.PutUint16(p[2:4], 0x8400)
+	for _, ip := range ips {
+		if ip.To4() == nil {
+			return nil, errors.New("mDNS IPv4 advertisement contains a non-IPv4 address")
+		}
+	}
 	binary.BigEndian.PutUint16(p[6:8], uint16(3+len(ips)))
 	if err := appendRecord(&b, Service, 12, ttl, payloadName(inst)); err != nil {
 		return nil, err
@@ -179,6 +184,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	ticker := time.NewTicker(50 * time.Second)
 	defer ticker.Stop()
 	buf := make([]byte, maxMessage)
+	peerCache := newDiscoveryCache0498()
 	for {
 		if ctx.Err() != nil {
 			goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
@@ -186,8 +192,24 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 			return nil
 		}
 		_ = conn.SetReadDeadline(time.Now().Add(350 * time.Millisecond))
-		n, addr, err := conn.ReadFromUDP(buf)
+		n, peerAddr, err := conn.ReadFromUDP(buf)
 		if err == nil {
+			// An mDNS peer using our instance label but a different TLS
+			// endpoint is a collision. Fail instead of silently advertising
+			// two different services under the same name.
+			peerCache.observe(buf[:n], time.Now())
+			collides := conflictingAdvertisement0498(buf[:n], name, port, fingerprint, addr)
+			for _, ep := range peerCache.endpoints(time.Now()) {
+				if strings.EqualFold(ep.Instance, name) && (ep.Port != port || !strings.EqualFold(ep.Fingerprint, fingerprint) || !net.ParseIP(ep.Address).Equal(addr)) {
+					collides = true
+					break
+				}
+			}
+			if collides {
+				goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
+				_ = send(goodbye)
+				return errors.New("mDNS instance collision: choose a distinct instance name")
+			}
 			qs, _, err := parsePacket(buf[:n])
 			if err != nil {
 				continue
@@ -198,7 +220,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 					break
 				}
 			}
-			_ = addr
+			_ = peerAddr
 		}
 		select {
 		case <-ctx.Done():
@@ -206,6 +228,23 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 			_ = send(goodbye)
 			return nil
 		case <-ticker.C:
+			// Do not keep publishing an address removed from the host.
+			current, err := ipForInterface()
+			if err != nil {
+				return fmt.Errorf("mDNS interface refresh: %w", err)
+			}
+			stillLocal := false
+			for _, ip := range current {
+				if ip.Equal(addr) {
+					stillLocal = true
+					break
+				}
+			}
+			if !stillLocal {
+				goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
+				_ = send(goodbye)
+				return errors.New("mDNS advertised interface address disappeared")
+			}
 			if err := send(packet); err != nil {
 				return fmt.Errorf("mDNS refresh advertisement: %w", err)
 			}
@@ -293,6 +332,48 @@ func ParseAdvertisement(p []byte) ([]Endpoint, error) {
 	sort.Slice(out, func(i, j int) bool { return out[i].Instance+out[i].Address < out[j].Instance+out[j].Address })
 	return out, nil
 }
+
+// conflictingAdvertisement0498 checks complete PTR/SRV/TXT/A announcements.
+// A DNS packet does not establish trust; TLS still needs an external pin.
+func conflictingAdvertisement0498(packet []byte, name string, port int, fingerprint string, localIP net.IP) bool {
+	items, err := ParseAdvertisement(packet)
+	if err != nil {
+		return false
+	}
+	for _, item := range items {
+		if strings.EqualFold(item.Instance, name) &&
+			(item.Port != port || !strings.EqualFold(item.Fingerprint, fingerprint) || !net.ParseIP(item.Address).Equal(localIP)) {
+			return true
+		}
+	}
+	return false
+}
+
+// goodbyeInstances0498 extracts service PTRs explicitly withdrawn with TTL 0.
+// Ignore unrelated multicast packets and malformed PTR payloads.
+func goodbyeInstances0498(packet []byte) map[string]bool {
+	result := make(map[string]bool)
+	if len(packet) < 12 || binary.BigEndian.Uint16(packet[2:4])&0x800f != 0x8000 {
+		return result
+	}
+	_, rr, err := parsePacket(packet)
+	if err != nil {
+		return result
+	}
+	for _, r := range rr {
+		if r.ttl != 0 || r.typ != 12 || (r.class&0x7fff) != 1 || !strings.EqualFold(r.name, Service) {
+			continue
+		}
+		pos := r.offset
+		target, err := getName(packet, &pos)
+		if err != nil || pos != r.offset+len(r.data) || !strings.HasSuffix(strings.ToLower(target), "."+Service) {
+			continue
+		}
+		result[strings.ToLower(strings.TrimSuffix(strings.ToLower(target), "."+Service))] = true
+	}
+	return result
+}
+
 func Discover(ctx context.Context, duration time.Duration) ([]Endpoint, error) {
 	if duration <= 0 || duration > 30*time.Second {
 		return nil, errors.New("discovery duration must be 1..30s")
@@ -313,7 +394,7 @@ func Discover(ctx context.Context, duration time.Duration) ([]Endpoint, error) {
 	}
 	end := time.Now().Add(duration)
 	buf := make([]byte, maxMessage)
-	found := map[string]Endpoint{}
+	cache := newDiscoveryCache0498()
 	for time.Now().Before(end) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -330,20 +411,9 @@ func Discover(ctx context.Context, duration time.Duration) ([]Endpoint, error) {
 			}
 			return nil, err
 		}
-		items, err := ParseAdvertisement(buf[:n])
-		if err != nil {
-			continue
-		}
-		for _, item := range items {
-			found[fmt.Sprintf("%s/%s/%d", item.Instance, item.Address, item.Port)] = item
-		}
+		cache.observe(buf[:n], time.Now())
 	}
-	out := make([]Endpoint, 0, len(found))
-	for _, v := range found {
-		out = append(out, v)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Instance+out[i].Address < out[j].Instance+out[j].Address })
-	return out, nil
+	return cache.endpoints(time.Now()), nil
 }
 
 // VerifyTLS requires a separately provisioned pin. A TXT fingerprint is *not*

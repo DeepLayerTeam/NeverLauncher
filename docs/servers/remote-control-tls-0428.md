@@ -34,7 +34,7 @@ The server verifies the client certificate against the CA *and* verifies its sco
 
 Use `nl server-bridge host service install --component remote --scope system --name remote-survival --server-root ... --service-user ... --tls-cert ... --tls-key ... --client-ca ... --listen ... --allow-source ... --now`. The installed service remains an unprivileged unit. A SIGTERM causes the remote HTTPS listener to stop accepting new work, allows up to **90 seconds** for existing requests and their durable command receipts to finish, and then fails visibly if that drain cannot complete. The generated unit sets `TimeoutStopSec=105s` rather than killing the listener at its previous 45-second timeout. Never automatically repeat a command with a different idempotency key after loss of acknowledgement; inspect the receipt first.
 
-For the Minecraft Host service, `Type=notify`, readiness and watchdog health are retained; the remote HTTPS listener remains a separate `Type=simple` unit.
+Both services now use `Type=notify` with `NotifyAccess=main` and `WatchdogSec=30s`. The Minecraft Host reports readiness only for a verified running child. **RemoteControl separately reports `READY=1` only after binding its HTTPS listener**, periodically sends `WATCHDOG=1` while serving, and sends `STOPPING=1` before journal-preserving shutdown. An absent or broken `NOTIFY_SOCKET` fails readiness when configured; an unexpected listener exit is treated as a service failure. No watchdog success implies that a Minecraft child is healthy; that remains the Host supervisor's responsibility.
 
 ## Release signatures and certificate boundaries
 

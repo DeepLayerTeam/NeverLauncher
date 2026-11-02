@@ -37,6 +37,32 @@ class ReleaseUploadTests(unittest.TestCase):
             self.assertNotEqual(result.returncode,0)
             self.assertIn(b'UUID does not match',result.stderr)
 
+    def test_real_sentry_cli_proguard_upload_and_finalize(self):
+        import zipfile
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            mapping=root/'mapping.txt'
+            mapping.write_text('com.example.Player -> a:\n')
+            uuid='12345678-1234-1234-1234-123456789abc'
+            bundle=root/'extension.jar'
+            with zipfile.ZipFile(bundle,'w') as z:
+                z.writestr('META-INF/sentry-debug-meta.properties', 'io.sentry.proguard.uuid='+uuid+'\n')
+            log=root/'upload.log'
+            cli=root/'sentry-cli'
+            cli.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SENTRY_TEST_LOG"\n')
+            cli.chmod(0o755)
+            env={**os.environ,'SENTRY_AUTH_TOKEN':'test-secret','SENTRY_ORG':'test-org',
+                 'SENTRY_PROJECT':'test-project','SENTRY_TEST_LOG':str(log)}
+            result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit','abcdef1234567890',
+                '--jvm-mapping',str(mapping),'--jvm-jar',str(bundle),'--mapping-uuid',uuid,
+                '--cli',str(cli)],env=env,capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            commands=log.read_text()
+            self.assertIn('upload-proguard --uuid '+uuid,commands)
+            self.assertIn('releases finalize',commands)
+            self.assertNotIn('test-secret',commands)
+            self.assertTrue(mapping.exists())  # Retained for audit/retry.
+
     def test_no_credential_no_file_deletion(self):
         with tempfile.TemporaryDirectory() as temporary:
             assets=Path(temporary)/'assets';assets.mkdir();(assets/'app.js.map').write_text('{}')

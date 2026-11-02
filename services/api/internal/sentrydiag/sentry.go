@@ -107,7 +107,12 @@ func New(dsn, release, environment string) (*Reporter, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Reporter{dest: d, release: release, environment: environment, events: make(chan event, 64), done: make(chan struct{}), stop: make(chan struct{}), client: &http.Client{Timeout: 3 * time.Second}}
+	r := &Reporter{dest: d, release: release, environment: environment, events: make(chan event, 64), done: make(chan struct{}), stop: make(chan struct{}), client: &http.Client{
+		Timeout: 3 * time.Second,
+		// Never forward the Sentry public key or envelope to a redirect target.
+		// The ingest origin comes from operator configuration, not the response.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}}
 	go r.loop()
 	return r, nil
 }

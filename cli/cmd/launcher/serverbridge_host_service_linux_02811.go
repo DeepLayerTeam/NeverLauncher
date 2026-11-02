@@ -132,6 +132,9 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 		// The HTTPS agent can start the independently supervised JVM host.
 		// Killing its entire cgroup on remote-agent reload would kill healthy
 		// game servers. The host itself is managed by its own supervisor.
+		// The remote HTTPS listener reports READY only after bind and sends
+		// WATCHDOG pings only while the serving loop is active.
+		unit = strings.Replace(unit, "Type=simple", "Type=notify\nNotifyAccess=main\nWatchdogSec=30s", 1)
 		unit = strings.Replace(unit, "KillMode=mixed", "KillMode=process", 1)
 		// The HTTPS server drains already accepted, journaled commands for up
 		// to 90s on SIGTERM; the unit must not SIGKILL it at the default 45s.

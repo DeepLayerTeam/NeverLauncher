@@ -45,7 +45,7 @@ func TestHostSystemdUnit02811(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(unit, "WatchdogSec") || !strings.Contains(unit, "Type=simple") || !strings.Contains(unit, "remote serve") || !strings.Contains(unit, "KillMode=process") || !strings.Contains(unit, "--allow-source \"127.0.0.0/8\"") {
+	if !strings.Contains(unit, "WatchdogSec=30s") || !strings.Contains(unit, "Type=notify") || !strings.Contains(unit, "NotifyAccess=main") || !strings.Contains(unit, "remote serve") || !strings.Contains(unit, "KillMode=process") || !strings.Contains(unit, "--allow-source \"127.0.0.0/8\"") {
 		t.Fatal("remote unit wrong", unit)
 	}
 }
