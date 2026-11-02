@@ -29,6 +29,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 	"gitflic.ru/skif4er/launcher/services/api/internal/sentrydiag"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitepg"
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
@@ -179,6 +180,17 @@ func main() {
 		log.Printf("deployment infrastructure verified PostgreSQL=%t RedisLease=%t S3RoundTrip=%t", growth.PostgreSQL, growth.RedisLease, growth.S3RoundTrip)
 	}
 	log.Printf("deployment mode=%s repository=%s coordinator=%s storage=%s single_instance=%t reasons=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
+	// No imported SQLite Core database can be served as a live PostgreSQL
+	// backend before independent HTTP/Coordinator/Extensions parity has a real
+	// approval gate. The schema-only 'migrate' role does not serve requests.
+	if role.name != "migrate" && (strings.EqualFold(cfg.RepositoryDriver, "postgres") || strings.EqualFold(cfg.RepositoryDriver, "postgresql") || strings.EqualFold(cfg.RepositoryDriver, "sql")) {
+		gateCtx, gateCancel := context.WithTimeout(context.Background(), 20*time.Second)
+		gateErr := sqlitepg.RejectUnapprovedBackend0475(gateCtx, cfg.DatabaseDSN)
+		gateCancel()
+		if gateErr != nil {
+			log.Fatalf("SQLite/PostgreSQL cutover gate: %v", gateErr)
+		}
+	}
 	repo := newRepository(cfg)
 	if closer, ok := repo.(interface{ Close() error }); ok {
 		defer closer.Close()

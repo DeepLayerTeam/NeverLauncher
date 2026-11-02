@@ -1,3 +1,12 @@
+## 0.47.5 — Offline cutover operator, file-catalog integrity and strict PostgreSQL acceptance (source candidate; backend cutover BLOCKED)
+
+- Add private fsynced journaled Linux/systemd operator for preflight → backup → freeze writers → frozen backup → immutable SQLite Core import → verified LocalStorage copy → PostgreSQL verification → cutover gate → health check. Supports safe restart of the unchanged source configuration before new PostgreSQL writes; refuses automatic retry of imports whose COMMIT outcome is unknown.
+- Verify existing live PostgreSQL receipts through actual SQLRepository project/profile/owner readers and per-table source mapping; check corresponding file-copy receipts. Block on unsupported HTTP/Coordinator/extension states instead of losing them or claiming they were migrated.
+- Repair a 0.47.4 catalog-fingerprint defect where unexported object fields serialized as `{}` and a same-count metadata change could evade detection. Persist the full canonical catalog SHA-256 in a forward-compatible receipt and reject old count-only receipts until independently recopied/reverified.
+- Refuse to start an imported PostgreSQL database in the real Backend before a full cross-store cutover approval exists, preventing manual environment-variable changes from bypassing the safety boundary. The migrate-only process role remains available for schema maintenance.
+- Add actual Python SQLite WAL backup/restore and failure-mode regression tests, Go catalog-digest/cutover input tests, and a restricted operator runbook.
+- **GA NOT APPROVED:** independent HTTP Repository and Coordinator state are still not migrated. The cutover gate is closed by design (`readyForBackendCutover=false`); no live Backend switch, owner login, systemd integration or Minecraft E2E is certified. Full Go 1.27.3 + PostgreSQL integration unavailable in this environment.
+
 ## 0.47.4 — SQLite Core durable state to PostgreSQL and verified offline storage (source candidate; production acceptance unverified)
 
 - Extend the existing verified staging-to-SQLRepository import to transfer authentication sessions, refresh families/tokens, TOTP/recovery, Minecraft identity/session history, security tombstones, durable jobs/attempts/scope leases/outbox, ServerBridge node identities, replay nonces, join tickets, runtime fencing and control-command history in a single PostgreSQL transaction. Reject invalid source hashes, broken relationships and unhandled nonempty source tables rather than reporting success.

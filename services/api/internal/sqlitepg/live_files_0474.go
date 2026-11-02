@@ -26,11 +26,24 @@ type FileCopyReport0474 struct {
 	Copied         int64  `json:"copied"`
 	AlreadyPresent int64  `json:"alreadyPresent"`
 	Verified       bool   `json:"verified"`
+	CatalogSHA256  string `json:"catalogSha256"`
 }
 
 type fileObject0474 struct {
 	project, version, path, hash string
 	size                         int64
+}
+
+// Canonical catalog serialization must include values, not merely a row
+// count. The unexported fileObject fields would otherwise marshal as {}.
+func (f fileObject0474) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Project string `json:"project"`
+		Version string `json:"version"`
+		Path    string `json:"path"`
+		Size    int64  `json:"size"`
+		SHA256  string `json:"sha256"`
+	}{f.project, f.version, f.path, f.size, f.hash})
 }
 
 func filePath0474(p, v, rel string) (string, error) {
@@ -285,6 +298,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		return report, e
 	}
 	catalogSHA := sha256.Sum256(catalog)
+	report.CatalogSHA256 = hex.EncodeToString(catalogSHA[:])
 	for _, o := range objects {
 		if e = ctx.Err(); e != nil {
 			return report, e
@@ -385,13 +399,21 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 	report.Verified = true
 	_, e = pg.Exec(ctx, `CREATE TABLE IF NOT EXISTS sqlite_file_receipts_0474(
        source_sha256 TEXT PRIMARY KEY,driver TEXT NOT NULL,objects BIGINT NOT NULL,
+       catalog_sha256 TEXT NOT NULL DEFAULT '',
        verified_at TIMESTAMPTZ NOT NULL DEFAULT now())`)
 	if e != nil {
 		report.Verified = false
 		return report, e
 	}
-	_, e = pg.Exec(ctx, `INSERT INTO sqlite_file_receipts_0474(source_sha256,driver,objects)
-      VALUES($1,$2,$3) ON CONFLICT(source_sha256) DO UPDATE SET driver=excluded.driver,objects=excluded.objects,verified_at=now()`, sourceSHA, report.Driver, report.Checked)
+	// Old 0.47.4 receipts lack the catalog digest. They must be reverified
+	// by this routine rather than silently accepted as a matching catalog.
+	_, e = pg.Exec(ctx, `ALTER TABLE sqlite_file_receipts_0474 ADD COLUMN IF NOT EXISTS catalog_sha256 TEXT NOT NULL DEFAULT ''`)
+	if e != nil {
+		report.Verified = false
+		return report, e
+	}
+	_, e = pg.Exec(ctx, `INSERT INTO sqlite_file_receipts_0474(source_sha256,driver,objects,catalog_sha256)
+      VALUES($1,$2,$3,$4) ON CONFLICT(source_sha256) DO UPDATE SET driver=excluded.driver,objects=excluded.objects,catalog_sha256=excluded.catalog_sha256,verified_at=now()`, sourceSHA, report.Driver, report.Checked, report.CatalogSHA256)
 	if e != nil {
 		report.Verified = false
 		return report, e
