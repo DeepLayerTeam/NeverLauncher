@@ -53,7 +53,9 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             long millis=1800;
             if(kind.equals("rpc")){
                 Object raw=data.get("deadlineMs");
-                if(!(raw instanceof Long n)||n<1||n>1800){respond(exchange,400,Map.of("error","invalid RPC deadline"));return;}
+                String method=Json.string(data,"method",true);
+                long max=method.equals("state.migrate")?8000:1800;
+                if(!(raw instanceof Long n)||n<1||n>max){respond(exchange,400,Map.of("error","invalid RPC deadline"));return;}
                 millis=n;
                 if(!"1.0".equals(data.get("protocolVersion"))){respond(exchange,409,Map.of("error","RPC protocol mismatch"));return;}
                 String id=Json.string(data,"requestId",true);
@@ -97,6 +99,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             case "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke" -> result=services.identity().dispatch(method,params);
             case "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare" -> result=services.content().dispatch(method,params);
             case "ui.action.invoke", "ui.settings.get", "ui.settings.put" -> result=services.ui().invoke(method,params);
+            case "state.migrate" -> result=services.stateMigrations().apply(Json.string(params,"fromVersion",true),Json.string(params,"toVersion",true));
             case "command.invoke" -> result=nullableResult("value",services.commands().invoke(Json.string(params,"command",true),params.get("payload")));
             case "event.deliver","hook.deliver" -> {
                 Map<String,Object> envelope=Json.object(params.get("envelope"));

@@ -31,6 +31,17 @@ type Host interface {
 	Get(extensionhost.Key) (extensionhost.Status, error)
 }
 
+// State is implemented by the running Host supervisor. A durable snapshot is
+// required before changing any installed version; there is no unsafe fallback.
+type State interface {
+	SnapshotRuntimeState04810(context.Context, extensionhost.Key, string) error
+	RestoreRuntimeState04810(context.Context, extensionhost.Key, string) error
+	DiscardRuntimeState04810(context.Context, extensionhost.Key, string) error
+}
+type StateMigrator interface {
+	MigrateExtensionState04810(context.Context, model.ExtensionInstall, string) error
+}
+
 type Security interface {
 	PermissionDiff(context.Context, string, string, string, string, string) (model.ExtensionPermissionDiff, error)
 }
@@ -47,6 +58,44 @@ type appliedItem struct {
 	Item         model.ExtensionUpdatePlanItem
 	Before       model.ExtensionInstall
 	InstalledNew bool
+}
+
+func (m *Manager) state04810() (State, error) {
+	if provider, ok := m.Host.(State); ok {
+		return provider, nil
+	}
+	return nil, errors.New("durable extension state checkpoint support is required for upgrades")
+}
+
+// Only checkpointed extension IDs may be restored, and only after the new Host
+// has been stopped. Snapshot IDs are persisted in the existing JSON transaction
+// plan, so all supported repositories recover without a schema migration.
+func (m *Manager) restoreState04810(tx model.ExtensionUpdateTransaction) []string {
+	if len(tx.Plan.StateSnapshots) == 0 {
+		return nil
+	}
+	state, err := m.state04810()
+	if err != nil {
+		return []string{err.Error()}
+	}
+	var failures []string
+	for i := len(tx.Plan.StateSnapshots) - 1; i >= 0; i-- {
+		id := tx.Plan.StateSnapshots[i]
+		key := extensionhost.Key{ExtensionID: id, Scope: tx.Scope, ScopeID: tx.ScopeID}
+		if err := state.RestoreRuntimeState04810(context.Background(), key, tx.ID); err != nil {
+			failures = append(failures, id+": "+err.Error())
+		}
+	}
+	return failures
+}
+func (m *Manager) discardState04810(tx model.ExtensionUpdateTransaction) {
+	state, err := m.state04810()
+	if err != nil {
+		return
+	}
+	for _, id := range tx.Plan.StateSnapshots {
+		_ = state.DiscardRuntimeState04810(context.Background(), extensionhost.Key{ExtensionID: id, Scope: tx.Scope, ScopeID: tx.ScopeID}, tx.ID)
+	}
 }
 
 func (m *Manager) normalized() Config {
@@ -192,6 +241,29 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			}
 		}
 	}
+	// The snapshots are created only after ALL old JVM hosts have stopped.
+	// Journal each completed snapshot before the first lifecycle mutation.
+	// Even a process crash after a file rename can then be recovered safely.
+	for _, item := range plan.Items {
+		if item.Operation == "unchanged" {
+			continue
+		}
+		state, stateErr := m.state04810()
+		if stateErr != nil {
+			m.restartSnapshots02011(snapshots, plan.Items)
+			return m.fail(tx, stateErr)
+		}
+		key := extensionhost.Key{ExtensionID: item.ExtensionID, Scope: plan.Scope, ScopeID: plan.ScopeID}
+		if stateErr = state.SnapshotRuntimeState04810(ctx, key, tx.ID); stateErr != nil {
+			m.restartSnapshots02011(snapshots, plan.Items)
+			return m.fail(tx, fmt.Errorf("checkpoint %s: %w", item.ExtensionID, stateErr))
+		}
+		tx.Plan.StateSnapshots = append(tx.Plan.StateSnapshots, item.ExtensionID)
+		if _, stateErr = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); stateErr != nil {
+			m.restartSnapshots02011(snapshots, plan.Items)
+			return m.fail(tx, fmt.Errorf("checkpoint journal %s: %w", item.ExtensionID, stateErr))
+		}
+	}
 	applied := []appliedItem{}
 	for _, item := range plan.Items {
 		if item.Operation == "unchanged" {
@@ -239,6 +311,18 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			e = fmt.Errorf("unsupported update operation %q", item.Operation)
 		}
 		if e != nil {
+			// A lifecycle method can fail after changing its durable install.
+			// Include that partial mutation in compensation, rather than
+			// clearing the in-flight marker and abandoning the new version.
+			current, checkErr := m.Repo.GetExtensionInstallState(context.Background(), item.ExtensionID, plan.Scope, plan.ScopeID)
+			if checkErr == nil && (current.CurrentVersion != before.CurrentVersion || current.CurrentState != before.CurrentState) {
+				applied = append(applied, appliedItem{Item: item, Before: before, InstalledNew: item.Operation == "install"})
+				tx.Applied = append(tx.Applied, item.ExtensionID)
+			} else if checkErr != nil && !errors.Is(checkErr, repository.ErrNotFound) {
+				// Leave the in-flight marker for startup recovery rather than
+				// claiming a successful rollback while repository is down.
+				return tx, fmt.Errorf("ambiguous lifecycle mutation: %w; cause: %v", checkErr, e)
+			}
 			tx.InFlight = ""
 			_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
 			return m.rollback(tx, applied, snapshots, fmt.Errorf("%s %s: %w", item.Operation, item.ExtensionID, e))
@@ -268,6 +352,15 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			if e != nil {
 				return m.rollback(tx, applied, snapshots, fmt.Errorf("host start %s: %w", item.ExtensionID, e))
 			}
+			if item.Operation == "update" && item.FromVersion != "" && item.FromVersion != cur.CurrentVersion {
+				migrator, ok := m.Host.(StateMigrator)
+				if !ok {
+					return m.rollback(tx, applied, snapshots, errors.New("Java state migration support is unavailable"))
+				}
+				if e = migrator.MigrateExtensionState04810(ctx, cur, item.FromVersion); e != nil {
+					return m.rollback(tx, applied, snapshots, fmt.Errorf("migrate state %s: %w", item.ExtensionID, e))
+				}
+			}
 			if e = m.waitHealthy(ctx, cur, cfg.HealthTimeout); e != nil {
 				return m.rollback(tx, applied, snapshots, e)
 			}
@@ -277,6 +370,9 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 	tx.Status = "succeeded"
 	tx.FinishedAt = &now
 	_, err = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
+	if err == nil {
+		m.discardState04810(tx)
+	}
 	return tx, err
 }
 
@@ -335,19 +431,34 @@ func planItem02011(plan model.ExtensionUpdatePlan, id string) (model.ExtensionUp
 // здоровой реплике. Постоянный маркер операции закрывает окно сбоя между
 // изменением файлов/жизненного цикла и записью журнала применения.
 func (m *Manager) recoverInterrupted02011(ctx context.Context, scope, scopeID string, healthTimeout time.Duration) error {
-	txs, err := m.Repo.ListExtensionUpdateTransactions(ctx, scope, scopeID, "running")
-	if err != nil {
-		return err
-	}
-	for _, tx := range txs {
-		if err := m.recoverTransaction02011(ctx, tx, healthTimeout); err != nil {
-			return fmt.Errorf("transaction %s: %w", tx.ID, err)
+	// Also retry previously failed compensation. Ignoring rollback_failed would
+	// permit a new update over an extension whose documents were NOT restored.
+	for _, status := range []string{"running", "rollback_failed"} {
+		txs, err := m.Repo.ListExtensionUpdateTransactions(ctx, scope, scopeID, status)
+		if err != nil {
+			return err
+		}
+		for _, tx := range txs {
+			if err = m.recoverTransaction02011(ctx, tx, healthTimeout); err != nil {
+				return fmt.Errorf("cannot recover extension update transaction %s: %w", tx.ID, err)
+			}
 		}
 	}
 	return nil
 }
 
 func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.ExtensionUpdateTransaction, healthTimeout time.Duration) error {
+	// Cancel all surviving new JVMs before checking in-flight installs or
+	// restoring checkpoints. If any process survives, leave the transaction
+	// unresolved and do not expose the old version to mixed state.
+	if m.Host != nil {
+		for _, item := range tx.Plan.Items {
+			err := m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: item.ExtensionID, Scope: tx.Scope, ScopeID: tx.ScopeID})
+			if err != nil && !errors.Is(err, extensionhost.ErrHostNotRunning) && !errors.Is(err, repository.ErrNotFound) {
+				return fmt.Errorf("cannot stop %s before recovery: %w", item.ExtensionID, err)
+			}
+		}
+	}
 	if tx.InFlight != "" && !contains02011(tx.Applied, tx.InFlight) && !contains02011(tx.RolledBack, tx.InFlight) {
 		item, ok := planItem02011(tx.Plan, tx.InFlight)
 		if !ok {
@@ -445,6 +556,9 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		}
 	}
 
+	// The old package may be restored while the new JVM had already written
+	// config/storage documents. Never restart old code against migrated state.
+	rbErrs = append(rbErrs, m.restoreState04810(tx)...)
 	if len(rbErrs) == 0 && m.Host != nil {
 		for _, item := range tx.Plan.Items {
 			cur, err := m.Repo.GetExtensionInstallState(context.Background(), item.ExtensionID, tx.Scope, tx.ScopeID)
@@ -482,6 +596,9 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		tx.Failure += "; automatically rolled back after interrupted update transaction"
 	}
 	_, err := m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
+	if err == nil {
+		m.discardState04810(tx)
+	}
 	return err
 }
 
@@ -494,9 +611,23 @@ func (m *Manager) fail(tx model.ExtensionUpdateTransaction, e error) (model.Exte
 	return tx, e
 }
 func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []appliedItem, snapshots map[string]model.ExtensionInstall, cause error) (model.ExtensionUpdateTransaction, error) {
+	// A timed-out JVM migration may ignore thread interruption. Never restore
+	// its files while the new process can still write to them.
 	if m.Host != nil {
+		var stopFailures []string
 		for _, item := range tx.Plan.Items {
-			_ = m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: item.ExtensionID, Scope: tx.Scope, ScopeID: tx.ScopeID})
+			err := m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: item.ExtensionID, Scope: tx.Scope, ScopeID: tx.ScopeID})
+			if err != nil && !errors.Is(err, extensionhost.ErrHostNotRunning) && !errors.Is(err, repository.ErrNotFound) {
+				stopFailures = append(stopFailures, item.ExtensionID+": "+err.Error())
+			}
+		}
+		if len(stopFailures) > 0 {
+			// Keep the journal recoverable on the next lease acquisition.
+			tx.Status = "running"
+			tx.Failure = cause.Error() + "; unable to stop JVM before state restore: " + strings.Join(stopFailures, "; ")
+			tx.FinishedAt = nil
+			_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
+			return tx, fmt.Errorf("upgrade rollback blocked by active extension: %w", errors.New(tx.Failure))
 		}
 	}
 	var rbErrs []string
@@ -516,7 +647,8 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 			_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
 		}
 	}
-	if m.Host != nil {
+	rbErrs = append(rbErrs, m.restoreState04810(tx)...)
+	if len(rbErrs) == 0 && m.Host != nil {
 		for _, item := range tx.Plan.Items {
 			old := snapshots[item.ExtensionID]
 			if old.CurrentState == model.ExtensionInstallStateEnabled && old.Enabled {
@@ -535,6 +667,9 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 	} else {
 		tx.Status = "rolled_back"
 	}
-	_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
+	_, saveErr := m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
+	if saveErr == nil && tx.Status == "rolled_back" {
+		m.discardState04810(tx)
+	}
 	return tx, fmt.Errorf("multi-extension update %s: %w", tx.Status, cause)
 }

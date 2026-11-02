@@ -1,3 +1,11 @@
+## 0.48.10 — Extension State & Safe Upgrades (working source changes; independent GA pending)
+
+- Persist per-extension/scope JSON runtime **checkpoints** before mutating the installed version, after stopping all old JVM Hosts. Snapshot both config and storage documents outside signed payload directories. Refuse symlinked or invalid documents, oversized snapshots and mismatched SHA-256 inventories.
+- Record completed checkpoint IDs in the existing durable extension transaction plan JSON. On failed, interrupted or previously rollback-failed multi-extension updates, stop new Hosts, roll back installed versions, **restore original runtime documents before restarting the old version**, and retain backups when recovery is incomplete. Successful transactions prune their checkpoint copies.
+- Add Java `runtime.stateMigrations().register(fromVersion,toVersion,callback)` and execute registered version transitions through the authenticated Go → JVM `state.migrate` RPC after installation and before final health verification. Missing steps and failed callbacks block activation; version-preserving extensions with no migrations keep the existing JSON unchanged.
+- Improve failure compensation when an extension lifecycle method mutates repository state before returning an error. Add checksum/tamper/isolation and interrupted-upgrade test scenarios; Java migration callback and real broker persistence tests run on JDK 21, and an isolated Go 1.23 race-enabled checkpoint test suite passes.
+- **Verification boundary:** The required Go 1.27.3 Backend integration/race matrix, PostgreSQL crash/restart testing, production signing and independent CI have not run locally. Checkpoints cover extension-owned runtime config/storage JSON, not external databases, queues or third-party side effects. This is not a claim of atomic multi-resource ACID transactions or independently certified GA.
+
 ## 0.48.9 — Admin, Desktop & CLI Java Extensions (source implementation; independent acceptance pending)
 
 - Connect the existing sandboxed Admin/Desktop iframe `rpc.request` bridges to a live Java backend extension through authenticated, timeout-bounded Go Host Supervisor RPC (`ui.action.invoke`, `ui.settings.get`, `ui.settings.put`). No JavaScript is injected into the host app and no arbitrary JVM method execution is permitted.

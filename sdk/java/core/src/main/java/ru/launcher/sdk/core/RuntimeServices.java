@@ -14,10 +14,11 @@ public final class RuntimeServices implements AutoCloseable {
     private final IdentityServices identity = new IdentityServices();
     private final ContentServices content;
     private final RuntimeUI ui;
+    private final RuntimeStateMigrations stateMigrations;
     public RuntimeServices(HostSession host,Set<String> declaredCommands){this(host,declaredCommands,Map.of());}
     public RuntimeServices(HostSession host,Set<String> declaredCommands,Map<String,Set<String>> uiActions){
         this.host=Objects.requireNonNull(host);config=new RuntimeDocuments(host,"config");storage=new RuntimeDocuments(host,"storage");
-        secrets=new Secrets(host);events=new RuntimeEvents(host);commands=new RuntimeCommands(declaredCommands);backend=new BackendServices(host);serverBridge=new ServerBridgeServices(host,events);content=new ContentServices(host);ui=new RuntimeUI(config,uiActions);
+        secrets=new Secrets(host);events=new RuntimeEvents(host);commands=new RuntimeCommands(declaredCommands);backend=new BackendServices(host);serverBridge=new ServerBridgeServices(host,events);content=new ContentServices(host);ui=new RuntimeUI(config,uiActions);stateMigrations=new RuntimeStateMigrations(config,storage);
     }
     public RuntimeDocuments config(){return config;}
     public RuntimeDocuments storage(){return storage;}
@@ -29,5 +30,6 @@ public final class RuntimeServices implements AutoCloseable {
     public IdentityServices identity(){return identity;}
     public ContentServices content(){return content;}
     public RuntimeUI ui(){return ui;}
+    public RuntimeStateMigrations stateMigrations(){return stateMigrations;}
     @Override public void close(){ui.close();events.close();}
 }

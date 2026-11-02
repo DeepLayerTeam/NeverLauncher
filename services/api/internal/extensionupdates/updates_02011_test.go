@@ -51,10 +51,30 @@ func (f *fakeLifecycle02011) Rollback(ctx context.Context, id string, s extensio
 }
 
 type fakeHost02011 struct {
-	healthy       bool
-	starts, stops int
+	healthy              bool
+	starts, stops        int
+	content, checkpoint  string
+	migrationErr         error
+	migrations, restores int
 }
 
+func (h *fakeHost02011) SnapshotRuntimeState04810(context.Context, extensionhost.Key, string) error {
+	h.checkpoint = h.content
+	return nil
+}
+func (h *fakeHost02011) RestoreRuntimeState04810(context.Context, extensionhost.Key, string) error {
+	h.content = h.checkpoint
+	h.restores++
+	return nil
+}
+func (h *fakeHost02011) DiscardRuntimeState04810(context.Context, extensionhost.Key, string) error {
+	return nil
+}
+func (h *fakeHost02011) MigrateExtensionState04810(context.Context, model.ExtensionInstall, string) error {
+	h.migrations++
+	h.content = "migrated"
+	return h.migrationErr
+}
 func (h *fakeHost02011) Stop(context.Context, extensionhost.Key) error { h.stops++; return nil }
 func (h *fakeHost02011) StartInstallation(context.Context, model.ExtensionInstall) error {
 	h.starts++
@@ -170,5 +190,47 @@ func TestInterruptedInFlightTransactionRecoveredBeforeNewApply02011(t *testing.T
 	}
 	if cur.CurrentVersion != "2.0.0" {
 		t.Fatalf("new transaction did not apply after recovery: current=%s", cur.CurrentVersion)
+	}
+}
+
+func TestFailedJavaMigrationRestoresCheckpoint04810(t *testing.T) {
+	r, target, original := updateFixture02011(t)
+	life := &fakeLifecycle02011{repo: r}
+	host := &fakeHost02011{healthy: true, content: `{"schema":1}`, migrationErr: errors.New("migration failed")}
+	manager := &Manager{Repo: r, Lifecycle: life, Host: host, Config: Config{HealthTimeout: time.Second}}
+	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}}}
+	tx, err := manager.Apply(context.Background(), plan)
+	if err == nil || tx.Status != "rolled_back" {
+		t.Fatalf("failed migration must rollback: tx=%+v err=%v", tx, err)
+	}
+	if host.migrations != 1 || host.restores != 1 || host.content != `{"schema":1}` {
+		t.Fatalf("state not compensated: %+v", host)
+	}
+	restored, err := r.GetExtensionInstallState(context.Background(), "update.test", "global", "")
+	if err != nil || restored.CurrentVersion != original.CurrentVersion {
+		t.Fatalf("package rollback failed: %+v err=%v", restored, err)
+	}
+}
+func TestRecoveredInterruptedTransactionRestoresState04810(t *testing.T) {
+	r, target, _ := updateFixture02011(t)
+	ctx := context.Background()
+	life := &fakeLifecycle02011{repo: r}
+	if _, err := life.Update(ctx, target, extensionlifecycle.Scope{Scope: "global"}); err != nil {
+		t.Fatal(err)
+	}
+	host := &fakeHost02011{healthy: true, content: "new-value", checkpoint: "old-value"}
+	manager := &Manager{Repo: r, Lifecycle: life, Host: host}
+	tx := model.ExtensionUpdateTransaction{ID: "extupd-123456789012345678901234", Scope: "global", Status: "running", StartedAt: time.Now().UTC(),
+		Plan:    model.ExtensionUpdatePlan{Scope: "global", StateSnapshots: []string{"update.test"}, Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", Operation: "update"}}},
+		Applied: []string{"update.test"}}
+	if err := manager.recoverTransaction02011(ctx, tx, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if host.restores != 1 || host.content != "old-value" {
+		t.Fatalf("state not restored after interruption: %+v", host)
+	}
+	install, err := r.GetExtensionInstallState(ctx, "update.test", "global", "")
+	if err != nil || install.CurrentVersion != "1.0.0" {
+		t.Fatalf("incorrect recovered version: %+v %v", install, err)
 	}
 }

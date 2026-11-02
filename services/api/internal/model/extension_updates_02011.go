@@ -46,7 +46,9 @@ type ExtensionUpdatePlan struct {
 	Architecture    string                    `json:"architecture"`
 	DefaultChannel  string                    `json:"defaultChannel"`
 	Items           []ExtensionUpdatePlanItem `json:"items"`
-	ResolvedAt      time.Time                 `json:"resolvedAt"`
+	// Server-side durable checkpoint journal, present only in an executing transaction.
+	StateSnapshots []string  `json:"stateSnapshots,omitempty"`
+	ResolvedAt     time.Time `json:"resolvedAt"`
 }
 
 // ExtensionUpdateTransaction записывает обновление нескольких расширений с компенсационным

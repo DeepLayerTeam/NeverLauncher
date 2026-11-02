@@ -191,3 +191,16 @@ Actual Minecraft session admission is unchanged. Details and tests:
 Current policy requires authenticated `extension:manage` for all three Java UI methods. A signed UI contribution permission (`ui:contribute` or `desktop:contribute`) is independently checked before and after RPC; package revocation, stale generation, process exit and project scope changes fail closed. Java callback responses are capped at 48 KiB and execute under the existing 1.8-second deadline. CLI remains an isolated short-lived target using the signed CLI namespace and `RuntimeCommands.register()`.
 
 Build and test a complete example including both iframe surfaces and an executable JAR: `sh examples/extensions/java-ui/build.sh && python3 examples/extensions/java-ui/test-runner.py`. Production signing/installation uses the normal extension pipeline and is not bypassed by this demo. `sh sdk/java/core/build.sh test` exercises in-process HTTP regressions as well.
+
+### 0.48.10 — versioned state migration on safe upgrades
+
+Register migrations in `Extension.start(ExtensionContext)` before the Host reaches readiness:
+
+```java
+context.runtime().stateMigrations().register("1.0.0", "2.0.0", (config, storage) -> {
+    Object prior = storage.get("preferences", null).orElse(java.util.Map.of());
+    storage.put("preferences", prior, null);
+});
+```
+
+The authenticated Host invokes the migrations only during an update with a changed version. Registered transitions must form an unbroken forward-only path from the installed version to the target; gaps fail closed. No registered transitions means the extension intentionally keeps its existing document schema. All writes use the existing scoped, permission-checked Host Broker and quotas. The Go update manager saves a checksum-checked on-disk snapshot and restores the previous data *before* restarting an older version on failed health checks, callback errors or interrupted updates. A migration must not alter any external resource it cannot compensate. Avoid relying on exactly-once callbacks: interrupted updates can safely re-run after rollback.

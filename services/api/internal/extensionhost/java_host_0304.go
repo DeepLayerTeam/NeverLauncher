@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/extensionjava"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const javaRPCVersion0304 = "1.0"
@@ -77,7 +78,7 @@ type javaRPCResponse0304 struct {
 // It is intentionally usable only for a running Java target registered by this supervisor.
 func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string, params json.RawMessage) (json.RawMessage, error) {
 	switch method {
-	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare", "ui.action.invoke", "ui.settings.get", "ui.settings.put":
+	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare", "ui.action.invoke", "ui.settings.get", "ui.settings.put", "state.migrate":
 	default:
 		return nil, errors.New("unsupported Java RPC method")
 	}
@@ -203,15 +204,26 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			return nil, fmt.Errorf("Java UI authorization revoked during RPC: %w", err)
 		}
 	}
+	if method == "state.migrate" {
+		if err := s.enforceLiveTrust04210(ctx, st); err != nil {
+			return nil, fmt.Errorf("Java state migration trust revoked: %w", err)
+		}
+	}
 	return result, nil
 }
 func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, method string, params json.RawMessage) (json.RawMessage, error) {
 	budget := s.cfg.CapabilityTimeout
-	if budget > 1800*time.Millisecond {
-		budget = 1800 * time.Millisecond
-	}
-	if budget <= 0 {
-		budget = 1800 * time.Millisecond
+	if method == "state.migrate" {
+		// State migrations are bounded separately from ordinary interactive RPC;
+		// the global HTTP callback timeout is 10 seconds by default.
+		budget = 8 * time.Second
+	} else {
+		if budget > 1800*time.Millisecond {
+			budget = 1800 * time.Millisecond
+		}
+		if budget <= 0 {
+			budget = 1800 * time.Millisecond
+		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
@@ -300,3 +312,63 @@ func (s *Supervisor) probeJava0304(st *processState) {
 
 // Package-level check to keep the Java JAR verifier independent of OS process setup.
 func sameHostJar0304(path string) bool { return strings.EqualFold(filepath.Ext(path), ".jar") }
+
+// MigrateExtensionState04810 invokes the new, already authenticated JVM's
+// registered migration graph. The update manager owns durable checkpoints,
+// restarts and compensation; this method never bypasses live trust or grants.
+func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install model.ExtensionInstall, fromVersion string) error {
+	if fromVersion == "" || fromVersion == install.CurrentVersion {
+		return nil
+	}
+	// Non-Java extensions have no Java callback. Their state is preserved
+	// unchanged by the same durable checkpoint/rollback path.
+	version, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
+	if err != nil {
+		return err
+	}
+	target, err := backendTarget(version.Manifest)
+	if errors.Is(err, ErrNoBackendTarget) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	_ = target
+	key := Key{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID}.normalized()
+	s.mu.RLock()
+	st := s.processes[key.String()]
+	s.mu.RUnlock()
+	if st == nil {
+		return ErrHostNotRunning
+	}
+	st.mu.Lock()
+	java := st.javaHost
+	sameVersion := st.install.CurrentVersion == install.CurrentVersion && st.install.Generation == install.Generation && st.install.CurrentPackageIdentity == install.CurrentPackageIdentity
+	st.mu.Unlock()
+	if !sameVersion {
+		return errors.New("extension generation changed during state migration")
+	}
+	if !java {
+		return nil
+	}
+	params, err := json.Marshal(map[string]string{"fromVersion": fromVersion, "toVersion": install.CurrentVersion})
+	if err != nil {
+		return err
+	}
+	body, err := s.CallJavaRPC0304(ctx, key, "state.migrate", params)
+	if err != nil {
+		return fmt.Errorf("state migration callback failed: %w", err)
+	}
+	var answer struct {
+		FromVersion string `json:"fromVersion"`
+		ToVersion   string `json:"toVersion"`
+		Applied     bool   `json:"applied"`
+	}
+	if err = json.Unmarshal(body, &answer); err != nil {
+		return err
+	}
+	if answer.FromVersion != fromVersion || answer.ToVersion != install.CurrentVersion {
+		return errors.New("invalid migration acknowledgement")
+	}
+	return nil
+}
