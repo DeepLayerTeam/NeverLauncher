@@ -53,6 +53,11 @@ func Open(ctx context.Context, options sqlitedurable.Options) (*Repository, erro
 // OpenExisting creates or migrates a core schema; for inspection and
 // startup readiness checks. The caller must first ensure the DB file exists.
 func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Repository, error) {
+	if st, err := os.Lstat(options.Path); err != nil {
+		return nil, fmt.Errorf("sqlite core existing database: %w", err)
+	} else if !st.Mode().IsRegular() {
+		return nil, errors.New("sqlite core existing database is not a regular file")
+	}
 	store, err := sqlitedurable.Open(ctx, options)
 	if err != nil {
 		return nil, err
@@ -130,6 +135,15 @@ func (r *Repository) migrate(ctx context.Context) error {
 			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
 		}
 		if version == 0 {
+			// user_version=0 can mean a fresh file OR an unrelated/legacy DB.
+			// Only a completely empty schema is safe to bootstrap as new.
+			var existing int
+			if err := q.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type IN ('table','index','trigger','view')`).Scan(&existing); err != nil {
+				return err
+			}
+			if existing != 0 {
+				return fmt.Errorf("sqlite core unversioned nonempty schema (%d objects); refusing destructive initialization", existing)
+			}
 			for _, stmt := range ddl {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite core schema: %w", err)

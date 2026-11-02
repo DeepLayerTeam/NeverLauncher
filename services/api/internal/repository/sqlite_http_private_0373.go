@@ -112,34 +112,34 @@ func restorePrivateSQLite0373(r *MemoryRepository, p sqliteHTTPPrivate0373) {
 }
 func validPrivateSQLite0373(s sqliteHTTPState0372) bool {
 	p := s.Private0373
-	if len(p.PasswordHashes) != 0 && len(p.PasswordHashes) != len(s.Users) {
+	if len(p.PasswordHashes) != len(s.Users) {
 		return false
 	}
-	if len(p.ProviderRefresh) != 0 && len(p.ProviderRefresh) != len(s.ProviderCredentials) {
+	if len(p.ProviderRefresh) != len(s.ProviderCredentials) {
 		return false
 	}
-	if len(p.DevicePublicKeys) != 0 && len(p.DevicePublicKeys) != len(s.TrustedDevices) {
+	if len(p.DevicePublicKeys) != len(s.TrustedDevices) {
 		return false
 	}
-	if len(p.DeviceChallenges) != 0 && len(p.DeviceChallenges) != len(s.DeviceChallenges) {
+	if len(p.DeviceChallenges) != len(s.DeviceChallenges) {
 		return false
 	}
-	if len(p.MinecraftSessions) != 0 && len(p.MinecraftSessions) != len(s.MinecraftSessions) {
+	if len(p.MinecraftSessions) != len(s.MinecraftSessions) {
 		return false
 	}
-	if len(p.MinecraftJoinUsernames) != 0 && len(p.MinecraftJoinUsernames) != len(s.MinecraftJoins) {
+	if len(p.MinecraftJoinUsernames) != len(s.MinecraftJoins) {
 		return false
 	}
-	if len(p.HardwareEvidence) != 0 && len(p.HardwareEvidence) != len(s.HardwareEvidence) {
+	if len(p.HardwareEvidence) != len(s.HardwareEvidence) {
 		return false
 	}
-	if len(p.MeasuredBoot) != 0 && len(p.MeasuredBoot) != len(s.MeasuredBoot0315) {
+	if len(p.MeasuredBoot) != len(s.MeasuredBoot0315) {
 		return false
 	}
-	if len(p.ExtensionSecrets) != 0 && len(p.ExtensionSecrets) != len(s.ExtensionSecrets) {
+	if len(p.ExtensionSecrets) != len(s.ExtensionSecrets) {
 		return false
 	}
-	if len(p.ExtensionDeliveryTokens) != 0 && len(p.ExtensionDeliveryTokens) != len(s.ExtensionEventDeliveries) {
+	if len(p.ExtensionDeliveryTokens) != len(s.ExtensionEventDeliveries) {
 		return false
 	}
 	return true

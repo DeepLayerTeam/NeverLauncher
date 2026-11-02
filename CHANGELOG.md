@@ -1,3 +1,12 @@
+## 0.47.1 — SQLite WAL durability, crash recovery, schema and HTTP snapshot hardening (source patch; GA verification pending)
+
+- Shared `sqlitedurable.Store`: full startup `integrity_check` plus foreign-key validation, private WAL/SHM sidecar checks, TRUNCATE checkpoint with incomplete-progress errors, and fail-closed handling of unresolved transaction/commit outcomes. Canceled transactions still attempt independent rollback and discard bad connections.
+- HTTP Repository: refuse to bootstrap unrelated SQLite databases or existing state tables without a snapshot; validate every top-level JSON snapshot field, reject duplicate/unknown/missing fields and invalid private credential-array alignment. Health recomputes the document digest and checks it against the cached committed state, including stable publish and first-admin bootstrap commits.
+- Coordinator: verify existing tables and indexes against the supported schema before applying DDL; reject partial or incompatible structures instead of silently recreating missing objects.
+- SQLite Core: reject nonempty unversioned databases instead of treating them as fresh; `OpenExisting` must not create a missing SQLite file.
+- Regression tests added for malformed snapshot input, invalid schema, non-SQLite state, sidecar attacks, WAL checkpoint and a three-database hard-kill/reopen scenario.
+- **Certification boundary:** Source syntax/DDL consistency checked, but the required Go 1.27.3 toolchain and modernc.org/sqlite dependencies are unavailable in this environment; tests could not be executed. Full SQLite durability/recovery on supported ext4/XFS/Btrfs storage and CI remain mandatory before this candidate may be declared production GA.
+
 ## 0.47.0 — Independent unsigned reproduction and native release evidence gates (source candidate; GA BLOCKED)
 
 - Export actual compiled unsigned Windows/Linux/macOS x64/ARM64 binaries into deterministic target archives *before* OS signing or delegated package signatures; keep unsigned-only mode separate from production-signing mode.

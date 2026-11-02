@@ -404,6 +404,7 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 	// For stable the permit is verified AGAIN within the same write transaction
 	// that consumes it, including fresh revocation and every target stage.
 	mutated := false
+	var committedDigest string
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		// Check the job snapshot before attempting a grant lookup.
 		canonical, e := json.Marshal(rel.Manifest)
@@ -429,6 +430,7 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 			return e
 		}
 		sum := sha256.Sum256(raw)
+		committedDigest = hex.EncodeToString(sum[:])
 		result, e := q.ExecContext(ctx, `UPDATE http_repository_state_0372 SET sequence=sequence+1,sha256=?,document=? WHERE singleton=1 AND sequence=? AND state_version=1`, hex.EncodeToString(sum[:]), raw, r.seq)
 		if e != nil {
 			return e
@@ -461,5 +463,6 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 		return model.ReleaseVersion{}, err
 	}
 	r.seq++
+	r.digest = committedDigest
 	return out, nil
 }

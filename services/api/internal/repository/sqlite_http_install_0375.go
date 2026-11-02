@@ -163,6 +163,7 @@ func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context
 		return model.User{}, r.failed
 	}
 	r.seq++
+	r.digest = hex.EncodeToString(sum[:])
 	return created, nil
 }
 

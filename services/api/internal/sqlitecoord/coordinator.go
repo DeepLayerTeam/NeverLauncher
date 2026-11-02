@@ -53,6 +53,59 @@ CREATE TABLE IF NOT EXISTS coord_limits (
 CREATE INDEX IF NOT EXISTS coord_limits_expiry ON coord_limits(resets_at);
 `
 
+// Require the exact production coordinator schema. CREATE IF NOT EXISTS is
+// not a migration: silently using a same-named table with different columns,
+// constraints or indexes would corrupt live locks and rate limits.
+func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (bool, error) {
+	expected := map[string]string{}
+	for _, raw := range strings.Split(schema, ";\n") {
+		stmt := strings.TrimSpace(raw)
+		if stmt == "" {
+			continue
+		}
+		fields := strings.Fields(stmt)
+		if len(fields) < 6 {
+			return false, fmt.Errorf("invalid embedded coordinator DDL: %q", stmt)
+		}
+		name := fields[5]
+		expected[name] = normalizeCoordinatorDDL0471(stmt)
+	}
+	rows, err := q.QueryContext(ctx, `SELECT type,name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type IN ('table','index','view','trigger')`)
+	if err != nil {
+		return false, err
+	}
+	seen := map[string]struct{}{}
+	for rows.Next() {
+		var kind, name string
+		var sqlText sql.NullString
+		if err = rows.Scan(&kind, &name, &sqlText); err != nil {
+			break
+		}
+		want, ok := expected[name]
+		if !ok || !sqlText.Valid || normalizeCoordinatorDDL0471(sqlText.String) != want {
+			err = fmt.Errorf("coordinator incompatible %s schema %q; manual migration required", kind, name)
+			break
+		}
+		seen[name] = struct{}{}
+	}
+	err = errors.Join(err, rows.Err(), rows.Close())
+	if err != nil {
+		return false, err
+	}
+	if len(seen) == 0 {
+		return false, nil
+	}
+	if len(seen) != len(expected) {
+		return true, fmt.Errorf("coordinator partial schema: found %d/%d objects", len(seen), len(expected))
+	}
+	return true, nil
+}
+
+func normalizeCoordinatorDDL0471(stmt string) string {
+	norm := strings.ToLower(strings.Join(strings.Fields(strings.TrimSuffix(strings.TrimSpace(stmt), ";")), ""))
+	return strings.ReplaceAll(norm, "ifnotexists", "")
+}
+
 func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 	db, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path, Readers: 2})
 	if err != nil {
@@ -64,6 +117,13 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 		}
 	}()
 	c := &Coordinator{db: db}
+	err = db.Read(ctx, func(q sqlitedurable.Executor) error {
+		_, e := validateExistingSchema0471(ctx, q)
+		return e
+	})
+	if err != nil {
+		return nil, fmt.Errorf("coordinator schema preflight: %w", err)
+	}
 	err = db.Write(ctx, func(q sqlitedurable.Executor) error {
 		// Statements deliberately execute inside one BEGIN IMMEDIATE transaction.
 		for _, stmt := range strings.Split(schema, ";\n") {
@@ -90,6 +150,12 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if err = db.Read(ctx, func(q sqlitedurable.Executor) error {
+		_, e := validateExistingSchema0471(ctx, q)
+		return e
+	}); err != nil {
+		return nil, fmt.Errorf("coordinator schema verification: %w", err)
 	}
 	if err = c.Health(ctx); err != nil {
 		return nil, err

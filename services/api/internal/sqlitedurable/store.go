@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -32,6 +34,7 @@ const (
 var (
 	ErrClosed        = errors.New("sqlite storage closed")
 	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome must be reconciled before replay")
+	ErrPoisoned      = errors.New("sqlite transaction state uncertain; close store and reconcile with a fresh connection before serving requests")
 )
 
 // Options requires a plain absolute or relative on-disk pathname, a URI,
@@ -46,12 +49,13 @@ type Options struct {
 // process cannot open the same DB via Open while this store holds its lock.
 // All writes serialize on the one writer connection. Reads use a bounded pool.
 type Store struct {
-	path    string
-	writer  *sql.DB
-	readers *sql.DB
-	lock    *os.File
-	mu      sync.RWMutex
-	closed  bool
+	path     string
+	writer   *sql.DB
+	readers  *sql.DB
+	lock     *os.File
+	mu       sync.RWMutex
+	closed   bool
+	poisoned atomic.Bool
 }
 
 type WALStatus struct {
@@ -94,6 +98,9 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	}()
 	if err = durableFileSystemProbe(filepath.Dir(path)); err != nil {
 		return nil, fmt.Errorf("sqlite durable filesystem probe failed: %w", err)
+	}
+	if err = checkSQLiteSidecars(path); err != nil {
+		return nil, err
 	}
 	if err = createDatabase0600(path); err != nil {
 		return nil, err
@@ -144,6 +151,9 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	if err = s.verifyReaders(ctx, timeout); err != nil {
 		return nil, err
 	}
+	if err = checkSQLiteSidecars(path); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -182,6 +192,71 @@ func checkExistingRegularFile(path string) error {
 	}
 	if f.Mode().Perm()&0077 != 0 {
 		return fmt.Errorf("sqlite database %s has unsafe permissions %04o; require 0600", path, f.Mode().Perm())
+	}
+	return nil
+}
+
+// SQLite may create WAL and shared-memory sidecars before the first query.
+// Never allow symlinked or world-readable sidecars in a private datastore.
+func checkSQLiteSidecars(path string) error {
+	for _, name := range []string{path + "-wal", path + "-shm"} {
+		info, err := os.Lstat(name)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
+			return fmt.Errorf("unsafe SQLite sidecar %q (expected regular private file)", name)
+		}
+	}
+	return nil
+}
+
+// Verify every SQLite integrity result (not just the first row), including
+// foreign keys. A quick_check alone cannot certify a recovered WAL database.
+func verifyDatabaseIntegrity(ctx context.Context, q Executor) error {
+	rows, err := q.QueryContext(ctx, "PRAGMA integrity_check")
+	if err != nil {
+		return err
+	}
+	var result string
+	if !rows.Next() {
+		err = rows.Err()
+		_ = rows.Close()
+		if err != nil {
+			return err
+		}
+		return errors.New("SQLite integrity_check returned no rows")
+	}
+	if err = rows.Scan(&result); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if result != "ok" {
+		_ = rows.Close()
+		return fmt.Errorf("SQLite integrity_check: %s", result)
+	}
+	if rows.Next() {
+		_ = rows.Close()
+		return errors.New("SQLite integrity_check produced unexpected additional rows")
+	}
+	err = errors.Join(rows.Err(), rows.Close())
+	if err != nil {
+		return err
+	}
+	rows, err = q.QueryContext(ctx, "PRAGMA foreign_key_check")
+	if err != nil {
+		return err
+	}
+	hasViolation := rows.Next()
+	err = errors.Join(rows.Err(), rows.Close())
+	if err != nil {
+		return err
+	}
+	if hasViolation {
+		return errors.New("SQLite foreign_key_check found inconsistent records")
 	}
 	return nil
 }
@@ -264,12 +339,8 @@ func (s *Store) verifyWriter(ctx context.Context, timeout string) error {
 	if err = pragmaInt(ctx, conn, "busy_timeout", n); err != nil {
 		return err
 	}
-	var integrity string
-	if err = conn.QueryRowContext(ctx, "PRAGMA quick_check").Scan(&integrity); err != nil {
-		return err
-	}
-	if integrity != "ok" {
-		return fmt.Errorf("sqlite quick_check failed: %s", integrity)
+	if err = verifyDatabaseIntegrity(ctx, conn); err != nil {
+		return fmt.Errorf("sqlite open integrity failure: %w", err)
 	}
 	return nil
 }
@@ -309,6 +380,9 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	if s.closed {
 		return ErrClosed
 	}
+	if s.poisoned.Load() {
+		return ErrPoisoned
+	}
 	if fn == nil {
 		return errors.New("nil sqlite write callback")
 	}
@@ -322,11 +396,21 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	}
 	active := true
 	defer func() {
+		// Always try to roll back using an independent context, including after
+		// cancellation and panic. An unresolved live transaction must never be
+		// returned to the pooled writer connection.
 		if active {
 			rollbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if _, rbErr := conn.ExecContext(rollbackCtx, "ROLLBACK"); rbErr != nil {
-				err = errors.Join(err, fmt.Errorf("sqlite rollback failed; connection must be discarded: %w", rbErr))
+			_, rbErr := conn.ExecContext(rollbackCtx, "ROLLBACK")
+			cancel()
+			if rbErr != nil {
+				// database/sql may already have discarded a canceled connection;
+				// otherwise invalidate the connection and fail this store closed.
+				if !errors.Is(rbErr, sql.ErrConnDone) && !errors.Is(rbErr, driver.ErrBadConn) {
+					s.poisoned.Store(true)
+					err = errors.Join(err, fmt.Errorf("sqlite rollback unresolved: %w", rbErr))
+				}
+				_ = conn.Raw(func(any) error { return driver.ErrBadConn })
 			}
 		}
 		if p := recover(); p != nil {
@@ -339,6 +423,7 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	// SQLite commits even if an API call races with a deadline; callers must
 	// reconcile an error's outcome using an immutable operation identifier.
 	if _, err = conn.ExecContext(ctx, "COMMIT"); err != nil {
+		s.poisoned.Store(true)
 		return errors.Join(ErrCommitUnknown, err)
 	}
 	active = false
@@ -350,6 +435,9 @@ func (s *Store) Read(ctx context.Context, fn func(Executor) error) error {
 	defer s.mu.RUnlock()
 	if s.closed {
 		return ErrClosed
+	}
+	if s.poisoned.Load() {
+		return ErrPoisoned
 	}
 	if fn == nil {
 		return errors.New("nil sqlite read callback")
@@ -370,12 +458,18 @@ func (s *Store) Checkpoint(ctx context.Context) (status WALStatus, err error) {
 	if s.closed {
 		return status, ErrClosed
 	}
-	err = s.writer.QueryRowContext(ctx, "PRAGMA wal_checkpoint(PASSIVE)").Scan(&status.Busy, &status.LogFrames, &status.CheckpointedFrames)
+	if s.poisoned.Load() {
+		return status, ErrPoisoned
+	}
+	// TRUNCATE waits up to busy_timeout for active readers, reports blocked
+	// readers, and bounds WAL growth. PASSIVE often returns success despite
+	// leaving frames behind and was not a reliable maintenance signal.
+	err = s.writer.QueryRowContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)").Scan(&status.Busy, &status.LogFrames, &status.CheckpointedFrames)
 	if err != nil {
 		return status, err
 	}
-	if status.Busy != 0 {
-		return status, fmt.Errorf("sqlite checkpoint busy=%d", status.Busy)
+	if status.Busy != 0 || (status.LogFrames >= 0 && status.CheckpointedFrames < status.LogFrames) {
+		return status, fmt.Errorf("sqlite checkpoint incomplete: busy=%d frames=%d checkpointed=%d", status.Busy, status.LogFrames, status.CheckpointedFrames)
 	}
 	return status, nil
 }
