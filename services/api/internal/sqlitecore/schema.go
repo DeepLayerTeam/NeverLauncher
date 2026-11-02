@@ -12,9 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
@@ -87,40 +85,11 @@ func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) err
 	if old != 322 && old != 323 && old != 324 && old != 325 && old != 326 {
 		return fmt.Errorf("SQLite schema %d unsupported; refusing migration", old)
 	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
+	if err := r.preflightLegacy0472(ctx, old); err != nil {
 		return err
 	}
-	backupDir := filepath.Join(filepath.Dir(abs), "pre-upgrade-backups")
-	if err = os.Mkdir(backupDir, 0700); err != nil && !os.IsExist(err) {
-		return err
-	}
-	if st, e := os.Lstat(backupDir); e != nil {
-		return e
-	} else if !st.IsDir() || st.Mode().Perm() != 0700 || st.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("unsafe pre-upgrade backup directory")
-	}
-	name := fmt.Sprintf("%s-schema-%d-%d.db", filepath.Base(abs), old, time.Now().UTC().UnixNano())
-	destination := filepath.Join(backupDir, name)
-	if _, err = sqlitedurable.OnlineBackup(ctx, abs, destination); err != nil {
-		return fmt.Errorf("mandatory pre-upgrade backup: %w", err)
-	}
-	if _, err = sqlitedurable.VerifyBackup(ctx, destination); err != nil {
-		return fmt.Errorf("mandatory pre-upgrade backup validation: %w", err)
-	}
-	// Restore verification in a separate temporary path before allowing DDL.
-	tmpDir, err := os.MkdirTemp(backupDir, ".restore-proof-*")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpDir)
-	restored := filepath.Join(tmpDir, "state.db")
-	if _, err = sqlitedurable.RestoreBackup(ctx, destination, restored, false); err != nil {
-		return fmt.Errorf("pre-upgrade restore proof failed: %w", err)
-	}
-	// Structural verification is performed during RestoreBackup. Older core
-	// schemas need not pass new-version application-level checks yet.
-	return nil
+	_, err := sqlitedurable.PreUpgradeBackup0472(ctx, path, fmt.Sprintf("core-%d-to-%d", old, SchemaVersion))
+	return err
 }
 
 // Schema changes and built-in role seeding are committed atomically. An
@@ -157,40 +126,46 @@ func (r *Repository) migrate(ctx context.Context) error {
 		}
 		if version == 0 || version == 322 {
 			for _, stmt := range authDDL {
-				if _, err := q.ExecContext(ctx, stmt); err != nil {
+				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
 					return fmt.Errorf("sqlite auth migration 323: %w", err)
 				}
 			}
 		}
 		if version != 324 && version != 325 && version != 326 && version != SchemaVersion {
 			for _, stmt := range joinDDL {
-				if _, err := q.ExecContext(ctx, stmt); err != nil {
+				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
 					return fmt.Errorf("sqlite replay/join migration 324: %w", err)
 				}
 			}
 		}
 		if version != 325 && version != 326 && version != SchemaVersion {
 			for _, stmt := range durableDDL {
-				if _, err := q.ExecContext(ctx, stmt); err != nil {
+				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
 					return fmt.Errorf("sqlite durable migration 325: %w", err)
 				}
 			}
 		}
 		if version != 326 && version != SchemaVersion {
 			for _, stmt := range fullStateDDL {
-				if _, err := q.ExecContext(ctx, stmt); err != nil {
+				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
 					return fmt.Errorf("sqlite full durable migration 326: %w", err)
 				}
 			}
 		}
 		if version > 0 && version < SchemaVersion {
-			for _, stmt := range []string{
-				"ALTER TABLE profiles ADD COLUMN minecraft_version TEXT NOT NULL DEFAULT ''",
-				"ALTER TABLE profiles ADD COLUMN loader_version TEXT NOT NULL DEFAULT ''",
-				"ALTER TABLE profiles ADD COLUMN java_major INTEGER NOT NULL DEFAULT 0",
+			for _, col := range []struct{ name, typ, sql string }{
+				{"minecraft_version", "TEXT", "ALTER TABLE profiles ADD COLUMN minecraft_version TEXT NOT NULL DEFAULT ''"},
+				{"loader_version", "TEXT", "ALTER TABLE profiles ADD COLUMN loader_version TEXT NOT NULL DEFAULT ''"},
+				{"java_major", "INTEGER", "ALTER TABLE profiles ADD COLUMN java_major INTEGER NOT NULL DEFAULT 0"},
 			} {
-				if _, err := q.ExecContext(ctx, stmt); err != nil {
-					return fmt.Errorf("sqlite profile migration 327: %w", err)
+				exists, checkErr := hasCoreColumn0472(ctx, q, "profiles", col.name, col.typ)
+				if checkErr != nil {
+					return fmt.Errorf("sqlite profile migration 327: %w", checkErr)
+				}
+				if !exists {
+					if _, err := q.ExecContext(ctx, col.sql); err != nil {
+						return fmt.Errorf("sqlite profile migration 327: %w", err)
+					}
 				}
 			}
 		}
@@ -199,7 +174,9 @@ func (r *Repository) migrate(ctx context.Context) error {
 				return err
 			}
 		}
-		return nil
+		// After all DDL, validate the core persisted graph before COMMIT.
+		// A failure rolls the entire upgrade back to the verified backup state.
+		return coreRecordPreflight0472(ctx, q)
 	})
 }
 

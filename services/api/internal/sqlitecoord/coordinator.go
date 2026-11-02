@@ -117,12 +117,22 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 		}
 	}()
 	c := &Coordinator{db: db}
+	legacy := false
 	err = db.Read(ctx, func(q sqlitedurable.Executor) error {
-		_, e := validateExistingSchema0471(ctx, q)
+		var e error
+		legacy, e = coordinatorLegacy0472(ctx, q)
 		return e
 	})
 	if err != nil {
 		return nil, fmt.Errorf("coordinator schema preflight: %w", err)
+	}
+	if legacy {
+		if _, err = sqlitedurable.PreUpgradeBackup0472(ctx, path, "coordinator-v0-to-v1"); err != nil {
+			return nil, err
+		}
+		if err = db.Write(ctx, func(q sqlitedurable.Executor) error { return migrateCoordinatorLegacy0472(ctx, q) }); err != nil {
+			return nil, err
+		}
 	}
 	err = db.Write(ctx, func(q sqlitedurable.Executor) error {
 		// Statements deliberately execute inside one BEGIN IMMEDIATE transaction.

@@ -111,6 +111,18 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	if err != nil {
 		return nil, fmt.Errorf("sqlite HTTP preflight: %w", err)
 	}
+	legacy, upgraded, e := preflightHTTPUpgrade0472(ctx, store, existing)
+	if e != nil {
+		return nil, fmt.Errorf("sqlite HTTP compatibility preflight: %w", e)
+	}
+	if legacy {
+		if _, e = sqlitedurable.PreUpgradeBackup0472(ctx, path, "http-v1-upgrade"); e != nil {
+			return nil, e
+		}
+		if e = migrateHTTPSnapshot0472(ctx, store, upgraded); e != nil {
+			return nil, fmt.Errorf("sqlite HTTP upgrade: %w", e)
+		}
+	}
 	err = store.Write(ctx, func(q sqlitedurable.Executor) error {
 		_, e := q.ExecContext(ctx, sqliteHTTPDDL0372)
 		if e != nil {

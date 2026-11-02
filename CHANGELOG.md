@@ -1,3 +1,11 @@
+## 0.47.2 — Verified SQLite legacy schema upgrades (source candidate, GA validation pending)
+
+- Core 322–326 → 327: validate known predecessor tables, critical column types and persisted project/profile/auth associations before changing any data. Reconcile already-present 327 profile columns without duplicate ALTER, execute SQL changes and final record validation atomically. Existing historical SQL migrations remain unchanged. Correct the historical `minecraft_sessions` index/table namespace collision at DDL execution time without rewriting the old SQL migration.
+- Coordinator v0 → v1: recognize only the exact prior table DDL, create missing runtime indexes/replay tombstones transactionally, seed token/fence entries for pre-existing command leases, and reject partial/future/current schema drift.
+- HTTP Repository: verify SQL layout and checksum, decode only explicitly supported earlier JSON fields, refuse missing secrets for existing auth records, create missing runtime/stable-permit tables and CAS-upgrade the snapshot in a single write transaction. Current layouts keep strict 0.47.1 JSON validation.
+- All recognized upgrades require a private, immutable, SHA-256-checked SQLite physical backup and successful independent restore proof before mutation. Schema version and compare-and-swap ensure repeat launches are idempotent; tests exercise preservation, rejection and repeat behavior.
+- **Certification:** Actual Go 1.27.3 tests, production filesystem crash/restore and integration/CI are not executed in the present environment. Until confirmed, this is a source candidate, not certified production GA. SQLite→PostgreSQL transfer is not a feature of this patch.
+
 ## 0.47.1 — SQLite WAL durability, crash recovery, schema and HTTP snapshot hardening (source patch; GA verification pending)
 
 - Shared `sqlitedurable.Store`: full startup `integrity_check` plus foreign-key validation, private WAL/SHM sidecar checks, TRUNCATE checkpoint with incomplete-progress errors, and fail-closed handling of unresolved transaction/commit outcomes. Canceled transactions still attempt independent rollback and discard bad connections.
