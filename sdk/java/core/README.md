@@ -148,3 +148,7 @@ JVM Host, embedded pinned JAR library, authenticated config, live provider switc
 through existing command RPC, CLI, heartbeat, shutdown and refusal of unknown selections.
 See `docs/extensions/java-spi-0483.md`. This SPI is *per-extension-JVM*, not a cross-package
 registry and not a Java sandbox.
+
+## 0.48.4 — Backend Java Services
+
+`context.runtime().backend()` exposes typed, read-only project/profile/channel/release/job-status services via the authenticated Go Host Broker. Individual capabilities require live `project:read` or `release:read` grants and enforce project scope. Bounded list pagination uses `Page<T>` with optional `nextOffset`; see [Backend Java Services](../../../docs/extensions/java-backend-services-0484.md) for the operations, permissions and limitations.

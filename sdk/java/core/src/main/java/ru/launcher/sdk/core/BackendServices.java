@@ -1,0 +1,165 @@
+package ru.launcher.sdk.core;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+
+/** Read-only project-scoped backend services over the authenticated Go capability broker.
+ * No database clients, new credentials or internal HTTP endpoints are exposed to extensions.
+ * The broker checks live grants both before execution and before returning a response.
+ */
+public final class BackendServices {
+    private final HostSession host;
+
+    BackendServices(HostSession host) { this.host = Objects.requireNonNull(host); }
+
+    public record Page<T>(List<T> items, Integer nextOffset) {
+        public Page { items = List.copyOf(items); }
+    }
+    public record Project(String id, String name, String description, String homepage,
+                          String repository, String defaultChannel, String createdAt, String updatedAt) {}
+    public record Profile(String id, String projectId, String name, String description,
+                          String loader, String minecraftVersion, String loaderVersion,
+                          int javaMajor, String preset, boolean isDefault, long revision) {}
+    public record Channel(String id, String projectId, String name, String description, boolean protectedChannel) {}
+    public record Release(String id, String projectId, String profileId, String channel,
+                          String version, String status, String publishedAt, Map<String,Object> manifest) {
+        public Release { manifest = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(manifest)); }
+    }
+    /** Deliberately omits job payload/result/lease credentials, actor and error text. */
+    public record Job(String id, String projectId, String kind, String status,
+                      int attemptCount, int maxAttempts, String createdAt,
+                      String updatedAt, String completedAt) {}
+
+    private static String id(String value, String field) {
+        if (value == null || value.isBlank() || value.length() > 128 || value.chars().anyMatch(c -> c < 32 || c == 127))
+            throw new IllegalArgumentException("invalid " + field);
+        return value;
+    }
+    private static Map<String,Object> request(String projectId) { return Map.of("projectId", id(projectId,"projectId")); }
+    private Map<String,Object> call(String capability, Map<String,Object> payload) throws IOException,InterruptedException {
+        return host.capability(capability, payload);
+    }
+    private static Map<String,Object> record(Map<String,Object> response, String key) {
+        return Json.object(Objects.requireNonNull(response.get(key),"backend response missing " + key));
+    }
+    private static String text(Map<String,Object> raw,String key) {
+        Object v=raw.get(key);
+        if(v==null)return "";
+        if(!(v instanceof String s))throw new IllegalArgumentException("invalid backend field: " + key);
+        return s;
+    }
+    private static String required(Map<String,Object> raw,String key) {
+        return id(Json.string(raw,key,true),key);
+    }
+    private static boolean bool(Map<String,Object> raw,String key) {
+        Object n=raw.get(key);
+        if(!(n instanceof Boolean b))throw new IllegalArgumentException("invalid backend boolean: "+key);
+        return b;
+    }
+    private static long number(Map<String,Object> raw,String key) {
+        Object n=raw.get(key);
+        if(!(n instanceof Number value)||value.longValue()!=value.doubleValue()||value.longValue()<0)
+            throw new IllegalArgumentException("invalid backend number: "+key);
+        return value.longValue();
+    }
+    private static int narrow(Map<String,Object> raw,String key) {
+        long v=number(raw,key);
+        if(v>Integer.MAX_VALUE)throw new IllegalArgumentException("backend integer overflow: "+key);
+        return (int)v;
+    }
+    private static Project project(Map<String,Object> m) {
+        return new Project(required(m,"id"),required(m,"name"),text(m,"description"),text(m,"homepage"),
+                text(m,"repository"),text(m,"defaultChannel"),text(m,"createdAt"),text(m,"updatedAt"));
+    }
+    private static Profile profile(Map<String,Object> m) {
+        return new Profile(required(m,"id"),required(m,"projectId"),required(m,"name"),text(m,"description"),
+                text(m,"loader"),text(m,"minecraftVersion"),text(m,"loaderVersion"),
+                narrow(m,"javaMajor"),text(m,"preset"),bool(m,"isDefault"),number(m,"revision"));
+    }
+    private static Channel channel(Map<String,Object> m) {
+        return new Channel(required(m,"id"),required(m,"projectId"),required(m,"name"),
+                text(m,"description"),bool(m,"protected"));
+    }
+    private static Release release(Map<String,Object> m) {
+        return new Release(required(m,"id"),required(m,"projectId"),required(m,"profileId"),
+                required(m,"channel"),required(m,"version"),required(m,"status"),
+                text(m,"publishedAt"),m.get("manifest")==null?Map.of():Json.object(m.get("manifest")));
+    }
+    private static Job job(Map<String,Object> m) {
+        return new Job(required(m,"id"),required(m,"projectId"),required(m,"kind"),
+                required(m,"status"),narrow(m,"attemptCount"),narrow(m,"maxAttempts"),
+                text(m,"createdAt"),text(m,"updatedAt"),text(m,"completedAt"));
+    }
+    private <T> Page<T> page(String operation,Map<String,Object> base,int offset,int limit,Function<Map<String,Object>,T> decoder)
+            throws IOException,InterruptedException {
+        if(offset<0||offset>1_000_000||limit<1||limit>50)throw new IllegalArgumentException("invalid page parameters");
+        var params=new java.util.LinkedHashMap<>(base);
+        params.put("offset",offset);params.put("limit",limit);
+        var response=call(operation,params);
+        Object raw=response.get("items");
+        if(!(raw instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("invalid backend page");
+        List<T> decoded=new ArrayList<>(items.size());
+        for(Object item:items) {
+            Map<String,Object> map=Json.object(item);
+            T value=decoder.apply(map);
+            // Prevent a malformed or downgraded broker from mixing project data.
+            Object expected=base.get("projectId");
+            if(expected!=null && !Objects.equals(expected,map.get("projectId")))
+                throw new SecurityException("cross-project backend response");
+            decoded.add(value);
+        }
+        Integer next=null;
+        if(response.containsKey("nextOffset")) {
+            long n=number(response,"nextOffset");
+            if(n<=offset||n>1_000_000)throw new IllegalArgumentException("invalid backend cursor");
+            next=(int)n;
+        }
+        return new Page<>(decoded,next);
+    }
+    private static void checkScope(String projectId,String expected) {
+        if(!projectId.equals(expected))throw new SecurityException("cross-project backend response");
+    }
+
+    /** Requires project:read and a global grant on a global-scoped extension. */
+    public Page<Project> projects(int offset,int limit)throws IOException,InterruptedException {
+        return page("project.list",Map.of(),offset,limit,BackendServices::project);
+    }
+    /** Requires project:read for this project. */
+    public Project project(String projectId)throws IOException,InterruptedException {
+        Project p=project(record(call("project.get",request(projectId)),"project"));
+        checkScope(projectId,p.id());return p;
+    }
+    /** Requires project:read for this project. */
+    public Page<Profile> profiles(String projectId,int offset,int limit)throws IOException,InterruptedException {
+        return page("profile.list",request(projectId),offset,limit,BackendServices::profile);
+    }
+    public Profile profile(String projectId,String profileId)throws IOException,InterruptedException {
+        Map<String,Object> req=Map.of("projectId",id(projectId,"projectId"),"profileId",id(profileId,"profileId"));
+        Profile p=profile(record(call("profile.get",req),"profile"));checkScope(projectId,p.projectId());return p;
+    }
+    /** Requires release:read for this project. */
+    public Page<Channel> channels(String projectId,int offset,int limit)throws IOException,InterruptedException {
+        return page("channel.list",request(projectId),offset,limit,BackendServices::channel);
+    }
+    public Channel channel(String projectId,String name)throws IOException,InterruptedException {
+        Map<String,Object> req=Map.of("projectId",id(projectId,"projectId"),"name",id(name,"name"));
+        Channel c=channel(record(call("channel.get",req),"channel"));checkScope(projectId,c.projectId());return c;
+    }
+    /** A bounded alternative to legacy unpaginated release.list. */
+    public Page<Release> releases(String projectId,int offset,int limit)throws IOException,InterruptedException {
+        return page("release.page",request(projectId),offset,limit,BackendServices::release);
+    }
+    public Release release(String projectId,String releaseId)throws IOException,InterruptedException {
+        Map<String,Object> req=Map.of("projectId",id(projectId,"projectId"),"name",id(releaseId,"releaseId"));
+        Release r=release(record(call("release.get",req),"release"));checkScope(projectId,r.projectId());return r;
+    }
+    /** Read only durable job status; requires project:read. A job without a matching project is not visible. */
+    public Job job(String projectId,String jobId)throws IOException,InterruptedException {
+        Map<String,Object> req=Map.of("projectId",id(projectId,"projectId"),"name",id(jobId,"jobId"));
+        Job j=job(record(call("job.get",req),"job"));checkScope(projectId,j.projectId());return j;
+    }
+}

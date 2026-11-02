@@ -9,14 +9,16 @@ public final class RuntimeServices implements AutoCloseable {
     private final Secrets secrets;
     private final RuntimeEvents events;
     private final RuntimeCommands commands;
+    private final BackendServices backend;
     public RuntimeServices(HostSession host,Set<String> declaredCommands){
         this.host=Objects.requireNonNull(host);config=new RuntimeDocuments(host,"config");storage=new RuntimeDocuments(host,"storage");
-        secrets=new Secrets(host);events=new RuntimeEvents(host);commands=new RuntimeCommands(declaredCommands);
+        secrets=new Secrets(host);events=new RuntimeEvents(host);commands=new RuntimeCommands(declaredCommands);backend=new BackendServices(host);
     }
     public RuntimeDocuments config(){return config;}
     public RuntimeDocuments storage(){return storage;}
     public Secrets secrets(){return secrets;}
     public RuntimeEvents events(){return events;}
     public RuntimeCommands commands(){return commands;}
+    public BackendServices backend(){return backend;}
     @Override public void close(){events.close();}
 }

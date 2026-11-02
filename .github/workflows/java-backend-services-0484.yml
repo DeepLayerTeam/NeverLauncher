@@ -1,0 +1,50 @@
+name: Java Backend Services 0.48.4 - typed broker and permission E2E
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionsecurity/**'
+      - '.github/workflows/java-backend-services-0484.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionsecurity/**'
+      - '.github/workflows/java-backend-services-0484.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-services:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Compile and exercise authenticated Java backend services
+        run: sh sdk/java/core/build.sh test
+  host-broker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Real host broker, repository scope, revocation and job redaction
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/extensionhost -run 'TestJavaBackendServicesBroker0484'
+      - name: Existing broker and security regressions
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity
+      - name: Canonical product version
+        run: python3 scripts/version/manage.py check

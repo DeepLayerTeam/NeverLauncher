@@ -20,9 +20,9 @@ func (s *Supervisor) revalidateCapability04312(ctx context.Context, st *processS
 	switch name {
 	case "host.health", "extension.self":
 		return nil
-	case "project.get":
+	case "project.get", "project.list", "profile.list", "profile.get", "job.get":
 		permission = "project:read"
-	case "release.list":
+	case "release.list", "release.get", "release.page", "channel.list", "channel.get":
 		permission = "release:read"
 	case "storage.read", "runtime.config.get", "runtime.storage.get", "fs.read":
 		permission = "storage:read"

@@ -1,3 +1,10 @@
+## 0.48.4 — Backend Java Services (source release; independent GA pending)
+
+- Add production-wired read-only Java BackendServices for projects, profiles, channels, releases and durable job status, exposed through existing `RuntimeServices` and authenticated Go Host Broker. Implement new capability dispatch against real repositories, limit pagination, and preserve legacy project.get/release.list wire compatibility.
+- Enforce per-project grants and extension scope, fail closed on revoked permissions or unavailable policy, recheck authorizations before delivering results, prevent cross-tenant entity leakage and redact durable job secrets/actor/payload/lease/result.
+- Add Java 17-compatible typed records and authenticated loopback HTTP tests; add Go Host Broker integration tests on the real repository and CI jobs for Java 17/21 and Go with race detection.
+- Sync canonical product version metadata to 0.48.4. **Not GA certified:** full Go 1.27.3 suite, independently executed CI matrix, PostgreSQL cutover, native signed platform packages and historical end-to-end upgrade gates remain outstanding; no inherited production guard is bypassed.
+
 ## 0.48.3 — Java SPI & Extension Registry (source release; independent GA pending)
 
 - Add operational per-extension Java SPI interfaces (`JavaProvider`, `ProviderService`, `ProviderDescriptor`, `ProviderContext`) and a typed provider registry with compatibility validation **before provider instantiation**. Reject mismatched SPI contract or version, invalid signed API ranges, duplicate IDs, unknown selection, and incompatible implementation factories.
