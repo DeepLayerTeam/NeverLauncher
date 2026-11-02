@@ -129,3 +129,22 @@ matrix; a JVM HTTP fixture alone is not release certification.
 Java `runtime().events().close()` now closes only local callback handlers. Backend subscriptions remain durable, so an update or JVM restart does not erase the pending EventBus backlog. To intentionally delete a subscription, invoke `runtime().events().unsubscribe(eventType, mode)` while the host session is active. The EventBus is at-least-once and callers must deduplicate non-idempotent side effects.
 
 The authenticated callback server accepts event/hook envelopes up to 2 MiB to carry the existing 1 MiB EventBus payload limit; authenticated command/RPC requests retain their separate 64 KiB bound. Java `null` is a valid JSON command result. Full documentation and tests: `docs/extensions/eventbus-rpc-persistence-0423.md`.
+
+## 0.48.3 — Real Java SPI provider registry
+
+`ExtensionContext.providers()` exposes a per-JVM, typed `ProviderRegistry`. Modules implement
+`JavaProvider`, register `ProviderDescriptor` instances for a `ProviderService<T>`, and call
+`select(serviceId, providerId, timeout)` before using `call(service, action)`. Registration
+checks exact contract identity, compatible SPI SemVer range and signed manifest API range;
+selection drains calls, gracefully replaces the active implementation and fails closed on
+errors or timeouts. `ExtensionLifecycle` automatically shuts down providers after
+`Extension.stop()` or failed startup. Persistent selection is retrieved from the existing
+permission-controlled Go config broker; no launcher core classpath changes are needed.
+
+Real compile/run integration: `sh sdk/java/core/build.sh test`,
+`sh examples/extensions/java-spi/build.sh`, and
+`python3 examples/extensions/java-spi/test-runner.py`. The fixture exercises the actual
+JVM Host, embedded pinned JAR library, authenticated config, live provider switching
+through existing command RPC, CLI, heartbeat, shutdown and refusal of unknown selections.
+See `docs/extensions/java-spi-0483.md`. This SPI is *per-extension-JVM*, not a cross-package
+registry and not a Java sandbox.

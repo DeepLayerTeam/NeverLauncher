@@ -1,0 +1,65 @@
+name: Java SPI Registry 0.48.3 - real lifecycle and provider integration
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'examples/extensions/java-spi/**'
+      - 'scripts/java/package_dependencies_0482.py'
+      - '.github/workflows/java-spi-registry-0483.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'examples/extensions/java-spi/**'
+      - 'scripts/java/package_dependencies_0482.py'
+      - '.github/workflows/java-spi-registry-0483.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runtime-spi:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile SDK and exercise lifecycle, compatibility and races
+        run: sh sdk/java/core/build.sh test
+      - name: Build executable Java extension and pinned dependent JAR
+        run: sh examples/extensions/java-spi/build.sh
+      - name: Real authenticated JVM Host, RPC provider switching, CLI and fail-closed readiness
+        run: python3 examples/extensions/java-spi/test-runner.py
+  extension-package-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build real SPI extension archive
+        run: sh examples/extensions/java-spi/build.sh
+      - name: Run existing locked-JAR preflight and conflict tests
+        working-directory: services/api
+        env:
+          LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-spi/build/package/backend/java-spi.jar
+        run: go test -race -count=1 ./internal/extensionjava
+      - name: Verify all canonical release metadata
+        run: python3 scripts/version/manage.py check

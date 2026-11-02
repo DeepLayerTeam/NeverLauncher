@@ -16,6 +16,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
         Thread t=new Thread(r,"neverext-lifecycle-"+IDS.incrementAndGet());t.setDaemon(true);return t;
     });
     private final Cancellation cancellation=new Cancellation();
+    private final ProviderRegistry providers;
     private final Object transition=new Object();
     private volatile State state=State.NEW;
     private Future<?> active;
@@ -24,6 +25,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
     public ExtensionLifecycle(Extension extension,ExtensionManifest manifest){this(extension,manifest,null);}
     public ExtensionLifecycle(Extension extension,ExtensionManifest manifest,RuntimeServices runtime){
         this.extension=Objects.requireNonNull(extension);this.manifest=Objects.requireNonNull(manifest);this.runtime=runtime;
+        this.providers=new ProviderRegistry(manifest,runtime,cancellation);
     }
     public State state(){return state;}
     public void start(Duration timeout) throws Exception {
@@ -33,14 +35,16 @@ public final class ExtensionLifecycle implements AutoCloseable {
             state=State.STARTING;
         }
         try {
-            invoke(()->extension.start(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime)),timeout,State.STARTING);
+            invoke(()->extension.start(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime,providers)),timeout,State.STARTING);
             synchronized(transition){
                 if(state!=State.STARTING)throw new CancellationException("extension startup cancelled");
                 state=State.RUNNING;
             }
         }catch(Exception e){
             synchronized(transition){if(state!=State.STOPPED)state=State.FAILED;}
-            cancellation.cancel();executor.shutdownNow();throw e;
+            cancellation.cancel();
+            try{providers.shutdown(Duration.ofMillis(500));}catch(Exception cleanup){e.addSuppressed(cleanup);}
+            executor.shutdownNow();throw e;
         }
     }
     public void stop(Duration timeout) throws Exception {
@@ -65,14 +69,26 @@ public final class ExtensionLifecycle implements AutoCloseable {
             return;
         }
         cancellation.cancel();
-        if(previous!=State.RUNNING){executor.shutdownNow();stopFinished.countDown();return;}
+        if(previous!=State.RUNNING){
+            try{providers.shutdown(timeout);}
+            catch(Exception failure){
+                synchronized(transition){state=State.FAILED;}
+                throw failure;
+            }finally{executor.shutdownNow();stopFinished.countDown();}
+            return;
+        }
+        long started=System.nanoTime();
+        Exception failure=null;
         try {
-            invoke(()->extension.stop(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime)),timeout,State.STOPPING);
-            synchronized(transition){if(state==State.STOPPING)state=State.STOPPED;}
-        }catch(Exception e){
-            synchronized(transition){if(state==State.STOPPING)state=State.FAILED;}
-            throw e;
-        }finally{executor.shutdownNow();stopFinished.countDown();}
+            invoke(()->extension.stop(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime,providers)),timeout,State.STOPPING);
+        }catch(Exception e){ failure=e; }
+        try {
+            long remaining=timeout.toNanos()-(System.nanoTime()-started);
+            providers.shutdown(Duration.ofNanos(Math.max(1,remaining)));
+        }catch(Exception e){if(failure==null)failure=e;else failure.addSuppressed(e);}
+        synchronized(transition){if(state==State.STOPPING)state=failure==null?State.STOPPED:State.FAILED;}
+        executor.shutdownNow();stopFinished.countDown();
+        if(failure!=null)throw failure;
     }
     private static void validateTimeout(Duration timeout){
         Objects.requireNonNull(timeout,"timeout");

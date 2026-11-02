@@ -1,3 +1,10 @@
+## 0.48.3 — Java SPI & Extension Registry (source release; independent GA pending)
+
+- Add operational per-extension Java SPI interfaces (`JavaProvider`, `ProviderService`, `ProviderDescriptor`, `ProviderContext`) and a typed provider registry with compatibility validation **before provider instantiation**. Reject mismatched SPI contract or version, invalid signed API ranges, duplicate IDs, unknown selection, and incompatible implementation factories.
+- Implement live active-provider selection with bounded start/stop callbacks, draining of concurrent calls, atomic activation, cleanup after unsuccessful startup, fail-closed state, and idempotent concurrent shutdown. Integrate automatic provider cleanup with the actual `ExtensionLifecycle` after normal stop and failed extension startup, without modifying the JVM's parent classpath or bypassing Go's permissions.
+- Build a real separate-library Java SPI extension and use authenticated Host config for initial selection. Demonstrate runtime switching through existing RPC, CLI invocation, heartbeat, nested JAR loading and incompatibility refusal before ready. Add Java 17/21 Linux/macOS CI and 0.48.2 package preflight matrix; add 0.48.3 regression checks for concurrency, compatibility and lifecycle.
+- Synchronize canonical 0.48.3 version metadata; preserve the existing 0.48.x fail-closed production admission gate. **Not independently GA-certified**: external CI/native signed artifacts, PostgreSQL migration and full product launch acceptance remain outstanding.
+
 ## 0.48.2 — Java module packaging and isolated dependencies (source release; external GA pending)
 
 - Load actual pinned third-party JAR dependencies during Java extension startup from **inside the signed host JAR**, without extending the launcher core classpath or resolving libraries over the network. The extension and libraries use a child-first `URLClassLoader` while JDK/SDK/Host packages retain parent identity; temporary JAR files are kept private and removed on shutdown.
