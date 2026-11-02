@@ -26,7 +26,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
     public ExtensionLifecycle(Extension extension,ExtensionManifest manifest,RuntimeServices runtime){
         this.extension=Objects.requireNonNull(extension);this.manifest=Objects.requireNonNull(manifest);this.runtime=runtime;
         this.providers=new ProviderRegistry(manifest,runtime,cancellation);
-        if(runtime!=null)runtime.identity().bind(providers);
+        if(runtime!=null){runtime.identity().bind(providers);runtime.content().bind(providers);}
     }
     public State state(){return state;}
     public void start(Duration timeout) throws Exception {

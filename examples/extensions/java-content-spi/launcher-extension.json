@@ -1,0 +1,11 @@
+{
+  "schemaVersion":"2.0",
+  "id":"org.example.content-spi",
+  "name":"Content SPI example",
+  "publisher":"NeverLauncher Examples",
+  "version":"0.48.6",
+  "api":"1.0",
+  "permissions":["release:read","storage:read","cli:contribute"],
+  "targets":[{"kind":"backend","entrypoint":"backend/content-spi.jar"},{"kind":"cli","entrypoint":"cli/content-spi.jar"}],
+  "cli":{"namespace":"contentspi","commands":[{"name":"content-check","description":"Exercise pre-sign content transformation"}]}
+}

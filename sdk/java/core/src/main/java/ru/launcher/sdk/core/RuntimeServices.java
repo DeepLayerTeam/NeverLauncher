@@ -11,9 +11,10 @@ public final class RuntimeServices implements AutoCloseable {
     private final RuntimeCommands commands;
     private final BackendServices backend;
     private final IdentityServices identity = new IdentityServices();
+    private final ContentServices content;
     public RuntimeServices(HostSession host,Set<String> declaredCommands){
         this.host=Objects.requireNonNull(host);config=new RuntimeDocuments(host,"config");storage=new RuntimeDocuments(host,"storage");
-        secrets=new Secrets(host);events=new RuntimeEvents(host);commands=new RuntimeCommands(declaredCommands);backend=new BackendServices(host);
+        secrets=new Secrets(host);events=new RuntimeEvents(host);commands=new RuntimeCommands(declaredCommands);backend=new BackendServices(host);content=new ContentServices(host);
     }
     public RuntimeDocuments config(){return config;}
     public RuntimeDocuments storage(){return storage;}
@@ -22,5 +23,6 @@ public final class RuntimeServices implements AutoCloseable {
     public RuntimeCommands commands(){return commands;}
     public BackendServices backend(){return backend;}
     public IdentityServices identity(){return identity;}
+    public ContentServices content(){return content;}
     @Override public void close(){events.close();}
 }

@@ -294,15 +294,33 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "не удалось прочитать файл")
 		return
 	}
+	// The caller-supplied SHA refers to the bytes that were uploaded. A
+	// selected content provider may deterministically transform them before
+	// storing; the core computes a NEW final SHA for signing and delivery.
+	uploadSum := sha256.Sum256(payload)
+	uploadSHA := hex.EncodeToString(uploadSum[:])
+	if expected := strings.TrimSpace(r.FormValue("sha256")); expected != "" && !strings.EqualFold(expected, uploadSHA) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "sha256 uploaded bytes mismatch", "expected": expected, "actual": uploadSHA}})
+		return
+	}
+	contentExtensionID := strings.TrimSpace(r.FormValue("contentExtensionId"))
+	if contentExtensionID != "" {
+		if lookup.Release.Status == "signed" {
+			writeError(w, http.StatusConflict, "signed package cannot be transformed; create a new unsigned version")
+			return
+		}
+		prepared, prepareErr := s.prepareJavaPackageFile0486(r.Context(), contentExtensionID, lookup.Release.ProjectID, relativePath, payload)
+		if prepareErr != nil {
+			writeError(w, http.StatusUnprocessableEntity, "Java content transformation refused: "+prepareErr.Error())
+			return
+		}
+		payload = prepared
+	}
 	sum := sha256.Sum256(payload)
 	actualSHA := hex.EncodeToString(sum[:])
 	executable, targetOS, metadataErr := releaseFileMetadata(r)
 	if metadataErr != nil {
 		writeError(w, http.StatusBadRequest, metadataErr.Error())
-		return
-	}
-	if expected := strings.TrimSpace(r.FormValue("sha256")); expected != "" && !strings.EqualFold(expected, actualSHA) {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "sha256 не совпадает", "expected": expected, "actual": actualSHA}})
 		return
 	}
 	ownership := strings.TrimSpace(r.FormValue("ownership"))
@@ -334,9 +352,12 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:file:upload", lookup.Release.ID+":"+relativePath)
+	if contentExtensionID != "" {
+		s.audit(r, s.adminActor(r), "package:file:java-content-transform", lookup.Release.ID+":"+relativePath+":"+contentExtensionID+":"+uploadSHA+":"+actualSHA)
+	}
 	s.storageWritten0206(r, saved)
 	s.packageEvent0206(r, "package.file-added", relativePath+":"+actualSHA, lookup.Release)
-	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "file": saved, "storageDriver": s.Storage.Driver(), "checksumVerified": true, "status": "uploaded"}})
+	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "file": saved, "storageDriver": s.Storage.Driver(), "checksumVerified": true, "status": "uploaded", "javaContentExtensionId": contentExtensionID, "uploadedSHA256": uploadSHA}})
 }
 
 func (s Server) packageValidate(w http.ResponseWriter, r *http.Request) {

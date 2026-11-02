@@ -1,0 +1,45 @@
+name: Java Content SPI 0.48.6
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'examples/extensions/java-content-spi/**'
+      - 'services/api/internal/extensionhost/**'
+      - '.github/workflows/java-content-spi-0486.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'examples/extensions/java-content-spi/**'
+      - 'services/api/internal/extensionhost/**'
+      - '.github/workflows/java-content-spi-0486.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-content:
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17','21']
+        os: [ubuntu-24.04,macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - run: sh sdk/java/core/build.sh test
+      - run: sh examples/extensions/java-content-spi/build.sh
+      - name: Real Java subprocess and callback smoke
+        run: python3 examples/extensions/java-content-spi/test-runner.py
+  go-content:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - working-directory: services/api
+        run: go test -race -count=1 ./internal/extensionhost ./internal/httpapi -run 'TestJavaContentRPC0486|TestJavaContentTransformVerification0486|TestJavaAuthRPCMethodWhitelist0485|TestJavaBackendServicesBroker0484'
+      - run: python3 scripts/version/manage.py check

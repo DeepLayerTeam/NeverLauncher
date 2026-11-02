@@ -77,7 +77,7 @@ type javaRPCResponse0304 struct {
 // It is intentionally usable only for a running Java target registered by this supervisor.
 func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string, params json.RawMessage) (json.RawMessage, error) {
 	switch method {
-	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke":
+	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare":
 	default:
 		return nil, errors.New("unsupported Java RPC method")
 	}
@@ -122,6 +122,31 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			return nil, errors.New("Java authentication capability revoked or unavailable")
 		}
 	}
+	if strings.HasPrefix(method, "content.") {
+		// Content callbacks cannot mint signed releases or bypass the Go broker.
+		// A global extension must be granted release:read for the explicit project;
+		// a project extension is confined to its installation project.
+		var payload struct {
+			ProjectID string `json:"projectId"`
+		}
+		if err := json.Unmarshal(params, &payload); err != nil {
+			return nil, errors.New("invalid content project")
+		}
+		if method != "content.health" {
+			id, err := s.scopedProject(st, payload.ProjectID)
+			if err != nil {
+				return nil, errors.New("content project scope denied")
+			}
+			permission := "release:read"
+			if method == "content.package.prepare" {
+				permission = "release:prepare"
+			}
+			granted, err := s.permissionAllowed0207(ctx, st, permission, id)
+			if err != nil || !granted {
+				return nil, errors.New("content permission denied or unavailable")
+			}
+		}
+	}
 	// A previously authorized supervisor command must not race an emergency
 	// disable, revoked publisher or replaced installation. The HTTP broker
 	// already checks live trust, but direct Go -> JVM RPC bypasses that broker.
@@ -144,6 +169,26 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		allowed, checkErr := s.permissionAllowed0207(ctx, st, "auth:provider", "")
 		if checkErr != nil || !allowed {
 			return nil, errors.New("Java authentication permission revoked during operation")
+		}
+	}
+	if strings.HasPrefix(method, "content.") && method != "content.health" {
+		var payload struct {
+			ProjectID string `json:"projectId"`
+		}
+		if err := json.Unmarshal(params, &payload); err != nil {
+			return nil, errors.New("invalid content scope")
+		}
+		id, err := s.scopedProject(st, payload.ProjectID)
+		if err != nil {
+			return nil, err
+		}
+		permission := "release:read"
+		if method == "content.package.prepare" {
+			permission = "release:prepare"
+		}
+		granted, err := s.permissionAllowed0207(ctx, st, permission, id)
+		if err != nil || !granted {
+			return nil, errors.New("content permission revoked during RPC")
 		}
 	}
 	return result, nil

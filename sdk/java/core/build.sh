@@ -17,6 +17,7 @@ if [ "${1:-}" = test ]; then
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.CoreTests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.RuntimeApiTests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.BackendServices0484Tests
+  "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.ContentSpi0486Tests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.IdentitySpi0485Tests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.ProviderRegistry0483Tests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.HostStability0481Tests

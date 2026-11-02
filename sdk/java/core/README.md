@@ -156,3 +156,7 @@ registry and not a Java sandbox.
 ## 0.48.5 — Authentication & Identity SPI
 
 `IdentityServices.CONTRACT` connects one selected `IdentityProvider` implementation to the existing authenticated callback RPC. Implementations verify external credentials, provide a stable immutable subject, introspect and revoke their **own** provider sessions. They never issue NeverLauncher tokens or Microsoft/Minecraft authentication evidence. Configuration, grants and activation: `docs/authentication/java-identity-spi-0485.md`. Run `sh sdk/java/core/build.sh test` to exercise the live JVM callback checks.
+
+## 0.48.6 — Content & Distribution SPI
+
+`context.runtime().content()` provides actual provider-driven source/texture/delivery resolution, metadata enrichment, bounded pre-sign byte transformations, and SHA-256 checked content reads using the current Go Host broker. Register a `ContentProvider` via `ContentServices.CONTRACT`; the selected provider is managed by `ExtensionLifecycle`. A transformed file is not a published release and must pass the existing signing and integrity pipeline. Build the executable sample: `sh examples/extensions/java-content-spi/build.sh`. For the production opt-in `contentExtensionId` multipart package transform, permissions, strict limits and the remaining public-distribution boundaries see `docs/extensions/java-content-spi-0486.md`.

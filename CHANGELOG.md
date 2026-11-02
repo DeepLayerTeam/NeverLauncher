@@ -1,3 +1,12 @@
+## 0.48.6 — Content & Distribution Java SPI (source release; independent GA pending)
+
+- Add executable per-extension Java `ContentProvider` with source, skin/cape textures, metadata enrichment, pre-sign package transforms and delivery resolution, using the existing versioned SPI registry and bounded lifecycle. Immutable project, path, asset size and SHA-256 validation precedes any data return.
+- Route reads through existing permission-controlled `storage.read` / `http.fetch` Go Host Broker; enforce project isolation, broker authorization, live permission revocation, HTTPS restrictions, byte size and SHA-256 integrity before returning data to Java extensions.
+- Expose explicit authenticated Go->JVM content RPC operations with a strict method allowlist, per-project `release:read` authorization and post-response revalidation. Preserve 64 KiB callback limits, reject large remote payloads, and never let providers bypass Minecraft trust or release signing.
+- Wire an opt-in `contentExtensionId` Java transform into the existing authenticated multipart package-file upload (24 KiB bounded payload): old-upload checksum, live `release:prepare` grant, post-RPC checksum, storage save, audit old/new hashes and mandatory later core signing; failure does not silently fall back to unsigned bytes.
+- Implement working Java sample (executable JAR, signable extension package) and real-JVM callback/broker tests for source/texture, signed field protection, transform, delivery, corruption rejection, revocation and graceful shutdown. Add JDK 17/21 CI workflow and Go race-check target.
+- **Scope:** small explicit multipart package transformations now run inside the original package upload pipeline. Public client downloads and signing remain owned by the core; source/texture/delivery SPI resolution is opt-in and does not automatically intercept the public download HTTP pipeline. **Not independently GA certified:** full Go 1.27.3, CI matrix, native signed packages, PostgreSQL upgrade and Minecraft E2E still require independent evidence; existing publish gate remains closed.
+
 ## 0.48.5 — Authentication & Identity Java SPI (source release; GA pending)
 
 - Add functional `IdentityProvider` Java SPI: verified password authentication, immutable subject resolution, provider-session introspection and provider-token revocation. The existing JVM callback accepts explicit authenticated `auth.*` RPC calls, with bounded deadlines and sanitized provider errors.
