@@ -50,7 +50,7 @@ public final class ExtensionRunner {
         if(argv!=null&&!declared.contains(argv[0]))throw new SecurityException("undeclared CLI command");
         java.util.concurrent.atomic.AtomicReference<ExtensionLifecycle> lifecycleRef=new java.util.concurrent.atomic.AtomicReference<>();
         try(HostSession host=HostSession.fromEnvironment(env,manifest);
-            RuntimeServices services=new RuntimeServices(host,declared);
+            RuntimeServices services=new RuntimeServices(host,declared,declaredUIActions(source));
             RuntimeCallbackServer callback=new RuntimeCallbackServer(required(env,"LAUNCHER_EXTENSION_CALLBACK_TOKEN"),services,
                 ()->{ExtensionLifecycle current=lifecycleRef.get();return current==null?"STARTING":current.state().name();})) {
             // No extension constructor, static initializer or start() is invoked
@@ -92,6 +92,24 @@ public final class ExtensionRunner {
         }
     }
     private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("missing "+key);return v;}
+    private static Map<String,Set<String>> declaredUIActions(String source){
+        Map<String,Object> manifest=Json.object(Json.parse(source));
+        Map<String,Set<String>> surfaces=new HashMap<>();
+        for(String kind:List.of("admin","desktop")){
+            Object value=manifest.get(kind);
+            if(value==null)continue;
+            Object actions=Json.object(value).get("actions");
+            if(actions==null)continue;
+            if(!(actions instanceof List<?> items))throw new IllegalArgumentException("UI actions must be an array");
+            Set<String> names=new HashSet<>();
+            for(Object item:items){
+                String id=Json.string(Json.object(item),"id",true);
+                if(!names.add(id))throw new IllegalArgumentException("duplicate signed UI action");
+            }
+            surfaces.put(kind,Set.copyOf(names));
+        }
+        return surfaces;
+    }
     private static Set<String> declaredCommands(String source) {
         Map<String,Object> raw=Json.object(Json.parse(source));
         Object cli=raw.get("cli");if(cli==null)return Set.of();

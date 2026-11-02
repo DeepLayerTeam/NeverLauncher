@@ -183,3 +183,11 @@ idempotency. `server.console` and `server.shutdown` are not exposed to Java.
 Actual Minecraft session admission is unchanged. Details and tests:
 `docs/extensions/java-serverbridge-0488.md` and
 `sh sdk/java/core/build.sh test`.
+
+### 0.48.9 Admin/Desktop UI and CLI integration
+
+`RuntimeServices.ui()` registers `registerAction("admin"|"desktop", actionId, JsonSchema|null, (actor, payload)->result)` and `registerSetting(surface, key, JsonSchema, defaultValue)` during `Extension.start()`. UI action IDs must be listed in the signed `admin.actions` / `desktop.actions` manifest. The existing Admin/Desktop iframe sends a `rpc.request` message to its host with method `java.action.invoke`, `java.settings.get` or `java.settings.put` and parameters including the current extension `version` and `generation`; the backend authenticates the user and routes authorized requests to a running Java backend target. UI source has no direct network access or bearer token. Settings persist through the existing `runtime.config` broker and require signed `storage:read` / `storage:write` permissions; only registered keys are exposed, and schema failure rejects the mutation.
+
+Current policy requires authenticated `extension:manage` for all three Java UI methods. A signed UI contribution permission (`ui:contribute` or `desktop:contribute`) is independently checked before and after RPC; package revocation, stale generation, process exit and project scope changes fail closed. Java callback responses are capped at 48 KiB and execute under the existing 1.8-second deadline. CLI remains an isolated short-lived target using the signed CLI namespace and `RuntimeCommands.register()`.
+
+Build and test a complete example including both iframe surfaces and an executable JAR: `sh examples/extensions/java-ui/build.sh && python3 examples/extensions/java-ui/test-runner.py`. Production signing/installation uses the normal extension pipeline and is not bypassed by this demo. `sh sdk/java/core/build.sh test` exercises in-process HTTP regressions as well.

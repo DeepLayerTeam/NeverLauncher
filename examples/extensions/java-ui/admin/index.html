@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Java workspace</title></head>
+<body><main><h2>Java workspace</h2><p>Actions execute inside the running Java Extension Host.</p>
+<button id="refresh" type="button">Execute Java action</button>
+<button id="load" type="button">Load settings</button>
+<select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select>
+<button id="save" type="button">Save settings</button>
+<pre id="result" role="status"></pre></main>
+<script>
+(() => {
+  "use strict";
+  const protocol="extensions.admin-rpc.v1";
+  let context=null;
+  let next=0;
+  const pending=new Map();
+  const out=document.getElementById("result");
+  const show=value=>{out.textContent=typeof value==="string"?value:JSON.stringify(value,null,2);};
+  window.addEventListener("message",event=>{
+    if(event.source!==window.parent) return;
+    const message=event.data;
+    if(!message||message.protocol!==protocol) return;
+    if(message.type==="host.context") { context=message.context;show("Connected to " + context.extensionId);return; }
+    if(message.type==="host.action"&&message.actionId==="refresh") { void action();return; }
+    if(message.type==="rpc.response"&&pending.has(message.id)) {
+      const p=pending.get(message.id);pending.delete(message.id);
+      if(message.error) p.reject(new Error(String(message.error)));else p.resolve(message.result);
+    }
+  });
+  function call(method,params={}) {
+    if(!context) return Promise.reject(new Error("Extension context unavailable"));
+    if(pending.size>=8)return Promise.reject(new Error("Too many outstanding UI requests"));
+    const id="ui-"+(++next);
+    return new Promise((resolve,reject)=>{
+      pending.set(id,{resolve,reject});
+      window.parent.postMessage({protocol,type:"rpc.request",id,method,
+        params:{...params,version:context.version,generation:context.generation}},"*");
+    });
+  }
+  const run=async promise=>{try{show(await promise);}catch(error){show(String(error));}};
+  async function action(){await run(call("java.action.invoke",{actionId:"refresh",payload:{}}));}
+  document.getElementById("refresh").addEventListener("click",action);
+  document.getElementById("load").addEventListener("click",()=>run(call("java.settings.get",{key:"appearance"}).then(answer=>{
+    document.getElementById("theme").value=answer.value.theme;return answer;
+  })));
+  document.getElementById("save").addEventListener("click",()=>run(call("java.settings.put",{key:"appearance",value:{theme:document.getElementById("theme").value}})));
+})();
+</script></body></html>

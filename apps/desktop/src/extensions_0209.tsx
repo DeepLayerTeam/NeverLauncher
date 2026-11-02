@@ -398,6 +398,7 @@ export function DesktopExtensions0209({
         context: {
           extensionId: current.extensionId,
           version: current.version,
+          generation: current.generation,
           extensionApiVersion: EXTENSION_API_VERSION,
           pageId,
           scope: current.scope,

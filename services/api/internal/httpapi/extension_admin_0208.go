@@ -310,6 +310,18 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		s.audit(r, claims.Email, "extension:admin-rpc:"+method, install.ExtensionID+":"+install.Scope+":"+install.ScopeID)
 	}
 	switch method {
+	case "java.action.invoke", "java.settings.get", "java.settings.put":
+		// UI actions and settings changes are privileged; a read-only admin
+		// session must not turn extension capabilities into user privileges.
+		if !s.authorizeClaims(r, claims, "extension:manage", "", "extension", install.ExtensionID).Allowed {
+			respond(nil, errors.New("user extension:manage denied"))
+			return
+		}
+		result, callErr := s.invokeJavaUI0489(r, install, method, req.Params, claims.Sub, claims.Email)
+		if callErr == nil {
+			audit()
+		}
+		respond(result, callErr)
 	case "context.get":
 		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}}, nil)
 	case "projects.list":

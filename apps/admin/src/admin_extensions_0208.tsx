@@ -302,6 +302,7 @@ function AdminExtensionFrame({
         context: {
           extensionId: extension.extensionId,
           version: extension.version,
+          generation: extension.generation,
           extensionApiVersion: EXTENSION_API_VERSION,
           scope: extension.scope,
           scopeId: extension.scopeId ?? "",

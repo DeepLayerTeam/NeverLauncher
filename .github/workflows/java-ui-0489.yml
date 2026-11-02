@@ -1,0 +1,47 @@
+name: Java Admin Desktop CLI extensions 0.48.9
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'examples/extensions/java-ui/**'
+      - 'services/api/internal/extensionhost/java_ui_0489*'
+      - 'services/api/internal/httpapi/extension_java_ui_0489.go'
+      - '.github/workflows/java-ui-0489.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'examples/extensions/java-ui/**'
+      - 'services/api/internal/extensionhost/java_ui_0489*'
+      - 'services/api/internal/httpapi/extension_java_ui_0489.go'
+      - '.github/workflows/java-ui-0489.yml'
+  workflow_dispatch:
+jobs:
+  jvm:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sh sdk/java/core/build.sh test
+      - run: sh examples/extensions/java-ui/build.sh
+      - run: python3 examples/extensions/java-ui/test-runner.py
+  go-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - run: go test -race ./internal/extensionhost ./internal/httpapi
+        working-directory: services/api

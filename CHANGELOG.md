@@ -1,3 +1,11 @@
+## 0.48.9 — Admin, Desktop & CLI Java Extensions (source implementation; independent acceptance pending)
+
+- Connect the existing sandboxed Admin/Desktop iframe `rpc.request` bridges to a live Java backend extension through authenticated, timeout-bounded Go Host Supervisor RPC (`ui.action.invoke`, `ui.settings.get`, `ui.settings.put`). No JavaScript is injected into the host app and no arbitrary JVM method execution is permitted.
+- Register typed Java UI actions only for action IDs declared in the signed Admin/Desktop contributions. Add per-extension, per-surface schema-validated settings stored through the existing permission-controlled runtime.config storage. Keep real Java CLI command execution through the existing signed, namespaced CLI target.
+- Enforce enabled installation version + generation on every UI callback, current user `extension:manage` privilege for Java UI actions/settings, project scope, declared Java backend target, live `ui:contribute` or `desktop:contribute` grant and `storage:read`/`storage:write` for settings. Supervisor rechecks permission and trust after callbacks.
+- Propagate generation from the actual Admin/Desktop iframe hosts, implement an executable four-target Java example with working iframe action/settings request handling and a CLI command, test real `java -jar`, authenticated Go-style HTTP broker, schema and signed action denial, and Java lifecycle cleanup.
+- Local OpenJDK 21 build and SDK tests plus live subprocess example pass; Go Backend requires 1.27.3 and cannot be tested with local Go 1.23.2. Independent CI, signed package, PostgreSQL and end-user Desktop/Admin acceptance remain required, and earlier release gates stay closed.
+
 ## 0.48.8 — ServerBridge Java Integration (source changes; independent GA pending)
 
 - Connect typed Java ServerBridge services to the existing authenticated Go Host broker and PostgreSQL v3 store: project-scoped node listings, status, pending-ticket advisory checks and durable command enqueue/status.

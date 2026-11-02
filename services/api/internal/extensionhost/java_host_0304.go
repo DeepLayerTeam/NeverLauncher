@@ -77,7 +77,7 @@ type javaRPCResponse0304 struct {
 // It is intentionally usable only for a running Java target registered by this supervisor.
 func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string, params json.RawMessage) (json.RawMessage, error) {
 	switch method {
-	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare":
+	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare", "ui.action.invoke", "ui.settings.get", "ui.settings.put":
 	default:
 		return nil, errors.New("unsupported Java RPC method")
 	}
@@ -147,6 +147,13 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			}
 		}
 	}
+	// UI callbacks are only exposed to signed Admin/Desktop contributions.
+	// Never accept arbitrary Java method/handler names from an iframe.
+	if strings.HasPrefix(method, "ui.") {
+		if err := s.checkJavaUI0489(ctx, st, method, params); err != nil {
+			return nil, err
+		}
+	}
 	// A previously authorized supervisor command must not race an emergency
 	// disable, revoked publisher or replaced installation. The HTTP broker
 	// already checks live trust, but direct Go -> JVM RPC bypasses that broker.
@@ -189,6 +196,11 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		granted, err := s.permissionAllowed0207(ctx, st, permission, id)
 		if err != nil || !granted {
 			return nil, errors.New("content permission revoked during RPC")
+		}
+	}
+	if strings.HasPrefix(method, "ui.") {
+		if err := s.checkJavaUI0489(ctx, st, method, params); err != nil {
+			return nil, fmt.Errorf("Java UI authorization revoked during RPC: %w", err)
 		}
 	}
 	return result, nil

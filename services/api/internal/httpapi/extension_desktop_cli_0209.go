@@ -286,6 +286,16 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		s.audit(r, claims.Email, "extension:desktop-rpc:"+req.Method, install.ExtensionID+":"+install.Scope+":"+install.ScopeID)
 	}
 	switch req.Method {
+	case "java.action.invoke", "java.settings.get", "java.settings.put":
+		if !s.authorizeClaims(r, claims, "extension:manage", "", "extension", install.ExtensionID).Allowed {
+			respond(nil, errors.New("user extension:manage denied"))
+			return
+		}
+		result, callErr := s.invokeJavaUI0489(r, install, req.Method, req.Params, claims.Sub, claims.Email)
+		if callErr == nil {
+			audit()
+		}
+		respond(result, callErr)
 	case "bridge.authorize":
 		// Unlike the catalog's UI hint, this is checked for every native action.
 		// Revocation, disabling the extension or replacing its version fails closed.
