@@ -288,13 +288,17 @@ def fsync_dir(path):
         os.close(fd)
 
 
-def host_binary(component, source: Path, install: Path, checksum, *, service=None, ready_url=None):
+def host_binary(component, source: Path, install: Path, checksum, *, service=None, ready_url=None,
+                source_version=SOURCE, target_version=TARGET, backup_tag='0458'):
     """Atomic executable replacement with verified rollback on service failure.
 
     Must be run as root in a controlled maintenance window; the old executable
     is moved to a private backup next to its installed path (same filesystem).
     """
     must(os.geteuid() == 0, 'host executable upgrade requires root')
+    must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'0\.\d+\.\d+', target_version),
+         'source/target binary version invalid')
+    must(re.fullmatch(r'\d{4}', backup_tag), 'invalid backup tag')
     must(component in COMPONENTS, 'unsupported host component')
     must(component != 'api' or service == 'launcher.service', 'minimal API must use managed launcher.service')
     must(component != 'bridge' or bool(service), 'ServerBridge upgrade requires a systemd unit')
@@ -306,12 +310,12 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
     old = install.lstat()
     must(stat.S_ISREG(old.st_mode) and old.st_uid == 0 and old.st_nlink == 1
          and not (old.st_mode & 0o022), 'existing binary must be root-owned regular file')
-    must(not install.with_name(install.name + '.previous-0458').exists(), 'previous backup exists; resolve prior upgrade first')
+    must(not install.with_name(install.name + '.previous-' + backup_tag).exists(), 'previous backup exists; resolve prior upgrade first')
     if service:
         must(SERVICE_RE.fullmatch(service) is not None, 'invalid systemd service')
     old_active = bool(service and systemctl_is_active(service))
     must(component != 'api' or old_active, 'managed API must be running for verified cutover')
-    backup = install.with_name(install.name + '.previous-0458')
+    backup = install.with_name(install.name + '.previous-' + backup_tag)
     with database.lock(install.parent):
         # Not possible to mix a runtime process with a partially copied file.
         if old_active:
@@ -332,12 +336,12 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
                         os.unlink(stage)
             if component != 'api':
                 version_output = run([str(install), 'version'], timeout=30).decode('utf-8', errors='replace')
-                must(TARGET in version_output, 'new CLI/Bridge executable reports unexpected version')
+                must(target_version in version_output, 'new CLI/Bridge executable reports unexpected version')
             if old_active:
                 run(['systemctl', 'start', service], timeout=90)
                 must(systemctl_is_active(service), 'upgraded systemd service is not active')
                 if component == 'api':
-                    database.wait_loopback_ready(ready_url or 'http://127.0.0.1:8080/ready', expected_version=TARGET)
+                    database.wait_loopback_ready(ready_url or 'http://127.0.0.1:8080/ready', expected_version=target_version)
             elif component == 'api':
                 raise ComponentError('minimal API service must be active for verified cutover')
             return {'status': 'upgraded', 'component': component,
@@ -357,20 +361,22 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
                     run(['systemctl', 'start', service], timeout=90)
                     must(systemctl_is_active(service), 'old service failed after rollback')
                     if component == 'api':
-                        database.wait_loopback_ready(ready_url or 'http://127.0.0.1:8080/ready', expected_version=SOURCE)
+                        database.wait_loopback_ready(ready_url or 'http://127.0.0.1:8080/ready', expected_version=source_version)
             except Exception as rollback_error:
                 raise ComponentError('host upgrade failed; previous executable could not be verified, service must stay down') from rollback_error
             raise ComponentError('host upgrade failed, old binary restored') from error
 
 
 def rollback_linux_host(component, install: Path, expected_previous_sha, *, service=None,
-                        ready_url='http://127.0.0.1:8080/ready'):
+                        ready_url='http://127.0.0.1:8080/ready', source_version=SOURCE, backup_tag='0458'):
     """Explicit recovery after a process crash or a completed-but-bad rollout.
 
     Never accept an unidentified `.previous` byte sequence. A rollback keeps
     the 0.45.8 executable in a separate `.failed` file for incident analysis.
     """
     must(os.geteuid() == 0, 'host rollback requires root')
+    must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'\d{4}', backup_tag),
+         'invalid rollback version/tag')
     must(component in COMPONENTS, 'unsupported host component')
     must(install.is_absolute() and install.parent.is_dir()
          and not install.parent.is_symlink() and install.parent.stat().st_uid == 0
@@ -379,8 +385,8 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
     must(component != 'bridge' or bool(service), 'ServerBridge rollback requires its systemd service')
     if service:
         must(SERVICE_RE.fullmatch(service) is not None, 'invalid systemd service')
-    backup = install.with_name(install.name + '.previous-0458')
-    failed = install.with_name(install.name + '.failed-0458')
+    backup = install.with_name(install.name + '.previous-' + backup_tag)
+    failed = install.with_name(install.name + '.failed-' + backup_tag)
     checked_file(backup, expected_previous_sha, must_be_root=True)
     must(not failed.exists() and not failed.is_symlink(), 'prior failed binary exists; manual intervention required')
     with database.lock(install.parent):
@@ -398,7 +404,7 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
         try:
             must(digest(install) == expected_previous_sha, 'restored old bytes mismatch')
             if component != 'api':
-                must(SOURCE in run([str(install), 'version'], timeout=30).decode('utf-8'),
+                must(source_version in run([str(install), 'version'], timeout=30).decode('utf-8'),
                      'old CLI/Bridge version does not match')
             if was_active:
                 run(['systemctl', 'start', service], timeout=90)
@@ -419,7 +425,7 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
             raise ComponentError('old executable restored but health/version not verified; service must stay stopped') from problem
 
 
-def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Path):
+def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Path, *, target_version=TARGET):
     """Calls the existing signed transactional component updater; not an alternate installer."""
     must(root.is_absolute() and root.is_dir() and not root.is_symlink(), 'existing client installation root required')
     must(delivery.is_file() and not delivery.is_symlink(), 'independently approved delivery manifest required')
@@ -433,7 +439,7 @@ def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Pat
     except ValueError as exc:
         raise ComponentError('native updater did not return JSON report') from exc
     must(isinstance(report, dict) and report.get('status') == 'committed'
-         and report.get('toVersion') == TARGET, 'native updater did not commit required version')
+         and report.get('toVersion') == target_version, 'native updater did not commit required version')
     # Existing update package validator checks per-file digests, signature,
     # trust epoch, platform identity and rollback journal. We do not override it.
     return {'status': 'upgraded', 'nativeReport': report}

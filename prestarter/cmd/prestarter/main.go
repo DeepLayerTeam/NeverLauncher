@@ -15,7 +15,7 @@ import (
 // Replaced at compile time using -ldflags -X. An empty embedded trust key
 // deliberately prevents production bootstrap until a trust root is provisioned.
 var embeddedRootPublicKey string
-var version = "0.23.12"
+var version = "0.47.6"
 
 func main() {
 	var opts prestarter.Options

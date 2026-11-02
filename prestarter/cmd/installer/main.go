@@ -13,7 +13,7 @@ import (
 )
 
 var embeddedRootPublicKey string // filled by linker from release-time provisioned key
-var version = "0.23.12"
+var version = "0.47.6"
 
 func rootDir() (string, error) {
 	home, e := os.UserHomeDir()

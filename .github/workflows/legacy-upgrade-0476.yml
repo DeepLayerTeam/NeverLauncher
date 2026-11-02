@@ -1,0 +1,29 @@
+name: NeverLauncher legacy upgrade 0.47.6
+on:
+  push:
+    paths:
+      - 'scripts/operations/legacy_upgrade_0476.py'
+      - 'scripts/operations/test_legacy_upgrade_0476.py'
+      - 'scripts/operations/component_upgrade_0458.py'
+      - 'docs/releases/0.47.6-legacy-upgrades.md'
+      - '.github/workflows/legacy-upgrade-0476.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-upgrade-regressions:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing installation, byte-exact backup and native updater tests
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest \
+            scripts/operations/test_legacy_upgrade_0476.py \
+            scripts/operations/test_component_upgrade_0458.py -v
+          python3 -m py_compile scripts/operations/legacy_upgrade_0476.py scripts/operations/component_upgrade_0458.py
+          python3 scripts/version/manage.py check
