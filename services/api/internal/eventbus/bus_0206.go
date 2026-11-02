@@ -35,6 +35,7 @@ type EventSpec struct {
 
 var specs0206 = map[string]EventSpec{
 	"project.before-save":         {"project.before-save", "project:read", true},
+	"profile.before-save":         {"profile.before-save", "project:read", true},
 	"project.saved":               {"project.saved", "project:read", false},
 	"release.created":             {"release.created", "release:read", false},
 	"release.before-publish":      {"release.before-publish", "release:read", true},
@@ -436,6 +437,20 @@ type AuditPayload struct {
 func (b *Bus) BeforeProjectSave(ctx context.Context, actor, action string, p model.Project) error {
 	return b.DispatchSync(ctx, PublishInput{Type: "project.before-save", ProjectID: p.ID, AggregateType: "project", AggregateID: p.ID, OrderingKey: "project:" + p.ID, IdempotencyKey: "hook:" + action + ":" + p.ID + ":" + fmt.Sprint(time.Now().UTC().UnixNano()), Source: "httpapi", Payload: ProjectPayload{Action: action, Actor: actor, Project: p}})
 }
+
+// BeforeProfileSave enforces Java policy before writing the proposed profile.
+// Hooks receive the proposed complete profile, not the untrusted request fragment.
+// A veto, timeout or unavailable subscribed host rejects the mutation.
+func (b *Bus) BeforeProfileSave(ctx context.Context, actor, action string, p model.Profile) error {
+	return b.DispatchSync(ctx, PublishInput{
+		Type: "profile.before-save", ProjectID: p.ProjectID,
+		AggregateType: "profile", AggregateID: p.ID,
+		OrderingKey:    "profile:" + p.ProjectID + ":" + p.ID,
+		IdempotencyKey: "profile-hook:" + action + ":" + p.ProjectID + ":" + p.ID + ":" + fmt.Sprint(time.Now().UTC().UnixNano()),
+		Source:         "httpapi", Payload: map[string]any{"action": action, "actor": actor, "profile": p},
+	})
+}
+
 func (b *Bus) ProjectSaved(ctx context.Context, actor, action string, p model.Project) error {
 	_, _, err := b.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: p.ID, AggregateType: "project", AggregateID: p.ID, OrderingKey: "project:" + p.ID, IdempotencyKey: action + ":" + p.ID + ":" + p.UpdatedAt.UTC().Format(time.RFC3339Nano), Source: "httpapi", Payload: ProjectPayload{Action: action, Actor: actor, Project: p}, OccurredAt: p.UpdatedAt})
 	return err

@@ -161,6 +161,10 @@ func (s Server) adminProfileCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	profile := model.Profile{ID: req.ID, ProjectID: projectID, Name: req.Name, Description: optionalProfileString0382(req.Description), Loader: firstNonEmpty(req.Loader, "vanilla"), MinecraftVersion: optionalProfileString0382(req.MinecraftVersion), LoaderVersion: optionalProfileString0382(req.LoaderVersion), JavaMajor: optionalProfileInt0382(req.JavaMajor), Preset: optionalProfileString0382(req.Preset), IsDefault: optionalProfileBool0382(req.IsDefault)}
+	if err := s.beforeProfileSave0495(r, "create", profile); err != nil {
+		writeError(w, http.StatusConflict, "profile policy rejected or unavailable")
+		return
+	}
 	creator, ok := s.Repo.(profileCreator0225)
 	if !ok {
 		writeError(w, http.StatusServiceUnavailable, "exclusive profile creation unavailable")
@@ -236,6 +240,10 @@ func (s Server) adminProfileUpdate(w http.ResponseWriter, r *http.Request) {
 	profile.Revision = 0
 	if req.ExpectedRevision != nil {
 		profile.Revision = *req.ExpectedRevision
+	}
+	if err := s.beforeProfileSave0495(r, "update", profile); err != nil {
+		writeError(w, http.StatusConflict, "profile policy rejected or unavailable")
+		return
 	}
 	saved, err := s.Repo.SaveProfile(profile)
 	if err != nil {

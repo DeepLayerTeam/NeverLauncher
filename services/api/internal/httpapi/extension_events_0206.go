@@ -58,6 +58,12 @@ func (s Server) beforeProjectSave0206(r *http.Request, action string, p model.Pr
 	}
 	return s.EventBus.BeforeProjectSave(r.Context(), s.adminActor(r), action, p)
 }
+func (s Server) beforeProfileSave0495(r *http.Request, action string, p model.Profile) error {
+	if s.EventBus == nil {
+		return nil
+	}
+	return s.EventBus.BeforeProfileSave(r.Context(), s.adminActor(r), action, p)
+}
 func (s Server) projectSaved0206(r *http.Request, action string, p model.Project) {
 	if s.EventBus != nil {
 		s.logEventError0206("project.saved", s.EventBus.ProjectSaved(r.Context(), s.adminActor(r), action, p))

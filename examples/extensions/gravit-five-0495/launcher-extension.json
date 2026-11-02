@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "2.0", "id": "org.example.gravit-five", "name": "Gravit Native Java Port", "version": "0.49.5",
+  "publisher": "NeverLauncher Examples", "api": "1.0",
+  "targets": [{"kind":"backend","entrypoint":"backend/gravit-five.jar"},{"kind":"cli","entrypoint":"cli/gravit-five.jar"}],
+  "permissions": ["project:read","events:subscribe","events:sync","storage:read","storage:write","cli:contribute"],
+  "hooks": ["profile.before-save"],
+  "cli": {"namespace":"gravitfive","commands":[{"name":"ported-status","description":"Display active providers and saved state"},{"name":"ported-save","description":"Persist extension-owned state"}]}
+}
