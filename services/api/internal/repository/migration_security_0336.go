@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +10,7 @@ import (
 	"time"
 
 	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
@@ -53,7 +52,11 @@ func migrationSecurityTargets0336(rows []gc.Row) ([]migrationSecurityTarget0336,
 		if row.Provider != "sql" && row.Provider != "fileauth" {
 			return nil, mw.ErrConflict
 		}
-		if row.SourceID == "" || row.Username == "" || row.UUID == "" {
+		canonicalUUID, parseErr := gi.UUID(row.UUID)
+		if row.SourceID == "" || row.Username == "" || parseErr != nil || row.UUID != canonicalUUID {
+			return nil, mw.ErrConflict
+		}
+		if row.Provider == "fileauth" && row.SourceID != row.UUID {
 			return nil, mw.ErrConflict
 		}
 		id := migratedUserID0335FromRow(row)
@@ -65,20 +68,13 @@ func migrationSecurityTargets0336(rows []gc.Row) ([]migrationSecurityTarget0336,
 	}
 	return out, nil
 }
-func migratedUserID0335FromRow(row gc.Row) string {
-	if row.Provider == "fileauth" {
-		return "gravit-fileauth-" + strings.ReplaceAll(row.UUID, "-", "")
-	}
-	// Use exactly the existing MIG05 derivation, not a second UUID mapping.
-	return migratedUserID0335FromSQL(row.SourceID)
-}
 
-// migrationSecurityTargets0336 expects the same stable user key that MIG05 used.
-// This function lives here because identity source IDs must never be exposed in
-// the security report or passed as request arguments.
-func migratedUserID0335FromSQL(sourceID string) string {
-	sum := sha256.Sum256([]byte("sql\x00" + sourceID))
-	return "gravit-sql-" + hex.EncodeToString(sum[:16])
+// Trust reset MUST derive the same identifier used by the credential import.
+// The old implementation hashed the SQL *source row ID*, while MIG05 creates
+// SQL users from their Minecraft UUID. The mismatch made legitimate SQL
+// migrations fail security activation after accounts had been committed.
+func migratedUserID0335FromRow(row gc.Row) string {
+	return migratedUserID0335(gi.Account{Provider: row.Provider, SourceID: row.SourceID, Username: row.Username, UUID: row.UUID})
 }
 
 func securityAffected0336(res sql.Result) (int64, error) { return res.RowsAffected() }
