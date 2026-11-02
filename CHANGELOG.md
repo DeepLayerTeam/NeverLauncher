@@ -1,3 +1,12 @@
+## 0.48.11 — Security & Isolation Hardening (working source, OS acceptance pending)
+
+- Bound Java JVM heap (40%), metaspace (20%), direct memory (10%) and code cache (10%) independently of the existing process-tree RSS / process count supervisor. Require at least 256 MiB for a JVM target. Disable HotSpot attach and crash core dumps. This is defense in depth, **not an OS sandbox**.
+- Give both persistent Java Host and transient Java CLI a unique 0700 scratch directory and private Java `user.home` / `java.io.tmpdir`; clean up after process termination. Do not forward backend home/TMP or unsafe `JDK_JAVA_OPTIONS`. Reject unsafe/unresolved Java executable paths.
+- Stop returning raw extension secrets to Java `secret.get` callers while reverse callback IPC remains outside the OS sandbox; retain explicit scoped, opaque broker operations for genuinely OS-isolated native processes.
+- Enforce the existing Host Protocol per-instance rate, concurrency and cumulative output budgets for authenticated Java RPC connections, not only isolated native extensions. Redact both host and callback bearer tokens in logs and CLI output, including nested credential fields.
+- Preserve strict fail-closed behavior for `sandbox.mode=isolated` JVM packages on platforms without authenticated reverse IPC. Java is still **unconfined with respect to direct filesystem and network access** in legacy mode. A signed package, private scratch and JVM heap caps must never be presented as full Linux/Windows/macOS isolation.
+- Add Java 17/21 and multi-platform CI jobs, regression tests for scratch permissions, JVM flags, Java raw-secret refusal, log redaction and Host rate limiting. Java SDK tests on local JDK 21 pass. Full Go 1.27.3 build/tests, independent OS (Linux/Windows/macOS) sandbox enforcement and production acceptance must be completed before GA.
+
 ## 0.48.10 — Extension State & Safe Upgrades (working source changes; independent GA pending)
 
 - Persist per-extension/scope JSON runtime **checkpoints** before mutating the installed version, after stopping all old JVM Hosts. Snapshot both config and storage documents outside signed payload directories. Refuse symlinked or invalid documents, oversized snapshots and mismatched SHA-256 inventories.

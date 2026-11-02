@@ -1,0 +1,50 @@
+name: Java Security and Isolation 0.48.11
+on:
+  push:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'sdk/java/core/**'
+      - '.github/workflows/java-security-isolation-04811.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'sdk/java/core/**'
+      - '.github/workflows/java-security-isolation-04811.yml'
+  workflow_dispatch:
+
+jobs:
+  java-cross-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Java SDK 17/21 runtime regression
+        shell: bash
+        run: sh sdk/java/core/build.sh test
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - name: Java Host permission, scratch, budgets and redaction regressions
+        shell: bash
+        working-directory: services/api
+        run: go test -count=1 -run 'TestJava.*04811' ./internal/extensionhost
+  go-linux-race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - name: Extension Host integration and race
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/extensionhost ./internal/extensionsecurity ./internal/extensionbroker

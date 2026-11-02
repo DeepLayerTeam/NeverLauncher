@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -178,6 +179,13 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		"LAUNCHER_EXTENSION_HOST_URL": baseURL, "LAUNCHER_EXTENSION_HOST_TOKEN": token, "LAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "LAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "LAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "LAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"LAUNCHER_EXTENSION_ID": install.ExtensionID, "LAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "LAUNCHER_EXTENSION_SCOPE": install.Scope, "LAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "LAUNCHER_EXTENSION_TARGET": "cli",
 	})
+	if st.javaHost {
+		scratch, err := prepareJavaScratch04811(cmd)
+		if err != nil {
+			return CLIResult0209{}, err
+		}
+		defer os.RemoveAll(scratch)
+	}
 	var isolatedHandle *extensionSandbox03111
 	if ver.Manifest.Sandbox != nil && ver.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
@@ -260,7 +268,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		if cmd.ProcessState != nil {
 			code = cmd.ProcessState.ExitCode()
 		}
-		result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: stdout.String(), Stderr: stderr.String(), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
+		result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: redactHostCredentials04811(stdout.String(), st.token, st.callbackToken), Stderr: redactHostCredentials04811(stderr.String(), st.token, st.callbackToken), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
 		if waitErr != nil {
 			return result, fmt.Errorf("cli extension exited before authenticated hello: %w", waitErr)
 		}
@@ -295,7 +303,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			if cmd.ProcessState != nil {
 				code = cmd.ProcessState.ExitCode()
 			}
-			result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: stdout.String(), Stderr: stderr.String(), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
+			result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: redactHostCredentials04811(stdout.String(), st.token, st.callbackToken), Stderr: redactHostCredentials04811(stderr.String(), st.token, st.callbackToken), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
 			if waitErr != nil || code != 0 {
 				return result, fmt.Errorf("cli extension exited with code %d", code)
 			}

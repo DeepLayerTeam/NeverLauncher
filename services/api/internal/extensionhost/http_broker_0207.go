@@ -95,6 +95,7 @@ func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL str
 	transport := &http.Transport{Proxy: nil, TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12, ServerName: host}, DialContext: func(c context.Context, network, address string) (net.Conn, error) {
 		return dialer.DialContext(c, network, net.JoinHostPort(selected.String(), port))
 	}, ForceAttemptHTTP2: true, MaxIdleConns: 2, IdleConnTimeout: 10 * time.Second}
+	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: s.cfg.HTTPTimeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
 	method = strings.ToUpper(strings.TrimSpace(method))
 	if method == "" {

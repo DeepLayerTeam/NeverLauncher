@@ -86,7 +86,11 @@ func (s *Supervisor) limitedHostHandler03113(next http.Handler) http.Handler {
 		s.mu.RLock()
 		st := s.tokens[token]
 		s.mu.RUnlock()
-		if st == nil || subtle.ConstantTimeCompare([]byte(token), []byte(st.token)) != 1 || st.manifest.Sandbox == nil || st.manifest.Sandbox.Mode != "isolated" {
+		// A Java process is not a sandbox, even when its manifest does not
+		// request OS isolation. Enforce the same authenticated IPC quotas for
+		// Java rather than offering it an unlimited loopback broker.
+		if st == nil || subtle.ConstantTimeCompare([]byte(token), []byte(st.token)) != 1 ||
+			(!st.javaHost && (st.manifest.Sandbox == nil || st.manifest.Sandbox.Mode != "isolated")) {
 			next.ServeHTTP(w, r)
 			return
 		}

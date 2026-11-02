@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -47,15 +48,39 @@ func (s *Supervisor) javaCommand0304(jar string, argv []string) (*exec.Cmd, erro
 		if err != nil {
 			return nil, fmt.Errorf("Java 17+ runtime missing: %w", err)
 		}
+		// A process must never obtain an executable from an implicit working-
+		// directory PATH element. Resolve the normal JDK alternatives symlink.
+		java, err = filepath.EvalSymlinks(java)
+		if err != nil {
+			return nil, fmt.Errorf("resolve Java runtime: %w", err)
+		}
 	}
-	heapMiB := s.cfg.MaxMemoryBytes / (1 << 20) * 65 / 100
-	if heapMiB < 32 {
-		heapMiB = 32
+	if !filepath.IsAbs(java) {
+		return nil, errors.New("resolved Java executable must be absolute")
 	}
-	if heapMiB > 4096 {
-		heapMiB = 4096
+	info, err := os.Stat(java)
+	if err != nil || !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm()&0111 == 0) {
+		return nil, errors.New("Java executable must be an executable regular file")
 	}
-	args := []string{"-XX:+ExitOnOutOfMemoryError", "-Djava.awt.headless=true", "-Dfile.encoding=UTF-8", fmt.Sprintf("-Xmx%dm", heapMiB), "-jar", jar}
+	// These are JVM allocations, not OS isolation: the process-tree monitor
+	// remains the total-RSS enforcement boundary. Retain native headroom for
+	// threads, GC, JIT and libc, rather than assigning 65% to Java heap alone.
+	memoryMiB := s.cfg.MaxMemoryBytes / (1 << 20)
+	if memoryMiB < 256 {
+		return nil, errors.New("Java Host requires at least 256 MiB process memory budget")
+	}
+	javaHeap := minInt64_04811(memoryMiB*40/100, 4096)
+	javaMeta := minInt64_04811(memoryMiB*20/100, 512)
+	javaDirect := minInt64_04811(memoryMiB*10/100, 256)
+	javaCode := minInt64_04811(memoryMiB*10/100, 256)
+	args := []string{
+		"-XX:+ExitOnOutOfMemoryError", "-XX:+DisableAttachMechanism", "-XX:-CreateCoredumpOnCrash",
+		"-Djava.awt.headless=true", "-Dfile.encoding=UTF-8", "-Djdk.attach.allowAttachSelf=false",
+		fmt.Sprintf("-Xmx%dm", javaHeap),
+		fmt.Sprintf("-XX:MaxMetaspaceSize=%dm", javaMeta),
+		fmt.Sprintf("-XX:MaxDirectMemorySize=%dm", javaDirect),
+		fmt.Sprintf("-XX:ReservedCodeCacheSize=%dm", javaCode), "-jar", jar,
+	}
 	args = append(args, argv...)
 	return exec.Command(java, args...), nil
 }
@@ -371,4 +396,12 @@ func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install mod
 		return errors.New("invalid migration acknowledgement")
 	}
 	return nil
+}
+
+// Keep arithmetic independent of Go's generic min and the package's minInt.
+func minInt64_04811(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }

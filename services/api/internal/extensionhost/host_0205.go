@@ -255,6 +255,7 @@ type processState struct {
 	sandbox                                                   *extensionSandbox03111
 	sandboxReady                                              bool
 	budget                                                    hostBudget03113
+	javaScratch                                               string
 }
 
 type Supervisor struct {
@@ -609,6 +610,17 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		"LAUNCHER_EXTENSION_HOST_URL": baseURL, "LAUNCHER_EXTENSION_HOST_TOKEN": token, "LAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "LAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "LAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "LAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"LAUNCHER_EXTENSION_ID": install.ExtensionID, "LAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "LAUNCHER_EXTENSION_SCOPE": install.Scope, "LAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "LAUNCHER_EXTENSION_TARGET": "backend",
 	})
+	// Java writes caches and temporary state only to a private, disposable
+	// directory by default. This is hygiene, not a substitute for an OS sandbox.
+	if st.javaHost {
+		scratch, err := prepareJavaScratch04811(cmd)
+		if err != nil {
+			return s.abortUnstarted0422(st, err)
+		}
+		st.mu.Lock()
+		st.javaScratch = scratch
+		st.mu.Unlock()
+	}
 	var isolatedHandle *extensionSandbox03111
 	if manifestVersion.Manifest.Sandbox != nil && manifestVersion.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
@@ -743,6 +755,9 @@ func (s *Supervisor) abortUnstarted0422(st *processState, cause error) error {
 	st.mu.Unlock()
 	s.removeProcessToken(st)
 	s.addLog(st, "host", "error", "launch failed: "+cause.Error(), nil)
+	if st.javaScratch != "" {
+		_ = os.RemoveAll(st.javaScratch)
+	}
 	return cause
 }
 
@@ -842,6 +857,10 @@ func (s *Supervisor) captureStream(st *processState, stream string, r io.Reader)
 	}
 }
 func (s *Supervisor) addLog(st *processState, stream, level, message string, fields map[string]any) {
+	// Extensions can print their bearer credentials on stdout. Never retain
+	// either live credential in the operator-facing in-memory logs.
+	message = redactHostCredentials04811(message, st.token, st.callbackToken)
+	fields = redactHostLogFields04811(fields, st.token, st.callbackToken)
 	st.mu.Lock()
 	// Charge bytes before retaining them. On exhaustion terminate isolated process,
 	// not merely drop a log line while it continues flooding stdout/IPC.
@@ -861,6 +880,9 @@ func (s *Supervisor) addLog(st *processState, stream, level, message string, fie
 func (s *Supervisor) waitProcess(st *processState) {
 	defer s.wg.Done()
 	err := st.cmd.Wait()
+	if st.javaScratch != "" {
+		_ = os.RemoveAll(st.javaScratch)
+	}
 	if st.sandbox != nil {
 		st.sandbox.Close()
 	}
@@ -1212,13 +1234,17 @@ func (s *Supervisor) statusOf(st *processState) Status {
 	status.HostRequestsRejected = st.budget.rejected
 	status.HostOutputBytes = st.budget.output
 	status.HostActiveRequests = st.budget.active
-	if st.sandbox != nil && st.sandboxReady {
+	if (st.sandbox != nil && st.sandboxReady) || st.javaHost {
 		status.EffectiveRestrictions = append(status.EffectiveRestrictions, "host-ipc-request-rate", "host-ipc-concurrent-limit", "host-output-cumulative-budget")
 	}
 	status.Runtime = "native"
 	if st.javaHost {
 		status.Runtime = "java-jvm"
 		status.RPCFailures = st.rpcFailures
+		if st.sandbox == nil {
+			status.IsolationReasonCodes = append(status.IsolationReasonCodes, "java-os-network-filesystem-isolation-unavailable")
+			status.EffectiveRestrictions = append(status.EffectiveRestrictions, "java-heap-metaspace-direct-codecache-limits", "java-attach-disabled", "java-private-temporary-directory", "java-raw-secret-denied")
+		}
 	}
 	if st.cmd != nil && st.cmd.Process != nil {
 		status.PID = st.cmd.Process.Pid
@@ -1641,6 +1667,9 @@ func (s *Supervisor) allowedCapabilities(st *processState) []string {
 				continue
 			}
 		}
+		if st.javaHost && item.capability == "secret.get" {
+			continue // raw secret material is never exposed to an unisolated JVM
+		}
 		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
 			if item.capability == "secret.get" {
 				continue
@@ -1803,6 +1832,12 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		return capabilityResult0205{value: map[string]any{"size": len(data), "contentBase64": base64.StdEncoding.EncodeToString(data)}, status: http.StatusOK}
 	case "secret.get":
+		// Until authenticated reverse RPC is available inside an enforced OS
+		// sandbox, Java can read host files / open sockets as its service user.
+		// Never return raw secret material to this unconfined JVM.
+		if st.javaHost {
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("raw secrets are unavailable to Java Host without OS isolation")}
+		}
 		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("isolated extensions must use scoped secret operations; raw secret.get is prohibited")}
 		}
