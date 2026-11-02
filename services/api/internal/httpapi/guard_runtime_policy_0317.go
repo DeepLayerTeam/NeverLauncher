@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,10 +24,20 @@ type guardRuntimeProfile0317 struct {
 	HookSetSHA256   string `json:"hookSetSha256,omitempty"`
 }
 
+var guardSemver0317 = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+
 func guardRuntimePolicyRequired0317(version string) bool {
-	var major, minor, patch int
-	if _, err := fmt.Sscanf(strings.TrimSpace(version), "%d.%d.%d", &major, &minor, &patch); err != nil {
-		return false
+	// A malformed version must not pass as a different signed release. The
+	// caller validates malformed release names during policy loading as well.
+	matches := guardSemver0317.FindStringSubmatch(version)
+	if matches == nil {
+		return true // malformed releases cannot disable Guard enforcement
+	}
+	major, errA := strconv.ParseUint(matches[1], 10, 32)
+	minor, errB := strconv.ParseUint(matches[2], 10, 32)
+	patch, errC := strconv.ParseUint(matches[3], 10, 32)
+	if errA != nil || errB != nil || errC != nil {
+		return true // overflow also fails closed
 	}
 	return major > 0 || minor > 31 || (minor == 31 && patch >= 7)
 }

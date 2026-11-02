@@ -70,7 +70,7 @@ func Verify(password, stored string) bool {
 // The upper limits prevent a malicious JSON import from exhausting memory.
 func verifyArgon(password, encoded string) bool {
 	parts := strings.Split(encoded, "$")
-	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != "v=19" {
+	if !fileauth.ValidateArgon2id(encoded) || len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != "v=19" {
 		return false
 	}
 	params := map[string]uint64{}
@@ -88,7 +88,7 @@ func verifyArgon(password, encoded string) bool {
 		}
 		params[pair[0]] = n
 	}
-	if len(params) != 3 || params["m"] > 1024*1024 || params["t"] > 20 || params["p"] > 32 {
+	if len(params) != 3 || params["m"] < 8 || params["m"] > 256*1024 || params["t"] > 10 || params["p"] > 8 {
 		return false
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])

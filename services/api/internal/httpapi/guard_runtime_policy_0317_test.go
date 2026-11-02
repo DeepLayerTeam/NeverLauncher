@@ -137,3 +137,16 @@ func TestRuntimePolicy0317AdditionalHashPinning(t *testing.T) {
 		t.Fatal("hook substitution accepted")
 	}
 }
+
+func TestGuardVersionGateFailsClosedOnNonCanonicalVersion0496(t *testing.T) {
+	for _, invalid := range []string{"0.31.7evil", "0.31.7/other", " 0.31.7", "00.31.7", "0.31.07", "0.31.7\n0.30.0", "999999999999.31.7"} {
+		if !guardRuntimePolicyRequired0317(invalid) {
+			t.Fatalf("malformed release bypassed Guard: %q", invalid)
+		}
+	}
+	for _, valid := range []string{"0.31.7", "0.49.6", "0.49.6-rc.1", "0.49.6+build.1"} {
+		if !guardRuntimePolicyRequired0317(valid) {
+			t.Fatalf("valid release missed gate: %q", valid)
+		}
+	}
+}

@@ -1,3 +1,12 @@
+## 0.49.6 — Gravit auth and protection integration (working source, GA BLOCKED)
+
+- Harden actual imported Argon2id login against excessive memory/time/parallelism costs; use the same safe PHC bounds at import and verification. AdditionalHash legacy digest/PHPass paths remain supported under their explicit policies.
+- Add an executable, POSIX offline FileAuthSystem `Database.json` maintenance tool with SHA-256 compare-and-swap, cooperating-writer lock, retained private preimage backup, fsync/atomic rename, preservation of user UUIDs and unknown fields, and fail-closed conflicting-source checks. Explicit legacy SHA256 password rotation requires a separate opt-in; no Gravit/Never session tokens or roles are imported.
+- Harden the existing offline Ed25519 trust policy signer (validity, duplicate keys, symlinks, atomic private output) and add genuine delegated-component certificate issue/revoke with incrementing root-signed epoch. An actual `component_set_sign` production signature is accepted before revocation and rejected after revocation in local integration tests.
+- Guard runtime policy cannot be disabled by malformed or overflowing release version identifiers. The official Mojang/Minecraft profile client now rejects malformed usernames before promoting identities into NeverLauncher ownership.
+- Local Python signing and FileAuth tests and isolated Go tests for FileAuth/Mojang pass. **GA BLOCKED:** complete Backend build requires Go 1.27.3; live PostgreSQL, Microsoft account, signed OS release installers, Guard-native instrumentation and real Gravit module compatibility have not been independently accepted. A working source patch is not a signed product release.
+
+
 ## 0.49.5 — Native Java Gravit source-port integration (local JVM acceptance PASS; production GA BLOCKED)
 
 - Wire a new **real Go EventBus synchronous `profile.before-save`** hook into the existing authenticated profile create/update APIs. A subscribed Java policy can veto invalid loader changes before repository mutation; unavailable/rejecting subscribed extensions fail closed. This preserves existing profile revision and repository validation rather than bypassing them.

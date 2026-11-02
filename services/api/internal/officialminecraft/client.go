@@ -213,7 +213,7 @@ func (c *Client) Begin(ctx context.Context, clientID string) (DeviceCode, error)
 		code.Interval = 5
 	}
 	u, err := url.Parse(code.VerificationURI)
-	if err != nil || u.Scheme != "https" || (u.Hostname() != "microsoft.com" && !strings.HasSuffix(u.Hostname(), ".microsoft.com") && u.Hostname() != "microsoftonline.com" && !strings.HasSuffix(u.Hostname(), ".microsoftonline.com")) {
+	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Fragment != "" || (u.Hostname() != "microsoft.com" && !strings.HasSuffix(u.Hostname(), ".microsoft.com") && u.Hostname() != "microsoftonline.com" && !strings.HasSuffix(u.Hostname(), ".microsoftonline.com")) {
 		return DeviceCode{}, errors.New("untrusted Microsoft verification URI")
 	}
 	return code, nil
@@ -320,13 +320,8 @@ func (c *Client) Profile(ctx context.Context, token string) (Profile, error) {
 	if err != nil {
 		return p, err
 	}
-	if len(p.ID) != 32 || p.Name == "" {
+	if !validOfficialSubject(p.ID, p.Name) {
 		return Profile{}, ErrUnlicensed
-	}
-	for _, ch := range p.ID {
-		if !strings.ContainsRune("0123456789abcdefABCDEF", ch) {
-			return Profile{}, ErrUnlicensed
-		}
 	}
 	return p, nil
 }

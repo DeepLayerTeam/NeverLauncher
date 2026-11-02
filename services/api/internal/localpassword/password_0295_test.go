@@ -37,3 +37,28 @@ func TestExistingLegacyNeverSHA0295(t *testing.T) {
 		t.Fatal("old local digest compatibility broken")
 	}
 }
+
+// The same Argon2id limits must apply to a directly loaded account as to a
+// Gravit Database.json import; otherwise a crafted database can exhaust RAM
+// on the next login despite a successful import preflight.
+func TestArgonImportAndLoginHaveIdenticalResourceLimits0496(t *testing.T) {
+	actual, err := Hash("protected")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !Verify("protected", actual) {
+		t.Fatal("native Argon2id login broken")
+	}
+	for _, bad := range []string{
+		strings.Replace(actual, "m=65536", "m=1048576", 1),
+		strings.Replace(actual, "t=3", "t=20", 1),
+		strings.Replace(actual, "p=1", "p=32", 1),
+		strings.Replace(actual, "m=65536", "m=0", 1),
+		strings.Replace(actual, "m=65536", "m=999999999", 1),
+		strings.Replace(actual, "m=65536", "m=65536,m=65536", 1),
+	} {
+		if fileauth.ValidateArgon2id(bad) || Verify("protected", bad) {
+			t.Fatalf("unsafe PHC parameters accepted: %s", strings.Split(bad, "$hash")[0])
+		}
+	}
+}
