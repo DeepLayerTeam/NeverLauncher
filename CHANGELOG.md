@@ -1,3 +1,11 @@
+## 0.48.5 — Authentication & Identity Java SPI (source release; GA pending)
+
+- Add functional `IdentityProvider` Java SPI: verified password authentication, immutable subject resolution, provider-session introspection and provider-token revocation. The existing JVM callback accepts explicit authenticated `auth.*` RPC calls, with bounded deadlines and sanitized provider errors.
+- Bridge approved global Java providers into the existing managed provider wizard and Go federation (`java` kind). Existing account-linking routes require a fresh signed-in Never user plus external password proof; `AutoProvision=false` prevents silent identity creation. MFA, issuer checking and Never token issuance remain inside Go.
+- Require both extension manifest `auth:provider` declaration and live permission grant for every Java auth request and after its response. Revoke/disable/stop blocks new calls; no direct Java database access, canonical session token minting or Minecraft OAuth impersonation.
+- Java SDK tests exercise real SPI registration, lifecycle and authenticated local JVM callback, password failures, immutable identity resolution, provider token introspection and revocation.
+- **Release gate:** this source release is NOT independently certified for GA. Go 1.27.3 full suite, Java 17/21 CI, live signed installer, PostgreSQL migration and end-to-end Minecraft account-link acceptance still require execution; inherited publish guard remains in force.
+
 ## 0.48.4 — Backend Java Services (source release; independent GA pending)
 
 - Add production-wired read-only Java BackendServices for projects, profiles, channels, releases and durable job status, exposed through existing `RuntimeServices` and authenticated Go Host Broker. Implement new capability dispatch against real repositories, limit pagination, and preserve legacy project.get/release.list wire compatibility.

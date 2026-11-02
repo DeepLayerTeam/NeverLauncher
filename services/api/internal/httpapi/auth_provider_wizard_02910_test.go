@@ -19,7 +19,10 @@ func TestProviderWizardStrictSecrets02910(t *testing.T) {
 		{"http", `{"id":"company","issuer":"https://issuer.example","baseUrl":"https://issuer.example","hmac":{"secretFile":"/var/secrets/key"}}`, false},
 		{"oidc", `{"id":"company","issuer":"https://issuer.example","clientId":"app","clientSecretEnv":"EXTERNAL_SECRET","redirectUris":[]}`, true},
 		{"oidc", `{"id":"company","clientSecret":"plaintext"}`, false},
-		{"microsoft", `{"id":"company","tenant":"consumers","clientId":"app","redirectUris":[]}`, true},
+		{"java", `{"id":"company","extensionId":"example.identity","displayName":"Identity"}`, true},
+        {"java", `{"id":"company","extensionId":"other","displayName":"Identity","privateToken":"oops"}`, false},
+        {"java", `{"id":"company","extensionId":"Other","displayName":"Identity"}`, false},
+        {"microsoft", `{"id":"company","tenant":"consumers","clientId":"app","redirectUris":[]}`, true},
 		{"microsoft", `{"id":"company","clientSecretFile":"/secrets"}`, false},
 		{"sql", `{"id":"wrong","dsnEnv":"COMPANY_DSN"}`, false},
 	}

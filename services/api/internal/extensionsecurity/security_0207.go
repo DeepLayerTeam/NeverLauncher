@@ -22,6 +22,7 @@ const KeyVersion = "v1"
 
 var catalog0207 = map[string]string{
 	"project:read":       "projects.read",
+	"auth:provider":      "identity.provider",
 	"project:write":      "projects.write",
 	"release:read":       "releases.read",
 	"release:prepare":    "releases.write",

@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/authrequest"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
 	"gitflic.ru/skif4er/launcher/services/api/internal/httpconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/javaauthconnector"
 	"gitflic.ru/skif4er/launcher/services/api/internal/microsoftconnector"
 	"gitflic.ru/skif4er/launcher/services/api/internal/oidcconnector"
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
@@ -105,6 +107,14 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 		if cfg.ClientSecretFile != "" {
 			return errors.New("OIDC secret files are unsupported")
 		}
+	case "java":
+		var cfg javaauthconnector.Config
+		if err := strictProviderConfig02910(v.Config, &cfg); err != nil {
+			return err
+		}
+		if err := cfg.Validate(); err != nil {
+			return err
+		}
 	case "microsoft":
 		var cfg microsoftconnector.Config
 		if err := strictProviderConfig02910(v.Config, &cfg); err != nil {
@@ -116,7 +126,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 	}
 	return nil
 }
-func createManagedProvider02910(ctx context.Context, v repository.ManagedProviderRevision02910) (managedProbe02910, error) {
+func createManagedProvider02910(ctx context.Context, v repository.ManagedProviderRevision02910, javaHost *extensionhost.Supervisor) (managedProbe02910, error) {
 	var out managedProbe02910
 	if err := validateManagedSecrets02910(v); err != nil {
 		return out, err
@@ -175,6 +185,17 @@ func createManagedProvider02910(ctx context.Context, v repository.ManagedProvide
 		}
 		conn = c
 		policy = federation.ProviderPolicy{AutoProvision: c.ProvisioningMode() == "jit", DefaultRole: c.DefaultRole(), RoleMappings: cfg.RoleMappings}
+	case "java":
+		var cfg javaauthconnector.Config
+		if err := strictProviderConfig02910(v.Config, &cfg); err != nil {
+			return out, err
+		}
+		c, err := javaauthconnector.New(cfg, javaHost)
+		if err != nil {
+			return out, err
+		}
+		conn = c
+		policy = federation.ProviderPolicy{AutoProvision: false}
 	case "microsoft":
 		var cfg microsoftconnector.Config
 		if err := strictProviderConfig02910(v.Config, &cfg); err != nil {
@@ -232,7 +253,7 @@ func (s Server) syncManagedProviders02910(ctx context.Context) error {
 			if s.Federation.ManagedRevision(candidate.ID) == candidate.Revision {
 				continue
 			}
-			probe, err := createManagedProvider02910(ctx, candidate)
+			probe, err := createManagedProvider02910(ctx, candidate, s.ExtensionHost)
 			if err != nil {
 				return err
 			}

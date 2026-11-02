@@ -83,6 +83,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 String state=lifecycleState.get();
                 result=Map.of("state",state,"responsive",true);
             }
+            case "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke" -> result=services.identity().dispatch(method,params);
             case "command.invoke" -> result=nullableResult("value",services.commands().invoke(Json.string(params,"command",true),params.get("payload")));
             case "event.deliver","hook.deliver" -> {
                 Map<String,Object> envelope=Json.object(params.get("envelope"));

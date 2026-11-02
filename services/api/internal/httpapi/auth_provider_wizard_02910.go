@@ -78,7 +78,7 @@ func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	probe, err := createManagedProvider02910(ctx, v)
+	probe, err := createManagedProvider02910(ctx, v, s.ExtensionHost)
 	if err != nil {
 		writeJSON(w, 422, map[string]any{"healthy": false, "detail": "live configuration, credential references, mapping or provider health failed"})
 		return
@@ -168,7 +168,7 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-		probe, probeErr := createManagedProvider02910(ctx, *candidate)
+		probe, probeErr := createManagedProvider02910(ctx, *candidate, s.ExtensionHost)
 		cancel()
 		if probeErr != nil {
 			writeError(w, 422, "provider connection or SDK conformance failed; active settings unchanged")

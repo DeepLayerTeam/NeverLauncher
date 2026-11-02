@@ -152,3 +152,7 @@ registry and not a Java sandbox.
 ## 0.48.4 — Backend Java Services
 
 `context.runtime().backend()` exposes typed, read-only project/profile/channel/release/job-status services via the authenticated Go Host Broker. Individual capabilities require live `project:read` or `release:read` grants and enforce project scope. Bounded list pagination uses `Page<T>` with optional `nextOffset`; see [Backend Java Services](../../../docs/extensions/java-backend-services-0484.md) for the operations, permissions and limitations.
+
+## 0.48.5 — Authentication & Identity SPI
+
+`IdentityServices.CONTRACT` connects one selected `IdentityProvider` implementation to the existing authenticated callback RPC. Implementations verify external credentials, provide a stable immutable subject, introspect and revoke their **own** provider sessions. They never issue NeverLauncher tokens or Microsoft/Minecraft authentication evidence. Configuration, grants and activation: `docs/authentication/java-identity-spi-0485.md`. Run `sh sdk/java/core/build.sh test` to exercise the live JVM callback checks.

@@ -1,0 +1,37 @@
+name: Java Identity SPI 0.48.5
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/javaauthconnector/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/httpapi/auth_provider*'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/javaauthconnector/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/httpapi/auth_provider*'
+jobs:
+  java:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['17','21']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.version }}
+      - run: sh sdk/java/core/build.sh test
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - working-directory: services/api
+        run: go test -race ./internal/javaauthconnector ./internal/extensionhost ./internal/httpapi ./internal/federation

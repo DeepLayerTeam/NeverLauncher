@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 
-type ProviderKind = "sql" | "http" | "oidc" | "microsoft";
+type ProviderKind = "sql" | "http" | "oidc" | "microsoft" | "java";
 type Revision = {
   id: string;
   revision: number;
@@ -60,6 +60,12 @@ function defaults(kind: ProviderKind, id: string): Record<string, unknown> {
         redirectUris: [],
         hostAllowlist: ["login.example.org"],
         provisioning,
+      };
+    case "java":
+      return {
+        id,
+        extensionId: "company.identity",
+        displayName: id,
       };
     case "microsoft":
       return {
@@ -195,7 +201,7 @@ export function AuthProviderWizard02910({
         </button>
       </div>
       <p className="muted">
-        Настройка реальных SQL, HTTP, OIDC и Microsoft-провайдеров. Секреты и
+        Настройка SQL, HTTP, OIDC, Microsoft и утверждённых Java SPI-провайдеров. Секреты и
         строки подключения задаются переменными окружения Backend; они не
         сохраняются в истории и не отображаются в Admin.
       </p>
@@ -220,13 +226,15 @@ export function AuthProviderWizard02910({
             <option value="http">HTTP (signed)</option>
             <option value="oidc">OIDC</option>
             <option value="microsoft">Microsoft Entra</option>
+            <option value="java">Java Identity SPI (approved global extension)</option>
           </select>
         </label>
       </div>
       <p className="muted">
-        Укажите allowlist хостов, issuer, redirect URI, provisioning и имена
-        переменных с секретами. Нельзя передавать DSN, пароли или private key в
-        JSON.
+        Для Java укажите extensionId глобального подписанного расширения с
+        разрешением auth:provider. Для остальных провайдеров задайте allowlist,
+        issuer, redirect URI и имена переменных с секретами. Нельзя сохранять
+        DSN, пароли, токены или приватные ключи в JSON.
       </p>
       <label>
         Конфигурация JSON

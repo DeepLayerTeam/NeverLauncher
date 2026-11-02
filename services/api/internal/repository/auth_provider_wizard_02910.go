@@ -187,7 +187,7 @@ func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 		return fmt.Errorf("invalid provider id")
 	}
 	switch v.Kind {
-	case "sql", "http", "oidc", "microsoft":
+	case "sql", "http", "oidc", "microsoft", "java":
 	default:
 		return errors.New("invalid provider kind")
 	}

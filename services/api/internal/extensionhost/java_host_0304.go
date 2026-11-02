@@ -77,7 +77,7 @@ type javaRPCResponse0304 struct {
 // It is intentionally usable only for a running Java target registered by this supervisor.
 func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string, params json.RawMessage) (json.RawMessage, error) {
 	switch method {
-	case "health", "command.invoke", "event.deliver", "hook.deliver":
+	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke":
 	default:
 		return nil, errors.New("unsupported Java RPC method")
 	}
@@ -101,6 +101,27 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 	if !running || endpoint == "" {
 		return nil, ErrHostNotRunning
 	}
+	if strings.HasPrefix(method, "auth.") {
+		// Authentication connectors are only allowed for explicitly consented,
+		// global installations. Project extensions cannot authenticate accounts.
+		if key.Scope != "global" || st.manifest.ID != key.ExtensionID {
+			return nil, errors.New("Java authentication provider scope denied")
+		}
+		declared := false
+		for _, permission := range st.manifest.Permissions {
+			if permission == "auth:provider" {
+				declared = true
+				break
+			}
+		}
+		if !declared {
+			return nil, errors.New("Java authentication capability not declared")
+		}
+		allowed, err := s.permissionAllowed0207(ctx, st, "auth:provider", "")
+		if err != nil || !allowed {
+			return nil, errors.New("Java authentication capability revoked or unavailable")
+		}
+	}
 	// A previously authorized supervisor command must not race an emergency
 	// disable, revoked publisher or replaced installation. The HTTP broker
 	// already checks live trust, but direct Go -> JVM RPC bypasses that broker.
@@ -115,7 +136,17 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 	if !stillRunning {
 		return nil, ErrHostNotRunning
 	}
-	return s.callJavaProcess0304(ctx, endpoint, token, method, params)
+	result, err := s.callJavaProcess0304(ctx, endpoint, token, method, params)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(method, "auth.") {
+		allowed, checkErr := s.permissionAllowed0207(ctx, st, "auth:provider", "")
+		if checkErr != nil || !allowed {
+			return nil, errors.New("Java authentication permission revoked during operation")
+		}
+	}
+	return result, nil
 }
 func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, method string, params json.RawMessage) (json.RawMessage, error) {
 	budget := s.cfg.CapabilityTimeout
