@@ -24,11 +24,12 @@ var className = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$.]{1,200}$`)
 var javaVersionPattern = regexp.MustCompile(`(?:java|openjdk) version "(?:1\.)?(\d+)(?:[.\-+"_]|$)`)
 
 type JarInfo struct {
-	EntrypointClass   string `json:"entrypointClass"`
-	GravitModuleClass string `json:"gravitModuleClass,omitempty"`
-	ClassFiles        int    `json:"classFiles"`
-	MaxClassMajor     int    `json:"maxClassMajor"`
-	MinimumJava       int    `json:"minimumJava"`
+	EntrypointClass   string            `json:"entrypointClass"`
+	GravitModuleClass string            `json:"gravitModuleClass,omitempty"`
+	ClassFiles        int               `json:"classFiles"`
+	Libraries         []LibraryInfo0482 `json:"libraries,omitempty"`
+	MaxClassMajor     int               `json:"maxClassMajor"`
+	MinimumJava       int               `json:"minimumJava"`
 }
 
 type RuntimeInfo struct {
@@ -192,6 +193,15 @@ func Inspect(file string) (JarInfo, error) {
 	}
 	if !classes["ru/launcher/sdk/host/JavaExtensionHost.class"] {
 		return JarInfo{}, errors.New("Java Extension Host class absent from JAR")
+	}
+	libraries, extraClasses, libraryMaxMajor, err := inspectLibraries0482(zr, classes)
+	if err != nil {
+		return JarInfo{}, fmt.Errorf("inspect bundled dependencies: %w", err)
+	}
+	result.Libraries = libraries
+	result.ClassFiles += extraClasses
+	if libraryMaxMajor > result.MaxClassMajor {
+		result.MaxClassMajor = libraryMaxMajor
 	}
 	result.EntrypointClass = class
 	if result.MaxClassMajor > 61 {

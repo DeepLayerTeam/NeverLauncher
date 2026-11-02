@@ -1,0 +1,73 @@
+name: Java Module Packaging 0.48.2 - real JAR dependencies and runtime isolation
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionjava/**'
+      - 'services/api/internal/extensionlifecycle/java_manager_0305.go'
+      - 'scripts/java/package_dependencies_0482.py'
+      - 'examples/extensions/java-dependencies/**'
+      - '.github/workflows/java-packaging-dependencies-0482.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionjava/**'
+      - 'services/api/internal/extensionlifecycle/java_manager_0305.go'
+      - 'scripts/java/package_dependencies_0482.py'
+      - 'examples/extensions/java-dependencies/**'
+      - '.github/workflows/java-packaging-dependencies-0482.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-real-dependencies:
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+        os: [ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and test SDK on real JVM
+        run: sh sdk/java/core/build.sh test
+      - name: Compile separate dependent JAR and create embedded locked host
+        run: sh examples/extensions/java-dependencies/build.sh
+      - name: Actual child-first extension class resolution and rejection cases
+        run: |
+          javac --release 17 -cp sdk/java/core/build/classes -d sdk/java/core/build/test-classes sdk/java/core/src/test/java/ru/launcher/sdk/core/ModulePackaging0482Tests.java
+          java -cp sdk/java/core/build/classes:sdk/java/core/build/test-classes ru.launcher.sdk.core.ModulePackaging0482Tests examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
+      - name: Real executable Host/HTTP handshake, start, callback, heartbeat, shutdown
+        run: python3 examples/extensions/java-dependencies/test-runner.py
+  java-signed-package-inspection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build actual embedded dependency package
+        run: sh examples/extensions/java-dependencies/build.sh
+      - name: Inspect actual JAR and adversarial library fixtures before activation
+        working-directory: services/api
+        env:
+          LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
+        run: go test -race -count=1 ./internal/extensionjava
+      - name: Validate canonical product version metadata
+        run: python3 scripts/version/manage.py check

@@ -1,3 +1,10 @@
+## 0.48.2 — Java module packaging and isolated dependencies (source release; external GA pending)
+
+- Load actual pinned third-party JAR dependencies during Java extension startup from **inside the signed host JAR**, without extending the launcher core classpath or resolving libraries over the network. The extension and libraries use a child-first `URLClassLoader` while JDK/SDK/Host packages retain parent identity; temporary JAR files are kept private and removed on shutdown.
+- Add reproducible offline bundled-JAR builder and a SHA-256 locked dependency index. Validate library identity, versions, ranges, conflicts and bytecode at both Go installation preflight and Java Host runtime. Reject missing or unlisted libraries, duplicate host/library classes, protected SDK overrides, unsafe/nested entries, foreign Class-Path, multi-release JARs and oversized inputs. Reject incompatible SDK API constraints before activation.
+- Add real built Java dependency extension with authenticated JVM Host hello/ready, `Extension.start()` calling dependency bytecode, HTTP heartbeat/RPC and shutdown. Cover collision/adversarial fixtures in Go and Java and run JDK 17/21 validation in a dedicated CI matrix.
+- Update canonical 0.48.2 version metadata. **Not independently GA-certified:** Java 17 runtime and Go 1.27.3 full-project tests require external CI; historical PostgreSQL migration/upgrade and production signing gates inherited from 0.48.0 remain closed pending independent evidence.
+
 ## 0.48.1 — Java SDK / JVM Host stabilization (source release; external GA pending)
 
 - Fix production Java ExtensionLifecycle deadlocks: lifecycle state no longer holds its monitor while executing third-party start/stop callbacks; concurrent startup cancellation and shutdown complete within caller deadlines. Duplicate stop requests wait for the in-progress stop callback rather than releasing host services too early. Timed-out, noncooperative extension code is interrupted, marked failed and remains subject to process-supervisor termination.

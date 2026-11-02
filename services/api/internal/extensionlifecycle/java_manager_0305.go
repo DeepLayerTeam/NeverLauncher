@@ -68,6 +68,11 @@ func (m *Manager) inspectPayload0305(ctx context.Context, root string, manifest 
 		if err != nil {
 			return nil, fmt.Errorf("Java target %s: %w", target.Entrypoint, err)
 		}
+		for _, library := range jar.Libraries {
+			if !extensionresolver.Matches(manifest.API, library.APIConstraint) {
+				return nil, fmt.Errorf("Java target %s: library %s@%s is incompatible with SDK API %s (requires %s)", target.Entrypoint, library.Coordinate, library.Version, manifest.API, library.APIConstraint)
+			}
+		}
 		runtime, err := extensionjava.ProbeRuntime(ctx, m.JavaExecutable, jar.MinimumJava)
 		if err != nil {
 			return nil, fmt.Errorf("Java target %s: %w", target.Entrypoint, err)

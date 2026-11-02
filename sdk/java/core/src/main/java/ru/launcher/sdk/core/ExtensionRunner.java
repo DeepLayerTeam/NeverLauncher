@@ -43,7 +43,8 @@ public final class ExtensionRunner {
         if(!kind.equals(env.getOrDefault("LAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("host target mismatch");
         // Loading without initialization prevents extension static initializers
         // from running until the authenticated host has negotiated the API.
-        Class<?> type=Class.forName(className,false,ExtensionRunner.class.getClassLoader());
+        try(BundledLibraries libraries=BundledLibraries.open(manifest.api())) {
+        Class<?> type=Class.forName(className,false,libraries.classLoader());
         if(!Extension.class.isAssignableFrom(type))throw new IllegalArgumentException("class does not implement Extension: "+className);
         Set<String> declared=declaredCommands(source);
         if(argv!=null&&!declared.contains(argv[0]))throw new SecurityException("undeclared CLI command");
@@ -55,6 +56,10 @@ public final class ExtensionRunner {
             // No extension constructor, static initializer or start() is invoked
             // if the host rejects the version, identity or advertised features.
             host.connect(callback.url());
+            Thread currentThread=Thread.currentThread();
+            ClassLoader previousLoader=currentThread.getContextClassLoader();
+            currentThread.setContextClassLoader(libraries.classLoader());
+            try {
             Extension extension=(Extension)type.getDeclaredConstructor().newInstance();
             try(ExtensionLifecycle lifecycle=new ExtensionLifecycle(extension,manifest,services)) {
                 lifecycleRef.set(lifecycle);
@@ -82,6 +87,8 @@ public final class ExtensionRunner {
                     try{Runtime.getRuntime().removeShutdownHook(shutdown);}catch(IllegalStateException ignored){/* JVM shutting down */}
                 }
             }
+            } finally {currentThread.setContextClassLoader(previousLoader);}
+        }
         }
     }
     private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("missing "+key);return v;}
