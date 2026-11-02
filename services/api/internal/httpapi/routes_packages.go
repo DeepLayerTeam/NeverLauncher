@@ -124,6 +124,7 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/admin/extension-hosts", s.requirePermission("extension:manage", s.extensionHosts0205))
 	mux.Handle("GET /api/v1/admin/extension-hosts/{extensionId}", s.requirePermission("extension:manage", s.extensionHostDetail0205))
 	mux.Handle("GET /api/v1/admin/extension-hosts/{extensionId}/logs", s.requirePermission("extension:manage", s.extensionHostLogs0205))
+	mux.Handle("POST /api/v1/admin/extension-hosts/{extensionId}/probe", s.requirePermission("extension:manage", s.extensionHostProbe0491))
 	mux.Handle("POST /api/v1/admin/extension-hosts/{extensionId}/start", s.requirePermission("extension:manage", s.extensionHostStart0205))
 	mux.Handle("POST /api/v1/admin/extension-hosts/{extensionId}/stop", s.requirePermission("extension:manage", s.extensionHostStop0205))
 	mux.Handle("POST /api/v1/admin/extension-hosts/{extensionId}/restart", s.requirePermission("extension:manage", s.extensionHostRestart0205))

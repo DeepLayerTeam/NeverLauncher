@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -112,4 +113,49 @@ func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request)
 	item, _ := s.ExtensionHost.Get(key)
 	s.audit(r, s.adminActor(r), "extension:host:restart", key.ExtensionID+":"+key.Scope+":"+key.ScopeID)
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"host": item}})
+}
+
+// extensionHostProbe0491 executes an actual authenticated health RPC inside the
+// installed Java Host, not merely an in-memory supervisor heartbeat check.
+// The extension:manage permission is enforced by the route; Java trust and
+// revocation are rechecked by CallJavaRPC0304 before returning a result.
+func (s Server) extensionHostProbe0491(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionHost == nil || s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "extension host unavailable")
+		return
+	}
+	key := extensionHostKey0205(r)
+	before, err := s.ExtensionHost.Get(key)
+	if err != nil {
+		writeError(w, http.StatusConflict, "extension host not running")
+		return
+	}
+	if before.Runtime != "java-jvm" || before.State != "running" || !before.Healthy || before.InstanceID == "" {
+		writeError(w, http.StatusConflict, "Java extension host not healthy")
+		return
+	}
+	payload, err := s.ExtensionHost.CallJavaRPC0304(r.Context(), key, "health", json.RawMessage(`{}`))
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "Java extension host RPC failed")
+		return
+	}
+	var result struct {
+		State      string `json:"state"`
+		Responsive bool   `json:"responsive"`
+	}
+	if err := json.Unmarshal(payload, &result); err != nil || result.State != "RUNNING" || !result.Responsive {
+		writeError(w, http.StatusServiceUnavailable, "Java extension host did not acknowledge RUNNING")
+		return
+	}
+	after, err := s.ExtensionHost.Get(key)
+	if err != nil || after.Runtime != "java-jvm" || after.State != "running" || !after.Healthy ||
+		before.Generation != after.Generation || before.InstanceID != after.InstanceID ||
+		before.Version != after.Version || after.InstanceID == "" {
+		writeError(w, http.StatusConflict, "Java host changed during live probe")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
+		"host": after, "java": result,
+	}})
 }

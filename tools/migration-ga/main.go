@@ -852,11 +852,13 @@ func main() {
 }
 func runMain(args []string) error {
 	if len(args) == 0 {
-		return errors.New("use certify --plan PLAN --output FILE --evidence-dir DIR; verify --certificate FILE --public-key KEY --evidence-dir DIR; or verify-cohort")
+		return errors.New("use certify, verify, verify-cohort, or integration-audit --backend URL --project ID --run ID --extension ID --output FILE")
 	}
 	cmd := args[0]
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	switch cmd {
+	case "integration-audit":
+		return integrationAuditCommand0491(args[1:])
 	case "manual-actions":
 		planFile := fs.String("plan", "", "migration operator plan")
 		out := fs.String("output", "", "new operator worklist Markdown file")
