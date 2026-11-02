@@ -27,6 +27,10 @@ on:
         type: string
         required: true
         description: 'Independently signed LIVE SQLite-only installed GA attestation, exact 0.33.0 commit'
+      ga0480_evidence_run_id:
+        type: string
+        required: false
+        description: 'Protected independently signed live 0.48.0 staging migration, legacy, game and exact signed-package acceptance run ID (mandatory for 0.48.0 publication)'
       publish_release:
         type: boolean
         required: true
@@ -1137,14 +1141,38 @@ jobs:
           set -euo pipefail
           python3 scripts/release/delivery_verify_0462.py \
             --bundle signed-release --release-manifest
+      - name: Retrieve independently signed 0.48.0 GA evidence from protected run
+        if: ${{ inputs.ga0480_evidence_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ga0480-independent-${{ github.sha }}
+          path: ga0480-independent
+          run-id: ${{ inputs.ga0480_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Re-verify signatures, exact bytes, all GA targets and same-run CI before publication
         env:
           LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NL0480_TRUSTED_KEY_HEX: ${{ vars.NL_GA0480_OPERATOR_ED25519_PUBLIC_KEY_HEX }}
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(cat VERSION)"
+          EXTRA=()
+          if [[ "$VERSION" == '0.48.0' ]]; then
+            [[ "$NL0480_TRUSTED_KEY_HEX" =~ ^[a-fA-F0-9]{64}$ ]] || { echo '0.48.0 trusted independent operator key missing' >&2; exit 2; }
+            umask 077
+            printf '%s' "$NL0480_TRUSTED_KEY_HEX" | xxd -r -p > "$RUNNER_TEMP/ga0480-operator.key"
+            test -s ga0480-independent/approval.json
+            test -s ga0480-independent/approval.sig
+            test -d ga0480-independent/evidence/signed
+            EXTRA=(
+              --ga0480-evidence-dir ga0480-independent/evidence
+              --ga0480-approval ga0480-independent/approval.json
+              --ga0480-signature ga0480-independent/approval.sig
+              --ga0480-trusted-key "$RUNNER_TEMP/ga0480-operator.key"
+            )
+          fi
           CLI="$PWD/signed-release/launcher-cli-linux-x64"
           test -s "$CLI"
           python3 scripts/release/publish_0370.py publish \
@@ -1158,6 +1186,7 @@ jobs:
             --trust-policy "$RUNNER_TEMP/trust-policy.json" \
             --trust-state "$RUNNER_TEMP/trust-state.json" \
             --cli "$CLI" --repository "$GITHUB_REPOSITORY" \
+            "${EXTRA[@]}" \
             --output "$RUNNER_TEMP/PUBLICATION_0370.json"
       - name: Record verified GitHub publication
         uses: actions/upload-artifact@v4

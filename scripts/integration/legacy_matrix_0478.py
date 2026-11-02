@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute native 0.47.8 host upgrades against independently pinned old installations.
+"""Execute native 0.48.0 host upgrades against independently pinned old installations.
 
 No fixtures are generated here. Each manifest entry is a real, previously
 installed Linux launcher CLI tree (ZIP) with a runnable prior-version binary.
@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/operations'))
 import legacy_upgrade_0476 as upgrade
 
-VERSIONS = ('0.45.14',) + tuple(f'0.46.{n}' for n in range(4)) + tuple(f'0.47.{n}' for n in range(8))
+VERSIONS = ('0.45.14',) + tuple(f'0.46.{n}' for n in range(4)) + tuple(f'0.47.{n}' for n in range(9))
 MAX_BYTES = 4 * 1024**3
 MAX_FILES = 150_000
 
@@ -87,7 +87,7 @@ def extract(source, target):
                 dest.chmod(0o700)
 
 def fetch(row, dest):
-    request = urllib.request.Request(row['url'], headers={'User-Agent':'NeverLauncher-0478-integration'})
+    request = urllib.request.Request(row['url'], headers={'User-Agent':'NeverLauncher-0480-integration'})
     with urllib.request.urlopen(request, timeout=120) as source, dest.open('xb') as out:
         require(source.geturl().startswith('https://'), 'baseline URL redirected away from TLS')
         length = 0
@@ -128,7 +128,7 @@ def run_one(row, current, workdir):
     require(proc.returncode == 0, f'native upgrade {version} failed (exit {proc.returncode})')
     result = json.loads(proc.stdout)
     require(result.get('status') == 'upgraded' and result.get('sourceVersion') == version and result.get('targetVersion') == upgrade.TARGET, 'native upgrade result invalid')
-    require(upgrade.native_binary_version(binary) == upgrade.TARGET, 'upgraded executable does not run as candidate')
+    require(upgrade.native_binary_version(binary, allow_target=True) == upgrade.TARGET, 'upgraded executable does not run as candidate')
     require(before == inventory(install, protected), 'project/profile/settings changed after native upgrade')
     journal = json.loads((backup/'journal.json').read_text())
     require(journal.get('phase') == 'verified' and journal.get('source') == version, 'native upgrade journal not verified')
@@ -136,7 +136,7 @@ def run_one(row, current, workdir):
     require(snap.get('files') == before, 'backup contents do not equal original installation')
     require(before == inventory(backup/'user-data', protected), 'physical backup diverges from source')
     return {'version': version, 'originalSha256': row['sha256'], 'beforeFiles': len(before),
-            'oldExecutableSha256': digest(binary.with_name(binary.name+'.previous-0478')),
+            'oldExecutableSha256': digest(binary.with_name(binary.name+'.previous-0480')),
             'newExecutableSha256': digest(binary), 'nativeVerified': True, 'userDataVerified': True}
 
 def main(argv=None):
@@ -148,9 +148,9 @@ def main(argv=None):
     try:
         rows = load_manifest(args.manifest)
         require(args.candidate_cli.is_file() and not args.candidate_cli.is_symlink(), 'candidate CLI missing')
-        require(upgrade.native_binary_version(args.candidate_cli) == upgrade.TARGET, 'candidate version mismatch')
+        require(upgrade.native_binary_version(args.candidate_cli, allow_target=True) == upgrade.TARGET, 'candidate version mismatch')
         # All artifacts are unpacked on an isolated, private test filesystem.
-        with tempfile.TemporaryDirectory(prefix='nl-0478-real-legacy-') as tmp:
+        with tempfile.TemporaryDirectory(prefix='nl-0480-real-legacy-') as tmp:
             workdir = Path(tmp)
             results = [run_one(row, args.candidate_cli.resolve(), workdir) for row in rows]
         payload = {'schemaVersion': 1, 'status': 'passed', 'targetVersion': upgrade.TARGET,
@@ -159,7 +159,7 @@ def main(argv=None):
         args.out.write_text(json.dumps(payload, indent=2, sort_keys=True)+'\n')
         return 0
     except (MatrixError, upgrade.LegacyUpgradeError, ValueError, OSError, json.JSONDecodeError, subprocess.TimeoutExpired, zipfile.BadZipFile) as e:
-        print(f'legacy matrix 0.47.8 FAILED: {e}', file=sys.stderr)
+        print(f'legacy matrix 0.48.0 FAILED: {e}', file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

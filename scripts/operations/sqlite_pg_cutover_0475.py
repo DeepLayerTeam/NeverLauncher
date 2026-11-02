@@ -563,17 +563,86 @@ class Operator:
         return {"backendStarted": True}
 
     def health_check(self):
-        # Cannot undo new PostgreSQL writes. If the backend has started, any
-        # unsuccessful health check stops here for manual reconciliation.
+        """Authenticate the existing owner and read their project over the real
+        switched Backend before declaring the migration operator complete.
+
+        This is additional *online* verification, not permission to bypass the
+        earlier domain-parity cutover gate. On error, new PG writes may exist:
+        callers stop writers but must never automatically revert to SQLite.
+        """
         import urllib.request
-        request = urllib.request.Request(self.a.health_url, method="GET")
-        with urllib.request.urlopen(request, timeout=10) as response:
-            if response.status != 200:
-                raise CutoverError("Backend health status is not 200")
-        # /ready proves only process liveness. Production acceptance requires
-        # an actual owner login and project operation; never mark the complete
-        # pipeline successful based solely on an HTTP 200.
-        raise CutoverError("Backend responded but owner login/project operation was not verified; keep PostgreSQL writers stopped")
+        from urllib.parse import quote, urlsplit
+
+        require_credentials = getattr(self.a, "owner_credentials", "")
+        if not require_credentials:
+            raise CutoverError("private old owner credentials file required for real Backend verification")
+        secret_file = Path(require_credentials)
+        private_file(secret_file)
+        try:
+            auth = json.loads(secret_file.read_text(encoding="utf-8"))
+        except (ValueError, UnicodeError) as exc:
+            raise CutoverError("invalid old owner credential JSON") from exc
+        if (not isinstance(auth, dict) or auth.get("email", "").casefold() != self.a.owner_email.casefold()
+                or not isinstance(auth.get("password"), str) or not auth["password"]):
+            raise CutoverError("old owner credential does not match migration owner")
+        values = {"email": auth["email"], "password": auth["password"]}
+        for optional in ("totp", "recoveryCode", "providerId"):
+            if optional in auth:
+                values[optional] = auth[optional]
+        cfg = parse_env(Path(self.a.source_env))
+        if (cfg.get("LAUNCHER_REPOSITORY_DRIVER") != "postgres" or
+                cfg.get("LAUNCHER_DATABASE_DSN") != self.env[self.a.dsn_env]):
+            raise CutoverError("running service environment is not the verified PostgreSQL target")
+        parts = urlsplit(self.a.health_url)
+        if (parts.scheme not in ("https", "http") or
+                (parts.scheme == "http" and parts.hostname not in ("127.0.0.1", "::1", "localhost")) or
+                parts.username or parts.password or parts.query or parts.fragment or parts.path != "/ready"):
+            raise CutoverError("a local /ready or HTTPS /ready URL without credentials is required")
+        base = self.a.health_url.rsplit("/ready", 1)[0]
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+        client = urllib.request.build_opener(NoRedirect)
+        def request(path, *, payload=None, token=""):
+            body = None if payload is None else json.dumps(payload).encode("utf-8")
+            headers = {"Accept": "application/json"}
+            if body is not None:
+                headers["Content-Type"] = "application/json"
+            if token:
+                headers["Authorization"] = "Bearer " + token
+            query = urllib.request.Request(base + path, body, headers=headers,
+                                           method="POST" if body is not None else "GET")
+            try:
+                with client.open(query, timeout=10) as response:
+                    if response.status != 200:
+                        raise CutoverError("post-cutover Backend HTTP operation was not successful")
+                    data = response.read(4 * 1024 * 1024 + 1)
+                    if len(data) > 4 * 1024 * 1024:
+                        raise CutoverError("post-cutover API payload exceeded verification limit")
+                    return json.loads(data)
+            except (OSError, ValueError) as exc:
+                raise CutoverError("live PostgreSQL Backend login or project operation failed") from exc
+        health = request("/ready")
+        if not isinstance(health, dict) or health.get("status") != "ok":
+            raise CutoverError("Backend health JSON is not ready")
+        login = request("/api/v1/admin/login", payload=values)
+        if not isinstance(login, dict) or not isinstance(login.get("token"), str) or len(login["token"]) <= 20:
+            raise CutoverError("original owner did not obtain a real administrative session")
+        user = login.get("user") or {}
+        if not isinstance(user, dict) or user.get("email", "").casefold() != self.a.owner_email.casefold():
+            raise CutoverError("authenticated owner differs from the imported owner")
+        expected = (self.state.get("receipts", {}).get("verify", {}) or {}).get("ownerId")
+        if not expected or user.get("id") != expected:
+            raise CutoverError("authenticated owner ID differs from migrated PostgreSQL identity")
+        project_path = "/api/v1/projects/" + quote(self.a.project, safe="")
+        project = request(project_path, token=login["token"])
+        if not isinstance(project, dict) or project.get("id") != self.a.project:
+            raise CutoverError("imported project cannot be read through Backend API")
+        # Protected Admin export requires real project permission, proving
+        # the session and role mapping instead of a public GET alone.
+        request("/api/v1/admin/projects/" + quote(self.a.project, safe="") + "/export", token=login["token"])
+        return {"backendHealthy": True, "ownerAuthenticated": True,
+                "ownerId": user["id"], "projectReadAndAuthorized": True}
 
     def run(self):
         self.init_workdir()
@@ -681,6 +750,7 @@ def main(argv=None):
     parser.add_argument("--writer-unit", dest="units", action="append", default=[])
     parser.add_argument("--project", default="")
     parser.add_argument("--owner-email", default="")
+    parser.add_argument("--owner-credentials", default="")
     parser.add_argument("--dsn-env", default="LAUNCHER_POSTGRES_DSN")
     parser.add_argument("--mfa-key-file", default="")
     parser.add_argument("--pg-secret-env", default="")

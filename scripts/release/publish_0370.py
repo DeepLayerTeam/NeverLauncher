@@ -587,6 +587,12 @@ def main() -> int:
         "trust-state",
     ):
         p.add_argument("--" + name, required=True)
+    # Required for 0.48.0: independent LIVE migration acceptance signed by a
+    # different, pinned operator identity. No signed data = no publication.
+    p.add_argument("--ga0480-evidence-dir", default="")
+    p.add_argument("--ga0480-approval", default="")
+    p.add_argument("--ga0480-signature", default="")
+    p.add_argument("--ga0480-trusted-key", default="")
     p.add_argument("--repository", default="")
     p.add_argument("--output", required=True)
     a = p.parse_args()
@@ -607,6 +613,25 @@ def main() -> int:
             cli=Path(a.cli),
             trust_state=Path(a.trust_state),
         )
+        if a.version == "0.48.0":
+            require(all((a.ga0480_evidence_dir, a.ga0480_approval,
+                         a.ga0480_signature, a.ga0480_trusted_key)),
+                    "0.48.0 requires independent signed live migration, real game and legacy GA evidence")
+            from ga_gate_0480 import gate as ga0480_gate
+            evidence_root = Path(a.ga0480_evidence_dir)
+            ga0480_gate(evidence_root, Path(a.ga0480_approval),
+                        Path(a.ga0480_signature), Path(a.ga0480_trusted_key), a.commit)
+            actual_bundle = Path(a.bundle)
+            certified_bundle = evidence_root / 'signed'
+            require(sha(actual_bundle / 'RELEASE_MANIFEST.json') ==
+                    sha(certified_bundle / 'RELEASE_MANIFEST.json'),
+                    '0.48.0 actual publish bundle not identical to independently approved final release')
+            # Compare every platform delivery package, not only a self-reported
+            # version. Exact-byte matching is mandatory before first network write.
+            from delivery_verify_0462 import verify_bundle
+            current = verify_bundle(actual_bundle, True)['targets']
+            certified = verify_bundle(certified_bundle, True)['targets']
+            require(current == certified, '0.48.0 actual package hashes differ from approved delivery')
         result = (
             publish(a.repository, verified, Path(a.bundle))
             if a.action == "publish"

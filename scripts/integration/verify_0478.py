@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed verification of native 0.47.8 acceptance evidence.
+"""Fail-closed verification of native 0.48.0 acceptance evidence.
 
 Never creates a pass receipt. Input comes from independently executed native
 upgrade, real Admin browser, SQL/Backend/ServerBridge and real JVM test runners.
@@ -12,8 +12,8 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED_VERSION = '0.47.8'
-VERSIONS = {'0.45.14'} | {f'0.46.{n}' for n in range(4)} | {f'0.47.{n}' for n in range(8)}
+EXPECTED_VERSION = '0.48.0'
+VERSIONS = {'0.45.14'} | {f'0.46.{n}' for n in range(4)} | {f'0.47.{n}' for n in range(9)}
 
 class EvidenceError(ValueError):
     pass
@@ -108,10 +108,10 @@ def main(argv=None):
             owner(a.path, a.version, a.commit)
         else:
             legacy(a.path, a.version)
-        print(f'0.47.8 REAL EVIDENCE PASS: {a.type}')
+        print(f'0.48.0 REAL EVIDENCE PASS: {a.type}')
         return 0
     except (EvidenceError, OSError, ValueError, KeyError, TypeError) as e:
-        print(f'0.47.8 EVIDENCE REJECTED: {e}', file=sys.stderr)
+        print(f'0.48.0 EVIDENCE REJECTED: {e}', file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

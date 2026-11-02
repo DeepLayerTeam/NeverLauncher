@@ -1,4 +1,4 @@
-"""0.47.8 acceptance verifier adversarial tests (no fabricated positive E2E)."""
+"""0.48.0 acceptance verifier adversarial tests (no fabricated positive E2E)."""
 import hashlib
 import json
 from pathlib import Path
@@ -20,25 +20,25 @@ class EvidenceSafety(unittest.TestCase):
         return path
 
     def test_legacy_missing_release_is_rejected(self):
-        self.put('manifest.json', {'target':'0.47.8','baselines':[{'version':'0.47.7','url':'https://example.test/old.zip','sha256':'a'*64,'binary':'launcher'}]})
+        self.put('manifest.json', {'target':'0.48.0','baselines':[{'version':'0.47.7','url':'https://example.test/old.zip','sha256':'a'*64,'binary':'launcher'}]})
         with self.assertRaisesRegex(legacy.MatrixError, 'every supported original release'):
             legacy.load_manifest(self.root / 'manifest.json')
 
     def test_legacy_duplicate_version_is_rejected(self):
         rows = [{'version':x,'sha256':'a'*64,'url':'https://example.test/old.zip','binary':'launcher'} for x in legacy.VERSIONS]
         rows[-1]['version'] = rows[-2]['version']
-        self.put('manifest.json', {'target':'0.47.8','baselines':rows})
+        self.put('manifest.json', {'target':'0.48.0','baselines':rows})
         with self.assertRaises(legacy.MatrixError):
             legacy.load_manifest(self.root/'manifest.json')
 
     def test_legacy_unsafe_url_and_hash_rejected(self):
         rows = [{'version':x,'sha256':'a'*64,'url':'https://example.test/old.zip','binary':'launcher'} for x in legacy.VERSIONS]
         rows[3]['url'] = 'http://example.test/old.zip'
-        self.put('manifest.json', {'target':'0.47.8','baselines':rows})
+        self.put('manifest.json', {'target':'0.48.0','baselines':rows})
         with self.assertRaisesRegex(legacy.MatrixError, 'pinned HTTPS'):
             legacy.load_manifest(self.root/'manifest.json')
         rows[3]['url'] = 'https://example.test/old.zip'; rows[3]['sha256']='wrong'
-        self.put('manifest.json', {'target':'0.47.8','baselines':rows})
+        self.put('manifest.json', {'target':'0.48.0','baselines':rows})
         with self.assertRaisesRegex(legacy.MatrixError, 'SHA-256'):
             legacy.load_manifest(self.root/'manifest.json')
 
@@ -50,15 +50,15 @@ class EvidenceSafety(unittest.TestCase):
     def test_no_silent_skip_of_old_versions(self):
         rows = [{'version':x, 'nativeVerified':True,'userDataVerified':True,'beforeFiles':2,
                  'originalSha256':'a'*64, 'oldExecutableSha256':'b'*64,'newExecutableSha256':'c'*64} for x in sorted(verifier.VERSIONS)]
-        self.put('legacy.json', {'type':'native-legacy-upgrade','targetVersion':'0.47.8','status':'passed','results':rows})
-        verifier.legacy(self.root/'legacy.json','0.47.8')
+        self.put('legacy.json', {'type':'native-legacy-upgrade','targetVersion':'0.48.0','status':'passed','results':rows})
+        verifier.legacy(self.root/'legacy.json','0.48.0')
         rows.pop()
-        self.put('legacy.json', {'type':'native-legacy-upgrade','targetVersion':'0.47.8','status':'passed','results':rows})
+        self.put('legacy.json', {'type':'native-legacy-upgrade','targetVersion':'0.48.0','status':'passed','results':rows})
         with self.assertRaises(verifier.EvidenceError):
-            verifier.legacy(self.root/'legacy.json','0.47.8')
+            verifier.legacy(self.root/'legacy.json','0.48.0')
 
     def test_unsigned_success_flag_without_game_proof_rejected(self):
-        self.put('result.json', {'version':'0.47.8','status':'passed','minecraft':{'version':'1.21.1','client':'actual-mojang-client'}, 'checks':{'actualClient':True}})
+        self.put('result.json', {'version':'0.48.0','status':'passed','minecraft':{'version':'1.21.1','client':'actual-mojang-client'}, 'checks':{'actualClient':True}})
         with self.assertRaises(verifier.EvidenceError):
             verifier.minecraft(self.root)
 
@@ -74,7 +74,7 @@ class EvidenceSafety(unittest.TestCase):
     def test_actual_matching_join_fields_mandatory(self):
         checks = {key:True for key in ('materialized','packageVerified','runtimeResolved','javaMatched','actualClient','matchingServer','serverVersionMatched','serverHealthy','clientJoinedServer')}
         ev = ['client-package.json','matching-server.log','matching-server.json']
-        self.put('result.json',{'version':'0.47.8','status':'passed','minecraft':{'version':'1.21.1','serverVersion':'1.21.1','client':'actual-mojang-client'},'checks':checks,'evidence':ev})
+        self.put('result.json',{'version':'0.48.0','status':'passed','minecraft':{'version':'1.21.1','serverVersion':'1.21.1','client':'actual-mojang-client'},'checks':checks,'evidence':ev})
         for name in ev:
             (self.root/name).write_text('actual-runner-file')
         self.put('matching-server.json',{'status':'passed','clientJoinedServer':True,'actualClient':True})
@@ -84,7 +84,7 @@ class EvidenceSafety(unittest.TestCase):
             verifier.minecraft(self.root, matching=True, mc='1.21.1')
 
     def test_real_owner_receipt_rejects_missing_checks(self):
-        path=self.put('owner.json',{'schemaVersion':1,'status':'passed','productVersion':'0.47.8','sourceCommit':'a'*40,'scope':'live-admin-browser-owner-cycle-0390','checks':[]})
+        path=self.put('owner.json',{'schemaVersion':1,'status':'passed','productVersion':'0.48.0','sourceCommit':'a'*40,'scope':'live-admin-browser-owner-cycle-0390','checks':[]})
         with self.assertRaises(RuntimeError):
             verifier.owner(path,'0.47.8','a'*40)
 

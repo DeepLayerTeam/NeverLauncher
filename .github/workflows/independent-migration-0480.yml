@@ -1,0 +1,104 @@
+name: NeverLauncher 0.48.0 independent installed-project migration
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Exact source commit to certify
+        type: string
+        required: true
+      original_version:
+        description: Previously installed release on the isolated staging runner
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: independent-0480-staging
+  cancel-in-progress: false
+jobs:
+  installed-live-cutover:
+    # This host must have a genuine copy of a PRE-0.48.0 installation with
+    # production-like data. Ordinary hosted CI and generated demo DBs do not
+    # constitute independent migration acceptance.
+    runs-on: [self-hosted, linux, x64, neverlauncher-isolated-staging]
+    environment: protected-migration-staging
+    timeout-minutes: 120
+    env:
+      NL_BASE_URL: ${{ vars.NL0480_BASE_URL }}
+      NL_CORE_DB: ${{ vars.NL0480_CORE_DB }}
+      NL_HTTP_DB: ${{ vars.NL0480_HTTP_DB }}
+      NL_COORD_DB: ${{ vars.NL0480_COORD_DB }}
+      NL_STORAGE_SOURCE: ${{ vars.NL0480_STORAGE_SOURCE }}
+      NL_STORAGE_TARGET: ${{ vars.NL0480_STORAGE_TARGET }}
+      NL_BACKEND_ENV: ${{ vars.NL0480_BACKEND_ENV }}
+      NL_PROJECT: ${{ vars.NL0480_PROJECT }}
+      NL_PROFILE: ${{ vars.NL0480_PROFILE }}
+      NL_CHANNEL: ${{ vars.NL0480_CHANNEL }}
+      NL_OWNER_CREDENTIALS_FILE: ${{ vars.NL0480_OWNER_CREDENTIALS_FILE }}
+      NL_LAUNCHER_SQLITE: ${{ vars.NL0480_LAUNCHER_SQLITE }}
+      NL_API_UNIT: ${{ vars.NL0480_API_UNIT }}
+      LAUNCHER_POSTGRES_DSN: ${{ secrets.NL0480_POSTGRES_DSN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - name: Require exact release identity and original installed baseline
+        env:
+          EXPECTED_COMMIT: ${{ inputs.source_commit }}
+          OLD_VERSION: ${{ inputs.original_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          test "$(cat VERSION)" = 0.48.0
+          [[ "$OLD_VERSION" =~ ^0\.(45\.14|46\.[0-3]|47\.[0-8])$ ]]
+          for key in NL_BASE_URL NL_CORE_DB NL_HTTP_DB NL_COORD_DB NL_STORAGE_SOURCE NL_STORAGE_TARGET NL_BACKEND_ENV NL_PROJECT NL_PROFILE NL_CHANNEL NL_OWNER_CREDENTIALS_FILE NL_LAUNCHER_SQLITE NL_API_UNIT LAUNCHER_POSTGRES_DSN; do
+            [[ -n "${!key:-}" ]] || { echo "missing protected environment: $key" >&2; exit 2; }
+          done
+          test -r "$NL_OWNER_CREDENTIALS_FILE"
+          test -r "$NL_CORE_DB"
+          test -r "$NL_HTTP_DB"
+          test -r "$NL_COORD_DB"
+          test -f "$NL_BACKEND_ENV"
+      - name: Capture actual original owner, project, SQLite and blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_DIR="$RUNNER_TEMP/independent-0480-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "RUN_DIR=$RUN_DIR" >> "$GITHUB_ENV"
+          mkdir -m 0700 "$RUNNER_TEMP/independent-0480-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 scripts/integration/live_upgrade_0480.py capture \
+            --old-version "${{ inputs.original_version }}" --base-url "$NL_BASE_URL" --owner-credentials "$NL_OWNER_CREDENTIALS_FILE" \
+            --project "$NL_PROJECT" --profile "$NL_PROFILE" --channel "$NL_CHANNEL" \
+            --core-db "$NL_CORE_DB" --http-db "$NL_HTTP_DB" --coordinator-db "$NL_COORD_DB" \
+            --storage "$NL_STORAGE_SOURCE" --output "$RUN_DIR/baseline.json"
+      - name: Execute real offline writer freeze, backup, migration and Backend cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER_EMAIL="$(python3 -c 'import json,os;print(json.load(open(os.environ["NL_OWNER_CREDENTIALS_FILE"]))["email"])')"
+          python3 scripts/operations/sqlite_pg_cutover_0475.py run \
+            --work-dir "$RUN_DIR/operator" --launcher-sqlite "$NL_LAUNCHER_SQLITE" \
+            --source-env "$NL_BACKEND_ENV" --core-db "$NL_CORE_DB" --http-db "$NL_HTTP_DB" \
+            --coordinator-db "$NL_COORD_DB" --storage-source "$NL_STORAGE_SOURCE" \
+            --storage-target "$NL_STORAGE_TARGET" --writer-unit "$NL_API_UNIT" \
+            --project "$NL_PROJECT" --owner-email "$OWNER_EMAIL" --owner-credentials "$NL_OWNER_CREDENTIALS_FILE"
+      - name: Independently verify deployed PostgreSQL and unchanged old user data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/integration/live_upgrade_0480.py verify \
+            --base-url "$NL_BASE_URL" --owner-credentials "$NL_OWNER_CREDENTIALS_FILE" \
+            --project "$NL_PROJECT" --profile "$NL_PROFILE" --channel "$NL_CHANNEL" \
+            --core-db "$NL_CORE_DB" --http-db "$NL_HTTP_DB" --coordinator-db "$NL_COORD_DB" \
+            --storage "$NL_STORAGE_SOURCE" --target-storage "$NL_STORAGE_TARGET" --baseline "$RUN_DIR/baseline.json" \
+            --operator-work "$RUN_DIR/operator" --backend-env "$NL_BACKEND_ENV" \
+            --output "$RUN_DIR/live.json"
+      - name: Export only verified acceptance result, never DBs, keys, DSNs or credentials
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-live-0480-${{ github.sha }}
+          path: ${{ runner.temp }}/independent-0480-${{ github.run_id }}-${{ github.run_attempt }}/live.json
+          if-no-files-found: error
+          retention-days: 7

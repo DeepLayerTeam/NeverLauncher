@@ -1,3 +1,11 @@
+## 0.48.0 — Storage Migration / Legacy Upgrade independent admission (GA blocked pending real cutover)
+
+- Advance canonical component and installer version to 0.48.0, accept previously installed 0.47.8 native CLI and preserve independent `.previous-0480` rollback binaries. Extend the real historical upgrade matrix through 0.47.8.
+- Add executable isolated installed-project pre/post migration acceptance: real old owner login, project/profile/channel/release read-back, transactional SQLite online snapshots with logical-data checksums, LocalStorage source/target SHA-256 inventory, operator journal verification and an independent SQL query of the live PostgreSQL referenced by the deployed Backend environment.
+- Add protected staging workflow and strict independent Ed25519-signed GA evidence verification for the historical upgrade matrix, live Admin UI owner cycle, both real matching Minecraft versions, full game/ServerBridge and six actual final packages. Bind every evidence file by SHA-256, commit, version and fresh protected workflow metadata.
+- Gate the existing real GitHub release publisher on the independently approved signed bytes and source/target receipt; no unapproved 0.48.0 production release can be promoted by marking `/ready` successful or forging a local JSON fixture. Existing release-signature, native-delivery, reproducibility and trust checks remain in force.
+- **Not GA-certified:** this source patch has not executed external staging, actual PostgreSQL cutover, native OS code signing or Minecraft join tests. The 0.47.5 cutover continues to fail closed until HTTP Repository / Coordinator / Extensions state parity is genuinely implemented and independently demonstrated. See `docs/deployment/storage-migration-ga-0480.md`.
+
 ## 0.47.8 — Actual integration matrix and fail-closed evidence validation (production certification pending)
 
 - Add a runnable PostgreSQL 17/18 + SQLite WAL/legacy/recovery CI matrix, production Backend HTTP authorization/publication checks, Admin build/UI tests and native Desktop update regressions; use actual integration code and source tests instead of pass-only placeholder scripts.
