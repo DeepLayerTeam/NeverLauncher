@@ -56,6 +56,8 @@ type fakeHost02011 struct {
 	content, checkpoint  string
 	migrationErr         error
 	migrations, restores int
+	active               model.ExtensionInstall
+	recoverOnOld         bool
 }
 
 func (h *fakeHost02011) SnapshotRuntimeState04810(context.Context, extensionhost.Key, string) error {
@@ -76,12 +78,16 @@ func (h *fakeHost02011) MigrateExtensionState04810(context.Context, model.Extens
 	return h.migrationErr
 }
 func (h *fakeHost02011) Stop(context.Context, extensionhost.Key) error { h.stops++; return nil }
-func (h *fakeHost02011) StartInstallation(context.Context, model.ExtensionInstall) error {
+func (h *fakeHost02011) StartInstallation(_ context.Context, ins model.ExtensionInstall) error {
 	h.starts++
+	h.active = ins
+	if h.recoverOnOld && ins.CurrentVersion == "1.0.0" {
+		h.healthy = true
+	}
 	return nil
 }
 func (h *fakeHost02011) Get(k extensionhost.Key) (extensionhost.Status, error) {
-	return extensionhost.Status{ExtensionID: k.ExtensionID, Scope: k.Scope, ScopeID: k.ScopeID, State: "running", Healthy: h.healthy}, nil
+	return extensionhost.Status{ExtensionID: k.ExtensionID, Scope: k.Scope, ScopeID: k.ScopeID, Version: h.active.CurrentVersion, Generation: h.active.Generation, State: "running", Healthy: h.healthy}, nil
 }
 
 func updateFixture02011(t *testing.T) (*repository.MemoryRepository, model.ExtensionRegistryVersion, model.ExtensionInstall) {
@@ -115,7 +121,7 @@ func updateFixture02011(t *testing.T) (*repository.MemoryRepository, model.Exten
 func TestAutomaticRollbackOnHealthFailure02011(t *testing.T) {
 	r, target, installed := updateFixture02011(t)
 	life := &fakeLifecycle02011{repo: r}
-	host := &fakeHost02011{healthy: false}
+	host := &fakeHost02011{healthy: false, recoverOnOld: true}
 	m := &Manager{Repo: r, Lifecycle: life, Host: host, Config: Config{HealthTimeout: 40 * time.Millisecond, LeaseTTL: time.Minute}}
 	plan := model.ExtensionUpdatePlan{Scope: "global", LauncherVersion: "0.20.11", APIVersion: "3.7", OS: "linux", Architecture: "amd64", DefaultChannel: "stable", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update", Channel: "stable"}}}
 	tx, err := m.Apply(context.Background(), plan)

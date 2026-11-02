@@ -167,7 +167,12 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 		pinMap[p.ExtensionID] = p.Version
 	}
 	requiresHost := false
+	seenIDs0499 := make(map[string]struct{}, len(plan.Items))
 	for _, item := range plan.Items {
+		if _, duplicate := seenIDs0499[item.ExtensionID]; duplicate {
+			return m.fail(tx, fmt.Errorf("%w: duplicate extension %s in update plan", repository.ErrConflict, item.ExtensionID))
+		}
+		seenIDs0499[item.ExtensionID] = struct{}{}
 		cur, e := m.Repo.GetExtensionInstallState(ctx, item.ExtensionID, plan.Scope, plan.ScopeID)
 		if errors.Is(e, repository.ErrNotFound) {
 			cur = model.ExtensionInstall{ExtensionID: item.ExtensionID, Scope: plan.Scope, ScopeID: plan.ScopeID, CurrentState: model.ExtensionInstallStateAbsent, DesiredState: model.ExtensionInstallStateAbsent}
@@ -180,6 +185,12 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 		}
 		if item.Operation == "install" && cur.CurrentState != model.ExtensionInstallStateAbsent {
 			return m.fail(tx, fmt.Errorf("%w: stale update plan for %s: extension is already installed", repository.ErrConflict, item.ExtensionID))
+		}
+		if item.Operation == "unchanged" && (cur.CurrentState == model.ExtensionInstallStateAbsent || cur.CurrentVersion != item.ToVersion || cur.CurrentVersion != item.FromVersion) {
+			return m.fail(tx, fmt.Errorf("%w: stale dependency %s: installed %s differs from planned %s", repository.ErrConflict, item.ExtensionID, cur.CurrentVersion, item.ToVersion))
+		}
+		if item.Operation != "unchanged" && item.Operation != "install" && item.Operation != "update" {
+			return m.fail(tx, fmt.Errorf("unsupported update operation %q for %s", item.Operation, item.ExtensionID))
 		}
 		if pinned := pinMap[item.ExtensionID]; pinned != "" && pinned != item.ToVersion {
 			return m.fail(tx, fmt.Errorf("%w: %s is pinned to %s, plan targets %s", repository.ErrConflict, item.ExtensionID, pinned, item.ToVersion))
@@ -231,12 +242,14 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 	}
 	// Остановите все выбранные активные хосты до изменения файлов, чтобы зависимые расширения не работали с наполовину обновлённым графом.
 	if m.Host != nil {
-		for _, item := range plan.Items {
+		// The resolver orders dependencies first. Stop dependents first so
+		// no live Java module can call into a dependency being replaced.
+		for i := len(plan.Items) - 1; i >= 0; i-- {
+			item := plan.Items[i]
 			cur := snapshots[item.ExtensionID]
 			if cur.CurrentState == model.ExtensionInstallStateEnabled && cur.Enabled {
 				if e := m.Host.Stop(ctx, hostKey02011(cur)); e != nil && !errors.Is(e, repository.ErrNotFound) && !errors.Is(e, extensionhost.ErrHostNotRunning) {
-					m.restartSnapshots02011(snapshots, plan.Items)
-					return m.fail(tx, fmt.Errorf("stop %s: %w", item.ExtensionID, e))
+					return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("stop %s: %w", item.ExtensionID, e))
 				}
 			}
 		}
@@ -250,18 +263,15 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 		}
 		state, stateErr := m.state04810()
 		if stateErr != nil {
-			m.restartSnapshots02011(snapshots, plan.Items)
-			return m.fail(tx, stateErr)
+			return m.abortBeforeMutation0499(tx, snapshots, stateErr)
 		}
 		key := extensionhost.Key{ExtensionID: item.ExtensionID, Scope: plan.Scope, ScopeID: plan.ScopeID}
 		if stateErr = state.SnapshotRuntimeState04810(ctx, key, tx.ID); stateErr != nil {
-			m.restartSnapshots02011(snapshots, plan.Items)
-			return m.fail(tx, fmt.Errorf("checkpoint %s: %w", item.ExtensionID, stateErr))
+			return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("checkpoint %s: %w", item.ExtensionID, stateErr))
 		}
 		tx.Plan.StateSnapshots = append(tx.Plan.StateSnapshots, item.ExtensionID)
 		if _, stateErr = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); stateErr != nil {
-			m.restartSnapshots02011(snapshots, plan.Items)
-			return m.fail(tx, fmt.Errorf("checkpoint journal %s: %w", item.ExtensionID, stateErr))
+			return m.abortBeforeMutation0499(tx, snapshots, fmt.Errorf("checkpoint journal %s: %w", item.ExtensionID, stateErr))
 		}
 	}
 	applied := []appliedItem{}
@@ -342,6 +352,9 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			if e != nil {
 				return m.rollback(tx, applied, snapshots, e)
 			}
+			if cur.CurrentVersion != item.ToVersion || cur.CurrentPackageIdentity != item.PackageIdentity {
+				return m.rollback(tx, applied, snapshots, fmt.Errorf("%w: extension %s changed during update: expected %s/%s, found %s/%s", repository.ErrConflict, item.ExtensionID, item.ToVersion, item.PackageIdentity, cur.CurrentVersion, cur.CurrentPackageIdentity))
+			}
 			if cur.CurrentState != model.ExtensionInstallStateEnabled || !cur.Enabled {
 				continue
 			}
@@ -383,7 +396,10 @@ func (m *Manager) waitHealthy(ctx context.Context, install model.ExtensionInstal
 	defer tick.Stop()
 	for {
 		st, e := m.Host.Get(hostKey02011(install))
-		if e == nil && st.Healthy {
+		// A healthy previous JVM must not satisfy the health gate of the
+		// upgraded package. The supervisor may still have a stale process
+		// status while a replacement is starting or a revoke is in flight.
+		if e == nil && healthyInstallation0499(st, install) {
 			return nil
 		}
 		select {
@@ -396,16 +412,51 @@ func (m *Manager) waitHealthy(ctx context.Context, install model.ExtensionInstal
 	}
 }
 
-func (m *Manager) restartSnapshots02011(snapshots map[string]model.ExtensionInstall, items []model.ExtensionUpdatePlanItem) {
+// Only an authenticated, running JVM for the exact persisted generation may
+// satisfy an update gate. The instance ID is intentionally not pinned here:
+// a supervisor restart within the same generation is permitted.
+func healthyInstallation0499(st extensionhost.Status, install model.ExtensionInstall) bool {
+	return st.Healthy && st.State == "running" && st.ExtensionID == install.ExtensionID &&
+		st.Scope == install.Scope && st.ScopeID == install.ScopeID &&
+		st.Version == install.CurrentVersion && st.Generation == install.Generation
+}
+
+func (m *Manager) restartSnapshots02011(snapshots map[string]model.ExtensionInstall, items []model.ExtensionUpdatePlanItem) []string {
 	if m.Host == nil {
-		return
+		return nil
 	}
+	var failures []string
 	for _, item := range items {
 		old := snapshots[item.ExtensionID]
 		if old.CurrentState == model.ExtensionInstallStateEnabled && old.Enabled {
-			_ = m.Host.StartInstallation(context.Background(), old)
+			if err := m.Host.StartInstallation(context.Background(), old); errors.Is(err, extensionhost.ErrNoBackendTarget) {
+				continue
+			} else if err != nil {
+				failures = append(failures, old.ExtensionID+": "+err.Error())
+			} else if err := m.waitHealthy(context.Background(), old, m.normalized().HealthTimeout); err != nil {
+				failures = append(failures, old.ExtensionID+": "+err.Error())
+			}
 		}
 	}
+	return failures
+}
+
+// Before the first package mutation, a failed stop/checkpoint still needs a
+// durable recovery path: earlier hosts might have been stopped. Never report
+// the transaction as simply failed if restarting one of them was unsuccessful.
+func (m *Manager) abortBeforeMutation0499(tx model.ExtensionUpdateTransaction, snapshots map[string]model.ExtensionInstall, cause error) (model.ExtensionUpdateTransaction, error) {
+	failures := m.restartSnapshots02011(snapshots, tx.Plan.Items)
+	if len(failures) > 0 {
+		tx.Status = "rollback_failed"
+		tx.Failure = cause.Error() + "; restart failed: " + strings.Join(failures, "; ")
+		tx.FinishedAt = nil
+		if _, err := m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); err != nil {
+			return tx, errors.Join(cause, fmt.Errorf("recovery journal: %w", err))
+		}
+		return tx, errors.New(tx.Failure)
+	}
+	m.discardState04810(tx)
+	return m.fail(tx, cause)
 }
 
 func contains02011(items []string, value string) bool {
@@ -452,7 +503,8 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 	// restoring checkpoints. If any process survives, leave the transaction
 	// unresolved and do not expose the old version to mixed state.
 	if m.Host != nil {
-		for _, item := range tx.Plan.Items {
+		for i := len(tx.Plan.Items) - 1; i >= 0; i-- {
+			item := tx.Plan.Items[i]
 			err := m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: item.ExtensionID, Scope: tx.Scope, ScopeID: tx.ScopeID})
 			if err != nil && !errors.Is(err, extensionhost.ErrHostNotRunning) && !errors.Is(err, repository.ErrNotFound) {
 				return fmt.Errorf("cannot stop %s before recovery: %w", item.ExtensionID, err)
@@ -516,7 +568,12 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 			continue
 		}
 		if m.Host != nil {
-			_ = m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: id, Scope: tx.Scope, ScopeID: tx.ScopeID})
+			stopErr := m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: id, Scope: tx.Scope, ScopeID: tx.ScopeID})
+			if stopErr != nil && !errors.Is(stopErr, extensionhost.ErrHostNotRunning) && !errors.Is(stopErr, repository.ErrNotFound) {
+				// A JVM that cannot be stopped can still mutate documents. Keep
+				// the transaction recoverable; do not restore its checkpoint.
+				return fmt.Errorf("cannot stop %s before rollback: %w", id, stopErr)
+			}
 		}
 		cur, getErr := m.Repo.GetExtensionInstallState(context.Background(), id, tx.Scope, tx.ScopeID)
 		alreadyRestored := false
@@ -562,11 +619,14 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 	if len(rbErrs) == 0 && m.Host != nil {
 		for _, item := range tx.Plan.Items {
 			cur, err := m.Repo.GetExtensionInstallState(context.Background(), item.ExtensionID, tx.Scope, tx.ScopeID)
-			if errors.Is(err, repository.ErrNotFound) || cur.CurrentState != model.ExtensionInstallStateEnabled || !cur.Enabled {
+			if errors.Is(err, repository.ErrNotFound) {
 				continue
 			}
 			if err != nil {
 				rbErrs = append(rbErrs, item.ExtensionID+": "+err.Error())
+				continue
+			}
+			if cur.CurrentState != model.ExtensionInstallStateEnabled || !cur.Enabled {
 				continue
 			}
 			if err := m.Host.StartInstallation(context.Background(), cur); errors.Is(err, extensionhost.ErrNoBackendTarget) {
@@ -615,7 +675,8 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 	// its files while the new process can still write to them.
 	if m.Host != nil {
 		var stopFailures []string
-		for _, item := range tx.Plan.Items {
+		for i := len(tx.Plan.Items) - 1; i >= 0; i-- {
+			item := tx.Plan.Items[i]
 			err := m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: item.ExtensionID, Scope: tx.Scope, ScopeID: tx.ScopeID})
 			if err != nil && !errors.Is(err, extensionhost.ErrHostNotRunning) && !errors.Is(err, repository.ErrNotFound) {
 				stopFailures = append(stopFailures, item.ExtensionID+": "+err.Error())
@@ -652,8 +713,12 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 		for _, item := range tx.Plan.Items {
 			old := snapshots[item.ExtensionID]
 			if old.CurrentState == model.ExtensionInstallStateEnabled && old.Enabled {
-				if e := m.Host.StartInstallation(context.Background(), old); e != nil && !errors.Is(e, extensionhost.ErrNoBackendTarget) {
+				if e := m.Host.StartInstallation(context.Background(), old); errors.Is(e, extensionhost.ErrNoBackendTarget) {
+					continue
+				} else if e != nil {
 					rbErrs = append(rbErrs, "restart "+item.ExtensionID+": "+e.Error())
+				} else if e := m.waitHealthy(context.Background(), old, m.normalized().HealthTimeout); e != nil {
+					rbErrs = append(rbErrs, "restored JVM unhealthy "+item.ExtensionID+": "+e.Error())
 				}
 			}
 		}
