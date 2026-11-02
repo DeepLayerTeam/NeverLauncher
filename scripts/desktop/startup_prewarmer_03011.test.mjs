@@ -20,3 +20,14 @@ test('failed optional preload cannot prevent later preload', async()=>{
  warmAfterIdle03011(work=>{fire=work;return ()=>{}},async name=>{seen.push(name);if(name==='first')throw Error('offline')},['first','second']);
  fire();await flush();assert.deepEqual(seen,['first','second']);
 });
+
+test('prewarm stops optional work after launch begins', async()=>{
+ let fire, resume, running=false;
+ const seen=[];
+ const first=new Promise(resolve=>{resume=resolve});
+ const stop=warmAfterIdle03011(work=>{fire=work;return ()=>{}},async name=>{seen.push(name);if(name==='official') await first},['official','components'],()=>!running);
+ fire(); await flush();
+ running=true; resume(); await flush();
+ assert.deepEqual(seen,['official']);
+ stop();
+});

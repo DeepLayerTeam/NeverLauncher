@@ -212,6 +212,17 @@ func (s *storage) artifact(ctx context.Context, art Artifact, offlineName string
 func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath string) error {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Minute)
 	defer cancel()
+	// Refuse attacker-controlled cache links even if the expected digest is
+	// known. Never truncate or append through a link in a writable cache.
+	for _, name := range []string{part, metaPath} {
+		if st, err := os.Lstat(name); err == nil {
+			if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
+				return errors.New("unsafe partial download entry")
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
 	var start int64
 	var validator string
 	if st, e := os.Lstat(part); e == nil && st.Mode().IsRegular() && st.Size() > 0 && st.Size() < art.Size {

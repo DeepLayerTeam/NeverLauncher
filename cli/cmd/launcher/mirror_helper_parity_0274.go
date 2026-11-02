@@ -207,10 +207,11 @@ func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorA
 		if a.Side != "" && a.Side != "client" && a.Side != "both" {
 			return nil, fmt.Errorf("unsupported side %q (server-only mod cannot be installed in client)", a.Side)
 		}
-		if seen[a.Path] {
-			return nil, fmt.Errorf("duplicate artifact path %s", a.Path)
+		portablePath := strings.ToLower(a.Path)
+		if seen[portablePath] {
+			return nil, fmt.Errorf("case-insensitive artifact path collision: %s", a.Path)
 		}
-		seen[a.Path] = true
+		seen[portablePath] = true
 		dst, err := secureClientDestination(stage, a.Path)
 		if err != nil {
 			return nil, err

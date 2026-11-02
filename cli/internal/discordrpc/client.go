@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -48,8 +49,12 @@ func (a Activity) Validate() error {
 		return errors.New("Discord supports at most two activity buttons")
 	}
 	for _, b := range a.Buttons {
-		if len([]rune(b.Label)) < 1 || len([]rune(b.Label)) > 32 || !strings.HasPrefix(b.URL, "https://") {
-			return errors.New("activity buttons require label <=32 and HTTP(S) URL")
+		if len([]rune(b.Label)) < 1 || len([]rune(b.Label)) > 32 {
+			return errors.New("Discord button label must have 1..32 characters")
+		}
+		u, err := url.Parse(b.URL)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || u.Fragment != "" || strings.ContainsAny(b.URL, "\r\n\t") {
+			return errors.New("Discord button must have a valid HTTPS URL without credentials")
 		}
 	}
 	return nil
@@ -146,7 +151,16 @@ type Client struct {
 	nonce uint64
 }
 
-func (c *Client) Close() error { c.mu.Lock(); defer c.mu.Unlock(); return c.conn.Close() }
+func (c *Client) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.conn == nil {
+		return nil
+	}
+	err := c.conn.Close()
+	c.conn = nil
+	return err
+}
 func Connect(ctx context.Context, appID string) (*Client, error) {
 	if !snowflake.MatchString(appID) {
 		return nil, errors.New("Discord application ID must be a decimal snowflake")
@@ -206,6 +220,12 @@ func (c *Client) SetActivity(ctx context.Context, activity *Activity) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if c.conn == nil {
+		return net.ErrClosed
+	}
 	if err := deadline(c.conn, ctx); err != nil {
 		return err
 	}

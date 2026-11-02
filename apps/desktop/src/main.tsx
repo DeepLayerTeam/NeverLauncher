@@ -1050,6 +1050,13 @@ function App() {
     useState<Recovery0354 | null>(null);
   const cancelledTransfer0354 = useRef(false);
   const [transferBusy, setTransferBusy] = useState(false);
+  // Idle import work is not permitted during first-run, login, game launch,
+  // or a live native transfer. It is cancelled as soon as these begin.
+  useEffect(() => {
+    if (!nativeConfigLoaded0357 || !settings.onboardingCompleted || transferBusy ||
+        !["idle", "ready", "running"].includes(stage) || document.visibilityState === "hidden") return;
+    return prewarmDesktop03011();
+  }, [nativeConfigLoaded0357, settings.onboardingCompleted, transferBusy, stage]);
   const [pendingJob, setPendingJob] = useState<PendingDownload | null>(null);
   const recoveryAttempted = useRef(new Set<string>());
   // Recover a durable signed operation after Desktop restart. Explicitly paused
@@ -4862,6 +4869,18 @@ function App() {
               <span role={stage === "failed" ? "alert" : "status"}>
                 {startupStatus0427(stage, ui0357.locale).message}
               </span>
+              {transferBusy && (stage === "files" || stage === "repair") && downloadProgress &&
+                progress0354(downloadProgress) && (
+                  <div className="startupTransfer0497" aria-live="off">
+                    <span>{progress0354(downloadProgress)!.label}</span>
+                    <progress
+                      max={100}
+                      value={progress0354(downloadProgress)!.percent}
+                      aria-label={ui0357.locale === "ru" ? "Проверенные байты" : "Verified bytes"}
+                    />
+                    <span>{progress0354(downloadProgress)!.verified} / {progress0354(downloadProgress)!.expected}</span>
+                  </div>
+                )}
               {startupStatus0427(stage, ui0357.locale).failed && (
                 <button
                   type="button"
@@ -7165,7 +7184,6 @@ function DiagnosticsPanel({
 }
 
 // The idle prewarm is not part of the critical authentication/render path.
-prewarmDesktop03011();
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <App />,
 );

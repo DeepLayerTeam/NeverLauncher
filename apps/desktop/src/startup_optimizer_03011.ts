@@ -66,5 +66,5 @@ export function prewarmDesktop03011(
   return warmAfterIdle03011(schedule, warm, [
     "official",
     "components",
-  ] as const);
+  ] as const, () => typeof document === "undefined" || document.visibilityState !== "hidden");
 }

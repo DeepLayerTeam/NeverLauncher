@@ -68,6 +68,23 @@ func mirrorZip0274(t *testing.T, names []string, contents []string) []byte {
 	}
 	return buffer.Bytes()
 }
+func TestMirrorPortablePathCollision0497(t *testing.T) {
+	stage := t.TempDir()
+	bytes := []byte("verified-mod")
+	source := filepath.Join(t.TempDir(), "source.jar")
+	if err := os.WriteFile(source, bytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	entries := []mirrorArtifact0274{
+		{Path: "mods/Mod.jar", File: source, SHA256: mirrorSHA0274(bytes)},
+		{Path: "mods/mod.jar", File: source, SHA256: mirrorSHA0274(bytes)},
+	}
+	_, err := mirrorAddArtifacts0274(context.Background(), stage, entries, "install-mods")
+	if err == nil || !strings.Contains(err.Error(), "collision") {
+		t.Fatalf("expected case-insensitive collision: %v", err)
+	}
+}
+
 func TestMirrorHelper0274ModsTransactionAndRecovery(t *testing.T) {
 	root := mirrorMinimalClient0274(t)
 	jar := []byte("valid mod payload")

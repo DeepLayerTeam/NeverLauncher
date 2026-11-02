@@ -1297,3 +1297,7 @@ button {
   background: var(--brand-background, transparent);
 }
 .startupStatus0427 button { min-width: 8rem; }
+
+/* Verified native transfer metrics on the signed startup/repair screen. */
+.startupTransfer0497 { display: flex; flex: 1 1 220px; gap: .55rem; align-items: center; flex-wrap: wrap; font-size: .85rem; }
+.startupTransfer0497 progress { flex: 1 1 120px; min-width: 90px; accent-color: var(--brand-accent, #22c55e); }

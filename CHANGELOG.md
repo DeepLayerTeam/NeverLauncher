@@ -1,3 +1,12 @@
+## 0.49.7 — Client and Runtime Gravit modules (source integrations; GA BLOCKED)
+
+- **DiscordGame:** Desktop native Discord IPC automatically reconnects and restores activity after a transport loss; explicit RPC rejections are not retried. CLI rejects credentialed/malformed HTTPS activity URLs and safely closes sessions.
+- **FxRuntimeOptimizer:** lazy view prewarming starts only after Desktop provisioning and outside active launch/transfer operations; it can be cancelled between async imports and skips hidden windows. Native startup-critical authentication stays on the foreground path.
+- **LauncherStartScreen:** live native transfer verification bytes and percent are visible in the branded startup/repair status. Existing signed branding, real lifecycle stages and retry action remain in use; there is no fictitious progress.
+- **MirrorHelper:** case-insensitive path collisions in a mod/library batch now fail before publication, avoiding cross-platform loss or overwrite; all writes continue to use checksum-verified sibling staging and atomic promotion.
+- **Prestarter:** if a fresh signed installation fails Managed Java/Runtime preparation, its newly activated slot is removed rather than being left as a launchable failed release. A corrected signed bootstrap can recover from the verified cache. Unsafe symlink partial-download entries are refused.
+- Verified locally: Go Discord tests; Prestarter packages; MirrorHelper collision and workspace regression tests; Node startup/screen tests. Real Discord client, all platform native installers, external launcher performance and end-to-end Minecraft are NOT certified; 0.49.7 GA remains BLOCKED.
+
 ## 0.49.6 — Gravit auth and protection integration (working source, GA BLOCKED)
 
 - Harden actual imported Argon2id login against excessive memory/time/parallelism costs; use the same safe PHC bounds at import and verification. AdditionalHash legacy digest/PHPass paths remain supported under their explicit policies.

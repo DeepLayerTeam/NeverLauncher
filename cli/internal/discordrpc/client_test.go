@@ -28,6 +28,23 @@ func TestActivityValidation(t *testing.T) {
 		t.Fatal("overlong state")
 	}
 }
+func TestDiscordActivityRejectsCredentialedAndMalformedLinks(t *testing.T) {
+	for _, uri := range []string{"https://user:secret@example.org/", "https://", "https://example.org\nX: 1", "http://example.org", "javascript:alert(1)", "https://example.org/#fragment"} {
+		activity := Activity{Buttons: []Button{{Label: "Join", URL: uri}}}
+		if err := activity.Validate(); err == nil {
+			t.Errorf("accepted unsafe Discord button %q", uri)
+		}
+	}
+	ok := Activity{Buttons: []Button{{Label: "Join", URL: "https://play.example.org/connect?id=42"}}}
+	if err := ok.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	empty := &Client{}
+	if err := empty.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLocalDiscordSession(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows named-pipe mock requires Windows IPC harness")

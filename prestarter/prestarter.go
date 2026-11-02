@@ -175,10 +175,17 @@ func Run(ctx context.Context, opts Options) error {
 		// The new binaries were hash-valid, but startup/Managed Java failed.
 		// Restore the previous *verified* active release with a higher
 		// generation so a crash during this rollback remains recoverable.
-		if previous != nil {
-			if active, currentErr := p.current(); currentErr == nil && active.Release == installed.Release {
+		if active, currentErr := p.current(); currentErr == nil && active.Release == installed.Release {
+			if previous != nil {
 				if restoreErr := p.activate(active, *previous); restoreErr != nil {
 					return fmt.Errorf("bootstrap failed: %v; last-known-good activation failed: %w", e, restoreErr)
+				}
+			} else {
+				// An initial install has no last-known-good slot. Do not leave a
+				// release that failed verification/Java/sync as active. Its
+				// hash-verified bytes remain cached for a subsequent repair.
+				if rollbackErr := p.deactivateFailedFirstRun(active); rollbackErr != nil {
+					return fmt.Errorf("bootstrap failed: %v; initial activation rollback failed: %w", e, rollbackErr)
 				}
 			}
 		}
@@ -397,6 +404,35 @@ func (p *installer) activate(previous *activeRecord, desired activeRecord) error
 	_ = os.Remove(filepath.Join(p.launcherRoot, "switch.journal"))
 	return syncDir(p.launcherRoot)
 }
+
+// deactivateFailedFirstRun clears only the exact generation-1 activation
+// created by this run. A later activation, or an existing recovery slot, is
+// never deleted. The bootstrap process lock serializes state changes.
+func (p *installer) deactivateFailedFirstRun(active *activeRecord) error {
+	if active == nil || active.Generation != 1 {
+		return errors.New("initial activation generation mismatch")
+	}
+	slot := filepath.Join(p.launcherRoot, "active-1.json")
+	data, err := os.ReadFile(slot)
+	if err != nil {
+		return err
+	}
+	var stored activeRecord
+	if err = decodeStrict(data, &stored); err != nil {
+		return err
+	}
+	if stored != *active {
+		return errors.New("initial activation changed during rollback")
+	}
+	if err = os.Remove(slot); err != nil {
+		return err
+	}
+	if err = os.Remove(filepath.Join(p.launcherRoot, "switch.journal")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return syncDir(p.launcherRoot)
+}
+
 func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, opts Options) error {
 	release := filepath.Join(p.launcherRoot, "releases", record.Release)
 	runtimeBin := filepath.Join(release, ComponentName("runtime"))

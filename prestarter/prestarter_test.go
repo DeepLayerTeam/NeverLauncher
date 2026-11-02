@@ -51,9 +51,9 @@ func generateConfig(t *testing.T, cfg Config) ([]byte, string) {
 }
 func baseParts() map[string][]byte {
 	return map[string][]byte{
-		"runtime":              []byte("#!/bin/sh\ncase \"$1\" in\nverify) echo '{\"status\":\"ready\"}' ;;\njava) echo '{\"javaExecutable\":\"/verified/runtime/bin/java\",\"majorVersion\":21,\"distribution\":\"temurin\"}' ;;\nsync-local) echo '{\"status\":\"ready\"}' ;;\nlaunch) echo '{\"status\":\"ready\",\"success\":true}' ;;\n*) exit 7 ;;\nesac\n"),
+		"runtime":                   []byte("#!/bin/sh\ncase \"$1\" in\nverify) echo '{\"status\":\"ready\"}' ;;\njava) echo '{\"javaExecutable\":\"/verified/runtime/bin/java\",\"majorVersion\":21,\"distribution\":\"temurin\"}' ;;\nsync-local) echo '{\"status\":\"ready\"}' ;;\nlaunch) echo '{\"status\":\"ready\",\"success\":true}' ;;\n*) exit 7 ;;\nesac\n"),
 		"desktop":                   []byte("#!/bin/sh\nexit 0\n"),
-		"guard":                []byte("#!/bin/sh\nexit 0\n"),
+		"guard":                     []byte("#!/bin/sh\nexit 0\n"),
 		"profile-manifest.json":     []byte(`{"projectId":"hello","profileId":"vanilla","channel":"stable","runtime":{"java":{"majorVersion":21,"distribution":"temurin"},"launch":{"offlineMode":true}}}`),
 		"managed-jre/manifest.json": []byte(`{"schemaVersion":"1.0","targets":[]}`),
 	}
@@ -170,6 +170,69 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 		t.Fatal("user file lost")
 	}
 }
+func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX runtime fixture")
+	}
+	root := t.TempDir()
+	parts := baseParts()
+	// Signed runtime verifies the profile, but cannot install Managed Java.
+	parts["runtime"] = []byte("#!/bin/sh\ncase \"$1\" in verify) echo '{}';; java) exit 17;; *) exit 19;; esac\n")
+	opts, _ := makeOfflineFixture(t, root, parts)
+	if err := Run(context.Background(), opts); err == nil {
+		t.Fatal("failed bootstrap returned success")
+	}
+	for _, name := range []string{"active-0.json", "active-1.json"} {
+		if _, err := os.Stat(filepath.Join(opts.Root, "launcher", name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("failed initial release left active slot %s: %v", name, err)
+		}
+	}
+	// Repair signed source, and re-run. The cache and manifest can be reused.
+	parts["runtime"] = baseParts()["runtime"]
+	// The test changes only the signed bootstrap payload and offline object.
+	repaired, key := generateConfig(t, identityConfig(parts))
+	if err := os.WriteFile(opts.ConfigPath, repaired, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts.TrustedKey = key
+	runtimePath := filepath.Join(opts.OfflineDir, "components", ComponentName("runtime"))
+	if err := os.WriteFile(runtimePath, parts["runtime"], 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatal("recovered first bootstrap:", err)
+	}
+}
+
+func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink permissions differ on Windows")
+	}
+	s, err := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := fakeArtifact([]byte("content"), "https://example.invalid/asset")
+	path := s.objectPath(a)
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	sentinel := filepath.Join(t.TempDir(), "sentinel")
+	if err = os.WriteFile(sentinel, []byte("unchanged"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Symlink(sentinel, path+".part"); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.fetch(context.Background(), a, path+".part", path+".etag"); err == nil || !strings.Contains(err.Error(), "unsafe partial") {
+		t.Fatalf("cache symlink accepted: %v", err)
+	}
+	data, err := os.ReadFile(sentinel)
+	if err != nil || string(data) != "unchanged" {
+		t.Fatalf("sentinel modified: %q %v", data, err)
+	}
+}
+
 func TestFailedNewReleaseKeepsOldActive(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX helper test")

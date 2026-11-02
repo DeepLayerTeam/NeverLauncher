@@ -154,6 +154,10 @@ impl Connection {
     }
 }
 
+fn transport_failure(message: &str) -> bool {
+    message.starts_with("Discord IPC ") || message == "Discord IPC closed"
+}
+
 #[tauri::command]
 pub async fn discord_presence_set(
     manager: State<'_, DiscordPresence>, request: PresenceRequest,
@@ -162,16 +166,23 @@ pub async fn discord_presence_set(
     let mut guard = manager.session.lock().await;
     if guard.as_ref().is_none_or(|session| session.application_id != request.application_id) {
         *guard = None;
-        *guard = Some(Connection::ready(request.application_id).await?);
+        *guard = Some(Connection::ready(request.application_id.clone()).await?);
     }
     let mut activity = json!({"type": 0, "state": request.state, "details": request.details});
     if let Some(url) = request.action_url.filter(|value| !value.is_empty()) {
         activity["buttons"] = json!([{"label": "Открыть проект", "url": url}]);
     }
     if let Some(session) = guard.as_mut() {
-        if let Err(error) = session.set_activity(Some(activity)).await {
+        if let Err(error) = session.set_activity(Some(activity.clone())).await {
+            // The SET_ACTIVITY operation replaces the previous state. Retry
+            // only transport failures (including a restart mid-ack), never
+            // an explicit Discord RPC rejection or malformed payload.
+            let disconnected = transport_failure(&error);
             *guard = None;
-            return Err(error);
+            if !disconnected { return Err(error); }
+            let mut replacement = Connection::ready(request.application_id).await?;
+            replacement.set_activity(Some(activity)).await?;
+            *guard = Some(replacement);
         }
     }
     Ok(())
@@ -191,6 +202,12 @@ pub async fn discord_presence_clear(manager: State<'_, DiscordPresence>) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn transport_retry_never_retries_explicit_rpc_error() {
+        assert!(transport_failure("Discord IPC header timed out"));
+        assert!(transport_failure("Discord IPC closed"));
+        assert!(!transport_failure("Discord rejected activity: invalid client"));
+    }
     #[test]
     fn activity_needs_valid_snowflake_and_action() {
         let mut req = PresenceRequest{application_id:"123456789012345678".into(),details:"Launcher".into(),state:"In launcher".into(),action_url:None};
