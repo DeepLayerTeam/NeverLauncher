@@ -2189,9 +2189,46 @@ func (s *Supervisor) DeliverExtensionEvent(ctx context.Context, sub model.Extens
 		return err
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, (64<<10)+1))
+	if err != nil {
+		return fmt.Errorf("read event acknowledgement: %w", err)
+	}
+	if len(raw) > 64<<10 {
+		return errors.New("event acknowledgement too large")
+	}
+	if resp.StatusCode == 422 {
+		var fault struct {
+			Code string `json:"code"`
+		}
+		if json.Unmarshal(raw, &fault) == nil && fault.Code == "EVENT_REJECTED" {
+			return fmt.Errorf("%w: extension %s event %s", eventbus.ErrPermanentDelivery, sub.ExtensionID, event.Type)
+		}
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("extension event callback returned HTTP %d", resp.StatusCode)
+	}
+	var acknowledgement struct {
+		Accepted bool `json:"accepted"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&acknowledgement); err != nil {
+		return fmt.Errorf("invalid event acknowledgement: %w", err)
+	}
+	var tail any
+	if err := decoder.Decode(&tail); !errors.Is(err, io.EOF) {
+		return errors.New("event acknowledgement has trailing data")
+	}
+	if !acknowledgement.Accepted {
+		return errors.New("event callback did not accept delivery")
+	}
+	// Never ACK an event using authority that was revoked during user code.
+	st, err := s.processForSubscription0206(sub)
+	if err != nil {
+		return err
+	}
+	if err := s.validateEventPermission0206(st, event.Type, sub.Mode); err != nil {
+		return fmt.Errorf("event permission revoked after callback: %w", err)
 	}
 	return nil
 }
@@ -2224,6 +2261,13 @@ func (s *Supervisor) DeliverExtensionHook(ctx context.Context, sub model.Extensi
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
 		return model.ExtensionHookResult{}, errors.New("extension hook response contains trailing data")
+	}
+	st, err := s.processForSubscription0206(sub)
+	if err != nil {
+		return model.ExtensionHookResult{}, err
+	}
+	if err := s.validateEventPermission0206(st, event.Type, sub.Mode); err != nil {
+		return model.ExtensionHookResult{}, fmt.Errorf("hook permission revoked after callback: %w", err)
 	}
 	return result, nil
 }

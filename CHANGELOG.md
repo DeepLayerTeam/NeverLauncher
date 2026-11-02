@@ -1,3 +1,10 @@
+## 0.48.7 — Advanced Java Events & Hooks (source changes; GA pending)
+
+- Extend the running Java RuntimeEvents with typed metadata, event-triggered async jobs and explicit fail-closed `HookDecision` handlers, preserving existing listeners and Host Protocol 1.0. Persistent retries and DLQ still use the established Go EventBus, not a shadow in-memory task queue.
+- Return stable authenticated callback outcomes for temporary failure (`EVENT_RETRY`), permanent failure (`EVENT_REJECTED`) and hook veto (`HOOK_REJECTED`). Strictly parse successful Java event ACK before completing delivery, recheck permissions after handlers run and send nonretryable work immediately to the persisted dead-letter store. Keep existing Go retry/backoff, idempotency uniqueness, per-ordering-key delivery and subscription recovery semantics.
+- Add authenticated Java HTTP integration regressions and Go durable-bus retry, policy and dead-letter tests. The Java 17-compatible source compiles and was exercised on local JDK 21; full Go 1.27.3 / PostgreSQL CI and independent system acceptance remain pending.
+- **No exactly-once guarantee:** application-level external side effects require transactional deduplication. Inherited fail-closed release signing and PostgreSQL migration gates remain unchanged.
+
 ## 0.48.6 — Content & Distribution Java SPI (source release; independent GA pending)
 
 - Add executable per-extension Java `ContentProvider` with source, skin/cape textures, metadata enrichment, pre-sign package transforms and delivery resolution, using the existing versioned SPI registry and bounded lifecycle. Immutable project, path, asset size and SHA-256 validation precedes any data return.

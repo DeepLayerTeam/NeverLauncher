@@ -15,6 +15,7 @@ if [ "${1:-}" = test ]; then
   find src/test/java -name '*.java' | LC_ALL=C sort > build/tests.txt
   "$JAVAC" --release 17 -encoding UTF-8 -cp build/classes -d build/test-classes @build/tests.txt
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.CoreTests
+  "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.AdvancedEvents0487Tests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.RuntimeApiTests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.BackendServices0484Tests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.launcher.sdk.core.ContentSpi0486Tests

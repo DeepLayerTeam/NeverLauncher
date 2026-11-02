@@ -64,7 +64,18 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             catch(RejectedExecutionException ex){respond(exchange,503,Map.of("error","callback queue full"));return;}
             try{respond(exchange,200,future.get(millis,TimeUnit.MILLISECONDS));}
             catch(TimeoutException ex){future.cancel(true);respond(exchange,504,Map.of("error","callback deadline exceeded"));}
-            catch(ExecutionException ex){Throwable cause=ex.getCause();respond(exchange,422,Map.of("error",cause.getClass().getSimpleName()));}
+            catch(ExecutionException ex){
+                Throwable cause=ex.getCause();
+                if(kind.equals("events")){
+                    if(cause instanceof RuntimeEvents.PermanentFailure || cause instanceof IllegalArgumentException){
+                        respond(exchange,422,Map.of("code","EVENT_REJECTED","error","event rejected permanently"));
+                    }else{
+                        respond(exchange,503,Map.of("code","EVENT_RETRY","error","event handler failed; retry"));
+                    }
+                }else if(kind.equals("hooks")){
+                    respond(exchange,422,Map.of("code","HOOK_REJECTED","error","policy hook rejected or failed"));
+                }else respond(exchange,422,Map.of("error",cause.getClass().getSimpleName()));
+            }
             catch(InterruptedException ex){Thread.currentThread().interrupt();future.cancel(true);respond(exchange,503,Map.of("error","interrupted"));}
         }catch(Exception e){try{respond(exchange,400,Map.of("error","invalid callback"));}catch(IOException ignored){}}finally{exchange.close();}
     }

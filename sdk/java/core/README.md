@@ -160,3 +160,13 @@ registry and not a Java sandbox.
 ## 0.48.6 — Content & Distribution SPI
 
 `context.runtime().content()` provides actual provider-driven source/texture/delivery resolution, metadata enrichment, bounded pre-sign byte transformations, and SHA-256 checked content reads using the current Go Host broker. Register a `ContentProvider` via `ContentServices.CONTRACT`; the selected provider is managed by `ExtensionLifecycle`. A transformed file is not a published release and must pass the existing signing and integrity pipeline. Build the executable sample: `sh examples/extensions/java-content-spi/build.sh`. For the production opt-in `contentExtensionId` multipart package transform, permissions, strict limits and the remaining public-distribution boundaries see `docs/extensions/java-content-spi-0486.md`.
+
+### 0.48.7 event-triggered jobs and policy hooks
+
+Use `runtime().events().subscribeJob(...)` for durable event-backed async jobs,
+`subscribeHook(...)` with explicit `HookDecision.allow()/deny()` for synchronous
+pre-mutation vetoes, and `subscribeDetailed(...)` for event sequence, schema,
+aggregate, ordering and idempotency metadata. The Go EventBus owns lease, retry
+and dead-letter state. Permanent failures use `RuntimeEvents.PermanentFailure`;
+other callback failures request retry. **Do not assume exactly-once external
+effects**. See `docs/extensions/java-events-hooks-0487.md`.

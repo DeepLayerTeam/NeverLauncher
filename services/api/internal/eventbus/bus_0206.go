@@ -22,8 +22,9 @@ import (
 const ProtocolVersion = "1.0"
 
 var (
-	ErrHookRejected = errors.New("extension sync hook rejected operation")
-	ErrHookTimeout  = errors.New("extension sync hook timeout")
+	ErrHookRejected      = errors.New("extension sync hook rejected operation")
+	ErrHookTimeout       = errors.New("extension sync hook timeout")
+	ErrPermanentDelivery = errors.New("extension event permanently rejected")
 )
 
 type EventSpec struct {
@@ -217,6 +218,9 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 		return errors.New("sync hook dispatcher unavailable")
 	}
 	for _, sub := range subs {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if sub.Scope == "project" && sub.ScopeID != event.ProjectID {
 			continue
 		}
@@ -317,7 +321,7 @@ func (b *Bus) processBatch(ctx context.Context) {
 			}
 			continue
 		}
-		if env.Delivery.AttemptCount >= b.cfg.MaxAttempts {
+		if env.Delivery.AttemptCount >= b.cfg.MaxAttempts || errors.Is(err, ErrPermanentDelivery) {
 			if dlqErr := b.store.DeadLetterExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, err.Error(), now); dlqErr != nil {
 				log.Printf("Extensions DLQ failed delivery=%d: %v", env.Delivery.ID, dlqErr)
 			}
