@@ -368,6 +368,9 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 		return nil, "", nil, err
 	} else if guard != nil {
 		fmt.Fprintf(&config, "guard.policy.active=true\ntransform.count=%d\n", len(guard.Policy.Transformations))
+		loaderConfig, loaderErr := guardLoaderConfig0504(root, guard.Policy)
+		if loaderErr != nil {return nil, "", nil, loaderErr}
+		config.WriteString(loaderConfig)
 		for i, transform := range guard.Policy.Transformations {
 			fmt.Fprintf(&config, "transform.%d.owner=%s\ntransform.%d.class=%s\n", i, transform.OwnerSHA256, i, base64.StdEncoding.EncodeToString([]byte(transform.ID)))
 		}

@@ -1,3 +1,12 @@
+## 0.50.4 — Authorized JVM Transformations: loader-origin enforcement (source implementation; GA BLOCKED)
+
+- Guard's signed-policy verifier now accepts SHA-256 pinned `loader-library` JARs; modern Rust Runtime and legacy Go ClientFactory bind their exact installed files and selected loader to real Java premain. Modded Trusted JVM launch fails closed if no loader libraries have been authorized, if a jar changed, or its digest was revoked.
+- Add a Java 8-compatible `ClassFileTransformer` that verifies loaded Fabric/Quilt/Forge/NeoForge, ModLauncher and Mixin infrastructure classes against the signed loader identity, their actual `ProtectionDomain.CodeSource`, and approved source-JAR digests. Unauthorized class sources terminate the process; the observer is installed before trusted extension hooks initialize.
+- Add optional signed `loaderClassBytes` assertions: at actual class definition, the JVM compares observed bytes against a pinned SHA-256 for each named class before Trusted hook transformations. A mismatch kills the JVM. The signed policy and Go/Rust paths validate and carry these bindings; class bytes not named by policy are not universally checked.
+- Retain per-plugin, per-class authorization for Trusted JVM hook transformations; callback failures in policy-enforced JVMs now terminate rather than silently ignoring broken transformations. External agent injection and unsigned mods remain prohibited.
+- Add actual Java subprocess integration tests (four loader families and forbidden paths), Go tests for approved/revoked/tampered JARs, and six-OS/CPU CI jobs for available native acceptance checks.
+- **GA BLOCKED:** actual upstream Minecraft Fabric/Quilt/Forge/NeoForge execution/join, independent six-target Rust/Windows native builds and signed final packages were not performed. CodeSource checks are not proof of attribution or mediation for every third-party bytecode transformer; trusted Java code retains full process privilege.
+
 ## 0.50.3 — Verified Modded Launch & Trusted JVM under Guard (source implementation; independent native GA BLOCKED)
 
 - Close the modern-client gap: Rust Runtime now discovers an installed Trusted JVM package, verifies its exact agent and plugin SHA-256 against the external Ed25519 Guard compatibility policy scoped to the signed project/Minecraft/loader, and constructs real Java `-javaagent` premain arguments and the original Minecraft main wrapper. Unapproved/changed/revoked modules, unknown mods, signed-policy scope mismatch or missing mandatory policy refuse JVM startup.

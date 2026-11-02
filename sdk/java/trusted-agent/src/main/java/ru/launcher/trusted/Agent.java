@@ -56,6 +56,11 @@ public final class Agent {
                 if (!classes.add(clazz)) throw new SecurityException("Guard duplicate transform binding");
             }
         }
+        if (guardPolicyActive) {
+            // Install the observer before Minecraft's own loader initializes.
+            // Authorized loader classes must originate in pinned runtime JARs.
+            instrumentation.addTransformer(LoaderGuard0504.from(config), false);
+        }
         List<URL> urls = new ArrayList<URL>();
         for (int i = 0; i < count; i++) {
             String path = new String(Base64.getDecoder().decode(config.getProperty("plugin."+i)), java.nio.charset.StandardCharsets.UTF_8);
@@ -97,10 +102,10 @@ public final class Agent {
                         }
                     }
                     return modified ? current : null;
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     System.err.println("[Launcher trusted JVM] transform rejected for " + name + ": " + ex);
-                    // JVM may ignore transformer exceptions: do not pretend it is a sandbox.
-                    return null;
+                    if (guardPolicyActive) Runtime.getRuntime().halt(79);
+                    return null; // legacy unguarded callback behavior
                 } finally { IN_CALLBACK.remove(); }
             }
         }, false);
@@ -117,8 +122,9 @@ public final class Agent {
     }
     private static boolean isMinecraftClass(String n) {
         return n.startsWith("net/minecraft/") || n.startsWith("com/mojang/") ||
-               n.startsWith("net/minecraftforge/") || n.startsWith("net/fabricmc/") ||
-               n.startsWith("org/quiltmc/");
+               n.startsWith("net/minecraftforge/") || n.startsWith("net/neoforged/") ||
+               n.startsWith("net/fabricmc/") || n.startsWith("org/quiltmc/") ||
+               n.startsWith("cpw/mods/modlauncher/") || n.startsWith("org/spongepowered/asm/mixin/");
     }
     private static String digest(String file) throws Exception {
         MessageDigest sha = MessageDigest.getInstance("SHA-256");

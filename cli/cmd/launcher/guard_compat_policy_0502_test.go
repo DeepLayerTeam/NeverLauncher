@@ -242,6 +242,7 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 	// The Java process is never spawned when a different mod appears.
 	approvedMod := artifact0502(t, root, "mod", "mods/approved.jar", "fixture-mod-0503")
 	p.Artifacts = append(p.Artifacts, approvedMod)
+	p.Artifacts = append(p.Artifacts, artifact0502(t, root, "loader-library", "libraries/fabric-loader.jar", "fixture-loader-0504"))
 	p.Transformations = []guardCompatTransform0502{{ID: "net.minecraft.client.Minecraft", OwnerSHA256: record.Plugins[0].SHA256}}
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err != nil {
 		t.Fatal(err)

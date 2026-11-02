@@ -65,7 +65,7 @@ fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String>
     if hex::encode(hasher.finalize()) != digest { return Err("Guard Trusted JVM signed package SHA-256 differs from active identity".into()) }
     Ok(())
 }
-fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String, String)]) -> Result<String, String> {
+fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String, String)], loader: &str, libraries: &[(PathBuf, String)], class_bytes: &[(String,String)]) -> Result<String, String> {
     if !main.contains('.') || !main.split('.').all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')) {
         return Err("Guard Trusted JVM invalid Minecraft main class".into());
     }
@@ -74,6 +74,21 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     for (i, (class, owner)) in transforms.iter().enumerate() {
         if !is_digest(owner) { return Err("Guard Trusted JVM transform owner digest invalid".into()) }
         text.push_str(&format!("transform.{i}.owner={owner}\ntransform.{i}.class={}\n", STANDARD.encode(class)));
+    }
+    if !["vanilla","fabric","quilt","forge","neoforge","neo-forge","neo_forge"].contains(&loader.to_ascii_lowercase().as_str()) {
+        return Err("Guard Trusted JVM invalid loader identifier".into());
+    }
+    if libraries.len()>128 {return Err("Guard Trusted JVM loader library limit exceeded".into())}
+    text.push_str(&format!("loader.id={}\nloader.count={}\n", loader.to_ascii_lowercase().replace('-', "").replace('_', ""), libraries.len()));
+    for (i, (path,digest)) in libraries.iter().enumerate() {
+        if !is_digest(digest) {return Err("Guard loader library digest invalid".into())}
+        text.push_str(&format!("loader.{i}.path={}\nloader.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));
+    }
+    if class_bytes.len()>4096 {return Err("Guard too many loader class digests".into())}
+    text.push_str(&format!("loader.class.count={}\n", class_bytes.len()));
+    for (i,(name,digest)) in class_bytes.iter().enumerate() {
+        if !is_digest(digest) || name.len()>256 || !name.contains('.') {return Err("Guard invalid class SHA-256 binding".into())}
+        text.push_str(&format!("loader.class.{i}.name={}\nloader.class.{i}.sha256={digest}\n",STANDARD.encode(name)));
     }
     text.push_str(&format!("count={}\n", plugins.len()));
     for (i, (path, digest)) in plugins.iter().enumerate() {
@@ -125,7 +140,8 @@ pub fn prepare(root: &Path, project: &str, minecraft: &str, loader: &str, origin
     // Recheck all policy artifacts, not only trusted ones, before preparing
     // the JVM. The final native Guard pre-spawn gate repeats these checks.
     guard_compatibility_0502::enforce_launch(root, project, minecraft, loader, &[])?;
-    let config = config_text(original_main, &plugins, &transforms)?;
+    let libraries = signed.loader_libraries(root, loader)?;
+    let config = config_text(original_main, &plugins, &transforms, loader, &libraries, &signed.loader_class_bytes())?;
     let dir = root.join(ROOT);
     let mut random = [0u8; 16]; OsRng.fill_bytes(&mut random);
     let name = dir.join(format!(".guard-launch-{}.properties", hex::encode(random)));
@@ -153,9 +169,9 @@ mod tests {
     #[test] fn rejects_bad_names_and_identity() {
         for s in ["../hook.jar", "other\\hook.jar", "nojar", "x.jar\nX=1", ".jar"] { assert!(!plugin_name(s)); }
         assert!(plugin_name("trusted-hook.jar"));
-        assert!(config_text("com.example.Client", &[], &[]).unwrap().contains("guard.policy.active=true"));
-        assert!(config_text("bad class", &[], &[]).is_err());
-        assert!(config_text("Main", &[], &[]).is_err());
+        assert!(config_text("com.example.Client", &[], &[], "vanilla", &[], &[]).unwrap().contains("guard.policy.active=true"));
+        assert!(config_text("bad class", &[], &[], "vanilla", &[], &[]).is_err());
+        assert!(config_text("Main", &[], &[], "vanilla", &[], &[]).is_err());
     }
 }
 
@@ -186,6 +202,7 @@ mod signed_launch_tests {
         create(root, &agent_path, agent);
         create(root, &plugin_path, plugin);
         create(root, "mods/approved.jar", b"approved-mod");
+        create(root, "libraries/fabric-loader.jar", b"approved-loader");
         create(root, ACTIVE, serde_json::to_string(&json!({
             "schemaVersion":"launcher.trusted-jvm.v1",
             "packageSha256":package_hash,
@@ -200,9 +217,11 @@ mod signed_launch_tests {
             "artifacts":[
                 {"kind":"java-agent","path":agent_path,"sha256":sha(agent)},
                 {"kind":"java-plugin","path":plugin_path,"sha256":sha(plugin)},
-                {"kind":"mod","path":"mods/approved.jar","sha256":sha(b"approved-mod")}
+                {"kind":"mod","path":"mods/approved.jar","sha256":sha(b"approved-mod")},
+                {"kind":"loader-library","path":"libraries/fabric-loader.jar","sha256":sha(b"approved-loader")}
             ],
             "transformations":[{"id":"net.minecraft.client.Minecraft","ownerSha256":sha(plugin)}],
+            "loaderClassBytes":[{"class":"net.minecraft.client.Minecraft","sha256":sha(b"game-class-expected")}],
             "revokedDigests":if revoked { vec![sha(agent)] } else { vec![] },
             "revokedTransformations":[]
         })).unwrap();
@@ -233,6 +252,9 @@ mod signed_launch_tests {
         let file = accepted.agent_arg.split_once('=').unwrap().1.to_string();
         let props = fs::read_to_string(&file).unwrap();
         assert!(props.contains("transform.count=1"));
+        assert!(props.contains("loader.id=fabric"));
+        assert!(props.contains("loader.count=1"));
+        assert!(props.contains("loader.class.count=1"));
         assert!(props.contains("plugin.0.sha256="));
         assert!(accepted.agent_arg.contains("agent.jar"));
         assert_eq!(accepted.main_class, WRAPPER);

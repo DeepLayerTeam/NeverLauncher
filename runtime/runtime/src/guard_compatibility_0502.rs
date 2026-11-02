@@ -25,10 +25,14 @@ struct Artifact { kind:String,path:String,sha256:String }
 struct Transform { id:String,owner_sha256:String }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
+struct ClassBytes0504 { #[serde(rename="class")] name:String, sha256:String }
+#[derive(Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 struct Policy {
  schema_version:String, project_id:String,minecraft:String,loader:String,epoch:u64,
  issued_at:i64,expires_at:i64,artifacts:Vec<Artifact>,transformations:Vec<Transform>,
  revoked_digests:Vec<String>,revoked_transformations:Vec<String>,
+ #[serde(default)] loader_class_bytes:Vec<ClassBytes0504>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
@@ -37,6 +41,14 @@ struct Verified { policy:Policy, digest:String }
 
 fn sha(bytes:&[u8])->String{hex::encode(Sha256::digest(bytes))}
 fn is_sha(s:&str)->bool{s.len()==64 && s.bytes().all(|b|b.is_ascii_hexdigit() && !b.is_ascii_uppercase())}
+fn class_binary_name(s:&str)->bool {
+ s.len()<=256 && s.contains('.') && s.split('.').all(|part| {
+  let mut ch=part.chars();
+  let Some(first)=ch.next() else{return false};
+  (first.is_ascii_alphabetic() || first=='_' || first=='$') &&
+  ch.all(|c|c.is_ascii_alphanumeric() || c=='_' || c=='$')
+ })
+}
 fn relative(rel:&str)->bool {
  !rel.is_empty() && !rel.starts_with('/') && !rel.contains('\\') && !rel.contains(':') && !rel.contains('\0') &&
  !rel.contains('\n') && !rel.contains('\r') && !rel.contains("//") &&
@@ -97,12 +109,12 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
  let current=now()?;
  if p.schema_version!=SCHEMA || p.epoch==0 || p.project_id.is_empty() || p.minecraft.is_empty() || p.loader.is_empty() ||
   p.issued_at<=0 || p.issued_at>current+300 || p.expires_at<=current || p.expires_at<=p.issued_at || p.expires_at-p.issued_at>90*86400 ||
-  p.artifacts.len()>4096 || p.transformations.len()>4096 || p.revoked_digests.len()>4096 || p.revoked_transformations.len()>4096 {
+  p.artifacts.len()>4096 || p.transformations.len()>4096 || p.loader_class_bytes.len()>4096 || p.revoked_digests.len()>4096 || p.revoked_transformations.len()>4096 {
   return Err("Guard compatibility scope, validity or list limits invalid".into())
  }
  let mut paths=HashSet::new();let mut plugin_digests=HashSet::new();
  for a in &p.artifacts {
-  if !["mod","java-agent","java-plugin","native-library"].contains(&a.kind.as_str()) || !relative(&a.path) || !is_sha(&a.sha256) ||
+  if !["mod","java-agent","java-plugin","native-library","loader-library"].contains(&a.kind.as_str()) || !relative(&a.path) || !is_sha(&a.sha256) ||
    !paths.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){return Err("Guard compatibility artifact invalid/duplicate".into())}
   if a.kind=="java-plugin"{plugin_digests.insert(&a.sha256);}
  }
@@ -110,6 +122,12 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
  for t in &p.transformations {
   if t.id.is_empty() || t.id.len()>256 || !is_sha(&t.owner_sha256) || !plugin_digests.contains(&t.owner_sha256) || !ids.insert(&t.id){
    return Err("Guard compatibility transformation invalid/duplicate".into())
+  }
+ }
+ let mut class_names=HashSet::new();
+ for c in &p.loader_class_bytes {
+  if !class_binary_name(&c.name) || !is_sha(&c.sha256) || !class_names.insert(&c.name) {
+   return Err("Guard loader class-byte binding invalid/duplicate".into())
   }
  }
  if p.revoked_digests.iter().any(|d|!is_sha(d)) || p.revoked_transformations.iter().any(|t|t.is_empty()) {
@@ -138,6 +156,29 @@ impl GamePolicy0503 {
   validate_safe_path(root,&artifact.path,512*1024*1024)?;
   if actual_sha(&root.join(&artifact.path))?!=artifact.sha256{return Err("Guard compatibility trusted code digest changed".into())}
   Ok(())
+ }
+ /// Loader runtime classes must come from independently signed loader-library JARs.
+ /// These are verified here and again by the Java agent at class definition.
+ pub fn loader_class_bytes(&self)->Vec<(String,String)> {
+  self.policy.loader_class_bytes.iter().map(|c|(c.name.clone(),c.sha256.clone())).collect()
+ }
+ pub fn loader_libraries(&self,root:&Path,loader:&str)->Result<Vec<(std::path::PathBuf,String)>,String>{
+  let kind=loader.to_ascii_lowercase().replace('-', "").replace('_', "");
+  if !["vanilla","fabric","quilt","forge","neoforge"].contains(&kind.as_str()) {
+   return Err("Guard unsupported loader identity for trusted JVM".into())
+  }
+  let mut result=Vec::new();
+  for a in self.policy.artifacts.iter().filter(|a|a.kind=="loader-library") {
+   if self.policy.revoked_digests.contains(&a.sha256) {return Err("Guard loader library revoked".into())}
+   validate_safe_path(root,&a.path,512*1024*1024)?;
+   if actual_sha(&root.join(&a.path))?!=a.sha256 {return Err("Guard loader library changed".into())}
+   if !a.path.to_ascii_lowercase().ends_with(".jar") {return Err("Guard loader library must be a JAR".into())}
+   result.push((fs::canonicalize(root.join(&a.path)).map_err(|e|e.to_string())?,a.sha256.clone()));
+  }
+  if kind!="vanilla" && result.is_empty(){return Err("Guard modded Trusted JVM requires signed loader-library JARs".into())}
+  if kind=="vanilla" && !result.is_empty(){return Err("Guard vanilla profile must not authorize loader libraries".into())}
+  if result.len()>128 {return Err("Guard too many loader libraries".into())}
+  Ok(result)
  }
  pub fn transforms(&self,owners:&HashSet<String>)->Result<Vec<(String,String)>,String>{
   let mut allowed=Vec::new();

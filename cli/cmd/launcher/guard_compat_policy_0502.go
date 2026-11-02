@@ -35,7 +35,7 @@ type guardCompatEnvelope0502 struct {
 	Signature string `json:"signature"`
 }
 type guardCompatArtifact0502 struct {
-	Kind   string `json:"kind"` // mod, java-agent, java-plugin, native-library
+	Kind   string `json:"kind"` // mod, java-agent, java-plugin, native-library, loader-library
 	Path   string `json:"path"` // client-root relative, slash-normalized
 	SHA256 string `json:"sha256"`
 }
@@ -43,18 +43,23 @@ type guardCompatTransform0502 struct {
 	ID          string `json:"id"`
 	OwnerSHA256 string `json:"ownerSha256"`
 }
+type guardCompatClassBytes0504 struct {
+	Class  string `json:"class"`
+	SHA256 string `json:"sha256"`
+}
 type guardCompatPolicy0502 struct {
-	Schema            string                     `json:"schemaVersion"`
-	ProjectID         string                     `json:"projectId"`
-	Minecraft         string                     `json:"minecraft"`
-	Loader            string                     `json:"loader"`
-	Epoch             uint64                     `json:"epoch"`
-	IssuedAt          int64                      `json:"issuedAt"`
-	ExpiresAt         int64                      `json:"expiresAt"`
-	Artifacts         []guardCompatArtifact0502  `json:"artifacts"`
-	Transformations   []guardCompatTransform0502 `json:"transformations"`
-	RevokedDigests    []string                   `json:"revokedDigests"`
-	RevokedTransforms []string                   `json:"revokedTransformations"`
+	Schema            string                      `json:"schemaVersion"`
+	ProjectID         string                      `json:"projectId"`
+	Minecraft         string                      `json:"minecraft"`
+	Loader            string                      `json:"loader"`
+	Epoch             uint64                      `json:"epoch"`
+	IssuedAt          int64                       `json:"issuedAt"`
+	ExpiresAt         int64                       `json:"expiresAt"`
+	Artifacts         []guardCompatArtifact0502   `json:"artifacts"`
+	Transformations   []guardCompatTransform0502  `json:"transformations"`
+	RevokedDigests    []string                    `json:"revokedDigests"`
+	RevokedTransforms []string                    `json:"revokedTransformations"`
+	LoaderClassBytes  []guardCompatClassBytes0504 `json:"loaderClassBytes,omitempty"`
 }
 type guardCompatFloor0502 struct {
 	Epoch      uint64 `json:"epoch"`
@@ -171,14 +176,14 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 	if p.IssuedAt > current+300 || p.ExpiresAt <= current || p.IssuedAt <= 0 || p.ExpiresAt <= p.IssuedAt || p.ExpiresAt-p.IssuedAt > 90*86400 {
 		return errors.New("Guard compatibility policy expired, future-issued or exceeds validity")
 	}
-	if len(p.Artifacts) > 4096 || len(p.Transformations) > 4096 || len(p.RevokedDigests) > 4096 || len(p.RevokedTransforms) > 4096 {
+	if len(p.Artifacts) > 4096 || len(p.Transformations) > 4096 || len(p.LoaderClassBytes) > 4096 || len(p.RevokedDigests) > 4096 || len(p.RevokedTransforms) > 4096 {
 		return errors.New("Guard compatibility list too large")
 	}
 	seen := map[string]bool{}
 	digests := map[string]bool{}
 	for _, a := range p.Artifacts {
 		switch a.Kind {
-		case "mod", "java-agent", "java-plugin", "native-library":
+		case "mod", "java-agent", "java-plugin", "native-library", "loader-library":
 		default:
 			return fmt.Errorf("unknown Guard compatibility artifact kind %q", a.Kind)
 		}
@@ -202,6 +207,12 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 			return errors.New("Guard compatibility transformation owner not authorized")
 		}
 		seen["transform:"+t.ID] = true
+	}
+	for _, cls := range p.LoaderClassBytes {
+		if !guardCompatClassName0504(cls.Class) || !guardCompatHex0502(cls.SHA256) || seen["loader-class:"+cls.Class] {
+			return errors.New("Guard loader class-byte binding invalid/duplicated")
+		}
+		seen["loader-class:"+cls.Class] = true
 	}
 	for _, s := range p.RevokedDigests {
 		if !guardCompatHex0502(s) || seen["revoked:"+s] {
