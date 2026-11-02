@@ -47,7 +47,7 @@ trap cleanup EXIT
 printf '[matching-e2e] build CLI and Runtime\n'
 (
   cd "$ROOT/cli"
-  go build -o "$NL_BIN" ./cmd/launcher
+  go build -trimpath -ldflags "-X main.version=${PRODUCT_VERSION}" -o "$NL_BIN" ./cmd/launcher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 [[ -x "$RUNTIME_BIN" ]] || { echo "[matching-e2e] Runtime binary is missing" >&2; exit 1; }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0.47.7 in-place legacy upgrade using the existing production updaters.
+"""0.47.8 in-place legacy upgrade using the existing production updaters.
 
 Operators provide independently pinned signed packages/images. No source-tree
 installation, replacement demo config, trust-policy bypass or implicit DB migration.
@@ -26,11 +26,11 @@ import zipfile
 
 import component_upgrade_0458 as native
 
-TARGET = '0.47.7'
+TARGET = '0.47.8'
 # A supported version here means an accepted input layout for the native updater,
 # not a promise that every third-party extension is ABI-compatible.
-SUPPORTED = {f'0.47.{n}' for n in range(7)} | {f'0.46.{n}' for n in range(4)} | {'0.45.14'}
-RELEASE_RE = re.compile(r'^0\.(?:45\.14|46\.[0-3]|47\.[0-6])$')
+SUPPORTED = {f'0.47.{n}' for n in range(8)} | {f'0.46.{n}' for n in range(4)} | {'0.45.14'}
+RELEASE_RE = re.compile(r'^0\.(?:45\.14|46\.[0-3]|47\.[0-7])$')
 MAX_FILES = 150_000
 MAX_INVENTORY = 8 * 1024 * 1024
 DEFAULT_DATA = ('profiles', 'data', 'settings', 'instances', 'worlds', 'game', 'saves', 'config', 'user-data')
@@ -301,7 +301,7 @@ def host_update(root: Path, args, source):
     require(native_binary_version(install) == source, 'installed host binary version drift')
     result = native.host_binary(args.component, Path(args.executable), install, args.sha256,
                                 service=args.service, ready_url=args.ready_url,
-                                source_version=source, target_version=TARGET, backup_tag='0477')
+                                source_version=source, target_version=TARGET, backup_tag='0478')
     return {'nativeStatus': result['status'], 'component': args.component,
             'oldBinarySha256': result['fromSha256'], 'newBinarySha256': result['toSha256']}
 
@@ -368,7 +368,7 @@ def bridge_jar_update(root: Path, args, source: str):
     oldstat = install.lstat()
     require(stat.S_ISREG(oldstat.st_mode) and oldstat.st_nlink == 1 and oldstat.st_uid == 0,
             'unsafe installed Bridge JAR')
-    backup = install.with_name(install.name + '.previous-0477')
+    backup = install.with_name(install.name + '.previous-0478')
     require(not backup.exists() and not backup.is_symlink(), 'previous JAR backup exists')
     oldsha = sha_file(install)
     native.run(['systemctl', 'stop', args.service], timeout=90)
@@ -459,7 +459,7 @@ def backend_upgrade(args):
 
 
 def rollback_host(args):
-    """Recover a 0.47.7 Linux executable using the original pinned backup receipt."""
+    """Recover a 0.47.8 Linux executable using the original pinned backup receipt."""
     require(args.root and args.install and args.component in ('api', 'cli', 'bridge'),
             'host rollback requires existing root, installed binary and component')
     root = checked_dir(Path(args.root).absolute())
@@ -483,7 +483,7 @@ def rollback_host(args):
         require(install.is_absolute() and install.is_relative_to(root), 'unsafe installed binary path')
         require(result.get('component') == args.component, 'component mismatch with receipt')
         restored = native.rollback_linux_host(args.component, install, sha, service=args.service,
-                    ready_url=args.ready_url, source_version=journal['source'], backup_tag='0477')
+                    ready_url=args.ready_url, source_version=journal['source'], backup_tag='0478')
         inventory = read_json(backup / 'inventory.json')
         require(inventory.get('files') and inventory.get('protectedPaths'),
                 'original user-data inventory absent')

@@ -1,0 +1,282 @@
+name: NeverLauncher 0.47.8 real integration and native upgrade matrix
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'scripts/integration/**'
+      - 'scripts/operations/**'
+      - 'services/api/**'
+      - 'e2e/**'
+      - 'apps/admin/**'
+      - 'apps/desktop/**'
+      - '.github/workflows/integration-matrix-0478.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      baselines_url:
+        description: 'HTTPS URL of independently SHA-256-pinned manifest covering all supported prior real installed release archives'
+        type: string
+        required: true
+      baselines_sha256:
+        description: 'Pinned SHA-256 digest of the exact manifest bytes'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: integration-0478-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  sqlite-and-faults:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+      - name: Native SQLite WAL crash, compatibility, recovery and legacy regressions
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/nl0478"; chmod 700 "$RUNNER_TEMP/nl0478"
+          echo "TMPDIR=$RUNNER_TEMP/nl0478" >> "$GITHUB_ENV"
+          PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_sqlite_pg_cutover_0475 scripts.operations.test_sqlite_pg_recovery_0477 scripts.integration.test_verify_0478 -v
+          sudo env PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_legacy_upgrade_0476 -v
+          (cd services/api && go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./internal/sqlitecoord ./internal/sqlitepg)
+          python3 scripts/version/manage.py check
+  postgres-real:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['17', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: launcher_test
+          POSTGRES_PASSWORD: isolated-test-only
+          POSTGRES_DB: nl_live_0478
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U launcher_test -d nl_live_0478"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LAUNCHER_PG_LIVE_TEST_DSN: postgres://launcher_test:isolated-test-only@127.0.0.1:5432/nl_live_0478?sslmode=disable
+      LAUNCHER_PG_TEST_DSN: postgres://launcher_test:isolated-test-only@127.0.0.1:5432/nl_live_0478?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Run real PostgreSQL migration to SQLRepository and read-back
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          go test -race -count=1 -timeout=25m -run '^TestLiveSQLiteToSQLRepository0473$' -v ./internal/sqlitepg
+          go vet ./internal/sqlitepg
+  backend-admin-desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real Backend HTTP API authorization, publication and Admin routing tests
+        working-directory: services/api
+        run: |
+          go test -race -count=1 -timeout=15m -run 'TestCanonicalAdminCRUDProductFlow|TestSecurityRealAuthHTTP02912|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable|TestImportedFileAuthLocalLoginAndAtomicRehash0295' -v ./internal/httpapi
+      - name: Admin UI actual production build and interactive component tests
+        working-directory: apps/admin
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+          npm run build
+      - name: Desktop component and client update tests against actual implementation
+        working-directory: apps/desktop
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          npm run test:update-migration
+          npm run test:server-join
+  legacy-native-installed:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+      - name: Verify HTTPS baseline manifest pin and build actual current CLI
+        env:
+          URL: ${{ inputs.baselines_url }}
+          SHA: ${{ inputs.baselines_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$URL" == https://* ]] || { echo 'HTTPS baseline URL required' >&2; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{64}$ ]] || { echo 'invalid pinned baseline SHA-256' >&2; exit 1; }
+          curl --proto '=https' --tlsv1.2 --fail --location --max-time 120 "$URL" -o "$RUNNER_TEMP/baselines.json"
+          echo "$SHA  $RUNNER_TEMP/baselines.json" | sha256sum --check --status
+          (cd cli && go build -trimpath -ldflags "-X main.version=0.47.8" -o "$RUNNER_TEMP/launcher-0478" ./cmd/launcher)
+          sudo chown root:root "$RUNNER_TEMP/launcher-0478"
+          sudo chmod 0755 "$RUNNER_TEMP/launcher-0478"
+      - name: Execute installed native CLI upgrade for every old version, with exact-byte user-data verification
+        run: |
+          set -euo pipefail
+          sudo python3 scripts/integration/legacy_matrix_0478.py --manifest "$RUNNER_TEMP/baselines.json" --candidate-cli "$RUNNER_TEMP/launcher-0478" --out "$RUNNER_TEMP/legacy-0478.json"
+          python3 scripts/integration/verify_0478.py legacy --path "$RUNNER_TEMP/legacy-0478.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: legacy-native-0478
+          if-no-files-found: error
+          path: ${{ runner.temp }}/legacy-0478.json
+  real-full-minecraft:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14'
+      - name: Install live Minecraft / PostgreSQL / GUI prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libasound2t64 jq postgresql-client maven
+      - name: Real signed-release publication, auth, Desktop transactional update, Bridge JVM joins and Minecraft client
+        env:
+          LAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
+          LAUNCHER_E2E_LOADER: vanilla
+          LAUNCHER_E2E_MODE: full
+        run: |
+          set -euo pipefail
+          export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
+          bash e2e/scripts/run-minecraft-e2e.sh
+          python3 scripts/integration/verify_0478.py full-game --path e2e/runtime --minecraft-version 1.21.1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-game-full-0478
+          if-no-files-found: error
+          path: e2e/runtime/
+  real-matching-minecraft:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {mc: '1.17.1', java: '17'}
+          - {mc: '1.21.1', java: '21'}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - run: sudo apt-get update && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libasound2t64
+      - name: Materialize actual matching Mojang server and client, launch and confirm join
+        env:
+          LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.mc }}
+          LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.java }}
+          LAUNCHER_COMPAT_OS: linux
+          LAUNCHER_COMPAT_ARCH: x86_64
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
+        run: |
+          set -euo pipefail
+          export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
+          bash e2e/scripts/run-vanilla-matching-e2e.sh
+          python3 scripts/integration/verify_0478.py matching-game --path e2e/runtime --minecraft-version '${{ matrix.mc }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-matching-${{ matrix.mc }}-0478
+          if-no-files-found: error
+          path: e2e/runtime/
+  real-owner-browser:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: protected-migration-staging
+    env:
+      E2E_OWNER_DESTRUCTIVE_ACK: OWNER_0390_DISPOSABLE_STAGING
+      E2E_ADMIN_URL: ${{ vars.NL_E2E_ADMIN_URL }}
+      E2E_API_URL: ${{ vars.NL_E2E_API_URL }}
+      E2E_ADMIN_TOKEN: ${{ secrets.NL_E2E_ADMIN_TOKEN }}
+      E2E_OPERATOR_TOKEN: ${{ secrets.NL_E2E_OPERATOR_TOKEN }}
+      E2E_OWNER_PROJECT_ID: ${{ vars.NL_E2E_OWNER_PROJECT_ID }}
+      E2E_OWNER_PROFILE_ID: ${{ vars.NL_E2E_OWNER_PROFILE_ID }}
+      E2E_OWNER_CHANNEL: ${{ vars.NL_E2E_OWNER_CHANNEL }}
+      E2E_OWNER_VALID_PACKAGE_ID: ${{ vars.NL_E2E_OWNER_VALID_PACKAGE_ID }}
+      E2E_OWNER_BROKEN_PACKAGE_ID: ${{ vars.NL_E2E_OWNER_BROKEN_PACKAGE_ID }}
+      E2E_OWNER_VALID_DRAFT_VERSION: ${{ vars.NL_E2E_OWNER_VALID_DRAFT_VERSION }}
+      E2E_OWNER_BROKEN_DRAFT_VERSION: ${{ vars.NL_E2E_OWNER_BROKEN_DRAFT_VERSION }}
+      E2E_OWNER_ROLLBACK_VERSION: ${{ vars.NL_E2E_OWNER_ROLLBACK_VERSION }}
+      E2E_FOREIGN_PROJECT_ID: ${{ vars.NL_E2E_FOREIGN_PROJECT_ID }}
+      E2E_EXPECTED_COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python3 -m pip install playwright==1.58.0
+          python3 -m playwright install --with-deps chromium
+      - name: Login as existing owner, operate Admin UI, publish real signed package and verify rollback
+        run: |
+          set -euo pipefail
+          python3 e2e/scripts/owner-cycle-0390-browser.py
+          python3 scripts/integration/verify_0478.py owner --path dist/ga-certification/owner-cycle-0390.json --commit "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-owner-0478
+          if-no-files-found: error
+          path: dist/ga-certification/owner-cycle-0390.json
+  production-acceptance:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: [sqlite-and-faults, postgres-real, backend-admin-desktop, legacy-native-installed, real-full-minecraft, real-matching-minecraft, real-owner-browser]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Accept only when every real integration suite succeeded (never accept skipped suites)
+        env:
+          SQLITE: ${{ needs.sqlite-and-faults.result }}
+          POSTGRES: ${{ needs.postgres-real.result }}
+          BACKEND: ${{ needs.backend-admin-desktop.result }}
+          LEGACY: ${{ needs.legacy-native-installed.result }}
+          GAME: ${{ needs.real-full-minecraft.result }}
+          MATCHING: ${{ needs.real-matching-minecraft.result }}
+          OWNER: ${{ needs.real-owner-browser.result }}
+        run: |
+          set -euo pipefail
+          for suite in SQLITE POSTGRES BACKEND LEGACY GAME MATCHING OWNER; do
+            status="${!suite}"
+            [[ "$status" == success ]] || { echo "$suite is $status, production acceptance DENIED" >&2; exit 1; }
+          done

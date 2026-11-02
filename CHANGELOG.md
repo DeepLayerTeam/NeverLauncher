@@ -1,3 +1,11 @@
+## 0.47.8 — Actual integration matrix and fail-closed evidence validation (production certification pending)
+
+- Add a runnable PostgreSQL 17/18 + SQLite WAL/legacy/recovery CI matrix, production Backend HTTP authorization/publication checks, Admin build/UI tests and native Desktop update regressions; use actual integration code and source tests instead of pass-only placeholder scripts.
+- Add operator-pinned old installed Linux CLI upgrade matrix covering every declared source version (0.45.14, 0.46.0–0.46.3, 0.47.0–0.47.7). Safely download/extract genuine old binaries, execute the native root-only updater and validate user-state inventory, backup and real upgraded executable. Reject missing, mismatched or unsafe artifacts.
+- Add protected full Minecraft/JVM and real ServerBridge workflow with matching Mojang client/server versions, actual Admin browser owner cycle and evidence files; separate the protected real-run gates from ordinary PR tests. Adversarial verifier tests refuse incomplete/missing outputs and skipped mandatory jobs.
+- Advance existing legacy upgrade operator to target 0.47.8 and preserve exact-byte rollback semantics; synchronize canonical version metadata.
+- **Production GA not approved:** protected CI and historical installations were not executed in this environment; independent HTTP/Coordinator migration and actual imported Backend owner login remain blocked by the previously implemented PostgreSQL cutover gate.
+
 ## 0.47.7 — SQLite→PostgreSQL migration failure recovery and fail-closed rollback (source patch; GA pending)
 
 - Harden the offline systemd cutover operator with WAL-inclusive disk-space preflight, immutable interrupted-backup detection, secure SHA-256 inventory of LocalStorage objects before and after verified copying, and rejection of incomplete file catalog receipts.

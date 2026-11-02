@@ -541,7 +541,7 @@ compose up -d postgres
 wait_healthy postgres
 (
   cd "$ROOT/cli"
-  go build -o "$RUNTIME_DIR/nl" ./cmd/launcher
+  go build -trimpath -ldflags "-X main.version=${VERSION}" -o "$RUNTIME_DIR/nl" ./cmd/launcher
 )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN"
 
@@ -1159,7 +1159,7 @@ fi
 # back up its persisted UUID/playerdata and plugin files with the production
 # Host CLI, and independently verify a restoration. Only for >= 0.29.0.
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
-  (cd "$ROOT/cli" && go build -trimpath -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/launcher)
+  (cd "$ROOT/cli" && go build -trimpath -ldflags "-X main.version=${VERSION}" -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/launcher)
   python3 "$ROOT/e2e/scripts/verify-real-world-backup-0290.py" \
     --cli "$RUNTIME_DIR/nl-server-control-0290" \
     --compose-file "$COMPOSE_FILE" --override-file "$GUARD_POLICY_OVERRIDE" \

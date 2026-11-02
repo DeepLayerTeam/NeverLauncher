@@ -1,4 +1,4 @@
-"""Real filesystem regression tests for the 0.47.7 in-place upgrade operator."""
+"""Real filesystem regression tests for the 0.47.8 in-place upgrade operator."""
 import argparse
 import json
 import zipfile
@@ -151,7 +151,7 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(result['pluginType'], 'paper')
         self.assertFalse(result['runtimeJoinVerified'])
         self.assertEqual(u.jar_metadata_version(old),u.TARGET)
-        self.assertEqual(u.jar_metadata_version(plugin_dir / 'launcher-paper-bridge.jar.previous-0477'),'0.47.5')
+        self.assertEqual(u.jar_metadata_version(plugin_dir / 'launcher-paper-bridge.jar.previous-0478'),'0.47.5')
         self.assertEqual([x[1] for x in calls],['stop','start'])
         self.assertEqual(json.loads((self.backups / 'run' / 'journal.json').read_text())['phase'],'verified')
 
@@ -177,19 +177,19 @@ class UpgradeTests(unittest.TestCase):
         old = self.root / 'launcher'
         new = self.base / 'signed-launcher'
         old.write_text('#!/bin/sh\necho "Launcher CLI 0.47.5"\n')
-        new.write_text('#!/bin/sh\necho "Launcher CLI 0.47.7"\n')
+        new.write_text('#!/bin/sh\necho "Launcher CLI 0.47.8"\n')
         old.chmod(0o755); new.chmod(0o755)
         original = old.read_bytes()
         args = self.args(mode='host', component='cli', install=str(old), executable=str(new), sha256=u.sha_file(new))
         result = u.execute(args)
         self.assertEqual(result['status'], 'upgraded')
-        self.assertIn(b'0.47.7',old.read_bytes())
-        self.assertEqual((self.root / 'launcher.previous-0477').read_bytes(),original)
+        self.assertIn(b'0.47.8',old.read_bytes())
+        self.assertEqual((self.root / 'launcher.previous-0478').read_bytes(),original)
         rollback = self.args(mode='rollback-host', component='cli', install=str(old))
         restored = u.execute(rollback)
         self.assertTrue(restored['userDataVerified'])
         self.assertEqual(old.read_bytes(), original)
-        self.assertIn(b'0.47.7',(self.root / 'launcher.failed-0477').read_bytes())
+        self.assertIn(b'0.47.8',(self.root / 'launcher.failed-0478').read_bytes())
         self.assertEqual(json.loads((self.backups / 'run' / 'journal.json').read_text())['phase'], 'reverted-and-verified')
 
     def test_installed_version_mismatch_blocks_before_native_update(self):

@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""Execute native 0.47.8 host upgrades against independently pinned old installations.
+
+No fixtures are generated here. Each manifest entry is a real, previously
+installed Linux launcher CLI tree (ZIP) with a runnable prior-version binary.
+Missing/unsupported baseline is an error, not a skip or simulated success.
+"""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import urllib.request
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts/operations'))
+import legacy_upgrade_0476 as upgrade
+
+VERSIONS = ('0.45.14',) + tuple(f'0.46.{n}' for n in range(4)) + tuple(f'0.47.{n}' for n in range(8))
+MAX_BYTES = 4 * 1024**3
+MAX_FILES = 150_000
+
+class MatrixError(RuntimeError):
+    pass
+
+def require(condition, message):
+    if not condition:
+        raise MatrixError(message)
+
+def digest(path):
+    h = hashlib.sha256()
+    with path.open('rb') as f:
+        for block in iter(lambda: f.read(1024*1024), b''):
+            h.update(block)
+    return h.hexdigest()
+
+def load_manifest(path):
+    data = json.loads(path.read_text(encoding='utf-8'))
+    require(data.get('target') == upgrade.TARGET and isinstance(data.get('baselines'), list), 'incorrect baseline manifest')
+    rows = data['baselines']
+    require(len(rows) == len(VERSIONS) and {x.get('version') for x in rows if isinstance(x, dict)} == set(VERSIONS), 'every supported original release must have one unique pinned baseline')
+    for x in rows:
+        require(isinstance(x.get('sha256'), str) and len(x['sha256']) == 64 and all(c in '0123456789abcdef' for c in x['sha256']), 'invalid baseline SHA-256')
+        require(isinstance(x.get('url'), str) and x['url'].startswith('https://') and ' ' not in x['url'], 'baseline must have pinned HTTPS download URL')
+        require(isinstance(x.get('binary'), str) and x['binary'], 'missing old binary path')
+        safe_member(x['binary'])
+        additional = x.get('protectedPaths', [])
+        require(isinstance(additional, list) and all(isinstance(n, str) for n in additional), 'protected paths must be an array')
+        for name in additional:
+            safe_member(name)
+    return rows
+
+def safe_member(name):
+    require(name and '\\' not in name and '\0' not in name and not name.startswith('/'), 'unsafe baseline ZIP name')
+    parts = name.rstrip('/').split('/')
+    require(parts and all(p not in ('', '..', '.') for p in parts), 'ZIP path traversal')
+    return parts
+
+def extract(source, target):
+    target.mkdir(mode=0o700)
+    with zipfile.ZipFile(source) as z:
+        items = z.infolist()
+        require(len(items) <= MAX_FILES and sum(i.file_size for i in items) <= MAX_BYTES, 'baseline expansion exceeds limits')
+        seen = set()
+        for item in items:
+            parts = safe_member(item.filename)
+            require(tuple(parts) not in seen, 'duplicate baseline member')
+            seen.add(tuple(parts))
+            mode = (item.external_attr >> 16)
+            require(stat.S_IFMT(mode) not in (stat.S_IFLNK, stat.S_IFCHR, stat.S_IFBLK, stat.S_IFIFO, stat.S_IFSOCK), 'unsafe ZIP member type')
+            dest = target.joinpath(*parts)
+            if item.is_dir():
+                dest.mkdir(parents=True, exist_ok=True)
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with z.open(item) as src, dest.open('xb') as out:
+                shutil.copyfileobj(src, out, 1024*1024)
+                out.flush(); os.fsync(out.fileno())
+            if mode & 0o111:
+                dest.chmod(0o700)
+
+def fetch(row, dest):
+    request = urllib.request.Request(row['url'], headers={'User-Agent':'NeverLauncher-0478-integration'})
+    with urllib.request.urlopen(request, timeout=120) as source, dest.open('xb') as out:
+        require(source.geturl().startswith('https://'), 'baseline URL redirected away from TLS')
+        length = 0
+        while block := source.read(1024 * 1024):
+            length += len(block)
+            require(length <= MAX_BYTES, 'baseline download too large')
+            out.write(block)
+        out.flush(); os.fsync(out.fileno())
+    require(digest(dest) == row['sha256'], f"baseline checksum mismatch for {row['version']}")
+
+def inventory(tree, data_dirs):
+    return upgrade.enumerate_data(tree, data_dirs)
+
+def run_one(row, current, workdir):
+    version = row['version']
+    folder = workdir / version
+    folder.mkdir(mode=0o700)
+    archive = folder / 'source.zip'
+    fetch(row, archive)
+    install = folder / 'installed'
+    extract(archive, install)
+    binary = install.joinpath(*safe_member(row['binary']))
+    require(binary.is_file() and not binary.is_symlink(), 'original native CLI binary absent')
+    require(upgrade.native_binary_version(binary) == version, 'actual old executable reports wrong release')
+    require(binary.parent == install, 'only root-level host CLI upgrade is supported in this matrix')
+    protected = list(dict.fromkeys([x for x in upgrade.DEFAULT_DATA if (install / x).exists()] + row.get('protectedPaths', [])))
+    for extra in row.get('protectedPaths', []):
+        require((install / extra).exists(), f'missing required protected installed path: {extra}')
+    require('profiles' in protected and 'settings' in protected, 'baseline must contain existing project/profile and settings data')
+    before = inventory(install, protected)
+    require(any(k.startswith('profiles/') for k in before) and any(k.startswith('settings/') for k in before), 'baseline contains empty demo directories')
+    backup = folder / 'backup'
+    cmd = [sys.executable, str(ROOT/'scripts/operations/legacy_upgrade_0476.py'), 'host',
+           '--root', str(install), '--backup', str(backup), '--component', 'cli',
+           '--from-version', version, '--install', str(binary),
+           '--executable', str(current), '--sha256', digest(current)]
+    proc = subprocess.run(cmd, capture_output=True, timeout=1200)
+    require(proc.returncode == 0, f'native upgrade {version} failed (exit {proc.returncode})')
+    result = json.loads(proc.stdout)
+    require(result.get('status') == 'upgraded' and result.get('sourceVersion') == version and result.get('targetVersion') == upgrade.TARGET, 'native upgrade result invalid')
+    require(upgrade.native_binary_version(binary) == upgrade.TARGET, 'upgraded executable does not run as candidate')
+    require(before == inventory(install, protected), 'project/profile/settings changed after native upgrade')
+    journal = json.loads((backup/'journal.json').read_text())
+    require(journal.get('phase') == 'verified' and journal.get('source') == version, 'native upgrade journal not verified')
+    snap = json.loads((backup/'inventory.json').read_text())
+    require(snap.get('files') == before, 'backup contents do not equal original installation')
+    require(before == inventory(backup/'user-data', protected), 'physical backup diverges from source')
+    return {'version': version, 'originalSha256': row['sha256'], 'beforeFiles': len(before),
+            'oldExecutableSha256': digest(binary.with_name(binary.name+'.previous-0478')),
+            'newExecutableSha256': digest(binary), 'nativeVerified': True, 'userDataVerified': True}
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--manifest', required=True, type=Path)
+    p.add_argument('--candidate-cli', required=True, type=Path)
+    p.add_argument('--out', required=True, type=Path)
+    args = p.parse_args(argv)
+    try:
+        rows = load_manifest(args.manifest)
+        require(args.candidate_cli.is_file() and not args.candidate_cli.is_symlink(), 'candidate CLI missing')
+        require(upgrade.native_binary_version(args.candidate_cli) == upgrade.TARGET, 'candidate version mismatch')
+        # All artifacts are unpacked on an isolated, private test filesystem.
+        with tempfile.TemporaryDirectory(prefix='nl-0478-real-legacy-') as tmp:
+            workdir = Path(tmp)
+            results = [run_one(row, args.candidate_cli.resolve(), workdir) for row in rows]
+        payload = {'schemaVersion': 1, 'status': 'passed', 'targetVersion': upgrade.TARGET,
+                   'type': 'native-legacy-upgrade', 'results': results}
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(payload, indent=2, sort_keys=True)+'\n')
+        return 0
+    except (MatrixError, upgrade.LegacyUpgradeError, ValueError, OSError, json.JSONDecodeError, subprocess.TimeoutExpired, zipfile.BadZipFile) as e:
+        print(f'legacy matrix 0.47.8 FAILED: {e}', file=sys.stderr)
+        return 1
+
+if __name__ == '__main__':
+    sys.exit(main())
