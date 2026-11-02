@@ -26,6 +26,9 @@ func handleMigrationWorkflow0331(args []string) error {
 	if command == "fence-source" || command == "verify-source-fence" {
 		return handleMigrationFence0448(args)
 	}
+	if command == "rehearse-local" {
+		return handleMigrationRehearsalLocal04910(args[1:])
+	}
 	if command == "rehearse" {
 		return handleMigrationRehearsal03310(args[1:])
 	}

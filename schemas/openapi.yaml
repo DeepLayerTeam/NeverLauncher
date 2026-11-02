@@ -3,7 +3,7 @@
   "info": {
     "title": "Launcher API",
     "version": "1.0.0",
-    "description": "Канонический production API Launcher 0.49.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API Launcher 0.49.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -1634,6 +1634,81 @@
             "BearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/admin/extension-hosts/{extensionId}/probe": {
+      "post": {
+        "operationId": "post_admin_extension_hosts_by_extensionId_probe",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-hosts/{extensionId}/probe",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global",
+                "project"
+              ],
+              "default": "global"
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/extension-hosts/{extensionId}/restart": {
@@ -5813,6 +5888,60 @@
           "admin"
         ],
         "summary": "POST /api/v1/admin/migration-runs/{runId}/dry-run",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/dry-run-all": {
+      "post": {
+        "operationId": "post_admin_migration_runs_by_runId_dry_run_all",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/migration-runs/{runId}/dry-run-all",
         "responses": {
           "200": {
             "description": "Success",

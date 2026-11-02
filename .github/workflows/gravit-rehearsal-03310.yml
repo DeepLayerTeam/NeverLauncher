@@ -8,6 +8,11 @@ on:
       - 'services/api/internal/dbmigrate/sql/0097*'
       - 'cli/cmd/launcher/migration_rehearsal*'
       - 'cli/cmd/launcher/migration_live*'
+      - 'cli/cmd/launcher/migration_rehearsal_local_04910*'
+      - 'cli/cmd/launcher/migration_workflow_0331.go'
+      - 'tools/gravit-port/rehearse_cohort_04910.py'
+      - 'tools/gravit-port/test_rehearse_cohort_04910.py'
+      - 'docs/migration/gravit-cohort-rehearsal-04910.md'
       - 'docs/migration/gravit-live-rehearsal-0447.md'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-rehearsal-03310.yml'
@@ -47,7 +52,9 @@ jobs:
           go test -count=1 ./internal/httpapi -run '^$'
       - name: CLI real-process probes and security checks
         working-directory: cli
-        run: go test -race -count=1 ./cmd/launcher -run 'TestRehearsal'
+        run: go test -race -count=1 ./cmd/launcher -run 'TestRehearsal|TestRehearseLocal04910'
+      - name: Three-project cohort regression (synthetic inputs; not GA)
+        run: python3 -m unittest discover -s tools/gravit-port -p 'test_rehearse_cohort_04910.py' -v
       - name: Contract and version
         run: |
           python3 scripts/version/manage.py check
