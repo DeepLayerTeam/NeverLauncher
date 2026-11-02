@@ -1,0 +1,60 @@
+name: Guard 0.50.5 runtime file and module enforcement
+on:
+  push:
+    paths:
+      - 'sdk/java/trusted-agent/**'
+      - 'runtime/runtime/src/runtime_integrity_0505.rs'
+      - 'runtime/runtime/src/guarded_trusted_launch_0503.rs'
+      - 'runtime/runtime/src/guard_compatibility_0502.rs'
+      - 'runtime/runtime/src/windows_module_guard.rs'
+      - 'runtime/runtime/src/windows_sensor.rs'
+      - 'cli/cmd/launcher/guard_runtime_integrity_0505*'
+      - 'cli/cmd/launcher/trusted_jvm_0306.go'
+      - 'scripts/tests/guard_runtime_integrity_0505.py'
+      - '.github/workflows/runtime-integrity-0505.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integrity-live-jvm:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, label: linux-x64}
+          - {runner: ubuntu-24.04-arm, label: linux-arm64}
+          - {runner: windows-2022, label: windows-x64}
+          - {runner: windows-11-arm, label: windows-arm64}
+          - {runner: macos-15-intel, label: macos-x64}
+          - {runner: macos-15, label: macos-arm64}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    name: ${{ matrix.label }} runtime integrity
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Real JVM classpath/JAR/native integrity positive and negative regressions
+        run: python scripts/tests/guard_runtime_integrity_0505.py
+      - name: Go signed Guard policy and legacy launcher integration
+        working-directory: cli
+        run: go test ./cmd/launcher -run '^(TestGuardRuntimeInventory0505|TestGuardLoader0504|TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1 -timeout 12m
+      - name: Native Rust launch & inventory unit tests
+        run: |
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib runtime_integrity_0505
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib guarded_trusted_launch_0503
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
+      - name: Version consistency
+        run: python scripts/version/manage.py check

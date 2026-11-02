@@ -60,6 +60,11 @@ public final class Agent {
             // Install the observer before Minecraft's own loader initializes.
             // Authorized loader classes must originate in pinned runtime JARs.
             instrumentation.addTransformer(LoaderGuard0504.from(config), false);
+            if ("true".equals(config.getProperty("integrity.required"))) {
+                RuntimeIntegrity0505 integrity = RuntimeIntegrity0505.from(config);
+                instrumentation.addTransformer(integrity, false);
+                integrity.start();
+            }
         }
         List<URL> urls = new ArrayList<URL>();
         for (int i = 0; i < count; i++) {

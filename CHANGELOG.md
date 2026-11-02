@@ -1,3 +1,11 @@
+## 0.50.5 — Runtime Integrity Enforcement (source implementation; GA BLOCKED)
+
+- Enforce the effective JVM classpath and modulepath against the signed release Manifest, native release files, and exact Guard Ed25519-authorized mods, agents, loader libraries and JVM plugins. Rust Runtime generates private integrity pins consumed by the real Trusted Java premain; changed, missing, unsigned or symlinked executables prevent protected startup.
+- Add a live Java integrity monitor: verify installed SHA-256 identities before Minecraft main, reject unexpected classpath and unapproved class-source JARs, and recheck signed files, mods and native trees every four seconds. Linux checks real JVM executable `/proc/self/maps` mappings for unsigned or changed native libraries; violations terminate the JVM.
+- Windows native Module Guard checks exact signed DLL hashes inside the guarded game root during baseline and continuous module load checks; system and managed-JRE trust are handled separately. Legacy Go ClientFactory gains live signed-policy file monitoring but does not claim complete native-manifest classpath enforcement.
+- Executable regression: 7/7 JVM subprocess integrity cases passed on OpenJDK 21/Linux; targeted Go signed-policy/Trusted JVM tests passed; version metadata checked. CI coverage added for six OS/CPU combinations.
+- **GA BLOCKED:** Rust and Windows/macOS native builds, real modded Minecraft join, independent final-installation evidence and full CI are still unverified. Live native module enumeration is only claimed for Windows Sensor and Linux /proc maps, not macOS. Same-process trusted Java/native code is not sandboxed.
+
 ## 0.50.4 — Authorized JVM Transformations: loader-origin enforcement (source implementation; GA BLOCKED)
 
 - Guard's signed-policy verifier now accepts SHA-256 pinned `loader-library` JARs; modern Rust Runtime and legacy Go ClientFactory bind their exact installed files and selected loader to real Java premain. Modded Trusted JVM launch fails closed if no loader libraries have been authorized, if a jar changed, or its digest was revoked.

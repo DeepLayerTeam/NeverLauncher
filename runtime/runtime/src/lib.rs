@@ -24,6 +24,7 @@ pub mod guard_ipc;
 pub mod guard_inventory_0501;
 pub mod guard_compatibility_0502;
 mod guarded_trusted_launch_0503;
+mod runtime_integrity_0505;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
@@ -1140,8 +1141,8 @@ pub async fn launch_with_timeout_matching_authenticated(
     if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
         return Err("Guard Trusted JVM requires a classpath Minecraft main; module entrypoint is unsupported".into());
     }
-    let _trusted = guarded_trusted_launch_0503::prepare(root, &manifest.project_id,
-        &manifest.minecraft.version, &manifest.minecraft.loader, &plan.main_class)?;
+    let _trusted = guarded_trusted_launch_0503::prepare_verified(root, &manifest.project_id,
+        &manifest.minecraft.version, &manifest.minecraft.loader, &plan.main_class, manifest, &plan)?;
     if let Some(ref trusted) = _trusted {
         // A signed Guard policy, not modded metadata or mutable JVM flags,
         // authorizes the exact agent and its JVM transformation owners.
@@ -1157,7 +1158,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     // injects its fresh authenticated IPC endpoint/secret without being erased.
     apply_launch_command_0223(&mut command, &plan);
     #[cfg(windows)]
-    let mut sensor_bootstrap = windows_sensor::prepare_sensor_command_for_game(&mut command, root)
+    let mut sensor_bootstrap = windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
         .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
     command
         .stdin(Stdio::null())

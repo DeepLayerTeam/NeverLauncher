@@ -101,7 +101,16 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
 /// If a trusted JVM package is installed, require the full signed Guard policy
 /// and bind its agent, plugins, transformations and game scope before Java spawn.
 /// Absence of the package keeps vanilla/ordinary loader launch unchanged.
-pub fn prepare(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str) -> Result<Option<GuardedTrustedLaunch0503>, String> {
+pub fn prepare_verified(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str,
+    manifest:&crate::Manifest, plan:&crate::LaunchPlan) -> Result<Option<GuardedTrustedLaunch0503>, String> {
+    prepare_inner(root,project,minecraft,loader,original_main,Some((manifest,plan)))
+}
+#[cfg(test)]
+fn prepare(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str) -> Result<Option<GuardedTrustedLaunch0503>, String> {
+    prepare_inner(root,project,minecraft,loader,original_main,None)
+}
+fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str,
+   launch:Option<(&crate::Manifest,&crate::LaunchPlan)>) -> Result<Option<GuardedTrustedLaunch0503>, String> {
     let canonical_root = fs::canonicalize(root).map_err(|e| format!("Guard Trusted JVM client root: {e}"))?;
     let root = canonical_root.as_path();
     let active = root.join(ACTIVE);
@@ -141,7 +150,10 @@ pub fn prepare(root: &Path, project: &str, minecraft: &str, loader: &str, origin
     // the JVM. The final native Guard pre-spawn gate repeats these checks.
     guard_compatibility_0502::enforce_launch(root, project, minecraft, loader, &[])?;
     let libraries = signed.loader_libraries(root, loader)?;
-    let config = config_text(original_main, &plugins, &transforms, loader, &libraries, &signed.loader_class_bytes())?;
+    let mut config = config_text(original_main, &plugins, &transforms, loader, &libraries, &signed.loader_class_bytes())?;
+    if let Some((manifest,plan))=launch {
+        config.push_str(&crate::runtime_integrity_0505::from_verified_launch(manifest,plan,root,&signed)?);
+    }
     let dir = root.join(ROOT);
     let mut random = [0u8; 16]; OsRng.fill_bytes(&mut random);
     let name = dir.join(format!(".guard-launch-{}.properties", hex::encode(random)));

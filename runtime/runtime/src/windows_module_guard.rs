@@ -190,6 +190,10 @@ mod imp {
     #[derive(Clone, Debug)]
     pub struct WindowsModuleGuardPolicy {
         trusted_roots: Vec<String>,
+        guarded_game_root: Option<String>,
+        managed_java_root: Option<String>,
+        pinned_sensor: (String,String),
+        signed_game_natives: HashMap<String,String>,
     }
 
     #[derive(Clone, Debug)]
@@ -264,7 +268,31 @@ mod imp {
             if trusted_roots.is_empty() {
                 return Err("Guard Module Guard trusted root set is empty".to_string());
             }
-            Ok(Self { trusted_roots })
+            let java_home = java_executable.parent().and_then(|bin|bin.parent())
+                .map(|home|canonical_or_absolute(home).map(|p|normalize_path(&p))).transpose()?;
+            let managed_java_root = java_home;
+            let pinned_sensor=(normalize_path(&canonical_or_absolute(sensor_path)?),sha256_file(sensor_path)?);
+            Ok(Self { trusted_roots, guarded_game_root: None, managed_java_root, pinned_sensor,
+                signed_game_natives: HashMap::new() })
+        }
+
+        /// Invoked exclusively for a game with a verified signed Guard policy.
+        /// The OS/JRE and verified Sensor retain their existing separate trust
+        /// handling; unsigned native DLLs anywhere in the game root do not.
+        pub fn set_game_native_pins(&mut self, root: &Path, pins: Vec<(PathBuf,String)>) -> Result<(),String> {
+            let canonical=canonical_or_absolute(root)?;
+            self.guarded_game_root=Some(normalize_path(&canonical));
+            for (path,sha) in pins {
+                let canonical_path=canonical_or_absolute(&path)?;
+                if !canonical_path.starts_with(&canonical) || sha.len()!=64 || !sha.bytes().all(|b|b.is_ascii_hexdigit()) {
+                    return Err("Guard Windows native pinned identity invalid".into());
+                }
+                let normalized=normalize_path(&canonical_path);
+                if self.signed_game_natives.insert(normalized,sha).is_some() {
+                    return Err("Guard Windows duplicate signed native".into());
+                }
+            }
+            Ok(())
         }
 
         fn is_trusted_root_path(&self, normalized_path: &str) -> bool {
@@ -292,6 +320,18 @@ mod imp {
                 })?;
             }
             let sha256 = sha256_file(&canonical)?;
+            if let Some(root)=&self.guarded_game_root {
+                if path_within(&normalized,root) {
+                    let from_managed_jre=self.managed_java_root.as_ref().map(|home|path_within(&normalized,home)).unwrap_or(false);
+                    let from_guard_sensor=normalized==self.pinned_sensor.0 && sha256==self.pinned_sensor.1;
+                    // Java runtime images belong to independently verified
+                    // Managed Java; the exact authenticated Sensor DLL is pinned.
+                    // Every other game-root native image must have a signed hash.
+                    if !from_managed_jre && !from_guard_sensor && self.signed_game_natives.get(&normalized)!=Some(&sha256) {
+                        return Err(format!("Guard Windows loaded native DLL is not signed for this build: {}",canonical.display()));
+                    }
+                }
+            }
             Ok((normalized, sha256))
         }
     }

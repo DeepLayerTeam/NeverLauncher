@@ -148,6 +148,17 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
 /// Artifacts are SHA-256 checked again immediately before spawn.
 pub struct GamePolicy0503 { policy:Policy, digest:String }
 impl GamePolicy0503 {
+ /// Return only independently signed, verified executable artifacts for in-JVM
+ /// integrity monitoring. This cannot extend trust beyond policy artifacts.
+ pub fn runtime_artifacts(&self,root:&Path)->Result<Vec<(std::path::PathBuf,String,String)>,String>{
+  let mut items=Vec::new();
+  for a in &self.policy.artifacts {
+   self.authorize(root,&a.kind,&a.path,&a.sha256)?;
+   let abs=fs::canonicalize(root.join(&a.path)).map_err(|e|e.to_string())?;
+   items.push((abs,a.sha256.clone(),a.kind.clone()));
+  }
+  Ok(items)
+ }
  pub fn digest(&self)->&str { &self.digest }
  pub fn authorize(&self,root:&Path,kind:&str,relative_path:&str,digest:&str)->Result<(),String> {
   let artifact=self.policy.artifacts.iter().find(|a|a.kind==kind && a.path==relative_path && a.sha256==digest)

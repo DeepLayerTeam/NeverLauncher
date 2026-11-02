@@ -193,6 +193,7 @@ mod imp {
         command: &mut Command,
         sensor_path: PathBuf,
         verified_root: Option<&Path>,
+        signed_manifest: Option<&crate::Manifest>,
     ) -> Result<WindowsSensorBootstrap, String> {
         validate_startup_instrumentation_boundary(command, verified_root)?;
         let metadata = std::fs::symlink_metadata(&sensor_path).map_err(|err| {
@@ -205,7 +206,12 @@ mod imp {
         verify_windows_authenticode_trust(&sensor_path)
             .map_err(|err| format!("Guard Sensor Authenticode verification failed: {err}"))?;
 
-        let module_guard_policy = policy_for_command(command, &sensor_path)?;
+        let mut module_guard_policy = policy_for_command(command, &sensor_path)?;
+        if let (Some(root),Some(manifest))=(verified_root,signed_manifest) {
+            if let Some(pins)=crate::runtime_integrity_0505::signed_native_pins(manifest,root)? {
+                module_guard_policy.set_game_native_pins(root,pins)?;
+            }
+        }
         let endpoint = sensor_endpoint();
         let server = create_secure_pipe_server(&endpoint)
             .map_err(|err| format!("Guard Sensor startup pipe creation failed: {err}"))?;
@@ -229,19 +235,19 @@ mod imp {
     }
 
     pub fn prepare_sensor_command(command: &mut Command) -> Result<WindowsSensorBootstrap, String> {
-        prepare_sensor_command_for_path(command, resolve_sensor_path()?, None)
+        prepare_sensor_command_for_path(command, resolve_sensor_path()?, None, None)
     }
     /// Native Minecraft launcher: authorize a pinned JVM agent against the
     /// signed client root, even when gameDirectory points elsewhere.
-    pub fn prepare_sensor_command_for_game(command: &mut Command, root: &Path) -> Result<WindowsSensorBootstrap, String> {
-        prepare_sensor_command_for_path(command, resolve_sensor_path()?, Some(root))
+    pub fn prepare_sensor_command_for_game(command: &mut Command, root: &Path, manifest: &crate::Manifest) -> Result<WindowsSensorBootstrap, String> {
+        prepare_sensor_command_for_path(command, resolve_sensor_path()?, Some(root), Some(manifest))
     }
 
     pub fn prepare_sensor_command_with_path(
         command: &mut Command,
         sensor_path: PathBuf,
     ) -> Result<WindowsSensorBootstrap, String> {
-        prepare_sensor_command_for_path(command, sensor_path, None)
+        prepare_sensor_command_for_path(command, sensor_path, None, None)
     }
 
     impl WindowsSensorBootstrap {
