@@ -1458,6 +1458,16 @@ func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.Ser
 
 const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,delivery_sequence,lease_owner,lease_token,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
 
+// serverBridgeControlDBTime0515 reads the authoritative PostgreSQL clock inside
+// the transaction that assigns or reconciles a ServerBridge delivery. Host
+// clocks may be arbitrarily skewed during multi-host failover; never use the
+// caller's wall clock to decide who owns an externally side-effecting command.
+func serverBridgeControlDBTime0515(ctx context.Context, tx *sql.Tx) (time.Time, error) {
+	var now time.Time
+	err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&now)
+	return now.UTC(), err
+}
+
 // CreateServerBridgeControlCommand обеспечивает однократный допуск по сочетанию (сервер, инициатор, ключ
 // идемпотентности). Повтор с тем же каноническим запросом возвращает исходную команду; повтор с другим хешем
 // отклоняется на всех репликах API благодаря уникальному ключу PostgreSQL и консультативной блокировке.
@@ -1465,7 +1475,7 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
 	}
-	if c.ID == "" || c.ServerID == "" || c.RuntimeEpoch < 1 || len(c.RuntimeID) != 64 || c.Type == "" || len(c.PayloadSHA256) != 64 || len(c.RequestDigest) != 64 || c.RequestedBy == "" || len(c.IdempotencyKey) < 8 || c.ExpiresAt.Before(now) {
+	if c.ID == "" || c.ServerID == "" || c.RuntimeEpoch < 1 || len(c.RuntimeID) != 64 || c.Type == "" || len(c.PayloadSHA256) != 64 || len(c.RequestDigest) != 64 || c.RequestedBy == "" || len(c.IdempotencyKey) < 8 {
 		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: invalid control command", ErrConflict)
 	}
 	payload, err := json.Marshal(c.Payload)
@@ -1477,6 +1487,15 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 		return model.ServerBridgeControlCommand{}, false, err
 	}
 	defer tx.Rollback()
+	// Expiry is checked against PostgreSQL after the transaction has started.
+	// A fast API clock must not reject an otherwise valid operator request.
+	now, err = serverBridgeControlDBTime0515(ctx, tx)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	if !c.ExpiresAt.After(now) {
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: control command already expired", ErrConflict)
+	}
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(195, hashtext($1 || ':' || $2 || ':' || $3))`, c.ServerID, c.RequestedBy, c.IdempotencyKey); err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
 	}
@@ -1573,10 +1592,15 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
 	}
-	// A leased command MAY have performed the side effect even if the ACK was
-	// lost. Convert an expired delivery into another dispatch. The
-	// PostgreSQL row is authoritative across all Backend replicas; Redis is
-	// only an additional ephemeral ownership check.
+	// Lease expiry, pending eligibility and runtime reconciliation share one
+	// authoritative clock even when API replicas have divergent NTP time.
+	now, err = serverBridgeControlDBTime0515(ctx, tx)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	// A delivered command MAY have performed its side effect before ACK loss.
+	// Expired delivery becomes indeterminate, never pending/redeliverable.
+	// PostgreSQL remains authoritative across API replicas.
 	if err = r.reconcileControlLeases0285(ctx, tx, serverID, now); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
@@ -1634,6 +1658,11 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		return model.ServerBridgeControlCommand{}, err
 	}
 	defer tx.Rollback()
+	// Completion and repeated ACKs use DB time for their persisted evidence.
+	now, err = serverBridgeControlDBTime0515(ctx, tx)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
 	current, err := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1 FOR UPDATE`, commandID))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

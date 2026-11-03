@@ -161,6 +161,11 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	if err != nil || first.Status != "leased" {
 		t.Fatalf("first uncertain lease: %+v %v", first, err)
 	}
+	// Simulate expiry at the database (the old test shifted API wall time,
+	// which 0.51.5 intentionally ignores to prevent cross-host clock skew).
+	if _, err = a.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1`, first.ID); err != nil {
+		t.Fatal(err)
+	}
 	_, err = b.LeaseServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
 		"dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef",
 		failedLease.DeliverySequence, now.Add(6*time.Second), 5*time.Second)
@@ -173,8 +178,14 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 			t.Fatalf("cross-replica uncertain state: %+v %v", read, readErr)
 		}
 	}
-	if _, err = b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, first.LeaseOwner, first.LeaseToken, first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second)); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale result committed: %v", err)
+	if _, err = b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, "dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef", first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second)); !errors.Is(err, ErrConflict) {
+		t.Fatalf("new owner must not claim expired delivery: %v", err)
+	}
+	// An original, authenticated durable ACK can reconcile a lost HTTP reply
+	// without re-dispatching the side effect.
+	late, err := b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, first.LeaseOwner, first.LeaseToken, first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second))
+	if err != nil || late.Status != "succeeded" {
+		t.Fatalf("original late ACK must reconcile safely: %+v %v", late, err)
 	}
 	// A pre-0.28.5 replica must be fenced by PostgreSQL itself, not just Go.
 	if _, err = b.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased', lease_token='stale' WHERE id=$1`, first.ID); err == nil {

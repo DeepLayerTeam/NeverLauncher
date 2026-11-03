@@ -1,0 +1,32 @@
+# ServerBridge 0.51.5: реальное восстановление команд, событий и управления
+
+## Цепочка безопасности
+
+1. Зафиксируйте неизменяемые `LAUNCHER_BACKEND_URLS` из двух действующих HTTPS API узлов с общей PostgreSQL базой, действующей Ed25519 node identity и валидным pinned backend public key. Не создавайте вторую identity для старого игрового узла и не копируйте private key на произвольные машины.
+2. Управляющий канал подтверждает исполнение лишь после `BridgeControlJournal.begin` (fsync) и `complete` (fsync) на игровом хосте. При потере HTTP-ACK журнал передаёт ту же receipt на другой API endpoint. Смена backend не вызывает повторного исполнения JVM операции.
+3. PostgreSQL привязывает delivery к `(server, runtime, channel, token, sequence)`. В 0.51.5 время выдачи и истечения аренды берётся в транзакции PostgreSQL, а не из часов отдельных API. Истёкшая доставка переходит в `indeterminate`, не возвращается в `pending`; поздняя проверенная receipt принимается только с **исходными** delivery-токенами.
+4. Event stream не удаляет записи при отсутствии согласованной capability: журнал удерживает подписанные события и повторяет отправку до настоящего `ackSequence` от backend. Изменение `runtimeId` после рестарта JVM архивирует неподтверждённый журнал прежнего runtime; эти события **не** объявляются доставленными. Проверьте `event-stream.journal.stale-*` при инциденте.
+
+## Восстановление удалённого host control при потерянном ответе
+
+На исходной машине оператора, имеющей CA certificate и секретный service token, повторите только **чтение** результата с первоначальным ключом:
+
+```bash
+nl server-bridge host remote call \
+  --url https://game-host.example:9443 \
+  --ca-file /etc/launcher/remote-ca.pem \
+  --token-file /run/secrets/remote-agent-token \
+  --action receipt \
+  --idempotency-key <original-command-idempotency-key> \
+  --output /var/lib/launcher/recovered-receipt.json
+```
+
+`receipt` обращается только к `GET /v1/host/receipts/{key}`. Права: `host.status` **и** соответствующий `host.start|host.stop|host.restart`; исходный subject должен совпадать. Запрос не может запускать JVM. Он работает при восстановленном TLS доступе к исходному agent и его приватному локальному журналу. При уничтожении диска хоста без журнала автоматическое «успешное» восстановление невозможно. `indeterminate` требует ручной проверки состояния миров, процесса и audit до любых новых операций.
+
+## Обязательная приёмка до объявления HA GA
+
+- Два API экземпляра с отдельными часами (в тесте ±6 часов) и одной PostgreSQL: выдача через A, возврат исходной delivery через B, отказ каналу C, отсутствие второй команды после истечения lease.
+- Отключение сети между игровым узлом и API после side effect: JVM не повторяет команду; control WAL переживает рестарт; подтверждение возвращается после восстановления соединения.
+- Версия backend без `events.ordered-stream-v1`: журнал событий не сокращается и не выдаёт фиктивный ACK. После восстановления совместимого backend реальный ack продвигает курсор.
+- TLS remote host: потерянный POST-ответ, последующий GET исходной receipt, ровно один вызов host action; без CA, scope или оригинального idempotency key — отказ.
+- Настоящие Paper/Velocity/Folia/модовые JVM, потеря игрового хоста и согласованное восстановление миров на другом устройстве — **BLOCKED**, пока не выполнены независимые прогоны. Этот код не осуществляет live-migration состояния игрового мира в памяти.

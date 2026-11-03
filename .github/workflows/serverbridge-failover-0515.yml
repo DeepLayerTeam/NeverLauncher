@@ -1,0 +1,85 @@
+name: ServerBridge real failover and receipt recovery (0.51.5)
+on:
+  push:
+    paths:
+      - 'plugins/bridge-common/src/**'
+      - 'cli/cmd/launcher/serverbridge_host_remote_0284.go'
+      - 'cli/cmd/launcher/serverbridge_host_receipt_recovery_0515_test.go'
+      - 'services/api/internal/repository/server_bridge_v2.go'
+      - 'services/api/internal/repository/server_bridge_control_0195_integration_test.go'
+      - '.github/workflows/serverbridge-failover-0515.yml'
+  pull_request:
+    paths:
+      - 'plugins/bridge-common/src/**'
+      - 'cli/cmd/launcher/serverbridge_host_remote_0284.go'
+      - 'cli/cmd/launcher/serverbridge_host_receipt_recovery_0515_test.go'
+      - 'services/api/internal/repository/server_bridge_v2.go'
+      - 'services/api/internal/repository/server_bridge_control_0195_integration_test.go'
+      - '.github/workflows/serverbridge-failover-0515.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bridge-jvm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compile real bridge runtime + durable journal tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/bridge-classes /tmp/bridge-generated/ru/launcher/bridge/common
+          printf 'package ru.launcher.bridge.common; public final class BridgeVersion { public static final String VERSION="%s"; }\n' "$(cat VERSION)" > /tmp/bridge-generated/ru/launcher/bridge/common/BridgeVersion.java
+          find plugins/bridge-common/src/main/java plugins/bridge-common/src/test/java /tmp/bridge-generated -name '*.java' > /tmp/bridge-sources
+          javac --release 21 -d /tmp/bridge-classes @/tmp/bridge-sources
+          java -cp /tmp/bridge-classes ru.launcher.bridge.common.BridgeControlJournal0412Test
+          java -cp /tmp/bridge-classes ru.launcher.bridge.common.BridgeFailoverRecovery0515Test
+  host-receipt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Real TLS and dropped-ACK CLI regressions with race detector
+        working-directory: cli
+        run: go test -race -count=1 ./cmd/launcher -run 'Test(RemoteReceiptRecovery0515|RemoteControlScopesAndSources0284|RemoteControlIdempotencyAndUnknown0284|RemoteControlConcurrentDelivery0284|RemoteControlRealHTTPSAndCLI0284)'
+  postgres-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: bridge_test
+          POSTGRES_PASSWORD: test-only-0515
+          POSTGRES_DB: bridge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd='pg_isready -U bridge_test -d bridge_test'
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=15
+    env:
+      LAUNCHER_SERVERBRIDGE_HA_DSN: postgres://bridge_test:test-only-0515@127.0.0.1:5432/bridge_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Real two-connection PostgreSQL lease/clock/fencing regression
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/repository -run 'Test(ServerBridgeControl0195Postgres|ServerBridgeHAControlPlane01911MultiReplica)'
+      - name: Version and gofmt
+        run: |
+          python3 scripts/version/manage.py check
+          test -z "$(gofmt -l services/api/internal/repository/server_bridge_v2.go services/api/internal/repository/server_bridge_control_0195_integration_test.go cli/cmd/launcher/serverbridge_host_remote_0284.go cli/cmd/launcher/serverbridge_host_receipt_recovery_0515_test.go)"

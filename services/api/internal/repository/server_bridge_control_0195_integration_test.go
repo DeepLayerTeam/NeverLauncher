@@ -99,4 +99,82 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	if auditCount != 2 {
 		t.Fatalf("expected queued+completed transactional audit rows, got %d", auditCount)
 	}
+
+	// 0.51.5: two independent API replicas can process the same delivery
+	// despite a six-hour time skew on either HTTP/worker host. The DB clock
+	// determines the lease and when it is safe to reconcile an unacknowledged
+	// side effect. An expired delivery NEVER becomes a second execution.
+	second, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
+	if !ok {
+		t.Fatal("second repository is not SQLRepository")
+	}
+	defer second.db.Close()
+	cmd2 := cmd
+	cmd2.ID = "ctl_control0195_skew_0515"
+	cmd2.IdempotencyKey = "control0195-skew-0515"
+	cmd2.ExpiresAt = time.Now().UTC().Add(2 * time.Minute)
+	cmd2.CreatedAt = time.Now().UTC()
+	cmd2.UpdatedAt = cmd2.CreatedAt
+	_, _, err = repo.CreateServerBridgeControlCommand(ctx, cmd2, time.Now().UTC().Add(6*time.Hour))
+	if err != nil {
+		t.Fatalf("fast API clock incorrectly rejected pending command: %v", err)
+	}
+	channel := "skew_channel_0123456789abcdef"
+	token := "skew_token_0123456789abcdef"
+	first, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, token, 0, time.Now().UTC().Add(6*time.Hour), 30*time.Second)
+	if err != nil || first.ID != cmd2.ID {
+		t.Fatalf("fast clock expired pending command: %+v, %v", first, err)
+	}
+	var dbNow time.Time
+	if err := repo.db.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&dbNow); err != nil {
+		t.Fatal(err)
+	}
+	if delta := first.LeaseUntil.Sub(dbNow); delta < 20*time.Second || delta > 35*time.Second {
+		t.Fatalf("lease must use database time, remaining: %v", delta)
+	}
+	resumedOtherReplica, err := second.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, "new_token_0123456789abcdef", 0, time.Now().UTC().Add(-6*time.Hour), 30*time.Second)
+	if err != nil || resumedOtherReplica.ID != first.ID || resumedOtherReplica.LeaseToken != token || resumedOtherReplica.Attempt != 1 {
+		t.Fatalf("other API replica must resume original delivery, not reexecute: %+v, %v", resumedOtherReplica, err)
+	}
+	_, err = second.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "other_channel_0123456789abcdef", "other_token_0123456789abcdef", 0, time.Now().UTC().Add(-6*time.Hour), 30*time.Second)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("second channel claimed active delivery: %v", err)
+	}
+	doneSkew, err := second.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd2.ID, channel, token, first.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(-6*time.Hour))
+	if err != nil || doneSkew.Status != "succeeded" {
+		t.Fatalf("cross replica ACK failed: %+v, %v", doneSkew, err)
+	}
+	if delta := doneSkew.CompletedAt.Sub(dbNow); delta < -5*time.Second || delta > 10*time.Second {
+		t.Fatalf("ACK evidence incorrectly uses an API host clock: %v", delta)
+	}
+	lateACK, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd2.ID, channel, token, first.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(6*time.Hour))
+	if err != nil || lateACK.Status != "succeeded" {
+		t.Fatalf("lost ACK retry across replicas: %+v, %v", lateACK, err)
+	}
+	cmd3 := cmd2
+	cmd3.ID = "ctl_control0195_expiry_0515"
+	cmd3.IdempotencyKey = "control0195-expiry-0515"
+	_, _, err = repo.CreateServerBridgeControlCommand(ctx, cmd3, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, "expired_token_0123456789abcdef", first.DeliverySequence, time.Now().Add(-6*time.Hour), 30*time.Second)
+	if err != nil || pending.ID != cmd3.ID {
+		t.Fatalf("lease command 3: %+v, %v", pending, err)
+	}
+	if _, err := repo.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1`, cmd3.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = second.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "other_channel_0123456789abcdef", "retry_token_0123456789abcdef", first.DeliverySequence, time.Now().Add(-6*time.Hour), 30*time.Second)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expired side effect must never be redelivered: %v", err)
+	}
+	current, err := second.GetServerBridgeControlCommand(ctx, node.ID, cmd3.ID)
+	if err != nil || current.Status != "indeterminate" {
+		t.Fatalf("expired command not reconciled: %+v, %v", current, err)
+	}
+	resolved, err := second.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd3.ID, channel, pending.LeaseToken, pending.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(6*time.Hour))
+	if err != nil || resolved.Status != "succeeded" {
+		t.Fatalf("original durable late ACK rejected: %+v, %v", resolved, err)
+	}
 }

@@ -1064,13 +1064,27 @@ func remoteCall0284(args []string) error {
 		}
 		tlsConfig.Certificates = []tls.Certificate{pair}
 	}
-	client := &http.Client{Timeout: 90 * time.Second, Transport: &http.Transport{TLSClientConfig: tlsConfig}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	// The Go transport treats an Idempotency-Key as permission to replay a
+	// request on a reused broken connection. Host side effects must NEVER be
+	// replayed after an uncertain reply: disable connection reuse entirely and
+	// recover only through the read-only receipt endpoint.
+	client := &http.Client{Timeout: 90 * time.Second, Transport: &http.Transport{TLSClientConfig: tlsConfig, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	action := flagValue(args, "--action", "status")
 	var method, path string
 	var body io.Reader
 	if action == "status" {
 		method = http.MethodGet
 		path = "/v1/host/status"
+	} else if action == "receipt" {
+		// A response may have been lost after the host executed the operation.
+		// Read the original, fsynced receipt: NEVER retry the mutation on
+		// another host or with a fresh idempotency key after I/O uncertainty.
+		key := flagValue(args, "--idempotency-key", "")
+		if !remoteIdempotency0284.MatchString(key) {
+			return errors.New("receipt recovery requires the original --idempotency-key (16-128 safe characters)")
+		}
+		method = http.MethodGet
+		path = "/v1/host/receipts/" + key
 	} else if action == "start" || action == "stop" || action == "restart" {
 		method = http.MethodPost
 		path = "/v1/host/commands"
@@ -1080,7 +1094,7 @@ func remoteCall0284(args []string) error {
 			return errors.New("mutations require --idempotency-key (16-128 safe characters)")
 		}
 	} else {
-		return errors.New("unsupported remote action")
+		return errors.New("unsupported remote action (status, start, stop, restart, receipt)")
 	}
 	request, err := http.NewRequest(method, url+path, body)
 	if err != nil {

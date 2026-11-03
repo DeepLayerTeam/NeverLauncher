@@ -1,3 +1,10 @@
+## 0.51.5 — ServerBridge Failover & Recovery (HA GA BLOCKED)
+
+- Fix cross-host ServerBridge command routing after API replica failure: PostgreSQL `clock_timestamp()` is authoritative for command admission, lease assignment, lease reconciliation and ACK commit in the same transaction; API node clock skew can no longer prematurely expire an unexecuted command or prolong a delivery lease. Expired/superseded delivered commands remain indeterminate and cannot be executed again.
+- Preserve real ServerBridge event-stream durability during backend failover: if a negotiated backend lacks the ordered-event feature, reject delivery instead of fabricating a successful ACK and deleting uncommitted events. Backend 502/503/504 and I/O uncertainty keep the signed journal for retry.
+- Add JVM/journal recovery regressions and PostgreSQL multi-replica clock-skew integration coverage. Remote host restart/stop still require durable receipts and process-identity verification; they are not retried blindly after an uncertain result.
+- **HA GA BLOCKED:** real multi-host Minecraft JVM restart, physical host loss, PostgreSQL primary failover and world-state consistency still require independent fault-injection acceptance. This source patch is not a certificate for those tests.
+
 ## 0.51.4 — Partition Safety & Fencing (PostgreSQL stale-owner protection; HA GA BLOCKED)
 
 - Make PostgreSQL, not individual API/worker wall clocks, authoritative for lease assignment, renewal, expiry and claim eligibility. Verify current token + unexpired lease before accepting durable job completion, failure, termination, operation completion and outbox delivery; retire expired jobs/events at their maximum attempt budget instead of leaving permanent running records; retain transactional channel-head CAS and monotonic fencing.

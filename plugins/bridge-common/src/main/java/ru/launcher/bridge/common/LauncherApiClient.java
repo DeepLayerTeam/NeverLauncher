@@ -596,11 +596,20 @@ public final class LauncherApiClient {
         }
     }
 
+    // Do not manufacture successful delivery ACKs when a failover endpoint
+    // advertises a reduced feature set. The signed journal must retain events
+    // until a compatible backend actually commits and acknowledges them.
+    static void requireEventStream0515(BridgeProtocolNegotiation protocol) throws IOException {
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION ||
+            !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
+            throw new IOException("ServerBridge event stream unavailable on negotiated backend; retaining durable events");
+        }
+    }
+
     private long sendEventBatch(List<BridgeEventRecord> batch) throws IOException, InterruptedException, GeneralSecurityException {
         BridgeProtocolNegotiation protocol = negotiateProtocol();
-        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
-            return batch.get(batch.size() - 1).sequence(); // Серверная часть при постепенном обновлении: локальная очередь ограничена, функция недоступна.
-        }
+        requireEventStream0515(protocol);
+
         StringBuilder events = new StringBuilder("[");
         for (int i = 0; i < batch.size(); i++) {
             if (i > 0) events.append(',');
