@@ -360,6 +360,30 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "file": saved, "storageDriver": s.Storage.Driver(), "checksumVerified": true, "status": "uploaded", "javaContentExtensionId": contentExtensionID, "uploadedSHA256": uploadSHA}})
 }
 
+// storageBackedCandidate0526 makes the same exact uploaded file set visible
+// to validation and signing. Never mutate a shared underlying Files slice.
+func storageBackedCandidate0526(lookup packageLookup) model.Manifest {
+	manifest := lookup.Release.Manifest
+	manifest.Files = make([]model.ManifestFile, 0, len(lookup.Files))
+	for _, file := range lookup.Files {
+		manifest.Files = append(manifest.Files, model.ManifestFile{
+			Path: file.Path, Size: file.Size, SHA256: file.SHA256,
+			URL: file.URL, Required: file.Required, Executable: file.Executable,
+			TargetOS: append([]string(nil), file.TargetOS...),
+			Mirrors:  append([]string(nil), file.Mirrors...), Ownership: file.Ownership,
+		})
+	}
+	return manifest
+}
+
+func validatePackageCandidate0526(lookup packageLookup) error {
+	manifest := storageBackedCandidate0526(lookup)
+	if err := model.ValidateManifestSchema(manifest); err != nil {
+		return err
+	}
+	return validateCompatibilityManifest(manifest)
+}
+
 func (s Server) packageValidate(w http.ResponseWriter, r *http.Request) {
 	lookup, err := s.lookupPackage(r.PathValue("packageId"))
 	if err != nil {
@@ -367,6 +391,15 @@ func (s Server) packageValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
+	// Validate the *actual storage-backed candidate* before reporting a valid
+	// package. Checking SHA-256 alone cannot certify a broken optional-component
+	// graph or a manifest whose declared files differ from its uploaded files.
+	if err := validatePackageCandidate0526(lookup); err != nil {
+		checks = append(checks, map[string]any{
+			"id": "manifest.candidate", "status": "failed",
+			"reasonCode": "manifest-candidate-invalid", "message": err.Error(),
+		})
+	}
 	status := "valid"
 	for _, check := range checks {
 		if check["status"] != "ok" {
@@ -436,10 +469,10 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	manifest := lookup.Release.Manifest
-	manifest.Files = manifest.Files[:0]
-	for _, file := range lookup.Files {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Mirrors: append([]string(nil), file.Mirrors...), Ownership: file.Ownership})
+	manifest := storageBackedCandidate0526(lookup)
+	if err := validatePackageCandidate0526(lookup); err != nil {
+		writeError(w, http.StatusConflict, "invalid package manifest or component graph: "+err.Error())
+		return
 	}
 	if guard, ok := s.Repo.(interface {
 		VerifyMigrationContentBeforeSign0337(context.Context, string, string, model.Manifest) error

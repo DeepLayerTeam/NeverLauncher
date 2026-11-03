@@ -101,10 +101,12 @@ async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String
     let selection = optional_flag(args, "--preset");
     let downloaded = download_missing_files_with_preset(&manifest, &root, &key, None, selection.clone()).await?;
     let files = check_files_with_preset(&manifest, &root, selection.as_deref()).await?;
-    let ready = downloaded.failed == 0 && files.iter().all(|file| file.status == "ok" || file.status == "optional-missing");
+    // Every file returned by check_files_with_preset is selected by the
+    // signed catalog. A selected optional mod is not optional to install.
+    let ready = downloaded.failed == 0 && files.iter().all(|file| file.status == "ok");
     if !ready {
         return Err(format!("sync-local: download failed={}, invalid={}", downloaded.failed,
-            files.iter().filter(|f| f.status != "ok" && f.status != "optional-missing").count()));
+            files.iter().filter(|f| f.status != "ok").count()));
     }
     Ok(json!({"status":"ready", "download":downloaded, "manifest":{
         "projectId": manifest.project_id, "profileId": manifest.profile_id, "version": manifest.version}}))

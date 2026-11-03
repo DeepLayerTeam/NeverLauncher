@@ -1,0 +1,58 @@
+package httpapi
+
+import (
+	"encoding/json"
+	"os"
+	"testing"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+)
+
+func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
+	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_manifest_v3_go_signed_0242.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest model.Manifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	uploaded := make([]model.FileObject, 0, len(manifest.Files))
+	for _, f := range manifest.Files {
+		uploaded = append(uploaded, model.FileObject{
+			ProjectID: manifest.ProjectID, Path: f.Path, SHA256: f.SHA256,
+			Size: f.Size, URL: f.URL, Required: f.Required, Ownership: f.Ownership,
+		})
+	}
+	lookup := packageLookup{Release: model.ReleaseVersion{Manifest: manifest}, Files: uploaded}
+	candidate := storageBackedCandidate0526(lookup)
+	if len(candidate.Files) != len(uploaded) {
+		t.Fatal("candidate ignored uploaded files")
+	}
+	if candidate.Files[0].SHA256 != uploaded[0].SHA256 {
+		t.Fatal("wrong uploaded file digest")
+	}
+	if len(manifest.Files) != len(uploaded) {
+		t.Fatal("original signed manifest mutated")
+	}
+	if err := validatePackageCandidate0526(lookup); err != nil {
+		t.Fatalf("valid fixture: %v", err)
+	}
+
+	// Removing an owned optional JAR must break graph validation, even though
+	// the old preflight accepted a matching empty subset of storage objects.
+	without := lookup
+	without.Files = uploaded[1:]
+	if err := validatePackageCandidate0526(without); err == nil {
+		t.Fatal("missing signed mod accepted by publication preflight")
+	}
+
+	// Invalid ownership also fails before the manifest is signed.
+	tampered := lookup
+	tampered.Files = append([]model.FileObject(nil), uploaded...)
+	tampered.Files[0].Ownership = "required"
+	tampered.Files[0].Required = true
+	if err := validatePackageCandidate0526(tampered); err == nil {
+		t.Fatal("required ownership smuggled into optional-component graph")
+	}
+}

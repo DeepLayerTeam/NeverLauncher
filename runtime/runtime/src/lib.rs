@@ -702,8 +702,12 @@ pub async fn check_files_with_preset(manifest:&Manifest,root:&Path,preset:Option
                 }
             }
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                let optional = manifest.schema_version == "2.0" && file_ownership::effective_ownership(file) == "optional" && !file_ownership::must_verify(manifest, &file.path);
-                results.push(FileCheckResult { path: file.path.clone(), status: if optional { "optional-missing" } else { "missing" }.into(), message: "файл отсутствует".into() });
+                // active_files() has already removed every *unselected* optional
+                // component. A missing file that remains in this list is a
+                // SELECTED game dependency, even for legacy manifest v2.
+                // Never mark it optional-missing: sync/repair/launch must fail
+                // until the actual signed bytes are installed.
+                results.push(FileCheckResult { path: file.path.clone(), status: "missing".into(), message: "выбранный файл отсутствует".into() });
             },
             Err(err) => return Err(format!("{}: {err}", local_path.display())),
         }
@@ -761,7 +765,7 @@ pub async fn repair_client_with_preset(manifest:&Manifest,root:&Path,pinned_publ
     let before=check_files_with_preset(manifest,root,preset.as_deref()).await?;
     let download=durable_downloads::start_with_preset(manifest,root,pinned_public_key,"repair",progress,preset.clone()).await?;
     let after=check_files_with_preset(manifest,root,preset.as_deref()).await?;
-    let broken_after = after.iter().filter(|item| item.status != "ok" && item.status != "optional-missing").count();
+    let broken_after = after.iter().filter(|item| item.status != "ok").count();
     Ok(RepairResult {
         status: if broken_after == 0 { "ready" } else { "failed" }.to_string(),
         before,

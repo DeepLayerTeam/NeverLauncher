@@ -1,0 +1,128 @@
+name: NeverLauncher 0.52.6 modpacks textures and game publication
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'runtime/runtime/src/**'
+      - 'runtime/runtime/tests/selected_optional_0526.rs'
+      - 'services/api/internal/httpapi/package_product.go'
+      - 'services/api/internal/httpapi/package_preflight_0526_test.go'
+      - 'scripts/acceptance/*0526.py'
+      - '.github/workflows/modpacks-textures-publication-0526.yml'
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'runtime/runtime/src/**'
+      - 'runtime/runtime/tests/selected_optional_0526.rs'
+      - 'services/api/internal/httpapi/package_product.go'
+      - 'services/api/internal/httpapi/package_preflight_0526_test.go'
+      - 'scripts/acceptance/*0526.py'
+      - '.github/workflows/modpacks-textures-publication-0526.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  code-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Version, prepublication and negative acceptance checks
+        run: |
+          set -euo pipefail
+          python3 scripts/version/manage.py check
+          python3 -m unittest discover -s scripts/acceptance -p 'test_modpacks_textures_publication_0526.py' -v
+          python3 -m py_compile scripts/acceptance/modpacks_textures_publication_0526.py
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Go production package validation and regressions
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/httpapi/package_product.go internal/httpapi/package_preflight_0526_test.go)"
+          go build ./cmd/...
+          go test -count=1 -timeout=15m ./internal/httpapi \
+            -run 'TestPublicationCandidate0526UsesActualUploadedBytesAndGraph|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Native Runtime selected optional file regression
+        working-directory: runtime/runtime
+        run: |
+          set -euo pipefail
+          cargo test --test selected_optional_0526
+          cargo build --bin runtime
+  live-physical:
+    # Deliberately not an automatic GA claim: requires a dedicated real JVM,
+    # already-uploaded package, operator MFA, trust pins and actual Minecraft.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64, neverlauncher-game-acceptance]
+    environment: modpacks-textures-physical-acceptance
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Real signed published bytes, textures, optional mods and JVM game join
+        env:
+          NL_0526_SECRETS: ${{ vars.NL_0526_SECRETS }}
+          NL_0526_OPERATOR_TOKEN: ${{ vars.NL_0526_OPERATOR_TOKEN }}
+          NL_0526_RUNTIME: ${{ vars.NL_0526_RUNTIME }}
+          NL_0526_RUNTIME_SHA256: ${{ vars.NL_0526_RUNTIME_SHA256 }}
+          NL_0526_CLI: ${{ vars.NL_0526_CLI }}
+          NL_0526_CLI_SHA256: ${{ vars.NL_0526_CLI_SHA256 }}
+          NL_0526_JAVA: ${{ vars.NL_0526_JAVA }}
+          NL_0526_SKIN: ${{ vars.NL_0526_SKIN }}
+          NL_0526_CAPE: ${{ vars.NL_0526_CAPE }}
+          NL_0526_MANIFEST_KEY: ${{ vars.NL_0526_MANIFEST_KEY }}
+          NL_0526_PROJECT: ${{ vars.NL_0526_PROJECT }}
+          NL_0526_PROFILE: ${{ vars.NL_0526_PROFILE }}
+          NL_0526_CHANNEL: ${{ vars.NL_0526_CHANNEL }}
+          NL_0526_PACKAGE_ID: ${{ vars.NL_0526_PACKAGE_ID }}
+          NL_0526_COMPONENT: ${{ vars.NL_0526_COMPONENT }}
+          NL_0526_SELECTED_PRESET: ${{ vars.NL_0526_SELECTED_PRESET }}
+          NL_0526_EXCLUDED_PRESET: ${{ vars.NL_0526_EXCLUDED_PRESET }}
+          NL_0526_SERVER_BUNDLE: ${{ vars.NL_0526_SERVER_BUNDLE }}
+          NL_0526_SERVER_SHA256: ${{ vars.NL_0526_SERVER_SHA256 }}
+          NL_0526_SERVER_ENTRY: ${{ vars.NL_0526_SERVER_ENTRY }}
+        run: |
+          set -euo pipefail
+          : "${NL_0526_SECRETS:?missing private player identity file}"
+          : "${NL_0526_OPERATOR_TOKEN:?missing private owner token file}"
+          : "${NL_0526_RUNTIME:?missing production native Runtime}"
+          : "${NL_0526_CLI:?missing production CLI}"
+          : "${NL_0526_JAVA:?missing real Java}"
+          : "${NL_0526_SKIN:?missing valid Minecraft skin}"
+          : "${NL_0526_CAPE:?missing valid Minecraft cape}"
+          : "${NL_0526_PACKAGE_ID:?missing isolated draft package}"
+          umask 077
+          extra=()
+          if [[ -n "${NL_0526_SERVER_BUNDLE:-}" ]]; then
+            extra+=(--server-bundle "$NL_0526_SERVER_BUNDLE")
+            extra+=(--server-bundle-sha256 "${NL_0526_SERVER_SHA256:-}")
+            extra+=(--server-entry "${NL_0526_SERVER_ENTRY:-}")
+          fi
+          python3 scripts/acceptance/modpacks_textures_publication_0526.py \
+            --secrets "$NL_0526_SECRETS" --operator-token "$NL_0526_OPERATOR_TOKEN" \
+            --runtime "$NL_0526_RUNTIME" --runtime-sha256 "$NL_0526_RUNTIME_SHA256" \
+            --cli "$NL_0526_CLI" --cli-sha256 "$NL_0526_CLI_SHA256" \
+            --java "$NL_0526_JAVA" --skin "$NL_0526_SKIN" --cape "$NL_0526_CAPE" \
+            --pinned-manifest-public-key "$NL_0526_MANIFEST_KEY" \
+            --project "$NL_0526_PROJECT" --profile "$NL_0526_PROFILE" \
+            --channel "$NL_0526_CHANNEL" --package-id "$NL_0526_PACKAGE_ID" \
+            --component "$NL_0526_COMPONENT" \
+            --selected-preset "$NL_0526_SELECTED_PRESET" \
+            --excluded-preset "$NL_0526_EXCLUDED_PRESET" \
+            --report "$RUNNER_TEMP/0526-real-acceptance-private.json" \
+            --destructive-isolated-run "${extra[@]}"
+          python3 - "$RUNNER_TEMP/0526-real-acceptance-private.json" <<'PY'
+          import json,sys
+          with open(sys.argv[1],encoding='utf-8') as f: receipt=json.load(f)
+          assert receipt['status']=='passed' and receipt['gaCertified'] is False
+          assert len(receipt['checks']) == 9
+          PY

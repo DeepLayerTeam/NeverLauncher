@@ -1,0 +1,17 @@
+# NeverLauncher 0.52.6: Modpacks, Textures & Game Publication
+
+## Working paths
+
+1. The Backend `/api/v1/packages/{id}/validate` checks uploaded storage hashes **and** the full candidate manifest plus signed component topology before it returns `valid`. `/sign` runs the same candidate validations. Broken optional component mappings are rejected before staging/publishing.
+2. Native Runtime `verify`, `sync` and `sync-local` require **all files selected by a preset**, including schema-v2 optional files, to have the correct bytes. Components excluded by the signed catalog are omitted; user-owned `options.txt` remains untouched. `sync-local` repairs a deleted selected JAR from its signed download URL.
+3. The destructive operator runner `scripts/acceptance/modpacks_textures_publication_0526.py` performs real draft validation/sign/stage/integrity/publish, public signed-manifest readback, skin and cape upload/readback, native sync/verify for two presets, deletion/repair of an actual mod JAR, and genuine JVM client join against a matching Minecraft server. Server log, RCON player list and world ticks must agree. A real world `save-all flush`, server stop and exit code are checked.
+
+## Required dedicated live setup
+
+Provide a disposable project/profile/channel and uploaded draft **manifest v3 with component catalog v5**, a real optional JAR, and two deterministic catalog presets that select/exclude the component. Publication may be blocked by existing required runtime evidence; this runner **does not forge or bypass** evidence. Provide a recently authenticated MFA administrator Bearer token in a private 0600 file, separate local Minecraft player credentials in a 0600 JSON file (`origin`, `playerEmail`, `playerPassword`), real skin and cape PNGs, pinned release Runtime/CLI executables and hashes, correct installed Java, and the independently pinned Ed25519 public manifest key. For modded servers supply an operator-pinned full server bundle and its SHA-256 plus the server entrypoint; do not use an arbitrary unverified JAR. Use an isolated Linux graphical or headless-game capable runner and dedicated world; the runner mutates, publishes and joins the project.
+
+Configure the `modpacks-textures-physical-acceptance` protected GitHub environment and `NL_0526_*` variables declared in `.github/workflows/modpacks-textures-publication-0526.yml` for the required external inputs. Trigger manually from the main branch. Secrets files must be pre-provisioned on the physical runner (not committed). Note: runner output contains only status, file digests and nonsecret identifiers; keep the 0600 receipt private because it still identifies an environment.
+
+## Gate and limitations
+
+A missing pinned executable, invalid PNG, absent mod, incorrect digest, inconsistent signed manifest, failed storage readback, incomplete publication, unknown external server, unsuccessful real Minecraft join, or bad RCON/exit **blocks PASS**. Positive local Python/Go/Rust tests prove only their stated invariants; they do not constitute external GA. The offline-mode loopback matching-server test does not prove Microsoft/Minecraft entitlement, and upload/readback does not independently prove in-game skin/cape rendering. A separate actual in-game texture screenshot/observer and authenticated online-mode join remain required for full independent acceptance. The operator report keeps `gaCertified:false` even when this local scenario passes.
