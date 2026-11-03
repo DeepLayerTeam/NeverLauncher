@@ -41,6 +41,7 @@ struct ManagedProcess {
     status: ProcessStatus,
     child: Arc<Mutex<Option<Child>>>,
     client_release_lease: Option<Arc<std::fs::File>>,
+    trusted_launch: Option<Arc<crate::guarded_trusted_launch_0503::GuardedTrustedLaunch0503>>,
     guard_violation: Option<String>,
     #[cfg(windows)]
     runtime_policy: Option<crate::RuntimeProcessPolicyGuard>,
@@ -138,6 +139,21 @@ impl ProcessSupervisor {
                 crate::offline_policy_0358::reject_offline_server_autojoin_0358(&plan)?;
             }
         }
+        crate::managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
+        if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
+            return Err("Guard Trusted JVM requires a classpath Minecraft main".into());
+        }
+        let trusted = crate::guarded_trusted_launch_0503::prepare_verified(
+            root, &manifest.project_id, &manifest.minecraft.version,
+            &manifest.minecraft.loader, &plan.main_class, manifest, &plan)?;
+        if let Some(ref agent) = trusted {
+            plan.jvm_args.push(agent.agent_arg.clone());
+            plan.main_class = agent.main_class.clone();
+        }
+        let trusted = trusted.map(Arc::new);
+        crate::guard_compatibility_0502::enforce_launch(root,
+            &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
+        let live_guard = crate::continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
         let started_at = now_unix()?;
@@ -154,10 +170,10 @@ impl ProcessSupervisor {
         let mut command = tokio::process::Command::new(&plan.java_executable);
         command.current_dir(Path::new(&plan.working_directory));
         command.args(&plan.jvm_args);
-        #[cfg(windows)]
-        let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
-            .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
         crate::apply_launch_command_0223(&mut command, &plan);
+        #[cfg(windows)]
+        let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
+            .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
         command
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
@@ -229,11 +245,39 @@ impl ProcessSupervisor {
             status: status.clone(),
             child: child.clone(),
             client_release_lease: Some(client_release_lease),
+            trusted_launch: trusted,
             guard_violation: None,
             #[cfg(windows)]
             runtime_policy: Some(runtime_policy),
             #[cfg(windows)]
             sensor_session: windows_sensor_session,
+        });
+
+        // Independent Rust-side verification runs for the entire lifetime of
+        // every supervised JVM. It also detects Guard policy revocation while
+        // the in-process Java watcher is stopped or disabled.
+        let watcher = self.clone();
+        let watched_id = id.clone();
+        tokio::spawn(async move {
+            loop {
+                sleep(Duration::from_secs(5)).await;
+                let current = watcher.status(&watched_id).await;
+                match current {
+                    Ok(status) if status.state == "running" => (),
+                    _ => return,
+                }
+                let guard = live_guard.clone();
+                let result = tokio::task::spawn_blocking(move || guard.verify()).await;
+                let failure = match result {
+                    Ok(Ok(())) => None,
+                    Ok(Err(e)) => Some(e),
+                    Err(e) => Some(format!("native live Guard watcher failed: {e}")),
+                };
+                if let Some(reason) = failure {
+                    let _ = watcher.stop_for_guard_violation_0438(&watched_id, &reason).await;
+                    return;
+                }
+            }
         });
 
         let processes = self.processes.clone();
@@ -285,6 +329,7 @@ impl ProcessSupervisor {
                         process.status.success = Some(success);
                         process.status.message = message.clone();
                         process.client_release_lease = None;
+                        process.trusted_launch = None;
                         #[cfg(windows)]
                         {
                             if let Some(session) = process.sensor_session.as_ref() {

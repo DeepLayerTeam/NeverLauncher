@@ -1,3 +1,10 @@
+## 0.50.6 — Continuous Game Protection (source implementation; independent production GA BLOCKED)
+
+- Add a native, independent live-game watchdog on both one-shot Runtime launch and Desktop ProcessSupervisor. Every five seconds it revalidates signed executable JAR/native file hashes, existing allowed mods/agents and the Ed25519 Guard policy's scope, revocations, validity and unchanged digest, and terminates a game whose trust changes in-flight. The watchdog uses a blocking hashing worker, never the async reactor thread.
+- Integrate signed Trusted Java Agent preparation and private configuration lifetime into the actual ProcessSupervisor path, so it observes the same verified JVM hook rules as the native one-shot launch. Fix Windows Guard Sensor environment setup order on this path.
+- Add a second Java integrity watchdog to detect stopped or stalled in-process file monitoring; normal game exits are not reported as Guard findings. The Windows Sensor's independent authenticated process heartbeat remains in place.
+- Add Java subprocess adversarial tests and Rust unit coverage; independent compiled Rust, Windows/macOS six-target CI and real Minecraft join remain **BLOCKED** until completed on native hosts. Trust inside the JVM is not a sandbox; an attacker with complete control of the user process or host can interfere with user-mode monitors.
+
 ## 0.50.5 — Runtime Integrity Enforcement (source implementation; GA BLOCKED)
 
 - Enforce the effective JVM classpath and modulepath against the signed release Manifest, native release files, and exact Guard Ed25519-authorized mods, agents, loader libraries and JVM plugins. Rust Runtime generates private integrity pins consumed by the real Trusted Java premain; changed, missing, unsigned or symlinked executables prevent protected startup.

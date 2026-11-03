@@ -25,6 +25,7 @@ pub mod guard_inventory_0501;
 pub mod guard_compatibility_0502;
 mod guarded_trusted_launch_0503;
 mod runtime_integrity_0505;
+mod continuous_game_protection_0506;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
@@ -1151,6 +1152,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         writeln!(log_file, "Guard policy digest: {}", trusted.policy_digest).map_err(|e| e.to_string())?;
     }
     guard_compatibility_0502::enforce_launch(root, &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
+    let live_guard = continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
@@ -1177,23 +1179,20 @@ pub async fn launch_with_timeout_matching_authenticated(
         .await
         .map_err(|err| format!("launch заблокирован: Guard Sensor authentication failed: {err}"))?;
 
-    let (status, timed_out) = if let Some(seconds) = max_runtime_seconds.filter(|seconds| *seconds > 0) {
-        match timeout(Duration::from_secs(seconds), child.wait()).await {
-            Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться runtime: {err}"))?), false),
-            Err(_) => {
-                child.kill().await.map_err(|err| format!("runtime превысил лимит {seconds}s и не был остановлен: {err}"))?;
-                let _ = child.wait().await;
-                (None, true)
-            }
-        }
-    } else {
-        (Some(child.wait().await.map_err(|err| format!("не удалось дождаться runtime: {err}"))?), false)
-    };
-    let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
+    let guarded_exit = continuous_game_protection_0506::wait_protected(
+        &mut child, live_guard, max_runtime_seconds).await?;
+    let (status, timed_out) = (guarded_exit.status, guarded_exit.timed_out);
+    if let Some(reason) = guarded_exit.violation.as_ref() {
+        let _ = writeln!(std::fs::OpenOptions::new().append(true).open(&log_path)
+            .map_err(|e| e.to_string())?, "--- Continuous Game Guard 0.50.6 ---\n{reason}");
+    }
+    let success = guarded_exit.violation.is_none() && status.as_ref().map(|value| value.success()).unwrap_or(false);
     let exit_code = status.and_then(|value| value.code());
     let stdout = read_log_tail(&log_path, 512 * 1024).await.unwrap_or_default();
     let stderr = String::new();
-    let message = if timed_out {
+    let message = if let Some(reason) = guarded_exit.violation.as_ref() {
+        format!("Guard 0.50.6 остановил игру: {reason}")
+    } else if timed_out {
         format!("Runtime остановлен после заданного лимита {}s", max_runtime_seconds.unwrap_or_default())
     } else if success {
         "Runtime завершился успешно".to_string()

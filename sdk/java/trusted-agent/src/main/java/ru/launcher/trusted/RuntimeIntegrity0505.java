@@ -31,6 +31,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
     private final Map<Path, String> kinds;
     private final boolean strictCode;
     private final Set<Path> verifiedOrigins = new HashSet<Path>();
+    private volatile long lastVerifiedNanos = System.nanoTime();
 
     private RuntimeIntegrity0505(Path root, Map<Path, String> digests, Map<Path, String> kinds, boolean strictCode) {
         this.root = root;
@@ -92,6 +93,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                     try {
                         Thread.sleep(4000);
                         scan();
+                        lastVerifiedNanos = System.nanoTime();
                     } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                     catch (Throwable e) { reject("continuous scan: " + e); }
                 }
@@ -99,6 +101,23 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         }, "launcher-runtime-integrity-0505");
         watcher.setDaemon(true);
         watcher.start();
+        // A second observer detects a crashed/interrupted integrity watcher.
+        // Guard must not silently continue a running game without scans.
+        Thread watchdog = new Thread(new Runnable() {
+            @Override public void run() {
+                for (;;) {
+                    try { Thread.sleep(1000); }
+                    catch (InterruptedException e) { reject("integrity watchdog interrupted"); }
+                    if (!watcher.isAlive()) reject("integrity watcher stopped while JVM running");
+                    // Permit slow disks and large mod packs, but fail closed on
+                    // a permanently stalled scan (monotonic clock; not wall time).
+                    if (System.nanoTime() - lastVerifiedNanos > 90_000_000_000L)
+                        reject("integrity watcher deadline exceeded");
+                }
+            }
+        }, "launcher-integrity-watchdog-0506");
+        watchdog.setDaemon(true);
+        watchdog.start();
     }
 
     private void check(Path path) throws Exception {
@@ -212,7 +231,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         return out.toString();
     }
     static void reject(String message) {
-        System.err.println("[Launcher Guard 0.50.5] "+message);
+        System.err.println("[Launcher Guard 0.50.6] "+message);
         Runtime.getRuntime().halt(79);
         throw new SecurityException(message); // unreachable in production, enables static analysis
     }

@@ -1,0 +1,51 @@
+name: Guard 0.50.6 continuous game supervision
+on:
+  push:
+    paths:
+      - 'runtime/runtime/src/continuous_game_protection_0506.rs'
+      - 'runtime/runtime/src/supervisor.rs'
+      - 'runtime/runtime/src/lib.rs'
+      - 'sdk/java/trusted-agent/src/main/java/ru/launcher/trusted/RuntimeIntegrity0505.java'
+      - 'scripts/tests/continuous_game_protection_0506.py'
+      - '.github/workflows/continuous-game-protection-0506.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-guard:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, platform: linux-x64}
+          - {runner: ubuntu-24.04-arm, platform: linux-arm64}
+          - {runner: windows-2022, platform: windows-x64}
+          - {runner: windows-11-arm, platform: windows-arm64}
+          - {runner: macos-15-intel, platform: macos-x64}
+          - {runner: macos-15, platform: macos-arm64}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    name: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Real JVM heartbeat/lifecycle and executable integrity
+        run: python scripts/tests/continuous_game_protection_0506.py
+      - name: Previous real JVM integrity regressions
+        run: python scripts/tests/guard_runtime_integrity_0505.py
+      - name: Compile and execute native parent watchdog regressions
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib continuous_game_protection_0506
+      - name: Compile full Runtime and supervised launcher
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib --no-run
+      - name: Check version consistency
+        run: python scripts/version/manage.py check

@@ -1,0 +1,194 @@
+//! Active, fail-closed checks during the lifetime of the Minecraft JVM.
+//! This is independent of the in-process Java file watcher. It does not
+//! attest to every in-memory class mutation or replace server-side anti-cheat.
+use crate::{Manifest, LaunchPlan};
+use sha2::{Digest, Sha256};
+use std::{collections::BTreeMap, fs::{self, File}, io::Read, path::{Component, Path, PathBuf}};
+use tokio::{process::Child, time::{timeout, Duration, Instant}};
+
+const LIMIT: usize = 8192;
+const PERIOD: Duration = Duration::from_secs(5);
+const MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
+
+#[derive(Clone)]
+pub struct LiveGameGuard0506 {
+    root: PathBuf,
+    project: String,
+    minecraft: String,
+    loader: String,
+    policy_digest: Option<String>,
+    pinned: BTreeMap<PathBuf, String>,
+    jvm_args: Vec<String>,
+}
+
+fn is_executable(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    n.ends_with(".jar") || n.ends_with(".dll") || n.ends_with(".dylib") ||
+        n.ends_with(".jnilib") || n.ends_with(".so") || n.contains(".so.")
+}
+
+fn digest_file(root: &Path, candidate: &Path) -> Result<String, String> {
+    let rel = candidate.strip_prefix(root).map_err(|_| "live Guard file escaped installation root")?;
+    let mut path = root.to_path_buf();
+    for component in rel.components() {
+        let Component::Normal(name) = component else {return Err("live Guard unsafe runtime file path".into())};
+        path.push(name);
+        if fs::symlink_metadata(&path).map_err(|e| format!("live Guard file missing {}: {e}", path.display()))?.file_type().is_symlink() {
+            return Err(format!("live Guard symlink in executable path: {}", path.display()));
+        }
+    }
+    let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
+    if !meta.is_file() || meta.len() > MAX_FILE_BYTES {return Err("live Guard invalid executable file".into())}
+    let mut f = File::open(&path).map_err(|e| e.to_string())?;
+    let mut sha = Sha256::new();
+    let mut buf = [0u8; 65536];
+    loop {let read = f.read(&mut buf).map_err(|e| e.to_string())?; if read == 0 {break} sha.update(&buf[..read]);}
+    Ok(hex::encode(sha.finalize()))
+}
+
+impl LiveGameGuard0506 {
+    pub fn new(manifest: &Manifest, plan: &LaunchPlan, root: &Path) -> Result<Self, String> {
+        let root = fs::canonicalize(root).map_err(|e| e.to_string())?;
+        let signed = crate::guard_compatibility_0502::verified_for_game(&root,
+            &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader)?;
+        crate::guard_compatibility_0502::enforce_launch(&root, &manifest.project_id,
+            &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
+        let selected = crate::component_catalog_0241::active_files(manifest,
+            crate::transactional_release::active_preset_for_manifest(manifest, &root).as_deref())?;
+        let mut pinned = BTreeMap::new();
+        for f in &manifest.files {
+            if !crate::manifest_file_applies(f) || !selected.contains(&f.path) || !is_executable(&f.path) {continue}
+            let absolute = root.join(&f.path);
+            let actual = digest_file(&root, &absolute)?;
+            if !actual.eq_ignore_ascii_case(&f.sha256) {return Err(format!("live Guard initial digest mismatch: {}", f.path))}
+            if pinned.insert(absolute, f.sha256.to_ascii_lowercase()).is_some() {return Err("live Guard duplicate signed file".into())}
+        }
+        if let Some(ref policy) = signed {
+            for (path, digest, _) in policy.runtime_artifacts(&root)? {
+                match pinned.insert(path.clone(), digest.clone()) {
+                    Some(old) if old != digest => return Err(format!("live Guard conflicting artifact: {}",path.display())),
+                    _ => (),
+                }
+            }
+        }
+        // Launcher-generated JVM entrypoint artifacts must be in the signed inventory.
+        for entry in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
+            let canonical = fs::canonicalize(entry).map_err(|e| format!("live Guard classpath missing: {e}"))?;
+            if !pinned.contains_key(&canonical) {
+                return Err(format!("live Guard unsigned classpath: {}",canonical.display()));
+            }
+        }
+        if pinned.is_empty() {return Err("live Guard executable inventory empty".into())}
+        if pinned.len() > LIMIT {return Err("live Guard inventory capacity exceeded".into())}
+        let guard = Self {
+            root, project:manifest.project_id.clone(), minecraft:manifest.minecraft.version.clone(),
+            loader:manifest.minecraft.loader.clone(), policy_digest:signed.map(|p|p.digest().to_string()),
+            pinned, jvm_args:plan.jvm_args.clone(),
+        };
+        guard.verify()?;
+        Ok(guard)
+    }
+
+    /// Called on a blocking worker; never runs hashing on an async executor thread.
+    pub fn verify(&self) -> Result<(), String> {
+        let current = crate::guard_compatibility_0502::verified_for_game(&self.root,
+            &self.project, &self.minecraft, &self.loader)?;
+        if current.as_ref().map(|p|p.digest()) != self.policy_digest.as_deref() {
+            return Err("live Guard policy replaced or revoked during game".into());
+        }
+        crate::guard_compatibility_0502::enforce_launch(&self.root, &self.project,
+            &self.minecraft, &self.loader, &self.jvm_args)?;
+        for (path, expected) in &self.pinned {
+            if &digest_file(&self.root, path)? != expected {
+                return Err(format!("live Guard executable changed during game: {}", path.display()));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Native entrypoint: monitor until the actual child exits, a signed file/policy
+/// changes, or the caller's total runtime limit expires. Violations terminate
+/// the child and cannot be reported as a successful game exit.
+pub struct ProtectedExit0506 {
+    pub status: Option<std::process::ExitStatus>,
+    pub timed_out: bool,
+    pub violation: Option<String>,
+}
+
+pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
+    max_seconds: Option<u64>) -> Result<ProtectedExit0506, String> {
+    let deadline = max_seconds.filter(|v|*v>0).map(|seconds| Instant::now()+Duration::from_secs(seconds));
+    loop {
+        let wait_for = deadline.map(|d|d.saturating_duration_since(Instant::now()).min(PERIOD)).unwrap_or(PERIOD);
+        if wait_for.is_zero() {
+            child.kill().await.map_err(|e|format!("runtime timeout kill: {e}"))?;
+            let _=child.wait().await;
+            return Ok(ProtectedExit0506{status:None,timed_out:true,violation:None});
+        }
+        match timeout(wait_for, child.wait()).await {
+            Ok(result) => return Ok(ProtectedExit0506{status:Some(result.map_err(|e|e.to_string())?),timed_out:false,violation:None}),
+            Err(_) => (),
+        }
+        if deadline.map(|d|Instant::now()>=d).unwrap_or(false) {continue}
+        let check = tokio::task::spawn_blocking({let guard=guard.clone(); move ||guard.verify()}).await
+            .map_err(|e|format!("live Guard watcher failed: {e}"))?;
+        if let Err(reason)=check {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            return Ok(ProtectedExit0506{status:None,timed_out:false,violation:Some(reason)});
+        }
+    }
+}
+
+#[cfg(test)] mod tests {
+    use super::*;
+    #[test] fn live_digest_rejects_mutation_and_symlinks() {
+        let root=std::env::temp_dir().join(format!("nl-0506-file-{}",std::process::id()));
+        let _=fs::remove_dir_all(&root);fs::create_dir_all(&root).unwrap();
+        let jar=root.join("test.jar");fs::write(&jar,b"original").unwrap();
+        let expected=hex::encode(Sha256::digest(b"original"));
+        assert_eq!(digest_file(&root,&jar).unwrap(),expected);
+        fs::write(&jar,b"changed").unwrap();
+        assert_ne!(digest_file(&root,&jar).unwrap(),expected);
+        assert!(digest_file(&root,&root.join("../escape.jar")).is_err());
+        #[cfg(unix)] {
+            use std::os::unix::fs::symlink;
+            let link=root.join("linked.jar");symlink(&jar,&link).unwrap();
+            assert!(digest_file(&root,&link).is_err());
+        }
+        let _=fs::remove_dir_all(root);
+    }
+    #[test] fn runtime_parent_detects_modified_pinned_bytes() {
+        let root=std::env::temp_dir().join(format!("nl-0506-live-{}", std::process::id()));
+        let _=fs::remove_dir_all(&root); fs::create_dir_all(&root).unwrap();
+        let jar=root.join("game.jar"); fs::write(&jar,b"signed-game").unwrap();
+        let sha=hex::encode(Sha256::digest(b"signed-game"));
+        let mut pins=BTreeMap::new(); pins.insert(jar.clone(),sha);
+        let live=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
+            loader:"vanilla".into(),policy_digest:None,pinned:pins,jvm_args:vec![]};
+        assert!(live.verify().is_ok());
+        fs::write(&jar,b"different game").unwrap();
+        assert!(live.verify().unwrap_err().contains("executable changed"));
+        let _=fs::remove_dir_all(root);
+    }
+    #[cfg(unix)]
+    #[tokio::test] async fn native_watchdog_kills_real_long_running_process_on_file_change() {
+        let root=std::env::temp_dir().join(format!("nl-0506-child-{}",std::process::id()));
+        let _=fs::remove_dir_all(&root);fs::create_dir_all(&root).unwrap();
+        let file=root.join("game.jar");fs::write(&file,b"trusted").unwrap();
+        let mut pinned=BTreeMap::new();pinned.insert(file.clone(),hex::encode(Sha256::digest(b"trusted")));
+        let guard=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
+            loader:"vanilla".into(),policy_digest:None,pinned,jvm_args:vec![]};
+        let mut child=tokio::process::Command::new("sleep").arg("12").spawn().unwrap();
+        let handle=tokio::spawn(async move {wait_protected(&mut child,guard,Some(10)).await.unwrap()});
+        tokio::time::sleep(Duration::from_millis(700)).await;
+        fs::write(&file,b"injected").unwrap();
+        let exited=handle.await.unwrap();
+        assert!(!exited.timed_out);
+        assert!(exited.violation.unwrap_or_default().contains("executable changed"));
+        assert!(exited.status.is_none());
+        let _=fs::remove_dir_all(root);
+    }
+
+}
