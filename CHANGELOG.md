@@ -1,3 +1,11 @@
+## 0.51.0 — Client Guard & Authorized JVM Modifications (final-byte independent GA gating; GA BLOCKED until real receipt)
+
+- Add a fail-closed independent Guard release gate over the **actual final six signed installers** and their SHA-256. Verify Ed25519 detached approval of the entire evidence tree, reject missing/altered/expired proofs, publisher self-review, cross-version reuse, signer/runner identity changes, and final re-signed/rebuilt artifacts that differ from independently approved bytes.
+- Implement native OS/CPU signing receipt generation using live Authenticode + trusted timestamp checks on Windows binaries, codesign/Gatekeeper/stapled notarization checks on macOS apps, and the production release verifier with externally pinned trust roots on Linux.
+- Gate real six-platform native adversarial Minecraft E2E, per-platform Vanilla/Fabric/Quilt/Forge/NeoForge game joins, JVM adversarial runtime tests/log hashes, measured p95 Guard overhead, and conservatively counted shadow player-hours with externally reviewed incidents. Absent evidence is a blocker; unit fixture output is never production evidence.
+- Connect Guard 0.51.0 independent review enforcement directly before public release promotion, publish only byte-identical packages, add version-specific final-package release inventory and independent reviewer signing tools, tests, CI and operator instructions.
+- **GA BLOCKED:** no externally signed Windows/macOS installers, six-native-game runs, 10,000-hour legitimate shadow pilot, production Rust verification or independent reviewer approval were available in this build environment. These must be completed on final packages before declaring 0.51.0 GA.
+
 ## 0.50.12 — Adversarial E2E & Shadow Pilot (executable instrumentation; independent GA BLOCKED)
 
 - Record actual signed ServerBridge/PostgreSQL Guard recheck outcomes and correlated session revocations in a restricted HMAC-SHA256 chained event journal with pseudonymous session/node identifiers and process-level durable sequencing; existing enforcement decisions are not disabled. No secret, raw player identity, or Minecraft credentials are logged.

@@ -1,0 +1,13 @@
+{
+  "schema": "neverlauncher.primary-payload.v1",
+  "version": "0.51.0",
+  "scope": "Six exact final signed release packages for Guard 0.51.0. Native signing, real game execution and independent GA review are mandatory separate checks.",
+  "targets": {
+    "windows-x64": "launcher-desktop-0.51.0-windows-x64.zip",
+    "windows-arm64": "launcher-desktop-0.51.0-windows-arm64.zip",
+    "linux-x64": "launcher-linux-x64-0.51.0.tar.gz",
+    "linux-arm64": "launcher-linux-arm64-0.51.0.tar.gz",
+    "darwin-x64": "launcher-desktop-0.51.0-macos-x64.zip",
+    "darwin-arm64": "launcher-desktop-0.51.0-macos-arm64.zip"
+  }
+}

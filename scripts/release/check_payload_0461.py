@@ -56,8 +56,10 @@ def inspect(path: Path) -> tuple[str,int]:
 
 
 def inventory(bundle: Path) -> dict:
-    contract=json.loads(CONTRACT.read_text())
-    if contract.get('version') != (ROOT/'VERSION').read_text().strip():
+    version = (ROOT/'VERSION').read_text().strip()
+    current_contract = ROOT / 'reproducibility' / f'primary-payload-{version}.json'
+    contract=json.loads((current_contract if current_contract.is_file() else CONTRACT).read_text())
+    if contract.get('version') != version:
         raise ValueError('wrong release version for primary contract')
     targets=contract.get('targets',{})
     if set(targets)!={'windows-x64','windows-arm64','linux-x64','linux-arm64','darwin-x64','darwin-arm64'}:

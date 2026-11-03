@@ -1,0 +1,39 @@
+name: Guard 0.51.0 independent final-byte GA gate regressions
+on:
+  push:
+    paths:
+      - 'scripts/guard_ci/guard_ga_0510.py'
+      - 'scripts/guard_ci/native_signed_0510.py'
+      - 'scripts/guard_ci/reviewer_sign_0510.py'
+      - 'scripts/guard_ci/test_guard_ga_0510.py'
+      - 'scripts/release/check_payload_0461.py'
+      - 'scripts/release/delivery_verify_0462.py'
+      - 'reproducibility/primary-payload-0.51.0.json'
+      - '.github/workflows/guard-final-ga-0510.yml'
+      - '.github/workflows/production-release-candidate.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gate-regressions:
+    name: Offline hostile-evidence and version-bound delivery checks (NOT GA certification)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned independent signature verifier
+        run: python3 -m pip install cryptography==46.0.4
+      - name: Test signature tampering, stale/replayed approvals, blocked platform results
+        run: PYTHONPATH=scripts/guard_ci python3 -m unittest scripts/guard_ci/test_guard_ga_0510.py -v
+      - name: Test version-specific real-package inventory
+        run: python3 -m unittest discover -s scripts/release -p 'test_check_payload_0461.py' -v
+      - name: Test existing Guard shadow and frame evidence rejection
+        run: python3 scripts/guard_ci/test_adversarial_pilot_05012.py
+      - name: Test existing six-native-game evidence verifier
+        run: python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -v

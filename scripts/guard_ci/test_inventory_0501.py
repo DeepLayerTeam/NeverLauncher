@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from inventory_0501 import MATRIX_SCHEMA, REQUIRED, TARGETS, validate_report
+from inventory_0501 import MATRIX_SCHEMA, REQUIRED, TARGETS, EXPECTED_VERSION, validate_report
 
 TOOL = Path(__file__).with_name('inventory_0501.py')
 
@@ -14,7 +14,7 @@ def fixture(os_name='linux', arch='x86_64'):
         {'id': name, 'status': ('UNSUPPORTED' if os_name != 'windows' and name.startswith('sensor.') else 'BLOCKED'), 'detail': 'not exercised'}
         for name in sorted(REQUIRED | {f"loader.runtime.{loader}" for loader in ("vanilla", "fabric", "quilt", "forge", "neoforge")})
     ]
-    return {'schema': 'guard/local-inventory/v1', 'productVersion': '0.50.1',
+    return {'schema': 'guard/local-inventory/v1', 'productVersion': EXPECTED_VERSION,
             'os': os_name, 'architecture': arch, 'javaMajor': 21,
             'minecraftVersion': None, 'loader': None,
             'checks': checks, 'status': 'BLOCKED'}

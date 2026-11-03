@@ -27,6 +27,14 @@ on:
         type: string
         required: true
         description: 'Independently signed LIVE SQLite-only installed GA attestation, exact 0.33.0 commit'
+      guard_0510_evidence_run_id:
+        type: string
+        required: false
+        description: 'Required for 0.51.0: external independent approval with raw final signed Guard/real game/native evidence'
+      guard_0510_native_ci_run:
+        type: string
+        required: false
+        description: 'Required for 0.51.0: exact six-native-Minecraft CI run ID represented by signed evidence'
       ga0480_evidence_run_id:
         type: string
         required: false
@@ -1149,6 +1157,45 @@ jobs:
           path: ga0480-independent
           run-id: ${{ inputs.ga0480_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve 0.51.0 independently reviewed final Guard evidence
+        if: ${{ inputs.guard_0510_evidence_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: launcher-guard-ga0510-${{ github.sha }}
+          path: guard-0510-independent
+          run-id: ${{ inputs.guard_0510_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Mandatory independent Guard 0.51.0 exact-final-byte admission
+        shell: bash
+        env:
+          GUARD_EVIDENCE_RUN: ${{ inputs.guard_0510_evidence_run_id }}
+          GUARD_NATIVE_RUN: ${{ inputs.guard_0510_native_ci_run }}
+          GUARD_PKG_ID: ${{ inputs.staged_package_id }}
+          GUARD_REVIEWER_PUBLIC_KEY: ${{ vars.NL_GUARD_GA0510_REVIEWER_ED25519_PUBLIC_KEY_HEX }}
+          GUARD_SHADOW_KEY: ${{ secrets.NL_GUARD_SHADOW_HMAC_KEY_HEX }}
+          GUARD_RELEASE_OPERATOR: ${{ vars.NL_GUARD_RELEASE_OPERATOR_ID }}
+        run: |
+          set -euo pipefail
+          if [[ "$(cat VERSION)" != '0.51.0' ]]; then exit 0; fi
+          [[ "$GUARD_EVIDENCE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 BLOCKED: independent evidence run missing'; exit 2; }
+          [[ "$GUARD_NATIVE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 BLOCKED: native game run missing'; exit 2; }
+          [[ "$GUARD_REVIEWER_PUBLIC_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: pinned independent reviewer key missing'; exit 2; }
+          [[ "$GUARD_SHADOW_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: HMAC shadow key unavailable'; exit 2; }
+          test -n "$GUARD_RELEASE_OPERATOR"
+          umask 077
+          printf '%s' "$GUARD_REVIEWER_PUBLIC_KEY" | xxd -r -p > "$RUNNER_TEMP/guard-reviewer.key"
+          printf '%s\n' "$GUARD_SHADOW_KEY" > "$RUNNER_TEMP/guard-shadow.key"
+          python3 -m unittest discover -s scripts/guard_ci -p 'test_guard_ga_0510.py' -q
+          python3 scripts/guard_ci/guard_ga_0510.py \
+            --evidence-root guard-0510-independent/evidence \
+            --approval guard-0510-independent/approval.json \
+            --signature guard-0510-independent/approval.sig \
+            --trusted-reviewer-key "$RUNNER_TEMP/guard-reviewer.key" \
+            --commit "$GITHUB_SHA" --release-operator "$GUARD_RELEASE_OPERATOR" \
+            --native-package-id "$GUARD_PKG_ID" --native-ci-run "$GUARD_NATIVE_RUN" \
+            --shadow-key "$RUNNER_TEMP/guard-shadow.key" \
+            --publishing-bundle signed-release \
+            --output "$RUNNER_TEMP/GUARD_GA0510.json"
       - name: Re-verify signatures, exact bytes, all GA targets and same-run CI before publication
         env:
           LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub

@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Capture a verified real Minecraft E2E *already executed* on a native host.
+
+This cannot produce a passing result from dummy main classes or fake launcher
+status. It validates the actual Mojang client, loader, ServerBridge permission
+and Paper join witnesses before emitting the exact final-package correlation.
+"""
+from __future__ import annotations
+import argparse
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts/release'))
+from check_payload_0461 import inventory
+from adversarial_pilot_05012 import verify_game
+from guard_ga_0510 import Blocked, VERSION, TARGETS, LOADERS, COMMIT, require
+
+
+def capture(work: Path, paper: Path, username: str, target: str, loader: str, commit: str,
+            package: Path, release_bundle: Path) -> dict:
+    require(target in TARGETS and loader in LOADERS and bool(COMMIT.fullmatch(commit)),
+            'exact native target, loader and source commit required')
+    host_os = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}.get(platform.system())
+    host_arch = {'x86_64': 'x64', 'AMD64': 'x64', 'aarch64': 'arm64', 'arm64': 'arm64'}.get(platform.machine())
+    require(f'{host_os}-{host_arch}' == target, 'Minecraft E2E capture must execute on native platform')
+    release = inventory(release_bundle)
+    require(release['version'] == VERSION, 'wrong final release package version')
+    row = release['targets'][target]
+    require(package.resolve() == (release_bundle / row['file']).resolve() and package.is_file()
+            and not package.is_symlink(), 'not the exact final signed installer')
+    from adversarial_pilot_05012 import file_hash
+    require(file_hash(package) == row['sha256'], 'final installer modified after validation')
+    game = verify_game(work, paper, username)
+    require(game['loader'] == loader, 'actual Minecraft loader differs from requested target')
+    require(paper.resolve() == (work / 'paper.log').resolve(),
+            'Paper join log must be retained alongside the exact game evidence')
+    result = {'target': target, 'version': VERSION, 'loader': loader,
+              'packageSha256': row['sha256'], 'username': username, 'commit': commit}
+    output = work / 'run-identity.json'
+    require(not output.exists(), 'do not overwrite previously captured game run')
+    handle = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(handle, 'w', encoding='utf-8') as stream:
+        json.dump(result, stream, sort_keys=True, indent=2)
+        stream.write('\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+    return result
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--game-work', type=Path, required=True)
+    p.add_argument('--paper-log', type=Path, required=True)
+    p.add_argument('--username', required=True)
+    p.add_argument('--target', choices=TARGETS, required=True)
+    p.add_argument('--loader', choices=LOADERS, required=True)
+    p.add_argument('--commit', required=True)
+    p.add_argument('--installer', type=Path, required=True)
+    p.add_argument('--release-bundle', type=Path, required=True)
+    a = p.parse_args(argv)
+    try:
+        result = capture(a.game_work, a.paper_log, a.username, a.target,
+                         a.loader, a.commit, a.installer, a.release_bundle)
+        print(json.dumps({'status': 'verified-real-game-captured', **result}))
+        return 0
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print('Guard 0.51.0 real-game capture BLOCKED: ' + str(exc), file=sys.stderr)
+        return 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
