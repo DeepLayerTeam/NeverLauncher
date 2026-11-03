@@ -53,7 +53,7 @@ type worldBackupLock02810 struct {
 
 func worldBackupHandle02810(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: nl server-bridge host world-backup create|verify|restore|list [--server-root PATH] [--backup-root PATH]")
+		return errors.New("usage: nl server-bridge host world-backup create|verify|restore|release|list [--server-root PATH] [--backup-root PATH]")
 	}
 	action := args[0]
 	args = args[1:]
@@ -65,6 +65,9 @@ func worldBackupHandle02810(args []string) error {
 	if err != nil {
 		return err
 	}
+	if holdID := flagValue(args, "--hold-id", ""); holdID != "" && !worldCohortID0518.MatchString(holdID) {
+		return errors.New("invalid world-backup cohort hold ID")
+	}
 	if action == "list" {
 		return worldBackupList02810(dir, flagValue(args, "--output", ""))
 	}
@@ -73,6 +76,10 @@ func worldBackupHandle02810(args []string) error {
 			return errors.New("gate-recover requires --confirm stale-gate; reconcile Host Supervisor/JVM first")
 		}
 		return worldBackupHostGateRecover04110(root)
+	}
+	if action == "release" {
+		holdID := flagValue(args, "--hold-id", "")
+		return worldBackupReleaseCohortHold0518(root, holdID)
 	}
 	if action != "create" && action != "verify" && action != "restore" {
 		return fmt.Errorf("unknown world-backup operation %q", action)
@@ -109,11 +116,23 @@ func worldBackupHandle02810(args []string) error {
 		if gateErr != nil {
 			return gateErr
 		}
-		defer releaseGate()
+		keepGate := false
+		defer func() {
+			if !keepGate {
+				releaseGate()
+			}
+		}()
 		if err = worldBackupQuiesce02810(root, policy); err != nil {
 			return err
 		}
 		m, err = worldBackupCreate02810(root, dir, worlds, policy)
+		if err == nil {
+			if holdID := flagValue(args, "--hold-id", ""); holdID != "" {
+				// Never release the directory on a partial failed hold write.
+				keepGate = true
+				err = worldBackupPersistCohortHold0518(root, holdID, m.ID)
+			}
+		}
 	case "verify", "restore":
 		id := flagValue(args, "--id", "")
 		if !worldBackupID02810.MatchString(id) {

@@ -1,3 +1,10 @@
+## 0.51.8 — Consistent Backup & PITR (multi-host frozen cohort; HA GA BLOCKED)
+
+- Add executable multi-host backup controller that fences API/worker across independent hosts and uses the real ServerBridge Host Supervisor world-backup CLI before the PostgreSQL recovery checkpoint. Extend the Go world-backup lifecycle with an atomic retained launch gate (`--hold-id`/explicit `release`) spanning the entire backup transaction; wrong/uncertain gate IDs fail closed. Preserve crash-recovery host journals and attempt to resume every stopped API/worker, including after a failed snapshot.
+- Add physical PostgreSQL full backup and repository/WAL verification via pgBackRest, standalone logical identity/schema dump validation, versioned S3 inventory plus byte-by-byte double readback, and all ten per-host local state volumes including extensions. Reject WAL movement and changing S3 object versions.
+- Seal the cohort with PostgreSQL LSN, pgBackRest physical backup label, world-backup receipts, object/version inventory, trust escrow fingerprints and payload SHA-256; add verified PostgreSQL-only PITR and isolated cohort-LSN restore without starting any service or rewinding production data.
+- Add archive-backed/failure regressions, CI and a multi-host maintenance/recovery runbook. **HA GA BLOCKED** pending live independent PostgreSQL/pgBackRest/Patroni/S3/world-host rehearsal; offsite encryption/immutability/secret escrow remain externally provisioned and independently auditable.
+
 ## 0.51.7 — Rolling Update Controller (real per-host upgrades; HA GA BLOCKED)
 
 - Add executable operator/host rolling controller for independently running `network-ha` Docker hosts. Serially pull digest-pinned images, gracefully stop and recreate **only** the selected host's API+worker, verify running 0.51.7 processes and public HTTPS after each switch, and never interrupt all nodes together.

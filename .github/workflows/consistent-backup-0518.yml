@@ -1,0 +1,45 @@
+name: Consistent Backup and PITR 0.51.8
+on:
+  push:
+    paths:
+      - 'scripts/operations/consistent_backup_0518.py'
+      - 'scripts/operations/test_consistent_backup_0518.py'
+      - 'scripts/operations/dr_03512.py'
+      - 'scripts/operations/multi_host_0512.py'
+      - 'scripts/operations/nn1_compat_0516.py'
+      - 'docs/deployment/consistent-backup-pitr-0518.md'
+      - '.github/workflows/consistent-backup-0518.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  consistent-backup-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Exercise real archive bytes and backup/failure controls
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest -v \
+            scripts/operations/test_consistent_backup_0518.py \
+            scripts/operations/test_dr_03512.py \
+            scripts/operations/test_standard_backup_0453.py \
+            scripts/operations/test_multi_host_0512.py
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Host Supervisor atomic world gate and backup/release, with race detector
+        working-directory: cli
+        run: |
+          go test -race -count=1 ./cmd/launcher -run 'Test(WorldBackupCommandRetainsCohortGate0518|WorldCohortGate0518HeldAcrossWorldBackupProcess|WorldBackupGateBlocksStartAndSecondBackup04110|WorldBackupGateFailsClosedAndRecoversOffline04110)$'
+      - name: Check schema/catalog and synchronized release
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -c 'import nn1_compat_0516 as n; c,h=n.migration_catalog(); assert len(c)>=100; print(h)'
+          python3 scripts/version/manage.py check
