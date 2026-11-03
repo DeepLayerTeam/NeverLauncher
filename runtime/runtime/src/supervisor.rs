@@ -161,6 +161,13 @@ impl ProcessSupervisor {
             daemon.ping_running().await?;
             live_guard.bind_linux_guard_daemon(daemon)?;
         }
+        #[cfg(target_os = "macos")]
+        {
+            let daemon = crate::macos_guard::GuardSupervisor::new();
+            daemon.ensure_started().await.map_err(|e|format!("macOS Guard startup failed: {e}"))?;
+            daemon.ping_running().await?;
+            live_guard.bind_macos_guard_daemon(daemon)?;
+        }
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
         let started_at = now_unix()?;
@@ -220,8 +227,15 @@ impl ProcessSupervisor {
             }
         };
         #[cfg(target_os = "macos")]
-        let macos_runtime_policy = crate::macos_policy::runtime_policy(&mut child)
-            .map_err(|err| format!("launch заблокирован: macOS runtime/process policy enforcement failed: {err}"))?;
+        let macos_runtime_policy = match crate::macos_policy::runtime_policy(&mut child) {
+            Ok(policy) => policy,
+            Err(err) => {
+                if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
+                let _ = child.kill().await;
+                let _ = child.wait().await;
+                return Err(format!("macOS runtime/process policy enforcement failed: {err}"));
+            }
+        };
 
         #[cfg(target_os = "linux")]
         if let Err(reason) = live_guard.bind_linux_process(
@@ -232,6 +246,17 @@ impl ProcessSupervisor {
             let _ = child.kill().await;
             let _ = child.wait().await;
             return Err(format!("Linux Guard game process validation failed: {reason}"));
+        }
+
+        #[cfg(target_os = "macos")]
+        if let Err(reason) = live_guard.bind_macos_process(
+            child.id().ok_or("macOS Guard JVM PID unavailable")?,
+            Path::new(&plan.java_executable),
+        ) {
+            if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            return Err(format!("macOS Guard game process validation failed: {reason}"));
         }
 
         let pid = child.id();
@@ -301,6 +326,10 @@ impl ProcessSupervisor {
                 #[cfg(target_os = "linux")]
                 let failure = if failure.is_none() {
                     live_guard.verify_linux_daemon().await.err()
+                } else { failure };
+                #[cfg(target_os = "macos")]
+                let failure = if failure.is_none() {
+                    live_guard.verify_macos_daemon().await.err()
                 } else { failure };
                 if let Some(reason) = failure {
                     let _ = watcher.stop_for_guard_violation_0438(&watched_id, &reason).await;

@@ -23,6 +23,10 @@ pub struct LiveGameGuard0506 {
     linux_process: Option<crate::linux_runtime_guard_0508::LinuxRuntimeGuard0508>,
     #[cfg(target_os = "linux")]
     linux_daemon: Option<crate::linux_guard::GuardSupervisor>,
+    #[cfg(target_os = "macos")]
+    macos_process: Option<crate::macos_runtime_guard_0509::MacOSRuntimeGuard0509>,
+    #[cfg(target_os = "macos")]
+    macos_daemon: Option<crate::macos_guard::GuardSupervisor>,
 }
 
 fn is_executable(name: &str) -> bool {
@@ -92,6 +96,10 @@ impl LiveGameGuard0506 {
             linux_process: None,
             #[cfg(target_os = "linux")]
             linux_daemon: None,
+            #[cfg(target_os = "macos")]
+            macos_process: None,
+            #[cfg(target_os = "macos")]
+            macos_daemon: None,
         };
         guard.verify()?;
         Ok(guard)
@@ -125,6 +133,25 @@ impl LiveGameGuard0506 {
         self.linux_daemon.as_ref().ok_or("Linux Guard daemon not bound")?.ping_running().await
     }
 
+    #[cfg(target_os = "macos")]
+    pub fn bind_macos_process(&mut self, pid: u32, java: &Path) -> Result<(), String> {
+        if self.macos_process.is_some() { return Err("macOS Guard JVM already bound".into()); }
+        self.macos_process = Some(crate::macos_runtime_guard_0509::MacOSRuntimeGuard0509::attach(pid, java)?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn bind_macos_guard_daemon(&mut self, daemon: crate::macos_guard::GuardSupervisor) -> Result<(), String> {
+        if self.macos_daemon.is_some() { return Err("macOS Guard daemon already bound".into()); }
+        self.macos_daemon = Some(daemon);
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    pub async fn verify_macos_daemon(&self) -> Result<(), String> {
+        self.macos_daemon.as_ref().ok_or("macOS Guard daemon not bound")?.ping_running().await
+    }
+
     /// Called on a blocking worker; never runs hashing on an async executor thread.
     pub fn verify(&self) -> Result<(), String> {
         let current = crate::guard_compatibility_0502::verified_for_game(&self.root,
@@ -141,6 +168,8 @@ impl LiveGameGuard0506 {
         }
         #[cfg(target_os = "linux")]
         if let Some(process) = &self.linux_process { process.verify()?; }
+        #[cfg(target_os = "macos")]
+        if let Some(process) = &self.macos_process { process.verify()?; }
         Ok(())
     }
 }
@@ -160,6 +189,8 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
     loop {
         let wait_for = deadline.map(|d|d.saturating_duration_since(Instant::now()).min(PERIOD)).unwrap_or(PERIOD);
         if wait_for.is_zero() {
+            #[cfg(target_os = "macos")]
+            if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
             child.kill().await.map_err(|e|format!("runtime timeout kill: {e}"))?;
             let _=child.wait().await;
             return Ok(ProtectedExit0506{status:None,timed_out:true,violation:None});
@@ -173,7 +204,11 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
             .map_err(|e|format!("live Guard watcher failed: {e}"))?;
         #[cfg(target_os = "linux")]
         let check = match check { Ok(()) => guard.verify_linux_daemon().await, err => err };
+        #[cfg(target_os = "macos")]
+        let check = match check { Ok(()) => guard.verify_macos_daemon().await, err => err };
         if let Err(reason)=check {
+            #[cfg(target_os = "macos")]
+            if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
             let _ = child.kill().await;
             let _ = child.wait().await;
             return Ok(ProtectedExit0506{status:None,timed_out:false,violation:Some(reason)});
@@ -208,7 +243,9 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         let live=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
             loader:"vanilla".into(),policy_digest:None,pinned:pins,jvm_args:vec![],
             #[cfg(target_os = "linux")] linux_process:None,
-            #[cfg(target_os = "linux")] linux_daemon:None};
+            #[cfg(target_os = "linux")] linux_daemon:None,
+            #[cfg(target_os = "macos")] macos_process:None,
+            #[cfg(target_os = "macos")] macos_daemon:None};
         assert!(live.verify().is_ok());
         fs::write(&jar,b"different game").unwrap();
         assert!(live.verify().unwrap_err().contains("executable changed"));
@@ -223,7 +260,9 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         let guard=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
             loader:"vanilla".into(),policy_digest:None,pinned,jvm_args:vec![],
             #[cfg(target_os = "linux")] linux_process:None,
-            #[cfg(target_os = "linux")] linux_daemon:None};
+            #[cfg(target_os = "linux")] linux_daemon:None,
+            #[cfg(target_os = "macos")] macos_process:None,
+            #[cfg(target_os = "macos")] macos_daemon:None};
         let mut child=tokio::process::Command::new("sleep").arg("12").spawn().unwrap();
         let handle=tokio::spawn(async move {wait_protected(&mut child,guard,Some(10)).await.unwrap()});
         tokio::time::sleep(Duration::from_millis(700)).await;

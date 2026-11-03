@@ -1,0 +1,58 @@
+name: macOS Guard 0.50.9 runtime protection
+on:
+  push:
+    paths:
+      - 'runtime/runtime/**'
+      - 'sdk/java/trusted-agent/**'
+      - 'scripts/tests/guard_runtime_integrity_0505.py'
+      - '.github/workflows/macos-guard-runtime-0509.yml'
+  pull_request:
+    paths:
+      - 'runtime/runtime/**'
+      - 'sdk/java/trusted-agent/**'
+      - 'scripts/tests/guard_runtime_integrity_0505.py'
+      - '.github/workflows/macos-guard-runtime-0509.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-macos-guard:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: macos-arm64, runner: macos-15, arch: arm64}
+          - {name: macos-x64, runner: macos-15-intel, arch: x86_64}
+    name: '${{ matrix.name }} — libproc, codesign, JVM, Guard watchdog'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require native host and signed JDK
+        run: |
+          test "$(uname -m)" = '${{ matrix.arch }}'
+          codesign --verify --strict --verbose=2 "$JAVA_HOME/bin/java"
+          codesign -dvvv "$JAVA_HOME/bin/java" 2>&1 | grep 'TeamIdentifier=' | grep -v 'not set'
+      - name: Compile real Rust Runtime, Guard and test binaries
+        run: |
+          cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
+          cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
+      - name: macOS libproc process and signed-JVM integration tests
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib macos_runtime_guard_0509 -- --nocapture
+      - name: Guard heartbeat cannot silently restart a missing authority
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --test macos_guard_runtime_0509 -- --nocapture
+      - name: Signed JAR/native integrity and Java watchdog regressions
+        run: |
+          python3 scripts/tests/guard_runtime_integrity_0505.py
+          python3 scripts/tests/continuous_game_protection_0506.py
+      - name: SIP diagnostic (not treated as a successful runtime check)
+        if: always()
+        run: |
+          /usr/bin/csrutil status || true

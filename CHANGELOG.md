@@ -1,3 +1,10 @@
+## 0.50.9 — macOS Guard Runtime Protection (native source implementation; independent GA BLOCKED)
+
+- macOS game JVM now binds to an authenticated, continuously supervised Guard process. Heartbeats during gameplay never restart a vanished Guard; loss of Guard IPC/identity fails the protected session.
+- Integrate native `libproc` process surveillance and `codesign --verify --strict` into both one-shot Rust Runtime and Desktop ProcessSupervisor: PID/start time, parent, UID, process group, trace flag, exact Java executable path/device/inode/SHA-256 and Developer Team/identifier are verified at admission and during gameplay.
+- Enforce process-group and DYLD launch restrictions on the real macOS game launch. A failed policy/identity check terminates the JVM. Existing signed policy, JAR/classpath/native SHA-256 and Trusted JVM checks continue uninterrupted.
+- macOS x64/ARM64 CI now builds Rust executables, exercises real signed Java child processes and reruns JAR/native watcher regressions. These workflows and a real signed installer/Minecraft join **have not been executed in this Linux environment**; production GA remains BLOCKED. SIP restrictions are not bypassed, and enumerating every loaded Mach-O or in-memory modification is not claimed.
+
 ## 0.50.8 — Linux Guard Runtime Protection (functional patch; independent GA BLOCKED)
 
 - Bind Linux game JVM to authenticated Guard IPC without transparent restarts after admission. A lost Guardian process or authenticated heartbeat is a live trust violation, not automatic PASS.

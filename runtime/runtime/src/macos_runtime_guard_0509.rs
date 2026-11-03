@@ -1,0 +1,214 @@
+//! macOS user-mode JVM monitoring. Deliberately does not use task_for_pid,
+//! kernel extensions, or claim to enumerate SIP/AMFI-protected memory maps.
+//! Files used by Minecraft are also watched by LiveGameGuard and the Java agent.
+#![cfg(target_os = "macos")]
+
+use crate::macos_policy::verify_macos_code_signature;
+use sha2::{Digest, Sha256};
+use std::{fs::{self, File}, io::Read, mem, os::unix::fs::MetadataExt, path::{Path, PathBuf}};
+
+const PROC_PIDTBSDINFO: libc::c_int = 3;
+const PROC_FLAG_TRACED: u32 = 0x2;
+const MAX_EXEC_PATH: usize = 4096;
+const MAX_JVM_BYTES: u64 = 512 * 1024 * 1024;
+
+#[link(name = "proc")]
+extern "C" {
+    fn proc_pidinfo(pid: libc::c_int, flavor: libc::c_int, arg: u64,
+                    buffer: *mut libc::c_void, buffersize: libc::c_int) -> libc::c_int;
+    fn proc_pidpath(pid: libc::c_int, buffer: *mut libc::c_void,
+                    buffersize: u32) -> libc::c_int;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Identity {
+    pid: u32,
+    parent: u32,
+    owner: u32,
+    group: u32,
+    started_seconds: u64,
+    started_microseconds: u64,
+    traced: bool,
+}
+
+fn process_identity(pid: u32) -> Result<Identity, String> {
+    if pid == 0 || pid > i32::MAX as u32 {
+        return Err("macOS Guard invalid JVM PID".into());
+    }
+    // proc_bsdinfo is the documented Darwin layout from <sys/proc_info.h>.
+    // Check the returned size; a partial or denied inspection never passes.
+    let mut info: libc::proc_bsdinfo = unsafe { mem::zeroed() };
+    let result = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0,
+        (&mut info as *mut libc::proc_bsdinfo).cast(),
+        mem::size_of::<libc::proc_bsdinfo>() as libc::c_int) };
+    if result != mem::size_of::<libc::proc_bsdinfo>() as libc::c_int {
+        return Err(format!("macOS Guard cannot inspect JVM process {}: {}", pid,
+            std::io::Error::last_os_error()));
+    }
+    if info.pbi_pid != pid || info.pbi_start_tvsec == 0 {
+        return Err("macOS Guard JVM identity missing or invalid".into());
+    }
+    Ok(Identity {
+        pid, parent: info.pbi_ppid, owner: info.pbi_uid,
+        group: info.pbi_pgid, started_seconds: info.pbi_start_tvsec,
+        started_microseconds: info.pbi_start_tvusec,
+        traced: info.pbi_flags & PROC_FLAG_TRACED != 0,
+    })
+}
+
+fn actual_executable(pid: u32) -> Result<PathBuf, String> {
+    let mut buffer = [0u8; MAX_EXEC_PATH];
+    let count = unsafe { proc_pidpath(pid as libc::c_int, buffer.as_mut_ptr().cast(), buffer.len() as u32) };
+    if count <= 0 || count as usize >= buffer.len() {
+        return Err(format!("macOS Guard cannot resolve JVM executable: {}", std::io::Error::last_os_error()));
+    }
+    if buffer[..count as usize].contains(&0) {
+        return Err("macOS Guard malformed JVM executable path".into());
+    }
+    let path = std::str::from_utf8(&buffer[..count as usize])
+        .map_err(|_| "macOS Guard non-UTF8 JVM executable path")?;
+    fs::canonicalize(path).map_err(|e| format!("macOS Guard JVM executable disappeared: {e}"))
+}
+
+fn sha256_file(path: &Path) -> Result<String, String> {
+    let meta = fs::metadata(path).map_err(|e| format!("macOS Guard JVM stat failed: {e}"))?;
+    if !meta.is_file() || meta.len() == 0 || meta.len() > MAX_JVM_BYTES {
+        return Err("macOS Guard JVM executable size or type invalid".into());
+    }
+    let mut file = File::open(path).map_err(|e| format!("macOS Guard JVM open failed: {e}"))?;
+    let mut digest = Sha256::new();
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        let n = file.read(&mut buf).map_err(|e| format!("macOS Guard JVM read failed: {e}"))?;
+        if n == 0 { break; }
+        digest.update(&buf[..n]);
+    }
+    Ok(hex::encode(digest.finalize()))
+}
+
+fn check_identity(current: Identity, original: Identity) -> Result<(), String> {
+    if current.pid != original.pid || current.started_seconds != original.started_seconds ||
+       current.started_microseconds != original.started_microseconds {
+        return Err("macOS Guard JVM PID was reused".into());
+    }
+    if current.parent != original.parent || current.owner != original.owner ||
+       current.group != original.group || current.group != current.pid {
+        return Err("macOS Guard JVM parent, owner, or process group changed".into());
+    }
+    if current.traced { return Err("macOS Guard JVM is being traced".into()); }
+    Ok(())
+}
+
+#[derive(Clone)]
+pub struct MacOSRuntimeGuard0509 {
+    identity: Identity,
+    executable: PathBuf,
+    device: u64,
+    inode: u64,
+    digest: String,
+    signing_team: String,
+    signing_identifier: String,
+}
+
+impl MacOSRuntimeGuard0509 {
+    pub fn attach(pid: u32, java: &Path) -> Result<Self, String> {
+        let expected = fs::canonicalize(java).map_err(|e|format!("macOS Guard configured Java missing: {e}"))?;
+        let actual = actual_executable(pid)?;
+        if expected != actual { return Err(format!("macOS Guard unexpected JVM executable: {}",actual.display())); }
+        let identity = process_identity(pid)?;
+        if identity.parent != std::process::id() || identity.owner != unsafe { libc::geteuid() } ||
+            identity.group != pid || identity.traced {
+            return Err("macOS Guard JVM failed parent/owner/group/trace policy".into());
+        }
+        let meta = fs::metadata(&actual).map_err(|e| e.to_string())?;
+        let signature = verify_macos_code_signature(&actual)?;
+        if !signature.valid { return Err("macOS Guard JVM signature invalid".into()); }
+        // Java needs a JIT and may use JNI agents. We do not falsely require
+        // the Guard daemon's Hardened Runtime/library-validation entitlements
+        // on this separate Java executable. Instead pin the actual identity,
+        // binary SHA-256 and the signing identity for the entire game session.
+        let signing_team = signature.team_identifier
+            .filter(|s| !s.trim().is_empty() && s != "not set")
+            .ok_or("macOS Guard JVM must have a non-ad-hoc signing TeamIdentifier")?;
+        let signing_identifier = signature.identifier
+            .filter(|s| !s.trim().is_empty())
+            .ok_or("macOS Guard JVM signing identifier unavailable")?;
+        let guard = Self { identity, executable: actual, device: meta.dev(), inode: meta.ino(),
+            digest: sha256_file(&expected)?, signing_team, signing_identifier };
+        guard.verify()?;
+        Ok(guard)
+    }
+
+    pub fn verify(&self) -> Result<(), String> {
+        check_identity(process_identity(self.identity.pid)?, self.identity)?;
+        let actual = actual_executable(self.identity.pid)?;
+        if actual != self.executable { return Err("macOS Guard running JVM image changed".into()); }
+        let meta = fs::metadata(&actual).map_err(|e| e.to_string())?;
+        if meta.dev() != self.device || meta.ino() != self.inode || sha256_file(&actual)? != self.digest {
+            return Err("macOS Guard JVM executable replaced or modified".into());
+        }
+        let sig = verify_macos_code_signature(&actual)?;
+        if !sig.valid || sig.team_identifier.as_deref() != Some(self.signing_team.as_str()) ||
+            sig.identifier.as_deref() != Some(self.signing_identifier.as_str()) {
+            return Err("macOS Guard JVM code signing identity changed".into());
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn rejects_pid_reuse_and_tracing() {
+        let original = Identity { pid: 42, parent: 1, owner: 501, group: 42,
+            started_seconds: 1_700_000_000, started_microseconds: 111, traced: false };
+        assert!(check_identity(original, original).is_ok());
+        assert!(check_identity(Identity{traced:true,..original},original).is_err());
+        assert!(check_identity(Identity{started_microseconds:112,..original},original).is_err());
+        assert!(check_identity(Identity{parent:55,..original},original).is_err());
+        assert!(check_identity(Identity{group:1,..original},original).is_err());
+    }
+    #[test]
+    fn checks_real_signed_jvm_child() {
+        use std::{os::unix::process::CommandExt, process::{Command, Stdio}, time::Duration};
+        let home = std::env::var("JAVA_HOME").expect("macOS Guard integration requires signed JAVA_HOME");
+        let java = PathBuf::from(&home).join("bin/java");
+        let javac = PathBuf::from(&home).join("bin/javac");
+        let fixture = std::env::temp_dir().join(format!("nl-0509-mac-java-{}",std::process::id()));
+        let _ = fs::remove_dir_all(&fixture);
+        fs::create_dir_all(&fixture).unwrap();
+        fs::write(fixture.join("GuardHold.java"),
+            "public final class GuardHold {public static void main(String[] a) throws Exception {Thread.sleep(20000);}}")
+            .unwrap();
+        let compiled = Command::new(javac).arg(fixture.join("GuardHold.java"))
+            .status().expect("javac spawn");
+        assert!(compiled.success(), "javac fixture failed");
+        let mut command = Command::new(&java);
+        command.args(["-cp",fixture.to_str().unwrap(),"GuardHold"]);
+        command.stdout(Stdio::null()).stderr(Stdio::null());
+        // The runtime uses the same pre-exec setpgid policy.
+        unsafe { command.pre_exec(|| {
+            if libc::setpgid(0, 0) < 0 {return Err(std::io::Error::last_os_error())}
+            Ok(())
+        }); }
+        let mut child = command.spawn().expect("signed game JVM must launch");
+        std::thread::sleep(Duration::from_millis(700));
+        let pid = child.id();
+        let attached = MacOSRuntimeGuard0509::attach(pid,&java).expect("signed JDK process must be verifiable");
+        attached.verify().expect("macOS process signature and identity still valid");
+        assert!(MacOSRuntimeGuard0509::attach(pid,Path::new("/usr/bin/false")).is_err());
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(attached.verify().is_err(),"dead JVM cannot retain valid Guard evidence");
+        let _ = fs::remove_dir_all(fixture);
+    }
+    #[test]
+    fn inspects_current_real_process() {
+        let pid = std::process::id();
+        let i = process_identity(pid).expect("macOS libproc must inspect own process");
+        assert_eq!(i.pid,pid);
+        assert_eq!(i.owner, unsafe{libc::geteuid()});
+        assert!(actual_executable(pid).unwrap().is_file());
+    }
+}

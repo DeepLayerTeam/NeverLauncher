@@ -147,7 +147,15 @@ impl GuardSupervisor {
         *state=Some(handle); Ok(status)
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
-    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid Guard ping".into())} }
+    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; self.ping_running().await }
+    /// A running protected game must never silently restart its Guard authority.
+    pub async fn ping_running(&self)->Result<(),String>{
+        let mut s=self.inner.lock().await;
+        let h=s.as_mut().ok_or("macOS Guard disappeared during game")?;
+        if h.child.try_wait().map_err(|e|e.to_string())?.is_some(){return Err("macOS Guard exited during game".into())}
+        let v=send_command(h,"ping","").await?;
+        if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid macOS Guard heartbeat".into())}
+    }
     pub async fn process_policy(&self)->Result<GuardProcessPolicyReport,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"process-policy","").await?; let p:GuardProcessPolicyReport=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_policy(&p)?; Ok(p) }
     pub async fn integrity_evidence(&self)->Result<GuardIntegrityEvidence,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"integrity-evidence","").await?; let e:GuardIntegrityEvidence=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_evidence(h,&e)?; Ok(e) }
     pub async fn remote_attestation(&self,challenge_id:&str,challenge:&str)->Result<GuardRemoteAttestation,String>{

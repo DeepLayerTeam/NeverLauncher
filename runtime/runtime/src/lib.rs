@@ -47,6 +47,8 @@ pub mod macos_policy;
 pub mod linux_guard;
 #[cfg(target_os = "macos")]
 pub mod macos_guard;
+#[cfg(target_os = "macos")]
+pub mod macos_runtime_guard_0509;
 pub use attestation::{GuardAttestationRequest, GuardRemoteAttestation, GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, GUARD_REMOTE_ATTESTATION_SCHEMA, GUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, ensure_managed_java_from_distribution, select_java_executable, ManagedJavaResult};
@@ -1171,6 +1173,13 @@ pub async fn launch_with_timeout_matching_authenticated(
         daemon.ping_running().await?;
         live_guard.bind_linux_guard_daemon(daemon)?;
     }
+    #[cfg(target_os = "macos")]
+    {
+        let daemon = macos_guard::GuardSupervisor::new();
+        daemon.ensure_started().await.map_err(|e| format!("macOS Guard startup failed: {e}"))?;
+        daemon.ping_running().await?;
+        live_guard.bind_macos_guard_daemon(daemon)?;
+    }
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
@@ -1187,6 +1196,8 @@ pub async fn launch_with_timeout_matching_authenticated(
     windows_policy::prepare_runtime_command(&mut command);
     #[cfg(target_os = "linux")]
     linux_policy::prepare_runtime_command(&mut command);
+    #[cfg(target_os = "macos")]
+    macos_policy::prepare_runtime_command(&mut command);
     let mut child = command
         .spawn()
         .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
@@ -1210,6 +1221,17 @@ pub async fn launch_with_timeout_matching_authenticated(
         let _ = child.kill().await;
         let _ = child.wait().await;
         return Err(format!("Linux Guard game process validation failed: {reason}"));
+    }
+
+    #[cfg(target_os = "macos")]
+    if let Err(reason) = live_guard.bind_macos_process(
+        child.id().ok_or("macOS Guard JVM PID unavailable")?,
+        Path::new(&plan.java_executable),
+    ) {
+        if let Some(pid) = child.id() { let _ = macos_policy::terminate_runtime_process_group(pid); }
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+        return Err(format!("macOS Guard game process validation failed: {reason}"));
     }
 
     let guarded_exit = continuous_game_protection_0506::wait_protected(
