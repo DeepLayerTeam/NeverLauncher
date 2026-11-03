@@ -1251,6 +1251,10 @@ def verify_result(
         "commit": commit,
         "runId": run_id,
     }
+    if semver_core(PRODUCT_VERSION) >= (0, 52, 1):
+        attempt = result.get('runAttempt')
+        if type(attempt) is not int or attempt < 1:
+            errors.append('runAttempt: positive CI run attempt required')
     for key, value in expected.items():
         if str(result.get(key, "")) != str(value):
             errors.append(f"{key}: expected {value!r}, got {result.get(key)!r}")
@@ -1448,6 +1452,8 @@ def verify_result(
                 "loader-hardening.json",
                 "loader-hardening-package.json",
             }
+        if semver_core(PRODUCT_VERSION) >= (0, 52, 1):
+            mandatory_files = set(mandatory_files) | {'compatibility-execution.log'}
         if not isinstance(files, list) or not mandatory_files.issubset(
             {str(value) for value in files}
         ):
@@ -1499,7 +1505,7 @@ def verify_evidence_files(result_path: Path, result: dict[str, Any]) -> list[str
             continue
         base = (
             evidence_root
-            if name in ("java-runtime.json", "platform-runtime.json")
+            if name in ("java-runtime.json", "platform-runtime.json", "compatibility-execution.log")
             else runtime_root
         )
         file = base / name
@@ -1671,6 +1677,9 @@ def command_aggregate(args: argparse.Namespace) -> int:
         result_errors = verify_result(
             target, result, commit=args.commit, run_id=args.run_id
         )
+        if semver_core(PRODUCT_VERSION) >= (0, 52, 1) and args.attempt is not None:
+            if result.get('runAttempt') != args.attempt:
+                result_errors.append('CI attempt does not match actual workflow invocation')
         result_errors.extend(verify_evidence_files(path, result))
         result = dict(result)
         if result_errors:
@@ -1748,6 +1757,7 @@ def main() -> int:
     aggregate.add_argument("--output-dir", type=Path, required=True)
     aggregate.add_argument("--commit", required=True)
     aggregate.add_argument("--run-id", required=True)
+    aggregate.add_argument("--attempt", type=int, default=None)
     aggregate.add_argument("--repository", required=True)
     aggregate.set_defaults(func=command_aggregate)
 

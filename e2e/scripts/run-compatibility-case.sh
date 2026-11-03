@@ -16,6 +16,8 @@ JAVA_BIN="${LAUNCHER_E2E_JAVA:-}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 COMMIT="${GITHUB_SHA:-local}"
 RUN_ID="${GITHUB_RUN_ID:-local}"
+RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:-local}"
+EXECUTION_LOG="$OUT_DIR/compatibility-execution.log"
 
 mkdir -p "$OUT_DIR"
 RESULT="$OUT_DIR/compatibility-result.json"
@@ -80,25 +82,30 @@ export LAUNCHER_E2E_MODE=compatibility
 export LAUNCHER_E2E_PROFILE_ID="$LOADER"
 
 set +e
+# Capture the actual child process output outside e2e/runtime (which each
+# certification runner clears). The raw log is hashed into the result and
+# independently replayed before any reviewed acceptance can be signed.
+printf "[compat] actual client execution target=%s version=%s\n" "$TARGET_ID" "$PRODUCT_VERSION" > "$EXECUTION_LOG"
 if [[ "$SCOPE" == "client" && "$MATCHING_SERVER" == "true" ]]; then
-  bash "$ROOT/e2e/scripts/run-vanilla-matching-e2e.sh"
+  bash "$ROOT/e2e/scripts/run-vanilla-matching-e2e.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "vanilla" ]]; then
-  bash "$ROOT/e2e/scripts/run-vanilla-certification-case.sh"
+  bash "$ROOT/e2e/scripts/run-vanilla-certification-case.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "fabric" ]]; then
-  bash "$ROOT/e2e/scripts/run-fabric-certification-case.sh"
+  bash "$ROOT/e2e/scripts/run-fabric-certification-case.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "quilt" ]]; then
-  bash "$ROOT/e2e/scripts/run-quilt-certification-case.sh"
+  bash "$ROOT/e2e/scripts/run-quilt-certification-case.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "forge" ]]; then
-  bash "$ROOT/e2e/scripts/run-forge-certification-case.sh"
+  bash "$ROOT/e2e/scripts/run-forge-certification-case.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "neoforge" ]]; then
-  bash "$ROOT/e2e/scripts/run-neoforge-certification-case.sh"
+  bash "$ROOT/e2e/scripts/run-neoforge-certification-case.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 else
-  bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
+  bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh" 2>&1 | tee -a "$EXECUTION_LOG"
 fi
-rc=$?
+rc=${PIPESTATUS[0]}
 set -e
+[[ -f "$EXECUTION_LOG" && $(wc -c < "$EXECUTION_LOG") -le 33554432 ]] || { echo "[compat] execution log exceeded bound" >&2; exit 2; }
 
-python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$MATCHING_SERVER" "$COMMIT" "$RUN_ID" "$rc" <<'PY'
+python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$MATCHING_SERVER" "$COMMIT" "$RUN_ID" "$RUN_ATTEMPT" "$rc" <<'PY'
 from __future__ import annotations
 import hashlib
 import json
@@ -112,9 +119,9 @@ java_evidence_path = Path(sys.argv[3])
 platform_evidence_path = Path(sys.argv[4])
 target_id, product_version, minecraft, loader, selector, os_name, arch = sys.argv[5:12]
 java_major = int(sys.argv[12])
-scope, matching_server_raw, commit, run_id = sys.argv[13:17]
+scope, matching_server_raw, commit, run_id, run_attempt = sys.argv[13:18]
 matching_server = matching_server_raw == "true"
-rc = int(sys.argv[17])
+rc = int(sys.argv[18])
 runtime = root / "e2e" / "runtime"
 
 def version_at_least(value: str, want: tuple[int, int, int]) -> bool:
@@ -379,6 +386,7 @@ payload = {
     "matchingServer": matching_server,
     "commit": commit,
     "runId": run_id,
+    "runAttempt": int(run_attempt) if run_attempt.isdecimal() else 0,
     "exitCode": rc,
     "checks": checks,
     "evidence": {
@@ -386,15 +394,15 @@ payload = {
         # filename/boolean alone is not proof that an installer or launch ran.
         "sha256": {
             name: file_sha256(
-                (out.parent / name) if name in ("platform-runtime.json", "java-runtime.json")
+                (out.parent / name) if name in ("platform-runtime.json", "java-runtime.json", "compatibility-execution.log")
                 else (runtime / name)
             )
-            for name in evidence_files + ["platform-runtime.json", "java-runtime.json"]
+            for name in evidence_files + ["platform-runtime.json", "java-runtime.json", "compatibility-execution.log"]
         },
         "manifestLoader": manifest_loader,
         "javaRuntime": java_evidence,
         "platformRuntime": platform_evidence,
-        "files": evidence_files + ["platform-runtime.json", "java-runtime.json"],
+        "files": evidence_files + ["platform-runtime.json", "java-runtime.json", "compatibility-execution.log"],
         "matchingServer": matching_server,
         "loaderPlatform": loader_platform if scope == "client" and cross_platform_loader_target else None,
         "loaderHardening": loader_hardening if scope == "client" and loader_hardening_target else None,

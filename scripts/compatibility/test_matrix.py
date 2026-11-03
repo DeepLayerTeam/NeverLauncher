@@ -158,6 +158,7 @@ class MatrixToolTests(unittest.TestCase):
                         }
                     )
                 files.extend(["loader-hardening.json", "loader-hardening-package.json"])
+        files.append("compatibility-execution.log")
         return {
             "schemaVersion": "1.0",
             "productVersion": VERSION,
@@ -181,6 +182,7 @@ class MatrixToolTests(unittest.TestCase):
             "matchingServer": target.get("matchingServer", False),
             "commit": commit,
             "runId": "77",
+            "runAttempt": 1,
             "exitCode": 0,
             "checks": checks,
             "evidence": {
@@ -227,7 +229,7 @@ class MatrixToolTests(unittest.TestCase):
             for name in result["evidence"]["files"]:
                 destination = (
                     report
-                    if name in {"java-runtime.json", "platform-runtime.json"}
+                    if name in {"java-runtime.json", "platform-runtime.json", "compatibility-execution.log"}
                     else runtime
                 ) / name
                 # Bytes are materialized, not merely a claimed list of paths.
@@ -258,6 +260,8 @@ class MatrixToolTests(unittest.TestCase):
             "abc123",
             "--run-id",
             "77",
+            "--attempt",
+            "1",
             "--repository",
             "DeepLayerTeam/Launcher",
         )

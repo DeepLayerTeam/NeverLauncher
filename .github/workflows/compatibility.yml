@@ -184,6 +184,7 @@ jobs:
           name: compatibility-${{ matrix.id }}
           path: |
             e2e/compatibility-result/compatibility-result.json
+            e2e/compatibility-result/compatibility-execution.log
             e2e/compatibility-result/java-runtime.json
             e2e/compatibility-result/platform-runtime.json
             e2e/runtime/result.json
@@ -386,6 +387,7 @@ jobs:
           name: compatibility-${{ matrix.id }}
           path: |
             e2e/compatibility-result/compatibility-result.json
+            e2e/compatibility-result/compatibility-execution.log
             e2e/compatibility-result/java-runtime.json
             e2e/compatibility-result/platform-runtime.json
             e2e/runtime/result.json
@@ -467,6 +469,7 @@ jobs:
             --output-dir compatibility-public \
             --commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" \
             --repository "$GITHUB_REPOSITORY" \
             > compatibility-public/aggregate.log 2>&1
           rc=$?
@@ -488,3 +491,38 @@ jobs:
             compatibility-public/aggregate.log
           if-no-files-found: error
           retention-days: 30
+
+  acceptance-inventory-0521:
+    name: Fail-closed 0.52.1 acceptance inventory (never GA)
+    if: always()
+    needs: [matrix-plan, compatibility-e2e, compatibility-e2e-b]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install evidence signature verifier
+        run: python3 -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: compatibility-*
+          path: compatibility-results
+      - name: Replay original hashed logs and reject missing required executions
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p acceptance-0521
+          python3 scripts/acceptance/inventory_0521.py inventory \
+            --results-root compatibility-results \
+            --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" --gate minecraft \
+            --output "$PWD/acceptance-0521/inventory.json"
+      - name: Upload observed inventory (not independent GA)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-acceptance-inventory-0521-${{ github.run_id }}-${{ github.run_attempt }}
+          path: acceptance-0521/inventory.json
+          if-no-files-found: warn
+          retention-days: 90

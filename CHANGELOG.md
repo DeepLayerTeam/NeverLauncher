@@ -1,3 +1,10 @@
+## 0.52.1 — Acceptance Inventory & Evidence Integrity (working replay verifier; independent GA BLOCKED)
+
+- Implement executable fail-closed inventory of all 322 mandatory rows (280 Minecraft, 14 ServerBridge, 7 Device Trust, 3 Guard, 18 user journeys) plus 12 optional Minecraft rows. Absent evidence is BLOCKED; historical and optional targets cannot count as PASS. Associate each technical target with its real test entrypoint.
+- Capture actual Minecraft certification subprocess output outside its ephemeral runtime directory and bind it by SHA-256 to the exact compatibility result, source commit, CI run ID and run attempt. Replay complete on-disk evidence, JVM/client/loader certificates and source-run logs; refuse duplicate IDs, missing/unsafe artifacts, contradictory results, tampering, unexpected targets and secrets in logs.
+- Add optional independent Ed25519 review signing *only after all 280 actual-client proofs replay*, using an out-of-checkout private key and separately pinned trusted public key. Verification reopens every raw input and refuses modified catalogs, old runs, changed bytes and counterfeit signatures. A signed CI review is **not** a final-installer or GA authorization.
+- Run acceptance inventory on actual compatibility CI downloads; a missing result fails the job while still uploading the BLOCKED report. Add tamper/replay/signature regressions and operator runbook. No physical six-platform package, official-account, multi-host or end-to-end user-scenario evidence was available locally: **0.53.0 GA remains BLOCKED**.
+
 ## 0.52.0 — Independent HA GA Acceptance (executable cross-host acceptance; GA BLOCKED)
 
 - Implement a new executable independent HA acceptance operator tool for the actual 0.52.0 deployment: run fault suites against separate Docker hosts, verify recovered hosts and PostgreSQL/ServerBridge/HTTPS readiness, require active Alertmanager observation, and hash individual real fault receipts. The tool rejects missing, replayed, duplicated or unrecovered fault results; unit tests cannot produce production GA.
