@@ -1,3 +1,10 @@
+## 0.52.4 — Minecraft & Loader Compatibility E2E (live matching-server evidence required; native GA BLOCKED)
+
+- Connect actual Vanilla, Fabric, Quilt, Forge and NeoForge Runtime certification clients to a version-matched **running** Minecraft dedicated server, rather than accepting a healthy process or a timeout as a multiplayer pass. Verify the real resolved loader, Java major and native OS/CPU on every execution.
+- Start independently SHA-256 pinned dedicated loader servers in disposable localhost environments; prove a joined Minecraft player by simultaneous server log and authenticated RCON online observation with advancing world ticks. Permit verifier-backed authoritative Mojang Vanilla server downloads. Missing original distribution, actual server, real join or ability to run on the native platform fails closed.
+- Seal verified live evidence only **after** the server JVM has stopped, with SHA-256 references to both final server log and exact client certificate. Require the new checks and original files in the compatibility aggregator and 0.52.1 independent evidence inventory; add native CI upload paths, negative tests and runbook.
+- This implementation changes executable compatibility checks but does **not** represent completion of the 280 native scenarios or final GA acceptance: no external signed installers, six-platform native/join matrix or independent 0.53.0 operator receipts were available locally. **0.53.0 GA BLOCKED.**
+
 ## 0.52.3 — Real Owner & Admin E2E (live Minimal/Standard acceptance; physical Standard BLOCKED)
 
 - Extend the real installed SQLite Minimal acceptance with authenticated owner/Admin project create/update, profile/channel creation, audit authorization and persistence checks after SIGTERM and SIGKILL. The final signed release bundle runner requires these additional steps.

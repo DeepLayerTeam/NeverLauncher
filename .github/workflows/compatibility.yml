@@ -34,6 +34,7 @@ jobs:
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
           python3 e2e/scripts/test_prepare_vanilla_1171_void_world.py
           python3 e2e/scripts/test_vanilla_1171_resource_ready_proxy.py
+          python3 e2e/scripts/test_live_join_0524.py
           full_matrix="$(python3 scripts/compatibility/matrix.py plan --targets compatibility/targets.json)"
           matrix="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[:mid]},separators=(",",":")))' <<<"$full_matrix")"
           matrix_b="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[mid:]},separators=(",",":")))' <<<"$full_matrix")"
@@ -154,8 +155,12 @@ jobs:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
+          # Operator-provisioned independently SHA-256 pinned matching server ZIPs.
+          # Missing distributions intentionally BLOCK required multiplayer targets.
+          LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
+          LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
-          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
           # CI runners have no physical audio device; force OpenAL Soft's
           # genuine null backend rather than failing to open the default one.
           # This only affects certification runners, not launcher releases.
@@ -223,6 +228,12 @@ jobs:
             e2e/runtime/loader-native-server-artifacts.txt
             e2e/runtime/loader-native-server-process.txt
             e2e/runtime/health-loader-native.json
+            e2e/runtime/live-join.json
+            e2e/runtime/live-server-ready.json
+            e2e/runtime/live-server-witness.json
+            e2e/runtime/live-server-stopped.json
+            e2e/runtime/live-server-execution.log
+            e2e/runtime/matching-server-install.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
             e2e/runtime/matching-server.initial.log
@@ -357,8 +368,12 @@ jobs:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
+          # Operator-provisioned independently SHA-256 pinned matching server ZIPs.
+          # Missing distributions intentionally BLOCK required multiplayer targets.
+          LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
+          LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
-          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
           # CI runners have no physical audio device; force OpenAL Soft's
           # genuine null backend rather than failing to open the default one.
           # This only affects certification runners, not launcher releases.
@@ -425,6 +440,12 @@ jobs:
             e2e/runtime/loader-native-server-artifacts.txt
             e2e/runtime/loader-native-server-process.txt
             e2e/runtime/health-loader-native.json
+            e2e/runtime/live-join.json
+            e2e/runtime/live-server-ready.json
+            e2e/runtime/live-server-witness.json
+            e2e/runtime/live-server-stopped.json
+            e2e/runtime/live-server-execution.log
+            e2e/runtime/matching-server-install.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
             e2e/runtime/matching-server.initial.log

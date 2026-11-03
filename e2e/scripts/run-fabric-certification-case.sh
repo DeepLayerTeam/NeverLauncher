@@ -13,6 +13,7 @@ TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
+source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[fabric-cert] invalid Minecraft version" >&2; exit 2; }
 [[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[fabric-cert] invalid Fabric loader selector" >&2; exit 2; }
@@ -118,6 +119,8 @@ MAIN_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],enco
 [[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[fabric-cert] incomplete Fabric profile evidence" >&2; exit 1; }
 case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[fabric-cert] mutable loader selector leaked into resolved version" >&2; exit 1 ;; esac
 
+certification_live_start fabric "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
+
 printf '[fabric-cert] launch actual Fabric client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
@@ -127,7 +130,10 @@ certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/fabric-certif
     --version "$PROFILE_ID" \
     --java "$JAVA_BIN" \
     --required-java-major "$JAVA_MAJOR" \
+    --server 127.0.0.1 --server-port "$LIVE_JOIN_SERVER_PORT" \
     --max-runtime-seconds "$MAX_RUNTIME_SECONDS"
+
+certification_live_finish fabric "$RESOLVED_LOADER" "$PROFILE_ID"
 
 python3 - "$RUNTIME_DIR/fabric-certification.json" "$RUNTIME_DIR/fabric-install.json" "$PROFILE_ID" "$JAVA_MAJOR" <<'PY'
 import json, sys

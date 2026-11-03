@@ -13,6 +13,7 @@ TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
+source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] invalid Minecraft version" >&2; exit 2; }
 [[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] invalid Forge loader selector" >&2; exit 2; }
@@ -160,6 +161,8 @@ python3 "$ROOT/e2e/scripts/prepare-legacy-forge-config.py" \
   --client-root "$RUNTIME_DIR/materialized-client" \
   --minecraft "$MINECRAFT_VERSION"
 
+certification_live_start forge "$RESOLVED_LOADER" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
+
 printf '[forge-cert] launch actual Forge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
@@ -169,7 +172,10 @@ certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/forge-certifi
     --version "$PROFILE_ID" \
     --java "$JAVA_BIN" \
     --required-java-major "$JAVA_MAJOR" \
+    --server 127.0.0.1 --server-port "$LIVE_JOIN_SERVER_PORT" \
     --max-runtime-seconds "$MAX_RUNTIME_SECONDS"
+
+certification_live_finish forge "$RESOLVED_LOADER" "$PROFILE_ID"
 
 python3 - "$RUNTIME_DIR/forge-certification.json" "$RUNTIME_DIR/forge-install.json" "$PROFILE_ID" "$JAVA_MAJOR" <<'PY'
 import json, sys

@@ -294,6 +294,59 @@ if scope == "client":
                     and probe.get("mainClass") == install.get("mainClass")
                 ),
             })
+    # Every ordinary client target in 0.52.4 requires contemporaneous server-side
+    # multiplayer proof, not merely an idle JVM surviving for N seconds.
+    if not matching_server:
+        live = read("live-join.json") or {}
+        server_log_path = runtime / "matching-server.log"
+        cert_path = runtime / probe_name
+        witness_path = runtime / "live-server-witness.json"
+        stopped_path = runtime / "live-server-stopped.json"
+        stopped = read("live-server-stopped.json") or {}
+        witness = read("live-server-witness.json") or {}
+        live_ok = (
+            live.get("schema") == "neverlauncher.compatibility-live-join/0.52.4"
+            and live.get("status") == "passed"
+            and live.get("targetId") == target_id
+            and live.get("sourceCommit") == commit
+            and live.get("ciRunId") == run_id
+            and live.get("ciRunAttempt") == (int(run_attempt) if run_attempt.isdecimal() else 0)
+            and live.get("minecraftVersion") == minecraft
+            and live.get("loader") == loader
+            and live.get("loaderVersion") == resolved
+            and live.get("profileId") == probe.get("minecraftVersion")
+            and live.get("javaMajor") == java_major
+            and live.get("playerJoined") is True
+            and live.get("playerOnlineViaRcon") is True
+            and live.get("worldTicksAdvanced") is True
+            and probe.get("matchingServer") == "127.0.0.1"
+            and probe.get("matchingServerPort") == live.get("serverPort")
+            and server_log_path.is_file()
+            and cert_path.is_file()
+            and witness_path.is_file()
+            and stopped_path.is_file()
+            and stopped.get("schema") == "neverlauncher.compatibility-server-stopped/0.52.4"
+            and stopped.get("stoppedAfterLiveWitness") is True
+            and stopped.get("serverLogSha256") == file_sha256(server_log_path)
+            and stopped.get("serverPid") == live.get("serverProcessId")
+            and live.get("serverStoppedSha256") == file_sha256(stopped_path)
+            and live.get("serverLogSha256") == file_sha256(server_log_path)
+            and live.get("clientCertificationSha256") == file_sha256(cert_path)
+            and live.get("witnessSha256") == file_sha256(witness_path)
+            and witness.get("targetId") == target_id
+            and witness.get("serverArtifactSha256") == live.get("serverArtifactSha256")
+            and witness.get("username") == "NL_Cert_Client"
+            and witness.get("joinedFromServerLog") is True
+            and witness.get("playerOnlineViaRcon") is True
+            and type(witness.get("tickBefore")) is int
+            and type(witness.get("tickAfter")) is int
+            and witness["tickAfter"] > witness["tickBefore"]
+        )
+        checks["liveMultiplayerJoin"] = live_ok
+        evidence_files += [name for name in (
+            "live-join.json", "live-server-ready.json", "live-server-witness.json", "live-server-stopped.json",
+            "live-server-execution.log", "matching-server.log", "matching-server-install.json"
+        ) if (runtime / name).is_file() and name not in evidence_files]
     matching = read("matching-server.json") or {}
     server_install = read("vanilla-server-install.json") or {}
     if matching_server:

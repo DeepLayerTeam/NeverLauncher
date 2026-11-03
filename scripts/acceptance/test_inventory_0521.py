@@ -57,7 +57,43 @@ class InventoryTests(unittest.TestCase):
         actual = {'status': 'passed', 'targetId': target['id']}
         if target['scope'] == 'integration':
             actual['mode'] = 'compatibility'
-        named = {'result.json': actual, f'{loader}-install.json': install,
+        # Synthetic NEGATIVE-TEST ONLY server artifact, never an acceptance run.
+        witness = {'schema': 'neverlauncher.compatibility-join-witness/0.52.4',
+                   'targetId': target['id'], 'serverPid': 54321,
+                   'serverArtifactSha256': 'f' * 64,
+                   'username': 'NL_Cert_Client', 'joinedFromServerLog': True,
+                   'playerOnlineViaRcon': True, 'tickBefore': 5, 'tickAfter': 10}
+        ready = {'targetId': target['id'], 'port': 25565, 'serverPid': 54321,
+                 'serverArtifactSha256': 'f' * 64}
+        stopped = {'schema': 'neverlauncher.compatibility-server-stopped/0.52.4',
+                   'stoppedAfterLiveWitness': True, 'serverPid': 54321,
+                   'serverLogSha256': hashlib.sha256(b'[Server thread/INFO]: NL_Cert_Client joined the game\n').hexdigest()}
+        stopped_file = runtime / 'live-server-stopped.json'
+        for binding in (ready, witness, stopped):
+            binding.update({'sourceCommit': COMMIT, 'ciRunId': RUN_ID, 'ciRunAttempt': 1})
+        write_json(stopped_file, stopped)
+        cert['matchingServer'] = '127.0.0.1'
+        cert['matchingServerPort'] = 25565
+        log_bytes = b'[Server thread/INFO]: NL_Cert_Client joined the game\n'
+        log_path = runtime / 'matching-server.log'
+        log_path.write_bytes(log_bytes)
+        cert_file = runtime / f'{loader}-certification.json'
+        write_json(cert_file, cert)
+        witness_file = runtime / 'live-server-witness.json'
+        write_json(witness_file, witness)
+        live = {'schema': 'neverlauncher.compatibility-live-join/0.52.4',
+                'targetId': target['id'], 'status': 'passed',
+                'minecraftVersion': target['minecraft'], 'loader': loader,
+                'profileId': cert['minecraftVersion'], 'javaMajor': target['javaMajor'],
+                'serverPort': 25565, 'serverArtifactSha256': 'f' * 64,
+                'sourceCommit': COMMIT, 'ciRunId': RUN_ID, 'ciRunAttempt': 1,
+                'serverLogSha256': hashlib.sha256(log_bytes).hexdigest(),
+                'clientCertificationSha256': hashlib.sha256(cert_file.read_bytes()).hexdigest(),
+                'witnessSha256': hashlib.sha256(witness_file.read_bytes()).hexdigest(),
+                'serverStoppedSha256': hashlib.sha256(stopped_file.read_bytes()).hexdigest(),
+                'playerJoined': True, 'playerOnlineViaRcon': True, 'worldTicksAdvanced': True}
+        named = {'live-join.json': live, 'live-server-ready.json': ready,
+                 'live-server-witness.json': witness, 'live-server-stopped.json': stopped, 'result.json': actual, f'{loader}-install.json': install,
                  f'{loader}-certification.json': cert,
                  'materialized-client-verify.json': {'status': 'valid', 'verify': {'valid': True}},
                  'runtime-launch-minecraft.json': {'success': True},
@@ -75,7 +111,7 @@ class InventoryTests(unittest.TestCase):
                 dest = report / name if name in {'java-runtime.json', 'platform-runtime.json'} else runtime / name
                 if name in named:
                     write_json(dest, named[name])
-                else:
+                elif name != 'matching-server.log':
                     dest.write_text(target['id'] + ' ' + name + '\n', encoding='utf-8')
             doc['evidence']['sha256'][name] = hashlib.sha256(dest.read_bytes()).hexdigest()
         path = report / 'compatibility-result.json'
@@ -106,6 +142,34 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(matching['status'], 'observed')
         self.assertEqual(data['counts']['observed'], 1)
         self.assertEqual(data['status'], 'BLOCKED')
+
+    def test_replayed_server_receipt_blocked_despite_rehashed_result(self):
+        target = self.one()
+        result = self.make(target)
+        path = result.parent.parent / 'runtime/live-server-ready.json'
+        doc = json.loads(path.read_text())
+        doc['ciRunId'] = '98765'
+        write_json(path, doc)
+        result_doc = json.loads(result.read_text())
+        result_doc['evidence']['sha256'][path.name] = inv.digest(path)
+        write_json(result, result_doc)
+        self.assertEqual(self.run_inventory()['counts']['observed'], 0)
+
+    def test_mutated_dedicated_server_log_invalidates_observation(self):
+        target = self.one()
+        result = self.make(target)
+        server_log = result.parent.parent / 'runtime/matching-server.log'
+        server_log.write_bytes(server_log.read_bytes() + b'[forged extra event]\n')
+        self.assertEqual(self.run_inventory()['counts']['observed'], 0)
+
+    def test_forged_server_stopped_receipt_invalidates_observation(self):
+        target = self.one()
+        result = self.make(target)
+        stopped = result.parent.parent / 'runtime/live-server-stopped.json'
+        body = json.loads(stopped.read_text())
+        body['stoppedAfterLiveWitness'] = False
+        write_json(stopped, body)
+        self.assertEqual(self.run_inventory()['counts']['observed'], 0)
 
     def test_log_tamper_invalidates_observation(self):
         target = self.one()

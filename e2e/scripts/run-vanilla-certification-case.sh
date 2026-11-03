@@ -10,7 +10,7 @@ TARGET_ID="${LAUNCHER_COMPAT_TARGET_ID:-vanilla-certification}"
 TARGET_OS="${LAUNCHER_COMPAT_OS:-}"
 TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
+MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[vanilla-cert] invalid Minecraft version" >&2; exit 2; }
@@ -108,28 +108,18 @@ biomeBlendRadius:0
 OPTIONS
 fi
 
+source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
+certification_live_start vanilla "" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
+
 printf '[vanilla-cert] launch actual Mojang client with Java %s on %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
 export LAUNCHER_RESOLUTION_WIDTH=854
 export LAUNCHER_RESOLUTION_HEIGHT=480
-if [[ "$TARGET_OS" == "linux" ]]; then
-  export LIBGL_ALWAYS_SOFTWARE=1
-  xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-    "$RUNTIME_BIN" certify-vanilla \
-      --root "$RUNTIME_DIR/materialized-client" \
-      --version "$MINECRAFT_VERSION" \
-      --java "$JAVA_BIN" \
-      --required-java-major "$JAVA_MAJOR" \
-      --max-runtime-seconds "$MAX_RUNTIME_SECONDS" \
-      > "$RUNTIME_DIR/vanilla-certification.json"
-else
-  certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json" \
-    certify-vanilla \
-    --root "$RUNTIME_DIR/materialized-client" \
-    --version "$MINECRAFT_VERSION" \
-    --java "$JAVA_BIN" \
-    --required-java-major "$JAVA_MAJOR" \
-    --max-runtime-seconds "$MAX_RUNTIME_SECONDS"
-fi
+certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json" \
+  certify-vanilla --root "$RUNTIME_DIR/materialized-client" --version "$MINECRAFT_VERSION" \
+  --java "$JAVA_BIN" --required-java-major "$JAVA_MAJOR" \
+  --server 127.0.0.1 --server-port "$LIVE_JOIN_SERVER_PORT" \
+  --max-runtime-seconds "$MAX_RUNTIME_SECONDS"
+certification_live_finish vanilla "" "$MINECRAFT_VERSION"
 
 python3 - "$RUNTIME_DIR/vanilla-certification.json" "$MINECRAFT_VERSION" "$JAVA_MAJOR" <<'PY'
 import json, sys

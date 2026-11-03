@@ -249,6 +249,7 @@ class MatchingServer:
         server_entry="",
         bridge_version="",
         online_mode=False,
+        require_bridge=None,
     ):
         self.work = Path(work)
         self.root = self.work / "matching-server"
@@ -273,7 +274,7 @@ class MatchingServer:
         while self.port == self.rcon_port:
             self.rcon_port = self.free_port()
         self.rcon = Rcon(self.rcon_port, self.rcon_password)
-        self.requires_bridge = loader != "vanilla" or bool(bridge_path)
+        self.requires_bridge = (loader != "vanilla" if require_bridge is None else bool(require_bridge)) or bool(bridge_path)
         self.artifact_sha = ""
 
     @staticmethod

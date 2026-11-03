@@ -61,6 +61,11 @@ class MatrixToolTests(unittest.TestCase):
                 "java-runtime.json",
                 "result.json",
             ]
+            if not target.get("matchingServer"):
+                checks["liveMultiplayerJoin"] = True
+                files.extend(["live-join.json", "live-server-ready.json",
+                              "live-server-witness.json", "live-server-stopped.json", "matching-server.log",
+                              "live-server-execution.log"])
             if target.get("matchingServer") is True:
                 checks.update(
                     {

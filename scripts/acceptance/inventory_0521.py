@@ -186,6 +186,39 @@ def verify_runtime_bytes(target, result_path: Path):
                     cert.get('mainClass') == install.get('mainClass') and
                     install.get('loader') == loader,
                     target['id'] + ': incorrect loader runtime identity')
+        if not target.get('matchingServer'):
+            live = read_json(runtime / 'live-join.json')
+            witness = read_json(runtime / 'live-server-witness.json')
+            ready = read_json(runtime / 'live-server-ready.json')
+            stopped = read_json(runtime / 'live-server-stopped.json')
+            server_log = safe_file(runtime / 'matching-server.log', MAX_LOG).read_bytes()
+            cert_file = runtime / (loader + '-certification.json')
+            require(live.get('schema') == 'neverlauncher.compatibility-live-join/0.52.4' and
+                    live.get('status') == 'passed' and live.get('targetId') == target['id'] and
+                    live.get('minecraftVersion') == target['minecraft'] and
+                    live.get('loader') == loader and live.get('javaMajor') == target['javaMajor'] and
+                    live.get('profileId') == cert.get('minecraftVersion') and
+                    live.get('serverLogSha256') == hashlib.sha256(server_log).hexdigest() and
+                    live.get('clientCertificationSha256') == digest(cert_file) and
+                    live.get('witnessSha256') == digest(runtime / 'live-server-witness.json') and
+                    live.get('serverStoppedSha256') == digest(runtime / 'live-server-stopped.json') and
+                    stopped.get('schema') == 'neverlauncher.compatibility-server-stopped/0.52.4' and
+                    stopped.get('stoppedAfterLiveWitness') is True and
+                    stopped.get('serverLogSha256') == hashlib.sha256(server_log).hexdigest() and
+                    stopped.get('serverPid') == ready.get('serverPid') and
+                    all(live.get(k) is True for k in ('playerJoined', 'playerOnlineViaRcon', 'worldTicksAdvanced')) and
+                    ready.get('targetId') == target['id'] and ready.get('port') == live.get('serverPort') and
+                    ready.get('serverArtifactSha256') == live.get('serverArtifactSha256') and
+                    witness.get('targetId') == target['id'] and witness.get('serverPid') == ready.get('serverPid') and
+                    witness.get('serverArtifactSha256') == ready.get('serverArtifactSha256') and
+                    witness.get('username') == 'NL_Cert_Client' and
+                    witness.get('joinedFromServerLog') is True and witness.get('playerOnlineViaRcon') is True and
+                    type(witness.get('tickBefore')) is int and type(witness.get('tickAfter')) is int and
+                    witness['tickAfter'] > witness['tickBefore'] and
+                    cert.get('matchingServer') == '127.0.0.1' and
+                    cert.get('matchingServerPort') == live.get('serverPort') and
+                    re.search(rb'(?im)\bNL_Cert_Client\b.*(?:joined the game|logged in with entity id)', server_log),
+                    target['id'] + ': live multiplayer join evidence invalid or altered')
         if target.get('matchingServer'):
             match = read_json(runtime / 'matching-server.json')
             require(match.get('status') == 'passed' and match.get('clientJoinedServer') is True,
@@ -205,7 +238,18 @@ def verify_compatibility(target, record, commit, run_id, attempt):
     problems = compatibility.verify_result(target, doc, commit=commit, run_id=run_id)
     problems += compatibility.verify_evidence_files(path, doc)
     require(not problems, target['id'] + ': ' + '; '.join(problems[:5]))
-    verify_runtime_bytes(target, path)
+    runtime_dir = verify_runtime_bytes(target, path)
+    if target['scope'] == 'client' and not target.get('matchingServer'):
+        live = read_json(runtime_dir / 'live-join.json')
+        for receipt in ('live-server-ready.json', 'live-server-witness.json', 'live-server-stopped.json'):
+            binding = read_json(runtime_dir / receipt)
+            require(binding.get('sourceCommit') == commit and
+                    binding.get('ciRunId') == run_id and
+                    binding.get('ciRunAttempt') == attempt,
+                    target['id'] + ': server observation from an unrelated CI run/attempt')
+        require(live.get('sourceCommit') == commit and live.get('ciRunId') == run_id and
+                live.get('ciRunAttempt') == attempt,
+                target['id'] + ': live multiplayer evidence from a different CI run/attempt')
     raw = doc.get('evidence', {})
     hashes = raw.get('sha256') or {}
     require('compatibility-execution.log' in (raw.get('files') or []) and
