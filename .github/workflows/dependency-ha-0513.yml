@@ -1,0 +1,48 @@
+name: Dependency HA 0.51.3 runtime and syntax regressions
+on:
+  push:
+    paths:
+      - 'scripts/operations/dependency_ha_0513.py'
+      - 'scripts/operations/test_dependency_ha_0513.py'
+      - 'deploy/production/dependency-ha-0513.example.env'
+      - '.github/workflows/dependency-ha-0513.yml'
+  pull_request:
+    paths:
+      - 'scripts/operations/dependency_ha_0513.py'
+      - 'scripts/operations/test_dependency_ha_0513.py'
+      - 'deploy/production/dependency-ha-0513.example.env'
+      - '.github/workflows/dependency-ha-0513.yml'
+jobs:
+  validate-proxy-and-vrrp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run real unit tests and generate live-format settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s scripts/operations -p 'test_dependency_ha_0513.py' -v
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq haproxy keepalived
+          d="$(mktemp -d)"
+          trap 'rm -rf "$d"' EXIT
+          printf '%s\n' 'ci-health-only-password-no-access' > "$d/redis-health"
+          chmod 600 "$d/redis-health"
+          python - "$d" <<'PY'
+          import sys
+          from pathlib import Path
+          d = Path(sys.argv[1])
+          text = Path('deploy/production/dependency-ha-0513.example.env').read_text()
+          text = text.replace('/etc/launcher/secrets/redis-ha-health-password', str(d / 'redis-health'))
+          (d / 'ha.env').write_text(text)
+          (d / 'ha.env').chmod(0o600)
+          PY
+          mkdir "$d/out"
+          python scripts/operations/dependency_ha_0513.py render --env-file "$d/ha.env" --output-dir "$d/out"
+          sudo haproxy -c -f "$d/out/haproxy.launcher-0513.cfg"
+          # Configuration test does not change system network or start VRRP.
+          sudo keepalived --config-test --use-file="$d/out/keepalived.launcher-0513.conf"

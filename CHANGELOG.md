@@ -1,3 +1,11 @@
+## 0.51.3 — Dependency HA & Ingress Failover (executable HAProxy/VRRP; HA GA BLOCKED)
+
+- Implement production HAProxy L4 TCP/TLS route switching with signed-health ingress probes, Patroni `/primary` ownership checks for PostgreSQL, authenticated TLS Redis master detection (`INFO replication`) and S3 quorum gateway health. Enforce TLS hostname verification and reject multiple writable primaries. Preserve end-to-end TLS (including S3 SigV4 `Host`) without retrying ambiguous writes at the proxy.
+- Supply per-node Keepalived unicast VRRP config for two dedicated, separately run load balancers with one public and one dependency VIP, monitored service health, and nonlocal VIP bind. Build secure, non-overwriting host configuration from a private file rather than trusting remote commands or checking in passwords.
+- Implement real HAProxy runtime-stat inspection, live public/API/worker PostgreSQL/Redis/S3 growth probes, direct cross-gateway AWS SigV4 S3 PUT→GET→DELETE with exact byte comparison, controlled primary/gateway outage drills with restart, and independent active-LB VRRP VIP takeover drill. Distinguish initial redundancy from safe degraded operation and require recovery to be verified.
+- Add fail-closed CLI safety checks, operator installation and fault-injection guide, 11 focused Python regression cases and HAProxy/Keepalived syntax validation in CI.
+- **HA GA BLOCKED:** actual separate LB/Patroni/Sentinel/object-store clusters and fault-injection infrastructure are not available in this environment. Proxy routing assumes already-operational quorum-backed upstream replication; it does not create it. Multi-host failures, real certificates, failover RTO/RPO, split-brain and cross-replica auth state remain external admission requirements.
+
 ## 0.51.2 — Real Multi-Host Deployment (executed topology implementation; HA GA BLOCKED)
 
 - Implement a separate, independent-host Docker Compose deployment with one real API, durable worker, Admin and TLS ingress per host; remove embedded PG/Redis, require externally shared PostgreSQL/Redis/S3, immutable OCI image digests, distinct per-host API/worker identities, and non-public worker/API sockets. Provision independent local writable volumes for both backends without treating them as authoritative cluster storage.
