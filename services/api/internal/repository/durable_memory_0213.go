@@ -59,7 +59,17 @@ func (r *MemoryRepository) leaseJobLocked0213(id, worker string, ttl time.Durati
 	if j.Status == model.DurableJobStatusRunning && j.LeaseExpiresAt.After(now) {
 		return j, ErrLeaseBusy
 	}
-	if j.AvailableAt.After(now) || j.AttemptCount >= j.MaxAttempts {
+	if j.AttemptCount >= j.MaxAttempts {
+		j.Status = model.DurableJobStatusDead
+		j.LastError = "lease expired; max attempts exceeded"
+		j.CompletedAt, j.UpdatedAt = now, now
+		j.LeaseOwner, j.LeaseToken = "", ""
+		j.LeaseExpiresAt = time.Time{}
+		r.finishMemoryOperationAttempt0217(id, "dead", j.LastError)
+		r.durableJobs[id] = j
+		return j, ErrImmutable
+	}
+	if j.AvailableAt.After(now) {
 		return j, ErrLeaseBusy
 	}
 	if ttl <= 0 {
@@ -100,7 +110,20 @@ func (r *MemoryRepository) LeaseDurableJobs(_ context.Context, kind, worker stri
 	ids := make([]string, 0)
 	now := time.Now().UTC()
 	for id, j := range r.durableJobs {
-		if j.Kind != kind || j.AttemptCount >= j.MaxAttempts || j.AvailableAt.After(now) {
+		if j.Kind != kind {
+			continue
+		}
+		if j.Status == model.DurableJobStatusRunning && j.AttemptCount >= j.MaxAttempts && !j.LeaseExpiresAt.After(now) {
+			r.finishMemoryOperationAttempt0217(id, "dead", "lease expired; max attempts exceeded")
+			j.Status = model.DurableJobStatusDead
+			j.LastError = "lease expired; max attempts exceeded"
+			j.LeaseOwner, j.LeaseToken = "", ""
+			j.LeaseExpiresAt = time.Time{}
+			j.CompletedAt, j.UpdatedAt = now, now
+			r.durableJobs[id] = j
+			continue
+		}
+		if j.AttemptCount >= j.MaxAttempts || j.AvailableAt.After(now) {
 			continue
 		}
 		if j.Status == model.DurableJobStatusPending || (j.Status == model.DurableJobStatusRunning && !j.LeaseExpiresAt.After(now)) {
@@ -128,7 +151,7 @@ func (r *MemoryRepository) FailDurableJob(_ context.Context, id, leaseToken, wor
 	if !ok {
 		return model.DurableJob{}, ErrNotFound
 	}
-	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken {
+	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken || !j.LeaseExpiresAt.After(time.Now().UTC()) {
 		return model.DurableJob{}, ErrLeaseLost
 	}
 	r.finishMemoryOperationAttempt0217(id, "failed", workerErr)
@@ -156,7 +179,7 @@ func (r *MemoryRepository) TerminateDurableJob(_ context.Context, id, leaseToken
 	if !ok {
 		return model.DurableJob{}, ErrNotFound
 	}
-	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken {
+	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken || !j.LeaseExpiresAt.After(time.Now().UTC()) {
 		return model.DurableJob{}, ErrLeaseLost
 	}
 	r.finishMemoryOperationAttempt0217(id, terminalStatus, reason)
@@ -213,7 +236,7 @@ func (r *MemoryRepository) ReleaseDurableScopeLease(_ context.Context, scopeKey,
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()
 	lease, ok := r.durableScopeLeases[scopeKey]
-	if !ok || lease.LeaseToken != leaseToken {
+	if !ok || lease.LeaseToken != leaseToken || !lease.ExpiresAt.After(time.Now().UTC()) {
 		return ErrLeaseLost
 	}
 	lease.ExpiresAt = time.Now().UTC()
@@ -323,6 +346,15 @@ func (r *MemoryRepository) ClaimOutboxEvents(_ context.Context, worker string, l
 	now := time.Now().UTC()
 	keys := make([]string, 0)
 	for key, e := range r.durableOutbox {
+		if e.Status == model.OutboxStatusRunning && e.AttemptCount >= e.MaxAttempts && !e.LeaseExpiresAt.After(now) {
+			e.Status = model.OutboxStatusDead
+			e.LastError = "delivery lease expired; max attempts exceeded"
+			e.LeaseOwner, e.LeaseToken = "", ""
+			e.LeaseExpiresAt = time.Time{}
+			e.UpdatedAt = now
+			r.durableOutbox[key] = e
+			continue
+		}
 		if e.AttemptCount >= e.MaxAttempts || e.AvailableAt.After(now) {
 			continue
 		}
@@ -354,7 +386,7 @@ func (r *MemoryRepository) CompleteOutboxEvent(_ context.Context, id, leaseToken
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()
 	for key, e := range r.durableOutbox {
-		if e.ID == id && e.LeaseToken == leaseToken && e.Status == model.OutboxStatusRunning {
+		if e.ID == id && e.LeaseToken == leaseToken && e.Status == model.OutboxStatusRunning && e.LeaseExpiresAt.After(time.Now().UTC()) {
 			e.Status = model.OutboxStatusDelivered
 			e.LeaseOwner, e.LeaseToken = "", ""
 			e.LeaseExpiresAt = time.Time{}
@@ -370,7 +402,7 @@ func (r *MemoryRepository) FailOutboxEvent(_ context.Context, id, leaseToken, de
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()
 	for key, e := range r.durableOutbox {
-		if e.ID == id && e.LeaseToken == leaseToken && e.Status == model.OutboxStatusRunning {
+		if e.ID == id && e.LeaseToken == leaseToken && e.Status == model.OutboxStatusRunning && e.LeaseExpiresAt.After(time.Now().UTC()) {
 			e.Status = model.OutboxStatusPending
 			if e.AttemptCount >= e.MaxAttempts {
 				e.Status = model.OutboxStatusDead

@@ -111,6 +111,9 @@ func (r *RedisCoordinator) TouchChannel(ctx context.Context, p ChannelPresence, 
 }
 
 func (r *RedisCoordinator) AcquireCommandLease(ctx context.Context, serverID, commandID, owner, token string, ttl time.Duration) (bool, error) {
+	if err := validateCommandLeaseIdentity0514(serverID, commandID, owner, token); err != nil {
+		return false, err
+	}
 	if ttl < 5*time.Second {
 		ttl = 5 * time.Second
 	}
@@ -127,6 +130,9 @@ func (r *RedisCoordinator) AcquireCommandLease(ctx context.Context, serverID, co
 }
 
 func (r *RedisCoordinator) VerifyCommandLease(ctx context.Context, serverID, commandID, owner, token string) (bool, error) {
+	if err := validateCommandLeaseIdentity0514(serverID, commandID, owner, token); err != nil {
+		return false, err
+	}
 	v, err := r.command(ctx, "GET", commandKey(serverID, commandID))
 	if err != nil {
 		return false, err
@@ -139,8 +145,24 @@ func (r *RedisCoordinator) VerifyCommandLease(ctx context.Context, serverID, com
 }
 
 func (r *RedisCoordinator) ReleaseCommandLease(ctx context.Context, serverID, commandID, owner, token string) error {
+	if err := validateCommandLeaseIdentity0514(serverID, commandID, owner, token); err != nil {
+		return err
+	}
 	_, err := r.command(ctx, "EVAL", releaseLeaseScript, "1", commandKey(serverID, commandID), leaseValue(owner, token))
 	return err
+}
+
+// Pre-0.51.4 key normalization silently discarded '/', ':', whitespace etc.
+// Two distinct untrusted identifiers could therefore acquire the same Redis
+// key. Reject lossy normalization instead of changing valid keys (which would
+// allow an old and new process to acquire separate locks during rollout).
+func validateCommandLeaseIdentity0514(parts ...string) error {
+	for _, part := range parts {
+		if part == "" || len(part) > 256 || safePart(part) != part {
+			return errors.New("unsafe Redis command lease identity")
+		}
+	}
+	return nil
 }
 
 func commandKey(serverID, commandID string) string {

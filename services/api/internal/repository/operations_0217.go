@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
@@ -33,14 +32,22 @@ func (r *SQLRepository) CompleteOperationJob(ctx context.Context, id, token stri
 	if err != nil {
 		return model.DurableJob{}, err
 	}
-	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != token || !j.LeaseExpiresAt.After(time.Now().UTC()) {
+	serverNow, err := durableDBClock0514(ctx, tx)
+	if err != nil {
+		return model.DurableJob{}, err
+	}
+	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != token || !j.LeaseExpiresAt.After(serverNow) {
 		return model.DurableJob{}, ErrLeaseLost
 	}
 	if len(result) == 0 {
 		result = []byte(`{}`)
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='succeeded',result=$3::jsonb,lease_owner='',lease_token='',lease_expires_at=NULL,updated_at=now(),completed_at=now() WHERE id=$1 AND lease_token=$2`, id, token, string(result)); err != nil {
+	updated, err := tx.ExecContext(ctx, `UPDATE durable_jobs SET status='succeeded',result=$3::jsonb,lease_owner='',lease_token='',lease_expires_at=NULL,updated_at=now(),completed_at=now() WHERE id=$1 AND lease_token=$2 AND status='running' AND lease_expires_at>clock_timestamp()`, id, token, string(result))
+	if err != nil {
 		return model.DurableJob{}, err
+	}
+	if n, _ := updated.RowsAffected(); n != 1 {
+		return model.DurableJob{}, ErrLeaseLost
 	}
 	if err = r.finishJobAttempt0213(ctx, tx, id, j.AttemptCount, "succeeded", ""); err != nil {
 		return model.DurableJob{}, err

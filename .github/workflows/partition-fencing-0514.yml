@@ -1,0 +1,59 @@
+name: Partition fencing and stale-owner PostgreSQL regressions (0.51.4)
+on:
+  push:
+    paths:
+      - 'services/api/internal/repository/durable_0213.go'
+      - 'services/api/internal/repository/durable_memory_0213.go'
+      - 'services/api/internal/repository/operations_0217.go'
+      - 'services/api/internal/repository/partition_fencing_0514*'
+      - 'services/api/internal/serverbridgeha/**'
+      - '.github/workflows/partition-fencing-0514.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/repository/durable_0213.go'
+      - 'services/api/internal/repository/durable_memory_0213.go'
+      - 'services/api/internal/repository/operations_0217.go'
+      - 'services/api/internal/repository/partition_fencing_0514*'
+      - 'services/api/internal/serverbridgeha/**'
+      - '.github/workflows/partition-fencing-0514.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fencing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: launcher_test
+          POSTGRES_PASSWORD: test-only-0514
+          POSTGRES_DB: launcher_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd='pg_isready -U launcher_test -d launcher_test'
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=12
+    env:
+      LAUNCHER_DURABLE_DSN: postgres://launcher_test:test-only-0514@127.0.0.1:5432/launcher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Rebuild and test real repository with two independent PostgreSQL pools
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go mod download
+          go test -race -count=1 ./internal/serverbridgeha
+          go test -race -count=1 -run 'Test(PostgresPartitionFencing0514|PostgresExpiredLeaseFailClosed0514|ExpiredMutationAndJobFences0514|DurableScopeLeaseHasSingleDistributedOwner0213|DurableJobLeaseRecoversAcrossReplicaRestart0213)' ./internal/repository
+      - name: Confirm clean version metadata and Go formatting
+        run: |
+          set -euo pipefail
+          python3 scripts/version/manage.py check
+          test -z "$(gofmt -l services/api/internal/repository/durable_0213.go services/api/internal/repository/durable_memory_0213.go services/api/internal/repository/operations_0217.go services/api/internal/repository/partition_fencing_0514_test.go services/api/internal/repository/partition_fencing_0514_integration_test.go services/api/internal/serverbridgeha/redis.go services/api/internal/serverbridgeha/partition_fencing_0514_test.go)"

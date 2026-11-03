@@ -1,3 +1,10 @@
+## 0.51.4 — Partition Safety & Fencing (PostgreSQL stale-owner protection; HA GA BLOCKED)
+
+- Make PostgreSQL, not individual API/worker wall clocks, authoritative for lease assignment, renewal, expiry and claim eligibility. Verify current token + unexpired lease before accepting durable job completion, failure, termination, operation completion and outbox delivery; retire expired jobs/events at their maximum attempt budget instead of leaving permanent running records; retain transactional channel-head CAS and monotonic fencing.
+- Reject lossy Redis ServerBridge lease key normalization, preventing distinct server/command/channel/token identities from silently colliding while retaining backwards-compatible keys for valid identifiers.
+- Align SQLite/Memory durable lease behavior; add two-pool PostgreSQL stale-worker/fencing integration tests, Redis lease collision regressions, a PostgreSQL-backed CI test job and operational partition procedures.
+- **HA GA BLOCKED:** actual network partition of physically independent hosts and leader fencing of PostgreSQL/Redis were not performed in the development environment. Stale external side effects, Minecraft world split-brain, and authoritative upstream quorum require independent acceptance; outbox is at-least-once, not exactly-once.
+
 ## 0.51.3 — Dependency HA & Ingress Failover (executable HAProxy/VRRP; HA GA BLOCKED)
 
 - Implement production HAProxy L4 TCP/TLS route switching with signed-health ingress probes, Patroni `/primary` ownership checks for PostgreSQL, authenticated TLS Redis master detection (`INFO replication`) and S3 quorum gateway health. Enforce TLS hostname verification and reject multiple writable primaries. Preserve end-to-end TLS (including S3 SigV4 `Host`) without retrying ambiguous writes at the proxy.

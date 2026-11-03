@@ -18,6 +18,16 @@ import (
 var ErrLeaseBusy = errors.New("durable scope lease busy")
 var ErrLeaseLost = errors.New("durable lease lost")
 
+// PostgreSQL is the sole time authority for distributed leases. Replica wall
+// clocks can be skewed (or jump) during partitions and failover; comparing or
+// extending a database lease using time.Now on an API host permits early
+// takeover or acceptance of a stale writer.
+func durableDBClock0514(ctx context.Context, tx *sql.Tx) (time.Time, error) {
+	var now time.Time
+	err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&now)
+	return now, err
+}
+
 // DurableControlPlane реализуют репозитории, способные сохранять задачи, защищённые
 // аренды, транзакционную публикацию и доставку через outbox между перезапусками
 // процессов. PostgreSQL и детерминированный тестовый репозиторий в памяти реализуют
@@ -222,7 +232,10 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 	if err != nil {
 		return model.DurableJob{}, err
 	}
-	now := time.Now().UTC()
+	now, err := durableDBClock0514(ctx, tx)
+	if err != nil {
+		return model.DurableJob{}, err
+	}
 	if current.Status == model.DurableJobStatusSucceeded || current.Status == model.DurableJobStatusRevoked || current.Status == model.DurableJobStatusDead || current.Status == model.DurableJobStatusFailed {
 		return current, ErrImmutable
 	}
@@ -240,7 +253,10 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 		return current, ErrLeaseBusy
 	}
 	if current.AttemptCount >= current.MaxAttempts {
-		_, _ = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='dead',last_error='max attempts exceeded',updated_at=now(),completed_at=now(),lease_owner='',lease_token='',lease_expires_at=NULL WHERE id=$1`, current.ID)
+		if _, err := tx.ExecContext(ctx, `UPDATE durable_jobs SET status='dead',last_error='max attempts exceeded',updated_at=clock_timestamp(),completed_at=clock_timestamp(),lease_owner='',lease_token='',lease_expires_at=NULL WHERE id=$1`, current.ID); err != nil {
+			return model.DurableJob{}, err
+		}
+		current.Status = model.DurableJobStatusDead
 		return current, ErrImmutable
 	}
 	token, err := randomHex0213(24)
@@ -252,9 +268,10 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 	current.Status = model.DurableJobStatusRunning
 	current.LeaseOwner = worker
 	current.LeaseToken = token
-	current.LeaseExpiresAt = now.Add(ttl)
 	current.UpdatedAt = now
-	_, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='running',lease_owner=$2,lease_token=$3,lease_fence=$4,lease_expires_at=$5,attempt_count=$6,updated_at=$7,last_error='' WHERE id=$1`, current.ID, worker, token, current.LeaseFence, current.LeaseExpiresAt, current.AttemptCount, now)
+	// Compute expiry *inside* PostgreSQL and return the actual DB timestamp.
+	// Never derive an authoritative TTL from the worker's local clock.
+	err = tx.QueryRowContext(ctx, `UPDATE durable_jobs SET status='running',lease_owner=$2,lease_token=$3,lease_fence=$4,lease_expires_at=clock_timestamp()+($5 * interval '1 second'),attempt_count=$6,updated_at=clock_timestamp(),last_error='' WHERE id=$1 RETURNING lease_expires_at`, current.ID, worker, token, current.LeaseFence, ttl.Seconds(), current.AttemptCount).Scan(&current.LeaseExpiresAt)
 	if err != nil {
 		return model.DurableJob{}, err
 	}
@@ -279,6 +296,13 @@ func (r *SQLRepository) LeaseDurableJob(ctx context.Context, id, worker string, 
 	defer tx.Rollback()
 	j, err := r.leaseDurableJobTx0213(ctx, tx, strings.TrimSpace(id), strings.TrimSpace(worker), ttl)
 	if err != nil {
+		// Persist an exhausted job's terminal transition; a transaction
+		// rollback would otherwise leave it running forever after expiry.
+		if errors.Is(err, ErrImmutable) && j.Status == model.DurableJobStatusDead {
+			if commitErr := tx.Commit(); commitErr != nil {
+				return model.DurableJob{}, commitErr
+			}
+		}
 		return j, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -305,8 +329,25 @@ func (r *SQLRepository) LeaseDurableJobs(ctx context.Context, kind, worker strin
 		return nil, err
 	}
 	defer tx.Rollback()
+	// Retire orphaned, attempt-exhausted jobs even though no worker will
+	// claim them again. Keep final attempt and job in the same transaction.
+	_, err = tx.ExecContext(ctx, `WITH expired AS MATERIALIZED (
+  SELECT id FROM durable_jobs
+  WHERE kind=$1 AND status='running' AND attempt_count>=max_attempts
+    AND lease_expires_at<=clock_timestamp()
+  ORDER BY lease_expires_at FOR UPDATE SKIP LOCKED LIMIT 32
+), retired AS (
+  UPDATE durable_jobs d SET status='dead',last_error='lease expired; max attempts exceeded',
+    lease_owner='',lease_token='',lease_expires_at=NULL,updated_at=clock_timestamp(),completed_at=clock_timestamp()
+  FROM expired WHERE d.id=expired.id RETURNING d.id,d.attempt_count
+)
+UPDATE durable_job_attempts a SET status='dead',error='lease expired; max attempts exceeded',finished_at=clock_timestamp()
+FROM retired WHERE a.job_id=retired.id AND a.attempt=retired.attempt_count AND a.status='running'`, strings.TrimSpace(kind))
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.QueryContext(ctx, `SELECT id FROM durable_jobs
-WHERE kind=$1 AND ((status='pending' AND available_at<=now()) OR (status='running' AND lease_expires_at<=now())) AND attempt_count < max_attempts
+WHERE kind=$1 AND ((status='pending' AND available_at<=clock_timestamp()) OR (status='running' AND lease_expires_at<=clock_timestamp())) AND attempt_count < max_attempts
 ORDER BY available_at,created_at FOR UPDATE SKIP LOCKED LIMIT $2`, strings.TrimSpace(kind), limit)
 	if err != nil {
 		return nil, err
@@ -364,7 +405,11 @@ func (r *SQLRepository) FailDurableJob(ctx context.Context, id, leaseToken, work
 	if err != nil {
 		return model.DurableJob{}, err
 	}
-	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken {
+	serverNow, err := durableDBClock0514(ctx, tx)
+	if err != nil {
+		return model.DurableJob{}, err
+	}
+	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken || !j.LeaseExpiresAt.After(serverNow) {
 		return model.DurableJob{}, ErrLeaseLost
 	}
 	status := model.DurableJobStatusPending
@@ -377,9 +422,12 @@ func (r *SQLRepository) FailDurableJob(ctx context.Context, id, leaseToken, work
 	if completed {
 		completedAt = time.Now().UTC()
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status=$2,lease_owner='',lease_token='',lease_expires_at=NULL,available_at=$3,last_error=$4,updated_at=now(),completed_at=$5 WHERE id=$1 AND lease_token=$6`, id, status, time.Now().UTC().Add(retryAfter), workerErr, completedAt, leaseToken)
+	updated, err := tx.ExecContext(ctx, `UPDATE durable_jobs SET status=$2,lease_owner='',lease_token='',lease_expires_at=NULL,available_at=clock_timestamp()+($3 * interval '1 second'),last_error=$4,updated_at=clock_timestamp(),completed_at=$5 WHERE id=$1 AND lease_token=$6 AND status='running' AND lease_expires_at>clock_timestamp()`, id, status, retryAfter.Seconds(), workerErr, completedAt, leaseToken)
 	if err != nil {
 		return model.DurableJob{}, err
+	}
+	if n, _ := updated.RowsAffected(); n != 1 {
+		return model.DurableJob{}, ErrLeaseLost
 	}
 	attemptStatus := "failed"
 	if status == model.DurableJobStatusDead {
@@ -413,12 +461,19 @@ func (r *SQLRepository) TerminateDurableJob(ctx context.Context, id, leaseToken,
 	if err != nil {
 		return model.DurableJob{}, err
 	}
-	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken {
-		return model.DurableJob{}, ErrLeaseLost
-	}
-	_, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status=$2,lease_owner='',lease_token='',lease_expires_at=NULL,last_error=$3,updated_at=now(),completed_at=now() WHERE id=$1 AND lease_token=$4`, id, terminalStatus, reason, leaseToken)
+	serverNow, err := durableDBClock0514(ctx, tx)
 	if err != nil {
 		return model.DurableJob{}, err
+	}
+	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken || !j.LeaseExpiresAt.After(serverNow) {
+		return model.DurableJob{}, ErrLeaseLost
+	}
+	updated, err := tx.ExecContext(ctx, `UPDATE durable_jobs SET status=$2,lease_owner='',lease_token='',lease_expires_at=NULL,last_error=$3,updated_at=now(),completed_at=now() WHERE id=$1 AND lease_token=$4 AND status='running' AND lease_expires_at>clock_timestamp()`, id, terminalStatus, reason, leaseToken)
+	if err != nil {
+		return model.DurableJob{}, err
+	}
+	if n, _ := updated.RowsAffected(); n != 1 {
+		return model.DurableJob{}, ErrLeaseLost
 	}
 	if err := r.finishJobAttempt0213(ctx, tx, id, j.AttemptCount, terminalStatus, reason); err != nil {
 		return model.DurableJob{}, err
@@ -448,14 +503,12 @@ func (r *SQLRepository) AcquireDurableScopeLease(ctx context.Context, scopeKey, 
 	if err != nil {
 		return model.DurableScopeLease{}, err
 	}
-	now := time.Now().UTC()
-	expires := now.Add(ttl)
 	var lease model.DurableScopeLease
 	err = r.db.QueryRowContext(ctx, `INSERT INTO durable_scope_leases(scope_key,owner,lease_token,fencing_token,expires_at,updated_at)
-VALUES($1,$2,$3,1,$4,$5)
-ON CONFLICT(scope_key) DO UPDATE SET owner=EXCLUDED.owner,lease_token=EXCLUDED.lease_token,fencing_token=durable_scope_leases.fencing_token+1,expires_at=EXCLUDED.expires_at,updated_at=EXCLUDED.updated_at
-WHERE durable_scope_leases.expires_at<=now()
-RETURNING scope_key,owner,lease_token,fencing_token,expires_at,updated_at`, scopeKey, owner, token, expires, now).Scan(&lease.ScopeKey, &lease.Owner, &lease.LeaseToken, &lease.FencingToken, &lease.ExpiresAt, &lease.UpdatedAt)
+VALUES($1,$2,$3,1,clock_timestamp()+($4 * interval '1 second'),clock_timestamp())
+ON CONFLICT(scope_key) DO UPDATE SET owner=EXCLUDED.owner,lease_token=EXCLUDED.lease_token,fencing_token=durable_scope_leases.fencing_token+1,expires_at=clock_timestamp()+($4 * interval '1 second'),updated_at=clock_timestamp()
+WHERE durable_scope_leases.expires_at<=clock_timestamp()
+RETURNING scope_key,owner,lease_token,fencing_token,expires_at,updated_at`, scopeKey, owner, token, ttl.Seconds()).Scan(&lease.ScopeKey, &lease.Owner, &lease.LeaseToken, &lease.FencingToken, &lease.ExpiresAt, &lease.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.DurableScopeLease{}, ErrLeaseBusy
 	}
@@ -472,9 +525,8 @@ func (r *SQLRepository) RenewDurableScopeLease(ctx context.Context, scopeKey, le
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
 	}
-	now := time.Now().UTC()
 	var lease model.DurableScopeLease
-	err := r.db.QueryRowContext(ctx, `UPDATE durable_scope_leases SET expires_at=$3,updated_at=$4 WHERE scope_key=$1 AND lease_token=$2 AND expires_at>now() RETURNING scope_key,owner,lease_token,fencing_token,expires_at,updated_at`, strings.TrimSpace(scopeKey), strings.TrimSpace(leaseToken), now.Add(ttl), now).Scan(&lease.ScopeKey, &lease.Owner, &lease.LeaseToken, &lease.FencingToken, &lease.ExpiresAt, &lease.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, `UPDATE durable_scope_leases SET expires_at=clock_timestamp()+($3 * interval '1 second'),updated_at=clock_timestamp() WHERE scope_key=$1 AND lease_token=$2 AND expires_at>clock_timestamp() RETURNING scope_key,owner,lease_token,fencing_token,expires_at,updated_at`, strings.TrimSpace(scopeKey), strings.TrimSpace(leaseToken), ttl.Seconds()).Scan(&lease.ScopeKey, &lease.Owner, &lease.LeaseToken, &lease.FencingToken, &lease.ExpiresAt, &lease.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.DurableScopeLease{}, ErrLeaseLost
 	}
@@ -488,7 +540,7 @@ func (r *SQLRepository) ReleaseDurableScopeLease(ctx context.Context, scopeKey, 
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	res, err := r.db.ExecContext(ctx, `UPDATE durable_scope_leases SET expires_at=now(),updated_at=now() WHERE scope_key=$1 AND lease_token=$2`, strings.TrimSpace(scopeKey), strings.TrimSpace(leaseToken))
+	res, err := r.db.ExecContext(ctx, `UPDATE durable_scope_leases SET expires_at=now(),updated_at=now() WHERE scope_key=$1 AND lease_token=$2 AND expires_at>clock_timestamp()`, strings.TrimSpace(scopeKey), strings.TrimSpace(leaseToken))
 	if err != nil {
 		return err
 	}
@@ -514,7 +566,7 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	if job.Status != model.DurableJobStatusRunning || job.LeaseToken != commit.JobLeaseToken || time.Now().UTC().After(job.LeaseExpiresAt) {
+	if job.Status != model.DurableJobStatusRunning || job.LeaseToken != commit.JobLeaseToken {
 		return model.ReleaseVersion{}, ErrLeaseLost
 	}
 	var leaseOwner, scopeToken string
@@ -527,7 +579,11 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		return model.ReleaseVersion{}, err
 	}
 	_ = leaseOwner
-	if scopeToken != commit.ScopeLeaseToken || scopeFence != commit.ScopeFencingToken || time.Now().UTC().After(scopeExpiry) {
+	serverNow, err := durableDBClock0514(ctx, tx)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	if !job.LeaseExpiresAt.After(serverNow) || scopeToken != commit.ScopeLeaseToken || scopeFence != commit.ScopeFencingToken || !scopeExpiry.After(serverNow) {
 		return model.ReleaseVersion{}, ErrLeaseLost
 	}
 
@@ -651,7 +707,7 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		}
 	}
 	resultRaw, _ := json.Marshal(map[string]any{"releaseId": rel.ID, "status": "published", "publishedAt": now})
-	res, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='succeeded',result=$2::jsonb,lease_owner='',lease_token='',lease_expires_at=NULL,last_error='',updated_at=$3,completed_at=$3 WHERE id=$1 AND lease_token=$4 AND status='running'`, job.ID, string(resultRaw), now, commit.JobLeaseToken)
+	res, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='succeeded',result=$2::jsonb,lease_owner='',lease_token='',lease_expires_at=NULL,last_error='',updated_at=$3,completed_at=$3 WHERE id=$1 AND lease_token=$4 AND status='running' AND lease_expires_at>clock_timestamp()`, job.ID, string(resultRaw), now, commit.JobLeaseToken)
 	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
@@ -711,7 +767,18 @@ func (r *SQLRepository) ClaimOutboxEvents(ctx context.Context, worker string, li
 		return nil, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(ctx, `SELECT id FROM event_outbox WHERE ((status='pending' AND available_at<=now()) OR (status='running' AND lease_expires_at<=now())) AND attempt_count<max_attempts ORDER BY available_at,created_at FOR UPDATE SKIP LOCKED LIMIT $1`, limit)
+	_, err = tx.ExecContext(ctx, `WITH expired AS MATERIALIZED (
+  SELECT id FROM event_outbox WHERE status='running' AND attempt_count>=max_attempts
+    AND lease_expires_at<=clock_timestamp()
+  ORDER BY lease_expires_at FOR UPDATE SKIP LOCKED LIMIT 64
+)
+UPDATE event_outbox e SET status='dead',last_error='delivery lease expired; max attempts exceeded',
+  lease_owner='',lease_token='',lease_expires_at=NULL,updated_at=clock_timestamp()
+FROM expired WHERE e.id=expired.id`)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM event_outbox WHERE ((status='pending' AND available_at<=clock_timestamp()) OR (status='running' AND lease_expires_at<=clock_timestamp())) AND attempt_count<max_attempts ORDER BY available_at,created_at FOR UPDATE SKIP LOCKED LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -732,7 +799,7 @@ func (r *SQLRepository) ClaimOutboxEvents(ctx context.Context, worker string, li
 			return nil, err
 		}
 		var e model.DurableOutboxEvent
-		e, err = scanOutbox0213(tx.QueryRowContext(ctx, `UPDATE event_outbox SET status='running',lease_owner=$2,lease_token=$3,lease_fence=lease_fence+1,lease_expires_at=$4,attempt_count=attempt_count+1,updated_at=now() WHERE id=$1 RETURNING `+outboxColumns0213, id, worker, token, time.Now().UTC().Add(ttl)))
+		e, err = scanOutbox0213(tx.QueryRowContext(ctx, `UPDATE event_outbox SET status='running',lease_owner=$2,lease_token=$3,lease_fence=lease_fence+1,lease_expires_at=clock_timestamp()+($4 * interval '1 second'),attempt_count=attempt_count+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING `+outboxColumns0213, id, worker, token, ttl.Seconds()))
 		if err != nil {
 			return nil, err
 		}
@@ -751,7 +818,7 @@ func (r *SQLRepository) CompleteOutboxEvent(ctx context.Context, id, leaseToken 
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	res, err := r.db.ExecContext(ctx, `UPDATE event_outbox SET status='delivered',lease_owner='',lease_token='',lease_expires_at=NULL,last_error='',delivered_at=now(),updated_at=now() WHERE id=$1 AND lease_token=$2 AND status='running'`, id, leaseToken)
+	res, err := r.db.ExecContext(ctx, `UPDATE event_outbox SET status='delivered',lease_owner='',lease_token='',lease_expires_at=NULL,last_error='',delivered_at=now(),updated_at=now() WHERE id=$1 AND lease_token=$2 AND status='running' AND lease_expires_at>clock_timestamp()`, id, leaseToken)
 	if err != nil {
 		return err
 	}
@@ -771,7 +838,7 @@ func (r *SQLRepository) FailOutboxEvent(ctx context.Context, id, leaseToken, del
 	if retryAfter < 0 {
 		retryAfter = 0
 	}
-	res, err := r.db.ExecContext(ctx, `UPDATE event_outbox SET status=CASE WHEN attempt_count>=max_attempts THEN 'dead' ELSE 'pending' END,lease_owner='',lease_token='',lease_expires_at=NULL,available_at=now()+($3 * interval '1 second'),last_error=$4,updated_at=now() WHERE id=$1 AND lease_token=$2 AND status='running'`, id, leaseToken, retryAfter.Seconds(), deliveryErr)
+	res, err := r.db.ExecContext(ctx, `UPDATE event_outbox SET status=CASE WHEN attempt_count>=max_attempts THEN 'dead' ELSE 'pending' END,lease_owner='',lease_token='',lease_expires_at=NULL,available_at=now()+($3 * interval '1 second'),last_error=$4,updated_at=now() WHERE id=$1 AND lease_token=$2 AND status='running' AND lease_expires_at>clock_timestamp()`, id, leaseToken, retryAfter.Seconds(), deliveryErr)
 	if err != nil {
 		return err
 	}
