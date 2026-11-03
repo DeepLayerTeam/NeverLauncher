@@ -157,6 +157,20 @@ impl GuardSupervisor {
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
     pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid Guard ping".into())} }
+    /// Only checks the already authenticated Guard process. Never silently
+    /// restart it after a game has been admitted; an IPC gap is a violation.
+    pub async fn ping_running(&self)->Result<(),String>{
+        let mut state=self.inner.lock().await;
+        let handle=state.as_mut().ok_or("Linux Guard process was never authenticated")?;
+        if handle.child.try_wait().map_err(|e|e.to_string())?.is_some(){
+            return Err("Linux Guard process exited during game".into());
+        }
+        let value=send_command(handle,"ping","").await?;
+        if value.get("pong").and_then(Value::as_bool)!=Some(true){
+            return Err("Linux Guard invalid authenticated heartbeat".into());
+        }
+        Ok(())
+    }
     pub async fn process_policy(&self)->Result<GuardProcessPolicyReport,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"process-policy","").await?; let p:GuardProcessPolicyReport=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_policy(&p)?; Ok(p) }
     pub async fn integrity_evidence(&self)->Result<GuardIntegrityEvidence,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"integrity-evidence","").await?; let e:GuardIntegrityEvidence=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_evidence(h,&e)?; Ok(e) }
     pub async fn remote_attestation(&self,challenge_id:&str,challenge:&str)->Result<GuardRemoteAttestation,String>{
@@ -265,7 +279,7 @@ async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guar
     let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if !ready_matches_challenge(&ch,&ready){return Err("Guard ready process identity mismatch".into())}
     let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"invalid ready proof")?){return Err("Guard ready proof invalid".into())}
     if ready.process_policy_version!=GUARD_LINUX_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=GUARD_LINUX_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Guard Linux policy/hardening not enforced".into())}
-    Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:"linux-amd64".into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard Linux authenticated Unix IPC ready".into()}))
+    Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:linux_platform().into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard Linux authenticated Unix IPC ready".into()}))
 }
 
 async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Value,String>{
@@ -276,7 +290,10 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Guard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("Guard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Guard response JSON invalid: {e}"))
 }
 fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Guard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
-fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Guard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="linux-amd64"{return Err(format!("Guard platform mismatch: expected linux-amd64, got {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Guard protocol mismatch: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Guard status failed mandatory runtime trust checks".into())}Ok(())}
+fn linux_platform() -> &'static str {
+    if cfg!(target_arch = "aarch64") { "linux-arm64" } else { "linux-amd64" }
+}
+fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Guard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!=linux_platform(){return Err(format!("Guard platform mismatch: expected {}, got {}",linux_platform(),s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Guard protocol mismatch: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Guard status failed mandatory runtime trust checks".into())}Ok(())}
 fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let l=p.linux.as_ref().ok_or("Linux process policy details missing")?;if p.schema!=GUARD_LINUX_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!l.no_new_privs||!l.dumpable_disabled||!l.core_dumps_disabled||!l.ptrace_restricted||!l.parent_death_signal||!l.private_umask{return Err("Guard Linux process policy rejected".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
 fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Linux Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
@@ -392,7 +409,7 @@ async fn serve_commands(
                 serde_json::to_string(&GuardStatus {
                     state: "ready".into(),
                     product_version: env!("CARGO_PKG_VERSION").into(),
-                    platform: "linux-amd64".into(),
+                    platform: linux_platform().into(),
                     pid: std::process::id(),
                     parent_pid,
                     protocol_version: GUARD_PROTOCOL_VERSION,

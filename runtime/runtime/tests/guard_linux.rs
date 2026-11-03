@@ -22,6 +22,7 @@ async fn linux_guard_authenticated_boundary_and_attestation() {
     assert!(status.authenticated && status.process_policy_enforced && status.hardening_enforced);
     assert!(status.secure_pipe_acl && status.lifetime_job_enforced);
     supervisor.ping().await.expect("authenticated ping");
+    supervisor.ping_running().await.expect("strict no-restart heartbeat");
 
     let policy = supervisor.process_policy().await.expect("Linux process policy");
     assert_eq!(policy.schema, GUARD_LINUX_PROCESS_POLICY_SCHEMA);
@@ -40,5 +41,6 @@ async fn linux_guard_authenticated_boundary_and_attestation() {
     assert_eq!(attestation.attestation_sha256.len(), 64);
 
     supervisor.shutdown().await.expect("shutdown Guard");
+    assert!(supervisor.ping_running().await.is_err(), "closed Guard must not silently restart");
     let _ = std::fs::remove_dir_all(runtime_dir);
 }

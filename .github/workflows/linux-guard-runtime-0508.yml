@@ -1,0 +1,62 @@
+name: Linux Guard 0.50.8 real runtime enforcement
+on:
+  push:
+    paths:
+      - 'runtime/runtime/**'
+      - 'sdk/java/trusted-agent/**'
+      - 'scripts/tests/linux_runtime_guard_0508.py'
+      - '.github/workflows/linux-guard-runtime-0508.yml'
+  pull_request:
+    paths:
+      - 'runtime/runtime/**'
+      - 'sdk/java/trusted-agent/**'
+      - 'scripts/tests/linux_runtime_guard_0508.py'
+      - '.github/workflows/linux-guard-runtime-0508.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-linux-guard:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: linux-x64, runner: ubuntu-24.04}
+          - {target: linux-arm64, runner: ubuntu-24.04-arm}
+    name: '${{ matrix.target }} — JVM, ELF, Guard IPC and process supervision'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install ELF compiler and runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+      - name: Compile production runtime and Guard executables
+        run: |
+          cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
+          cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
+      - name: Real Linux /proc and injected ELF regressions
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
+      - name: Authenticated Linux Guard IPC and no-restart heartbeat
+        env:
+          XDG_RUNTIME_DIR: ${{ runner.temp }}/nl-guard-ipc
+        run: |
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
+      - name: Real hardened and unhardened JVM scenarios
+        run: python3 scripts/tests/linux_runtime_guard_0508.py
+      - name: Existing signed-JAR/native and continuous JVM regressions
+        run: |
+          python3 scripts/tests/guard_runtime_integrity_0505.py
+          python3 scripts/tests/continuous_game_protection_0506.py

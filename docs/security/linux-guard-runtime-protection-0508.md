@@ -1,0 +1,29 @@
+# NeverLauncher 0.50.8 — Linux Guard Runtime Protection
+
+## Исполняемый маршрут
+
+После проверки подписи release manifest, подписанной Guard compatibility policy и выбора компонентов Runtime создаёт `LiveGameGuard0506` с точными SHA-256 активных JAR и native files. Перед стартом игры он поднимает отдельный Guard-процесс через существующий Unix socket + SO_PEERCRED + HMAC IPC, проверяет его состояние и **не принимает прозрачную перезагрузку Guard во время игры**.
+
+Игровой процесс создаётся с `PR_SET_PDEATHSIG(SIGKILL)`, `PR_SET_NO_NEW_PRIVS`, `RLIMIT_CORE=0`, собственной process group. После `spawn` `LinuxRuntimeGuard0508` привязывается к PID и starttime из `/proc/<pid>/stat`, inode и SHA-256 реального исполняемого Java; читает `/proc/<pid>/status` (PPid, TracerPid, NoNewPrivs), фактические argv, executable mappings (`maps`) и открытые JAR/native objects (`fd`). Файлы в игровом каталоге сверяются со списком SHA-256, полученным **из уже проверенного** manifest/policy. Несовпадение, неизвестная ELF-библиотека, подозрительная замена открытого inode, tracer, потеря Guard IPC или нарушение процесса приводит к `trust-blocked` и остановке группы игрового процесса.
+
+`ProcessSupervisor` и отдельный запуск через Runtime используют тот же монитор. `LinuxProcessGuard0508` внутри проверенного Trusted JVM Agent добавляет реальные проверки `NoNewPrivs`, process group, `TracerPid` и core limit на старте и при непрерывном сканировании. Список активных модов и файлов продолжает проверяться под SHA-256 Java Agent из 0.50.5/0.50.6. Свойство `integrity.linux.process.required=true` генерируется Rust Runtime при подготовке подписанного агента, а не берётся из модового JSON.
+
+Java native-библиотеки внутри управляемого JRE фиксируются при запуске отдельным baseline (включая действительные symlink aliases внутри той же JRE). Системные библиотеки вне клиентского каталога доверяются как компонентам ОС; этот слой не подтверждает подпись каждого системного ELF. Один только `NoNewPrivs` не делает JVM песочницей.
+
+## Проверка
+
+```bash
+# Требуются Linux, Rust/Cargo, JDK 21, Python 3 и C compiler.
+cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
+cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
+cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
+python3 scripts/tests/linux_runtime_guard_0508.py
+python3 scripts/tests/guard_runtime_integrity_0505.py
+python3 scripts/tests/continuous_game_protection_0506.py
+```
+
+Отдельные native CI runs — `linux-x64` и `linux-arm64`. `XDG_RUNTIME_DIR` должен быть каталогом текущего UID с разрешениями `0700`, release `guard` должен находиться рядом с запускающим Runtime/Desktop и быть частью проверенного подписанного Linux package manifest. Установка без полного релизного пакета не считается подтверждённой.
+
+## Границы и выпуск
+
+Проверки не гарантируют невозможность обхода на машине под контролем атакующего пользователя с произвольным нативным кодом. `/proc` можно наблюдать только в пределах прав текущего UID и настроек ядра; отказ в чтении, неожиданный `hidepid` или потеря IPC должны приводить к отказу защищённой сессии, а не к PASS. Наличие Java-файла или успешная компиляция не являются доказательством полноценного Minecraft join. Поддержка требует отдельной проверки JDK/loader/modpack и Linux x64/ARM64 на живых машинах, в том числе лаунчера, подписанной поставки и входа на реальный сервер. Статус независимой production GA — **BLOCKED** до выполнения этих испытаний.

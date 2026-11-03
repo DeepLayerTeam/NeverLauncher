@@ -30,14 +30,17 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
     private final Map<Path, String> digests;
     private final Map<Path, String> kinds;
     private final boolean strictCode;
+    private final boolean linuxProcessRequired;
     private final Set<Path> verifiedOrigins = new HashSet<Path>();
     private volatile long lastVerifiedNanos = System.nanoTime();
 
-    private RuntimeIntegrity0505(Path root, Map<Path, String> digests, Map<Path, String> kinds, boolean strictCode) {
+    private RuntimeIntegrity0505(Path root, Map<Path, String> digests, Map<Path, String> kinds,
+                                 boolean strictCode, boolean linuxProcessRequired) {
         this.root = root;
         this.digests = digests;
         this.kinds = kinds;
         this.strictCode = strictCode;
+        this.linuxProcessRequired = linuxProcessRequired;
     }
 
     static RuntimeIntegrity0505 from(Properties props) throws Exception {
@@ -67,7 +70,8 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             kinds.put(path, kind);
         }
         RuntimeIntegrity0505 guard = new RuntimeIntegrity0505(root,digests,kinds,
-            "true".equals(props.getProperty("integrity.code.strict")));
+            "true".equals(props.getProperty("integrity.code.strict")),
+            "true".equals(props.getProperty("integrity.linux.process.required")));
         guard.scan();
         if (guard.strictCode) guard.verifyClasspath();
         return guard;
@@ -143,7 +147,12 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         // Linux: verify actual native modules mapped by this JVM, not only files on disk.
         // Windows uses the separate continuously armed native Module Guard; macOS
         // has no portable equivalent at this stage and does not claim coverage.
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("linux")) scanLinuxMaps();
+        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("linux")) {
+            if (linuxProcessRequired) LinuxProcessGuard0508.verify();
+            scanLinuxMaps();
+        } else if (linuxProcessRequired) {
+            throw new SecurityException("Linux process requirements on non-Linux JVM");
+        }
     }
 
     private void checkTree(Path dir, boolean jars) throws Exception {

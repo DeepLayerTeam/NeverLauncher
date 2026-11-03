@@ -19,6 +19,10 @@ pub struct LiveGameGuard0506 {
     policy_digest: Option<String>,
     pinned: BTreeMap<PathBuf, String>,
     jvm_args: Vec<String>,
+    #[cfg(target_os = "linux")]
+    linux_process: Option<crate::linux_runtime_guard_0508::LinuxRuntimeGuard0508>,
+    #[cfg(target_os = "linux")]
+    linux_daemon: Option<crate::linux_guard::GuardSupervisor>,
 }
 
 fn is_executable(name: &str) -> bool {
@@ -84,9 +88,41 @@ impl LiveGameGuard0506 {
             root, project:manifest.project_id.clone(), minecraft:manifest.minecraft.version.clone(),
             loader:manifest.minecraft.loader.clone(), policy_digest:signed.map(|p|p.digest().to_string()),
             pinned, jvm_args:plan.jvm_args.clone(),
+            #[cfg(target_os = "linux")]
+            linux_process: None,
+            #[cfg(target_os = "linux")]
+            linux_daemon: None,
         };
         guard.verify()?;
         Ok(guard)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn linux_root(&self) -> &Path { &self.root }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn linux_signed_artifacts(&self) -> &BTreeMap<PathBuf, String> { &self.pinned }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn linux_jvm_args(&self) -> &[String] { &self.jvm_args }
+
+    #[cfg(target_os = "linux")]
+    pub fn bind_linux_process(&mut self, pid: u32, java: &Path) -> Result<(), String> {
+        if self.linux_process.is_some() { return Err("Linux Guard JVM already bound".into()); }
+        self.linux_process = Some(crate::linux_runtime_guard_0508::LinuxRuntimeGuard0508::attach(pid, java, self)?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn bind_linux_guard_daemon(&mut self, daemon: crate::linux_guard::GuardSupervisor) -> Result<(),String> {
+        if self.linux_daemon.is_some(){return Err("Linux Guard daemon already bound".into());}
+        self.linux_daemon = Some(daemon);
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub async fn verify_linux_daemon(&self) -> Result<(),String> {
+        self.linux_daemon.as_ref().ok_or("Linux Guard daemon not bound")?.ping_running().await
     }
 
     /// Called on a blocking worker; never runs hashing on an async executor thread.
@@ -103,6 +139,8 @@ impl LiveGameGuard0506 {
                 return Err(format!("live Guard executable changed during game: {}", path.display()));
             }
         }
+        #[cfg(target_os = "linux")]
+        if let Some(process) = &self.linux_process { process.verify()?; }
         Ok(())
     }
 }
@@ -133,6 +171,8 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         if deadline.map(|d|Instant::now()>=d).unwrap_or(false) {continue}
         let check = tokio::task::spawn_blocking({let guard=guard.clone(); move ||guard.verify()}).await
             .map_err(|e|format!("live Guard watcher failed: {e}"))?;
+        #[cfg(target_os = "linux")]
+        let check = match check { Ok(()) => guard.verify_linux_daemon().await, err => err };
         if let Err(reason)=check {
             let _ = child.kill().await;
             let _ = child.wait().await;
@@ -166,7 +206,9 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         let sha=hex::encode(Sha256::digest(b"signed-game"));
         let mut pins=BTreeMap::new(); pins.insert(jar.clone(),sha);
         let live=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
-            loader:"vanilla".into(),policy_digest:None,pinned:pins,jvm_args:vec![]};
+            loader:"vanilla".into(),policy_digest:None,pinned:pins,jvm_args:vec![],
+            #[cfg(target_os = "linux")] linux_process:None,
+            #[cfg(target_os = "linux")] linux_daemon:None};
         assert!(live.verify().is_ok());
         fs::write(&jar,b"different game").unwrap();
         assert!(live.verify().unwrap_err().contains("executable changed"));
@@ -179,7 +221,9 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         let file=root.join("game.jar");fs::write(&file,b"trusted").unwrap();
         let mut pinned=BTreeMap::new();pinned.insert(file.clone(),hex::encode(Sha256::digest(b"trusted")));
         let guard=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
-            loader:"vanilla".into(),policy_digest:None,pinned,jvm_args:vec![]};
+            loader:"vanilla".into(),policy_digest:None,pinned,jvm_args:vec![],
+            #[cfg(target_os = "linux")] linux_process:None,
+            #[cfg(target_os = "linux")] linux_daemon:None};
         let mut child=tokio::process::Command::new("sleep").arg("12").spawn().unwrap();
         let handle=tokio::spawn(async move {wait_protected(&mut child,guard,Some(10)).await.unwrap()});
         tokio::time::sleep(Duration::from_millis(700)).await;

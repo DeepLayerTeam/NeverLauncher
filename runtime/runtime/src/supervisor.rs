@@ -153,7 +153,14 @@ impl ProcessSupervisor {
         let trusted = trusted.map(Arc::new);
         crate::guard_compatibility_0502::enforce_launch(root,
             &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
-        let live_guard = crate::continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;
+        let mut live_guard = crate::continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;
+        #[cfg(target_os = "linux")]
+        {
+            let daemon = crate::linux_guard::GuardSupervisor::new();
+            daemon.ensure_started().await.map_err(|e|format!("Linux Guard startup failed: {e}"))?;
+            daemon.ping_running().await?;
+            live_guard.bind_linux_guard_daemon(daemon)?;
+        }
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
         let started_at = now_unix()?;
@@ -203,11 +210,29 @@ impl ProcessSupervisor {
         #[cfg(not(windows))]
         let windows_sensor = None;
         #[cfg(target_os = "linux")]
-        let linux_runtime_policy = crate::linux_policy::runtime_policy(&mut child)
-            .map_err(|err| format!("launch заблокирован: Linux runtime/process policy enforcement failed: {err}"))?;
+        let linux_runtime_policy = match crate::linux_policy::runtime_policy(&mut child) {
+            Ok(policy) => policy,
+            Err(err) => {
+                if let Some(pid) = child.id() { let _ = crate::linux_policy::terminate_runtime_process_group(pid); }
+                let _ = child.kill().await;
+                let _ = child.wait().await;
+                return Err(format!("Linux runtime/process policy enforcement failed: {err}"));
+            }
+        };
         #[cfg(target_os = "macos")]
         let macos_runtime_policy = crate::macos_policy::runtime_policy(&mut child)
             .map_err(|err| format!("launch заблокирован: macOS runtime/process policy enforcement failed: {err}"))?;
+
+        #[cfg(target_os = "linux")]
+        if let Err(reason) = live_guard.bind_linux_process(
+            child.id().ok_or("Linux Guard JVM PID unavailable")?,
+            Path::new(&plan.java_executable),
+        ) {
+            if let Some(pid) = child.id() { let _ = crate::linux_policy::terminate_runtime_process_group(pid); }
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            return Err(format!("Linux Guard game process validation failed: {reason}"));
+        }
 
         let pid = child.id();
         #[cfg(windows)]
@@ -273,6 +298,10 @@ impl ProcessSupervisor {
                     Ok(Err(e)) => Some(e),
                     Err(e) => Some(format!("native live Guard watcher failed: {e}")),
                 };
+                #[cfg(target_os = "linux")]
+                let failure = if failure.is_none() {
+                    live_guard.verify_linux_daemon().await.err()
+                } else { failure };
                 if let Some(reason) = failure {
                     let _ = watcher.stop_for_guard_violation_0438(&watched_id, &reason).await;
                     return;

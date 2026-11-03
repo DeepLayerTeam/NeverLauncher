@@ -1,3 +1,11 @@
+## 0.50.8 — Linux Guard Runtime Protection (functional patch; independent GA BLOCKED)
+
+- Bind Linux game JVM to authenticated Guard IPC without transparent restarts after admission. A lost Guardian process or authenticated heartbeat is a live trust violation, not automatic PASS.
+- Add `/proc` process/ELF inspection to both Runtime game launch and `ProcessSupervisor`: PID/starttime, Java executable inode/SHA-256, actual JVM arguments, parent/group/NoNewPrivs/tracer state, mapped executable objects and opened JAR/native file descriptors, including replaced/deleted inode detection. Existing release/Guard-signed inventory remains the only source of game artifact trust.
+- Track JRE native libraries under client root separately from signed game/mod native libraries; reject unknown executable mappings under game root, even when the file is not named `.so`.
+- Add in-JVM Linux process hardening checks to the existing Trusted Java Agent while preserving 0.50.5/0.50.6 classpath/native/module checks. Correct Linux aarch64 Guard release identity (`linux-arm64`).
+- Add executable Linux JDK regressions (4/4 local PASS) and native Rust child/ELF/IPC regression tests plus x64/arm64 CI. Native Rust compilation, real Guard IPC, full Minecraft launch/join and independently signed release packages were **not performed locally**; production GA therefore remains **BLOCKED**.
+
 ## 0.50.7 — Server-Bound Guard Sessions (production source changes; independent GA BLOCKED)
 
 - Bind accepted Guard v2 evidence, hardware-device identity, Never/Minecraft sessions, server/project/profile and exact signed component plan to durable per-player correlations; reject an unbound or mismatched redemption.

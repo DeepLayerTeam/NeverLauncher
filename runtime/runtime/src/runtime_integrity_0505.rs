@@ -92,6 +92,8 @@ pub fn from_verified_launch(manifest:&Manifest,plan:&LaunchPlan,root:&Path,guard
     }
     if pins.is_empty(){return Err("Guard runtime empty verified executable inventory".into())}
     let mut result=format!("integrity.required=true\nintegrity.code.strict=true\nintegrity.root={}\nintegrity.count={}\n",STANDARD.encode(root.to_string_lossy().as_bytes()),pins.len());
+    #[cfg(target_os = "linux")]
+    result.push_str("integrity.linux.process.required=true\n");
     for (index,(path,(digest,kind))) in pins.iter().enumerate(){
         result.push_str(&format!("integrity.{index}.path={}\nintegrity.{index}.sha256={digest}\nintegrity.{index}.kind={kind}\n",STANDARD.encode(path.as_bytes())));
     }

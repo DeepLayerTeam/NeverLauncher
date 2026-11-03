@@ -22,6 +22,8 @@ pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOW
 pub mod managed_java;
 pub mod guard_ipc;
 pub mod guard_inventory_0501;
+#[cfg(target_os = "linux")]
+pub mod linux_runtime_guard_0508;
 pub mod guard_compatibility_0502;
 mod guarded_trusted_launch_0503;
 mod runtime_integrity_0505;
@@ -977,9 +979,18 @@ pub async fn certify_vanilla_compatibility(
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file));
     windows_policy::prepare_runtime_command(&mut command);
+    #[cfg(target_os = "linux")]
+    linux_policy::prepare_runtime_command(&mut command);
     let mut child = command.spawn().map_err(|err| format!("не удалось запустить Vanilla {version}: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
         .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
+    #[cfg(target_os = "linux")]
+    if let Err(reason) = linux_policy::runtime_policy(&mut child) {
+        if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+        return Err(format!("Linux runtime/process policy enforcement failed: {reason}"));
+    }
     #[cfg(windows)]
     sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
     #[cfg(windows)]
@@ -1152,7 +1163,14 @@ pub async fn launch_with_timeout_matching_authenticated(
         writeln!(log_file, "Guard policy digest: {}", trusted.policy_digest).map_err(|e| e.to_string())?;
     }
     guard_compatibility_0502::enforce_launch(root, &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
-    let live_guard = continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;
+    let mut live_guard = continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;
+    #[cfg(target_os = "linux")]
+    {
+        let daemon = linux_guard::GuardSupervisor::new();
+        daemon.ensure_started().await.map_err(|e|format!("Linux Guard startup failed: {e}"))?;
+        daemon.ping_running().await?;
+        live_guard.bind_linux_guard_daemon(daemon)?;
+    }
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
@@ -1167,6 +1185,8 @@ pub async fn launch_with_timeout_matching_authenticated(
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file));
     windows_policy::prepare_runtime_command(&mut command);
+    #[cfg(target_os = "linux")]
+    linux_policy::prepare_runtime_command(&mut command);
     let mut child = command
         .spawn()
         .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
@@ -1178,6 +1198,19 @@ pub async fn launch_with_timeout_matching_authenticated(
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
         .map_err(|err| format!("launch заблокирован: Guard Sensor authentication failed: {err}"))?;
+
+    // Bind /proc observations to this exact child after fork/exec. Failure is
+    // terminal: never continue with an unmonitored JVM.
+    #[cfg(target_os = "linux")]
+    if let Err(reason) = live_guard.bind_linux_process(
+        child.id().ok_or("Linux Guard JVM PID unavailable")?,
+        Path::new(&plan.java_executable),
+    ) {
+        if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+        return Err(format!("Linux Guard game process validation failed: {reason}"));
+    }
 
     let guarded_exit = continuous_game_protection_0506::wait_protected(
         &mut child, live_guard, max_runtime_seconds).await?;
