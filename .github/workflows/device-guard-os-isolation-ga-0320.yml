@@ -63,7 +63,7 @@ jobs:
           go build ./...
       - name: Upload signed-candidate evidence (NOT signed and NOT GA)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-0320-offline-unsigned
           path: ${{ runner.temp }}/security-offline-0320.json
@@ -81,7 +81,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: Runtime session binding, policy revocation and ServerBridge joins
         run: python3 scripts/security/certify_0320.py --tier backend-security --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-backend-0320.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-0320-backend-unsigned
@@ -128,7 +128,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: Enforce namespaces, mounts, seccomp and cgroup.kill against descendants
         run: python3 scripts/security/certify_0320.py --tier linux-live --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-linux-0320.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-0320-linux-live-unsigned
@@ -149,7 +149,7 @@ jobs:
       - name: AppContainer token, handle allowlist, ACL, broker and Job containment
         shell: pwsh
         run: python scripts/security/certify_0320.py --tier windows-live --commit "$env:GITHUB_SHA" --output "$env:RUNNER_TEMP/security-windows-0320.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-0320-windows-live-unsigned
@@ -196,7 +196,7 @@ jobs:
           PY
       - name: Publish authenticated verdict
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-0320-signed-ga-verdict
           path: dist/security-0320-GA-verdict.json

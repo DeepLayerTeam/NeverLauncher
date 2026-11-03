@@ -81,7 +81,7 @@ jobs:
             --signer "runtime/runtime/target/release/examples/cert_sign_fixture${ext}" \
             --commit "$GITHUB_SHA" \
             --output 'rc-out/native/${{ matrix.target }}.json'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rc03514-native-${{ matrix.target }}-${{ github.sha }}
           path: rc-out/native/${{ matrix.target }}.json
@@ -147,7 +147,7 @@ jobs:
             --frontend apps/desktop/dist \
             --commit "$GITHUB_SHA" \
             --output 'rc-out/desktop/${{ matrix.target }}.json'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rc03514-desktop-${{ matrix.target }}-${{ github.sha }}
           path: rc-out/desktop/${{ matrix.target }}.json
@@ -191,7 +191,7 @@ jobs:
         run: |
           mkdir -p rc-out/backend
           bash scripts/acceptance/run_owner_player_0351.sh "$PWD/rc-out/backend/owner-player.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rc03514-backend-${{ github.sha }}
           path: rc-out/backend/owner-player.json
@@ -229,7 +229,7 @@ jobs:
             --native-dir rc-out/native --desktop-dir rc-out/desktop \
             --backend rc-out/backend/owner-player.json \
             --commit "$GITHUB_SHA" --output rc03514-verification.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rc03514-source-checks-${{ github.sha }}
           path: rc03514-verification.json

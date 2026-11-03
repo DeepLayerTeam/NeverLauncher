@@ -70,7 +70,7 @@ jobs:
             --cli "$RUNNER_TEMP/nl-03012$ext" \
             --report "$RUNNER_TEMP/integration-03012.json" \
             --timeout 300 --revision "$GITHUB_SHA"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: integration-03012-${{ matrix.label }}
@@ -123,7 +123,7 @@ jobs:
         run: |
           python3 scripts/certification/review_integration_03012.py \
             --evidence reports --revision "$GITHUB_SHA" --output integration-review-03012.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: integration-review-03012
           path: integration-review-03012.json

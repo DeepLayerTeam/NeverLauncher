@@ -64,7 +64,7 @@ jobs:
             --output "guard-inventory-${{ matrix.target }}.json"
       - name: Upload actual local diagnostic (BLOCKED is not a pass)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-inventory-${{ matrix.target }}
           path: guard-inventory-${{ matrix.target }}.json
@@ -94,7 +94,7 @@ jobs:
           PY
       - name: Publish explicitly non-certified matrix
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-inventory-matrix-0501
           path: guard-inventory-matrix-0501.json

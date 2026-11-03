@@ -145,7 +145,7 @@ jobs:
           fi
 
       - name: Upload notarized macOS delivery
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-macos-notarized-${{ github.sha }}
           path: |

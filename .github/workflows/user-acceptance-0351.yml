@@ -42,7 +42,7 @@ jobs:
         run: |
           python3 scripts/acceptance/ux_0351.py run --ids M04,M07,G31 \
             --report "$RUNNER_TEMP/0351-desktop-local.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: user-acceptance-0351-desktop-${{ github.sha }}
@@ -61,7 +61,7 @@ jobs:
       - name: Execute actual owner and player CRUD/auth HTTP lifecycle
         run: |
           bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/0351-owner-player.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: user-acceptance-0351-backend-${{ github.sha }}

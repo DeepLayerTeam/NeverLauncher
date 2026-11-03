@@ -60,7 +60,7 @@ jobs:
           doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":{"darwin":"macos"}.get(os.environ['GOOS_ACTUAL'], os.environ['GOOS_ACTUAL']),"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
           open("evidence/${{ matrix.target }}.json","w",encoding="utf-8").write(json.dumps(doc,indent=2,sort_keys=True)+"\n")
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extensions-trust-evidence-${{ matrix.target }}
           path: evidence/${{ matrix.target }}.json
@@ -78,7 +78,7 @@ jobs:
       - name: Aggregate fail-closed public matrix
         run: |
           python3 scripts/compatibility/extensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_TRUST_COMPATIBILITY.json --out-md EXTENSIONS_TRUST_COMPATIBILITY.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extensions-0.20.12-public-compatibility-matrix
           path: |

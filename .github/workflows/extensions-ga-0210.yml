@@ -89,7 +89,7 @@ jobs:
           doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":{"darwin":"macos"}.get(os.environ['GOOS_ACTUAL'],os.environ['GOOS_ACTUAL']),"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","contract":contract,"checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
           open("evidence/${{ matrix.target }}.json","w",encoding="utf-8").write(json.dumps(doc,indent=2,sort_keys=True)+"\n")
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extensions-ga-evidence-${{ matrix.target }}
           path: evidence/${{ matrix.target }}.json
@@ -114,7 +114,7 @@ jobs:
       - name: Build fail-closed public matrix and certificate
         run: |
           python3 scripts/compatibility/extensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_GA_COMPATIBILITY.json --out-md EXTENSIONS_GA_COMPATIBILITY.md --out-certificate EXTENSIONS_GA_CERTIFICATE.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extensions-0.21.0-ga-certification
           path: |

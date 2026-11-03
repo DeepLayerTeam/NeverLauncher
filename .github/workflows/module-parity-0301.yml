@@ -59,7 +59,7 @@ jobs:
             echo 'Uncertified matrix falsely reported full M01-M19 parity' >&2
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: module-parity-0301-source-and-linux-test-evidence

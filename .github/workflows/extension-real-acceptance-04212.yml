@@ -56,7 +56,7 @@ jobs:
             --target '${{ matrix.target }}' \
             --cli "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" \
             --evidence "evidence/${{ matrix.target }}.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: extensions-04212-${{ matrix.target }}
@@ -112,7 +112,7 @@ jobs:
             --version "$(cat VERSION)" --run-id "$GITHUB_RUN_ID" \
             --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --output evidence/extension-acceptance-certificate.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: extensions-04212-certificate

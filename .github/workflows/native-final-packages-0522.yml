@@ -120,7 +120,7 @@ jobs:
             --disposable-runner --output "$RUNNER_TEMP/native-package-0522"
       - name: Upload redacted diagnostic logs and verified receipt or BLOCKED marker
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: native-package-0522-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-package-0522/
@@ -190,7 +190,7 @@ jobs:
             --project "$PROJECT_ID" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" \
             --output "$RUNNER_TEMP/native-six-package-0522.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: native-six-package-0522-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-six-package-0522.json

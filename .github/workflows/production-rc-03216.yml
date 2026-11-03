@@ -124,7 +124,7 @@ jobs:
           set -euo pipefail
           python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/launcher-03216-rc.json"
       - name: Upload actual passing RC test receipt only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-03216-rc-${{ github.sha }}
           path: ${{ runner.temp }}/launcher-03216-rc.json

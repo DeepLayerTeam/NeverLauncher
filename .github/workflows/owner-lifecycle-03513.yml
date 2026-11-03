@@ -60,7 +60,7 @@ jobs:
       - name: Run disposable authenticated owner and player HTTP journey
         run: |
           bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/03513-owner-player.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: owner-player-http-03513-${{ github.sha }}

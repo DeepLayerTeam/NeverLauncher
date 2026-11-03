@@ -39,7 +39,7 @@ jobs:
           python3 scripts/certification/certify.py --mode local --output dist/certification-0240/evidence.json
       - name: Publish evidence regardless of outcome
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: certification-0240-${{ runner.os }}-${{ runner.arch }}
           path: dist/certification-0240/
@@ -66,7 +66,7 @@ jobs:
             dist/platform-evidence/*/evidence.json
       - name: Upload final evidence even when incomplete
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: certification-0240-aggregate
           path: dist/certification-0240/aggregate.json

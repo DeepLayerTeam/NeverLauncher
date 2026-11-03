@@ -91,7 +91,7 @@ jobs:
             --world-marker "$NL_0523_WORLD_MARKER" \
             --report "$RUNNER_TEMP/nl-owner-real-0523.json" \
             --isolated-destructive-acceptance
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: owner-admin-standard-physical-0523-${{ github.sha }}-${{ github.run_id }}

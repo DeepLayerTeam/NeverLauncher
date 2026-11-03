@@ -63,7 +63,7 @@ jobs:
         run: go vet ./internal/attestverify ./internal/repository ./internal/httpapi
       - name: Publish actual test logs for security review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tpm-hardware-0436-${{ github.sha }}-${{ github.run_id }}
           path: |

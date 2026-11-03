@@ -98,7 +98,7 @@ jobs:
         shell: pwsh
         run: Remove-Item "$env:RUNNER_TEMP\launcher-codesign.pfx" -Force -ErrorAction SilentlyContinue
       - name: Upload signed Windows delivery artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-windows-production-${{ github.sha }}
           path: |

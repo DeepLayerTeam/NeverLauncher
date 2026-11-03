@@ -112,7 +112,7 @@ jobs:
             --output e2e/device-trust-result/device-trust-result.json
       - name: Upload machine-verifiable Device Trust evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: device-trust-${{ matrix.id }}
           path: |
@@ -160,7 +160,7 @@ jobs:
           exit "$rc"
       - name: Upload public trust matrix JSON and Markdown
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-device-trust-matrix-${{ github.run_id }}
           path: |

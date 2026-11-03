@@ -176,7 +176,7 @@ jobs:
           python3 -m playwright install --with-deps chromium
       - name: Certify candidate with real builds, PostgreSQL and staging
         run: bash scripts/release/certify-admin-ga-0220.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: launcher-admin-ga-${{ github.sha }}
           path: dist/ga-certification/admin-0220.json
@@ -225,7 +225,7 @@ jobs:
         run: python3 scripts/release/test_certify_profiles_ga_0230.py
       - name: Run Profile/Manifest and workspace GA certification
         run: python3 scripts/release/certify-profiles-ga-0230.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: launcher-profiles-ga-${{ github.sha }}
           path: dist/ga-certification/profiles-0230.json
@@ -299,7 +299,7 @@ jobs:
             --source-ready-url "$RC_DR_SOURCE_URL" \
             --target-ready-url "$RC_DR_TARGET_URL" \
             --output "$RUNNER_TEMP/rc-dr-03514.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rc03514-isolated-dr-${{ github.sha }}
           path: ${{ runner.temp }}/rc-dr-03514.json
@@ -368,7 +368,7 @@ jobs:
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json"
       - name: Stage independently checked GA certification
         run: cp "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json" single-node-ga-evidence/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: launcher-single-node-ga-verified-${{ github.sha }}
           path: single-node-ga-evidence/
@@ -857,7 +857,7 @@ jobs:
             --report "$RUNNER_TEMP/nl-final-bundle-e2e-0380.json"
       - name: Preserve exact-final-binary live E2E evidence
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-final-bundle-e2e-0380-${{ github.sha }}-${{ github.run_id }}
           path: |
@@ -880,7 +880,7 @@ jobs:
           fi
       - name: Upload independent publication dry-run result
         if: ${{ success() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-publication-dry-run-${{ github.sha }}
           path: dist/.release-*/PUBLICATION_DRY_RUN_0365.json
@@ -1035,7 +1035,7 @@ jobs:
         run: |
           echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
       - name: Upload immutable signed GA release for post-gate publication
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: dist/release-${{ steps.final-release.outputs.version }}/*
@@ -1074,7 +1074,7 @@ jobs:
             --run-attempt "$GITHUB_RUN_ATTEMPT" --output required-production-evidence.json
       - name: Publish required production status
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-production-evidence.json
@@ -1236,7 +1236,7 @@ jobs:
             "${EXTRA[@]}" \
             --output "$RUNNER_TEMP/PUBLICATION_0370.json"
       - name: Record verified GitHub publication
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-publication-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/PUBLICATION_0370.json

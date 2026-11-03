@@ -226,7 +226,7 @@ jobs:
             --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
             --output guard-ci-result/linux/guard-ci-result.json
       - name: Upload Linux Guard package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-linux-guard-${{ github.sha }}
           path: |
@@ -237,7 +237,7 @@ jobs:
             dist/release-*/GUARD_RELEASE_ALLOWLIST_LINUX.json
           if-no-files-found: error
       - name: Upload Linux Guard CI result
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-ci-linux-amd64-${{ github.sha }}
           path: guard-ci-result/linux/guard-ci-result.json
@@ -308,7 +308,7 @@ jobs:
           "${DIR}/launcher-cli-linux-${{ matrix.arch }}" update component-self-test
           "${DIR}/launcher-cli-linux-${{ matrix.arch }}" update stabilization-self-test
       - name: Upload native Linux production artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-linux-production-${{ matrix.arch }}-${{ github.sha }}
           path: |
@@ -416,7 +416,7 @@ jobs:
           $Dir = "dist/release-$Version"
           python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/launcher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/launcher-desktop-windows-amd64.exe" --guard "$Dir/guard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
       - name: Upload Windows package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-windows-guard-${{ github.sha }}
           path: |
@@ -443,7 +443,7 @@ jobs:
             dist/release-*/WINDOWS_SIGNING_EVIDENCE.json
           if-no-files-found: error
       - name: Upload Windows Guard CI result
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-ci-windows-amd64-${{ github.sha }}
           path: guard-ci-result/windows/guard-ci-result.json
@@ -510,7 +510,7 @@ jobs:
             --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
             --output guard-ci-result/macos/guard-ci-result.json
       - name: Upload macOS package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-macos-guard-${{ github.sha }}
           path: |
@@ -521,7 +521,7 @@ jobs:
             dist/release-*/GUARD_RELEASE_ALLOWLIST_MACOS.json
           if-no-files-found: error
       - name: Upload macOS Guard CI result
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-ci-macos-universal-${{ github.sha }}
           path: guard-ci-result/macos/guard-ci-result.json
@@ -570,7 +570,7 @@ jobs:
           /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
           /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}"
       - name: Upload macOS x64 + ARM64 delivery candidates
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-macos-production-${{ github.sha }}
           path: |
@@ -623,7 +623,7 @@ jobs:
             cat guard-ci-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload Guard certification evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-guard-ci-matrix-${{ github.run_id }}
           path: |
@@ -725,7 +725,7 @@ jobs:
           /tmp/nl-managed-jre delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
       - name: Upload exact-commit Managed JRE production assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts/
@@ -1025,7 +1025,7 @@ jobs:
             > e2e/runtime/player-cycle-0398-verification.json
       - name: Upload E2E evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-minecraft-client-e2e-evidence
           path: |
@@ -1065,14 +1065,14 @@ jobs:
           retention-days: 7
       - name: Upload Forge + NeoForge migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-forge-neoforge-migration-e2e-evidence
           path: e2e/forge-neoforge-migration-result/
           if-no-files-found: ignore
       - name: Upload ServerBridge HA hardening migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-serverbridge-ha-hardening-e2e-evidence
           path: e2e/serverbridge-ha-migration-result/
@@ -1080,7 +1080,7 @@ jobs:
           retention-days: 14
       - name: Upload topology + handoff migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-topology-handoff-migration-e2e-evidence
           path: e2e/topology-handoff-migration-result/
@@ -1088,7 +1088,7 @@ jobs:
           retention-days: 14
       - name: Upload Device Trust protocol evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-device-trust-protocol-e2e-evidence
           path: |
@@ -1098,7 +1098,7 @@ jobs:
           retention-days: 14
       - name: Upload Guard migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-guard-migration-e2e-evidence
           path: e2e/guard-migration-result/
@@ -1106,7 +1106,7 @@ jobs:
           retention-days: 14
       - name: Upload ServerBridge v2 migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-serverbridge-v2-migration-e2e-evidence
           path: e2e/serverbridge-v2-migration-result/
@@ -1114,7 +1114,7 @@ jobs:
           retention-days: 14
       - name: Upload ServerBridge cryptographic identity migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-serverbridge-crypto-identity-migration-e2e-evidence
           path: e2e/serverbridge-crypto-migration-result/
@@ -1122,7 +1122,7 @@ jobs:
           retention-days: 14
       - name: Upload one-time join ticket migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-one-time-join-ticket-migration-e2e-evidence
           path: e2e/one-time-join-migration-result/
@@ -1130,7 +1130,7 @@ jobs:
           retention-days: 14
       - name: Upload Proxy family migration evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-proxy-family-migration-e2e-evidence
           path: e2e/proxy-family-migration-result/
@@ -1190,7 +1190,7 @@ jobs:
           python scripts/guard_ci/test_windows_adversarial.py
       - name: Upload per-Java adversarial evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-windows-adversarial-java-${{ matrix.java }}-${{ github.sha }}
           path: guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json
@@ -1243,7 +1243,7 @@ jobs:
           (cd cli && go test ./cmd/launcher -run 'TestWindowsProtectionGA' -count=1)
       - name: Upload Windows adversarial certificate
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: guard-windows-adversarial-certificate-${{ github.sha }}
           path: |
@@ -1492,7 +1492,7 @@ jobs:
           PYCODE
       - name: Publish machine evidence (fail closed if missing)
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: minimal-live-e2e-0378-${{ github.sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/nl-live-evidence-0378.json
@@ -1581,7 +1581,7 @@ jobs:
             --run-attempt "$GITHUB_RUN_ATTEMPT" --output required-ci-evidence.json
       - name: Publish required CI result
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-required-ci-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-ci-evidence.json

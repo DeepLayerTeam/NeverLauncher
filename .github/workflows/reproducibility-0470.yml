@@ -94,7 +94,7 @@ jobs:
           esac
           python scripts/release/inputs_guard_0461.py verify
       - name: Upload actual unsigned target packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned-0470-${{ matrix.builder }}-${{ matrix.target }}-${{ github.sha }}
           path: dist/unsigned-0.47.0/*
@@ -148,7 +148,7 @@ jobs:
           shred -u /tmp/unsigned-operator-key.pem || rm -f /tmp/unsigned-operator-key.pem
           mkdir -p dist/repro-capture
           cp /tmp/unsigned-0470.json /tmp/unsigned-0470.sig dist/repro-capture/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: reproducibility-capture-${{ matrix.builder }}-${{ github.sha }}
           path: dist/repro-capture/*
@@ -207,7 +207,7 @@ jobs:
             --b-report dist/reports/b/unsigned-0470.json \
             --b-sig dist/reports/b/unsigned-0470.sig --b-key /tmp/repro-b.pem --b-dir dist/b \
             --out dist/independent-evidence/REPRODUCIBILITY_COMPARISON_0470.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: reproducibility-comparison-${{ github.sha }}
           path: dist/independent-evidence/REPRODUCIBILITY_COMPARISON_0470.json

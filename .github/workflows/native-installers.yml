@@ -184,7 +184,7 @@ jobs:
         shell: bash
         run: rm -f "$RUNNER_TEMP/native-notary-0522.p8"
       - name: Upload signed installers and signatures
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-installer-${{ matrix.platform }}-${{ matrix.arch }}
           path: dist/native/

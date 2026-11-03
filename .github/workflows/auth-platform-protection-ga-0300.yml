@@ -122,7 +122,7 @@ jobs:
           cmp services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
           (cd cli && go test -count=1 ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/launcher)
           (cd apps/admin && npm ci --no-audit --no-fund && npm run build)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: auth-platform-protection-e2e-${{ github.sha }}

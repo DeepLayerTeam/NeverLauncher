@@ -75,12 +75,12 @@ jobs:
             --timeout 300 --revision "$GITHUB_SHA"
       - name: Publish verified Java 17 SDK as CI artifact
         if: success() && matrix.label == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: java-sdk-maven-0310
           path: ${{ runner.temp }}/integration-0310.maven/maven
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: integration-0310-${{ matrix.label }}
@@ -133,7 +133,7 @@ jobs:
         run: |
           python3 scripts/certification/review_integration_0310.py \
             --evidence reports --revision "$GITHUB_SHA" --output integration-review-0310.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: integration-review-0310
           path: integration-review-0310.json

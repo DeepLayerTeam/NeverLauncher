@@ -138,7 +138,7 @@ jobs:
           set -euo pipefail
           sudo python3 scripts/integration/legacy_matrix_0478.py --manifest "$RUNNER_TEMP/baselines.json" --candidate-cli "$RUNNER_TEMP/launcher-0478" --out "$RUNNER_TEMP/legacy-0478.json"
           python3 scripts/integration/verify_0478.py legacy --path "$RUNNER_TEMP/legacy-0478.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: legacy-native-0478
@@ -175,7 +175,7 @@ jobs:
           export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-minecraft-e2e.sh
           python3 scripts/integration/verify_0478.py full-game --path e2e/runtime --minecraft-version 1.21.1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: real-game-full-0478
@@ -214,7 +214,7 @@ jobs:
           export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-vanilla-matching-e2e.sh
           python3 scripts/integration/verify_0478.py matching-game --path e2e/runtime --minecraft-version '${{ matrix.mc }}'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: real-matching-${{ matrix.mc }}-0478
@@ -254,7 +254,7 @@ jobs:
           set -euo pipefail
           python3 e2e/scripts/owner-cycle-0390-browser.py
           python3 scripts/integration/verify_0478.py owner --path dist/ga-certification/owner-cycle-0390.json --commit "$GITHUB_SHA"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: real-owner-0478

@@ -179,7 +179,7 @@ jobs:
         id: compatibility_evidence_upload
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: &compatibility_evidence_a
           name: compatibility-${{ matrix.id }}
           path: |
@@ -240,7 +240,7 @@ jobs:
       # Неудачная повторная попытка остаётся обязательным проваленным заданием.
       - name: Retry transient compatibility evidence upload
         if: always() && steps.compatibility_evidence_upload.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: *compatibility_evidence_a
 
   compatibility-e2e-b:
@@ -382,7 +382,7 @@ jobs:
         id: compatibility_evidence_upload
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: &compatibility_evidence_b
           name: compatibility-${{ matrix.id }}
           path: |
@@ -442,7 +442,7 @@ jobs:
       # Неудачная повторная попытка остаётся обязательным проваленным заданием.
       - name: Retry transient compatibility evidence upload
         if: always() && steps.compatibility_evidence_upload.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: *compatibility_evidence_b
 
   publish-matrix:
@@ -482,7 +482,7 @@ jobs:
           exit "$rc"
       - name: Upload public matrix JSON and Markdown
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-compatibility-matrix-${{ github.run_id }}
           path: |
@@ -520,7 +520,7 @@ jobs:
             --output "$PWD/acceptance-0521/inventory.json"
       - name: Upload observed inventory (not independent GA)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-acceptance-inventory-0521-${{ github.run_id }}-${{ github.run_attempt }}
           path: acceptance-0521/inventory.json

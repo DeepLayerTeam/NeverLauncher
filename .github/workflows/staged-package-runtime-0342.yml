@@ -152,7 +152,7 @@ jobs:
               --server-entry "$SERVER_ENTRY" --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA256" --bridge-version "$BRIDGE_VERSION"
       - name: Upload redacted observational evidence (no grant or private key)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: staged-runtime-${{ github.run_id }}
           if-no-files-found: ignore

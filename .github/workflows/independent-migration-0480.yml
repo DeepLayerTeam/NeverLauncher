@@ -96,7 +96,7 @@ jobs:
             --operator-work "$RUN_DIR/operator" --backend-env "$NL_BACKEND_ENV" \
             --output "$RUN_DIR/live.json"
       - name: Export only verified acceptance result, never DBs, keys, DSNs or credentials
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: independent-live-0480-${{ github.sha }}
           path: ${{ runner.temp }}/independent-0480-${{ github.run_id }}-${{ github.run_attempt }}/live.json

@@ -127,7 +127,7 @@ jobs:
             --output "dist/02413/report-${{ matrix.os }}-${{ matrix.arch }}.json"
       - name: Upload actual execution evidence (including partial failures)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: components-02413-${{ matrix.os }}-${{ matrix.arch }}
           path: |
@@ -171,7 +171,7 @@ jobs:
             --output dist/certification-02413-aggregate.json "${reports[@]}"
       - name: Retain failed/incomplete verdict for audit
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: certification-02413-aggregate
           path: dist/certification-02413-aggregate.json

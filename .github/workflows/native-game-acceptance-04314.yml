@@ -68,7 +68,7 @@ jobs:
             --package-id "$PACKAGE_ID" --version "$(cat VERSION)" \
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --output "$RUNNER_TEMP/native-game-0440.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: launcher-six-native-observations-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-game-0440.json
