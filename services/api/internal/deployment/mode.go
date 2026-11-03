@@ -155,6 +155,15 @@ func Detect(cfg config.Config) (Plan, error) {
 			}
 		}
 		if p.Mode == NetworkHA {
+			// Routing and lease ownership are keyed by this identity across API
+			// and workers. A PID/hostname-generated fallback changes on restart
+			// and can collide in cloned containers; reject it for Network-HA.
+			id := strings.TrimSpace(cfg.ServerBridgeReplicaID)
+			if id == "" {
+				problems = append(problems, "network-ha requires an explicitly configured stable LAUNCHER_REPLICA_ID for each API/worker")
+			} else if len(id) > 128 || strings.ContainsAny(id, " \t\r\n/\\") {
+				problems = append(problems, "network-ha LAUNCHER_REPLICA_ID must be a stable non-whitespace identity of at most 128 bytes")
+			}
 			if sqliteCoord {
 				problems = append(problems, "network-ha cannot use local SQLite coordinator")
 			}

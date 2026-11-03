@@ -1,3 +1,10 @@
+## 0.51.1 — HA Inventory & Failure-Domain Baseline (operational diagnostics; multi-host GA BLOCKED)
+
+- Add working, read-only `scripts/operations/ha_inventory_0511.py` for actual local/SSH multi-host Docker processes: inspect real roles, live API/worker loopback readiness with p50/p95, volume ownership, unique replica IDs, PostgreSQL/Redis replication state, and real existing PostgreSQL lease/S3 growth diagnostics. Cluster assessment flags single-host API/worker/ingress, PostgreSQL and Redis SPOFs without confusing multiple containers with independent machines. Unknown managed dependencies and game worlds remain UNVERIFIED; physical fault tests are never fabricated.
+- Harden Network-HA startup: require an explicit, stable, bounded `LAUNCHER_REPLICA_ID`; no hostname/PID fallback for distributed ServerBridge owners. Add regression tests for missing or malformed identity.
+- Add source-traced runtime/local state inventory, operator workflow, private atomic JSON reports and Python CI regression. Secrets/DSNs/environment values are never exported in reports; unavailable probes are not marked successful.
+- **HA GA BLOCKED:** the developer environment has no Docker/SSH multi-node lab, PostgreSQL/Redis/S3 endpoints or Go 1.27.3; real host loss, partition, N/N−1 rolling, restore and physical domain independence must be executed later. This release is a functional *live auditing tool* plus a fail-closed identity enforcement, not HA failover implementation.
+
 ## 0.51.0 — Client Guard & Authorized JVM Modifications (final-byte independent GA gating; GA BLOCKED until real receipt)
 
 - Add a fail-closed independent Guard release gate over the **actual final six signed installers** and their SHA-256. Verify Ed25519 detached approval of the entire evidence tree, reject missing/altered/expired proofs, publisher self-review, cross-version reuse, signer/runner identity changes, and final re-signed/rebuilt artifacts that differ from independently approved bytes.

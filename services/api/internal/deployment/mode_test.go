@@ -29,6 +29,7 @@ func TestAutoDetectStandardAndNetworkHA(t *testing.T) {
 	cfg.StorageDriver = "s3"
 	cfg.ServerBridgeHARequired = true
 	cfg.RedisURL = "redis://redis.internal:6379"
+	cfg.ServerBridgeReplicaID = "api-a"
 	p, err = Detect(cfg)
 	if err != nil || p.Mode != NetworkHA || p.Coordinator != "redis" || p.SingleInstance || p.LockPath != "" {
 		t.Fatalf("HA plan=%+v error=%v", p, err)
@@ -47,6 +48,21 @@ func TestExplicitModeRejectsUnsafeCombinations(t *testing.T) {
 		{"sqlite-requires-persistent-path", func(c *config.Config) { c.RepositoryDriver = "sqlite" }, "absolute clean persistent path"},
 		{"mixed-HA", func(c *config.Config) { c.ServerBridgeHARequired = true }, "distributed HA"},
 		{"network-requires-s3", func(c *config.Config) { c.DeploymentMode = "network-ha" }, "shared S3"},
+		{"network-requires-stable-replica-id", func(c *config.Config) {
+			c.DeploymentMode = "network-ha"
+			c.SQLiteCoordinatorPath = ""
+			c.StorageDriver = "s3"
+			c.ServerBridgeHARequired = true
+			c.RedisURL = "redis://redis.internal:6379"
+		}, "LAUNCHER_REPLICA_ID"},
+		{"network-rejects-unsafe-replica-id", func(c *config.Config) {
+			c.DeploymentMode = "network-ha"
+			c.SQLiteCoordinatorPath = ""
+			c.StorageDriver = "s3"
+			c.ServerBridgeHARequired = true
+			c.RedisURL = "redis://redis.internal:6379"
+			c.ServerBridgeReplicaID = "api/a"
+		}, "stable non-whitespace"},
 		{"network-requires-redis", func(c *config.Config) {
 			c.DeploymentMode = "network-ha"
 			c.StorageDriver = "s3"

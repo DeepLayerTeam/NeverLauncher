@@ -1,0 +1,32 @@
+name: HA inventory 0.51.1 regression
+on:
+  push:
+    paths:
+      - 'scripts/operations/ha_inventory_0511.py'
+      - 'scripts/operations/test_ha_inventory_0511.py'
+      - '.github/workflows/ha-inventory-0511.yml'
+  pull_request:
+    paths:
+      - 'scripts/operations/ha_inventory_0511.py'
+      - 'scripts/operations/test_ha_inventory_0511.py'
+      - '.github/workflows/ha-inventory-0511.yml'
+  workflow_dispatch:
+jobs:
+  inventory-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Python and real audit functions without Docker fixtures
+        run: |
+          python3 -m py_compile scripts/operations/ha_inventory_0511.py
+          python3 -m unittest discover -s scripts/operations -p 'test_ha_inventory_0511.py' -v
+      - name: Missing live Docker project must never report PASS
+        run: |
+          set +e
+          python3 scripts/operations/ha_inventory_0511.py node --project definitely-not-running-0511 --output /tmp/ha-0511-absent.json
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then echo 'FAIL: absent live topology reported success'; exit 1; fi
