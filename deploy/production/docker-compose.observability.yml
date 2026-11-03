@@ -24,7 +24,7 @@ services:
       - --web.enable-lifecycle=false
     volumes:
       - ${LAUNCHER_PROMETHEUS_CONFIG:-./monitoring/prometheus-standard.yml}:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ${LAUNCHER_PROMETHEUS_ALERT_RULES:-./monitoring/alerts.yml}:/etc/prometheus/alerts.yml:ro
       - launcher_prometheus:/prometheus
     security_opt: ['no-new-privileges:true']
     networks: [launcher]

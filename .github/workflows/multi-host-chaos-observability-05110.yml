@@ -1,0 +1,57 @@
+name: Multi-host chaos and observability 0.51.10
+on:
+  push:
+    paths:
+      - 'scripts/operations/multi_host_chaos_05110.py'
+      - 'scripts/operations/test_multi_host_chaos_05110.py'
+      - 'scripts/operations/multi_host_0512.py'
+      - 'deploy/production/docker-compose.observability.yml'
+      - 'deploy/production/monitoring/blackbox.yml'
+      - 'docs/operations/multi-host-chaos-observability-05110.md'
+      - '.github/workflows/multi-host-chaos-observability-05110.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chaos-safety-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test actual fault orchestration, recovery safety and prior HA code
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'PyYAML==6.0.3'
+          PYTHONPATH=scripts/operations python3 -m unittest -v \
+            scripts/operations/test_multi_host_chaos_05110.py \
+            scripts/operations/test_multi_host_0512.py \
+            scripts/operations/test_dependency_ha_0513.py \
+            scripts/operations/test_cross_host_recovery_0519.py
+      - name: Check Python, version metadata, Prometheus and blackbox configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/operations/multi_host_chaos_05110.py
+          python3 scripts/version/manage.py check
+          python3 - <<'PY'
+          import yaml
+          from pathlib import Path
+          b = yaml.safe_load(Path('deploy/production/monitoring/blackbox.yml').read_text())
+          assert b['modules']['https_2xx_strict']['http']['follow_redirects'] is False
+          assert b['modules']['https_2xx_strict']['http']['fail_if_not_ssl'] is True
+          d = yaml.safe_load(Path('deploy/production/docker-compose.observability.yml').read_text())
+          assert any('LAUNCHER_PROMETHEUS_ALERT_RULES' in str(v) for v in d['services']['prometheus']['volumes'])
+          PY
+          mkdir -p "$RUNNER_TEMP/chaos-monitor"
+          python3 scripts/operations/multi_host_chaos_05110.py monitor-config \
+            --node-url a=https://node-a.example.org/ready \
+            --node-url b=https://node-b.example.org/ready \
+            --edge-url https://launcher.example.org/ready \
+            --output-directory "$RUNNER_TEMP/chaos-monitor"
+          docker run --rm --entrypoint /bin/promtool \
+            -v "$RUNNER_TEMP/chaos-monitor:/prom-config:ro" \
+            prom/prometheus:v2.55.1 check rules /prom-config/alerts-05110.yml

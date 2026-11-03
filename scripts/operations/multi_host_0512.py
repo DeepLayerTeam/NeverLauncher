@@ -333,7 +333,7 @@ def remote_stop_start(target, installed_script, directory, project, action):
     if action not in ("stop", "start"):
         raise DeploymentError("unsupported disruption action")
     return remote_call(target, installed_script, directory, project, "local-" + action,
-                       growth=False, timeout=100)
+                       growth=False, timeout=(260 if action == "start" else 120))
 
 
 def parse_nodes(specs):
