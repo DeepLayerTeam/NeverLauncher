@@ -288,7 +288,7 @@ def node_inventory(project, samples, growth=True, source_root=None):
         problems.append("no running or stopped project containers found")
     for item in items:
         service = item["service"]
-        if service in ("api", "api-b", "worker-a", "worker-b"):
+        if service in ("api", "api-b", "worker", "worker-a", "worker-b"):
             item["readiness"] = docker_ready(item["containerId"], samples) if item["running"] else {
                 "sampled": 0, "success": 0, "failures": 0, "p50Ms": None, "p95Ms": None}
             if item["readiness"]["success"] != samples:
@@ -324,7 +324,7 @@ def node_inventory(project, samples, growth=True, source_root=None):
     # Collisions in identifiers on the same host are unsafe even if Docker uses
     # different container IDs: ServerBridge routing is keyed by replica ID.
     replica_ids = [i["environment"].get("LAUNCHER_REPLICA_ID") for i in items
-                   if i["service"] in ("api", "api-b", "worker-a", "worker-b")]
+                   if i["service"] in ("api", "api-b", "worker", "worker-a", "worker-b")]
     nonempty = [x for x in replica_ids if x]
     if len(nonempty) != len(set(nonempty)):
         problems.append("duplicate LAUNCHER_REPLICA_ID on Docker host")
@@ -408,8 +408,8 @@ def assess_cluster(nodes, edge=None):
     record("failure_domains", "OBSERVED" if host_ids_valid and len(host_ids) >= 2 else "RISK",
            "distinct OS identities on %d operator-reached Docker hosts; physical/hypervisor separation unverified" % len(set(host_ids))
            if host_ids_valid else "duplicate/missing OS identity or fewer than two hosts")
-    for role, aliases in (("api", ("api", "api-b")), ("worker", ("worker-a", "worker-b")),
-                          ("admin", ("admin",)), ("ingress", ("nginx",))):
+    for role, aliases in (("api", ("api", "api-b")), ("worker", ("worker", "worker-a", "worker-b")),
+                          ("admin", ("admin",)), ("ingress", ("nginx", "ingress"))):
         matched = [(h, i) for _, h, i in containers if i["service"] in aliases and i["running"]]
         ready = [(h, i) for h, i in matched if (i.get("readiness", {}).get("success", 0) > 0
                                               if role in CRITICAL_ROLES else i["health"] == "healthy")]
@@ -418,7 +418,7 @@ def assess_cluster(nodes, edge=None):
         record(role, status, "%d running; %d live-ready on %d OS identities" %
                (len(matched), len(ready), len(domains)))
     replicas = [(name, i) for name, _, i in containers if i["service"] in
-                ("api", "api-b", "worker-a", "worker-b") and i["running"]]
+                ("api", "api-b", "worker", "worker-a", "worker-b") and i["running"]]
     ids = [i["environment"].get("LAUNCHER_REPLICA_ID") for _, i in replicas]
     role_safe = len(replicas) >= 4 and all(ids) and len(ids) == len(set(ids))
     if role_safe:
