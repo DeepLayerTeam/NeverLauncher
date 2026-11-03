@@ -1,0 +1,53 @@
+name: Guard policy operations 0.50.11
+on:
+  push:
+    paths:
+      - 'cli/cmd/launcher/guard_compat_policy_0502.go'
+      - 'cli/cmd/launcher/guard_policy_operations_05011*'
+      - 'cli/cmd/guard-policy-sign/**'
+      - 'apps/admin/src/admin/GuardPolicyOperations05011.tsx'
+      - 'apps/admin/src/admin/guard_policy_offline_05011.ts'
+      - 'apps/admin/tests/guard_policy_05011.test.mjs'
+      - '.github/workflows/guard-policy-operations-05011.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Build and test actual CLI and signer
+        working-directory: cli
+        run: |
+          go test ./cmd/guard-policy-sign -count=1
+          go test ./cmd/launcher -run 'TestGuardPolicyOperations05011|TestGuardCompatibility0502' -count=1 -timeout=15m
+          go build ./cmd/launcher
+          go build ./cmd/guard-policy-sign
+  admin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Verify WebCrypto runtime policy operations
+        working-directory: apps/admin
+        run: node --experimental-strip-types --test tests/guard_policy_05011.test.mjs
+      - name: Build production Admin
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm run build

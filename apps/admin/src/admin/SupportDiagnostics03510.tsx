@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { GuardPolicyOperations05011 } from "./GuardPolicyOperations05011";
 import { requestJSON } from "../api/client";
 
 type PlayerEvent = { code: string; count: number };
@@ -31,9 +32,11 @@ function saveJSON(name: string, data: unknown) {
 export function SupportDiagnostics03510({
   backendUrl,
   token,
+  canOperate,
 }: {
   backendUrl: string;
   token: string;
+  canOperate: boolean;
 }) {
   const [operator, setOperator] = useState<Record<string, unknown> | null>(
     null,
@@ -141,6 +144,7 @@ export function SupportDiagnostics03510({
           </button>
         </>
       )}
+      <GuardPolicyOperations05011 canOperate={canOperate} />
       {!loading && reports.length === 0 && (
         <p>
           Отчёты пока не отправлены. Игрок должен сначала посмотреть состав и

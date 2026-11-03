@@ -2105,7 +2105,7 @@ export function AdminApp() {
           <AuthProviderWizard02910 backendUrl={backendUrl} token={token} />
         )}
         {token && mayRead && active === "diagnostics" && (
-          <SupportDiagnostics03510 backendUrl={backendUrl} token={token} />
+          <SupportDiagnostics03510 backendUrl={backendUrl} token={token} canOperate={can(identity, "settings:manage")} />
         )}
         {token && mayRead && active === "branding-studio" && (
           <BrandingStudio0355

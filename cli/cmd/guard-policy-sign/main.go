@@ -15,13 +15,18 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 const schema = "launcher.guard-compatibility.v1"
 const domain = "NeverLauncher-Guard-Compatibility-v1\n"
 
 func main() {
-	mode := flag.String("mode", "sign", "sign or keygen")
+	mode := flag.String("mode", "sign", "sign, keygen, revoke or rollback")
+	current := flag.String("current", "", "currently signed policy envelope for revoke/rollback")
+	previous := flag.String("previous", "", "previous signed policy envelope for rollback")
+	revokeDigest := flag.String("revoke-digest", "", "comma-separated SHA-256 hashes")
+	revokeTransform := flag.String("revoke-transform", "", "comma-separated transformation IDs")
 	policy := flag.String("policy", "", "source policy JSON")
 	key := flag.String("private-key", "", "external hex Ed25519 private key file")
 	public := flag.String("public-key", "", "external hex Ed25519 public key output for keygen")
@@ -33,6 +38,8 @@ func main() {
 		err = sign(*policy, *key, *out)
 	case "keygen":
 		err = keygen(*key, *public)
+	case "revoke", "rollback":
+		err = operatorRevise05011(*mode, *current, *previous, *key, *out, *revokeDigest, *revokeTransform, time.Now())
 	default:
 		err = errors.New("unknown --mode")
 	}

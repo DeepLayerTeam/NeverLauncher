@@ -830,7 +830,7 @@ func handleRuntimeFactory0271(args []string) error {
 		if mode == "adapter-inspect" || mode == "adapter-verify" {
 			return handleRuntimeFactoryAdapters02711(args)
 		}
-		if mode == "guard-policy-install" || mode == "guard-policy-verify" {
+		if mode == "guard-policy-install" || mode == "guard-policy-verify" || mode == "guard-policy-status" || mode == "guard-policy-history" || mode == "guard-policy-diagnose" || mode == "guard-policy-rollback" {
 			return handleGuardCompat0502(args)
 		}
 		if mode == "trusted-install" || mode == "trusted-verify" || mode == "trusted-inspect" || mode == "trusted-remove" {

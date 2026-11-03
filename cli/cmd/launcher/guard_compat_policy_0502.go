@@ -364,6 +364,9 @@ func guardCompatInstall0502(root, policyFile, keyFile string) error {
 	if err = guardCompatAgainstFloor0502(root, v); err != nil {
 		return err
 	}
+	if err = guardCompatArchiveIncoming05011(root, keyFile, raw, v); err != nil {
+		return err
+	}
 	active, err := guardCompatPath0502(root, guardCompatPolicyFile0502)
 	if err != nil {
 		return err
@@ -454,7 +457,9 @@ func guardCompatRelative0502(root, full string) (string, error) {
 	return rel, nil
 }
 func guardCompatValidateLaunch0502(root, project, minecraft, loader string, agents, plugins []string) error {
-	key := strings.TrimSpace(os.Getenv(guardCompatKeyEnv0502))
+	return guardCompatValidateLaunchWithKey05011(root, strings.TrimSpace(os.Getenv(guardCompatKeyEnv0502)), project, minecraft, loader, agents, plugins)
+}
+func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader string, agents, plugins []string) error {
 	v, err := guardCompatLoad0502(root, key)
 	if err != nil {
 		return err
@@ -587,7 +592,7 @@ func guardCompatInspect0502(root, key string) (map[string]any, error) {
 }
 func handleGuardCompat0502(args []string) error {
 	if len(args) == 0 {
-		return errors.New("guard-policy-install|guard-policy-verify required")
+		return errors.New("guard-policy-install|guard-policy-verify|guard-policy-status|guard-policy-history|guard-policy-diagnose|guard-policy-rollback required")
 	}
 	root := flagValue(args[1:], "--client-dir", "")
 	if root == "" {
@@ -595,10 +600,15 @@ func handleGuardCompat0502(args []string) error {
 	}
 	key := flagValue(args[1:], "--public-key", os.Getenv(guardCompatKeyEnv0502))
 	switch args[0] {
-	case "guard-policy-install":
+	case "guard-policy-install", "guard-policy-rollback":
 		file := flagValue(args[1:], "--policy", "")
 		if file == "" {
 			return errors.New("signed --policy required")
+		}
+		if args[0] == "guard-policy-rollback" {
+			if err := guardCompatAuthorizeRollback05011(root, key, file); err != nil {
+				return err
+			}
 		}
 		if err := guardCompatInstall0502(root, file, key); err != nil {
 			return err
@@ -609,6 +619,12 @@ func handleGuardCompat0502(args []string) error {
 		}
 		printJSON(report)
 		return nil
+	case "guard-policy-status", "guard-policy-history", "guard-policy-diagnose":
+		report, err := guardCompatOperation05011(root, key, args)
+		if report != nil {
+			printJSON(report)
+		}
+		return err
 	case "guard-policy-verify":
 		report, err := guardCompatInspect0502(root, key)
 		if err != nil {

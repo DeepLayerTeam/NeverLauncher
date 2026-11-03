@@ -1,3 +1,11 @@
+## 0.50.11 — Guard Diagnostics & Policy Operations (implementation patch; independent GA BLOCKED)
+
+- Implement immutable on-client archive of signed Guard compatibility policy revisions and a CLI history/status/diagnose path that checks accepted epoch, signature, scope, current artifact digests, authorized mods, native modules and revocations. Existing launch protection remains fail-closed.
+- Add offline Ed25519-signed revoke and rollback operations: both create strictly higher epochs; rollback restores historical approved artifacts without removing any previously signed digest/transform revocation. No private key is installed on the client or shipped to Admin.
+- Harden installation around interruptions: archival before anti-rollback floor advancement, detection of corrupt history, and recovery when the floor was updated but the active signed file was not.
+- Admin diagnostics includes local Ed25519 verification of current/historical signed envelopes, offline revoke/rollback preparation, signed-candidate verification and redacted CLI diagnostic import. Installation still requires the trusted CLI on each target; Admin cannot directly alter a player's local files.
+- Go policy and offline signing regression tests and browser WebCrypto regression tests are included. Native Rust/macOS/Windows builds, live multi-host policy rollout, and real Minecraft/Guard independent acceptance are not certified. GA remains BLOCKED.
+
 ## 0.50.10 — Mod & Software Compatibility (executable code, independent GA BLOCKED)
 
 - Scope Windows in-process IAT instrumentation to Java/game native modules; external OBS/overlay/AV/GPU DLLs are not rewritten by this Hook Engine, while Windows Module Guard still requires their existing executable authenticity and exact hashes for game-root natives.

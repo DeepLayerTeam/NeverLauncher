@@ -1,6 +1,6 @@
 {
   "name": "launcher-desktop",
-  "version": "0.50.10",
+  "version": "0.50.11",
   "private": true,
   "type": "module",
   "scripts": {
