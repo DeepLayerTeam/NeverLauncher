@@ -1,3 +1,10 @@
+## 0.50.10 — Mod & Software Compatibility (executable code, independent GA BLOCKED)
+
+- Scope Windows in-process IAT instrumentation to Java/game native modules; external OBS/overlay/AV/GPU DLLs are not rewritten by this Hook Engine, while Windows Module Guard still requires their existing executable authenticity and exact hashes for game-root natives.
+- Extend the existing Ed25519-signed, anti-rollback Guard compatibility policy with Linux-only `externalNativeModules` (max 64 exact absolute-path/SHA-256 bindings); refuse revoked, altered, symlinked and non-file payloads. The operator can issue/revoke scoped versions without granting privileges to unknown Java agents.
+- Enforce signed external native library digests in both independent Rust Runtime `/proc` monitoring and Java premain integrity checks. Permit OS-owned immutable system library roots separately; detect user-writable unpinned ELF mappings and changes after admission. Retain all previous JAR, mod, Java transformer and process restrictions.
+- Real OpenJDK 21 JNI regression checks and Go signed-policy/revocation tests run locally; native Windows/Linux/macOS Rust compilation and real OBS/overlay/antivirus/GPU-driver + Minecraft acceptance have **not** been completed here. The release is not independently production/GA certified.
+
 ## 0.50.9 — macOS Guard Runtime Protection (native source implementation; independent GA BLOCKED)
 
 - macOS game JVM now binds to an authenticated, continuously supervised Guard process. Heartbeats during gameplay never restart a vanished Guard; loss of Guard IPC/identity fails the protected session.

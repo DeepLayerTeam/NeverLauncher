@@ -47,19 +47,24 @@ type guardCompatClassBytes0504 struct {
 	Class  string `json:"class"`
 	SHA256 string `json:"sha256"`
 }
+type guardCompatExternalNative05010 struct {
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
+}
 type guardCompatPolicy0502 struct {
-	Schema            string                      `json:"schemaVersion"`
-	ProjectID         string                      `json:"projectId"`
-	Minecraft         string                      `json:"minecraft"`
-	Loader            string                      `json:"loader"`
-	Epoch             uint64                      `json:"epoch"`
-	IssuedAt          int64                       `json:"issuedAt"`
-	ExpiresAt         int64                       `json:"expiresAt"`
-	Artifacts         []guardCompatArtifact0502   `json:"artifacts"`
-	Transformations   []guardCompatTransform0502  `json:"transformations"`
-	RevokedDigests    []string                    `json:"revokedDigests"`
-	RevokedTransforms []string                    `json:"revokedTransformations"`
-	LoaderClassBytes  []guardCompatClassBytes0504 `json:"loaderClassBytes,omitempty"`
+	Schema                string                           `json:"schemaVersion"`
+	ProjectID             string                           `json:"projectId"`
+	Minecraft             string                           `json:"minecraft"`
+	Loader                string                           `json:"loader"`
+	Epoch                 uint64                           `json:"epoch"`
+	IssuedAt              int64                            `json:"issuedAt"`
+	ExpiresAt             int64                            `json:"expiresAt"`
+	Artifacts             []guardCompatArtifact0502        `json:"artifacts"`
+	Transformations       []guardCompatTransform0502       `json:"transformations"`
+	RevokedDigests        []string                         `json:"revokedDigests"`
+	RevokedTransforms     []string                         `json:"revokedTransformations"`
+	LoaderClassBytes      []guardCompatClassBytes0504      `json:"loaderClassBytes,omitempty"`
+	ExternalNativeModules []guardCompatExternalNative05010 `json:"externalNativeModules,omitempty"`
 }
 type guardCompatFloor0502 struct {
 	Epoch      uint64 `json:"epoch"`
@@ -176,7 +181,7 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 	if p.IssuedAt > current+300 || p.ExpiresAt <= current || p.IssuedAt <= 0 || p.ExpiresAt <= p.IssuedAt || p.ExpiresAt-p.IssuedAt > 90*86400 {
 		return errors.New("Guard compatibility policy expired, future-issued or exceeds validity")
 	}
-	if len(p.Artifacts) > 4096 || len(p.Transformations) > 4096 || len(p.LoaderClassBytes) > 4096 || len(p.RevokedDigests) > 4096 || len(p.RevokedTransforms) > 4096 {
+	if len(p.Artifacts) > 4096 || len(p.Transformations) > 4096 || len(p.LoaderClassBytes) > 4096 || len(p.ExternalNativeModules) > 64 || len(p.RevokedDigests) > 4096 || len(p.RevokedTransforms) > 4096 {
 		return errors.New("Guard compatibility list too large")
 	}
 	seen := map[string]bool{}
@@ -214,6 +219,12 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 		}
 		seen["loader-class:"+cls.Class] = true
 	}
+	for _, external := range p.ExternalNativeModules {
+		if !guardCompatExternalNativePath05010(external.Path) || !guardCompatHex0502(external.SHA256) || seen["external:"+external.Path] {
+			return errors.New("Guard external native module path/digest invalid or duplicated")
+		}
+		seen["external:"+external.Path] = true
+	}
 	for _, s := range p.RevokedDigests {
 		if !guardCompatHex0502(s) || seen["revoked:"+s] {
 			return errors.New("Guard compatibility revoked digest invalid/duplicated")
@@ -227,6 +238,52 @@ func (p guardCompatPolicy0502) validate0502(now time.Time) error {
 		seen["revoked-transform:"+s] = true
 	}
 	return nil
+}
+func guardCompatExternalNativePath05010(path string) bool {
+	if len(path) > 4096 || !strings.HasPrefix(path, "/") || strings.ContainsAny(path, "\\\x00\r\n") ||
+		strings.HasPrefix(path, "/proc/") || strings.HasPrefix(path, "/sys/") || strings.HasPrefix(path, "/dev/") {
+		return false
+	}
+	for _, component := range strings.Split(path, "/")[1:] {
+		if component == "" || component == "." || component == ".." {
+			return false
+		}
+	}
+	lower := strings.ToLower(path)
+	return strings.HasSuffix(lower, ".so") || strings.Contains(lower, ".so.")
+}
+func guardCompatExternalNativeHash05010(path string) (string, error) {
+	if !guardCompatExternalNativePath05010(path) {
+		return "", errors.New("invalid external native path")
+	}
+	current := "/"
+	for _, component := range strings.Split(path, "/")[1:] {
+		current = filepath.Join(current, component)
+		stat, err := os.Lstat(current)
+		if err != nil {
+			return "", err
+		}
+		if stat.Mode()&os.ModeSymlink != 0 {
+			return "", errors.New("external native module symlink rejected")
+		}
+	}
+	stat, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+	if !stat.Mode().IsRegular() || stat.Size() > 512<<20 {
+		return "", errors.New("external native module invalid")
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	sum := sha256.New()
+	if _, err = io.Copy(sum, io.LimitReader(f, (512<<20)+1)); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(sum.Sum(nil)), nil
 }
 func guardCompatPath0502(root, rel string) (string, error) {
 	if !guardCompatRel0502(rel) {
@@ -435,6 +492,18 @@ func guardCompatValidateLaunch0502(root, project, minecraft, loader string, agen
 			return fmt.Errorf("Guard compatibility digest mismatch: %s", a.Path)
 		}
 		authorized[a.Kind+":"+strings.ToLower(a.Path)] = a
+	}
+	for _, ext := range p.ExternalNativeModules {
+		if revoked[ext.SHA256] {
+			return fmt.Errorf("Guard external native module revoked: %s", ext.Path)
+		}
+		actual, err := guardCompatExternalNativeHash05010(ext.Path)
+		if err != nil {
+			return fmt.Errorf("Guard external native module unavailable: %w", err)
+		}
+		if actual != ext.SHA256 {
+			return fmt.Errorf("Guard external native module changed: %s", ext.Path)
+		}
 	}
 	for _, tr := range p.Transformations {
 		if revokedTransform[tr.ID] || revoked[tr.OwnerSHA256] {

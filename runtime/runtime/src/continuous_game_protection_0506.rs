@@ -20,6 +20,8 @@ pub struct LiveGameGuard0506 {
     pinned: BTreeMap<PathBuf, String>,
     jvm_args: Vec<String>,
     #[cfg(target_os = "linux")]
+    linux_external: BTreeMap<PathBuf,String>,
+    #[cfg(target_os = "linux")]
     linux_process: Option<crate::linux_runtime_guard_0508::LinuxRuntimeGuard0508>,
     #[cfg(target_os = "linux")]
     linux_daemon: Option<crate::linux_guard::GuardSupervisor>,
@@ -88,10 +90,17 @@ impl LiveGameGuard0506 {
         }
         if pinned.is_empty() {return Err("live Guard executable inventory empty".into())}
         if pinned.len() > LIMIT {return Err("live Guard inventory capacity exceeded".into())}
+        #[cfg(target_os = "linux")]
+        let linux_external = match signed.as_ref() {
+            Some(policy) => policy.external_native_modules(&root)?,
+            None => BTreeMap::new(),
+        };
         let guard = Self {
             root, project:manifest.project_id.clone(), minecraft:manifest.minecraft.version.clone(),
-            loader:manifest.minecraft.loader.clone(), policy_digest:signed.map(|p|p.digest().to_string()),
+            loader:manifest.minecraft.loader.clone(), policy_digest:signed.as_ref().map(|p|p.digest().to_string()),
             pinned, jvm_args:plan.jvm_args.clone(),
+            #[cfg(target_os = "linux")]
+            linux_external,
             #[cfg(target_os = "linux")]
             linux_process: None,
             #[cfg(target_os = "linux")]
@@ -110,6 +119,8 @@ impl LiveGameGuard0506 {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn linux_signed_artifacts(&self) -> &BTreeMap<PathBuf, String> { &self.pinned }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn linux_external_modules(&self) -> &BTreeMap<PathBuf,String> { &self.linux_external }
 
     #[cfg(target_os = "linux")]
     pub(crate) fn linux_jvm_args(&self) -> &[String] { &self.jvm_args }
@@ -161,6 +172,12 @@ impl LiveGameGuard0506 {
         }
         crate::guard_compatibility_0502::enforce_launch(&self.root, &self.project,
             &self.minecraft, &self.loader, &self.jvm_args)?;
+        #[cfg(target_os = "linux")]
+        for (path,expected) in &self.linux_external {
+            if &crate::guard_compatibility_0502::verified_external_native_hash(path)?!=expected {
+                return Err(format!("live Guard external overlay changed: {}",path.display()));
+            }
+        }
         for (path, expected) in &self.pinned {
             if &digest_file(&self.root, path)? != expected {
                 return Err(format!("live Guard executable changed during game: {}", path.display()));
@@ -242,6 +259,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         let mut pins=BTreeMap::new(); pins.insert(jar.clone(),sha);
         let live=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
             loader:"vanilla".into(),policy_digest:None,pinned:pins,jvm_args:vec![],
+            #[cfg(target_os = "linux")] linux_external:BTreeMap::new(),
             #[cfg(target_os = "linux")] linux_process:None,
             #[cfg(target_os = "linux")] linux_daemon:None,
             #[cfg(target_os = "macos")] macos_process:None,
@@ -259,6 +277,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         let mut pinned=BTreeMap::new();pinned.insert(file.clone(),hex::encode(Sha256::digest(b"trusted")));
         let guard=LiveGameGuard0506{root:root.clone(),project:"p".into(),minecraft:"1.20.1".into(),
             loader:"vanilla".into(),policy_digest:None,pinned,jvm_args:vec![],
+            #[cfg(target_os = "linux")] linux_external:BTreeMap::new(),
             #[cfg(target_os = "linux")] linux_process:None,
             #[cfg(target_os = "linux")] linux_daemon:None,
             #[cfg(target_os = "macos")] macos_process:None,

@@ -769,6 +769,11 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
     Ok(String::from_utf16_lossy(&buffer[..length]))
 }
 
+// Do not patch the IAT of externally signed recording/overlay/AV modules.
+// Parent Module Guard still authenticates loaded DLLs independently.
+fn scope_contains(path:&str, root:&str) -> bool {
+    path == root || path.strip_prefix(root).is_some_and(|tail|tail.starts_with('\\'))
+}
 fn should_skip_module(module: &ProcessModule) -> bool {
     let path = normalize_path(&module.path);
     let system_root = env::var("SystemRoot")
@@ -778,6 +783,22 @@ fn should_skip_module(module: &ProcessModule) -> bool {
     if path == system_root || path.strip_prefix(&system_root).is_some_and(|suffix| suffix.starts_with('\\')) {
         return true;
     }
+    // External overlays, capture utilities and AV/GPU vendor DLLs are validated
+    // by the parent Module Guard. Never rewrite their IAT: the hooks can conflict
+    // with vendor instrumentation even when the DLL is authenticode-signed.
+    // Only Java's own modules and game-root native code are instrumented.
+    let game_root=env::current_dir().ok().map(|p|normalize_path(&p.to_string_lossy()));
+    let jvm=wide_null("jvm.dll");
+    let jvm=unsafe {GetModuleHandleW(jvm.as_ptr())};
+    let java_root=if jvm.is_null(){None}else{
+        module_path(jvm).ok().and_then(|p|{
+            std::path::Path::new(&p).parent()?.parent()?.parent()
+                .map(|r|normalize_path(&r.to_string_lossy()))
+        })
+    };
+    let inside = game_root.as_ref().is_some_and(|p| scope_contains(&path,p))
+        || java_root.as_ref().is_some_and(|p|scope_contains(&path,p));
+    if !inside {return true;}
     let wrapper = hook_load_library_w as usize;
     wrapper >= module.base && wrapper < module.base.saturating_add(module.size)
 }
@@ -1213,5 +1234,20 @@ mod self_process_handle_tests {
         assert_ne!(opened, pseudo);
         unsafe { CloseHandle(opened); }
         assert!(!is_current_process_handle(std::ptr::null_mut()));
+    }
+}
+
+#[cfg(test)]
+mod external_overlay_scope_05010_tests {
+    use super::scope_contains;
+    #[test]
+    fn verified_native_scope_never_matches_vendor_or_sibling_directories() {
+        let game=r"c:\players\minecraft";
+        let java=r"c:\program files\temurin\jdk";
+        assert!(scope_contains(r"c:\players\minecraft\natives\lwjgl.dll",game));
+        assert!(scope_contains(r"c:\program files\temurin\jdk\bin\server\jvm.dll",java));
+        assert!(!scope_contains(r"c:\players\minecraft-backup\foo.dll",game));
+        assert!(!scope_contains(r"c:\program files\obs-studio\bin\obs-hook.dll",game));
+        assert!(!scope_contains(r"c:\program files\antivirus\scanner.dll",java));
     }
 }

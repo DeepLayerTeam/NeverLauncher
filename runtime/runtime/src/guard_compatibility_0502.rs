@@ -28,11 +28,15 @@ struct Transform { id:String,owner_sha256:String }
 struct ClassBytes0504 { #[serde(rename="class")] name:String, sha256:String }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
+struct ExternalNative05010 { path:String, sha256:String }
+#[derive(Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 struct Policy {
  schema_version:String, project_id:String,minecraft:String,loader:String,epoch:u64,
  issued_at:i64,expires_at:i64,artifacts:Vec<Artifact>,transformations:Vec<Transform>,
  revoked_digests:Vec<String>,revoked_transformations:Vec<String>,
  #[serde(default)] loader_class_bytes:Vec<ClassBytes0504>,
+ #[serde(default)] external_native_modules:Vec<ExternalNative05010>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
@@ -109,7 +113,7 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
  let current=now()?;
  if p.schema_version!=SCHEMA || p.epoch==0 || p.project_id.is_empty() || p.minecraft.is_empty() || p.loader.is_empty() ||
   p.issued_at<=0 || p.issued_at>current+300 || p.expires_at<=current || p.expires_at<=p.issued_at || p.expires_at-p.issued_at>90*86400 ||
-  p.artifacts.len()>4096 || p.transformations.len()>4096 || p.loader_class_bytes.len()>4096 || p.revoked_digests.len()>4096 || p.revoked_transformations.len()>4096 {
+  p.artifacts.len()>4096 || p.transformations.len()>4096 || p.loader_class_bytes.len()>4096 || p.external_native_modules.len()>64 || p.revoked_digests.len()>4096 || p.revoked_transformations.len()>4096 {
   return Err("Guard compatibility scope, validity or list limits invalid".into())
  }
  let mut paths=HashSet::new();let mut plugin_digests=HashSet::new();
@@ -117,6 +121,13 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
   if !["mod","java-agent","java-plugin","native-library","loader-library"].contains(&a.kind.as_str()) || !relative(&a.path) || !is_sha(&a.sha256) ||
    !paths.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){return Err("Guard compatibility artifact invalid/duplicate".into())}
   if a.kind=="java-plugin"{plugin_digests.insert(&a.sha256);}
+ }
+ let mut external_paths=HashSet::new();
+ for m in &p.external_native_modules {
+  if !is_sha(&m.sha256) || !valid_external_native_path(&m.path) ||
+     !external_paths.insert(m.path.clone()) || p.revoked_digests.contains(&m.sha256) {
+   return Err("Guard external overlay path/hash invalid, duplicated or revoked".into())
+  }
  }
  let mut ids=HashSet::new();
  for t in &p.transformations {
@@ -158,6 +169,21 @@ impl GamePolicy0503 {
    items.push((abs,a.sha256.clone(),a.kind.clone()));
   }
   Ok(items)
+ }
+ /// Exact Linux user-mode overlay/recording native images. A signed operator
+ /// policy, never the user's environment or a vendor name, grants access.
+ /// Every entry is checked before launch and again during game monitoring.
+ pub fn external_native_modules(&self,root:&Path)->Result<std::collections::BTreeMap<std::path::PathBuf,String>,String> {
+  let mut result=std::collections::BTreeMap::new();
+  for entry in &self.policy.external_native_modules {
+   if self.policy.revoked_digests.contains(&entry.sha256) {return Err("Guard external module revoked".into())}
+   let path=std::path::PathBuf::from(&entry.path);
+   if path.starts_with(root) {return Err("Guard external module inside game root".into())}
+   let hash=verified_external_native_hash(&path)?;
+   if hash!=entry.sha256 {return Err(format!("Guard external overlay modified: {}",path.display()))}
+   if result.insert(path,entry.sha256.clone()).is_some(){return Err("Guard duplicate external overlay".into())}
+  }
+  Ok(result)
  }
  pub fn digest(&self)->&str { &self.digest }
  pub fn authorize(&self,root:&Path,kind:&str,relative_path:&str,digest:&str)->Result<(),String> {
@@ -210,6 +236,27 @@ pub fn verified_for_game(root:&Path,project:&str,minecraft:&str,loader:&str)->Re
  Ok(Some(GamePolicy0503{policy:v.policy,digest:v.digest}))
 }
 
+fn valid_external_native_path(name:&str)->bool {
+ if !cfg!(target_os="linux") || name.len()>4096 || !name.starts_with('/') ||
+    name.contains('\0') || name.contains('\n') || name.contains('\r') || name.contains('\\') ||
+    ["/proc/","/sys/","/dev/"].iter().any(|p|name.starts_with(p)) ||
+    !name.split('/').skip(1).all(|part|!part.is_empty() && part!="." && part!="..") {return false}
+ let lower=name.to_ascii_lowercase();
+ lower.ends_with(".so") || lower.contains(".so.")
+}
+pub(crate) fn verified_external_native_hash(path:&Path)->Result<String,String>{
+ let name=path.to_str().ok_or("Guard external module path is not UTF-8")?;
+ if !valid_external_native_path(name){return Err("Guard external overlay unsafe absolute library path".into())}
+ let mut cursor=std::path::PathBuf::from("/");
+ for segment in path.components().skip(1) {
+  let Component::Normal(part)=segment else{return Err("Guard external overlay non-normal path".into())};
+  cursor.push(part);
+  if fs::symlink_metadata(&cursor).map_err(|e|e.to_string())?.file_type().is_symlink(){
+   return Err("Guard external overlay symlink rejected".into())
+  }
+ }
+ actual_sha(path)
+}
 fn validate_safe_path(root:&Path,rel:&str,max:u64)->Result<(),String>{
  if !relative(rel){return Err("Guard compatibility invalid path".into())}
  let mut path=root.to_path_buf();
@@ -289,6 +336,11 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
   validate_safe_path(root,&a.path,512*1024*1024)?;
   if actual_sha(&path)?!=a.sha256{return Err(format!("Guard compatibility digest mismatch: {}",a.path))}
   approved.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase()),a.sha256.clone());
+ }
+ for m in &p.external_native_modules {
+  if p.revoked_digests.contains(&m.sha256) || verified_external_native_hash(Path::new(&m.path))?!=m.sha256 {
+   return Err("Guard external overlay missing, revoked or modified".into())
+  }
  }
  for tr in &p.transformations {if p.revoked_transformations.contains(&tr.id) || p.revoked_digests.contains(&tr.owner_sha256){return Err("Guard compatibility transformation revoked".into())}}
  require_candidates(root,&root.join("mods"),"mod",&[".jar"],&approved)?;

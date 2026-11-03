@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -29,16 +30,19 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
     private final Path root;
     private final Map<Path, String> digests;
     private final Map<Path, String> kinds;
+    private final Map<Path, String> externalModules;
     private final boolean strictCode;
     private final boolean linuxProcessRequired;
     private final Set<Path> verifiedOrigins = new HashSet<Path>();
     private volatile long lastVerifiedNanos = System.nanoTime();
 
     private RuntimeIntegrity0505(Path root, Map<Path, String> digests, Map<Path, String> kinds,
+                                 Map<Path,String> externalModules,
                                  boolean strictCode, boolean linuxProcessRequired) {
         this.root = root;
         this.digests = digests;
         this.kinds = kinds;
+        this.externalModules = externalModules;
         this.strictCode = strictCode;
         this.linuxProcessRequired = linuxProcessRequired;
     }
@@ -69,7 +73,23 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                 throw new SecurityException("Guard Runtime Integrity outside/duplicate file " + i);
             kinds.put(path, kind);
         }
-        RuntimeIntegrity0505 guard = new RuntimeIntegrity0505(root,digests,kinds,
+        int externalCount;
+        try {externalCount = Integer.parseInt(props.getProperty("integrity.external.count","0"));}
+        catch(NumberFormatException ex) {throw new SecurityException("Guard external overlay count invalid",ex);}
+        if (externalCount<0 || externalCount>64 || (externalCount!=0 && !System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("linux")))
+            throw new SecurityException("Guard external overlay count/platform invalid");
+        Map<Path,String> external = new HashMap<Path,String>();
+        for(int i=0;i<externalCount;i++) {
+            String raw=props.getProperty("integrity.external."+i+".path");
+            String sha=props.getProperty("integrity.external."+i+".sha256");
+            if(raw==null || sha==null || !sha.matches("[0-9a-f]{64}"))
+                throw new SecurityException("Guard external overlay malformed binding "+i);
+            Path path=new File(new String(Base64.getDecoder().decode(raw),"UTF-8")).toPath();
+            if(!path.isAbsolute() || path.normalize().equals(root) || path.normalize().startsWith(root) ||
+               !path.equals(path.normalize()) || !isNative(path) || external.put(path,sha)!=null)
+                throw new SecurityException("Guard external overlay unsafe or duplicate path "+i);
+        }
+        RuntimeIntegrity0505 guard = new RuntimeIntegrity0505(root,digests,kinds,external,
             "true".equals(props.getProperty("integrity.code.strict")),
             "true".equals(props.getProperty("integrity.linux.process.required")));
         guard.scan();
@@ -142,6 +162,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
 
     private void scan() throws Exception {
         for (Path path : digests.keySet()) check(path);
+        for (Path path : externalModules.keySet()) checkExternal(path);
         checkTree(root.resolve("mods"),true);
         checkTree(root.resolve("natives"),false);
         // Linux: verify actual native modules mapped by this JVM, not only files on disk.
@@ -204,9 +225,44 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                     if (!"native".equals(kinds.get(p)))
                         throw new SecurityException("unapproved mapped native module: "+p);
                     check(p);
+                } else if (isNative(p) && !p.startsWith(javaHome) && !trustedOSNative(p)) {
+                    if (!externalModules.containsKey(p))
+                        throw new SecurityException("unapproved external native module: "+p);
+                    checkExternal(p);
                 }
             }
         }
+    }
+    private static boolean trustedOSNative(Path path) throws Exception {
+        String name=path.toString();
+        if (!(name.startsWith("/usr/lib/") || name.startsWith("/usr/lib64/") ||
+              name.startsWith("/lib/") || name.startsWith("/lib64/"))) return false;
+        // A system library is trusted only under a root-owned, non-writable
+        // directory chain. Home-directory Vulkan layers must be explicitly pinned.
+        try {
+            Path real=path.toRealPath();
+            if (!real.toString().startsWith("/usr/lib/") && !real.toString().startsWith("/usr/lib64/")) return false;
+            Path cursor=real;
+            while(cursor!=null) {
+                int uid=(Integer)Files.getAttribute(cursor,"unix:uid",LinkOption.NOFOLLOW_LINKS);
+                Set<PosixFilePermission> perms=Files.getPosixFilePermissions(cursor,LinkOption.NOFOLLOW_LINKS);
+                if(uid!=0 || perms.contains(PosixFilePermission.GROUP_WRITE) ||
+                       perms.contains(PosixFilePermission.OTHERS_WRITE)) return false;
+                cursor=cursor.getParent();
+            }
+            return true;
+        } catch (IOException ex) {return false;}
+    }
+    private void checkExternal(Path path) throws Exception {
+        if (!path.isAbsolute() || !isNative(path)) throw new SecurityException("external native not an absolute library");
+        Path cursor=path.getRoot();
+        for(Path part:path) {
+            cursor=cursor.resolve(part);
+            if(Files.isSymbolicLink(cursor)) throw new SecurityException("external native symlink: "+cursor);
+        }
+        if (!Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS) || Files.size(path)>512L*1024*1024 ||
+            !externalModules.get(path).equals(digest(path)))
+            throw new SecurityException("external native modified: "+path);
     }
     private static boolean isNative(Path file) {
         String s=file.getFileName().toString().toLowerCase(Locale.ROOT);

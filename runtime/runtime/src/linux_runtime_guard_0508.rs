@@ -30,6 +30,7 @@ pub struct LinuxRuntimeGuard0508 {
     java_home: PathBuf,
     java_executable: PathBuf,
     signed: BTreeMap<PathBuf, String>,
+    external: BTreeMap<PathBuf, String>,
     java_native_baseline: BTreeMap<PathBuf, String>,
     expected_jvm_args: Vec<String>,
 }
@@ -110,6 +111,24 @@ fn collect_java_natives(home: &Path) -> Result<BTreeMap<PathBuf, String>, String
     Ok(result)
 }
 
+fn trusted_system_library(path:&Path)->Result<bool,String> {
+ // The external path may be a canonical /usr/lib file or a distro /lib ->
+ // /usr/lib alias. Only a root-owned immutable target and directory chain
+ // receives OS-library trust; user-owned overlays require signed digest pins.
+ let original=path.to_string_lossy();
+ if !["/usr/lib/","/usr/lib64/","/lib/","/lib64/"].iter().any(|r|original.starts_with(r)) {return Ok(false)}
+ let resolved=match fs::canonicalize(path) {Ok(p)=>p,Err(_)=>return Ok(false)};
+ let resolved_name=resolved.to_string_lossy();
+ if !["/usr/lib/","/usr/lib64/"].iter().any(|r|resolved_name.starts_with(r)) {return Ok(false)}
+ let mut current=PathBuf::from("/");
+ for component in resolved.components().skip(1) {
+  let std::path::Component::Normal(part)=component else{return Ok(false)};
+  current.push(part);
+  let meta=fs::symlink_metadata(&current).map_err(|e|e.to_string())?;
+  if meta.file_type().is_symlink() || meta.uid()!=0 || meta.mode() & 0o022 != 0 {return Ok(false)}
+ }
+ Ok(fs::metadata(&resolved).map_err(|e|e.to_string())?.is_file())
+}
 fn check_process(pid: u32, start: u64) -> Result<(), String> {
     if start_ticks_from_stat(&read_proc(pid, "stat")?)? != start {
         return Err("Linux Guard game process identity changed (PID reuse)".into());
@@ -161,7 +180,8 @@ impl LinuxRuntimeGuard0508 {
         } else { BTreeMap::new() };
         let guard = Self { pid, start_ticks: start_ticks_from_stat(&read_proc(pid, "stat")?)?,
             java_device: expected.dev(), java_inode: expected.ino(), java_sha256: sha256_file(&java)?,
-            root, java_home, java_executable:java, signed, java_native_baseline,
+            root, java_home, java_executable:java, signed,
+            external:verified.linux_external_modules().clone(), java_native_baseline,
             expected_jvm_args: verified.linux_jvm_args().to_vec() };
         guard.verify()?;
         Ok(guard)
@@ -214,7 +234,17 @@ impl LinuxRuntimeGuard0508 {
             if let Some(fd) = proc_object { verify_inode(path, fd)?; }
             return Ok(());
         }
-        if !path.starts_with(&self.root) { return Ok(()); } // OS-managed shared libraries
+        if !path.starts_with(&self.root) {
+            if !executable && !native_name(path) {return Ok(())}
+            if trusted_system_library(path)? {return Ok(())}
+            let expected=self.external.get(path).ok_or_else(||format!(
+                "Linux Guard external native module not approved: {}",path.display()))?;
+            if &crate::guard_compatibility_0502::verified_external_native_hash(path)?!=expected {
+                return Err(format!("Linux Guard external overlay modified: {}",path.display()));
+            }
+            if let Some(fd)=proc_object {verify_inode(path,fd)?;}
+            return Ok(())
+        }
         if !executable && !game_code_name(path) { return Ok(()); } // data files / non-executable fd
         let expected = self.signed.get(path)
             .ok_or_else(|| format!("Linux Guard unauthorized game module: {}", path.display()))?;
@@ -238,7 +268,7 @@ impl LinuxRuntimeGuard0508 {
             let mut fields = line.split_whitespace();
             let _address = fields.next();
             let permissions = fields.next().unwrap_or("");
-            let _offset = fields.next(); let _device = fields.next(); let _inode = fields.next();
+            let _offset = fields.next(); let _device = fields.next(); let inode = fields.next().unwrap_or("0");
             if !permissions.contains('x') { continue; }
             let filename = fields.collect::<Vec<_>>().join(" ");
             if !filename.starts_with('/') { continue; }
@@ -251,6 +281,13 @@ impl LinuxRuntimeGuard0508 {
             // Any executable file-backed mapping from game root is code,
             // regardless of its extension (.dat is not a bypass).
             self.verify_mapped_file(path, None, true)?;
+            if self.external.contains_key(path) {
+                let mapped_inode=inode.parse::<u64>().map_err(|_|"Linux Guard bad overlay mapping inode")?;
+                let actual_inode=fs::metadata(path).map_err(|e|format!("Linux Guard overlay map vanished: {e}"))?.ino();
+                if mapped_inode==0 || mapped_inode!=actual_inode {
+                    return Err(format!("Linux Guard external overlay inode replaced: {}",path.display()));
+                }
+            }
         }
         Ok(())
     }
@@ -287,6 +324,14 @@ impl LinuxRuntimeGuard0508 {
 mod tests {
     use super::*;
     #[test]
+    fn external_vendor_modules_are_not_implicitly_approved() {
+        let temp=std::env::temp_dir().join(format!("nl-05010-vendor-{}",std::process::id()));
+        let _=fs::remove_dir_all(&temp);fs::create_dir_all(&temp).unwrap();
+        let overlay=temp.join("libcapture.so");fs::write(&overlay,b"signed test payload").unwrap();
+        assert!(!trusted_system_library(&overlay).unwrap());
+        let _=fs::remove_dir_all(temp);
+    }
+    #[test]
     fn parses_real_linux_stat_with_weird_comm() {
         let sample = "424 (hello (other) game) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 12345 20 21 22";
         assert_eq!(start_ticks_from_stat(sample).unwrap(), 12345);
@@ -317,7 +362,7 @@ mod tests {
             root:std::env::temp_dir().join(format!("nl-0508-empty-{}",pid)),
             java_home:exe.parent().unwrap().parent().unwrap().to_path_buf(),
             java_executable:exe.clone(),
-            signed:BTreeMap::new(), java_native_baseline:BTreeMap::new(),
+            signed:BTreeMap::new(), external:BTreeMap::new(), java_native_baseline:BTreeMap::new(),
             expected_jvm_args:vec!["8".into()],
         };
         assert!(guard.verify().is_ok(), "actual hardened child should pass");
@@ -352,7 +397,7 @@ mod tests {
             java_device:meta.dev(), java_inode:meta.ino(), java_sha256:sha256_file(&exe).unwrap(),
             root:root.clone(), java_home:PathBuf::from("/not-a-java-home"),
             java_executable:exe.clone(),
-            signed:BTreeMap::new(), java_native_baseline:BTreeMap::new(),
+            signed:BTreeMap::new(), external:BTreeMap::new(), java_native_baseline:BTreeMap::new(),
             expected_jvm_args:vec!["8".into()],
         };
         let result=guard.verify();

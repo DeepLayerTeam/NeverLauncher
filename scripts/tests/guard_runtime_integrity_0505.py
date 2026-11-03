@@ -69,16 +69,19 @@ public class Game {
 
     def tearDown(self): self.work.cleanup()
 
-    def invoke(self, extra=(), optional=(), strict=True, args=()):
+    def invoke(self, extra=(), optional=(), strict=True, args=(), external=()):
         pins=[(self.agent,'code'),(self.game,'code')]+list(optional)
         config=[f'main={b64("fixture.Game")}', 'count=0', 'guard.policy.active=true',
                 'transform.count=0','loader.id=vanilla','loader.count=0',
                 'loader.class.count=0', 'integrity.required=true',
                 f'integrity.root={b64(self.root)}',f'integrity.code.strict={str(strict).lower()}',
-                f'integrity.count={len(pins)}']
+                f'integrity.count={len(pins)}', f'integrity.external.count={len(external)}']
         for i,(path,kind) in enumerate(pins):
             config.extend((f'integrity.{i}.path={b64(path)}',f'integrity.{i}.sha256={digest(path)}',
                            f'integrity.{i}.kind={kind}'))
+        for i,path in enumerate(external):
+            config.extend((f'integrity.external.{i}.path={b64(path)}',
+                           f'integrity.external.{i}.sha256={digest(path)}'))
         self.config=self.root/'guard.properties';self.config.write_text('\n'.join(config)+'\n')
         cmd=['java','-javaagent:'+str(self.agent)+'='+str(self.config),'-cp',
              os.pathsep.join([str(self.game)]+list(map(str,extra))),
@@ -143,5 +146,35 @@ public class Game {
         proc=self.invoke(optional=[(lib,'native')],args=[lib])
         rc,out,err=self.finish(proc,timeout=18)
         self.assertEqual(rc,0,err);self.assertIn('GAME_STARTED',out)
+
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Linux native overlay required')
+    def test_external_native_unapproved_during_live_game(self):
+        path=self.base/'unapproved-external-overlay.so'
+        shutil.copy2(self.native,path)
+        proc=self.invoke(args=[path]);rc,_,err=self.finish(proc,timeout=17)
+        self.assertNotEqual(rc,0)
+        self.assertIn('unapproved external native module',err)
+
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Linux native overlay required')
+    def test_external_native_signed_and_pinned_allowed(self):
+        path=self.base/'approved-external-overlay.so'
+        shutil.copy2(self.native,path)
+        proc=self.invoke(args=[path], external=[path])
+        rc,out,err=self.finish(proc,timeout=18)
+        self.assertEqual(rc,0,err)
+        self.assertIn('GAME_STARTED',out)
+
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Linux native overlay required')
+    def test_external_native_replaced_during_game(self):
+        path=self.base/'replace-external-overlay.so'
+        shutil.copy2(self.native,path)
+        proc=self.invoke(args=[path],external=[path])
+        self.assertEqual(proc.stdout.readline().strip(),'GAME_STARTED')
+        alternate=self.base/'replacement.so'
+        alternate.write_bytes(b'not an approved ELF overlay')
+        os.replace(alternate,path)
+        rc,_,err=self.finish(proc,timeout=16)
+        self.assertNotEqual(rc,0)
+        self.assertIn('external native modified',err)
 
 if __name__=='__main__': unittest.main(verbosity=2)
