@@ -1,4 +1,4 @@
-name: Native branded installers 0.45.10
+name: Native branded installers (notarized 0.52.2)
 on:
   pull_request:
     paths:
@@ -137,6 +137,22 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_P12_PASSWORD }}
+      - name: Configure protected Apple notarization profile
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          NOTARY_PRIVATE_KEY: ${{ secrets.APPLE_NOTARY_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$NOTARY_KEY_ID" && test -n "$NOTARY_ISSUER" && test -n "$NOTARY_PRIVATE_KEY"
+          printf '%s' "$NOTARY_PRIVATE_KEY" | /usr/bin/base64 -D > "$RUNNER_TEMP/native-notary-0522.p8"
+          chmod 600 "$RUNNER_TEMP/native-notary-0522.p8"
+          xcrun notarytool store-credentials native-package-0522 \
+            --key "$RUNNER_TEMP/native-notary-0522.p8" \
+            --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER"
+          printf 'LAUNCHER_MACOS_NOTARY_PROFILE=native-package-0522\n' >> "$GITHUB_ENV"
       - name: Import Linux signing key
         if: runner.os == 'Linux'
         shell: bash
@@ -163,6 +179,10 @@ jobs:
             --project '${{ vars.LAUNCHER_BRANDED_PROJECT_ID }}' --version "$VERSION" \
             --config branded-input/bootstrap.signed.json --prestarter "$PRESTARTER" \
             --root-key-file root-public-key.hex --output dist/native "${EXTRA[@]}"
+      - name: Destroy temporary Apple notary key file
+        if: always() && runner.os == 'macOS'
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/native-notary-0522.p8"
       - name: Upload signed installers and signatures
         uses: actions/upload-artifact@v4
         with:

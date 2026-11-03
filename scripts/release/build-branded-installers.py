@@ -531,6 +531,24 @@ def package_macos(args, stage, key, out, version):
         checked(*cmd)
         if not args.unsigned_test:
             checked("pkgutil", "--check-signature", result)
+            # A signed pkg alone is not accepted as a Gatekeeper-ready final
+            # installer: notarize the exact published package and staple the
+            # Apple ticket before calculating its final release SHA-256.
+            profile = os.environ.get("LAUNCHER_MACOS_NOTARY_PROFILE", "")
+            if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", profile):
+                raise RuntimeError("protected Apple notarytool keychain profile required")
+            notarized = subprocess.run(
+                ["xcrun", "notarytool", "submit", str(result),
+                 "--keychain-profile", profile, "--wait", "--output-format", "json"],
+                capture_output=True, text=True, check=True, timeout=1800,
+            )
+            outcome = json.loads(notarized.stdout)
+            if outcome.get("status") != "Accepted" or not outcome.get("id"):
+                raise RuntimeError("Apple notary service did not accept final installer")
+            checked("xcrun", "stapler", "staple", result)
+            checked("xcrun", "stapler", "validate", result)
+            checked("spctl", "--assess", "--type", "install", "--verbose=4", result)
+            checked("pkgutil", "--check-signature", result)
         # Invoke the real signed-bootstrap verification in the newly built
         # application before accepting the .pkg as a deliverable.
         checked(binary, "verify", "--bundle", resources)

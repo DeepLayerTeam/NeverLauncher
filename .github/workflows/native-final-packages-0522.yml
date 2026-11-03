@@ -1,0 +1,198 @@
+name: Native final package acceptance 0.52.2 (six OS/CPU runners)
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_url:
+        description: 'HTTPS source index of the exact six publicly downloadable signed final installers'
+        type: string
+        required: true
+      manifest_sha256:
+        description: 'Independently approved SHA-256 of source index (NOT copied from the index)'
+        type: string
+        required: true
+      manifest_size:
+        description: 'Exact source index byte size from protected release approval'
+        type: string
+        required: true
+      project:
+        description: 'Project ID pinned by signed bootstrap configuration'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: native-final-packages-0522-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-package:
+    name: Real signed installer on ${{ matrix.platform }}-${{ matrix.arch }}
+    # These hosted runners are disposable. This test runs real system installers,
+    # including sudo dpkg and Apple Installer, and MUST NOT run on user machines.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: windows-2022, platform: windows, arch: x64}
+          - {runner: windows-11-arm, platform: windows, arch: arm64}
+          - {runner: ubuntu-24.04, platform: linux, arch: x64}
+          - {runner: ubuntu-24.04-arm, platform: linux, arch: arm64}
+          - {runner: macos-15-intel, platform: macos, arch: x64}
+          - {runner: macos-15, platform: macos, arch: arm64}
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.runner }}
+    environment: production-acceptance
+    timeout-minutes: 70
+    steps:
+      - name: Reject untrusted branch/ref before accessing release inputs
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == refs/tags/v* ]] || exit 2
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned-format Ed25519 review dependency
+        run: python -m pip install 'cryptography>=42,<47'
+      - name: Pin real native runner architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util, os, pathlib
+          script=pathlib.Path('scripts/acceptance/native_packages_0522.py').resolve()
+          spec=importlib.util.spec_from_file_location('native_0522',script)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          print('Native runner:',m.host_target())
+          assert m.host_target()==('${{ matrix.platform }}','${{ matrix.arch }}')
+          PY
+      - name: Provision independent native signature trust
+        shell: bash
+        env:
+          LINUX_GPG_KEYRING_BASE64: ${{ secrets.NL_NATIVE_ACCEPTANCE_GPG_KEYRING_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [[ '${{ matrix.platform }}' == 'linux' ]]; then
+            test -n "$LINUX_GPG_KEYRING_BASE64"
+            python - <<'PY'
+          import base64,os,pathlib
+          raw=base64.b64decode(os.environ['LINUX_GPG_KEYRING_BASE64'],validate=True)
+          path=pathlib.Path(os.environ['RUNNER_TEMP'])/'native-acceptance-trusted.gpg'
+          path.write_bytes(raw)
+          path.chmod(0o600)
+          PY
+          fi
+      - name: Download, authenticate, system-install, provision and verify the final package
+        shell: bash
+        env:
+          NATIVE_MANIFEST_URL: ${{ inputs.manifest_url }}
+          NATIVE_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          NATIVE_MANIFEST_SIZE: ${{ inputs.manifest_size }}
+          NATIVE_PROJECT: ${{ inputs.project }}
+          APPROVED_INDEX_SHA256: ${{ vars.NL_NATIVE_ACCEPTANCE_INDEX_SHA256 }}
+          APPROVED_PROJECT: ${{ vars.LAUNCHER_BRANDED_PROJECT_ID }}
+          PINNED_WINDOWS_SHA1: ${{ vars.NL_NATIVE_ACCEPTANCE_WINDOWS_SIGNER_SHA1 }}
+          PINNED_LINUX_GPG_FINGERPRINT: ${{ vars.NL_NATIVE_ACCEPTANCE_LINUX_GPG_FINGERPRINT }}
+          PINNED_LINUX_KEYRING_SHA256: ${{ vars.NL_NATIVE_ACCEPTANCE_LINUX_KEYRING_SHA256 }}
+          PINNED_APPLE_TEAM_ID: ${{ vars.NL_NATIVE_ACCEPTANCE_APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$APPROVED_INDEX_SHA256" && test "$NATIVE_MANIFEST_SHA256" = "$APPROVED_INDEX_SHA256"
+          test -n "$APPROVED_PROJECT" && test "$NATIVE_PROJECT" = "$APPROVED_PROJECT"
+          python scripts/acceptance/native_packages_0522.py run \
+            --manifest-url "$NATIVE_MANIFEST_URL" \
+            --manifest-sha256 "$NATIVE_MANIFEST_SHA256" \
+            --manifest-size "$NATIVE_MANIFEST_SIZE" \
+            --version "$(cat VERSION | tr -d '\r\n')" --commit "$GITHUB_SHA" \
+            --project "$NATIVE_PROJECT" --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" \
+            --linux-keyring "$RUNNER_TEMP/native-acceptance-trusted.gpg" \
+            --linux-keyring-sha256 "$PINNED_LINUX_KEYRING_SHA256" \
+            --linux-fingerprint "$PINNED_LINUX_GPG_FINGERPRINT" \
+            --windows-thumbprint "$PINNED_WINDOWS_SHA1" \
+            --apple-team-id "$PINNED_APPLE_TEAM_ID" \
+            --disposable-runner --output "$RUNNER_TEMP/native-package-0522"
+      - name: Upload redacted diagnostic logs and verified receipt or BLOCKED marker
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-package-0522-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-package-0522/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Clear acceptance keyring
+        if: always() && matrix.platform == 'linux'
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/native-acceptance-trusted.gpg"
+
+  six-native-gate:
+    name: Require six distinct exact final packages and unchanged execution evidence
+    needs: [native-package]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-acceptance
+    steps:
+      - name: Missing native target blocks acceptance
+        shell: bash
+        env:
+          RESULT: ${{ needs.native-package.result }}
+        run: |
+          test "$RESULT" = success || { echo 'BLOCKED: one or more real native installers failed/skipped'; exit 2; }
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install signature-verification dependency
+        run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-package-0522-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-package-receipts-0522
+          merge-multiple: false
+      - name: Re-fetch same independently pinned source index
+        shell: bash
+        env:
+          INDEX_URL: ${{ inputs.manifest_url }}
+          INDEX_SHA256: ${{ inputs.manifest_sha256 }}
+          INDEX_SIZE: ${{ inputs.manifest_size }}
+        run: |
+          python - <<'PY'
+          import importlib.util,os,pathlib
+          spec=importlib.util.spec_from_file_location('native_0522',pathlib.Path('scripts/acceptance/native_packages_0522.py').resolve())
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          m.fetch(os.environ['INDEX_URL'],pathlib.Path(os.environ['RUNNER_TEMP'])/'native-final-sources-0522.json',
+                  os.environ['INDEX_SHA256'],int(os.environ['INDEX_SIZE']))
+          PY
+      - name: Independently replay reports/log hashes, block any omission or substitution
+        shell: bash
+        env:
+          INDEX_SHA256: ${{ inputs.manifest_sha256 }}
+          PROJECT_ID: ${{ inputs.project }}
+          APPROVED_INDEX_SHA256: ${{ vars.NL_NATIVE_ACCEPTANCE_INDEX_SHA256 }}
+          APPROVED_PROJECT: ${{ vars.LAUNCHER_BRANDED_PROJECT_ID }}
+        run: |
+          test -n "$APPROVED_INDEX_SHA256" && test "$INDEX_SHA256" = "$APPROVED_INDEX_SHA256"
+          test -n "$APPROVED_PROJECT" && test "$PROJECT_ID" = "$APPROVED_PROJECT"
+          python scripts/acceptance/native_packages_0522.py aggregate \
+            --results "$RUNNER_TEMP/native-package-receipts-0522" \
+            --source-index "$RUNNER_TEMP/native-final-sources-0522.json" \
+            --manifest-sha256 "$INDEX_SHA256" \
+            --version "$(cat VERSION | tr -d '\r\n')" --commit "$GITHUB_SHA" \
+            --project "$PROJECT_ID" --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" \
+            --output "$RUNNER_TEMP/native-six-package-0522.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-six-package-0522-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-six-package-0522.json
+          if-no-files-found: error
+          retention-days: 90

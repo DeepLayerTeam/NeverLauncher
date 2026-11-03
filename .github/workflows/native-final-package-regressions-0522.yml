@@ -1,0 +1,58 @@
+name: Native final package acceptance 0.52.2 regressions (not native GA)
+
+on:
+  push:
+    paths:
+      - 'scripts/acceptance/native_packages_0522.py'
+      - 'scripts/acceptance/test_native_packages_0522.py'
+      - 'scripts/release/build-branded-installers.py'
+      - 'scripts/release/test_build_branded_installers.py'
+      - '.github/workflows/native-installers.yml'
+      - '.github/workflows/native-final-packages-0522.yml'
+      - '.github/workflows/native-final-package-regressions-0522.yml'
+      - 'docs/operations/native-final-package-acceptance-0522.md'
+      - 'VERSION'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  no-false-pass:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: prestarter/go.mod
+          cache-dependency-path: prestarter/go.sum
+      - name: Install review signature dependency
+        run: python3 -m pip install 'cryptography>=42,<47'
+      - name: Verify real source version and syntax
+        run: |
+          python3 scripts/version/manage.py check
+          python3 -m py_compile scripts/acceptance/native_packages_0522.py scripts/release/build-branded-installers.py
+      - name: Run checksum, replay, false PASS, platform and redaction regressions
+        run: python3 -m unittest scripts/acceptance/test_native_packages_0522.py -v
+      - name: Exercise actual .deb builder with signed source fixture (unsigned TEST output only)
+        run: python3 scripts/release/test_build_branded_installers.py -v
+      - name: Refuse a fake native six-platform invocation on this Ubuntu runner
+        env:
+          GITHUB_ACTIONS: 'false'
+        run: |
+          set -euo pipefail
+          if python3 scripts/acceptance/native_packages_0522.py run \
+             --manifest-url https://example.invalid/release.json --manifest-sha256 "$(printf 'a%.0s' {1..64})" \
+             --manifest-size 100 --version "$(cat VERSION)" \
+             --commit "$GITHUB_SHA" --project test-project \
+             --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+             --disposable-runner --output "$RUNNER_TEMP/fake-native"; then
+            echo 'FAILED: self-proclaimed runner was accepted as final native package' >&2
+            exit 1
+          fi
