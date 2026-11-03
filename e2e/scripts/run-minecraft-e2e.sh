@@ -1233,4 +1233,14 @@ if [[ "$MODE" == "full" ]]; then
   mv "$RUNTIME_DIR/result-04113-tmp.json" "$RUNTIME_DIR/result.json"
   echo '[e2e] real JVM + network probes verified for 10 core targets; bukkit/quilt/sponge/vanilla are NOT certified by this suite' >&2
 fi
+# 0.50.12: retain the real Paper log while Docker is still running.
+# Both ServerBridge-authorized admission and the genuine Minecraft join must
+# be present; a client main-class or fixture verdict alone cannot certify it.
+compose logs --no-color paper > "$RUNTIME_DIR/paper-live-05012.log"
+chmod 0600 "$RUNTIME_DIR/paper-live-05012.log"
+python3 "$ROOT/scripts/guard_ci/adversarial_pilot_05012.py" verify-game \
+  --work "$RUNTIME_DIR" \
+  --paper-log "$RUNTIME_DIR/paper-live-05012.log" \
+  --username "$PLAYER_USERNAME" \
+  --output "$RUNTIME_DIR/guard-real-game-05012.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

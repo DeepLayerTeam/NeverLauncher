@@ -242,12 +242,16 @@ func (s Server) recheckServerBoundGuard0507(r *http.Request, nodeID string) (int
 			return 0, 0, err
 		}
 		for _, correlation := range unbound {
+			started := time.Now()
 			invalidated, err := store.InvalidateGuardBoundSession0507(r.Context(), correlation, "guard_binding_missing", time.Now().UTC())
 			if err != nil {
 				return 0, revoked, err
 			}
 			if invalidated {
 				revoked++
+				if err := recordGuardShadow05012(nodeID, correlation, "revoked", "guard_binding_missing", time.Since(started)); err != nil {
+					return 0, revoked, err
+				}
 			}
 		}
 	}
@@ -257,6 +261,7 @@ func (s Server) recheckServerBoundGuard0507(r *http.Request, nodeID string) (int
 	}
 	checked := 0
 	for _, b := range due {
+		started := time.Now()
 		if err := r.Context().Err(); err != nil {
 			return checked, revoked, err
 		}
@@ -273,9 +278,16 @@ func (s Server) recheckServerBoundGuard0507(r *http.Request, nodeID string) (int
 			}
 			if invalidated {
 				revoked++
+				if err := recordGuardShadow05012(nodeID, b.CorrelationID, "revoked", reason.Error(), time.Since(started)); err != nil {
+					return checked, revoked, err
+				}
 			}
 		} else if err := store.MarkGuardBoundSessionChecked0507(r.Context(), b.CorrelationID, time.Now().UTC()); err != nil {
 			return checked, revoked, err
+		} else if reason == nil {
+			if err := recordGuardShadow05012(nodeID, b.CorrelationID, "allowed", "none", time.Since(started)); err != nil {
+				return checked, revoked, err
+			}
 		}
 		checked++
 	}

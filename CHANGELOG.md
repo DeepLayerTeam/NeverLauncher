@@ -1,3 +1,11 @@
+## 0.50.12 — Adversarial E2E & Shadow Pilot (executable instrumentation; independent GA BLOCKED)
+
+- Record actual signed ServerBridge/PostgreSQL Guard recheck outcomes and correlated session revocations in a restricted HMAC-SHA256 chained event journal with pseudonymous session/node identifiers and process-level durable sequencing; existing enforcement decisions are not disabled. No secret, raw player identity, or Minecraft credentials are logged.
+- Provide a real-command JVM adversarial regression runner with captured exit codes, test counts, exact log digests, explicit timeouts and refusal to pass missing/skipped checks; use existing live Java/Guard test code instead of fake launcher scenarios.
+- Add authenticated observation validation, conservative verified-active session interval counting, revocation review accounting, and failure on replay, altered evidence, invalid key permissions and unreviewed/false-positive candidates. These intervals are not independently certified player-hours.
+- Verify genuine existing Minecraft E2E launch and Paper join evidence by checking real-game result flags, retained release evidence files and server admission/join logs; implement A/B p95 frame-time measurement over real captured frame CSV with matched environment metadata and 3% initial budget. No game or performance samples are fabricated.
+- Add cross-platform regression CI and operator instructions. **GA BLOCKED:** production Rust/Windows/macOS native builds, genuine five-loader Minecraft joins, real OBS/AV/GPU trials, complete shadow pilot (10,000 legitimate player-hours), independent signature/reviewer and final package validation have not been performed here.
+
 ## 0.50.11 — Guard Diagnostics & Policy Operations (implementation patch; independent GA BLOCKED)
 
 - Implement immutable on-client archive of signed Guard compatibility policy revisions and a CLI history/status/diagnose path that checks accepted epoch, signature, scope, current artifact digests, authorized mods, native modules and revocations. Existing launch protection remains fail-closed.
