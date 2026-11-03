@@ -405,6 +405,21 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if planPolicyRequired02412() && join.ProtocolVersion != serverBridgeProtocolV3 {
+		s.State.ServerBridge.invalidateJoin(join.Username, join.ServerID)
+		writeError(w, http.StatusUpgradeRequired, "Guard Session requires ServerBridge Protocol v3")
+		return
+	}
+	if planPolicyRequired02412() {
+		// Durable, insert-only binding is mandatory before returning a ticket.
+		// A failure must not leave a redeemable unbound Guard join.
+		if err := s.storeGuardBoundJoin0507(r, join, req.PlanEvidence, verifiedGuardTicket); err != nil {
+			s.State.ServerBridge.invalidateJoin(join.Username, join.ServerID)
+			_ = s.flushPersistenceState950("server-bridge-guard-session-issue-failed")
+			writeError(w, http.StatusServiceUnavailable, "Guard Session PostgreSQL binding failed")
+			return
+		}
+	}
 	_ = s.flushPersistenceState950("server-bridge-join-created")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("join-created"), Actor: user.Email, Action: "serverbridge:session:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed negotiated ServerBridge request", "a replay, expired ticket, or rotated node identity is denied"}}})

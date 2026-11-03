@@ -86,6 +86,10 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolCurrent, "status": "heartbeat-rejected", "reason": runtimeFeatureReason}})
 		return
 	}
+	if planPolicyRequired02412() && (req.ProtocolVersion != serverBridgeProtocolV3 || !securityV3 || !runtimeEnabled) {
+		writeError(w, http.StatusUpgradeRequired, "guard_session_requires_signed_runtime_bound_protocol_v3")
+		return
+	}
 	telemetryEnabled, telemetryFeatureReason := bridgeTelemetryFeatureMode0193(req.Features)
 	if telemetryFeatureReason != "" {
 		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolCurrent, "status": "heartbeat-rejected", "reason": telemetryFeatureReason}})
@@ -209,6 +213,15 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// The existing signed node heartbeat is the live server-side Guard timer.
+	// It must process durable player bindings and queue correlated kicks for
+	// revoked sessions before acknowledging this heartbeat as healthy.
+	guardChecked, guardRevoked, guardErr := s.recheckServerBoundGuard0507(r, serverID)
+	if guardErr != nil {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-session-recheck-unavailable"), Actor: server.ID, Action: "guard:session:recheck-unavailable", Target: serverID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusServiceUnavailable, "Guard Session recheck unavailable")
+		return
+	}
 	// Обслуживание выполняется при возможности и никогда не должно портить правильный
 	// heartbeat. PostgreSQL сериализует очистку между активными репликами API.
 	s.State.ServerBridge.maybeMaintain0149()
@@ -219,6 +232,9 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("runtime-transition"), Actor: server.ID, Action: action, Target: runtimeTransition.PreviousRuntimeID + "->" + runtimeTransition.RuntimeID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	}
 	data := map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": req.ProtocolVersion, "features": bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2), "status": "heartbeat-accepted", "serverId": server.ID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}
+	if planPolicyRequired02412() {
+		data["guardSessions"] = guardBoundStatus0507(guardChecked, guardRevoked)
+	}
 	if runtimeEnabled {
 		data["runtime"] = bridgeRuntimeResponse0192(runtimeIdentity, runtimeTransition)
 	}
@@ -264,6 +280,10 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	}
 	if server.ID != req.ServerID {
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "serverbridge_node_server_id_mismatch", req, bridgeJoinRecord{}))
+		return
+	}
+	if planPolicyRequired02412() && req.ProtocolVersion != serverBridgeProtocolV3 {
+		writeJSON(w, http.StatusUpgradeRequired, bridgeValidateResponse940(s.Version, false, "guard_session_requires_protocol_v3", req, bridgeJoinRecord{}))
 		return
 	}
 	bridgeIntegrity := s.evaluateRegisteredBridgeIntegrity0135(server)
@@ -375,6 +395,15 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		payload["data"].(map[string]any)["trust"] = trust
 		payload["data"].(map[string]any)["bridgeIntegrity"] = bridgeIntegrity
 		writeJSON(w, http.StatusForbidden, payload)
+		return
+	}
+	// A signed build/Guard binding must survive proxy handoffs. Recheck current
+	// policy and account/device state before consuming a one-time admission.
+	if err := s.requireGuardBoundJoin0507(r, join, fromHandoff); err != nil {
+		s.State.ServerBridge.invalidateSession(join.SessionID, "")
+		_ = s.flushPersistenceState950("server-bridge-guard-binding-denied")
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-session-join-denied"), Actor: server.ID, Action: "guard:session:join-denied", Target: join.SessionCorrelationID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "guard_session_binding_denied", req, join))
 		return
 	}
 	_, minecraftIntegrity := s.evaluateServerBridgeJoinIntegrity0135(join)

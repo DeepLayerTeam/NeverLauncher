@@ -1,3 +1,11 @@
+## 0.50.7 — Server-Bound Guard Sessions (production source changes; independent GA BLOCKED)
+
+- Bind accepted Guard v2 evidence, hardware-device identity, Never/Minecraft sessions, server/project/profile and exact signed component plan to durable per-player correlations; reject an unbound or mismatched redemption.
+- Recheck active correlated sessions during signed ServerBridge node heartbeats against current device/session risk, linked identity, Minecraft integrity, release/artifact/runtime allowlists and the live signed build policy; revoke by correlation and queue authenticated runtime-bound player kicks.
+- PostgreSQL migration includes durable Guard session records and upgrades the existing DB-wide player-revocation trigger to include the exact session correlation in every queued kick (preventing username-only disconnects and preserving idempotency). The legacy memory bridge is not an acceptable protected production backend; missing storage fails closed when a signed plan is required.
+- The existing continuous client-side watchdog from 0.50.6 remains in place. Server-side rechecks validate the authority and revocation of its last signed evidence; they are **not** fresh runtime measurements or hardware attestation of every running frame. Fresh client challenges and actual Minecraft certification remain separate work.
+- Source code and targeted regressions are included; independent Windows/Linux/macOS gameplay certification, full Go 1.27 build and final GA approvals remain BLOCKED.
+
 ## 0.50.6 — Continuous Game Protection (source implementation; independent production GA BLOCKED)
 
 - Add a native, independent live-game watchdog on both one-shot Runtime launch and Desktop ProcessSupervisor. Every five seconds it revalidates signed executable JAR/native file hashes, existing allowed mods/agents and the Ed25519 Guard policy's scope, revocations, validity and unchanged digest, and terminates a game whose trust changes in-flight. The watchdog uses a blocking hashing worker, never the async reactor thread.

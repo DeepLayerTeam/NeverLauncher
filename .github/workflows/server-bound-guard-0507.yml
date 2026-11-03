@@ -1,0 +1,56 @@
+name: Server-Bound Guard Sessions 0.50.7
+on:
+  push:
+    paths:
+      - 'services/api/internal/httpapi/server_bound_guard_0507*'
+      - 'services/api/internal/httpapi/server_bridge.go'
+      - 'services/api/internal/httpapi/bridge_plugins.go'
+      - 'services/api/internal/repository/guard_bound_sessions_0507*'
+      - 'services/api/internal/dbmigrate/sql/0116_server_bound_guard_sessions_0507.sql'
+      - 'cli/internal/dbmigrate/sql/0116_server_bound_guard_sessions_0507.sql'
+      - '.github/workflows/server-bound-guard-0507.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guard-session-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: launcher_guard
+          POSTGRES_USER: launcher_guard
+          POSTGRES_PASSWORD: disposable-guard-0507
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U launcher_guard -d launcher_guard' --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_guard:disposable-guard-0507@127.0.0.1:5432/launcher_guard?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Version and migration catalog
+        run: python3 scripts/version/manage.py check
+      - name: Compile actual API backend
+        working-directory: services/api
+        run: go build ./cmd/...
+      - name: Guard account/server/plan proof and live player tamper regressions
+        working-directory: services/api
+        run: go test -count=1 -race -timeout=10m ./internal/httpapi -run '^TestGuardBoundSession0507'
+      - name: PostgreSQL actual sessions, pacing, revocation and runtime kick
+        working-directory: services/api
+        run: go test -count=1 -race -timeout=10m ./internal/repository -run '^TestServerBoundGuardPostgres0507$'
+      - name: Compile CLI and sealed migration catalog
+        working-directory: cli
+        run: go build ./cmd/... && go test -count=1 ./internal/dbmigrate
+      - name: Static analysis
+        working-directory: services/api
+        run: go vet ./internal/repository ./internal/httpapi
