@@ -82,8 +82,9 @@ func (s Server) authOIDCComplete115(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "OIDC transaction недействителен или истёк")
 		return
 	}
-	if req.DeviceID != "" {
-		tx.DeviceID = req.DeviceID
+	if tx.LinkUserID != "" || (req.DeviceID != "" && req.DeviceID != tx.DeviceID) {
+		writeError(w, http.StatusUnauthorized, "OIDC transaction context mismatch")
+		return
 	}
 	s.completeOIDC115(w, r, tx, req.Code, req.State, req.TOTP, req.RecoveryCode)
 }
@@ -153,8 +154,11 @@ func (s Server) beginOIDC115(r *http.Request, providerID, redirectURI, deviceID 
 
 func (s Server) completeOIDC115(w http.ResponseWriter, r *http.Request, tx oidcTransaction115, code, state, totp, recovery string) {
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
-	if provider == "" || provider != tx.ProviderID || state == "" || state != tx.State || strings.TrimSpace(code) == "" {
+	if provider == "" || provider != tx.ProviderID || tx.LinkUserID != "" || state == "" || state != tx.State || strings.TrimSpace(code) == "" {
 		writeError(w, http.StatusUnauthorized, "OIDC authorization response недействителен")
+		return
+	}
+	if !s.claimBrowserTransaction0525(w, r, tx) {
 		return
 	}
 	rateKey := "oidc:" + provider + ":" + clientIP(r)

@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -20,6 +19,10 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if !freshNeverIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "recent Never authentication required")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
@@ -42,8 +45,7 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req oidcBeginRequest115
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	start, sealed, err := s.beginOIDC115(r, providerID, req.RedirectURI, req.DeviceID)
@@ -75,6 +77,10 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
+	if !freshNeverIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "recent Never authentication required")
+		return
+	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
 		writeError(w, http.StatusForbidden, "связывание с данным провайдером запрещено")
@@ -91,13 +97,15 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var req oidcCompleteRequest115
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)
 	if err != nil || tx.LinkUserID == "" || tx.LinkUserID != claims.Sub || tx.ProviderID != providerID || req.State == "" || req.State != tx.State || strings.TrimSpace(req.Code) == "" {
 		writeError(w, http.StatusUnauthorized, "provider linking transaction недействителен или истёк")
+		return
+	}
+	if !s.claimBrowserTransaction0525(w, r, tx) {
 		return
 	}
 	verifiedMeta, proof, err := s.Federation.CompleteBrowserAuthProof(r.Context(), providerID, authconnector.BrowserAuthCallback{
@@ -117,7 +125,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil || user.Status == "disabled" {
+	if err != nil || user.Status != "active" {
 		writeError(w, http.StatusUnauthorized, "учётная запись больше недоступна")
 		return
 	}

@@ -1,3 +1,10 @@
+## 0.52.5 — Authentication & Identity Acceptance (real provider operator E2E; external GA BLOCKED)
+
+- Enforce atomic, durable single-use browser authorization transactions for OIDC login, Microsoft linking and generic OIDC linking, using the existing PostgreSQL `used_nonces` unique constraint or single-writer SQLite coordinator. Replays across API replicas, re-sealed transaction envelopes and attempts to use a link transaction for login are rejected before an upstream code exchange; database unavailability fails closed.
+- Bind browser completion to the original device and require recent canonical Never authentication for explicit provider linking. Reject ambiguous/unknown JSON keys on generic browser link begin/complete and stop accepting non-active linked users.
+- Add an executable external-provider operator E2E: real Local/SQL password authentication and explicit identity linking, two genuine OIDC browser authorizations, licensed Microsoft/Minecraft profile and live Mojang session join/hasJoined, stable canonical user ID, role access, foreign-owner UUID collision/unlink denial, refresh replay family revocation and logout. The runner requires private 0600 credentials, verified HTTPS, exact source commit/package digest and refuses missing evidence; its 13 runtime observations are not synthetic.
+- Add concurrency and HTTP replay tests, optional genuine two-replica PostgreSQL integration test, negative Python checks, separate CI and a protected operator workflow, with a reproducible runbook. **No real external Microsoft, SQL, OIDC, JVM or physical-platform run was available during preparation; the 0.53.0 independent acceptance remains BLOCKED until independently run and signed.**
+
 ## 0.52.4 — Minecraft & Loader Compatibility E2E (live matching-server evidence required; native GA BLOCKED)
 
 - Connect actual Vanilla, Fabric, Quilt, Forge and NeoForge Runtime certification clients to a version-matched **running** Minecraft dedicated server, rather than accepting a healthy process or a timeout as a multiplayer pass. Verify the real resolved loader, Java major and native OS/CPU on every execution.

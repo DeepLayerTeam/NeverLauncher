@@ -33,6 +33,10 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
+	if !freshNeverIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "recent Never authentication required")
+		return
+	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
 		writeError(w, http.StatusForbidden, "связывание с данным Microsoft provider запрещено")
@@ -78,6 +82,10 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
+	if !freshNeverIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "recent Never authentication required")
+		return
+	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
 		writeError(w, http.StatusForbidden, "связывание с данным Microsoft provider запрещено")
@@ -94,6 +102,9 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 	tx, err := s.openOIDCTransaction115(req.Transaction)
 	if err != nil || tx.LinkUserID == "" || tx.LinkUserID != claims.Sub || tx.ProviderID != providerID || req.State == "" || req.State != tx.State || strings.TrimSpace(req.Code) == "" {
 		writeError(w, http.StatusUnauthorized, "Microsoft linking transaction недействителен или истёк")
+		return
+	}
+	if !s.claimBrowserTransaction0525(w, r, tx) {
 		return
 	}
 	meta, proof, err := s.Federation.CompleteBrowserAuthProof(r.Context(), providerID, authconnector.BrowserAuthCallback{
@@ -113,7 +124,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil {
+	if err != nil || user.Status != "active" {
 		writeError(w, http.StatusUnauthorized, "учётная запись больше недоступна")
 		return
 	}
@@ -180,7 +191,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil {
+	if err != nil || user.Status != "active" {
 		writeError(w, http.StatusUnauthorized, "учётная запись больше недоступна")
 		return
 	}

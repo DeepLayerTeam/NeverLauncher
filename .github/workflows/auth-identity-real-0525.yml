@@ -1,0 +1,109 @@
+name: NeverLauncher 0.52.5 authentication and identity real acceptance
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'services/api/internal/httpapi/auth_browser_replay_0525*'
+      - 'services/api/internal/httpapi/oidc_flow_115.go'
+      - 'services/api/internal/httpapi/microsoft_flow_116.go'
+      - 'services/api/internal/httpapi/federation_release_0120.go'
+      - 'scripts/acceptance/auth_identity_real_0525.py'
+      - 'scripts/acceptance/test_auth_identity_real_0525.py'
+      - '.github/workflows/auth-identity-real-0525.yml'
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'services/api/internal/httpapi/auth_browser_replay_0525*'
+      - 'services/api/internal/httpapi/oidc_flow_115.go'
+      - 'services/api/internal/httpapi/microsoft_flow_116.go'
+      - 'services/api/internal/httpapi/federation_release_0120.go'
+      - 'scripts/acceptance/auth_identity_real_0525.py'
+      - 'scripts/acceptance/test_auth_identity_real_0525.py'
+      - '.github/workflows/auth-identity-real-0525.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  durable-auth-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: acceptance
+          POSTGRES_USER: acceptance
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U acceptance -d acceptance'
+          --health-interval 5s --health-timeout 5s --health-retries 25
+    env:
+      LAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://acceptance:integration-only@localhost:5432/acceptance?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Strict version and live operator negative checks
+        run: |
+          set -euo pipefail
+          python3 scripts/version/manage.py check
+          python3 -m unittest discover -s scripts/acceptance -p 'test_auth_identity_real_0525.py' -v
+          if python3 scripts/acceptance/auth_identity_real_0525.py run \
+               --secrets "$RUNNER_TEMP/not-provided.json" \
+               --oidc-proof "$RUNNER_TEMP/not-provided-oidc.json" \
+               --output "$RUNNER_TEMP/false-pass.json"; then
+            echo 'FAIL: missing live credentials accepted' >&2
+            exit 1
+          fi
+          test ! -e "$RUNNER_TEMP/false-pass.json"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Build production Backend and run browser replay + existing auth regressions
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/httpapi/*0525*.go internal/httpapi/oidc_flow_115.go internal/httpapi/microsoft_flow_116.go internal/httpapi/federation_release_0120.go)"
+          go build ./cmd/...
+          go test -race -count=1 -timeout=12m ./internal/httpapi \
+            -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
+  live-external-providers:
+    # External Microsoft identity and SQL/OIDC secrets must be provisioned by
+    # an independent operator, never stored in Actions logs or unit fixtures.
+    # A missing proof remains BLOCKED; this is not an automatic GA approval.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, auth-identity-live]
+    environment: auth-identity-physical-acceptance
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Live Microsoft/Minecraft, SQL, local, OIDC and session replay
+        env:
+          AUTH_0525_SECRETS_FILE: ${{ vars.AUTH_0525_SECRETS_FILE }}
+          AUTH_0525_OIDC_PROOF_FILE: ${{ vars.AUTH_0525_OIDC_PROOF_FILE }}
+          AUTH_0525_API_SHA256: ${{ vars.AUTH_0525_API_SHA256 }}
+        run: |
+          set -euo pipefail
+          : "${AUTH_0525_SECRETS_FILE:?private 0600 credential file required}"
+          : "${AUTH_0525_OIDC_PROOF_FILE:?private 0600 real browser proof required}"
+          : "${AUTH_0525_API_SHA256:?independently pinned Backend package SHA-256 required}"
+          umask 077
+          python3 scripts/acceptance/auth_identity_real_0525.py run \
+             --secrets "$AUTH_0525_SECRETS_FILE" \
+             --oidc-proof "$AUTH_0525_OIDC_PROOF_FILE" \
+             --source-commit "$GITHUB_SHA" \
+             --api-package-sha256 "$AUTH_0525_API_SHA256" \
+             --output "$RUNNER_TEMP/auth-identity-0525.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auth-identity-live-0525-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/auth-identity-0525.json
+          if-no-files-found: error
+          retention-days: 30
