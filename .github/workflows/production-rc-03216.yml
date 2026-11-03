@@ -74,7 +74,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache: true
           cache-dependency-path: services/api/go.sum
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Verify RC scripts and canonical version
