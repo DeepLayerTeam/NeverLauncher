@@ -1,3 +1,10 @@
+## 0.51.7 — Rolling Update Controller (real per-host upgrades; HA GA BLOCKED)
+
+- Add executable operator/host rolling controller for independently running `network-ha` Docker hosts. Serially pull digest-pinned images, gracefully stop and recreate **only** the selected host's API+worker, verify running 0.51.7 processes and public HTTPS after each switch, and never interrupt all nodes together.
+- Compare fully rendered source/target Compose configurations to reject all changes except API/worker image digests; keep Admin, ingress, ports, volumes, PostgreSQL/Redis/S3, identities, TLS and trust secrets identical. Preserve private, `fsync`-durable source configuration and per-node transaction journal for crash recovery/verified rollback (no database rewind).
+- Extend exact N/N−1 process admission to the **0.51.6↔0.51.7** pair while retaining the existing 0.51.5↔0.51.6 compatibility verifier. Check actual API/worker readiness, ServerBridge protocol, PostgreSQL read-only migration checks and a session-scoped cluster advisory lock before and between updates. No SQL migrations or forced mixed-version loopholes.
+- Add fault/rollback/host-sequence and multi-host admission Python regressions, automated CI checks and operator runbook. **HA GA BLOCKED:** no independent physical two-host Docker/Patroni/S3/Redis/ingress or real Minecraft traffic was run as part of this code change. Sampled `/ready` is not a zero-downtime guarantee; require external load/incident evidence.
+
 ## 0.51.6 — N/N−1 API/worker, ServerBridge and PostgreSQL compatibility (HA GA BLOCKED)
 
 - Provide executable, fail-closed 0.51.5 ↔ 0.51.6 mixed-version admission against real per-host API/worker `/ready`, public API v1 responses and signed ServerBridge v3 capabilities. Reject unsupported versions, stale/contradictory role reports and incompatible live contracts.

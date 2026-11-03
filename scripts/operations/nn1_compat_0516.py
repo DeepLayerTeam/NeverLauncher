@@ -140,7 +140,7 @@ def validate_schema(actual, catalog):
     return {"checkedMigrations": len(catalog), "pending": 0, "unknown": 0, "checksumDrift": 0}
 
 
-def validate_live_nodes(reports, *, require_mixed=False):
+def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
     require(len(reports) >= 2, "at least two independently observed hosts required")
     machines, engines, node_ids = set(), set(), set()
     baseline = None
@@ -171,7 +171,7 @@ def validate_live_nodes(reports, *, require_mixed=False):
             require(item.get("running") is True and item.get("health") == "healthy"
                     and readiness.get("success") == readiness.get("sampled") == 3
                     and readiness.get("versionVerified") is True
-                    and readiness.get("version") in PAIR,
+                    and readiness.get("version") in pair,
                     "live API/worker readiness version missing or unsupported on " + label + "/" + role)
             require(item.get("environment", {}).get("LAUNCHER_REPLICA_ID") == node_id + "-" + role,
                     "incorrect live replica role identity on " + label)
@@ -187,9 +187,9 @@ def validate_live_nodes(reports, *, require_mixed=False):
         require(all(re.fullmatch(r"[0-9a-f]{64}", value or "") for value in fingerprints),
                 "invalid live API/Bridge contract fingerprint on " + label)
         require(observed_contracts is None or observed_contracts == fingerprints,
-                "running API/Bridge contracts differ between 0.51.5 and 0.51.6")
+                "running API/Bridge contracts differ between supported cohort versions")
         observed_contracts = fingerprints
-    require(not require_mixed or set(versions.values()) == PAIR, "mixed version run requires both N and N-1")
+    require(not require_mixed or set(versions.values()) == pair, "mixed version run requires both N and N-1")
     return versions
 
 

@@ -53,9 +53,12 @@ def run(argv, *, cwd=None, timeout=30, codes=(0,)):
     return p.stdout.decode("utf-8", errors="replace")
 
 
-def compose_command(directory, project, *rest):
-    return ["docker", "compose", "--project-name", project,
-            "-f", str(directory / "docker-compose.multi-host.yml"), *rest]
+def compose_command(directory, project, *rest, env_file=None):
+    command = ["docker", "compose", "--project-name", project,
+               "-f", str(directory / "docker-compose.multi-host.yml")]
+    if env_file is not None:
+        command.extend(("--env-file", str(env_file)))
+    return [*command, *rest]
 
 
 def url_host(value, scheme):
@@ -78,13 +81,13 @@ def check_secure_file(path, *, strict=False):
         raise DeploymentError("secret file is accessible to group/other: " + path.name)
 
 
-def resolved_compose(directory, project):
+def resolved_compose(directory, project, *, env_file=None):
     if not PROJECT_REGEX.fullmatch(project):
         raise DeploymentError("invalid Compose project name")
-    check_secure_file(directory / ".env", strict=True)
+    check_secure_file(env_file if env_file is not None else directory / ".env", strict=True)
     check_secure_file(directory / "docker-compose.multi-host.yml")
     check_secure_file(directory / "nginx.multi-host-0512.conf")
-    raw = run(compose_command(directory, project, "config", "--format", "json"), cwd=directory, timeout=20)
+    raw = run(compose_command(directory, project, "config", "--format", "json", env_file=env_file), cwd=directory, timeout=20)
     try:
         data = json.loads(raw)
     except ValueError as exc:
@@ -237,7 +240,7 @@ def local_compat_observe_0516(directory, project):
     running = {c.get("service"): c for c in report["live"]["containers"]}
     for role in ("api", "worker"):
         ready = (running.get(role) or {}).get("readiness") or {}
-        if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6")):
+        if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6", "0.51.7")):
             raise DeploymentError("unsupported or unverified live /ready version for " + role)
     if running["api"]["readiness"]["version"] != running["worker"]["readiness"]["version"]:
         raise DeploymentError("API/worker live version mismatch on the same host")
