@@ -1,3 +1,10 @@
+## 0.51.6 — N/N−1 API/worker, ServerBridge and PostgreSQL compatibility (HA GA BLOCKED)
+
+- Provide executable, fail-closed 0.51.5 ↔ 0.51.6 mixed-version admission against real per-host API/worker `/ready`, public API v1 responses and signed ServerBridge v3 capabilities. Reject unsupported versions, stale/contradictory role reports and incompatible live contracts.
+- Verify actual primary PostgreSQL migration rows and checksums in a read-only transaction against the immutable 0.51.5 catalog. Add **no** new DDL or protocol changes during the compatible rollout window; no silent acceptance of unknown/partially applied migrations.
+- Make `dbmigrate.StatusOf` strictly read-only instead of attempting tracking-table DDL during every startup/readiness check. The one-shot migration process retains exclusive migration authority.
+- Add mixed-version, schema-drift, secrets/redaction, public API/Bridge protocol regressions and a repeatable operator entrypoint. Full real PostgreSQL, Docker, Minecraft ServerBridge and rolling traffic E2E evidence remains **BLOCKED** on an external multi-host environment.
+
 ## 0.51.5 — ServerBridge Failover & Recovery (HA GA BLOCKED)
 
 - Fix cross-host ServerBridge command routing after API replica failure: PostgreSQL `clock_timestamp()` is authoritative for command admission, lease assignment, lease reconciliation and ACK commit in the same transaction; API node clock skew can no longer prematurely expire an unexecuted command or prolong a delivery lease. Expired/superseded delivered commands remain indeterminate and cannot be executed again.

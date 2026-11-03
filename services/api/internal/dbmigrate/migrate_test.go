@@ -1,6 +1,8 @@
 package dbmigrate
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -28,7 +30,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0114_gravit_migration_plan_0442" {
+	if st.Current != "0116_server_bound_guard_sessions_0507" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -764,5 +766,22 @@ func TestTextureLifecycleMigration02511(t *testing.T) {
 		if !strings.Contains(string(b), word) {
 			t.Errorf("lifecycle migration lacks %q", word)
 		}
+	}
+}
+
+// The current release deliberately adds no DDL. An unknown migration applied
+// during a mixed 0.51.5/0.51.6 deployment would make the old /ready fail.
+func TestNN1MigrationCatalogFrozen0516(t *testing.T) {
+	ms, err := Catalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := sha256.New()
+	for _, m := range ms {
+		_, _ = h.Write([]byte(m.Description + "\x00" + m.Checksum + "\n"))
+	}
+	const baseline0515 = "12247e5cb196efb8a77d52c64dd55e4b4956703100a928c65d8be0c978c723ce"
+	if got := hex.EncodeToString(h.Sum(nil)); got != baseline0515 {
+		t.Fatalf("N/N-1 cannot run after PostgreSQL catalog change: %s", got)
 	}
 }

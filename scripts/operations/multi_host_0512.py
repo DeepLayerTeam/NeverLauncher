@@ -224,6 +224,71 @@ def live_observe(directory, project, *, growth=True):
             "observedUtc": inventory.utc_now()}
 
 
+def local_compat_observe_0516(directory, project):
+    """Real HTTP API, Bridge and worker probes inside pinned running images.
+
+    This is purposefully a separate, read-only mode. Ordinary cluster checks
+    continue to reject different image digests during deploy/chaos drills.
+    """
+    import hashlib
+    report = live_observe(directory, project, growth=True)
+    if not report.get("ready"):
+        raise DeploymentError("cannot inspect compatibility on an unhealthy node")
+    running = {c.get("service"): c for c in report["live"]["containers"]}
+    for role in ("api", "worker"):
+        ready = (running.get(role) or {}).get("readiness") or {}
+        if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6")):
+            raise DeploymentError("unsupported or unverified live /ready version for " + role)
+    if running["api"]["readiness"]["version"] != running["worker"]["readiness"]["version"]:
+        raise DeploymentError("API/worker live version mismatch on the same host")
+    container = running["api"]["containerId"]
+    def get(path):
+        raw = inventory.execute(["docker", "exec", container, "wget", "-qO-", "-T", "5",
+                                 "http://127.0.0.1:8080" + path], timeout=9)
+        if len(raw) > 512_000:
+            raise DeploymentError("HTTP API compatibility response too large")
+        try:
+            data = json.loads(raw)
+        except ValueError as exc:
+            raise DeploymentError("HTTP API compatibility response invalid") from exc
+        if not isinstance(data, dict):
+            raise DeploymentError("HTTP API compatibility response must be a JSON object")
+        return data
+    v = running["api"]["readiness"]["version"]
+    status = get("/api/v1/status")
+    if status.get("status") != "ok" or status.get("version") != v:
+        raise DeploymentError("live API status differs from live readiness version")
+    loaders = get("/api/v1/loaders")
+    if loaders.get("version") != v or not isinstance(loaders.get("items"), list) or not loaders["items"]:
+        raise DeploymentError("live loader API contract incompatible")
+    runtime = get("/api/v1/runtime/requirements")
+    if runtime.get("version") != v or not isinstance(runtime.get("java"), dict):
+        raise DeploymentError("live runtime requirements API incompatible")
+    bridge = get("/api/v1/server-bridge/capabilities?protocols=3,2")
+    data = bridge.get("data")
+    if (not isinstance(data, dict) or data.get("toolVersion") != v or
+            data.get("negotiatedProtocolVersion") != 3 or
+            data.get("supportedProtocolVersions") != [3, 2] or
+            data.get("rollingUpgrade") is not True or
+            not data.get("activeSigningKeyFingerprint")):
+        raise DeploymentError("live signed ServerBridge capability negotiation incompatible")
+    # Compare real response contracts, not version-dependent strings.
+    protocols = {key: data.get(key) for key in (
+        "schemaVersion", "preferredProtocolVersion", "minimumProtocolVersion",
+        "supportedProtocolVersions", "requiredFeatures", "protocolV3FeatureDigest",
+        "legacyProtocolV2Supported", "securityCapabilityDigest", "activeSigningKeyFingerprint")}
+    loaders.pop("version", None)
+    runtime.pop("version", None)
+    def fingerprint(payload):
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    report["compatibility0516"] = {"liveVersion": v, "apiStatus": "ok",
+                                   "loadersSHA256": fingerprint(loaders),
+                                   "runtimeRequirementsSHA256": fingerprint(runtime),
+                                   "bridgeContractSHA256": fingerprint(protocols),
+                                   "bridgeProtocol": 3}
+    return report
+
+
 def local_up(directory, project):
     expected = resolved_compose(directory, project)
     # Production images are always fetched by digest. Never build independently
@@ -415,7 +480,7 @@ def outage_drill(nodes, script, directory, project, edge_url, failed_node):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("local-check", "local-up", "local-observe", "local-stop", "local-start",
-                                         "cluster-check", "cluster-up", "cluster-verify", "cluster-drill"))
+                                         "cluster-check", "cluster-up", "cluster-verify", "cluster-drill", "local-compat-observe"))
     parser.add_argument("--directory", default="/opt/launcher/deploy/production")
     parser.add_argument("--project", default="launcher")
     parser.add_argument("--node", action="append", default=[], help="label=ssh-user@host (repeat)")
@@ -437,6 +502,8 @@ def main(argv=None):
                 report = local_up(directory, args.project)
             elif args.mode == "local-observe":
                 report = live_observe(directory, args.project, growth=not args.skip_growth)
+            elif args.mode == "local-compat-observe":
+                report = local_compat_observe_0516(directory, args.project)
             elif args.mode in ("local-stop", "local-start"):
                 resolved_compose(directory, args.project)
                 action = "stop" if args.mode == "local-stop" else "start"

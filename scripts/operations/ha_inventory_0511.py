@@ -167,19 +167,35 @@ def classify_container(raw, project):
 
 
 def docker_ready(container_id, count):
+    """Probe actual HTTP readiness, retaining the binary version for mixed-rollout gates.
+
+    Older response shapes remain observable but cannot qualify for N/N-1
+    compatibility; the version must come from the running process, never image
+    tags, Compose environment, a local VERSION file or a status-only probe.
+    """
     durations = []
     failures = 0
+    versions = []
     for _ in range(count):
         start = time.monotonic_ns()
         try:
-            # Actual loopback app readiness (worker requires a successful
-            # durable PostgreSQL poll; API also checks backend dependencies).
-            execute(["docker", "exec", container_id, "wget", "-qO-", "-T", "5",
-                     "http://127.0.0.1:8080/ready"], timeout=8)
+            raw = execute(["docker", "exec", container_id, "wget", "-qO-", "-T", "5",
+                           "http://127.0.0.1:8080/ready"], timeout=8)
+            # Only a JSON {status:"ready",version:"..."} from the backend
+            # is a trustworthy software version. Never silently infer it.
+            try:
+                body = json.loads(raw)
+            except (ValueError, TypeError):
+                body = None
+            if isinstance(body, dict) and body.get("status") == "ready" and isinstance(body.get("version"), str):
+                versions.append(body["version"])
             durations.append((time.monotonic_ns() - start) / 1_000_000)
         except InventoryError:
             failures += 1
+    stable = bool(versions) and len(versions) == len(durations) and len(set(versions)) == 1
     return {"sampled": count, "success": len(durations), "failures": failures,
+            "version": versions[0] if stable else None,
+            "versionVerified": stable and failures == 0,
             "p50Ms": round(statistics.median(durations), 3) if durations else None,
             "p95Ms": round(sorted(durations)[math.ceil(len(durations) * .95) - 1], 3) if durations else None}
 
