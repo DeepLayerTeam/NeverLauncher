@@ -1,0 +1,36 @@
+name: Cross-host disaster recovery 0.51.9
+on:
+  push:
+    paths:
+      - 'scripts/operations/cross_host_recovery_0519.py'
+      - 'scripts/operations/test_cross_host_recovery_0519.py'
+      - 'scripts/operations/consistent_backup_0518.py'
+      - 'scripts/operations/dr_03512.py'
+      - 'docs/deployment/cross-host-disaster-recovery-0519.md'
+      - '.github/workflows/cross-host-recovery-0519.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recovery-safety-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test restored world bytes, stale host admission and recovery safety
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest -v \
+            scripts/operations/test_cross_host_recovery_0519.py \
+            scripts/operations/test_consistent_backup_0518.py \
+            scripts/operations/test_dr_03512.py \
+            scripts/operations/test_multi_host_0512.py \
+            scripts/operations/test_nn1_compat_0516.py
+      - name: Check Python syntax and release metadata
+        run: |
+          python3 -m py_compile scripts/operations/cross_host_recovery_0519.py
+          python3 scripts/version/manage.py check
