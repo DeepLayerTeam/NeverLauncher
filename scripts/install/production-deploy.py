@@ -210,6 +210,7 @@ def preflight(values, mode, *, docker, tls_required=True):
     ):
         fail("manifest signing key must be a 32-byte hex Ed25519 seed")
     if docker:
+        compose_project(values)
         for key in ("POSTGRES_PASSWORD", "REDIS_PASSWORD"):
             if key == "REDIS_PASSWORD" and mode != "network-ha":
                 continue
@@ -419,12 +420,22 @@ def exclusive_lock(path):
         os.close(fd)
 
 
+def compose_project(values):
+    # Namespacing prevents an isolated acceptance deployment from touching the
+    # ordinary production project's containers, networks or named volumes.
+    project = values.get("LAUNCHER_COMPOSE_PROJECT", "launcher")
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{2,40}", project):
+        fail("invalid LAUNCHER_COMPOSE_PROJECT (lowercase Docker Compose project)")
+    return project
+
+
 def compose_args(env, mode):
+    project = compose_project(read_env(env))
     args = [
         "docker",
         "compose",
         "--project-name",
-        "launcher",
+        project,
         "--env-file",
         str(env),
         "-f",
@@ -432,6 +443,16 @@ def compose_args(env, mode):
     ]
     if mode == "network-ha":
         args += ["-f", str(HA), "--profile", "network-ha"]
+    values = read_env(env)
+    if any(key.startswith("LAUNCHER_0523_HOST_") for key in values):
+        if mode != "standard" or not re.fullmatch(r"nl0523[a-z0-9]{8,20}", project):
+            fail("0523 host-control integration may only run in an isolated Standard project")
+        for key in ("LAUNCHER_0523_HOST_TARGETS_FILE", "LAUNCHER_0523_HOST_CA_FILE", "LAUNCHER_0523_HOST_TOKEN_FILE"):
+            value = values.get(key, "")
+            if not value or not Path(value).is_absolute():
+                fail("missing absolute 0523 host-control trust file: " + key)
+            safe_file(value, private=True)
+        args += ["-f", str(ROOT / "deploy/production/docker-compose.owner-e2e-0523.yml")]
     return args
 
 

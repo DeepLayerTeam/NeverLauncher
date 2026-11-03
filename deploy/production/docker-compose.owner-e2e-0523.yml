@@ -1,0 +1,12 @@
+# Only enabled by the production deploy CLI when the isolated acceptance
+# namespace and all three externally provisioned private files are present.
+# Docker mount ownership: the Backend runs as uid=10001 and MUST be able to
+# read the 0600 trust files. Not suitable as a generic production override.
+services:
+  api:
+    environment:
+      LAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE: /run/owner0523/targets.json
+    volumes:
+      - ${LAUNCHER_0523_HOST_TARGETS_FILE:?}:/run/owner0523/targets.json:ro
+      - ${LAUNCHER_0523_HOST_CA_FILE:?}:/run/owner0523/ca.pem:ro
+      - ${LAUNCHER_0523_HOST_TOKEN_FILE:?}:/run/owner0523/token:ro

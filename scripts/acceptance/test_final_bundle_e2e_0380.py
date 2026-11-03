@@ -10,7 +10,7 @@ spec = importlib.util.spec_from_file_location('final_bundle_e2e_0380', FILE)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 COMMIT = 'a' * 40
-VERSION = '0.38.0'
+VERSION = (FILE.parents[2] / 'VERSION').read_text().strip()
 
 
 class FinalBundleTests(unittest.TestCase):

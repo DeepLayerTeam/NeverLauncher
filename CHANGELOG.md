@@ -1,3 +1,10 @@
+## 0.52.3 — Real Owner & Admin E2E (live Minimal/Standard acceptance; physical Standard BLOCKED)
+
+- Extend the real installed SQLite Minimal acceptance with authenticated owner/Admin project create/update, profile/channel creation, audit authorization and persistence checks after SIGTERM and SIGKILL. The final signed release bundle runner requires these additional steps.
+- Add an executable isolated Standard acceptance runner that actually deploys production Docker Compose/PostgreSQL behind authenticated HTTPS, creates the first owner and first draft, enrolls real TOTP MFA, checks Admin CRUD and reboot persistence, registers a pinned real Ed25519 ServerBridge node and verifies its signed heartbeat.
+- Run the dedicated Minecraft JVM through real RemoteControl stop/start/restart with durable idempotent host operation receipts, check a console command is acknowledged by the game agent, and verify an existing player/project state file by SHA-256 before/after the lifecycle. Fail closed for unverified operations or missing physical infrastructure.
+- Support isolated Docker Compose namespaces and an opt-in real HostControl TLS/secret bind override only for strictly named acceptance projects. Add negative tests, a protected manual physical-runner workflow and operator instructions. Unit/negative runs do not certify a real Standard host: **0.53.0 GA BLOCKED** until the actual environment and final package matrix are independently accepted.
+
 ## 0.52.2 — Six-Platform Final Package Acceptance (executable native release gate; no independent GA)
 
 - Add a real final-installer acceptance executor for Windows, Linux, and macOS x64/ARM64. Each native disposable runner downloads final `.exe`/`.deb`/`.pkg` bytes over HTTPS, rechecks a separately pinned source-index SHA-256 and exact byte length, and validates Authenticode/GPG/Apple Developer ID identity against independently provisioned trust inputs. Reject foreign/emulated targets, altered package bytes, source/run substitution, missing six-target coverage, wrong signers and unexpected URLs.

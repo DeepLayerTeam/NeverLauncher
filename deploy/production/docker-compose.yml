@@ -54,6 +54,7 @@ services:
       dockerfile: services/api/Dockerfile
       args:
         LAUNCHER_VERSION: ${LAUNCHER_IMAGE_TAG}
+        LAUNCHER_SOURCE_COMMIT: ${LAUNCHER_SOURCE_COMMIT:-unknown}
     image: launcher-api:${LAUNCHER_IMAGE_TAG:?LAUNCHER_IMAGE_TAG must be set}
     restart: unless-stopped
     depends_on:

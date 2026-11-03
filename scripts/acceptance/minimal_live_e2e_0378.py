@@ -258,6 +258,61 @@ def verify_project(port, identifier, token=None):
         require(isinstance(sessions, dict), "sessions endpoint returned invalid result")
 
 
+
+def owner_admin_crud_0523(port, email, password):
+    """Real authenticated admin mutations against the installed SQLite Backend."""
+    login = expect(port, 'POST', '/api/v1/admin/login', 200,
+                   {'email': email, 'password': password})
+    token = login.get('token')
+    require(isinstance(token, str) and len(token) >= 20,
+            'real administrator login missing session')
+    unauth_status, _ = request(port, 'POST', '/api/v1/admin/projects',
+                               {'id': 'unauthenticated-0523', 'name': 'Rejected'})
+    require(unauth_status in (401, 403), 'unauthenticated admin mutation was not denied')
+    header = {'Authorization': 'Bearer ' + token}
+    project = 'owner0523-' + secrets.token_hex(8)
+    description = 'Minimal SQLite retained owner project ' + secrets.token_hex(8)
+    created = expect(port, 'POST', '/api/v1/admin/projects', 201,
+                     {'id': project, 'name': 'Owner acceptance project', 'defaultChannel': 'stable'}, header)
+    require(created.get('data', {}).get('project', {}).get('id') == project,
+            'owner project was not created')
+    expect(port, 'PATCH', '/api/v1/admin/projects/' + project, 200,
+           {'description': description}, header)
+    profile = 'owner-vanilla'
+    channel = 'owner-review'
+    profile_response = expect(port, 'POST', '/api/v1/admin/projects/' + project + '/profiles', 201,
+                              {'id': profile, 'name': 'Owner vanilla', 'loader': 'vanilla'}, header)
+    require(profile_response.get('data', {}).get('profile', {}).get('id') == profile,
+            'owner profile was not created')
+    channel_response = expect(port, 'POST', '/api/v1/admin/projects/' + project + '/channels', 201,
+                              {'id': channel, 'name': 'Owner review', 'protected': True}, header)
+    require(channel_response.get('data', {}).get('channel', {}).get('id') == channel,
+            'owner channel was not created')
+    verify_admin_0523(port, email, password, project, description, profile, channel)
+    expect(port, 'GET', '/api/v1/projects/' + project + '/profiles/' + profile + '/manifest', 404)
+    return (project, description, profile, channel)
+
+
+def verify_admin_0523(port, email, password, project, description, profile, channel):
+    login = expect(port, 'POST', '/api/v1/admin/login', 200,
+                   {'email': email, 'password': password})
+    token = login.get('token')
+    require(isinstance(token, str) and len(token) >= 20, 'administrator login state lost')
+    doc = expect(port, 'GET', '/api/v1/projects/' + project, 200)
+    require(doc.get('id') == project and doc.get('description') == description,
+            'persisted admin project data differs')
+    profiles = expect(port, 'GET', '/api/v1/projects/' + project + '/profiles', 200)
+    channels = expect(port, 'GET', '/api/v1/projects/' + project + '/channels', 200)
+    require(any(p.get('id') == profile for p in profiles.get('items', [])),
+            'persisted profile missing')
+    require(any(c.get('id') == channel for c in channels.get('items', [])),
+            'persisted channel missing')
+    expect(port, 'GET', '/api/v1/admin/audit', 200,
+           headers={'Authorization': 'Bearer ' + token})
+    denied_status, _ = request(port, 'GET', '/api/v1/admin/audit')
+    require(denied_status in (401, 403), 'unauthenticated audit read was not denied')
+
+
 def run_acceptance(
     binary: Path,
     guard: Path,
@@ -424,6 +479,8 @@ def run_acceptance(
             return tokens
 
         tokens = step(report, "bootstrap_login_draft_and_stable_denial", setup)
+        admin_record = step(report, 'real_owner_admin_crud_0523',
+                            lambda: owner_admin_crud_0523(port, email, password))
 
         def reject_online_backup():
             p = subprocess.run(
@@ -450,6 +507,8 @@ def run_acceptance(
         step(report, "sigterm_shutdown", api.stop)
         step(report, "graceful_restart", api.start)
         step(report, "graceful_state_verified", lambda: verify_project(port, project))
+        step(report, 'owner_admin_state_after_sigterm_restart_0523',
+             lambda: verify_admin_0523(port, email, password, *admin_record))
 
         def durable_refresh():
             response = expect(
@@ -488,6 +547,8 @@ def run_acceptance(
             )
 
         step(report, "durable_ack_survives_sigkill", verify_crash)
+        step(report, 'owner_admin_state_after_sigkill_0523',
+             lambda: verify_admin_0523(port, email, password, *admin_record))
         step(report, "stop_before_backup", api.stop)
         blob = root / "storage" / "e2e" / "blobs" / "survives.dat"
         blob.parent.mkdir(parents=True, mode=0o700)
@@ -565,6 +626,8 @@ def run_acceptance(
             )
 
         step(report, "restored_auth_project_and_one_time_token", verify_restored)
+        step(report, 'owner_admin_state_after_backup_restore_0523',
+             lambda: verify_admin_0523(port, email, password, *admin_record))
         step(report, "restored_api_shutdown", rest.stop)
 
         # 0.45.2: the portable, authenticated snapshot must boot the *actual*
