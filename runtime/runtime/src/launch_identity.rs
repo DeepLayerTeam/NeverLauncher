@@ -47,8 +47,8 @@ pub fn forbidden_auth_agent(args: &[String]) -> bool {
     })
 }
 
-// Metadata and signed project arguments may contain stale identities. Pin one
-// authoritative set *after* resolving the version, not before it.
+// Метаданные и подписанные аргументы проекта могут содержать устаревшие идентификаторы.
+// Закрепляйте один достоверный набор ПОСЛЕ разрешения версии, а не до него.
 fn remove_pair(args:&mut Vec<String>, key:&str) -> Result<(),String> {
     let mut i=0;
     while i<args.len() {
@@ -88,8 +88,8 @@ pub fn pin_game_identity(plan:&mut LaunchPlan, version:&str, credentials:Option<
         }
         None => {
             if !valid_name(offline_username) {return Err("offline Minecraft username must be 3-16 ASCII letters/digits/underscore".into());}
-            // An offline game receives no provider credentials and can never
-            // generate sessionserver join proof for an online-mode server.
+            // Офлайн-игра не получает учётных данных провайдера и не может сформировать
+            // доказательство подключения sessionserver для сервера с online-mode.
             plan.game_args.extend(["--username".into(),offline_username.into(),"--accessToken".into(),"0".into()]);
             if supports_user_type(version) {plan.game_args.extend(["--userType".into(),"legacy".into()]);}
         }

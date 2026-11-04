@@ -159,7 +159,7 @@ func TestLegacyAdapters0278VanillaFactoryEndToEnd(t *testing.T) {
 	if err = os.WriteFile(legacyLaunchFile0278(root), append(raw, []byte(" ")...), 0600); err != nil {
 		t.Fatal(err)
 	}
-	// Semantically equivalent whitespace is accepted; modifying the content is not.
+	// Семантически эквивалентные пробелы допустимы; изменение содержимого — нет.
 	raw = append([]byte{}, raw...)
 	raw[0] = '!'
 	if err = os.WriteFile(legacyLaunchFile0278(root), raw, 0600); err != nil {
@@ -238,7 +238,7 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 	if err := runLegacyClient0278(context.Background(), root, java, "Legacy User", "uuid-test"); err == nil {
 		t.Fatal("Java 21 used for classic Java 8 target")
 	}
-	// Existing immutable 0.27.7 plans do not contain the new recipe.
+	// Существующие неизменяемые планы 0.27.7 не содержат нового рецепта.
 	old := plan
 	old.Legacy = nil
 	old.ReproducibilitySHA256, err = factoryDigest0271(old)

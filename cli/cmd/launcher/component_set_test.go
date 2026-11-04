@@ -92,7 +92,7 @@ func TestSignedComponentSet02310(t *testing.T) {
 	if err := verifySignedComponentSet02310(path, manifest, false); err != nil {
 		t.Fatal(err)
 	}
-	// Signature is over exact bytes, not a normalized subset of JSON.
+	// Подпись распространяется на точные байты, а не нормализованное подмножество JSON.
 	raw, _ := os.ReadFile(path)
 	if err := os.WriteFile(path, append(raw, ' '), 0o600); err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestCoordinatedPackageCommitAndFailure02310(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// Inject a package-content error: the updater must reject before touching live binaries.
+	// Искусственно внесите ошибку содержимого пакета: обновлятор обязан отклонить его до изменения рабочих бинарников.
 	payload := filepath.Join(bundle, manifest.Components[1].SourcePath)
 	raw, err := os.ReadFile(payload)
 	if err != nil {
@@ -176,7 +176,7 @@ func TestCoordinatedPackageCommitAndFailure02310(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(installRoot, filepath.FromSlash(componentUpdateStateFile0157))); err != nil {
 		t.Fatal(err)
 	}
-	// Produce a ZIP fixture too: extraction must retain detached Ed25519 signature.
+	// Создайте также тестовый ZIP: при распаковке должна сохраняться отдельная подпись Ed25519.
 	zipPath := filepath.Join(t.TempDir(), "update.zip")
 	zf, err := os.Create(zipPath)
 	if err != nil {

@@ -1,7 +1,7 @@
 package main
 
-// Immutable, locally verified classloader additions. Nothing in this package
-// downloads executable code at launch or silently rewrites Mojang libraries.
+// Неизменяемые локально проверенные дополнения загрузчика классов. Этот пакет не загружает
+// исполняемый код при старте и не переписывает библиотеки Mojang без уведомления.
 import (
 	"archive/zip"
 	"bytes"
@@ -74,7 +74,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 	if err := d.Decode(new(any)); err != io.EOF {
 		return input, errors.New("unexpected data after compatibility request")
 	}
-	// Prevent accepting an oversized but otherwise valid JSON document.
+	// Запретите приём слишком большого, хотя и синтаксически допустимого, документа JSON.
 	if st, err := file.Stat(); err != nil || st.Size() > 1<<20 {
 		return input, errors.New("compatibility request exceeds 1 MiB")
 	}
@@ -164,7 +164,7 @@ func compatValidateLock0279(lock *compatLock0279) error {
 	}
 	opened := map[string]bool{}
 	for _, op := range lock.AddOpens {
-		// Allow only module/package=ALL-UNNAMED; no free-form JVM switches.
+		// Разрешайте только module/package=ALL-UNNAMED; произвольные параметры JVM запрещены.
 		if !validAddOpens0279(op) || opened[op] {
 			return fmt.Errorf("unsupported or duplicate --add-opens %q", op)
 		}
@@ -194,8 +194,8 @@ func validAddOpens0279(op string) bool {
 	return true
 }
 
-// Reject non-JAR input before it can become an executable launch artifact.
-// A Java agent must declare Premain-Class, otherwise -javaagent cannot work.
+// Отклоняйте входные данные не в формате JAR до превращения в исполняемый артефакт
+// запуска. Java-агент обязан объявлять Premain-Class, иначе -javaagent не сработает.
 func verifyCompatibilityJar0279(path string, agent bool) error {
 	reader, err := zip.OpenReader(path)
 	if err != nil {
@@ -411,8 +411,8 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 	return append(actions, mirrorAction0274{Kind: "compat-receipt", Path: compatReceiptPath0279, Before: p.ReproducibilitySHA256, After: sha256HexBytes(append(raw, '\n'))}), nil
 }
 
-// The only command-line changes permitted at runtime are pinned classpath
-// additions, pinned agents, and (Java 9+) explicit module opens/modulepath.
+// Единственные допустимые изменения командной строки во время работы: закреплённые
+// дополнения classpath, агенты и (Java 9+) явные открытия модулей/modulepath.
 func compatJVMArgs0279(root string, p factoryPlan0271) ([]string, []string, error) {
 	if err := verifyCompat0279(root, p); err != nil {
 		return nil, nil, err
@@ -501,8 +501,8 @@ func handleRuntimeCompat0279(args []string) error {
 	}
 }
 
-// Called when a mirror transaction creates compatibility metadata; the
-// transaction digest then includes the pinned runtime additions.
+// Вызывается при создании метаданных совместимости транзакцией зеркала;
+// дайджест транзакции после этого включает закреплённые дополнения Runtime.
 func attachCompatToPlan0279(root string, p *factoryPlan0271) error {
 	lock, err := readCompatReceipt0279(root)
 	if errors.Is(err, os.ErrNotExist) {
@@ -516,9 +516,9 @@ func attachCompatToPlan0279(root string, p *factoryPlan0271) error {
 	return nil
 }
 
-// The verified provenance for byte-transforming the authlib archive is kept
-// separate from author-supplied patch bytes, so it can be checked at every
-// subsequent read/launch, even for builds without custom Java agents.
+// Проверенное происхождение изменения байтов архива authlib хранится отдельно
+// от предоставленных автором байтов патча. Оно проверяется при каждом чтении и
+// запуске, включая сборки без пользовательских Java-агентов.
 const authlibProvenancePath0279 = ".launcher/authlib-provenance.json"
 const authlibProvenanceSchema0279 = "launcher.authlib-provenance.v1"
 

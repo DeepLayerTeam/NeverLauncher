@@ -1,4 +1,4 @@
-/** Only a reviewed, allowlisted native report can enter the support submission path. */
+/** В отправку в поддержку может попадать только предварительно проверенный и разрешённый нативный отчёт. */
 export type PlayerDiagnosticEvent03510 = { code: string; count: number };
 export type PlayerDiagnosticReport03510 = { schemaVersion:'1.1'; launcherVersion:string; generatedAtUnix:number; os:string; arch:string; stage:string; events:PlayerDiagnosticEvent03510[] };
 export type PlayerDiagnosticPreview03510 = { reviewToken:string; report:PlayerDiagnosticReport03510 };

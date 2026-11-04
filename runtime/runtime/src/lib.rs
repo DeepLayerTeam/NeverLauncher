@@ -543,8 +543,8 @@ pub fn apply_launch_preferences(manifest: &Manifest, root: &Path, plan: &mut Lau
             replace_or_append_arg_pair(&mut plan.game_args, "--port", port.to_string());
         }
     }
-    // User choices are part of the reproducible plan identity, unlike session
-    // tokens and machine-specific installation paths.
+    // Выбор игрока входит в идентичность воспроизводимого плана, в отличие
+    // от токенов сеанса и специфичных для машины путей установки.
     plan.deterministic_sha256 = deterministic_launch::plan_digest(manifest, root, manifest.runtime.java.major_version, plan, credentials)?;
     plan.command_preview = redacted_command_preview119(plan, credentials.map(|c| c.access_token.as_str()));
     Ok(())
@@ -1187,8 +1187,8 @@ pub async fn launch_with_timeout_matching_authenticated(
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
-    // env_clear removes caller-controlled options first; Guard Sensor then
-    // injects its fresh authenticated IPC endpoint/secret without being erased.
+    // Сначала env_clear удаляет параметры вызывающей стороны; затем Guard Sensor добавляет
+    // свежие аутентифицированные конечную точку IPC и секрет, которые не должны стираться.
     apply_launch_command_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
@@ -1411,15 +1411,15 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
-        // Authlib injector is an internal, trusted argument derived only from
-        // the pinned, signed manifest artifact; do not treat it as custom args.
+        // Инъектор authlib — внутренний доверенный аргумент, полученный только из закреплённого
+        // подписанного артефакта манифеста. Не считайте его пользовательскими аргументами.
         if let Some(credentials) = credentials {
             apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
         }
     }
-    // Manifest JVM args are appended after Mojang resolution. Repin the
-    // extraction root here so a later manifest override cannot redirect the
-    // LWJGL loader outside the client's Guard-certified native cache.
+    // Аргументы JVM манифеста добавляются после разрешения Mojang. Здесь повторно закрепляйте
+    // корень распаковки, чтобы последующая подмена манифеста не могла вывести загрузчик LWJGL
+    // за пределы сертифицированного Guard кэша нативных библиотек клиента.
     #[cfg(windows)]
     if strategy == "compatibility" || strategy == "mojang" {
         compatibility::pin_windows_lwjgl_extract_path(
@@ -1429,23 +1429,23 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             std::env::consts::ARCH,
         );
     }
-    // Resolved Mojang metadata and signed project arguments must not override
-    // the selected account. This is the final authority for game auth args.
+    // Разрешённые метаданные Mojang и подписанные аргументы проекта не должны перекрывать
+    // выбранную учётную запись. Это окончательный источник игровых аргументов авторизации.
     launch_identity_0269::pin_game_identity(&mut plan, &manifest.minecraft.version, credentials, &offline_username_0269)?;
     if credentials.is_none() && launch_identity_0269::forbidden_auth_agent(&plan.jvm_args) {
         return Err("offline game may not load an online authentication injector".into());
     }
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
-        // A reproducible plan identity covers resolved metadata/order/options,
-        // but deliberately excludes local installation roots and auth secrets.
+        // Идентичность воспроизводимого плана охватывает разрешённые метаданные, порядок и
+        // параметры, но намеренно исключает локальные корни установки и секреты авторизации.
         plan.deterministic_sha256 = deterministic_launch::plan_digest(manifest, root, required_java, &plan, credentials)?;
     }
     plan.command_preview = redacted_command_preview119(&plan, credentials.map(|c| c.access_token.as_str()));
     Ok(plan)
 }
 
-// For v2, platform native directory selection depends only on signed
-// release paths, never on which directories happened to be created locally.
+// В версии v2 выбор каталога нативных файлов платформы зависит только от путей
+// подписанного релиза, а не от того, какие каталоги случайно появились локально.
 fn signed_platform_natives_directory_0227(manifest: &Manifest, root: &Path, base: &Path) -> Result<PathBuf, String> {
     let prefix = base.strip_prefix(root).map_err(|_| "native directory outside client root")?
         .to_string_lossy().replace('\\', "/");
@@ -1503,9 +1503,9 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
             let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
             if filename.starts_with("authlib-injector") { continue; }
             let local_path = safe_join(root, &file.path)?;
-            // v2 uses signed file order, never the mutable set of currently
-            // installed JARs. Missing/corrupt inputs fail instead of changing
-            // the LaunchPlan between identical releases.
+            // v2 использует порядок подписанных файлов, а не изменяемый набор
+            // установленных JAR. Отсутствующий или повреждённый ввод вызывает
+            // ошибку, а не меняет LaunchPlan при одинаковом релизе.
             if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") || fs::metadata(&local_path).await.is_ok() {
                 classpath_entries.push(local_path.to_string_lossy().to_string());
             }
@@ -1569,8 +1569,8 @@ fn redacted_command_preview119(plan: &LaunchPlan, access_token: Option<&str>) ->
     match access_token.filter(|v| !v.is_empty()) { Some(token) => raw.replace(token, "[REDACTED]"), None => raw }
 }
 
-// 0.22.3: runtime constraints are enforced both when verifying v2 signatures
-// and again immediately before constructing the OS process.
+// 0.22.3: ограничения Runtime проверяются и при проверке подписи
+// v2, и непосредственно перед созданием процесса ОС.
 fn validate_runtime_constraints_0223(m: &Manifest) -> Result<(), String> {
     let j = &m.runtime.java;
     let launch = &m.runtime.launch;
@@ -1580,8 +1580,8 @@ fn validate_runtime_constraints_0223(m: &Manifest) -> Result<(), String> {
         launch.classpath_strategy.is_empty() && launch.classpath_entries.is_empty() &&
         launch.modulepath_entries.is_empty() && launch.main_module.is_empty() &&
         launch.environment_allowlist.is_empty() {
-        // Empty pre-release drafts can still be inspected. Publishing must
-        // require a runnable runtime before they can reach a public channel.
+        // Пустые черновики до выпуска всё ещё можно просматривать. Для публичного
+        // канала публикация должна требовать работоспособный Runtime.
         return Ok(());
     }
     if j.major_version == 0 || j.major_version > 255 || j.minimum_major_version > 255 ||
@@ -1648,7 +1648,7 @@ fn parse_heap_arg_0223(arg: &str) -> Result<Option<(char, u64)>, String> {
         return Err(format!("invalid heap argument {arg}"));
     }
     let value = digits.parse::<u64>().map_err(|_| format!("invalid heap argument {arg}"))?;
-    // Convert to MB with checked multiplication and ceiling for k/bytes.
+    // Переводите в МБ с проверяемым умножением и округлением вверх для k/bytes.
     let mb = match payload.chars().last() {
         Some('k') => value.checked_add(1023).map(|v| v / 1024),
         Some('m') => Some(value),
@@ -1698,7 +1698,7 @@ fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -
     plan.modulepath_entries = launch.modulepath_entries.iter().map(|v| safe_join(root, v).map(|p| p.to_string_lossy().to_string())).collect::<Result<Vec<_>, _>>()?;
     plan.main_module = launch.main_module.clone();
     if !plan.main_module.is_empty() && launch.classpath_entries.is_empty() {
-        // Modules must not silently reappear on the legacy classpath.
+        // Модули не должны незаметно возвращаться в старый classpath.
         plan.classpath_entries.clear();
     }
     if plan.main_module.is_empty() && plan.classpath_entries.is_empty() {
@@ -1707,9 +1707,9 @@ fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -
     Ok(())
 }
 
-// Recheck all selected executable inputs against the signed Manifest bytes;
-// otherwise edited Mojang metadata or disappearing JARs can silently change
-// an otherwise identical plan even though the manifest signature is valid.
+// Повторно сравнивайте все выбранные исполняемые входные данные с байтами
+// подписанного Manifest, иначе изменённые метаданные Mojang или пропавшие JAR
+// незаметно изменят одинаковый по виду план при действительной подписи.
 async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &LaunchPlan, metadata_paths: &[String]) -> Result<(), String> {
     let canonical_root = root.canonicalize().map_err(|e| format!("client root is unavailable: {e}"))?;
     let mut paths = HashSet::<String>::new();
@@ -1720,9 +1720,9 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
         let rel = rel.to_str().ok_or("non-UTF8 JAR path")?.replace('\\', "/");
         paths.insert(rel);
     }
-    // Metadata read by Compatibility Engine must also be exactly the signed
-    // bytes. Otherwise local JSON edits could change launch args while keeping
-    // the same signed release and profile snapshot.
+    // Метаданные Compatibility Engine тоже должны побайтово совпадать с
+    // подписанными. Иначе локальное редактирование JSON изменит параметры
+    // запуска при том же подписанном релизе и снимке профиля.
     let active=component_catalog_0241::active_files(manifest,transactional_release::active_preset_for_manifest(manifest,root).as_deref())?;
     for rel in paths.iter().chain(metadata_paths.iter()) {
         let declared = manifest.files.iter().find(|file| file.path == *rel && manifest_file_applies(file) &&
@@ -2176,7 +2176,7 @@ mod tests {
 
     #[test]
     fn v3_go_publisher_fixture_verifies_in_native_runtime_0241() {
-        // Fixture signed with crypto/ed25519 + encoding/json by the Go publisher.
+        // Тестовые данные подписаны издателем Go через crypto/ed25519 и encoding/json.
         let json = include_str!("../tests/fixtures/component_catalog_v3_go_signed.json");
         let m: Manifest = serde_json::from_str(json).expect("Go v3 fixture decode");
         let pinned = "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
@@ -2303,8 +2303,8 @@ mod tests {
 
     #[test]
     fn file_download_rate_limit_retry_budget_remains_bounded() {
-        // These are the actual bounded retry settings used by HTTP Resume and
-        // the durable download worker, not unused legacy constants.
+        // Это реальные ограниченные параметры повтора, используемые HTTP Resume и
+        // устойчивым обработчиком загрузки, а не неиспользуемые старые константы.
         assert_eq!(network_resilience::MAX_ATTEMPTS, 7);
         assert_eq!(network_resilience::REQUEST_TIMEOUT, Duration::from_secs(30));
     }

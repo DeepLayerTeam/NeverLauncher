@@ -27,8 +27,8 @@ type factoryAdapterPin02711 struct {
 	ImplementationSHA256 string `json:"implementationSha256"`
 }
 
-// Keep independently versioned recipes even when several adapters share an
-// installer implementation. Future versions can coexist as explicit entries.
+// Сохраняйте независимые версии рецептов, даже когда несколько адаптеров используют одну
+// реализацию установщика. Будущие версии могут сосуществовать как явные записи.
 var factoryAdapterDefinitions02711 = map[string]struct {
 	version string
 	files   []string
@@ -76,8 +76,8 @@ func currentFactoryAdapterPins02711(loader string) []factoryAdapterPin02711 {
 	return pins
 }
 
-// Old <=0.27.10 plans remain readable and their on-disk hashes can still be
-// checked; they are *not* implicitly assigned new adapter identities.
+// Планы версии не выше 0.27.10 остаются читаемыми, их дисковые хеши можно
+// проверить; новые идентификаторы адаптеров им автоматически НЕ назначаются.
 func validateFactoryAdapterPins02711(p factoryPlan0271) error {
 	if len(p.AdapterPins) == 0 {
 		return nil
@@ -111,9 +111,9 @@ func requireCurrentFactoryAdapters02711(p factoryPlan0271) error {
 	return nil
 }
 
-// An explicit upgrade may result in different generated files, but may not
-// silently replace the bytes of a previously pinned source artifact. New
-// sources may be introduced and are recorded in the upgraded plan.
+// Явное обновление может создавать другие файлы, но не должно
+// незаметно заменять байты ранее закреплённого исходного артефакта.
+// Новые источники допустимы и записываются в обновлённый план.
 func checkAdapterUpgradeSources02711(old, next []factorySource0271) error {
 	known := make(map[string]factorySource0271, len(old))
 	for _, s := range old {
@@ -133,20 +133,20 @@ func factoryAdapterTargetCheck02711(p factoryPlan0271) error {
 			return fmt.Errorf("unsupported build target %s/%s: %w", target.OS, target.Arch, err)
 		}
 	}
-	// The classic Forge 1.7.10 / 1.12.2 routes intentionally use Java 8.
-	// Cleanroom/lwjgl3ify bridges have their own explicit install rules and
-	// cannot be silently treated as compatible with those classic adapters.
+	// Классические варианты Forge 1.7.10 и 1.12.2 намеренно используют Java 8. Для
+	// мостов Cleanroom/lwjgl3ify действуют отдельные правила установки; их нельзя
+	// автоматически считать совместимыми с классическими адаптерами.
 	if p.Loader == "forge" && (p.MinecraftVersion == "1.7.10" || p.MinecraftVersion == "1.12.2") && p.Java.Major != 8 {
 		return fmt.Errorf("classic Forge %s requires Java 8; Java %d requires a separately validated bridge target", p.MinecraftVersion, p.Java.Major)
 	}
 	return nil
 }
 
-// The processor journal certifies a result for specific processor/input
-// identities. When the implementation changes, it must not resume from an old
-// completed entry even if the old outputs appear valid. Removing the journal
-// only in the isolated staging copy triggers the existing Forge worker's
-// quarantine and recovery path and forces a new processor execution.
+// Журнал процессора удостоверяет результат для конкретных идентификаторов
+// обработчика и входных данных. При изменении реализации нельзя возобновлять старую
+// завершённую запись, даже если результаты кажутся корректными. Удаление журнала
+// только в изолированной промежуточной копии запускает существующий механизм
+// карантина и восстановления Forge и принуждает процессор к повторному запуску.
 func invalidateFactoryProcessorRecovery02711(staging, loader string) error {
 	if loader != "forge" && loader != "neoforge" {
 		return nil

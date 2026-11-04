@@ -1,6 +1,6 @@
-/** Real Admin owner operations: persist a mutation intent before sending it, then
- * independently read its durable job and channel head. Neither HTTP 202 nor a
- * locally cached draft may be reported as a completed publication. */
+/** Реальные операции владельца в Admin: сначала сохраните намерение изменения, затем
+ * независимо считайте устойчивое задание и активный релиз канала. Ни HTTP 202, ни
+ * локально кэшированный черновик не доказывают завершение публикации. */
 import type {
   ReleaseApi,
   Preview,
@@ -193,8 +193,8 @@ export async function observeOwnerOperation(
     head.channel !== pending.intent.channel
   )
     throw Error("Невозможно подтвердить состояние канала");
-  // A succeeded job is insufficient evidence if another release has since
-  // advanced the channel, or the job response belongs to a different package.
+  // Статуса успешного задания недостаточно, если канал уже
+  // переведён на другой релиз или ответ относится к иному пакету.
   const committedRevision = head.revision === pending.before.revision + 1;
   const matches =
     pending.intent.kind === "package-publish"
@@ -217,8 +217,8 @@ export async function observeOwnerOperation(
   };
 }
 
-/** Continue a stable rollback that was deliberately staged by the Backend.
- * No manual package URL or SQL edits; server validates this fresh owner draft. */
+/** Продолжите стабильный откат, заранее подготовленный Backend. Никаких ручных
+ * изменений URL пакета или SQL: сервер проверяет новый черновик владельца. */
 export async function openStagedRollback(
   api: ReleaseApi,
   pending: OwnerPending,

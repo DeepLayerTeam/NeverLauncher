@@ -171,7 +171,7 @@ export function AuthProviderWizard02910({
       doc.id = value;
       setRawConfig(JSON.stringify(doc, null, 2));
     } catch {
-      /* Draft JSON may be incomplete while editing. */
+      /* Во время редактирования черновик JSON может быть неполным. */
     }
     setTest(null);
     setTestedConfig("");

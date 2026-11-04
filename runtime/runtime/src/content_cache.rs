@@ -40,8 +40,8 @@ fn user_cache_root() -> Result<PathBuf, String> {
 }
 
 async fn directory(path: &Path) -> Result<(), String> {
-    // Reject symlinks in the store's own directory tree, including the final
-    // object directory. No symlink is ever followed when publishing an object.
+    // Отклоняйте символические ссылки в собственном дереве каталога хранилища, включая
+    // конечный каталог объекта. При публикации объекта переход по симлинку запрещён.
     fs::create_dir_all(path).await.map_err(|e| format!("create content cache {}: {e}", path.display()))?;
     if fs::symlink_metadata(path).await.map_err(|e| e.to_string())?.file_type().is_symlink() {
         return Err(format!("cache directory is a symlink: {}", path.display()));
@@ -99,8 +99,8 @@ impl CacheStore {
         if fs::symlink_metadata(&lockpath).await.is_ok_and(|m| m.file_type().is_symlink()) {
             return Err("content cache lock path is a symlink".into());
         }
-        // The blocking lock is acquired off the async executor. File locks are
-        // OS-wide and automatically released if this process is killed.
+        // Блокирующая блокировка захватывается вне асинхронного исполнителя. Блокировки файлов
+        // действуют в масштабе ОС и автоматически снимаются при завершении процесса.
         let handle = tokio::task::spawn_blocking(move || -> Result<std::fs::File, String> {
             let handle = std::fs::OpenOptions::new().read(true).write(true).create(true)
                 .open(&lockpath).map_err(|e| format!("open cache lock: {e}"))?;
@@ -120,7 +120,7 @@ pub(crate) struct CacheLease {
 impl CacheLease {
     pub(crate) async fn restore(&self, root: &Path, file: &ManifestFile, target: &Path) -> Result<bool, String> {
         if !existing_verified(&self.path, file).await? {
-            // Corruption, wrong size and symlink replacement all invalidate the object.
+            // Повреждение, неправильный размер и замена симлинком делают объект недействительным.
             if fs::symlink_metadata(&self.path).await.is_ok() {
                 fs::remove_file(&self.path).await.map_err(|e| format!("invalidate cache object: {e}"))?;
             }
@@ -160,8 +160,8 @@ impl CacheLease {
             destination.sync_all().await.map_err(|e| e.to_string())?;
             drop(destination);
             if !existing_verified(&staging, file).await? { return Err("refusing to cache invalid content".into()); }
-            // Windows cannot rename over an existing file. The object lock
-            // serializes readers/writers, so removal is safe here.
+            // Windows не может переименовать файл поверх существующего. Блокировка объекта
+            // сериализует читателей и писателей, поэтому удаление здесь безопасно.
             if fs::symlink_metadata(&self.path).await.is_ok() {
                 fs::remove_file(&self.path).await.map_err(|e| e.to_string())?;
             }

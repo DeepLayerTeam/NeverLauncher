@@ -418,7 +418,7 @@ ul {
   }
 }
 
-/* 0.22.9: server browser and runtime preferences */
+/* 0.22.9: браузер серверов и настройки Runtime. */
 .settings select {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -441,7 +441,7 @@ ul {
   accent-color: #22c55e;
 }
 
-/* 0.24.7 — component selection, explanations and verified installation diff */
+/* 0.24.7: выбор компонентов, пояснения и проверенный список изменений установки. */
 .componentChooser0247 {
   margin-top: 20px;
 }
@@ -536,7 +536,7 @@ ul {
   }
 }
 
-/* 0.25.8 — operational texture gallery, canvas-free pixel-accurate 2D / CSS 3D. */
+/* 0.25.8: рабочая галерея текстур, точное пиксельное 2D без canvas и 3D на CSS. */
 .texturesPanel0258 {
   min-width: 0;
 }
@@ -841,7 +841,7 @@ ul {
   }
 }
 
-/* 0.26.10 — production desktop game-account management */
+/* 0.26.10: промышленное управление игровыми учётными записями Desktop. */
 .officialAuth02610 {
   display: grid;
   gap: 18px;
@@ -990,7 +990,7 @@ ul {
   }
 }
 
-/* 0.35.4: native verified-transfer feedback and accessible recovery. */
+/* 0.35.4: обратная связь о проверенной нативной передаче и доступное восстановление. */
 .transferStatus,
 .transferFailure {
   margin-top: 18px;
@@ -1026,7 +1026,7 @@ ul {
   accent-color: #4ade80;
   height: 15px;
 }
-/* 0.35.5: decoration comes only from Native Ed25519-verified bootstrap. */
+/* 0.35.5: оформление поступает только из bootstrap, проверенного в Native по Ed25519. */
 .shell:has(.brandIdentity0355) {
   background: var(--brand-background, #0f172a);
   color: var(--brand-text, #e5e7eb);
@@ -1088,7 +1088,7 @@ ul {
   margin: 8px 0;
 }
 
-/* 0.35.7 — Desktop accessibility and OS-scaled layout. */
+/* 0.35.7: доступность Desktop и масштабирование макета средствами ОС. */
 .skipLink0357 {
   position: fixed;
   z-index: 10000;
@@ -1282,7 +1282,7 @@ button {
   }
 }
 
-/* Signed launcher startup screen: real operation state and actionable recovery. */
+/* Экран подписанного запуска лаунчера: реальное состояние операций и доступные способы восстановления. */
 .startupStatus0427 {
   display: flex;
   align-items: center;
@@ -1298,6 +1298,6 @@ button {
 }
 .startupStatus0427 button { min-width: 8rem; }
 
-/* Verified native transfer metrics on the signed startup/repair screen. */
+/* Проверенные метрики нативной передачи на подписанном экране запуска и восстановления. */
 .startupTransfer0497 { display: flex; flex: 1 1 220px; gap: .55rem; align-items: center; flex-wrap: wrap; font-size: .85rem; }
 .startupTransfer0497 progress { flex: 1 1 120px; min-width: 90px; accent-color: var(--brand-accent, #22c55e); }

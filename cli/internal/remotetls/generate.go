@@ -1,5 +1,5 @@
-// Package remotetls provisions an isolated CA and distinct server/client
-// credentials for the authenticated RemoteControl HTTPS transport.
+// Пакет remotetls создаёт изолированный центр сертификации и отдельные
+// серверные/клиентские учётные данные для аутентифицированного транспорта RemoteControl по HTTPS.
 package remotetls
 
 import (
@@ -79,7 +79,7 @@ func names(hosts []string) ([]net.IP, []string, error) {
 }
 
 func serial() (*big.Int, error) {
-	// Positive 128-bit serial, enough entropy to avoid collisions.
+	// Положительный 128-битный серийный номер с достаточной энтропией для предотвращения совпадений.
 	n, e := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if e != nil {
 		return nil, e
@@ -113,9 +113,9 @@ func writeExclusive(path string, contents []byte, perm os.FileMode) error {
 	return ce
 }
 
-// Generate atomically owns a *new* private output directory. No existing
-// credentials are overwritten. A failed generation removes only this directory.
-// Operators must move ca.key to offline storage after distributing credentials.
+// Generate атомарно создаёт НОВЫЙ приватный выходной каталог. Существующие учётные
+// данные не перезаписываются. При сбое удаляется только этот каталог. После раздачи
+// учётных данных оператор должен перенести ca.key в офлайн-хранилище.
 func Generate(directory string, hosts []string, days int) (result Result, err error) {
 	if days < 1 || days > 90 {
 		return result, errors.New("certificate lifetime must be 1-90 days")
@@ -214,7 +214,7 @@ func Generate(directory string, hosts []string, days int) (result Result, err er
 			return result, e
 		}
 	}
-	// Validate all generated objects against the same trust root used by the CLI.
+	// Проверяйте все созданные объекты относительно того же корня доверия, который использует CLI.
 	pool := x509.NewCertPool()
 	pool.AddCert(ca)
 	for _, item := range []struct {
@@ -253,5 +253,5 @@ func Generate(directory string, hosts []string, days int) (result Result, err er
 	return result, nil
 }
 
-// Ensure the private keys are Ed25519 keys and distinct from one another.
+// Убедитесь, что закрытые ключи имеют формат Ed25519 и отличаются друг от друга.
 var _ crypto.Signer = ed25519.PrivateKey{}

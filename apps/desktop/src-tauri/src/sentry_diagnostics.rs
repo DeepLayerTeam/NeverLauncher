@@ -48,7 +48,7 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
     if !CONSENT.load(Ordering::SeqCst) {return Ok(())}
     let Some(category) = safe_code(category) else {return Err("invalid diagnostic category".into())};
     let uuid = {
-        // Two random UUID v4s are unnecessary; use cryptographic OS randomness from rand.
+        // Два случайных UUID v4 избыточны; используйте криптографическую случайность ОС из rand.
         let mut bytes: [u8;16] = rand::random();bytes[6] = (bytes[6]&15)|64;bytes[8] = (bytes[8]&63)|128;
         hex::encode(bytes)
     };
@@ -60,8 +60,8 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
     let item = json!({"type":"event"});
     let envelope = format!("{}\n{}\n{}\n", head, item, report);
     let response = reqwest::Client::builder()
-      // The ingest origin is operator configured. A 30x response must not
-      // forward the envelope or X-Sentry-Auth header to another origin.
+      // Источник приёма настроен оператором. Ответ 30x не должен
+      // перенаправлять конверт или заголовок X-Sentry-Auth другому источнику.
       .redirect(reqwest::redirect::Policy::none())
       .timeout(Duration::from_secs(3)).build().map_err(|_|"cannot create diagnostics client")?
       .post(&dest.ingest).header("Content-Type","application/x-sentry-envelope")
@@ -76,11 +76,11 @@ pub fn desktop_sentry_consent(enabled: bool) { CONSENT.store(enabled, Ordering::
 pub async fn desktop_sentry_report(category: String, frames: Vec<BrowserFrame>) -> Result<(), String> {
     transmit(&category,"javascript",self::frames(frames)).await
 }
-/// Panic hook never blocks or changes native panic semantics; no panic message or payload is forwarded.
+/// Обработчик panic никогда не блокирует и не меняет семантику нативной паники; сообщение и полезная нагрузка panic не пересылаются.
 pub fn install_panic_hook() {
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        // Standard panic hook may log locally, but does not enter remote diagnostic data.
+        // Стандартный обработчик panic может записывать сообщение локально, но не включает его в удалённую диагностику.
         previous(info);
         if CONSENT.load(Ordering::SeqCst) && configured().is_some() {
             std::thread::spawn(|| {

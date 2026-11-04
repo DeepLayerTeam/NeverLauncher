@@ -42,7 +42,7 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 	if err := OutsideBundle(bundle, insideAlias); err == nil {
 		t.Fatal("accepted key path inside bundle")
 	}
-	// Alias of the bundle directory outside its location.
+	// Псевдоним каталога набора вне его расположения.
 	bundleAlias := filepath.Join(root, "release-alias")
 	if err := os.Symlink(bundle, bundleAlias); err != nil {
 		t.Fatal(err)

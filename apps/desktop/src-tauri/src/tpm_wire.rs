@@ -32,9 +32,9 @@ pub fn certify_command(object: u32, ak: u32, extra: &[u8; 32]) -> Vec<u8> {
     cmd.extend_from_slice(&0x00000148u32.to_be_bytes()); // TPM_CC_Certify
     cmd.extend_from_slice(&object.to_be_bytes());
     cmd.extend_from_slice(&ak.to_be_bytes());
-    // Both handles require authorization: empty password sessions only.
-    // If the TPM's CNG keys require nonempty authValue or policy session,
-    // Windows TBS must reject this command. Never retry with a weaker mode.
+    // Оба handle требуют авторизации: только сеансы с пустым паролем. Если ключам
+    // CNG в TPM требуется непустой authValue или сеанс политики, Windows TBS
+    // должен отклонить команду. Не повторяйте в более слабом режиме.
     cmd.extend_from_slice(&18u32.to_be_bytes());
     for _ in 0..2 {
         cmd.extend_from_slice(&0x40000009u32.to_be_bytes()); // TPM_RS_PW
@@ -74,7 +74,7 @@ pub fn parse_public_response(resp: &[u8]) -> Result<(Vec<u8>, [u8;65]), String> 
     let (_, name_end) = item(params, end, 128)?;
     let (_, final_end) = item(params, name_end, 128)?;
     if final_end != params.len() { return Err("trailing ReadPublic bytes".into()); }
-    // TPMT_PUBLIC: type, nameAlg, objectAttrs, authPolicy, parameters, unique.
+    // TPMT_PUBLIC: тип, nameAlg, objectAttrs, authPolicy, параметры и уникальное значение.
     let b = &public[2..];
     if b.len() < 14 || be16(b)? != 0x0023 || be16(&b[2..])? != 0x000b {
         return Err("device TPM key must be ECC SHA-256".into());
@@ -104,7 +104,7 @@ pub fn parse_public_response(resp: &[u8]) -> Result<(Vec<u8>, [u8;65]), String> 
 pub fn parse_certify_response(resp: &[u8], extra: &[u8;32]) -> Result<(Vec<u8>,Vec<u8>),String> {
     let params = response_parameters(resp, true)?;
     let (attest, offset) = item(params, 0, 4096)?;
-    // TPMT_SIGNATURE consists of scheme, hash and a scheme-specific signature.
+    // TPMT_SIGNATURE состоит из схемы, хеша и специфичной для схемы подписи.
     let sig = params.get(offset..).ok_or("missing TPM signature")?;
     if sig.len() < 6 || sig.len() > 1024 { return Err("invalid TPM signature size".into()); }
     let scheme = be16(sig)?;
@@ -123,7 +123,7 @@ pub fn parse_certify_response(resp: &[u8], extra: &[u8;32]) -> Result<(Vec<u8>,V
     let (_, signer_end) = item(att, 6, 128)?;
     let (qualifier, offset) = item(att, signer_end, 64)?;
     if qualifier.len() != 34 || qualifier[2..] != extra[..] { return Err("TPM certify challenge mismatch".into()); }
-    // TPMS_CLOCK_INFO.safe is signed by the AK. Refuse unsafe TPM state.
+    // TPMS_CLOCK_INFO.safe подписан AK. Небезопасное состояние TPM отклоняется.
     let clock=att.get(offset..offset+25).ok_or("truncated TPM Certify clock")?;
     if clock[16]!=1 { return Err("unsafe TPM Certify clock".into()); }
     Ok((attest.to_vec(),sig.to_vec()))
@@ -189,7 +189,7 @@ mod test_vectors {
         let (att,sig)=parse_certify_response(&resp,&extra).unwrap();
         assert_eq!(att,encoded(&inner));assert_eq!(sig.len(),262);
         assert!(parse_certify_response(&resp,&[22;32]).is_err());
-        // The TPM clock safety bit is in the signed TPMS_CLOCK_INFO.
+        // Признак безопасности часов TPM находится в подписанном TPMS_CLOCK_INFO.
         let mut unsafe_reply=resp.clone();
         let marker=[0xff, 0x54, 0x43, 0x47];
         let start=unsafe_reply.windows(4).position(|w|w==marker).unwrap();
@@ -224,16 +224,16 @@ mod linux_signing_scheme_tests_0314 {
         let mut frame=Vec::new();frame.extend_from_slice(&0x8001u16.to_be_bytes());
         frame.extend_from_slice(&((10+params.len()) as u32).to_be_bytes());frame.extend_from_slice(&[0;4]);frame.extend_from_slice(&params);
         assert!(parse_public_response(&frame).is_ok());
-        // The hash parameter in the ECC scheme is at TPMT_PUBLIC index 14-15.
+        // Параметр хеша схемы ECC расположен в TPMT_PUBLIC по индексам 14–15.
         let hash_offset=10+2+2+2+4+2+2+2;
         frame[hash_offset+1]=0x04;
         assert!(parse_public_response(&frame).is_err());
     }
 }
 
-// A TPM Quote must contain one SHA-256 bank with the exact PCR selection and
-// the caller's 32-byte qualifying nonce. This is a local defensive parser; the
-// backend independently validates the signature and PCR digest.
+// TPM Quote должен содержать один банк SHA-256 с точным набором PCR и
+// 32-байтовым nonce вызывающей стороны. Это локальный защитный парсер;
+// Backend отдельно проверяет подпись и дайджест PCR.
 pub fn validate_quote_0315(att: &[u8], sig: &[u8], extra: &[u8;32], indices: &[u8]) -> Result<(),String> {
     if att.len()<2 || be16(att)?+2!=att.len() {return Err("invalid TPM2B Quote length".into());}
     let bytes=&att[2..];

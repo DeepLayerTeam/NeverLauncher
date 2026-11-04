@@ -318,8 +318,8 @@ type Event = {
   createdAt: string;
 };
 
-/** A working server-backed migration run operator. No client-side state is
- * considered authoritative. All mutations are fenced/committed on Backend. */
+/** Рабочий оператор миграций, состояние которых хранится на сервере. Клиентское состояние не
+ * является авторитетным. Все изменения защищены fencing и фиксируются в Backend. */
 export function MigrationCenter0331({
   backendUrl,
   token,
@@ -837,7 +837,7 @@ export function MigrationCenter0331({
     } finally {
       setBusy(false);
     }
-    // Preserve the idempotency key after uncertain network errors for safe retry.
+    // После сетевой ошибки с неопределённым исходом сохраняйте ключ идемпотентности для безопасного повтора.
   }
   async function operate(action: "execute" | "pause" | "resume") {
     if (!runId || busy) return;
@@ -852,7 +852,7 @@ export function MigrationCenter0331({
       );
       await refresh(runId);
     } catch (e) {
-      // Failed/indeterminate responses require rereading durable state before replay.
+      // При ошибочном или неопределённом ответе перечитайте сохранённое состояние перед повторной отправкой.
       setError(String(e));
       await refresh(runId).catch(() => undefined);
     } finally {

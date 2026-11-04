@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Compiles the actual platform-neutral auth/HTTP bridge code and executes its
-# denial/acceptance scenarios. No stubbed Minecraft platform APIs are used.
+# Компилирует фактический нейтральный к платформе код моста авторизации и HTTP и проверяет
+# сценарии разрешения/отказа. Заглушки API платформ Minecraft не используются.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VERSION="$(tr -d '\r\n' < "$ROOT/VERSION")"

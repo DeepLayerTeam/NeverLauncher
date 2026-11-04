@@ -12,12 +12,12 @@ import (
 	"strings"
 )
 
-// Set at build time by a trusted release pipeline: -ldflags
-// '-X main.componentSetTrustedKey02310=<64-hex-character-Ed25519-public-key>'.
-// Never obtain this value from the downloaded component package.
+// Задаётся во время сборки доверенным конвейером релиза: -ldflags '-X
+// main.componentSetTrustedKey02310=<64-hex-character-Ed25519-public-key>'.
+// Никогда не берите это значение из скачанного пакета компонентов.
 var componentSetTrustedKey02310 string
 
-// A separate offline root is provisioned at release build; it never comes from the package.
+// Отдельный офлайн-корневой ключ подготавливается при сборке релиза; он никогда не извлекается из пакета.
 var componentSetRootKey02312 string
 
 const componentPolicyFile02312 = "COMPONENT_TRUST_POLICY.json"
@@ -62,8 +62,8 @@ func componentCoordinationRequired02310(ver string) bool {
 	return ok && (major > 0 || (minor > 23 || (minor == 23 && patch >= 10)))
 }
 
-// The signature authenticates the *exact* manifest bytes, including every file,
-// protocol edge and target. The package hash is checked independently upstream.
+// Подпись удостоверяет ТОЧНЫЕ байты манифеста, включая каждый файл, границу
+// протокола и цель. Хеш пакета независимо проверяется выше по цепочке.
 func verifySignedComponentSet02310(manifestPath string, manifest componentUpdateManifest0157, allowDevelopment bool) error {
 	if !componentCoordinationRequired02310(manifest.ProductVersion) {
 		return nil
@@ -115,9 +115,9 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 	return nil
 }
 
-// Fail closed on protocol mismatches *before* the first live file is touched.
-// The minimum verified protocol requirements are derived from the actual
-// Guard v4, sensor v3 and updater v2 wire implementations.
+// При несоответствии протоколов отказывайте ДО изменения первого рабочего
+// файла. Минимальные проверенные требования выводятся из действительных
+// реализаций протоколов Guard v4, sensor v3 и updater v2.
 func validateComponentProtocols02310(manifest componentUpdateManifest0157) error {
 	if manifest.ComponentSet == nil || manifest.ComponentSet.SchemaVersion != "1.0" {
 		return errors.New("component-set protocol matrix missing")
@@ -175,7 +175,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 			return fmt.Errorf("missing protocol role %s", name)
 		}
 	}
-	// These edges are mandatory even when a manifest tries to omit them.
+	// Эти связи обязательны, даже если манифест пытается их опустить.
 	edges := map[string][]componentProtocolRequirement02310{
 		"desktop": {{"guard", "guard-ipc", 4}, {"runtime", "guard-ipc", 4}, {"updater", "component-update", 2}},
 		"guard":   {{"runtime", "guard-ipc", 4}},
@@ -220,7 +220,7 @@ func containsCoreComponent02310(value string) bool {
 	return value == "desktop" || value == "guard" || value == "runtime" || value == "sensor"
 }
 
-// Fixed compatibility matrix is also exercised by the real updater self-test.
+// Фиксированная матрица совместимости также проверяется настоящим самотестированием обновлятора.
 func builtInComponentProtocolSet02310(platform string) *componentSet02310 {
 	rows := []componentProtocol02310{
 		{Component: "desktop", Provides: map[string]uint32{"guard-ipc": 4}, Requires: []componentProtocolRequirement02310{{"guard", "guard-ipc", 4}, {"runtime", "guard-ipc", 4}, {"updater", "component-update", 2}}},
@@ -235,9 +235,9 @@ func builtInComponentProtocolSet02310(platform string) *componentSet02310 {
 	return &componentSet02310{SchemaVersion: "1.0", Protocols: rows}
 }
 
-// Recovery must not restart the launcher merely because journal replay returned
-// without an error: verify all recorded active components, including the
-// updater that participates in the coordinated set.
+// Восстановление не должно перезапускать лаунчер только потому, что
+// воспроизведение журнала завершилось без ошибки: проверьте все записанные
+// активные компоненты, включая обновлятор в согласованном наборе.
 func verifyRestartedComponentSet02310(root, desktopPath string) error {
 	statePath := filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))
 	state, present, err := readComponentUpdateStateOptional01510(statePath)
@@ -271,9 +271,9 @@ func verifyRestartedComponentSet02310(root, desktopPath string) error {
 	} else if appRoot == "" {
 		return err
 	}
-	// On macOS an intact, signed .app may have been committed just before
-	// power loss, with the external state write not yet durable. Derive state
-	// only from the still-trusted signature inside the sealed new application.
+	// В macOS целое подписанное приложение .app могло быть зафиксировано перед отключением
+	// питания, но внешнее состояние ещё не было долговечным. Выводите состояние только из
+	// всё ещё доверенной подписи внутри нового запечатанного приложения.
 	manifestPath := filepath.Join(appRoot, "Contents", "Resources", componentUpdateManifestFile0157)
 	manifest, err := readComponentUpdateManifest0157(manifestPath)
 	if err != nil {

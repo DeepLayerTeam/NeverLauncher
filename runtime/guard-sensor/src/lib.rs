@@ -65,8 +65,8 @@ const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
 const MODULE_PATH_WCHARS: usize = 2048;
 const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
 const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
-// Native Minecraft startup can load more than 512 DLLs between worker polls.
-// Preserve every notification; actual overflow still remains a guard violation.
+// При запуске нативного Minecraft между опросами рабочего процесса может загружаться более 512
+// DLL. Сохраняйте каждое уведомление; фактическое переполнение остаётся нарушением Guard.
 const MODULE_RING_CAPACITY: usize = 2048;
 const MODULE_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 const MODULE_WORKER_POLL_INTERVAL: Duration = Duration::from_millis(20);
@@ -631,9 +631,9 @@ fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
     event
 }
 
-// Rust abort() produces Windows 0xC0000409; mark intentional fail-closed
-// termination distinctly from a JVM or GPU driver native crash. Do not log
-// secrets, memory contents or full host filesystem paths.
+// Rust abort() в Windows даёт 0xC0000409. Отмечайте намеренное прекращение работы с
+// отказом по умолчанию отдельно от нативного сбоя JVM или драйвера GPU. Не
+// записывайте секреты, содержимое памяти и полные пути файловой системы хоста.
 #[track_caller]
 fn guard_fail_closed_abort() -> ! {
     let site = std::panic::Location::caller();
@@ -863,8 +863,8 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     guard_fail_closed_abort();
                 }
                 Err(err) => {
-                    // Keep the exact reason in CI stdout even if the parent
-                    // fails to consume the signed tamper packet before abort.
+                    // Сохраняйте точную причину в stdout CI, даже если родитель не
+                    // успел прочитать подписанный пакет вмешательства до abort.
                     eprintln!("Guard JVM-Aware violation: {}", err.chars().take(240).collect::<String>());
                     let tamper = jvm_aware_tamper_event(&err);
                     let _ = write_module_event(

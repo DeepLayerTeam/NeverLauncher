@@ -35,8 +35,8 @@ fn process_identity(pid: u32) -> Result<Identity, String> {
     if pid == 0 || pid > i32::MAX as u32 {
         return Err("macOS Guard invalid JVM PID".into());
     }
-    // proc_bsdinfo is the documented Darwin layout from <sys/proc_info.h>.
-    // Check the returned size; a partial or denied inspection never passes.
+    // proc_bsdinfo — документированная структура Darwin из <sys/proc_info.h>. Проверяйте
+    // возвращённый размер; неполная или запрещённая инспекция никогда не проходит.
     let mut info: libc::proc_bsdinfo = unsafe { mem::zeroed() };
     let result = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0,
         (&mut info as *mut libc::proc_bsdinfo).cast(),
@@ -123,10 +123,10 @@ impl MacOSRuntimeGuard0509 {
         let meta = fs::metadata(&actual).map_err(|e| e.to_string())?;
         let signature = verify_macos_code_signature(&actual)?;
         if !signature.valid { return Err("macOS Guard JVM signature invalid".into()); }
-        // Java needs a JIT and may use JNI agents. We do not falsely require
-        // the Guard daemon's Hardened Runtime/library-validation entitlements
-        // on this separate Java executable. Instead pin the actual identity,
-        // binary SHA-256 and the signing identity for the entire game session.
+        // Java требует JIT и может использовать JNI-агенты. Нельзя ошибочно требовать
+        // для отдельного исполняемого Java разрешения Hardened Runtime/проверки
+        // библиотек демона Guard. Вместо этого на всю игровую сессию закрепляются
+        // фактическая идентичность, SHA-256 бинарника и идентичность подписи.
         let signing_team = signature.team_identifier
             .filter(|s| !s.trim().is_empty() && s != "not set")
             .ok_or("macOS Guard JVM must have a non-ad-hoc signing TeamIdentifier")?;
@@ -187,7 +187,7 @@ mod tests {
         let mut command = Command::new(&java);
         command.args(["-cp",fixture.to_str().unwrap(),"GuardHold"]);
         command.stdout(Stdio::null()).stderr(Stdio::null());
-        // The runtime uses the same pre-exec setpgid policy.
+        // Runtime использует ту же политику setpgid перед exec.
         unsafe { command.pre_exec(|| {
             if libc::setpgid(0, 0) < 0 {return Err(std::io::Error::last_os_error())}
             Ok(())

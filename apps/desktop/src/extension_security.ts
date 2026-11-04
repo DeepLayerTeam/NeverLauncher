@@ -1,4 +1,4 @@
-/** Fail-closed checks for untrusted Desktop extension catalog / HTML / RPC. */
+/** Проверки с отказом по умолчанию для недоверенного каталога расширений Desktop, HTML и RPC. */
 export const EXTENSION_PROTOCOL_0356 = "extensions.desktop-rpc.v1";
 export const EXTENSION_API_0356 = "1.0";
 const MAX_HTML = 2 * 1024 * 1024;

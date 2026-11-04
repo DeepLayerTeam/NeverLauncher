@@ -24,7 +24,7 @@ func loadComponentPolicy02312(manifestPath string) (TrustPolicy, string, compone
 	if e != nil {
 		return TrustPolicy{}, "", env, e
 	}
-	// Unlike the v1 signer, the v2 delegation root MUST be independently provisioned.
+	// В отличие от подписанта v1 корневой ключ делегирования v2 ОБЯЗАТЕЛЬНО должен выдаваться независимо.
 	p, digest, e := VerifyTrustPolicy(raw, componentSetRootKey02312, time.Now().UTC())
 	if e != nil {
 		return p, "", env, e
@@ -58,8 +58,8 @@ func verifyComponentTrust02312(manifestPath string) error {
 	if e != nil {
 		return e
 	}
-	// Enforce active issuance, not merely validity at a historical date: a
-	// revoked or retired signer may not authorize a NEW update.
+	// Требуйте действующий статус выпуска, а не только историческую действительность:
+	// отозванный или выведенный из эксплуатации подписант не может разрешить НОВОЕ обновление.
 	var pub []byte
 	for _, k := range policy.Keys {
 		if k.ID == env.KeyID && k.Role == "component" {
@@ -91,8 +91,8 @@ func acceptComponentTrust02312(root, manifestPath string) error {
 	return e
 }
 
-// Support explicitly separately signed v2 metadata while retaining v1 sidecar
-// for upgrading a 0.23.11 installation through its existing external updater.
+// Поддерживайте отдельно подписанные метаданные v2, сохраняя боковой файл v1 для
+// обновления установки 0.23.11 через её существующий внешний обновлятор.
 func checkComponentTrustSet02312(root, manifestPath string, m componentUpdateManifest0157) error {
 	if !componentTrustRequired02312(m.ProductVersion) {
 		return nil

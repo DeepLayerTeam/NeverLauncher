@@ -82,9 +82,9 @@ export LAUNCHER_E2E_MODE=compatibility
 export LAUNCHER_E2E_PROFILE_ID="$LOADER"
 
 set +e
-# Capture the actual child process output outside e2e/runtime (which each
-# certification runner clears). The raw log is hashed into the result and
-# independently replayed before any reviewed acceptance can be signed.
+# Сохраняйте реальный вывод дочернего процесса вне e2e/runtime, который
+# очищает каждый сценарий сертификации. Сырой журнал хешируется в результате
+# и независимо воспроизводится до подписи проверенной приёмки.
 printf "[compat] actual client execution target=%s version=%s\n" "$TARGET_ID" "$PRODUCT_VERSION" > "$EXECUTION_LOG"
 if [[ "$SCOPE" == "client" && "$MATCHING_SERVER" == "true" ]]; then
   bash "$ROOT/e2e/scripts/run-vanilla-matching-e2e.sh" 2>&1 | tee -a "$EXECUTION_LOG"
@@ -294,8 +294,8 @@ if scope == "client":
                     and probe.get("mainClass") == install.get("mainClass")
                 ),
             })
-    # Every ordinary client target in 0.52.4 requires contemporaneous server-side
-    # multiplayer proof, not merely an idle JVM surviving for N seconds.
+    # Каждая обычная цель клиента версии 0.52.4 требует одновременного серверного
+    # подтверждения мультиплеера, а не просто бездействующей JVM, прожившей N секунд.
     if not matching_server:
         live = read("live-join.json") or {}
         server_log_path = runtime / "matching-server.log"
@@ -443,8 +443,8 @@ payload = {
     "exitCode": rc,
     "checks": checks,
     "evidence": {
-        # Bind this CI result to the exact bytes uploaded with the job. A
-        # filename/boolean alone is not proof that an installer or launch ran.
+        # Привязывайте результат CI к точным байтам, загруженным вместе с заданием. Имя файла или
+        # булево значение не доказывают, что установщик или запуск действительно выполнялись.
         "sha256": {
             name: file_sha256(
                 (out.parent / name) if name in ("platform-runtime.json", "java-runtime.json", "compatibility-execution.log")

@@ -189,7 +189,7 @@ class RealProductionUpdater(unittest.TestCase):
                 json.loads((root / "cycle-verify-rollback.json").read_text())["status"],
                 "valid",
             )
-            # No actual Minecraft JVM or ServerBridge: must NOT generate a PASS certificate.
+            # Нет настоящей JVM Minecraft или ServerBridge: сертификат PASS создаваться НЕ должен.
             final = subprocess.run(
                 [
                     sys.executable,

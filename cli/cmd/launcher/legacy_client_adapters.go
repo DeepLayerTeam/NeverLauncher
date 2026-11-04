@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-// Legacy launch recipes are resolved from the *materialized* Minecraft and
-// loader profiles, not guessed from a forge version string. The recipe is
-// immutable inside the Client Factory lock and is checked on every launch.
+// Рецепты старого запуска выводятся из ПОДГОТОВЛЕННЫХ профилей Minecraft и
+// загрузчика, а не угадываются по строке версии Forge. Рецепт неизменяем в
+// lock Client Factory и проверяется при каждом запуске.
 type legacyClasspath0278 struct {
 	Path   string `json:"path"`
 	SHA256 string `json:"sha256"`
@@ -56,9 +56,9 @@ func legacyLaunchFile0278(root string) string {
 	return filepath.Join(root, ".launcher", "legacy-launch.json")
 }
 
-// Mojang older versions do not use modern arguments.game. The split keeps
-// quoted arguments intact and rejects unclosed quotes rather than producing
-// ambiguous launcher invocations.
+// Старые версии Mojang не используют современное arguments.game.
+// Разделение сохраняет аргументы в кавычках и отклоняет незакрытые
+// кавычки, а не формирует неоднозначные вызовы лаунчера.
 func splitLegacyArguments0278(s string) ([]string, error) {
 	var out []string
 	var b strings.Builder
@@ -109,11 +109,11 @@ func splitLegacyArguments0278(s string) ([]string, error) {
 	return out, nil
 }
 
-// Merge inherited legacy options at argv boundaries, not by concatenating
-// strings. Some Forge install profiles provide only --tweakClass, while others
-// repeat --username/--version without supplying every Mojang base argument.
-// A child's explicit value supersedes the parent's value for that option;
-// parent options that are not mentioned by the child must survive.
+// Объединяйте унаследованные старые параметры по границам argv, а не конкатенацией
+// строк. Некоторые профили установки Forge содержат лишь --tweakClass, другие
+// повторяют --username/--version, не указывая все базовые параметры Mojang. Явное
+// значение дочернего процесса перекрывает родительское для этого параметра; не
+// упомянутые дочерним параметры родителя должны сохраняться.
 func mergeLegacyArgumentTokens0278(parent, child []string) []string {
 	if len(parent) == 0 {
 		return append([]string(nil), child...)
@@ -173,8 +173,8 @@ func legacyGroupArtifact0278(name string) string {
 	if len(p) < 3 {
 		return name
 	}
-	// Classifiers are distinct artifacts but version changes must replace the
-	// matching group:artifact:classifier without changing classpath order.
+	// Классификаторы — отдельные артефакты, однако при изменении версии заменяется
+	// соответствующая группа group:artifact:classifier без изменения порядка classpath.
 	if len(p) >= 4 {
 		return p[0] + ":" + p[1] + ":" + p[3]
 	}
@@ -283,7 +283,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 			if !rulesAllowTarget(lib.Rules, target) || !libraryArtifactAppliesToTarget(lib.Name, target) || isClassifiedNativeLibrary(lib.Name) {
 				continue
 			}
-			// Classifier-only natives have no classpath artifact.
+			// Нативные библиотеки, заданные только классификатором, не имеют артефакта classpath.
 			artifact := lib.Downloads.Artifact
 			if !hasMojangDownloadDescriptor(artifact) && len(lib.Downloads.Classifiers) > 0 {
 				continue
@@ -298,7 +298,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 				return nil, fmt.Errorf("%s: %w", lib.Name, e)
 			}
 		}
-		// Inherited Minecraft client always remains the last classpath entry.
+		// Унаследованный клиент Minecraft всегда остаётся последним элементом classpath.
 		jarRel := filepath.ToSlash(filepath.Join("versions", minecraft, minecraft+".jar"))
 		if err = addLegacyClasspath0278(root, &item, jarRel); err != nil {
 			return nil, err
@@ -352,8 +352,8 @@ func writeLegacyLaunch0278(root string, recipe *legacyLaunch0278) error {
 }
 func verifyLegacyLaunch0278(root string, p factoryPlan0271) error {
 	if p.Legacy == nil {
-		// Previously published 0.27.7 lockfiles do not contain a legacy
-		// recipe. Their original plan digest and outputs remain authoritative.
+		// Ранее опубликованные lock-файлы 0.27.7 не содержат старого рецепта.
+		// Их исходный дайджест плана и результаты сохраняют силу.
 		return nil
 	}
 	actual, err := resolveLegacyLaunch0278(root, p.Loader, p.MinecraftVersion, p.Launch.ProfilePath, p.Java.Major, p.Targets)
@@ -433,7 +433,7 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 	if javaExecutable == "" {
 		javaExecutable = "java"
 	}
-	// Use the existing Java selector's mandatory major-version check.
+	// Используйте обязательную проверку основной версии в существующем селекторе Java.
 	if err = verifyLegacyJava0278(ctx, javaExecutable); err != nil {
 		return err
 	}
@@ -500,9 +500,9 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		return err
 	}
 	defer trustedCleanup()
-	// Guard compatibility is an enforcement step, not just a published allowlist.
-	// All ordinary JVM agents (including compat agents) and trusted plugins must
-	// match the independently signed policy before the process can be spawned.
+	// Совместимость Guard — обязательная проверка, а не просто опубликованный список
+	// разрешений. Все обычные JVM-агенты, включая агенты совместимости, и доверенные плагины
+	// должны соответствовать независимо подписанной политике до создания процесса.
 	var guardedAgents, guardedPlugins []string
 	for _, arg := range append(append([]string{}, compatJVM...), trustedJVM...) {
 		if strings.HasPrefix(strings.ToLower(arg), "-javaagent:") {
@@ -548,7 +548,7 @@ func verifyLegacyJava0278(ctx context.Context, executable string) error {
 	if err != nil {
 		return fmt.Errorf("Java version check: %w", err)
 	}
-	// Accept the Java 8 version formats: 1.8.0_*** and 8.0.*.
+	// Разрешайте форматы версии Java 8: 1.8.0_*** и 8.0.*.
 	if !regexp.MustCompile(`(?m)(?:version|openjdk)\s+"(?:1\.8\.|8(?:[.+-]|"))`).Match(raw) {
 		return fmt.Errorf("legacy adapter requires Java 8, got %q", strings.TrimSpace(string(raw)))
 	}

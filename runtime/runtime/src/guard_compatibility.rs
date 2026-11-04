@@ -161,8 +161,8 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
 /// Artifacts are SHA-256 checked again immediately before spawn.
 pub struct GamePolicy0503 { policy:Policy, digest:String }
 impl GamePolicy0503 {
- /// Return only independently signed, verified executable artifacts for in-JVM
- /// integrity monitoring. This cannot extend trust beyond policy artifacts.
+ /// Возвращайте только независимо подписанные и проверенные исполняемые артефакты для контроля
+ /// целостности внутри JVM. Это не расширяет доверие за пределы артефактов политики.
  pub fn runtime_artifacts(&self,root:&Path)->Result<Vec<(std::path::PathBuf,String,String)>,String>{
   let mut items=Vec::new();
   for a in &self.policy.artifacts {
@@ -172,9 +172,9 @@ impl GamePolicy0503 {
   }
   Ok(items)
  }
- /// Exact Linux user-mode overlay/recording native images. A signed operator
- /// policy, never the user's environment or a vendor name, grants access.
- /// Every entry is checked before launch and again during game monitoring.
+ /// Точные нативные образы оверлеев и записи Linux в пользовательском пространстве. Доступ
+ /// разрешает подписанная политика оператора, а не окружение пользователя или имя
+ /// поставщика. Каждая запись проверяется до запуска и во время наблюдения игры.
  pub fn external_native_modules(&self,root:&Path)->Result<std::collections::BTreeMap<std::path::PathBuf,String>,String> {
   let mut result=std::collections::BTreeMap::new();
   for entry in &self.policy.external_native_modules {
@@ -196,8 +196,8 @@ impl GamePolicy0503 {
   if actual_sha(&root.join(&artifact.path))?!=artifact.sha256{return Err("Guard compatibility trusted code digest changed".into())}
   Ok(())
  }
- /// Loader runtime classes must come from independently signed loader-library JARs.
- /// These are verified here and again by the Java agent at class definition.
+ /// Классы загрузчика Runtime должны происходить из независимо подписанных JAR-библиотек
+ /// загрузчика. Здесь они проверяются, а Java-агент повторяет проверку при определении класса.
  pub fn loader_class_bytes(&self)->Vec<(String,String)> {
   self.policy.loader_class_bytes.iter().map(|c|(c.name.clone(),c.sha256.clone())).collect()
  }
@@ -307,8 +307,8 @@ fn require_candidates(root:&Path,dir:&Path,kind:&str,extensions:&[&str],approved
  }
  Ok(())
 }
-/// Rejects native certification of an unscoped game in a root where a
-/// signed policy is required. Certification has no project manifest to bind.
+/// Отклоняет нативную сертификацию игры без привязки к области в каталоге, где
+/// требуется подписанная политика. Для привязки у сертификации нет манифеста проекта.
 pub fn refuse_unscoped_launch(root:&Path)->Result<(),String>{
  if root.join(POLICY).exists() || root.join(FLOOR).exists() || std::env::var(REQUIRED).ok().as_deref()==Some("1") {
   return Err("Guard compatibility cannot authorize unscoped native game certification".into())
@@ -316,8 +316,8 @@ pub fn refuse_unscoped_launch(root:&Path)->Result<(),String>{
  Ok(())
 }
 
-/// Enforces scope, revocation, exact allowed artifact bytes, and rejects
-/// unknown executable files in controlled Minecraft folders.
+/// Принудительно проверяет область действия, отзывы, точные разрешённые байты артефактов
+/// и отклоняет неизвестные исполняемые файлы в управляемых каталогах Minecraft.
 pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_args:&[String])->Result<(),String>{
  let Some(v)=load(root)? else{return Ok(())};
  let p=v.policy;
@@ -334,7 +334,7 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
  for a in &p.artifacts {
   if p.revoked_digests.contains(&a.sha256){return Err(format!("Guard compatibility artifact revoked: {}",a.path))}
   let path=root.join(&a.path);
-  // Verify every intermediate path as well as the final inode.
+  // Проверяйте не только конечный inode, но и каждый промежуточный компонент пути.
   validate_safe_path(root,&a.path,512*1024*1024)?;
   if actual_sha(&path)?!=a.sha256{return Err(format!("Guard compatibility digest mismatch: {}",a.path))}
   approved.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase()),a.sha256.clone());
@@ -362,8 +362,8 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
  }
  Ok(())
 }
-/// Called by Windows Guard before allowing -javaagent. A signed policy is
-/// required: ordinary JVM option injection stays forbidden.
+/// Вызывается Windows Guard до разрешения -javaagent. Подписанная политика
+/// обязательна; обычное внедрение параметров JVM остаётся запрещённым.
 pub fn authorize_agent(root:&Path,argument:&str)->Result<bool,String>{
  let Some(v)=load(root)? else{return Ok(false)};
  let Some(value)=argument.strip_prefix("-javaagent:") else{return Ok(false)};

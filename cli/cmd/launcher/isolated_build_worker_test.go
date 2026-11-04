@@ -19,7 +19,7 @@ func TestProcessorWorker0273ExecutesOutsideCLIWithSanitizedEnvAndLog(t *testing.
 	}
 	dir := t.TempDir()
 	java := filepath.Join(dir, "java")
-	// Java fixture writes its own PID, inherited secret status and a result.
+	// Тестовый Java-процесс записывает собственный PID, факт наследования секрета и результат.
 	script := `#!/bin/sh
 printf '%s' "$PPID" > "$PWD/worker-parent.pid"
 if [ -n "$LAUNCHER_TOKEN" ]; then exit 99; fi
@@ -65,7 +65,7 @@ func TestProcessorWorker0273TimeoutKillsProcessGroup(t *testing.T) {
 	}
 	dir := t.TempDir()
 	java := filepath.Join(dir, "java")
-	// Includes a grandchild that inherits pipes: timeout must not wait for it.
+	// Включён дочерний процесс следующего уровня, наследующий каналы: таймаут не должен ожидать его завершения.
 	if err := os.WriteFile(java, []byte("#!/bin/sh\nsleep 60 &\nwait\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -86,8 +86,8 @@ func TestProcessorWorker0273TimeoutKillsProcessGroup(t *testing.T) {
 }
 
 func TestProcessorWorker0273RefusesOversizedOrUntrustedRequest(t *testing.T) {
-	// Do not permit JSON requests that cannot be independently bounded or
-	// execution paths that are resolved relative to arbitrary PATH entries.
+	// Не разрешайте JSON-запросы, размер которых нельзя проверить независимо, или
+	// пути запуска, разрешаемые относительно произвольных элементов PATH.
 	tooBig := processorWorkerRequest0273{Java: "/usr/bin/java", Directory: "/tmp", TempDirectory: "/tmp", TimeoutSeconds: 60, HeapMiB: 2048, Args: make([]string, 5000)}
 	raw, err := json.Marshal(tooBig)
 	if err != nil {

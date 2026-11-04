@@ -140,7 +140,7 @@ export function BackendOperations0289({
       )
     )
       return;
-    // Keep the key in sessionStorage until the outcome is independently checked.
+    // Сохраняйте ключ в sessionStorage, пока результат не будет независимо проверен.
     const storageKey = `launcher.backend-restart:${status.instanceId}`;
     const key =
       restartKey || sessionStorage.getItem(storageKey) || crypto.randomUUID();

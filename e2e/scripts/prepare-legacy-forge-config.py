@@ -37,7 +37,7 @@ def prepare(root: Path, minecraft_version: str) -> bool:
         with output.open("x", encoding="utf-8", newline="\n") as stream:
             stream.write(FORGE_1144_FML_DEFAULTS)
     except FileExistsError:
-        # A concurrent writer must not cause us to overwrite its file.
+        # Конкурирующий писатель не должен заставить нас перезаписать его файл.
         if output.is_symlink() or not output.is_file():
             raise ValueError("Forge fml.toml was replaced with an unsafe path")
         return False

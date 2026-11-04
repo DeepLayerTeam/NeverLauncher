@@ -198,8 +198,8 @@ def prepare(args: argparse.Namespace) -> None:
         "installed baseline differs from Minecraft source",
     )
 
-    # A real, versioned client resource changes between releases. The Minecraft
-    # assets, libraries, natives, and loader remain the genuine Mojang material.
+    # Настоящий версионированный клиентский ресурс изменяется между релизами. Ресурсы,
+    # библиотеки, нативные файлы Minecraft и загрузчик остаются подлинными материалами Mojang.
     updated_content = (
         f"Launcher E2E release: {args.release}-update\n"
         f"project=e2e-project\nprofile={args.profile}\nsourceCommit={source_sha}\n"

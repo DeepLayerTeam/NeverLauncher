@@ -73,7 +73,7 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 	if e = acceptComponentTrust02312(rootInstall, manifestPath); e != nil {
 		t.Fatal(e)
 	}
-	// Signed manifest cannot be mixed with modified metadata or an older epoch.
+	// Подписанный манифест нельзя сочетать с изменёнными метаданными или более старой эпохой.
 	if e = os.WriteFile(manifestPath, append(manifest, ' '), 0600); e != nil {
 		t.Fatal(e)
 	}
@@ -88,8 +88,8 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 	if e = verifyComponentTrust02312(manifestPath); e == nil {
 		t.Fatal("revoked component signer accepted")
 	}
-	// Accepting a newer revocation epoch makes a previously signed older policy
-	// permanently unusable, even if its signature itself is still valid.
+	// Принятие новой эпохи отзывов навсегда запрещает старую подписанную
+	// политику, даже если её собственная подпись остаётся действительной.
 	if _, e = AcceptTrustPolicy(filepath.Join(rootInstall, ".launcher", "component-trust"), rootHex, revoked, now); e != nil {
 		t.Fatal(e)
 	}

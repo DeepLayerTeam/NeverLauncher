@@ -77,7 +77,7 @@ X-Launcher-Signature
 X-Launcher-Connector-Id
 ```
 
-Request canonical string:
+Каноническая строка запроса:
 
 ```text
 METHOD\n

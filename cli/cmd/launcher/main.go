@@ -556,8 +556,8 @@ func handleUpdate(args []string) error {
 			if e != nil {
 				return e
 			}
-			// The caller passed the currently installed Desktop executable, not
-			// an arbitrary remote URL or an executable from the package.
+			// Вызывающая сторона передала установленный исполняемый файл
+			// Desktop, а не произвольный внешний URL или бинарник из пакета.
 			if _, e := os.Stat(target); e != nil {
 				return fmt.Errorf("recovered Desktop is missing: %w", e)
 			}

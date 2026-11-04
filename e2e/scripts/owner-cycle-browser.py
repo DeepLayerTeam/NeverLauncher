@@ -185,7 +185,7 @@ async def main():
                 )
                 page = await ctx.new_page()
                 page.on("dialog", lambda d: asyncio.create_task(d.accept()))
-                # Fresh real project and its first real profile, created through Admin forms.
+                # Новый реальный проект и его первый настоящий профиль создаются через формы Admin.
                 canary = f"owner0390-{uuid.uuid4().hex[:12]}"
                 await page.goto(web + "/#/projects?project=" + project)
                 await page.get_by_role("heading", name="Рабочие CRUD-формы").wait_for(
@@ -217,7 +217,7 @@ async def main():
                     timeout=20000
                 )
                 receipt["checks"].append("profile-created-in-admin")
-                # Return to certified staging resources and verify negative case via UI.
+                # Вернитесь к сертифицированным ресурсам тестового развёртывания и проверьте отрицательный сценарий через UI.
                 uri = (
                     web
                     + f"/#/release-workspace?project={project}&profile={profile}&channel={channel}"
@@ -264,7 +264,7 @@ async def main():
                 await page.get_by_role(
                     "heading", name="Проверка реального результата операции"
                 ).wait_for(timeout=20000)
-                # Exact original idempotency key and job must survive browser reload.
+                # Точный исходный ключ идемпотентности и задание должны сохраниться после перезагрузки браузера.
                 await page.reload()
                 await page.get_by_role(
                     "heading", name="Проверка реального результата операции"
@@ -307,7 +307,7 @@ async def main():
                 receipt["checks"].append("rollback-confirmed")
                 receipt["finalRevision"] = rolled_back["revision"]
                 receipt["finalReleaseId"] = rolled_back["releaseId"]
-                # Operator token is a separate principal; no cross-project read.
+                # Токен оператора принадлежит другому субъекту; чтение между проектами запрещено.
                 denied = await p.request.new_context(
                     extra_http_headers={"Authorization": f"Bearer {operator}"}
                 )
@@ -330,7 +330,7 @@ async def main():
                 await browser.close()
         finally:
             await request.dispose()
-    # This is CI evidence OUTSIDE signed artifacts, not a GA/operator signature.
+    # Это доказательство CI ВНЕ подписанных артефактов, а не подпись GA или оператора.
     output = ROOT / "dist/ga-certification/owner-cycle-0390.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(

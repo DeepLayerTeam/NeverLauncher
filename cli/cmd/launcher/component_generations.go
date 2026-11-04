@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-// SecurityGeneration belongs to the signed component-set manifest. It MUST NOT
-// be inferred from productVersion, a mirror URL, or the local transaction ID.
-// The watermark lives outside the rollback-controlled managed component tree.
-// All calls are serialized by the existing transactional updater lock.
+// SecurityGeneration принадлежит подписанному манифесту набора компонентов. Его НЕЛЬЗЯ
+// выводить из productVersion, URL зеркала или ID локальной транзакции. Контрольное
+// минимальное значение хранится вне управляемого дерева компонентов, подверженного откату.
+// Все вызовы сериализованы существующей блокировкой транзакционного обновлятора.
 const componentSecurityState02311 = ".launcher/component-security"
 
 type componentGenerationRecord02311 struct {
@@ -109,8 +109,8 @@ func checkComponentGeneration02311(root string, m componentUpdateManifest0157) e
 	if m.SecurityGeneration == floor.Generation && floor.Generation > 0 && componentDigest02311(m) != floor.ManifestDigest {
 		return errors.New("component generation reused for a different signed set")
 	}
-	// A verified installed state can be ahead of the watermark if power was lost
-	// after atomic commit but before recording the separate watermark.
+	// Проверенное установленное состояние может опережать контрольное минимальное значение, если
+	// питание пропало после атомарной фиксации, но до сохранения отдельного значения.
 	statePath := filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))
 	st, available, err := readComponentUpdateStateOptional01510(statePath)
 	if err != nil {
@@ -169,8 +169,8 @@ func reconcileInstalledComponentGeneration02311(root string) error {
 		return errors.New("installed security generation state is malformed")
 	}
 	if st.SecurityGeneration > floor.Generation {
-		// Never raise floor on the basis of an unverified local state alone.
-		// The active component tree must match every recorded SHA-256.
+		// Никогда не повышайте нижнюю границу на основе одного непроверенного локального
+		// состояния. Активное дерево компонентов должно соответствовать всем записанным SHA-256.
 		verifyRoot := root
 		if st.Platform == "macos" {
 			if filepath.Base(st.BundleName) != st.BundleName || !strings.HasSuffix(strings.ToLower(st.BundleName), ".app") {

@@ -9,9 +9,9 @@ import (
 	"os/exec"
 )
 
-// On non-Linux platforms the worker still has a separate PID, bounded heap,
-// wall-clock deadline, sanitized env and bounded logs. Kernel rlimits and
-// process-group teardown require OS-specific runners and are not claimed.
+// На платформах не-Linux рабочий процесс всё ещё имеет отдельный PID, ограниченную
+// кучу, дедлайн, очищенное окружение и ограниченные журналы. Лимиты ядра и
+// завершение группы процессов требуют обработчиков ОС и не заявлены здесь.
 func limitWorkerResources0273(seconds int) error { return nil }
 func prepareWorkerProcess0273(cmd *exec.Cmd)     {}
 func terminateWorkerTree0273(p *os.Process) {

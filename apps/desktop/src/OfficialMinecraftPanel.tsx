@@ -18,7 +18,7 @@ type Props = {
 const formatTime = (seconds: number): string =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-/** Complete account experience. Only metadata is retained by React; secrets stay in Rust. */
+/** Полный интерфейс управления учётной записью. React хранит только метаданные; секреты остаются в Rust. */
 export function OfficialMinecraftPanel0257({
   client,
   linkedProfile,

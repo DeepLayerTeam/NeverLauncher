@@ -9,8 +9,8 @@ import {
 } from "../src/api/client.ts";
 import { can, canSeeSection } from "../src/admin/permissions.ts";
 
-// Real loopback TCP server: lost replies are exercised over an actual socket,
-// not a mocked fetch implementation.
+// Настоящий TCP-сервер на loopback: потерянные ответы
+// проверяются через реальный сокет, а не имитацию fetch.
 async function withBackend(handler, run) {
   const server = createServer(handler);
   server.listen(0, "127.0.0.1");

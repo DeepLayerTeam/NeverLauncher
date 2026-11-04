@@ -90,7 +90,7 @@ def custom_probe(credentials, negative_credentials):
     base=credentials.get('authServerBaseUrl','').rstrip('/')
     if not base or base in ('https://example.com','https://example.org'):
         raise ProviderMisconfigured('custom Yggdrasil provider must be explicitly configured')
-    # Do NOT accept arbitrary loopback/mock servers as a real external provider.
+    # НЕ принимайте произвольные локальные или имитирующие серверы за настоящего внешнего провайдера.
     parsed=urllib.parse.urlsplit(base)
     if parsed.hostname in ('localhost','127.0.0.1','::1'):
         raise ProviderMisconfigured('loopback mock is not live custom-provider certification')
@@ -115,7 +115,7 @@ def custom_probe(credentials, negative_credentials):
     join(credentials,live_challenge)
     if not has_joined(credentials,live_challenge):
         raise ProviderRejected('custom hasJoined did not redeem a live session')
-    # Existing backend uses atomic consume-once Yggdrasil joins.
+    # Существующий Backend использует атомарное одноразовое погашение входов Yggdrasil.
     if has_joined(credentials,live_challenge):
         raise ProviderRejected('custom join ticket replay was accepted')
     revoked_challenge=secrets.token_hex(32)
@@ -145,8 +145,8 @@ def run_probe(mode,credentials_path,negative_path=None,expected_backend=None):
         return c
     c=read_credential(credentials_path)
     if mode=='custom':
-        # Only the exact staged Backend may issue a trusted custom session.
-        # A third-party mock with a valid public TLS certificate is NOT proof.
+        # Только точный тестовый Backend может выдавать доверенный пользовательский сеанс. Сторонняя
+        # имитация с действительным публичным TLS-сертификатом НЕ является доказательством.
         if not expected_backend or c.get('authServerBaseUrl','').rstrip('/')!=expected_backend.rstrip('/'):
             raise ProviderMisconfigured('custom auth provider differs from the staged Backend')
     negative=read_credential(negative_path) if mode=='custom' and negative_path else None
@@ -177,7 +177,7 @@ def guard_denial_probe(active, denied_path):
     try:
         provider_request(base,'/sessionserver/session/minecraft/join',method='POST',data=payload)
     except ProviderRejected as exc:
-        # Stronger than status-only: a backend generated policy denial is needed.
+        # Недостаточно только кода состояния: требуется отказ по политике, сформированный Backend.
         if 'trust policy denied' not in str(exc) and 'integrity policy denied' not in str(exc):
             raise ProviderRejected('negative join denied without verifiable trust/Guard policy reason') from None
         return {'negativeGuardJoinDenied':'guard' in str(exc), 'negativeDeviceTrustJoinDenied':True}

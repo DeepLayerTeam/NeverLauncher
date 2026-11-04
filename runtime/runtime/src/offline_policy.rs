@@ -1,6 +1,6 @@
-// 0.35.8. The owner-signed offline profile authorizes only local play.
-// In particular, a signed launch argument must not sneak a server auto-join
-// into a launch in which the UI deliberately disabled auto-enter.
+// 0.35.8: подписанный владельцем офлайн-профиль разрешает только локальную
+// игру. В частности, подписанный аргумент запуска не должен тайно включать
+// автоматический вход на сервер, если UI явно выключил автоподключение.
 use crate::LaunchPlan;
 
 pub fn reject_offline_server_autojoin_0358(plan: &LaunchPlan) -> Result<(), String> {

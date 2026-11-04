@@ -186,8 +186,8 @@ func readPolicyState02312(path string) (trustPolicyState, error) {
 	return st, nil
 }
 
-// Called under the existing Prestarter process lock. The watermark and the
-// current policy are outside the replaceable launcher/component directories.
+// Вызывается под существующей блокировкой процесса Prestarter. Контрольное значение и
+// текущая политика находятся за пределами заменяемых каталогов лаунчера и компонентов.
 func AcceptTrustPolicy(path, rootHex string, raw []byte, now time.Time) (TrustPolicy, error) {
 	p, digest, e := VerifyTrustPolicy(raw, rootHex, now)
 	if e != nil {
@@ -207,7 +207,7 @@ func AcceptTrustPolicy(path, rootHex string, raw []byte, now time.Time) (TrustPo
 		return p, e
 	}
 	if previous.Epoch < p.Epoch {
-		// Keep a durable revocation floor even if subsequent component installation fails.
+		// Сохраняйте долговечную нижнюю границу отзывов, даже если дальнейшая установка компонентов завершится ошибкой.
 		if e = writeTrustAtomic02312(statePath, trustPolicyState{p.Epoch, digest, hex.EncodeToString(fp[:])}); e != nil {
 			return p, e
 		}

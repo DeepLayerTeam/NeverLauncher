@@ -72,8 +72,8 @@ class LiveJoinNegativeTests(unittest.TestCase):
         self.assertFalse(gate_server.requires_bridge)
 
     def construct_fake_negative_fixture(self):
-        # The evidence is deliberately made up to exercise rejection of tamper.
-        # Not shipped as a passing compatibility run.
+        # Доказательство намеренно подделано для проверки отклонения
+        # вмешательства. Оно не поставляется как успешный результат совместимости.
         runtime = self.root / 'runtime'
         runtime.mkdir()
         ready = {'schema': 'neverlauncher.compatibility-server-ready/0.52.4',

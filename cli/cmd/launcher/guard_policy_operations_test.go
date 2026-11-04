@@ -45,7 +45,7 @@ func TestGuardPolicyOperations05011HistoryDiagnoseAndRollback(t *testing.T) {
 	if len(items) != 2 || items[0].Epoch != 2 || items[1].Epoch != 1 || !items[0].Current {
 		t.Fatalf("wrong history: %+v", items)
 	}
-	// Cannot restore prior policy without a new signature at a newer epoch.
+	// Без новой подписи в более высокой эпохе нельзя восстановить предыдущую политику.
 	if err := guardCompatAuthorizeRollback05011(root, key, first); err == nil {
 		t.Fatal("old epoch rollback accepted")
 	}
@@ -88,9 +88,9 @@ func TestGuardPolicyOperations05011CrashAndHistoryTampering(t *testing.T) {
 	if err := guardCompatArchiveIncoming05011(root, key, raw, v); err != nil {
 		t.Fatal(err)
 	}
-	// Simulate a crash after accepted.json was durably updated but before
-	// compatibility.json could be replaced. Reinstalling the same signed epoch
-	// must recover, and an older epoch must never be accepted.
+	// Имитируйте сбой после долговечного обновления accepted.json, но до замены
+	// compatibility.json. Повторная установка той же подписанной эпохи должна
+	// восстановить работу, а старая эпоха никогда не принимается.
 	floor, _ := guardCompatPath0502(root, guardCompatFloorFile0502)
 	state := []byte(`{"epoch":2,"digest":"` + v.Digest + `","rootSha256":"` + v.RootSHA256 + `"}`)
 	if err := trustedAtomic0306(floor, state); err != nil {
@@ -119,8 +119,8 @@ func TestGuardPolicyOperations05011ExpiredPolicyCanRotate(t *testing.T) {
 	if err := guardCompatInstall0502(root, first, key); err != nil {
 		t.Fatal(err)
 	}
-	// Do not need an expired client for the check: verify the same envelope at
-	// time after expiry by direct historical verifier.
+	// Для проверки необязателен клиент с истёкшей сессией: проверяйте тот же
+	// конверт историческим верификатором уже после даты окончания действия.
 	raw, _ := os.ReadFile(first)
 	v, err := guardCompatHistoricalVerify05011(root, key, raw)
 	if err != nil || v.Policy.Epoch != 1 {

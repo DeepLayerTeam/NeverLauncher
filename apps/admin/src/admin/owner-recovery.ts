@@ -1,8 +1,8 @@
 import type { ReleaseApi, Operation } from "../api/release.ts";
 import type { OwnerPending } from "./owner-lifecycle-03513.ts";
 
-/** No credentials are written here. Scope by verified logged-in actor,
- * by the transient session ID; authentication/permissions still live on API. */
+/** Учётные данные здесь не записываются. Область определяется проверенным пользователем
+ * после входа, а не временным ID сеанса; аутентификация и права остаются в API. */
 export function durableOwnerKey(
   backend: string,
   userId: string,

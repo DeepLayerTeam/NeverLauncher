@@ -1,11 +1,11 @@
 import type { LocalLaunchSettings } from './desktop_experience_0229';
 
-/** Offline is a distinct local-only launch, not a fallback auth provider. */
+/** Офлайн-режим — отдельный локальный запуск, а не резервный провайдер аутентификации. */
 export function offlineLaunchSettings0358<T extends LocalLaunchSettings>(settings: T, offline: boolean): T {
   if (!offline) return settings;
-  // A signed owner bundle may auto-enter a protected server in ONLINE mode.
-  // That setting must not be used for local offline play, even if it is locked
-  // by the owner and therefore cannot be changed through the Settings screen.
+  // Подписанный набор владельца может автоматически входить на защищённый сервер в
+  // режиме ONLINE. Эта настройка не должна применяться к локальной офлайн-игре,
+  // даже если владелец заблокировал её изменение на экране настроек.
   return { ...settings, offlineEnabled: true, autoEnter: false, serverId: '', serverHost: '', serverPort: 25565 };
 }
 

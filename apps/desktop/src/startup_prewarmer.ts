@@ -1,11 +1,11 @@
-// Pure scheduler used by startup_optimizer_03011; testable without React/WebView.
+// Чистый планировщик для startup_optimizer_03011; его можно тестировать без React и WebView.
 export type IdleScheduler03011 = (work: () => void) => () => void;
 export function warmAfterIdle03011<T>(schedule: IdleScheduler03011, warm: (key: T) => Promise<unknown>, keys: readonly T[], canWarm: () => boolean = () => true): () => void {
   let stopped = false;
   const cancel = schedule(() => {
     if (stopped || !canWarm()) return;
-    // Never let an optional preload failure affect the launcher; serial
-    // loading avoids CPU/disk bursts during the first authenticated paint.
+    // Ошибка необязательной предварительной загрузки не должна влиять на лаунчер. Последовательная
+    // загрузка предотвращает скачки нагрузки CPU и диска при первом отображении после входа.
     void (async () => {
       for (const key of keys) {
         if (stopped || !canWarm()) return;

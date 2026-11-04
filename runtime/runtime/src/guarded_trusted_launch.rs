@@ -43,9 +43,9 @@ fn plugin_name(s: &str) -> bool {
         !s.chars().any(|c| matches!(c, '/' | '\\' | ':' | '\r' | '\n' | '\0')) && s != ".jar"
 }
 fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String> {
-    // The native Runtime does not reinterpret mutable active.json as a signed
-    // extension manifest: independently verify the installed .nlext bytes.
-    // The external Guard policy remains the launch authorization for JARs.
+    // Нативный Runtime не принимает изменяемый active.json за подписанный
+    // манифест расширения: байты установленного .nlext проверяются независимо.
+    // Разрешением на запуск JAR остаётся внешняя политика Guard.
     let mut current = root.to_path_buf();
     for part in format!("{release}/signed.nlext").split('/') {
         current.push(part);
@@ -98,9 +98,9 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     Ok(text)
 }
 
-/// If a trusted JVM package is installed, require the full signed Guard policy
-/// and bind its agent, plugins, transformations and game scope before Java spawn.
-/// Absence of the package keeps vanilla/ordinary loader launch unchanged.
+/// Если установлен доверенный пакет JVM, требуйте полную подписанную политику Guard и
+/// привязывайте её агент, плагины, преобразования и область игры до создания
+/// Java-процесса. Без пакета обычный запуск vanilla и загрузчиков остаётся прежним.
 pub fn prepare_verified(root: &Path, project: &str, minecraft: &str, loader: &str, original_main: &str,
     manifest:&crate::Manifest, plan:&crate::LaunchPlan) -> Result<Option<GuardedTrustedLaunch0503>, String> {
     prepare_inner(root,project,minecraft,loader,original_main,Some((manifest,plan)))
@@ -144,10 +144,10 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
         let absolute = root.join(&rel).canonicalize().map_err(|e| e.to_string())?;
         plugins.push((absolute, plugin.sha256));
     }
-    // Every transformation must belong to an installed, authorized plugin.
+    // Каждое преобразование должно принадлежать установленному и разрешённому плагину.
     let transforms = signed.transforms(&approved_plugins)?;
-    // Recheck all policy artifacts, not only trusted ones, before preparing
-    // the JVM. The final native Guard pre-spawn gate repeats these checks.
+    // Перед подготовкой JVM повторно проверяйте ВСЕ артефакты политики, не только
+    // доверенные. Финальный нативный барьер Guard до запуска повторяет эти проверки.
     guard_compatibility_0502::enforce_launch(root, project, minecraft, loader, &[])?;
     let libraries = signed.loader_libraries(root, loader)?;
     let mut config = config_text(original_main, &plugins, &transforms, loader, &libraries, &signed.loader_class_bytes())?;

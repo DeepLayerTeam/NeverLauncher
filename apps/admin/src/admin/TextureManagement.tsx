@@ -9,7 +9,7 @@ type History = { id: number; revision?: number; userId?: string; kind?: string; 
 const blank: Policy = { projectId: '', revision: 0, allowPlayerSkins: true, allowPlayerCapes: false, defaultSkinModel: 'classic', defaultSkinDigest: '', defaultCapeDigest: '', fallbackSkinModel: 'classic', fallbackSkinDigest: '', fallbackCapeDigest: '', maxBytesPerPlayer: 10485760, maxBlobsPerPlayer: 20 };
 
 export function TextureManagement0259({ backendUrl, token, projectId }: { backendUrl: string; token: string; projectId: string }) {
-  // Local Yggdrasil and Desktop assignments currently use global projectId=''.
+  // Локальные назначения Yggdrasil и Desktop сейчас используют глобальный projectId=''.
   const [scope, setScope] = useState('');
   const [policy, setPolicy] = useState<Policy>(blank);
   const [options, setOptions] = useState<DefaultOption[]>([]);

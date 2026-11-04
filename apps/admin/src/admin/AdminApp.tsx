@@ -209,8 +209,8 @@ export function AdminApp() {
   });
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const availableProjects = dashboard?.projects ?? [];
-  // IDs from URL and localStorage are preferences, not authorization. Overview is
-  // access-filtered by the Backend and is the only source for resolving them.
+  // Идентификаторы из URL и localStorage — лишь пользовательские предпочтения, а не разрешение на доступ. Обзор
+  // Backend уже отфильтрован по правам и служит единственным источником проверки этих идентификаторов.
   const ownerStorageKey = identity
     ? contextStorageKey(backendUrl, identity.user.id)
     : "";
@@ -298,7 +298,7 @@ export function AdminApp() {
         defaultChannel: String(row.defaultChannel ?? "stable"),
       });
     } else if (active === "profiles") {
-      // The profile editor is driven by the selected Backend profile, not local copies.
+      // Редактор профиля использует профиль, выбранный в Backend, а не локальные копии.
     } else if (active === "channels") {
       setChannelForm({
         projectId: selectedProjectId,
@@ -327,7 +327,7 @@ export function AdminApp() {
     }
   }
 
-  // Live Backend view. A failed request leaves a stale success-shaped inventory.
+  // Актуальный обзор Backend. При неудачном запросе нельзя оставлять устаревший список, выглядящий как успешный ответ.
   useEffect(() => {
     if (
       !token ||
@@ -385,8 +385,8 @@ export function AdminApp() {
     if (!selectedProjectId || !can(identity, "project:read", selectedProjectId))
       return;
     let nodes = bridgeInventoryFresh ? projectNodes : null;
-    // Immediately after enrollment the parent inventory may predate the new node.
-    // Re-read the authoritative project inventory before accepting its context.
+    // Сразу после регистрации родительский список может ещё не содержать новый узел.
+    // Перед применением его контекста повторно считайте достоверный список проекта.
     if (!nodes || !nodeForContext0383(nodes, selectedProjectId, id)) {
       try {
         const projectId = selectedProjectId;
@@ -417,8 +417,8 @@ export function AdminApp() {
     navigate(active, { serverId: server.id, profileId: boundProfile });
   }
 
-  // Canonicalize only after the authenticated access-filtered overview arrives.
-  // A removed project/profile/channel cannot survive as a live selection.
+  // Нормализуйте выбор только после получения авторизованного обзора с фильтрацией по
+  // правам. Удалённые проект, профиль или канал не должны оставаться выбранными.
   useEffect(() => {
     if (
       !ownerStorageKey ||
@@ -473,8 +473,8 @@ export function AdminApp() {
     }));
   }, [selectedProjectId]);
 
-  // The simple package form and the Release Workspace consume the same
-  // validated selection. Moving between tabs must not force manual ID entry.
+  // Простая форма пакета и рабочая область релиза используют один и тот же проверенный
+  // выбор. Переключение вкладок не должно требовать ручного ввода идентификаторов.
   useEffect(() => {
     if (!selectedProjectId || dashboardScope !== selectedProjectId) return;
     setPackageForm((current) => {
@@ -498,14 +498,14 @@ export function AdminApp() {
     });
   }, [selectedProjectId, dashboardScope, selectedProfileId, selectedChannelId]);
 
-  // Restored deep-links select their resource without requiring a second click.
+  // Восстановленная глубокая ссылка сразу выбирает ресурс без дополнительного нажатия.
   useEffect(() => {
     if (active === "profiles") setSelectedRecordId(selectedProfileId);
     else if (active === "channels") setSelectedRecordId(selectedChannelId);
   }, [active, selectedProfileId, selectedChannelId]);
 
-  // A deep-link selection also opens the corresponding editable form after
-  // the authenticated resource list has finished loading.
+  // Выбор по глубокой ссылке также открывает нужную форму
+  // редактирования после полной загрузки списка доступных ресурсов.
   useEffect(() => {
     const rawItems = payload?.items;
     const rows = Array.isArray(rawItems) ? rawItems : [];
@@ -745,8 +745,8 @@ export function AdminApp() {
       await requestJSON<any>(backendUrl, "/api/v1/admin/logout", token, {
         method: "POST",
       }).catch(() => undefined);
-    // A logout must not leave pending player/server mutations for another
-    // principal using the same browser profile.
+    // После выхода из учётной записи не должны оставаться ожидающие изменения игроков
+    // и серверов, доступные другому пользователю того же профиля браузера.
     for (const key of Object.keys(sessionStorage)) {
       if (
         key.startsWith("launcher.bridge.pending.") ||
@@ -1068,8 +1068,8 @@ export function AdminApp() {
       token,
       { method: "POST", body: JSON.stringify(projectForm) },
     );
-    // The new project must be present in an authenticated overview before it
-    // can become the active scope. Never mark a failed refresh as success.
+    // Новый проект должен появиться в авторизованном обзоре, прежде чем стать
+    // активной областью. Не считайте неудачное обновление успешным.
     const overview = await new AdminApi(backendUrl, token).overview(id);
     if (!overview.projects?.some((p) => p.id === id))
       throw new Error(

@@ -1,4 +1,4 @@
-/** Persistent player-only UI preferences. These change signed provisioning or API trust. */
+/** Постоянные настройки UI только для игрока. Они изменяют подписанное развёртывание или доверие к API. */
 export type Locale0357 = "ru" | "en";
 export type UISettings0357 = {
   locale: Locale0357;
@@ -70,7 +70,7 @@ export function isEditableTarget0357(target: EventTarget | null): boolean {
     Boolean(el.closest?.('[contenteditable="true"]'))
   );
 }
-/** Do not hijack text inputs, IME composition or the OS browser's normal shortcuts. */
+/** Не перехватывайте ввод в текстовых полях, композицию IME и стандартные горячие клавиши браузера ОС. */
 export function shortcut0357(
   event: {
     key: string;
@@ -88,7 +88,7 @@ export function shortcut0357(
   | { type: "focusNav" }
   | null {
   if (event.isComposing || event.altKey) return null;
-  // F6 is a focus-management key, even if a text field currently has focus.
+  // F6 управляет фокусом, даже если сейчас активное поле ввода текста.
   if (event.key === "F6" && !event.ctrlKey && !event.metaKey && !event.shiftKey)
     return { type: "focusNav" };
   if (isEditableTarget0357(event.target ?? null)) return null;
@@ -107,7 +107,7 @@ export function shortcut0357(
     return { type: "section", index: Number(event.key) - 1 };
   return null;
 }
-/** Trust-gated access: UI shortcuts must bypass signed first-run or native verification. */
+/** Доступ с проверкой доверия: горячие клавиши интерфейса должны обходить подписанный первый запуск или нативную проверку. */
 export function canNavigate0357(
   screen: Screen0357,
   nativeLoaded: boolean,

@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// The operator inventory is built by the running Backend, not from locally
-// cached manifests. It includes current JVM state, effective permissions and
-// recent runtime logs. The server checks extension:manage for every request.
+// Список расширений оператора формируется работающим Backend, а не из локального
+// кэша манифестов. Он содержит текущее состояние JVM, действующие права и последние
+// журналы Runtime. Сервер проверяет extension:manage при каждом запросе.
 func handleExtensionManager0425(args []string) error {
 	backend := adminBackendURL(args)
 	if backend == "" {

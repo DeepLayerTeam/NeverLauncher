@@ -46,10 +46,10 @@ func TestLegacy0406ChildOptionsOverrideWithoutDroppingParent(t *testing.T) {
 	}
 }
 
-// Launch an actual JVM with Java-8-compatible bytecode and a controlled
-// LaunchWrapper fixture. The Java 8 selector shim is explicit: this test
-// verifies the execution path and classpath precedence, NOT an actual
-// Mojang/Forge client or a Java 8 runtime installation.
+// Запускайте настоящую JVM с байткодом, совместимым с Java 8, и
+// контролируемым LaunchWrapper. Подмена селектора Java 8 явная:
+// тест проверяет путь исполнения и приоритет classpath, а НЕ клиент
+// Mojang/Forge и не реальную установленную Java 8.
 func TestLegacy0406ExecutableForgeLaunchAndClasspathPrecedence(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX Java selector fixture")

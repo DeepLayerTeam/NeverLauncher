@@ -20,7 +20,7 @@ func terminateWorkerTree0273(p *os.Process) {
 	if p == nil {
 		return
 	}
-	// taskkill /T terminates child processes as well as the build worker.
+	// Команда taskkill /T завершает и дочерние процессы, и рабочий процесс сборки.
 	_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(p.Pid)).Run()
 	_ = p.Kill()
 }

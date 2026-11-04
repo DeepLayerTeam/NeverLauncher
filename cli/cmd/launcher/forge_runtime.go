@@ -394,9 +394,9 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, err
 	}
 	installerSHA1 := strings.ToLower(strings.TrimSpace(opts.InstallerSHA1))
-	// The verified local installer is a cache source, not an alternate runtime
-	// identity: the canonical upstream URL remains in the resolution lock.
-	// Never accept an unpinned local installer or use it to defeat a pinned lock.
+	// Проверенный локальный установщик — источник кэша, а не альтернативная идентичность
+	// Runtime: канонический URL источника остаётся в lock разрешения. Никогда не принимайте
+	// незакреплённый локальный установщик и не позволяйте обходить им закреплённый lock.
 	if opts.InstallerSourceFile != "" {
 		if !isSHA256Hex0271(opts.InstallerSourceSHA256) {
 			return forgeMaterializeResult{}, errors.New("local installer requires exact --installer-sha256")
@@ -1603,8 +1603,8 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if lib.ClientReq != nil && !*lib.ClientReq {
 			continue
 		}
-		// Keep non-applicable libraries in the version profile for downstream
-		// target-specific launches; do not fetch their JARs for this build.
+		// Сохраняйте неприменимые библиотеки в профиле версии для последующих
+		// запусков под конкретную цель; не скачивайте их JAR при текущей сборке.
 		selected := false
 		for _, target := range selectedTargets {
 			if rulesAllowTarget(lib.Rules, target) && libraryArtifactAppliesToTarget(lib.Name, target) {
@@ -1632,7 +1632,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if rel == "" {
 			rel = canonical
 		}
-		// Reject a different Maven artifact masquerading as the requested dependency.
+		// Отклоняйте другой артефакт Maven, выдаваемый за требуемую зависимость.
 		if rel != canonical {
 			return nil, fmt.Errorf("library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
 		}
@@ -1846,8 +1846,8 @@ type forgeProcessorContext struct {
 	Timeout          time.Duration
 }
 
-// The processor cache is valid only for the exact Java, processor JAR and
-// dependency JAR bytes. Installer metadata alone is not sufficient.
+// Кэш процессора действителен только для точных байтов Java, JAR процессора
+// и JAR зависимостей. Одних метаданных установщика недостаточно.
 func fingerprintForgeProcessor0273(pc forgeProcessorContext, p forgeProcessor) (string, error) {
 	jar, err := resolveProcessorArtifactPath(pc.ClientDir, p.Jar)
 	if err != nil {
@@ -1992,9 +1992,9 @@ func processorAppliesToClient(sides []string) bool {
 	return false
 }
 
-// Reject output symlinks and paths outside the materialized client root,
-// including symlinks in an existing parent directory. This check runs before
-// a digest can be trusted for crash recovery.
+// Отклоняйте выходные симлинки и пути вне подготовленного клиентского корня, в
+// том числе ссылки в уже существующем родительском каталоге. Эта проверка
+// выполняется до доверия дайджесту при восстановлении после сбоя.
 func validateProcessorOutput0273(root, output string) error {
 	base, err := filepath.Abs(root)
 	if err != nil {

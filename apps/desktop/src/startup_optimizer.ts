@@ -1,7 +1,7 @@
 import { warmAfterIdle03011 } from "./startup_prewarmer_03011";
-// Actual Vite code-splitting entrypoints: these modules are not parsed until
-// their screen opens or the launcher is idle. One import promise per view
-// deduplicates screen navigation and speculative cache warming.
+// Настоящие точки разделения кода Vite: модули не разбираются, пока не открыт их
+// экран или лаунчер не простаивает. Один промис импорта на представление
+// устраняет дублирование при переходах и предварительном прогреве кэша.
 export const desktopViews03011 = {
   extensions: () =>
     import("./extensions_0209").then((m) => ({
@@ -37,15 +37,15 @@ export function loadDesktopView03011<T extends DesktopView03011>(
   if (cached) return cached as ReturnType<(typeof desktopViews03011)[T]>;
   const promise = desktopViews03011[name]() as Promise<LoaderResult>;
   loaded.set(name, promise);
-  // Failed network/bundle import is retryable when a new navigation happens.
+  // При ошибке сетевого импорта или загрузки пакета попытку можно повторить при следующем переходе.
   void promise.catch(() => {
     if (loaded.get(name) === promise) loaded.delete(name);
   });
   return promise as ReturnType<(typeof desktopViews03011)[T]>;
 }
 
-// Startup must await optional pages. Only two screens are prefetched after
-// idle, preventing a burst of JS evaluation while authentication is initializing.
+// Запуск не должен ожидать необязательные страницы. После простоя предварительно загружаются только
+// два экрана, чтобы не создавать всплеск выполнения JS при инициализации аутентификации.
 export function prewarmDesktop03011(
   options: {
     schedule?: (work: () => void) => () => void;

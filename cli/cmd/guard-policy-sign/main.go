@@ -1,5 +1,5 @@
-// guard-policy-sign creates an offline Ed25519 key pair or signs a reviewed
-// Guard compatibility policy. Private keys must never reach the client root.
+// Утилита guard-policy-sign создаёт офлайн-пару ключей Ed25519 или подписывает проверенную политику
+// совместимости Guard. Закрытые ключи никогда не должны попадать в корневой каталог клиента.
 package main
 
 import (
@@ -69,7 +69,7 @@ func keygen(privatePath, publicPath string) error {
 	if privatePath == "" || publicPath == "" || privatePath == publicPath {
 		return errors.New("separate --private-key and --public-key required")
 	}
-	// The caller must choose an external, operator-controlled secret directory.
+	// Вызывающая сторона должна выбрать внешний каталог секретов, управляемый оператором.
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return err

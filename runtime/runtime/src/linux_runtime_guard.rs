@@ -61,7 +61,7 @@ fn read_proc(pid: u32, file: &str) -> Result<String, String> {
 }
 
 fn start_ticks_from_stat(stat: &str) -> Result<u64, String> {
-    // comm (field 2) can itself contain spaces and parentheses.
+    // Поле comm (второе) само может содержать пробелы и скобки.
     let end = stat.rfind(") ").ok_or("Linux Guard invalid /proc stat comm")?;
     let tail = &stat[end + 2..];
     let ticks = tail.split_whitespace().nth(19)
@@ -112,9 +112,9 @@ fn collect_java_natives(home: &Path) -> Result<BTreeMap<PathBuf, String>, String
 }
 
 fn trusted_system_library(path:&Path)->Result<bool,String> {
- // The external path may be a canonical /usr/lib file or a distro /lib ->
- // /usr/lib alias. Only a root-owned immutable target and directory chain
- // receives OS-library trust; user-owned overlays require signed digest pins.
+ // Внешний путь может быть каноническим файлом /usr/lib или ссылкой дистрибутива /lib → /usr/lib.
+ // Доверие к системной библиотеке получают только неизменяемая цель с владельцем root и её цепочка
+ // каталогов; пользовательские оверлеи требуют закреплённого подписанного дайджеста.
  let original=path.to_string_lossy();
  if !["/usr/lib/","/usr/lib64/","/lib/","/lib64/"].iter().any(|r|original.starts_with(r)) {return Ok(false)}
  let resolved=match fs::canonicalize(path) {Ok(p)=>p,Err(_)=>return Ok(false)};
@@ -150,8 +150,8 @@ fn check_process(pid: u32, start: u64) -> Result<(), String> {
     Ok(())
 }
 
-// Check the opened object's inode too: a process may still hold a replaced or
-// unlinked JAR through an fd while the pathname now hashes to an approved file.
+// Проверяйте также inode открытого объекта: процесс может продолжать держать заменённый
+// или удалённый JAR через дескриптор, хотя файл по пути уже имеет одобренный хеш.
 fn verify_inode(path: &Path, proc_object: &Path) -> Result<(), String> {
     let on_disk = fs::metadata(path).map_err(|e| e.to_string())?;
     let opened = match fs::metadata(proc_object) {
@@ -278,8 +278,8 @@ impl LinuxRuntimeGuard0508 {
             if deleted && (path.starts_with(&self.root) || path.starts_with(&self.java_home)) {
                 return Err(format!("Linux Guard mapped executable was deleted: {}", path.display()));
             }
-            // Any executable file-backed mapping from game root is code,
-            // regardless of its extension (.dat is not a bypass).
+            // Любое исполняемое отображение файла из игрового корня считается
+            // кодом независимо от расширения; .dat не служит обходом.
             self.verify_mapped_file(path, None, true)?;
             if self.external.contains_key(path) {
                 let mapped_inode=inode.parse::<u64>().map_err(|_|"Linux Guard bad overlay mapping inode")?;
@@ -345,8 +345,8 @@ mod tests {
         assert_eq!(status_value(&status, "TracerPid:").unwrap(), "0");
         assert!(status_value(&status, "NoNewPrivs:").is_ok());
     }
-    // This is an actual child process with the same prctl/process-group
-    // restrictions used by the game launcher, not a mocked /proc fixture.
+    // Это настоящий дочерний процесс с теми же ограничениями prctl и
+    // группы процессов, что у игрового лаунчера, а не имитация /proc.
     #[tokio::test]
     async fn live_child_process_flags_and_argv_are_enforced() {
         let mut cmd = tokio::process::Command::new("sleep");

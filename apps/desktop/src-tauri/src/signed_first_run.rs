@@ -109,8 +109,8 @@ fn identifier(s:&str)->bool{
     s.bytes().all(|c|c.is_ascii_alphanumeric()||matches!(c,b'_'|b'-'|b'.'))
 }
 fn https_url(s:&str)->bool {
-    // Validated again by native HTTP and signed manifest verification; reject
-    // userinfo, fragments, control chars and ambiguous/relative URL forms here.
+    // Нативный HTTP и проверка подписанного манифеста дополнительно выполняют проверку; здесь
+    // отклоняйте userinfo, фрагменты, управляющие символы и неоднозначные или относительные URL.
     if !s.starts_with("https://") || s.len()>2048 || s.bytes().any(|c|c<=32||c==127||c==b'#'||c==b'\\') {return false}
     let authority=s[8..].split('/').next().unwrap_or("");
     !authority.is_empty()&&!authority.contains('@')&&!authority.starts_with(':')
@@ -194,7 +194,7 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
     if env.schema_version=="2.0"&&!cfg.profile_public_key.eq_ignore_ascii_case(root_hex){
         return Err("Delegated bootstrap требует profilePublicKey=root".into())
     }
-    // Config is signed by the operator; only its verified fields are authoritative.
+    // Конфигурация подписана оператором; только проверенные поля имеют силу.
     if let Some(ref brand)=cfg.branding {validate_brand0355(brand)?;}
     let display=cfg.branding.as_ref().map(|b|b.display_name.clone()).unwrap_or_else(||"Launcher".into());
     let _=&cfg.installer_targets;
@@ -212,8 +212,8 @@ pub fn load(dir:&Path)->Result<Option<Provisioning0352>,String>{
         Err(e)=>return Err(e.to_string()),
         Ok(_)=>{},
     }
-    // Production root is compiled into the Desktop binary. Never accept a
-    // root key supplied by renderer, local config, query string or process env.
+    // Производственный корневой ключ встроен в двоичный файл Desktop. Не принимайте ключ от
+    // рендерера, локальной конфигурации, строки запроса или переменных окружения процесса.
     let root=option_env!("LAUNCHER_BOOTSTRAP_ROOT_KEY").unwrap_or("");
     if root.is_empty(){return Err("Desktop не содержит закреплённый bootstrap Ed25519 root; необходима branded production сборка".into())}
     let raw=safe_file(&file,1024*1024)?;

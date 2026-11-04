@@ -4,7 +4,7 @@ export type SectionId = typeof routeIds[number];
 const ids: ReadonlySet<string> = new Set(routeIds);
 export type AdminRoute = { section: SectionId } & Partial<ProjectContext>;
 const keyNames: Record<keyof ProjectContext,string> = {projectId:'project',profileId:'profile',channelId:'channel',serverId:'server'};
-/** Decode one hash, without trusting its values as permissions or resource existence. */
+/** Разберите один фрагмент URL, не принимая его значения за доказательство прав или существования ресурса. */
 export function parseAdminRoute(hash: string): AdminRoute {
   const raw = hash.replace(/^#\/?/, '');
   const question = raw.indexOf('?');

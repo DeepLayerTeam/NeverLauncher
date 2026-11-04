@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compile actual production ServerBridge/Vanilla source, exercise postconditions and RCON TCP.
+# Компилируйте настоящий производственный код ServerBridge/Vanilla, проверяйте постусловия и TCP RCON.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 work="$(mktemp -d)"

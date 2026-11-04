@@ -10,10 +10,10 @@ import (
 )
 
 func limitWorkerResources0273(seconds int) error {
-	// Hard limits apply only to the disposable worker and its Java children.
-	// No address-space rlimit: modern JVMs reserve large virtual arenas even
-	// with a bounded Java heap. CPU time, file size and descriptor limits are
-	// kernel-enforced; heap is bounded by -Xmx in the child.
+	// Жёсткие лимиты применяются только к одноразовому рабочему процессу и его дочерним
+	// Java. Лимит виртуального адресного пространства не задаётся: современные JVM
+	// резервируют большие диапазоны даже при ограниченной куче. Время CPU, размер файлов и
+	// число дескрипторов ограничивает ядро; куча дочернего процесса ограничена -Xmx.
 	for _, limit := range []struct {
 		resource int
 		value    uint64
@@ -43,10 +43,10 @@ func terminateWorkerTree0273(p *os.Process) {
 	_ = p.Kill()
 }
 
-// Strict mode is deliberately opt-in for 0.27.3: it requires user namespace
-// support and bubblewrap. It creates a private mount namespace with only the
-// build root writable, no host home/credentials and no network namespace.
-// Never fall back to the unsandboxed worker if bwrap is unavailable.
+// Строгий режим версии 0.27.3 включается только явно: требуются пространства имён
+// пользователей и bubblewrap. Создаётся частное пространство монтирования, где запись
+// разрешена только в корень сборки, без домашнего каталога хоста, учётных данных и сетевого
+// пространства имён. Если bwrap отсутствует, нельзя откатываться к неизолированному процессу.
 func strictSandboxJavaCommand0273(ctx context.Context, req processorWorkerRequest0273, javaArgs []string) (*exec.Cmd, error) {
 	bwrap, err := exec.LookPath("bwrap")
 	if err != nil {

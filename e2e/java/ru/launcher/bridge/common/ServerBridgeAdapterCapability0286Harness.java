@@ -3,7 +3,7 @@ package ru.launcher.bridge.common;
 import java.util.List;
 import java.util.Set;
 
-/** Executable Java capability policy tests. This is not a live Minecraft runtime E2E. */
+/** Исполняемые Java-тесты политики возможностей. Это НЕ полное E2E с работающим Minecraft. */
 public final class ServerBridgeAdapterCapability0286Harness {
     public static void main(String[] args) {
         Set<String> expected = Set.of("velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper",

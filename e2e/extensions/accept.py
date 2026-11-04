@@ -121,8 +121,8 @@ def main():
         if not cli.is_file():
             raise RuntimeError('CLI is not a regular file')
         report['cliSha256'] = sha(cli)
-        # Inspect the 19 real module source/test references with the built CLI,
-        # preserving their partial/blocked status rather than inventing parity.
+        # Проверьте 19 реальных ссылок на исходники и тесты модулей собранным CLI; сохраняйте
+        # статусы частичного выполнения и блокировки, не выдавая фиктивную совместимость.
         with tempfile.TemporaryDirectory(prefix='nl-gravit-audit-') as audit_dir:
             audit_file = Path(audit_dir) / 'audit.json'
             run([cli, 'module-parity', 'audit', '--root', ROOT,

@@ -67,7 +67,7 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 		t.Fatalf("HTTP %d", response.StatusCode)
 	}
 	tr.CloseIdleConnections()
-	// Never accept clients that lack an authorized client certificate.
+	// Никогда не принимайте клиентов без разрешённого клиентского сертификата.
 	unauthenticated := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots}}, Timeout: 3 * time.Second}
 	if resp, err := unauthenticated.Get(server.URL); err == nil {
 		resp.Body.Close()
@@ -78,7 +78,7 @@ func TestGenerateAuthenticatesTLSAndClientCertificate0428(t *testing.T) {
 		resp.Body.Close()
 		t.Fatal("accepted unlisted SAN")
 	}
-	// Same directory must never rotate existing credentials implicitly.
+	// Повторный вызов для того же каталога не должен незаметно менять действующие учётные данные.
 	before, err := os.ReadFile(result.ServerKey)
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +132,7 @@ func TestGenerateServerCertificateCannotImpersonateClient0428(t *testing.T) {
 	if _, err = cert.Verify(x509.VerifyOptions{Roots: roots, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}}); err == nil {
 		t.Fatal("server certificate accepted for client auth")
 	}
-	// The public server leaf must be valid for the documented IP address.
+	// Открытый серверный конечный сертификат должен быть действителен для указанного в документации IP-адреса.
 	if _, err = cert.Verify(x509.VerifyOptions{Roots: roots, DNSName: net.ParseIP("127.0.0.1").String(), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}); err != nil {
 		t.Fatal(err)
 	}

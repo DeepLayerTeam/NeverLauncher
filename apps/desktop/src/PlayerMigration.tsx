@@ -39,7 +39,7 @@ type Props = {
   onAdopted: () => void;
 };
 
-/** Gravit directories are local, untrusted input. No credentials, mods or unknown executables are ever imported. */
+/** Каталоги Gravit — локальный недоверенный ввод. Учётные данные, моды и неизвестные исполняемые файлы никогда не импортируются. */
 export default function PlayerMigration0339({
   manifest,
   pinnedPublicKey,

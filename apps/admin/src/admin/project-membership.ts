@@ -1,4 +1,4 @@
-/** Project membership is inferred from a global RoleID. The API remains authoritative. */
+/** Членство в проекте определяется по глобальному RoleID. Источник полномочий — API. */
 export type ProjectRoleUser0387 = {
   id: string;
   email: string;
@@ -14,7 +14,7 @@ export type ProjectRole0387 = {
   permissions: string[];
 };
 
-/** Privileged global roles must not appear in the ordinary project-role picker. */
+/** Привилегированные глобальные роли нельзя предлагать в обычном списке ролей проекта. */
 const assignable = new Set([
   "owner",
   "release-manager",

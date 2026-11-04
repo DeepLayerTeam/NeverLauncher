@@ -73,8 +73,8 @@ def reject_tampered_manifest(runtime: str, manifest: Path, key: str,
 
 def reject_corrupted_client(cli: str, package: Path, client: Path,
                             files: list[dict], work: Path, env: dict[str, str]) -> dict:
-    # The CLI has already established a byte-for-byte valid installation. Pick
-    # an actual REQUIRED regular file, and reject links (including directory links).
+    # CLI уже установил побайтовую корректность установки. Выбирайте настоящий
+    # ОБЯЗАТЕЛЬНЫЙ обычный файл и отклоняйте ссылки, в том числе ссылки на каталоги.
     candidate = None
     for entry in files:
         if not entry.get("required", True) or not isinstance(entry.get("path"), str):
@@ -100,8 +100,8 @@ def reject_corrupted_client(cli: str, package: Path, client: Path,
     baseline = _digest(path)
     if baseline != str(entry.get("sha256", "")).lower():
         raise RuntimeError("selected client file is not initially byte verified")
-    # Keep all material in the isolated worker. A killed test may leave this
-    # *temporary* client corrupted, never the real user's install.
+    # Храните всё в изолированном рабочем процессе. Убитый тест может повредить
+    # только этот ВРЕМЕННЫЙ клиент, но не настоящую установку пользователя.
     flags = os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(path, flags)
     try:

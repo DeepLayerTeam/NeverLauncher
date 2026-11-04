@@ -20,12 +20,12 @@ const CONTINUOUS_GUARD_ACK_MAGIC: &[u8; 8] = b"NGCGAK01";
 const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"guard-continuous-guard-ack-v1";
 const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
 const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
-// The Guard parent allows 15 seconds per authenticated event read. Under
-// software-rendered Minecraft/Forge the parent may briefly be descheduled.
-// Forge on emulated Windows ARM64 can spend >12 seconds processing signed
-// module events before replying to a heartbeat. Keep a finite deadline shorter
-// than the parent's 45-second runtime-event watchdog; every received ACK still
-// requires exact PID, sequence, event-chain and HMAC verification.
+// Родитель Guard допускает 15 секунд на чтение каждого аутентифицированного события.
+// При программной отрисовке Minecraft/Forge родитель может ненадолго лишиться CPU. На
+// эмулируемой Windows ARM64 обработка подписанных событий модулей Forge до ответа
+// heartbeat может занимать более 12 секунд. Сохраняйте конечный дедлайн меньше
+// 45-секундного сторожа событий Runtime у родителя; каждый полученный ACK по-прежнему
+// требует точной проверки PID, последовательности, цепочки событий и HMAC.
 const GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(35);
 const GUARD_ACK_POLL: Duration = Duration::from_millis(10);
 

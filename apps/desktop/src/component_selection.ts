@@ -1,5 +1,5 @@
-/** Player choices only reference identifiers from a signed catalog. Runtime
- * verifies the signature, resolves the final graph and is authoritative for IO.
+/** Выбор игрока ссылается только на идентификаторы подписанного каталога. Runtime
+ * проверяет подпись, разрешает итоговый граф и отвечает за операции ввода-вывода.
  */
 export const CUSTOM_PREFIX_0247 = "@custom:v1:";
 export type ComponentChoice0247 = {
@@ -60,8 +60,8 @@ export function encodeChoice0247(choice: ComponentChoice0247): string {
   return encoded;
 }
 
-// Same supported SemVer range operators as the native catalog graph (v3-v5).
-// A malformed range must not be silently treated as "no conflict" by the UI.
+// Поддерживаются те же операторы диапазонов SemVer, что и в нативном графе каталога
+// (v3–v5). Неверный диапазон нельзя молча считать отсутствием конфликта в UI.
 type Version = { numbers: bigint[]; pre: string[] };
 const versionPattern =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
@@ -109,7 +109,7 @@ function compare(a: Version, b: Version): number {
   return Math.sign(a.pre.length - b.pre.length);
 }
 export function matchesVersion0247(actual: string, range: string): boolean {
-  // Native validates the version even for wildcard constraints.
+  // Нативный код проверяет версию даже для ограничений с подстановочными символами.
   const version = semver(actual);
   if (!range.trim() || range.trim() === "*") return true;
   if (range.length > 256) throw new Error("Слишком длинный диапазон версий");
@@ -148,10 +148,10 @@ export function matchesVersion0247(actual: string, range: string): boolean {
   });
 }
 
-/** Create a workable candidate before native preview. On enable, the requested
- * component and its entire dependency closure have priority over existing
- * incompatible components. Their dependents are also removed. Never silently
- * evict a required component or a dependency of the requested component.
+/** Перед нативным предварительным просмотром создайте допустимого кандидата. При
+ * включении выбранный компонент и всё замыкание его зависимостей имеют приоритет над
+ * уже установленными несовместимыми компонентами. Их зависимые компоненты также
+ * удаляются. Никогда не исключайте обязательный компонент незаметно.
  */
 export function proposeChoice0247(
   encoded: string,
@@ -215,8 +215,8 @@ export function proposeChoice0247(
       ),
     );
   if (enable) {
-    // Check every pair, not merely the directly clicked component. An added
-    // transitive dependency may itself conflict with an existing mod.
+    // Проверяйте каждую пару, а не только непосредственно выбранный компонент. Новая
+    // транзитивная зависимость тоже может конфликтовать с уже установленным модом.
     for (const requested of components.filter((c) => protectedIDs.has(c.id))) {
       for (const other of components) {
         if (
@@ -235,8 +235,8 @@ export function proposeChoice0247(
       }
     }
   }
-  // Removing a dependency must also remove every selected dependent, including
-  // dependents introduced by a signed preset. This is transitive and stable.
+  // Удаление зависимости должно удалить все выбранные компоненты, зависящие от неё,
+  // включая добавленные подписанным пресетом. Правило транзитивно и детерминированно.
   let changed = true;
   while (changed) {
     changed = false;
@@ -258,8 +258,8 @@ export function proposeChoice0247(
   const result = parseChoice0247(encoded);
   for (const name of removed) result.overrides.set(name, false);
   for (const name of added) {
-    // Native expands dependencies, even hidden ones. Remove stale explicit
-    // exclusions rather than granting unrelated user-selected roots.
+    // Нативная часть раскрывает зависимости, включая скрытые. Удаляйте устаревшие явные
+    // исключения, а не расширяйте список независимых выбранных пользователем корневых компонентов.
     if (name === id) result.overrides.set(name, true);
     else result.overrides.delete(name);
   }

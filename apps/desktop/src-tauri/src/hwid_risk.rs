@@ -1,5 +1,5 @@
-// Voluntary, untrusted host-continuity hint. Not a serial number collector or
-// identity attestation. No raw values leave this function (or the device).
+// Добровольная недоверенная подсказка о непрерывности хоста. Не собирает серийные номера и
+// не подтверждает личность. Сырые значения не покидают функцию или устройство.
 use sha2::{Digest, Sha256};
 
 #[cfg(target_os = "linux")]
@@ -52,7 +52,7 @@ pub(crate) fn hardware_risk_signal_0299() -> Result<String, String> {
     let mut sha = Sha256::new();
     sha.update(b"Launcher voluntary host continuity v1\0");
     for part in parts {
-        // No hostname, user name, MAC addresses, disks or serial-number list.
+        // Не собирайте имя хоста, пользователя, MAC-адреса, диски или список серийных номеров.
         sha.update((part.len() as u32).to_be_bytes());
         sha.update(part.as_bytes());
     }

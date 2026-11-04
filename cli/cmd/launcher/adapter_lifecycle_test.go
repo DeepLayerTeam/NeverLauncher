@@ -89,8 +89,8 @@ func TestAdapterLifecycle02711ExplicitUpgradeAndSourceIntegrity(t *testing.T) {
 	if _, err = executeFactoryBuild0271(context.Background(), opts); err != nil {
 		t.Fatalf("current version replay failed: %v", err)
 	}
-	// Simulate a previously built client whose adapter was older, with an
-	// internally consistent install-plan digest and unchanged on-disk files.
+	// Имитируйте ранее собранный клиент со старым адаптером, внутренне
+	// согласованным дайджестом плана и неизменными файлами на диске.
 	built.AdapterPins[0].Version = "0.9.0"
 	built.ReproducibilitySHA256, err = factoryDigest0271(built)
 	if err != nil {

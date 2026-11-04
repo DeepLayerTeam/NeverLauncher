@@ -31,8 +31,8 @@ type Props = {
   installSelection: (choice: string) => Promise<void>;
 };
 
-/** The native boundary verifies the old installed release and the new pinned
- * Ed25519 manifest. Imported JSON supplies file paths or JVM arguments. */
+/** Нативная граница проверяет старый установленный релиз и новый закреплённый
+ * манифест Ed25519. Импортированный JSON задаёт пути к файлам или аргументы JVM. */
 export function ComponentPortability02410({
   manifest,
   root,

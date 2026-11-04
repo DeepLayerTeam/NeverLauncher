@@ -149,7 +149,7 @@ export function DesktopExtensions0209({
         (x): x is DesktopExtensionCatalogItem =>
           validExtension0356(x, projectId),
       );
-      // A manual refresh revalidates HTML even when version/generation is unchanged.
+      // Ручное обновление повторно проверяет HTML, даже если версия и поколение не изменились.
       if (selected && next.some(x => identity0356(x) === selected)) {
         const same = next.find(x => identity0356(x) === selected);
         if (same) void loadEntrypoint(same);
@@ -174,8 +174,8 @@ export function DesktopExtensions0209({
       setPageId(firstPage?.id ?? "");
     } catch (e) {
       if (generation !== catalogGeneration.current) return;
-      // Old catalog may no longer be authorized after a token, project or
-      // publisher-trust change. Never retain it on network/authorization errors.
+      // Старый каталог может утратить авторизацию после смены токена, проекта или
+      // доверия издателю. Не сохраняйте его при сетевых ошибках или отказах доступа.
       setItems([]);
       setSelected("");
       setPageId("");
@@ -251,8 +251,8 @@ export function DesktopExtensions0209({
   useEffect(() => {
     const listener = async (event: MessageEvent) => {
       const frame = iframeRef.current?.contentWindow;
-      // sandbox="allow-scripts" (without allow-same-origin) guarantees an opaque
-      // origin. Do not process messages from descendants or navigated HTTPS pages.
+      // Атрибут sandbox="allow-scripts" без allow-same-origin гарантирует непрозрачное происхождение. Не
+      // обрабатывайте сообщения от вложенных фреймов или страниц HTTPS, открытых при переходе.
       if (
         !frame ||
         event.source !== frame ||
@@ -300,9 +300,9 @@ export function DesktopExtensions0209({
       let result: unknown;
       let rpcError = "";
       try {
-        // Never trust a catalog's old bridgeAllowed flag as authorization.
-        // The existing Backend RPC enforces the current install, verified
-        // device, permissions, scope, version and generation for every action.
+        // Не считайте старый флаг bridgeAllowed из каталога разрешением.
+        // Существующий RPC в Backend для каждого действия проверяет текущую
+        // установку, доверенное устройство, права, область, версию и поколение.
         if (
           message.method === "tauri.platform" ||
           message.method === "tauri.openGameDirectory"
@@ -419,8 +419,8 @@ export function DesktopExtensions0209({
     }
   }
   useEffect(() => {
-    // The iframe stays mounted while switching contributed pages, so onLoad
-    // alone cannot deliver the new page/action context.
+    // iframe остаётся смонтированным при смене добавленных страниц, поэтому одного
+    // onLoad недостаточно для передачи контекста новой страницы или действия.
     if (html && current && loadedIdentity.current === identity0356(current))
       notifyContext();
   }, [pageId, html, selected]);

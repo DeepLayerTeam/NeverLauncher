@@ -27,9 +27,9 @@ pub struct LinuxTPMEvidence0314 {
 
 fn parse_ak_handle(input: &str) -> Result<String, String> {
     let s = input.trim();
-    // No filesystem AK contexts, no options and no TCTI/authorization argument
-    // may enter a subprocess through IPC. An administrator provisions the AK
-    // into a persistent handle (0x81xxxxxx), with a CA-issued leaf certificate.
+    // Контексты AK файловой системы, параметры и аргументы TCTI/авторизации не
+    // должны попадать в подпроцесс через IPC. Администратор записывает AK в
+    // постоянный handle (0x81xxxxxx) с конечным сертификатом CA.
     if s.len()!=10 || !s.starts_with("0x") ||
        !s[2..].bytes().all(|b| b.is_ascii_hexdigit()) ||
        !s[2..4].eq_ignore_ascii_case("81") {
@@ -39,9 +39,9 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
     Ok(format!("0x{n:08x}"))
 }
 
-// Launcher hardware-enclave config uses app_name=launcher-desktop.
-// 0.2.10 adds -unsigned for unsigned developer binaries. Only the normal
-// XDG application directories are eligible; never accept a frontend path.
+// Конфигурация hardware-enclave для Launcher использует app_name=launcher-desktop. В
+// версии 0.2.10 добавлен -unsigned для неподписанных сборок разработчика. Разрешены
+// только стандартные каталоги приложений XDG; путь от frontend принимать нельзя.
 fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
     if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b=='-') {
         return Err("invalid hardware-enclave TPM label".into());
@@ -64,14 +64,14 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
 }
 
 fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> {
-    // No symlinks. A different UID's blobs cannot be silently used.
+    // Никаких символических ссылок. Нельзя незаметно использовать данные другого UID.
     let md=fs::symlink_metadata(path).map_err(|e|format!("TPM device blob missing: {e}"))?;
     if !md.file_type().is_file() || md.uid() != unsafe { libc::geteuid() } || md.len()==0 || md.len() as usize>maximum ||
        md.mode() & 0o022 != 0 {
         return Err("TPM key blob must be an owned, non-group/world-writable regular file".into());
     }
-    // The regular-file check prevents naive symlink following; Linux O_NOFOLLOW
-    // closes the rename-to-symlink race between stat and open.
+    // Проверка обычного файла предотвращает прямое следование симлинку; Linux
+    // O_NOFOLLOW закрывает гонку переименования в симлинк между stat и open.
     let mut opts=OpenOptions::new();
     opts.read(true).custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
     let mut f=opts.open(path).map_err(|e|format!("cannot open TPM key blob: {e}"))?;
@@ -89,7 +89,7 @@ fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> 
 struct TempTPMDir(PathBuf);
 impl TempTPMDir {
     fn new() -> Result<Self,String> {
-        // Fixed per-user base dir avoids placing secrets in untrusted work dirs.
+        // Фиксированный базовый каталог пользователя не позволяет помещать секреты в недоверенные рабочие каталоги.
         for _ in 0..6 {
             let mut salt=[0u8;16]; OsRng.fill_bytes(&mut salt);
             let path=std::env::temp_dir().join(format!("nl-tpm0314-{}",hex::encode(salt)));
@@ -118,7 +118,7 @@ impl Drop for TempTPMDir { fn drop(&mut self){ let _=fs::remove_dir_all(&self.0)
 fn tool(program: &str, args: &[String]) -> Result<(),String> {
     const NAMES: &[&str]=&["tpm2_createprimary","tpm2_load","tpm2_readpublic","tpm2_certify","tpm2_quote","tpm2_pcrread"];
     if !NAMES.contains(&program) { return Err("unknown TPM command".into()); }
-    // Absolute fixed executable path: no PATH search, no shell expansion.
+    // Фиксированный абсолютный путь к исполняемому файлу: никакого поиска по PATH и подстановок shell.
     let path=Path::new("/usr/bin").join(program);
     let mut child=Command::new(path).args(args).env_remove("TPM2TOOLS_TCTI")
         .env("TPM2TOOLS_TCTI","device:/dev/tpmrm0")
@@ -156,8 +156,8 @@ fn attestation_with_size(input: Vec<u8>) -> Result<Vec<u8>,String> {
     Err("tpm2_certify did not return a TPM_ST_ATTEST payload".into())
 }
 fn validate_outputs(public: &[u8], att: &[u8], sig: &[u8], registered: &[u8], extra: &[u8;32]) -> Result<(),String> {
-    // Reuse strict wire checks from Windows TPM, including fixed TPM,
-    // P-256, signed certify tag, nonce and signature shape.
+    // Повторно используйте строгие проверки протокола Windows TPM:
+    // fixedTPM, P-256, подписанный тег certify, nonce и формат подписи.
     let mut read_frame=Vec::new();
     let mut read_params=public.to_vec();read_params.extend_from_slice(&[0,0,0,0]);
     read_frame.extend_from_slice(&0x8001u16.to_be_bytes());
@@ -192,10 +192,10 @@ pub fn certify(
         return Err("issuer-certified AK X.509 PEM required".into());
     }
     let (pub_blob,priv_blob)=device_blobs(device_label)?;
-    // Public is TPMT_PUBLIC (not TPM2B_PUBLIC) from hardware-enclave.
-    // Wrapped private is raw TPM2B_PRIVATE.buffer, so add TPM2B length.
+    // Публичный ключ — TPMT_PUBLIC (не TPM2B_PUBLIC) от hardware-enclave. Обёрнутый
+    // секрет — сырой TPM2B_PRIVATE.buffer, поэтому нужно добавить длину TPM2B.
     let public=to_tpm2b(&pub_blob,MAX_BLOB)?;
-    // Check the local public blob *before* touching TPM operations.
+    // Проверяйте локальный публичный блок ДО обращения к операциям TPM.
     let mut read_frame=Vec::new();let mut public_params=public.clone();public_params.extend_from_slice(&[0,0,0,0]);
     read_frame.extend_from_slice(&0x8001u16.to_be_bytes());
     read_frame.extend_from_slice(&((10+public_params.len()) as u32).to_be_bytes());
@@ -209,17 +209,17 @@ pub fn certify(
     let parent=tmp.file("parent.ctx");let subject=tmp.file("subject.ctx");
     let read_pub=tmp.file("subject-read.pub");let att_file=tmp.file("certify.att");let sig_file=tmp.file("certify.sig");
     let path=|p: &Path| p.to_string_lossy().into_owned();
-    // Matching hardware-enclave 0.2.10 owner ECC P-256 restricted storage
-    // parent template: fixedTPM/parent, sensitiveDataOrigin, userWithAuth,
-    // restricted decrypt, AES-128 CFB, SHA-256, null ECC scheme and KDF.
+    // Шаблон ограниченного родительского хранилища ECC P-256 владельца
+    // hardware-enclave 0.2.10: fixedTPM/parent, sensitiveDataOrigin,
+    // userWithAuth, restricted decrypt, AES-128 CFB, SHA-256, null ECC scheme и KDF.
     tool("tpm2_createprimary", &arglist(&["-Q","-C","o","-g","sha256","-G","ecc256:aes128cfb",
         "-a","fixedtpm|fixedparent|sensitivedataorigin|userwithauth|restricted|decrypt", "-c",&path(&parent)]))?;
     tool("tpm2_load", &arglist(&["-Q","-C",&path(&parent),"-u",&path(&pub_path),"-r",&path(&private_path),"-c",&path(&subject)]))?;
     tool("tpm2_readpublic", &arglist(&["-Q","-c",&path(&subject),"-f","tss","-o",&path(&read_pub)]))?;
     let loaded_public=bytes_from(&read_pub,MAX_BLOB+2)?;
     if loaded_public!=public {return Err("loaded TPM object public area differs from sealed identity".into());}
-    // The AK is a distinct persistent TPM object enrolled under a TPM-aware
-    // issuer CA. Certify's own TPM signature and AK chain are verified remotely.
+    // AK — отдельный постоянный объект TPM, зарегистрированный в доверенном для TPM центре
+    // сертификации. Собственная TPM-подпись Certify и цепочка AK проверяются удалённо.
     tool("tpm2_certify", &arglist(&["-Q","-c",&path(&subject),"-C",&ak,"-g","sha256",
         "-q",&path(&nonce),"-f","tss","-o",&path(&att_file),"-s",&path(&sig_file)]))?;
     let attest=attestation_with_size(bytes_from(&att_file,4098)?)?;
@@ -252,9 +252,9 @@ mod tests {
     }
 }
 
-// 0.31.5: Quote is a distinct TPM operation. PCR bytes come from tpm2_pcrread,
-// but only the signed TPM Quote's digest is trusted by the backend. Reading
-// PCRs after Quote is deliberately fail-closed when measurements race/change.
+// 0.31.5: Quote — отдельная операция TPM. Байты PCR читаются через tpm2_pcrread, но
+// Backend доверяет только дайджесту в подписанном TPM Quote. Чтение PCR после Quote
+// намеренно приводит к отказу, если измерения изменились или возникла гонка.
 #[derive(Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct LinuxTPMQuote0315 {
@@ -299,8 +299,8 @@ pub fn quote0315(
     let stringify=|p:&Path|p.to_string_lossy().into_owned();
     tool("tpm2_quote",&arglist(&["-Q","-c",&ak,"-l",pcr_selection,"-q",&stringify(&nonce),
         "-g","sha256","-f","tss","-m",&stringify(&attest_file),"-s",&stringify(&signature_file)]))?;
-    // Read values independently; the backend recomputes and authenticates
-    // their combined digest from the signed TPMS_ATTEST.
+    // Читайте значения независимо: Backend пересчитывает и
+    // проверяет их общий дайджест из подписанного TPMS_ATTEST.
     tool("tpm2_pcrread",&arglist(&["-Q","-o",&stringify(&pcr_file),"-F","values",pcr_selection]))?;
     let values=bytes_from(&pcr_file,24*32)?;
     if values.len()!=indices.len()*32 {return Err("unexpected PCR value file length".into());}
@@ -310,7 +310,7 @@ pub fn quote0315(
     }
     let attest=attestation_with_size(bytes_from(&attest_file,4098)?)?;
     let signature=bytes_from(&signature_file,2048)?;
-    // Independently reject wrong nonce and PCR set before contacting backend.
+    // До обращения к Backend независимо отклоняйте неверный nonce и неверный набор PCR.
     crate::tpm_wire_0313::validate_quote_0315(&attest,&signature,&extra,&indices)?;
     Ok(LinuxTPMQuote0315 {
         tpm2b_attest:URL_SAFE_NO_PAD.encode(attest),

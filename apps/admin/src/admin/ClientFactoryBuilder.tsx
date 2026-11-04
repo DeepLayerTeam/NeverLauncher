@@ -196,7 +196,7 @@ export function ClientFactoryBuilder02710({
       controller.abort();
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
-    // Tick follows current id, independent of the displayed polling result.
+    // Обновление связано с текущим идентификатором независимо от показанного результата опроса.
   }, [endpoint, current, request, workspaceId]);
   async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {
     if (busy) return;

@@ -97,11 +97,11 @@ def find_window(root_pid, java_binary=None):
         match = PID_PROP.search(prop)
         if match:
             pid = int(match.group(1))
-            # A name alone is NEVER proof; the Java game must be our child.
+            # Одно имя НИКОГДА не доказывает личность процесса; игровая Java должна быть нашим дочерним процессом.
             if is_descendant(pid, root_pid):
                 if java_binary is not None:
-                    # A different process under the same runner cannot masquerade
-                    # as the signed release's selected Java executable.
+                    # Другой процесс того же исполнителя не может выдавать себя за
+                    # выбранный Java-бинарник подписанного релиза.
                     try:
                         if not os.path.samefile(f"/proc/{pid}/exe", java_binary):
                             continue
@@ -120,7 +120,7 @@ def log_health(client_dir, runtime_log, loader):
     combined = ""
     for path in paths:
         if path and path.exists() and path.is_file():
-            # Bound reads, avoid untrusted huge diagnostics and disk exhaustion.
+            # Ограничивайте чтение, чтобы недоверенная огромная диагностика не исчерпала дисковое пространство.
             with path.open("rb") as stream:
                 stream.seek(max(0, path.stat().st_size - 2 * 1024 * 1024))
                 combined += "\n" + stream.read(2 * 1024 * 1024).decode(
@@ -158,9 +158,9 @@ def capture_menu(wid, destination):
         from native_window_03410 import capture_menu as native_capture_menu
 
         return native_capture_menu(wid, destination, MENU)
-    # Capture the specific PID-verified window, not the screen or an unrelated app.
-    # scrot uses X11 directly; unlike some ImageMagick builds it does not
-    # depend on an optional X11 delegate for taking screenshots.
+    # Захватывайте конкретное окно с проверенным PID, а не весь экран или чужое
+    # приложение. scrot обращается к X11 напрямую; в отличие от некоторых сборок
+    # ImageMagick, для снимков ему не нужен необязательный делегат X11.
     destination.unlink(missing_ok=True)
     command(["scrot", "--window", wid, "--silent", str(destination)], 9)
     meta = command(
@@ -181,13 +181,13 @@ def capture_menu(wid, destination):
     )
     controls = sorted(key for key, regex in MENU.items() if regex.search(text))
     if len(controls) < 2:
-        # Some title-screen layouts yield better segmentation as sparse text.
+        # Некоторые макеты главного экрана лучше сегментируются как разреженный текст.
         text = command(
             ["tesseract", str(destination), "stdout", "--psm", "11", "-l", "eng"], 9
         )
         controls = sorted(key for key, regex in MENU.items() if regex.search(text))
-    # Two distinct native Minecraft controls (e.g. Singleplayer / Multiplayer)
-    # actually visible on a rendered frame are stronger than a startup log.
+    # Два разных нативных элемента управления Minecraft, например Одиночная игра и Сетевая игра,
+    # действительно видимых на кадре, — более сильное доказательство, чем журнал запуска.
     if len(controls) < 2:
         return None
     digest = hashlib.sha256(destination.read_bytes()).hexdigest()
@@ -221,8 +221,8 @@ class StartupObserver:
         self.last_change_monotonic = None
         self.window_last_seen_monotonic = None
         self.evidence_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        # V10: probe real host capabilities, including a fresh OpenGL context
-        # on native Windows/macOS (not a caller-supplied "hasGPU" assertion).
+        # V10: проверяйте реальные возможности хоста, включая новый контекст OpenGL в
+        # нативных Windows/macOS, а не переданное вызывающим утверждение hasGPU.
         from runtime_capabilities_03410 import evaluate
 
         caps = evaluate("gui", java_binary)
@@ -234,7 +234,7 @@ class StartupObserver:
             return
         self.last_probe = time.monotonic()
         candidates = sorted((self.client_dir / "logs").glob("runtime-launch-*.log"))
-        # Never use a stale log from a previous run to authorize readiness.
+        # Никогда не используйте старый журнал предыдущего запуска для подтверждения готовности.
         candidates = [p for p in candidates if p.stat().st_mtime >= self.started_at - 1]
         self.runtime_log = candidates[-1] if candidates else None
         ready, detail = log_health(self.client_dir, self.runtime_log, self.loader)
@@ -252,7 +252,7 @@ class StartupObserver:
                 self.samples.clear()
             self.window_pid = pid
             self.window_last_seen_monotonic = time.monotonic()
-            # Keep only two distinct proof frames, reuse a scratch capture after that.
+            # Сохраняйте только два разных кадра доказательств; далее переиспользуйте временный снимок.
             path = self.evidence_dir / (
                 f"menu-frame-{len(self.samples) + 1}.png"
                 if len(self.samples) < 2
@@ -289,7 +289,7 @@ class StartupObserver:
                 exc, (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired)
             ):
                 raise
-            # Failure to obtain a window is not proof of Minecraft incompatibility.
+            # Неудача получения окна не доказывает несовместимость с Minecraft.
             self.last_diagnostic = str(exc)[:240]
 
     def conclude(self, launch):

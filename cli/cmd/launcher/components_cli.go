@@ -20,9 +20,9 @@ import (
 	cm "gitflic.ru/skif4er/launcher/cli/internal/componentmodel"
 )
 
-// The signed manifest is serialized in the exact Go API field order. RawMessage
-// preserves the signed nested objects (including unknown supported runtime
-// fields) without lossy conversion or map key reordering.
+// Подписанный манифест сериализуется в точном порядке полей Go API.
+// RawMessage сохраняет подписанные вложенные объекты, включая
+// поддерживаемые неизвестные поля Runtime, без потерь или перестановки ключей.
 type componentsSignedWire0249 struct {
 	SchemaVersion         string                   `json:"schemaVersion"`
 	ProjectID             string                   `json:"projectId"`
@@ -55,8 +55,8 @@ type componentsInput0249 struct {
 	SignatureVerified bool
 }
 
-// Reject duplicate keys at every level: Go's standard decoder otherwise keeps
-// the last value, which can make two consumers see different signed content.
+// Отклоняйте повторяющиеся ключи на всех уровнях: стандартный декодер Go иначе оставляет
+// последнее значение, из-за чего два получателя могут видеть разное подписанное содержимое.
 func rejectDuplicateJSON0249(data []byte) error {
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
@@ -154,7 +154,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 	if e = json.Unmarshal(data, &out.Manifest); e != nil {
 		return out, e
 	}
-	// Trust is never inferred from the untrusted manifest's embedded publicKey.
+	// Доверие никогда не выводится из publicKey, встроенного в недоверенный манифест.
 	if !allowUnsigned {
 		if trustedKey == "" {
 			return out, errors.New("--public-key is required; use --allow-unsigned only for a local draft")
@@ -188,8 +188,8 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 	if e = cm.ValidateComponentCatalog0241(out.Manifest); e != nil {
 		return out, fmt.Errorf("catalog validation: %w", e)
 	}
-	// Validate signed file references and ownership before an export or plan is
-	// allowed; otherwise a valid graph could refer to tampered file metadata.
+	// Проверяйте ссылки на подписанные файлы и принадлежность до разрешения экспорта или
+	// плана, иначе корректный граф может ссылаться на подменённые метаданные файлов.
 	if e = cm.ValidateSignedFiles0249(out.Manifest.Files); e != nil {
 		return out, e
 	}
@@ -490,7 +490,7 @@ func executeComponents0249(args []string) error {
 		}
 	}
 	env := cm.ComponentEnvironment0244{OS: *osName, Arch: *arch, JavaMajor: uint32(*javaMajor), MinecraftVersion: *minecraft, Loader: *loader, LoaderVersion: *loaderVersion}
-	// CLI intentionally has NO --permissions: claims from a local flag are not server entitlements.
+	// CLI намеренно НЕ имеет параметра --permissions: утверждения из локального флага не являются серверными правами.
 	if cmd == "diff" {
 		if *old == "" || *newPath == "" {
 			return errors.New("components diff requires --old and --new")
@@ -541,7 +541,7 @@ func executeComponents0249(args []string) error {
 	cat := input.Manifest.ComponentCatalog
 	switch cmd {
 	case "validate":
-		// Validate every named preset's statically resolvable graph, not only one.
+		// Проверяйте статически разрешимый граф каждого именованного пресета, а не только одного.
 		for _, p := range cat.Presets {
 			if _, e = cm.PreviewCatalogGraph0248(*cat, p.ID); e != nil {
 				return fmt.Errorf("preset %s: %w", p.ID, e)
@@ -580,8 +580,8 @@ func executeComponents0249(args []string) error {
 	return errors.New("unsupported components command")
 }
 
-// All commands emit a stable JSON error object, including an explanation code,
-// while preserving the process's nonzero status for scripts and CI.
+// Все команды возвращают стабильный JSON-объект ошибки с кодом
+// объяснения, сохраняя ненулевой код выхода для скриптов и CI.
 func handleComponents0249(args []string) error {
 	err := executeComponents0249(args)
 	if err == nil {

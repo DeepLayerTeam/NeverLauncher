@@ -55,7 +55,7 @@ func TestOfflineGuardRevokeAndRollback05011(t *testing.T) {
 	if err := operatorRevise05011("revoke", revoked, "", priv, filepath.Join(dir, "invalid2.json"), "bad", "", time.Now()); err == nil {
 		t.Fatal("bad hash revoked")
 	}
-	// A valid signed envelope is emitted and decodes as a signed JSON object.
+	// Формируется допустимый подписанный конверт, который разбирается как подписанный объект JSON.
 	var env signedPolicy05011
 	data, _ := os.ReadFile(restored)
 	if err := json.Unmarshal(data, &env); err != nil || env.Signature == "" {

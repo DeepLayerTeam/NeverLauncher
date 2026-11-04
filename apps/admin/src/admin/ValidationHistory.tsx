@@ -4,8 +4,8 @@ import { ReleaseApi, type ValidationAuditReport03412 } from '../api/release';
 type Props = {api:ReleaseApi; packageId:string};
 const readableTime = (value?:string) => value ? new Date(value).toLocaleString() : '—';
 
-/** This screen does not send an administrative certification decision. Its
- * eligibility comes only from Backend's live signed-evidence evaluator. */
+/** Этот экран не отправляет административное решение о сертификации. Право на неё
+ * определяется только действующим анализатором подписанных доказательств в Backend. */
 export function ValidationHistory03412({api,packageId}:Props) {
   const [report,setReport] = useState<ValidationAuditReport03412|null>(null);
   const [events,setEvents] = useState<ValidationAuditReport03412['attempts']>([]);

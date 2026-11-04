@@ -4,8 +4,8 @@ import type {SkinModel0258} from './texture_service_0258';
 type Vec = {x:number;y:number;w:number;h:number};
 type Cube = {id:string;x:number;y:number;z:number;w:number;h:number;d:number;atlas:Vec;overlay?:boolean; cape?:boolean};
 const UNIT = 7;
-// Java edition 64x64 skin atlas. Coordinates are the native Minecraft UV mapping;
-// an HD skin is rendered at the same pixel-art aspect ratio without resampling.
+// Атлас скина Java Edition 64×64. Координаты соответствуют родной UV-развёртке Minecraft;
+// HD-скин выводится с исходными пиксельными пропорциями без пересэмплирования.
 function cubes0258(model: SkinModel0258): Cube[] {
   const arm = model === 'slim' ? 3 : 4;
   const base: Cube[] = [
@@ -42,7 +42,7 @@ function uvStyle0258(url: string, crop: Vec, cape: boolean): React.CSSProperties
 function Sprite0258({cube,url,view}: {cube:Cube;url:string;view:'2d'|'3d'}) {
   const adjusted: Cube = cube.overlay ? {...cube,w:cube.w,h:cube.h,d:cube.d} : cube;
   if (view === '2d') {
-    // A literal front elevation rather than an atlas thumbnail.
+    // Буквальный вид спереди, а не миниатюра атласа.
     const crop = cube.cape ? {x:1,y:1,w:10,h:16} : faceLayout[0].crop(cube);
     return <div className="textureSprite0258" style={{left:`calc(50% + ${(cube.x-cube.atlas.w/2)*UNIT}px)`,top:`calc(50% + ${(cube.y-cube.atlas.h/2)*UNIT}px)`,width:cube.atlas.w*UNIT,height:cube.atlas.h*UNIT,...uvStyle0258(url,crop,Boolean(cube.cape))}} />;
   }

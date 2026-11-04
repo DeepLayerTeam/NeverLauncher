@@ -222,9 +222,9 @@ impl NativeProvider {
         let value: MinecraftProfile = self.get_json(&self.minecraft,"/minecraft/profile",Some(minecraft)).await?;
         value.checked()
     }
-    /// Parse actual named entitlements, not merely the length of the array.
-    /// This is NOT a reliable standalone Game Pass check: Java profile is the
-    /// authoritative proof of a playable Java identity when items are empty.
+    /// Разбирайте реальные именованные права, а не только длину массива. Это НЕ
+    /// самостоятельная надёжная проверка Game Pass: при пустых элементах авторитетным
+    /// доказательством доступной Java-учётной записи служит Java-профиль.
     pub(crate) async fn entitlements(&self, minecraft: &str) -> Result<official_verification_0266::JavaAccessEvidence,ProviderError> {
         #[derive(Deserialize)] struct Entitlement { items: Vec<EntitlementItem> }
         #[derive(Deserialize)] struct EntitlementItem { name: String }
@@ -233,20 +233,20 @@ impl NativeProvider {
         let names: Vec<String> = data.items.into_iter().map(|item|item.name).collect();
         official_verification_0266::inspect_entitlements(&names)
     }
-    /// Fail closed on HTTP/JSON failures, invalid/demonstration Java profiles,
-    /// or UUID changes. The entitlement response alone cannot establish that a
-    /// given MS token has a playable Java identity.
+    /// При ошибках HTTP/JSON, недействительных или демонстрационных Java-профилях
+    /// и смене UUID действует отказ по умолчанию. Один ответ о правах не
+    /// доказывает, что данный токен MS имеет игровую Java-учётную запись.
     pub async fn verify_java(&self, token: &str, expected_uuid: Option<&str>) -> Result<OfficialProfile,ProviderError> {
         let evidence = self.entitlements(token).await?;
         let profile = self.profile(token).await?;
         official_verification_0266::verify_playable_profile(&profile, expected_uuid, evidence)?;
         Ok(profile)
     }
-    /// A write acknowledgement is not the final Minecraft state. Read the
-    /// authenticated profile again and confirm that the requested texture is
-    /// active before returning it to Desktop (and before updating the vault).
-    /// Provider propagation can lag briefly; retries are bounded and
-    /// repeat the write itself.
+    /// Подтверждение записи ещё не является окончательным состоянием
+    /// Minecraft. Повторно считайте авторизованный профиль и подтвердите
+    /// активацию выбранной текстуры до возврата в Desktop и обновления
+    /// хранилища. Распространение у провайдера может запаздывать;
+    /// количество повторов ограничено, сама запись не повторяется.
     async fn confirmed_texture_0395(&self, token: &str, operation: &str,
         cape_id: Option<&str>, skin_variant: Option<&str>, uuid: &str,
     ) -> Result<OfficialProfile,ProviderError> {
@@ -269,8 +269,8 @@ impl NativeProvider {
     }
     pub async fn texture(&self, token: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>,String)>) -> Result<OfficialProfile,ProviderError> {
         if !valid_token(token) { return Err(ProviderError::InvalidResponse); }
-        // All writes use one account's token; accept a cape merely because
-        // it was displayed earlier by the renderer.
+        // Все записи используют токен одной учётной записи; нельзя
+        // принимать плащ только потому, что его раньше показал рендерер.
         let before = self.profile(token).await?;
         let variant = skin.as_ref().map(|(_,model)| model.as_str().to_owned());
         let path = match operation {
@@ -297,8 +297,8 @@ impl NativeProvider {
             },
             _ => unreachable!(),
         };
-        // Minecraft Services currently returns a profile for PUT/POST and
-        // can return 204 on DELETE. Verify its status, not a cached reply.
+        // Minecraft Services сейчас возвращает профиль при PUT/POST и может вернуть
+        // 204 при DELETE. Проверяйте ответ, а не кэшированное значение.
         if matches!(operation,"resetSkin"|"resetCape") {
             let response = builder.send().await.map_err(|_|ProviderError::Unavailable)?;
             if !response.status().is_success() { return Err(ProviderError::Transient); }
@@ -316,8 +316,8 @@ fn texture_applied_0395(profile: &OfficialProfile, operation: &str, cape_id: Opt
         "selectCape" => cape_id.is_some_and(|id|profile.capes.iter().any(|cape|cape.id == id && cape.state == "ACTIVE")),
         "resetCape" => !profile.capes.iter().any(|cape|cape.state == "ACTIVE"),
         "uploadSkin" => variant.is_some_and(|v|profile.skins.iter().any(|skin|skin.state == "ACTIVE" && skin.variant.eq_ignore_ascii_case(v))),
-        // The official default after skin reset is provider-dependent.
-        // A successful DELETE + fresh authenticated profile is authoritative.
+        // Официальная текстура по умолчанию после сброса скина зависит от провайдера.
+        // Успешный DELETE и свежий авторизованный профиль — источник истины.
         "resetSkin" => true,
         _ => false,
     }

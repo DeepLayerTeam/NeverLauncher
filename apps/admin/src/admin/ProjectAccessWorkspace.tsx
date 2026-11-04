@@ -8,8 +8,8 @@ type Props = {
   onChanged: () => Promise<void>;
 };
 
-/** Project role administration uses the existing authenticated user API. No local
- * membership edit is treated as committed until the Backend has saved it. */
+/** Управление ролями проекта использует существующее авторизованное API пользователей. Локальное
+ * изменение состава участников нельзя считать сохранённым до подтверждения Backend. */
 export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onStepUp, onChanged }: Props) {
   const [users, setUsers] = useState<ProjectRoleUser0387[]>([]);
   const [roles, setRoles] = useState<ProjectRole0387[]>([]);

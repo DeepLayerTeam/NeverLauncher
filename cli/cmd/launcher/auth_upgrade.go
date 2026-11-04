@@ -13,10 +13,10 @@ import (
 	"gitflic.ru/skif4er/launcher/cli/internal/dbmigrate"
 )
 
-// handleAuthUpgrade02911 is deliberately separate from db migrate apply.
-// A production operator must opt in with an off-host PostgreSQL backup and
-// controlled write-free maintenance window. Database migration checksums stay
-// enforced by the existing dbmigrate runner.
+// Операция handleAuthUpgrade02911 намеренно отделена от db migrate apply.
+// Оператор промышленной среды должен явно согласовать внешнее резервное
+// копирование PostgreSQL и контролируемое окно обслуживания без записи.
+// Проверка сумм миграций остаётся за существующим dbmigrate.
 func handleAuthUpgrade02911(args []string) error {
 	if len(args) == 0 {
 		return errors.New("db auth-upgrade requires preflight|apply|verify")

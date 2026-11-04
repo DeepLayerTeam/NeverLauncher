@@ -19,9 +19,9 @@ import (
 	"time"
 )
 
-// The factory uses the existing, tested materializers as executable install
-// adapters. Its lock is an immutable receipt for exact inputs and on-disk
-// outputs, not an optimistic description of what an installer might produce.
+// Фабрика использует существующие проверенные средства подготовки как исполняемые
+// адаптеры установки. Её lock — неизменная квитанция точных входов и результатов на
+// диске, а не оптимистичное описание возможного результата установщика.
 const factoryPlanSchema0271 = "launcher.client-factory.install-plan.v1"
 
 type factorySource0271 struct {
@@ -291,8 +291,8 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 	return nil
 }
 
-// Only data files participate in the reproducibility hash. Materializer logs,
-// temporary downloads, journals, state paths and lock files are excluded.
+// В хеш воспроизводимости входят только файлы данных. Журналы подготовки, временные
+// загрузки, журналы транзакций, пути состояния и lock-файлы исключаются.
 func scanFactoryOutputs0271(root string) ([]factoryOutput0271, error) {
 	outputs := []factoryOutput0271{}
 	err := filepath.WalkDir(root, func(full string, d os.DirEntry, walkErr error) error {
@@ -483,7 +483,7 @@ func factorySteps0271(loader string) []factoryStep0271 {
 	return append(s, factoryStep0271{ID: "verify", Adapter: "sha256-verify", Requires: []string{prev}}, factoryStep0271{ID: "publish", Adapter: "atomic-publish", Requires: []string{"verify"}})
 }
 
-// A sibling lock remains effective while root is atomically replaced.
+// Соседний lock продолжает действовать, пока корневой каталог атомарно заменяется.
 func acquireFactoryLock0271(dst string) (func(), error) {
 	lockPath := dst + ".client-factory.lock"
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
@@ -631,8 +631,8 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return factoryPlan0271{}, err
 	}
-	// Sibling staging makes failure non-destructive; no file in the destination
-	// is modified until every step and SHA-256 has been verified.
+	// Промежуточный каталог рядом с целью обеспечивает отказ без разрушения
+	// данных: до проверки всех шагов и SHA-256 файлы назначения не меняются.
 	staging, err := os.MkdirTemp(filepath.Dir(dst), ".factory-staging-")
 	if err != nil {
 		return factoryPlan0271{}, err
@@ -654,7 +654,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	var vanilla vanillaInstallResult
 	var loaderVersion, profilePath, mainClass, loaderResolutionSHA, processorExecutableSHA string
 	var resolvedIdentity *factoryResolution0271
-	// One executor, shared context, shared source recorder and output verifier.
+	// Один исполнитель, общий контекст, единый регистратор источников и проверяющий результаты.
 	switch o.Loader {
 	case "vanilla":
 		vanilla, err = installVanilla(ctx, base)
@@ -739,8 +739,8 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, AdapterPins: currentFactoryAdapterPins02711(o.Loader), LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity, Legacy: legacyRecipe}
 	if hasPrior {
 		p.Compatibility = prior.Compatibility
-		// Source order and metadata can be re-observed, but previously pinned
-		// outputs and loader identity are immutable. This is a true replay.
+		// Порядок и метаданные источников можно наблюдать повторно, но ранее закреплённые
+		// результаты и идентичность загрузчика неизменны. Это настоящее воспроизведение.
 		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) || !reflect.DeepEqual(p.Legacy, prior.Legacy) {
 			return factoryPlan0271{}, errors.New("rebuild changed pinned runtime identity")
 		}
@@ -753,7 +753,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 					return factoryPlan0271{}, fmt.Errorf("rebuild changed %s", p.Outputs[i].Path)
 				}
 			}
-			// Preserve the original evidence only on an unchanged adapter replay.
+			// Сохраняйте исходное доказательство только при повторе с неизменным адаптером.
 			p.Sources = prior.Sources
 			p.Processors = prior.Processors
 		} else {

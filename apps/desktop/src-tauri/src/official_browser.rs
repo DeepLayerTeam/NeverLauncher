@@ -46,7 +46,7 @@ pub fn valid_client_id(v: &str) -> bool {
     v.bytes().enumerate().all(|(i, c)| if [8,13,18,23].contains(&i) { c == b'-' } else { c.is_ascii_hexdigit() })
 }
 
-// Keep callback parsing independent of network I/O to support adversarial tests.
+// Разбор обратного вызова отделён от сетевого ввода-вывода для тестирования в недоверенных условиях.
 fn equals_secret(expected: &str, candidate: &str) -> bool {
     if expected.len() != candidate.len() { return false; }
     let mismatch = expected.bytes().zip(candidate.bytes()).fold(0u8, |acc,(a,b)| acc | (a ^ b));
@@ -80,8 +80,8 @@ pub fn parse_callback(request: &str, port: u16, state: &str) -> Callback {
     }
     if !host_ok || !parts[1].starts_with('/') || parts[1].starts_with("//") { return Callback::Reject; }
     let Ok(url) = Url::parse(&format!("http://localhost:{port}{}", parts[1])) else { return Callback::Reject };
-    // Reject parser normalization that changes the authority (e.g. URL
-    // targets containing backslashes under special-scheme URL parsing).
+    // Отклоняйте нормализацию парсера, меняющую адрес назначения, например
+    // URL с обратными косыми чертами при разборе специальных схем.
     if url.host_str() != Some("localhost") || url.port() != Some(port) { return Callback::Reject; }
     if url.path() != CALLBACK_PATH || url.fragment().is_some() { return Callback::Irrelevant; }
     let mut values = std::collections::HashMap::<String,String>::new();
@@ -147,7 +147,7 @@ pub async fn receive_callback(listener: TcpListener, state: &str, mut cancelled:
 }
 
 pub fn open_system_browser(url: &Url) -> Result<(),String> {
-    // Fixed HTTPS identity host, no shell parsing and no user-provided command.
+    // Фиксированный HTTPS-хост идентификации, без разбора через shell и пользовательских команд.
     if url.scheme() != "https" || url.host_str() != Some("login.microsoftonline.com") || url.path() != "/consumers/oauth2/v2.0/authorize" {
         return Err("Недоверенный OAuth URL".into());
     }
@@ -166,7 +166,7 @@ mod tests {
     use super::*;
     #[test]
     fn exact_pkce_s256_and_microsoft_url() {
-        // RFC 7636 Appendix B test vector.
+        // Тестовый вектор RFC 7636, приложение B.
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
         let redirect="http://localhost:23456/minecraft-poc/callback";
         let url = authorization_uri("01234567-89ab-cdef-0123-456789abcdef",redirect,"ABCDEFGHIJKLMNOPabcdefghijklmnop1234567890_-",verifier).unwrap();

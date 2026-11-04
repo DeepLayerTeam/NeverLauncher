@@ -109,10 +109,10 @@ class APIClient:
         self, method: str, path: str, body: bytes | None, headers: dict[str, str]
     ) -> tuple[int, bytes]:
         request_path = self.base_path + path
-        # The SQL repository uses an upsert keyed by (version_id, path), so an
-        # interrupted *file upload* can safely be retransmitted with the exact
-        # same bytes and independently rechecked SHA-256. Never apply a lengthy
-        # POST retry loop to authentication, signing, or publishing operations.
+        # SQL-репозиторий использует upsert по (version_id, path), поэтому
+        # прерванную ЗАГРУЗКУ ФАЙЛА можно безопасно повторить с точно теми же
+        # байтами и независимой проверкой SHA-256. Не применяйте длинный цикл
+        # повторов POST к аутентификации, подписанию и публикации.
         upload_endpoint = (
             method == "POST"
             and path.startswith("/api/v1/admin/projects/")
@@ -145,8 +145,8 @@ class APIClient:
                     )
                     time.sleep(delay)
                     continue
-                # 502/503/504 may be emitted while the API container is
-                # restarted. The uploaded file is repeatable; other POSTs are not.
+                # Ошибки 502/503/504 возможны при перезапуске контейнера API.
+                # Загрузку файла можно повторить; другие POST — нельзя.
                 if (
                     upload_endpoint
                     and response.status in {502, 503, 504}
@@ -527,8 +527,8 @@ def main() -> int:
         "release": published,
     }
     if args.refreshed_token_output:
-        # The E2E orchestrator must not reuse a token that expired during a
-        # multi-GB upload. Never put the renewed bearer in JSON certificates.
+        # Оркестратор E2E не должен повторно использовать токен, истёкший при загрузке
+        # нескольких гигабайт. Обновлённый bearer нельзя помещать в сертификаты JSON.
         token_path = args.refreshed_token_output
         token_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL

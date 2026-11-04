@@ -106,7 +106,7 @@ const fixture = () => {
   };
 };
 
-// Wait until an async operation is observed, without provider/network sleeps.
+// Ожидайте наблюдения асинхронной операции без искусственных пауз провайдера или сети.
 const waitFor = async (predicate) => {
   for (let i = 0; i < 30; i++) {
     if (predicate()) return;

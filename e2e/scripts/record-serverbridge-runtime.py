@@ -49,8 +49,8 @@ def record(
         or artifact.stat().st_size == 0
     ):
         raise ValueError(f"{service}: the exact built plugin JAR is required")
-    # A runtime test must bind to the actual plugin bytes, not a file name or
-    # a declaration in the generated build manifest.
+    # Тест Runtime должен быть привязан к фактическим байтам плагина, а не к
+    # имени файла или декларации в сгенерированном манифесте сборки.
     jar_digest = digest(artifact)
     if version == "0.42.0" and not re.fullmatch(
         r"[a-f0-9]{40}|[a-f0-9]{64}", source_commit
@@ -58,7 +58,7 @@ def record(
         raise ValueError(
             "0.42.0 requires an exact source commit for live certification"
         )
-    # Independent observation: do not infer process presence from HTTP heartbeat.
+    # Независимое наблюдение: не выводите наличие процесса только из heartbeat HTTP.
     inspect = json.loads(run("docker", "inspect", "--type", "container", cid))
     if len(inspect) != 1:
         raise ValueError("Docker must identify exactly one runtime container")
@@ -86,7 +86,7 @@ def record(
             java_pids.append(int(fields[0]))
     if len(java_pids) != 1:
         raise ValueError(f"{service}: expected one live Java process, got {java_pids}")
-    # java -version writes to stderr; retain only the major version, no private args.
+    # java -version выводит в stderr; сохраняйте лишь основную версию, без приватных аргументов.
     proc = subprocess.run(
         ["docker", "exec", cid, "java", "-version"],
         capture_output=True,
@@ -208,7 +208,7 @@ def main() -> int:
     ) as exc:
         parser.exit(1, f"[live] cannot certify {args.service}: {exc}\n")
     target = args.runtime / f"live-{args.service}-04113.json"
-    # Atomic, avoid exposing partial certifications on crash.
+    # Атомарная запись, чтобы сбой не раскрывал частичную сертификацию.
     tmp = target.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     tmp.replace(target)

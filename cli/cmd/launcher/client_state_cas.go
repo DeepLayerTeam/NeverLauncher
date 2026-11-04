@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 )
 
-// Returns a digest of the exact persisted version pointer, not a timestamp.
-// A missing pointer has a distinct sentinel from an empty pointer.
+// Возвращает дайджест точного сохранённого указателя версии, а не временную метку. У
+// отсутствующего указателя отдельный маркер, отличный от пустого указателя.
 func clientStateSHA2560228(root string) (string, error) {
 	file := filepath.Join(root, ".launcher", "client-state.json")
 	info, err := os.Lstat(file)

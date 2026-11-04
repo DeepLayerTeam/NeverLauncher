@@ -1,5 +1,5 @@
-// Server-bound launch authorization is a separate step from possession of
-// credentials in the OS vault. No Microsoft bearer may cross this interface.
+// Разрешение запуска на конкретном сервере — отдельный шаг, не равный наличию учётных данных
+// в хранилище ОС. Токены Microsoft bearer не должны проходить через этот интерфейс.
 export type OfficialJoin0397 = {username: string; uuid: string; serverId: string};
 export function assertOfficialJoin0397(result: OfficialJoin0397, expected: {uuid: string; name: string; serverId: string}): OfficialJoin0397 {
   const uuid=(v:string)=>v.replace(/-/g, '').toLowerCase();

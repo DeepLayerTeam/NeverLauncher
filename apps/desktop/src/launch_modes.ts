@@ -1,4 +1,4 @@
-/** 0.26.9: Resolve one and only one game-authentication realm at launch time. */
+/** 0.26.9: при запуске выбирайте ровно одну область игровой аутентификации. */
 export type GameLaunchMode0269 = 'official' | 'local' | 'offline';
 export type LaunchIntent0269 = {
   identity: GameLaunchMode0269;

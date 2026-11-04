@@ -169,7 +169,7 @@ def _capture(wid, destination):
     image = ImageGrab.grab(bbox=bbox, all_screens=True)
     if image.width < 640 or image.height < 400:
         raise RuntimeError("captured window dimensions too small")
-    # Entropy is measured on the actual rendered RGB image, not on the title.
+    # Энтропия измеряется по реально отрисованному RGB-изображению, а не по заголовку окна.
     import math
 
     hist = image.convert("L").histogram()
@@ -228,7 +228,7 @@ def screenshot_world(wid, path):
 
 
 def move_forward(wid, seconds=2):
-    # Do not send keys to a background window or a process we did not identify.
+    # Не отправляйте клавиши в фоновое окно или процесс, личность которого не установлена.
     if not _foreground(wid):
         raise GUIUnavailable("Minecraft not focused; refusing gameplay input")
     if sys.platform == "darwin":

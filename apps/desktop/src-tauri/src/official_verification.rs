@@ -2,8 +2,8 @@
 //! This is a *game* authorization gate, not an OIDC/Never sign-in gate.
 use crate::{official_exchange_0265::ProviderError, official_identity_0262::OfficialProfile};
 
-/// Internal evidence only; never sent to renderer or persisted as an ownership
-/// assertion (ownership can change after account revocation).
+/// Только внутреннее доказательство; не отправляется в рендерер и не сохраняется как постоянное
+/// подтверждение владения, поскольку оно может измениться после отзыва учётной записи.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum JavaAccessEvidence {
     JavaLicense,
@@ -11,8 +11,8 @@ pub(crate) enum JavaAccessEvidence {
     ProfileBased,
 }
 
-/// Only known Java Edition product names count as Java ownership.
-/// Bedrock/Dungeons/unknown item names MUST NOT authorize Java by themselves.
+/// Только известные названия продуктов Java Edition подтверждают право на Java.
+/// Bedrock, Dungeons и неизвестные продукты сами по себе НЕ разрешают Java.
 pub(crate) fn inspect_entitlements(names: &[String]) -> Result<JavaAccessEvidence, ProviderError> {
     if names.len() > 1024 || names.iter().any(|s| s.is_empty() || s.len()>128 ||
         !s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')) {
@@ -21,17 +21,17 @@ pub(crate) fn inspect_entitlements(names: &[String]) -> Result<JavaAccessEvidenc
     if names.iter().any(|v| matches!(v.as_str(), "game_minecraft" | "product_minecraft")) {
         Ok(JavaAccessEvidence::JavaLicense)
     } else if names.iter().any(|v| matches!(v.as_str(), "product_game_pass_pc" | "game_pass_pc")) {
-        // Game Pass entitlements are not always populated in mcstore.
+        // Права Game Pass не всегда заполняются в mcstore.
         Ok(JavaAccessEvidence::GamePassCandidate)
     } else {
         Ok(JavaAccessEvidence::ProfileBased)
     }
 }
 
-/// Minecraft Services /minecraft/profile is token-authenticated. An empty
-/// entitlement list (e.g. Game Pass) is acceptable only with a real Java
-/// profile from that SAME token. This never bypasses the Minecraft session
-/// server, multiplayer/privacy checks or external application approval.
+/// Маршрут Minecraft Services /minecraft/profile аутентифицируется токеном. Пустой
+/// список прав, например при Game Pass, допустим только при наличии реального
+/// Java-профиля из ТОГО ЖЕ токена. Это не обходит сервер сеансов Minecraft,
+/// проверки мультиплеера, приватности или разрешение внешнего приложения.
 pub(crate) fn verify_playable_profile(
     profile: &OfficialProfile, expected_uuid: Option<&str>, _evidence: JavaAccessEvidence,
 ) -> Result<(), ProviderError> {
@@ -41,8 +41,8 @@ pub(crate) fn verify_playable_profile(
         return Err(ProviderError::NoMinecraftJava);
     }
     if let Some(expected) = expected_uuid {
-        // Only the verified Minecraft UUID identifies a persisted account;
-        // display name can change and must not be used to authorize a switch.
+        // Только проверенный UUID Minecraft идентифицирует сохранённую учётную
+        // запись; отображаемое имя меняется и не может разрешать переключение.
         if expected.len()!=32 || !expected.bytes().all(|b|b.is_ascii_hexdigit()) ||
             !expected.eq_ignore_ascii_case(&profile.id) {
             return Err(ProviderError::IdentityMismatch);

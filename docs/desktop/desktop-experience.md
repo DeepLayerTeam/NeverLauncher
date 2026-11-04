@@ -8,7 +8,7 @@
 - Scoped server browser: `GET /api/v1/projects/{projectId}/profiles/{profileId}/servers` отдаёт безопасный срез активных узлов только нужного проекта и профиля; секреты node identity и внутренние routing details не передаются. Это discovery, а не разрешение на join. Фактический ServerBridge join по-прежнему проверяет серверный билет и обязательную аттестацию.
 - ServerBridge node ID не равен Minecraft DNS/port. Для auto-enter пользователь указывает реальный публичный игровой адрес. Для Minecraft 1.20+ используется Quick Play, для более старых версий — `--server` и `--port`. ServerBridge one-time ticket запрашивается до auto-enter, чтобы Minecraft не опередил разрешение входа. Если сервер требует post-launch Continuous Guard Attestation v2, предварительный join не может быть подтверждён: auto-enter отклоняется, а обычный запуск и ручное подключение сохраняются. Для loader-специфичных нестандартных идентификаторов версии автоматический выбор Quick Play требует реальной E2E проверки.
 
-## Offline
+## Офлайн-режим
 
 Offline поддерживается **только** для signed Manifest v2, где `runtime.launch.offlineMode` явно разрешён издателем. Manifest записывается как кеш локально после pinned-Ed25519 verification и повторно проверяется при загрузке и непосредственно перед offline launch. `projectId/profileId/channel/version/signature` должны совпадать с кешем. Runtime повторно проверяет целостность файлов перед запуском. Offline не выдаёт Minecraft session, Guard launch ticket и ServerBridge join. Он не предоставляет доступ к защищённым online-серверам и не обходит Guard process hardening.
 

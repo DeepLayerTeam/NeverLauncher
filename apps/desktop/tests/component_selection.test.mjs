@@ -1,4 +1,4 @@
-// `node --test` after transpiling the pure selection module with tsc.
+// Запуск `node --test` после транспиляции чистого модуля выбора через tsc.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseChoice0247,encodeChoice0247,proposeChoice0247} from '../build-tests/component_selection_0247.js';

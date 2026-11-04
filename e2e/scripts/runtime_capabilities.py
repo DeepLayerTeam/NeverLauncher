@@ -124,7 +124,7 @@ def _native_display():
     if sys.platform == "win32":
         try:
             user32 = ctypes.WinDLL("user32", use_last_error=True)
-            # A service in session 0 or a disconnected session is not GUI-capable.
+            # Сервис в сеансе 0 или отключённый сеанс не имеет возможностей GUI.
             session = ctypes.c_uint32(0)
             kernel = ctypes.WinDLL("kernel32", use_last_error=True)
             if (

@@ -1,6 +1,6 @@
-/** Operator actions use the existing authenticated 0.20.x extension API.
- * No result is classified as successful until the authoritative install list
- * reflects the transition. MFA / phishing-resistant freshness is server-side.
+/** Действия оператора используют существующее авторизованное API расширений версии
+ * 0.20.x. Результат считается успешным только после отражения перехода в достоверном
+ * списке установок. Актуальность MFA и защита от фишинга проверяются на сервере.
  */
 export type ExtensionScope0425 = { scope: "global" | "project"; scopeId: string };
 export type ExtensionInstall0425 = {

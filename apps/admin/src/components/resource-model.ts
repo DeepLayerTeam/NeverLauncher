@@ -1,4 +1,4 @@
-/** Pure collection transforms used by tables (independent of React/rendering). */
+/** Чистые преобразования коллекций для таблиц, независимые от React и рендеринга. */
 export type TableRow = Record<string, unknown>;
 export type Column = { field: string; title: string; facet?: boolean; datetime?: boolean };
 

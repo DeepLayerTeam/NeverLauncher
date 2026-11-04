@@ -1,9 +1,9 @@
 package main
 
-// Guard policy operations never lower the accepted epoch and never access the
-// operator's private signing key. Snapshots are the exact signed envelopes,
-// not reconstructed policies. Restoring an old configuration requires a new
-// Ed25519 signature for a strictly higher epoch.
+// Операции политик Guard никогда не понижают принятую эпоху и не получают
+// закрытый ключ оператора. Снимки — точные подписанные конверты, а не
+// восстановленные политики. Для возврата старой конфигурации требуется
+// новая подпись Ed25519 на строго более высокой эпохе.
 import (
 	"bytes"
 	"encoding/base64"
@@ -44,7 +44,7 @@ func guardHistoryPersist05011(root string, raw []byte, v guardCompatVerified0502
 	if err != nil {
 		return err
 	}
-	// Existing archive entries are immutable: never overwrite in place.
+	// Существующие записи архива неизменяемы: никогда не перезаписывайте на месте.
 	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if errors.Is(err, os.ErrExist) {
 		existing, err := guardCompatRead0502(root, guardHistoryDir05011+"/"+guardHistoryName05011(v), 256*1024)
@@ -75,8 +75,8 @@ func guardHistoryPersist05011(root string, raw []byte, v guardCompatVerified0502
 }
 
 func guardCompatArchiveIncoming05011(root, key string, raw []byte, v guardCompatVerified0502) error {
-	// Archive the previous accepted policy before raising the floor. If it has
-	// been corrupted, installation must stop, not silently forget evidence.
+	// Перед повышением нижней границы архивируйте предыдущую принятую политику. Если она
+	// повреждена, установку нужно остановить, а не незаметно забыть доказательство.
 	old, err := guardCompatRead0502(root, guardCompatPolicyFile0502, 256*1024)
 	if err == nil {
 		current, err := guardCompatHistoricalVerify05011(root, key, old)
@@ -170,7 +170,7 @@ func decodeArchivedPayload05011(env guardCompatEnvelope0502) (guardCompatPolicy0
 	return p, err
 }
 func decodeGuardBase6405011(encoded string) ([]byte, error) {
-	// Keep the reader bounded even with hostile history files.
+	// Ограничивайте размер чтения даже при враждебно сформированных файлах истории.
 	if len(encoded) > 256*1024 {
 		return nil, errors.New("history payload too large")
 	}
@@ -273,8 +273,8 @@ func guardCompatOperation05011(root, key string, args []string) (map[string]any,
 		minecraft := flagValue(args[1:], "--minecraft", active.Policy.Minecraft)
 		loader := flagValue(args[1:], "--loader", active.Policy.Loader)
 		var agents, plugins []string
-		// Explicit agent/plugin paths are required when verifying actual launcher
-		// arguments; the normal directory walk still enforces signed mods/natives.
+		// При проверке фактических аргументов лаунчера требуются явные пути агентов и плагинов;
+		// обычный обход каталога по-прежнему проверяет подписанные моды и нативные библиотеки.
 		if list := flagValue(args[1:], "--agents", ""); list != "" {
 			agents = strings.Split(list, ",")
 		}

@@ -1,4 +1,4 @@
-/** Browser-side preflight only. The API independently enforces paths and SHA-256. */
+/** Только предварительная проверка в браузере. API независимо проверяет пути и SHA-256. */
 export type BuildImportFile0384 = { name: string; webkitRelativePath?: string };
 export type PlannedImport0384<T extends BuildImportFile0384> = {
   file: T;
@@ -14,7 +14,7 @@ export function normalizeImportPath0384(source: BuildImportFile0384): string {
     "/",
   );
   const segments = relative.split("/");
-  // Directory-picker entries have an enclosing folder, selected individual files do not.
+  // Записи, выбранные через диалог каталогов, имеют родительскую папку; отдельно выбранные файлы — нет.
   const path = (
     source.webkitRelativePath && segments.length > 1
       ? segments.slice(1)

@@ -636,8 +636,8 @@ export function AdminExtensions({
         const after = await management.installs();
         verifyLifecycle0425(action, id, scope, before, after, result);
       }
-      // The inventory and safety lists must be refreshed, infer success
-      // from a 200/201 response or optimistically alter the UI.
+      // Списки установок и безопасности необходимо обновлять; нельзя
+      // выводить успех из ответа 200/201 или оптимистично менять UI.
       const [nextManager, nextQuarantine, nextEmergency] = await Promise.all([
         api<ManagerData>(backendUrl, "/api/v1/admin/extensions/manager", token),
         management.quarantine(),

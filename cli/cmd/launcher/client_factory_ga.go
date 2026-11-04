@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// The GA gate is deliberately separate from build/verify/export. A successful
-// materialization or a fixture certificate must never imply a public release.
+// Проверка GA намеренно отделена от build/verify/export. Успешная подготовка или
+// сертификат тестового примера никогда не означают разрешение на публичный релиз.
 const factoryGASchema0280 = "launcher.factory.ga-join-attestation.v1"
 
 var factoryCommit0280 = regexp.MustCompile(`^[0-9a-f]{40}$`)
@@ -165,8 +165,8 @@ func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinP
 	if err != nil {
 		return report, fmt.Errorf("runtime matrix: %w", err)
 	}
-	// A single family fixture cannot satisfy the GA matrix. Enforce an actual
-	// certificate for all five families and all requested targets.
+	// Одного тестового примера семейства недостаточно для матрицы GA. Требуйте
+	// реальный сертификат для всех пяти семейств и всех запрошенных целей.
 	if certs.Total < 5 || certs.Failed != 0 {
 		return report, errors.New("incomplete client runtime certification")
 	}

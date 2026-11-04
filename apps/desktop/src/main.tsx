@@ -938,7 +938,7 @@ function App() {
           if (active) setNativeUI0357(value);
         })
         .catch(() => {
-          /* Browser preview has no native window. */
+          /* Предварительный просмотр в браузере не имеет нативного окна. */
         });
     update();
     window.addEventListener("resize", update);
@@ -1024,7 +1024,7 @@ function App() {
           locale: signedProvisioning0352.branding!.locale!,
         }));
     } catch {
-      /* UI preference storage optional */
+      /* Хранилище настроек UI необязательно. */
     }
   }, [signedProvisioning0352]);
 
@@ -1132,7 +1132,7 @@ function App() {
         else stop();
       })
       .catch(() => {
-        /* Desktop web preview has no Tauri event bus. */
+        /* Веб-предпросмотр Desktop не имеет шины событий Tauri. */
       });
     return () => {
       mounted = false;
@@ -1313,7 +1313,7 @@ function App() {
           if (!cancelled && profile) setOfficialProfile(profile);
         })
         .catch(() => {
-          /* expired/revoked session must not be treated as linked */
+          /* Истёкший или отозванный сеанс нельзя считать привязанным. */
         });
     }
     return () => {

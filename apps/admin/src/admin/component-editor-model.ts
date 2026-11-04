@@ -1,5 +1,5 @@
-// The editor works on an unsigned copy. Backend recomputes revision/digest;
-// this module deliberately computes or signs a release checksum.
+// Редактор работает с неподписанной копией. Backend пересчитывает ревизию и дайджест;
+// этот модуль намеренно вычисляет или подписывает контрольную сумму релиза.
 export type Action0248 = {
   type: "File" | "ClassPath" | "JvmArgs" | "ClientArgs";
   path?: string;
@@ -133,8 +133,8 @@ export const listAvailableFiles0248 = (
       !owned.has(f.path.toLowerCase()),
   );
 };
-// Local checks provide immediate form feedback; the server validator is always
-// authoritative for constraints, signatures, paths, ownership and presets.
+// Локальные проверки сразу показывают ошибки формы; серверная проверка всегда
+// определяет допустимость ограничений, подписей, путей, владельцев и пресетов.
 export function lintCatalog0248(
   cat: Catalog0248,
   files: CatalogFile0248[],

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Compile and execute the shipping ServerBridge parser, session/auth and routing tests.
-# Platform-specific JAR compatibility needs separate upstream Velocity/Bungee tests.
+# Компилируйте и выполняйте поставляемые тесты парсера ServerBridge, сеансов, авторизации и
+# маршрутизации. Совместимость платформенных JAR требует отдельных внешних тестов Velocity/Bungee.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 work="$(mktemp -d)"

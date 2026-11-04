@@ -1,5 +1,5 @@
-// Only frames pointing into this packaged app are sent. Never send messages, cookies,
-// URLs, exception objects, usernames, auth tokens, or raw JS stack traces.
+// Отправляются только кадры, относящиеся к этому упакованному приложению. Никогда не отправляйте сообщения,
+// cookies, URL, объекты исключений, имена пользователей, токены и сырые трассировки JavaScript.
 export type SafeFrame0309 = { asset: string; line: number; column: number };
 const framePattern = /(?:^|[/(])assets\/([a-zA-Z0-9_.-]+\.js):(\d{1,8}):(\d{1,8})\b/g;
 export function stackFrames0309(stack: unknown): SafeFrame0309[] {

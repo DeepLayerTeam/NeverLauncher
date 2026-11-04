@@ -109,9 +109,9 @@ impl GuardSupervisor {
         validate_secure_file(&executable, true)?;
         let verified_guard_hash=if self.require_package_manifest { Some(verify_linux_package_manifest(&executable)?) } else { None };
         let manifest_ok=verified_guard_hash.is_some();
-        // Open the verified executable itself and execute that inode through
-        // /proc/self/fd. A subsequent rename of the pathname cannot redirect
-        // spawn() to a different Guard binary.
+        // Откройте сам проверенный исполняемый файл и запустите этот
+        // inode через /proc/self/fd. Последующее переименование пути не
+        // перенаправит spawn() на другой бинарник Guard.
         let pinned_image=if let Some(expected)=verified_guard_hash.as_ref() {
             let image=File::open(&executable).map_err(|e|format!("open verified Guard image failed: {e}"))?;
             let observed=sha256_open_file(&image)?;
@@ -126,8 +126,8 @@ impl GuardSupervisor {
         let mut command=Command::new(&program);
         if let Some(image)=pinned_image.as_ref(){
             let fd=image.as_raw_fd();
-            // Only the forked child clears CLOEXEC, avoiding a process-wide
-            // descriptor leak to other concurrent spawned commands.
+            // Только дочерний процесс после fork снимает CLOEXEC, предотвращая
+            // глобальную утечку дескриптора в другие параллельно запускаемые команды.
             unsafe { command.as_std_mut().pre_exec(move || {
                 let flags=libc::fcntl(fd,libc::F_GETFD);
                 if flags<0||libc::fcntl(fd,libc::F_SETFD,flags & !libc::FD_CLOEXEC)<0 {
@@ -140,7 +140,7 @@ impl GuardSupervisor {
         prepare_guard_command(&mut command);
         let mut child=command.spawn().map_err(|e|format!("failed to spawn Guard {}: {e}",executable.display()))?;
         let guard_pid=child.id().ok_or_else(||"Guard PID unavailable".to_string())?;
-        // The process image was already bound to a verified open descriptor.
+        // Образ процесса уже привязан к проверенному открытому дескриптору.
         drop(pinned_image);
         let mut stdin=child.stdin.take().ok_or_else(||"Guard bootstrap stdin unavailable".to_string())?;
         if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("Guard bootstrap write failed: {e}")); }
@@ -157,8 +157,8 @@ impl GuardSupervisor {
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
     pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid Guard ping".into())} }
-    /// Only checks the already authenticated Guard process. Never silently
-    /// restart it after a game has been admitted; an IPC gap is a violation.
+    /// Проверяет только уже аутентифицированный процесс Guard. Не
+    /// перезапускайте его незаметно после допуска игры; разрыв IPC — нарушение.
     pub async fn ping_running(&self)->Result<(),String>{
         let mut state=self.inner.lock().await;
         let handle=state.as_mut().ok_or("Linux Guard process was never authenticated")?;
@@ -205,9 +205,9 @@ fn sha256_open_file(file:&File)->Result<String,String>{
 }
 const GUARD_MANIFEST_DOMAIN: &[u8] = b"NeverLauncher Linux Guard package manifest v1\0";
 fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
-    // This key must have been compiled into the Desktop at trusted release
-    // build time. A key from a manifest, environment or nearby file would be
-    // attacker-controlled and must never be accepted.
+    // Этот ключ должен быть встроен в Desktop при доверенной сборке
+    // релиза. Ключ из манифеста, окружения или соседнего файла находился
+    // бы под контролем злоумышленника и никогда не принимается.
     let pinned=option_env!("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY")
         .ok_or("Linux production Guard requires a build-time pinned Ed25519 public key")?;
     let key_bytes=hex::decode(pinned.trim()).map_err(|_|"invalid compiled Linux Guard public key")?;
@@ -250,8 +250,8 @@ fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
         if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Linux package artifact verification failed: {name}"))}
         if path == guard { verified_guard_hash=Some(a.sha256.to_ascii_lowercase()); }
     }
-    // Compare the post-spawn process image to the immutable expected digest
-    // parsed from the original manifest, never to a second read of guard path.
+    // После запуска сравнивайте образ процесса с неизменным ожидаемым
+    // дайджестом из исходного манифеста, а не с повторным чтением пути Guard.
     verified_guard_hash.ok_or_else(||"Guard hash missing in verified manifest".into())
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("desktop parent missing")?.join("guard"))}

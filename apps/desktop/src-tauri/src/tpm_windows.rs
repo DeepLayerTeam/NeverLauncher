@@ -101,9 +101,9 @@ pub fn certify(
     }
     let provider = open_provider()?;
     let subject = open_key(&provider,device_key_name,0)?;
-    // Enterprise AIKs are often enrolled in the machine key namespace.
-    // Certify only with the issuer-certified AK; neither namespace is trusted
-    // merely because NCryptOpenKey succeeded.
+    // Корпоративные AIK часто регистрируются в пространстве машинных ключей.
+    // Выполняйте Certify только с AK, сертифицированным издателем; ни одному
+    // пространству нельзя доверять только из-за успеха NCryptOpenKey.
     let ak = open_key(&provider,ak_key_name,0)
         .or_else(|_| open_key(&provider,ak_key_name,0x20))?; // NCRYPT_MACHINE_KEY_FLAG
     let subject_handle = key_handle(&subject)?;
@@ -149,8 +149,8 @@ pub fn quote0315(extra_b64url:&str,selection:&str,ak_key_name:&str,
     let ctx=context_handle(&provider)?;
     let quote=submit(ctx,&crate::tpm_wire_0313::quote_command_0315(ak_handle,&extra,&indices))?;
     let (attest,signature)=crate::tpm_wire_0313::parse_quote_response_0315(&quote,&extra,&indices)?;
-    // A second TPM operation reads the PCR values; backend detects races by
-    // checking that they hash to the PCR digest in the signed Quote.
+    // Вторая операция TPM считывает значения PCR; Backend выявляет гонку,
+    // проверяя их хеш на соответствие дайджесту PCR в подписанном Quote.
     let read=submit(ctx,&crate::tpm_wire_0313::pcr_read_command_0315(&indices))?;
     let values=crate::tpm_wire_0313::parse_pcr_read_response_0315(&read,&indices)?;
     let mut pcr_values=std::collections::BTreeMap::new();

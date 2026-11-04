@@ -35,8 +35,8 @@ pub struct PlayerMigrationPreview0339 {
     pub missing_files: usize,
     pub matched_bytes: u64,
     pub matched_paths: Vec<String>,
-    /// Heuristic only: a component is a candidate when all of its signed file bytes exist.
-    /// A player must choose a preset separately using the normal signed component resolver.
+    /// Только эвристика: компонент становится кандидатом, когда существуют все его подписанные байты
+    /// файлов. Игрок отдельно выбирает пресет через обычный разрешитель подписанных компонентов.
     pub optional_component_candidates: Vec<String>,
     pub suggested_settings: PlayerSettings0339,
     pub warning: String,
@@ -63,7 +63,7 @@ fn valid_relative(path: &str) -> Result<&Path, String> {
 }
 
 fn safe_source(source: &Path) -> Result<PathBuf, String> {
-    // A manually selected root must exist. Do not silently create or traverse a symlink root.
+    // Выбранный вручную корневой каталог должен существовать. Не создавайте его незаметно и не проходите по симлинку.
     let meta = fs::symlink_metadata(source).map_err(|e| format!("legacy directory: {e}"))?;
     if !meta.is_dir() || meta.file_type().is_symlink() {
         return Err("legacy root must be an existing real directory".into());
@@ -74,7 +74,7 @@ fn safe_source(source: &Path) -> Result<PathBuf, String> {
 }
 
 fn candidate_roots(source: &Path, profile_id: &str) -> Result<Vec<PathBuf>, String> {
-    // Only known directory layouts; no recursive glob or unbounded scan of an untrusted tree.
+    // Только известные структуры каталогов; никаких рекурсивных glob и неограниченного обхода недоверенного дерева.
     if profile_id.is_empty() || profile_id.contains('/') || profile_id.contains('\\') ||
         profile_id == "." || profile_id == ".." || profile_id.contains(':') {
         return Err("unsafe profile identifier".into());
@@ -109,7 +109,7 @@ fn digest_file(path: &Path, expected: &ManifestFile) -> Result<bool, String> {
 fn locate_verified(root: &Path, layouts: &[PathBuf], file: &ManifestFile) -> Result<Option<PathBuf>, String> {
     let rel = valid_relative(&file.path)?;
     for layout in layouts {
-        // The entire candidate tree is checked for symlinks/reparse points, including layout.
+        // Всё дерево кандидата проверяется на симлинки и точки повторного разбора, включая структуру каталогов.
         let candidate = layout.join(rel);
         if !is_safe_file(root, &candidate, file.size) { continue }
         if digest_file(&candidate, file)? { return Ok(Some(candidate)); }
@@ -119,8 +119,8 @@ fn locate_verified(root: &Path, layouts: &[PathBuf], file: &ManifestFile) -> Res
 
 fn options_from(source: &Path, layouts: &[PathBuf]) -> PlayerSettings0339 {
     let mut result = PlayerSettings0339 { fullscreen: None, screen_width: None, screen_height: None };
-    // options.txt is Minecraft's ordinary display preferences; do not read or copy
-    // launcher config, auth cache, account database, Java args, server settings or scripts.
+    // options.txt содержит обычные настройки отображения Minecraft; не читайте и не копируйте конфигурацию
+    // лаунчера, кэш авторизации, БД учётных записей, аргументы Java, настройки сервера или скрипты.
     for base in layouts {
         let file = base.join("options.txt");
         if !is_safe_file(source, &file, fs::symlink_metadata(&file).map_or(u64::MAX, |m| m.len())) { continue }
@@ -167,9 +167,9 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
         }
     }
     let matched_paths: Vec<String> = verified.iter().map(|(f, _)| f.path.clone()).collect();
-    // Determine legacy optional selections independently of the Never preset chosen for
-    // cache adoption. This is an advisory *mapping by verified content*, never an
-    // implicit selection or execution of optional actions.
+    // Определяйте старые необязательные компоненты независимо от Never-пресета,
+    // выбранного для принятия кэша. Это только рекомендация соответствия ПО ПРОВЕРЕННОМУ
+    // СОДЕРЖИМОМУ, а не неявное включение или исполнение необязательных действий.
     let mut found: HashSet<String> = matched_paths.iter().cloned().collect();
     let by_path: HashMap<_, _> = manifest.files.iter().map(|f| (f.path.as_str(), f)).collect();
     let mut examined = 0usize;
@@ -209,7 +209,7 @@ pub fn preview(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path,
 }
 
 pub async fn adopt(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset: Option<&str>) -> Result<PlayerMigrationResult0339, String> {
-    // Re-scan after the user's confirmation; NEVER trust a renderer-supplied list or old preview.
+    // Повторно сканируйте после подтверждения пользователем; НИКОГДА не доверяйте списку из рендерера или старому предпросмотру.
     let signed = manifest.clone(); let pin = pinned_public_key.to_owned();
     let root = legacy_root.to_path_buf(); let choice = preset.map(str::to_owned);
     let scanned = tokio::task::spawn_blocking(move || scan(&signed, &pin, &root, choice.as_deref()))
@@ -222,9 +222,9 @@ async fn adopt_scanned(scanned: Scan0339, cache: &CacheStore) -> Result<PlayerMi
     let mut count = 0usize;
     let mut bytes = 0u64;
     for (file, source) in scanned.verified {
-        // The store's OS lock prevents conflicts with ongoing installs/downloads.
+        // Блокировка хранилища на уровне ОС предотвращает конфликты с текущими установками и загрузками.
         let lease = cache.lock(&file).await?;
-        // Source could change while scan is running: verify before publishing.
+        // Источник может измениться во время сканирования: проверяйте его перед публикацией.
         let source_root = PathBuf::from(&scanned.preview.source);
         if !is_safe_file(&source_root, &source, file.size) || !digest_file(&source, &file)? {
             return Err(format!("legacy source changed during adoption: {}", file.path))
@@ -240,7 +240,7 @@ async fn adopt_scanned(scanned: Scan0339, cache: &CacheStore) -> Result<PlayerMi
         message: "Verified Never content objects published to the shared cache. Install/repair through the ordinary signed release workflow; no Gravit credentials or executables were adopted.".into() })
 }
 
-/// Suggested legacy roots only; the player selects and confirms the actual folder.
+/// Только предлагаемые старые корневые каталоги; игрок самостоятельно выбирает и подтверждает фактическую папку.
 pub fn discover() -> Vec<String> {
     let Some(home) = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from) else { return Vec::new() };
     let mut places = vec![home.join(".minecraft"), home.join(".gravitlauncher"), home.join("GravitLauncher")];
@@ -302,7 +302,7 @@ mod tests {
         assert!(lease.restore(&root, file, &restored).await.unwrap());
         assert_eq!(fs::read(restored).unwrap(), b"SAFE");
         drop(lease);
-        // A repeated adoption reuses the same locked object instead of duplicating it.
+        // Повторное принятие использует тот же заблокированный объект, а не создаёт дубликат.
         assert_eq!(adopt_scanned(scan(&m, &key, &root, None).unwrap(), &store)
             .await.unwrap().cached_files, 1);
         fs::remove_dir_all(root).unwrap();

@@ -35,8 +35,8 @@ def export_reports(work, destination):
     for name in PUBLIC_REPORTS:
         source=Path(work)/name
         if source.is_file() and not source.is_symlink() and source.stat().st_size<=2*1024*1024:
-            # Export only sanitized/allowlisted JSON, never auth, worker grants,
-            # raw JVM logs, session data, or private test identities.
+            # Экспортируйте только очищенный JSON из разрешённого списка, никогда — данные аутентификации,
+            # гранты рабочих процессов, сырые журналы JVM, сеансы или приватные идентификаторы тестов.
             try:
                 data=json.loads(source.read_text(encoding='utf-8'))
                 if not isinstance(data,dict):continue
@@ -50,8 +50,8 @@ def export_reports(work, destination):
                                 ('renderer','display','gui','headless','java','capability'))
                         else '[redacted]'} for k,v in data.get('stages',{}).items()}
                 if name=='adversarial-gameplay-04314.json':
-                    # Export only bounded boolean outcomes/digests from the
-                    # disposable worker, never raw command output or tokens.
+                    # Экспортируйте из одноразового рабочего процесса только ограниченные булевы
+                    # результаты и дайджесты, никогда — сырой вывод команд или токены.
                     data={k:v for k,v in data.items() if k in
                           ('schemaVersion', 'manifestTamper', 'installedFileTamper')}
                     manifest=data.get('manifestTamper')
@@ -66,14 +66,14 @@ def export_reports(work, destination):
                                 for x in (manifest.get('alteredManifestSha256'), installed.get('baselineSha256'),
                                           installed.get('restoredFileSha256'), installed.get('restoredVerificationSha256')))):
                         continue
-                    # Keep exact source bytes so the hash in gameplay-smoke.json
-                    # still binds the negative observation after sanitizing.
+                    # Сохраняйте точные исходные байты, чтобы хеш в gameplay-smoke.json
+                    # по-прежнему привязывал отрицательное наблюдение после очистки.
                     (destination/name).write_bytes(source.read_bytes())
                     continue
                 if name=='host-capabilities.json':
                     data={k:v for k,v in data.items() if k not in ('host','user','environment')}
-                # Don't export possibly sensitive provider auth fields from any
-                # generic diagnostics: V12 handles centralized log redaction.
+                # Не экспортируйте потенциально чувствительные данные аутентификации провайдера из
+                # общей диагностики: централизованное удаление секретов выполняется V12.
                 if name not in ('host-capabilities.json','staged-execution.json','verified.json',
                                 'startup-readiness.json','server-readiness.json','gameplay-smoke.json',
                                 'adversarial-gameplay-04314.json', 'update-recovery.json'):
@@ -158,8 +158,8 @@ def main():
             work=Path(root)/'execution'
             invocation=[sys.executable,str(Path(__file__).parent/'run-staged-package-0342.py'),
                         *remainder,'--execution-mode',args.mode,'--output',str(work)]
-            # The worker inherits only the current job's environment. On shared
-            # hosts run it as a dedicated OS account/VM with no production secrets.
+            # Рабочий процесс наследует только окружение текущего задания. На общих хостах запускайте
+            # его под отдельной учётной записью ОС или в VM без производственных секретов.
             proc=subprocess.Popen(invocation,stdin=subprocess.DEVNULL,
                                   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**group_flags())
             try:

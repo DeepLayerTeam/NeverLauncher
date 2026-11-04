@@ -1,4 +1,4 @@
-/** 0.35.3 player navigation: URL-free, owner-binding-safe, deterministic screen and history state. */
+/** Навигация игрока версии 0.35.3: без URL, с безопасной привязкой владельца, детерминированным экраном и историей. */
 export const navigation0353 = [
   {id:'overview',title:'Главная',group:'Игра'},
   {id:'accounts',title:'Аккаунты',group:'Игра'},
@@ -47,7 +47,7 @@ export function chooseProfile0353(profileId:string, items:readonly {id:string}[]
 export function canSelectServer0353(id:string, servers:readonly {id:string;status:string}[], lockedId:string):boolean {
   return (!lockedId||lockedId===id) && (id===''&&!lockedId || servers.some(server=>server.id===id && server.status==='active'));
 }
-/** Remove an existing project/profile suffix only on exact path components. */
+/** Удаляйте существующий суффикс проекта/профиля только при точном совпадении компонентов пути. */
 export function gameBaseDirectory0353(root:string, projectId:string, profileId:string):string {
   const trimmed=root.replace(/[\\/]+$/,'');
   if(!projectId||!profileId)return trimmed;

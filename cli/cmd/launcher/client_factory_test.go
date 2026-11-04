@@ -13,8 +13,8 @@ import (
 	"testing"
 )
 
-// These are real HTTP-backed materializer invocations, not mocked install
-// adapters. The fixture is deliberately small enough to run offline in CI.
+// Это настоящие вызовы средств подготовки через HTTP, а не имитации адаптеров
+// установки. Тестовый набор достаточно мал, чтобы CI мог запускаться офлайн.
 func TestClientFactory0271VanillaTransactionReplayAndTampering(t *testing.T) {
 	clientJar := []byte("fixture-client-jar")
 	asset := []byte("fixture-asset")

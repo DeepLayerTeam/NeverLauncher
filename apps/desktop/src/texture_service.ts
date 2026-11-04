@@ -1,4 +1,4 @@
-/** 0.25.8: account-scoped local texture operations; sends official credentials. */
+/** 0.25.8: локальные операции с текстурами в области учётной записи; официальные учётные данные отправляются. */
 export type TextureKind0258 = "skin" | "cape";
 export type SkinModel0258 = "classic" | "slim";
 export type TextureVisibility0258 = "public" | "unlisted" | "private";
@@ -75,8 +75,8 @@ export function validateTextureFile0258(
 export function safeOfficialTextureURL0258(value: string): string | undefined {
   try {
     const u = new URL(value);
-    // Minecraft Services can return http://textures.minecraft.net/texture/<hash>.
-    // Upgrade ONLY this public CDN to TLS; all other hosts and arbitrary paths fail closed.
+    // Minecraft Services может вернуть http://textures.minecraft.net/texture/<hash>. Переводите ТОЛЬКО этот
+    // публичный CDN на TLS; для остальных хостов и произвольных путей действует отказ по умолчанию.
     if (
       !["https:", "http:"].includes(u.protocol) ||
       u.hostname !== "textures.minecraft.net" ||
@@ -258,10 +258,10 @@ export class TextureServiceClient0258 {
       visibility,
     });
   }
-  /** Verify the actual public Yggdrasil delivery, not the private gallery preview.
-   * The signature, canonical UUID, published digest and downloaded bytes must
-   * all match. Minecraft rendering itself still requires a live client check.
-   * Crucially, Never/Minecraft tokens are NOT sent to public Yggdrasil URLs.
+  /** Проверяйте фактическую публичную выдачу Yggdrasil, а не приватный предпросмотр
+   * галереи. Подпись, канонический UUID, опубликованный дайджест и загруженные байты
+   * должны совпадать. Отображение Minecraft требует отдельной проверки с живым клиентом.
+   * Токены Never/Minecraft НЕ отправляются на публичные адреса Yggdrasil.
    */
   async verifyYggdrasilDelivery(
     kind: TextureKind0258,
@@ -380,7 +380,7 @@ export class TextureServiceClient0258 {
       signal?.removeEventListener("abort", abort);
     }
   }
-  /** Never cache owner-only PNG bytes or use the image endpoint as an unauthenticated <img> URL. */
+  /** Никогда не кэшируйте PNG, доступный только владельцу, и не используйте endpoint изображения как неавторизованный URL <img>. */
   async preview(
     kind: TextureKind0258,
     digest: string,
@@ -411,7 +411,7 @@ export class TextureServiceClient0258 {
       throw new Error("Неверный размер PNG с сервера.");
     return URL.createObjectURL(bytes);
   }
-  /** XHR is used for real upload progress; requests are cancellable on logout/unmount. */
+  /** XHR применяется для фактического отображения прогресса загрузки; запросы можно отменить при выходе или размонтировании компонента. */
   upload(
     kind: TextureKind0258,
     file: File,

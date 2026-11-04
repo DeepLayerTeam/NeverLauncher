@@ -124,8 +124,8 @@ def extract_pinned_prior(archive, expected, root, current, pinned_key):
         "previous release signed identity does not match pinned key",
     )
 
-    # Reject an accidentally supplied newer/same baseline. Certification
-    # must exercise a real upgrade, not an arbitrary different version.
+    # Отклоняйте случайно переданную новую или равную базовую версию. Сертификация
+    # должна проверять настоящее обновление, а не произвольную другую версию.
     def release_key(value):
         m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:[-+][a-zA-Z0-9.\-]+)?", value)
         require(bool(m), "release version must be semantic version")
@@ -289,7 +289,7 @@ def run_game_launch(
     env,
     max_seconds=180,
 ):
-    # Import the actual Runtime observer, not a simulated readiness check.
+    # Импортируйте настоящий наблюдатель Runtime, а не имитацию проверки готовности.
     from staged_readiness_0343 import StartupObserver
     import time as _time
     import subprocess as _subprocess
@@ -317,7 +317,7 @@ def run_game_launch(
         not observer.blocked,
         "GUI runner incapable of validating lifecycle launch: " + str(observer.blocked),
     )
-    # Same implementation as V03, using a file for stdout to prevent deadlock.
+    # Та же реализация, что и V03, с файлом для stdout во избежание взаимной блокировки.
     with (
         open(output.with_suffix(".stdout"), "wb") as stdout,
         open(output.with_suffix(".stderr"), "wb") as stderr,
@@ -421,8 +421,8 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     summary["checks"]["previousDigest"] = hashlib.sha256(
         prior_path.read_bytes()
     ).hexdigest()
-    # Deliberately make an updater source fail before commit. The old complete
-    # installation MUST remain usable; a successful command would be a defect.
+    # Намеренно вызовите ошибку источника обновлятора до фиксации. Старая полная установка
+    # ОБЯЗАНА оставаться рабочей; успешная команда свидетельствовала бы об ошибке.
     chosen = min(
         (f for f in current_pkg["files"] if f["size"] > 0), key=lambda f: f["size"]
     )
@@ -447,8 +447,8 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     verify_exact(client, current_pkg)
     summary["checks"]["upgrade"] = "passed"
     summary["rollbackSnapshot"] = upd["rollbackSnapshot"]
-    # Damage both active bytes and the preferred source cache. Repair must
-    # reject the poisoned cache; only a fresh verified source can heal it.
+    # Повредите и активные байты, и предпочтительный исходный кэш. Ремонт должен отвергнуть
+    # отравленный кэш; восстановить можно только из нового проверенного источника.
     live = safe_file(client, chosen["path"])
     live.write_bytes(bytes([original[0] ^ 1]) + original[1:])
     cache_prefix = upd["apply"]["storagePrefix"]
@@ -483,8 +483,8 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         summary["checks"]["interruptedTransaction-" + phase] = interrupt_and_recover(
             args.cli, prior_path, current_path, root, root, env, phase
         )
-    # Different actual Java binaries of the same required major. Do not touch
-    # system-managed installations, credentials or distribution checksums.
+    # Разные реальные бинарники Java одной требуемой основной версии. Не изменяйте
+    # системные установки, учётные данные или контрольные суммы дистрибутивов.
     replacement = Path(args.replacement_java)
     require(
         replacement.is_file()
@@ -550,9 +550,9 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         env,
         args.runtime_seconds,
     )
-    # Real Managed Java II replacement: use the runtime's pinned Temurin
-    # distribution installer, corrupt its installed java executable, then
-    # require the manager to quarantine/reinstall and successfully launch.
+    # Реальная замена Managed Java II: используйте установщик закреплённого
+    # Temurin от Runtime, повредите установленный исполняемый java, затем
+    # требуйте помещения в карантин, переустановки и успешного запуска.
     managed_manifest = Path(args.managed_java_manifest)
     require(
         managed_manifest.is_file()
@@ -791,7 +791,7 @@ def interrupt_and_recover(
         matched and p.returncode != 0,
         "real updater " + target_phase + " interruption not observed; cannot certify",
     )
-    # Use the PUBLIC recovery command, not direct editing of journal/locks.
+    # Используйте ПУБЛИЧНУЮ команду восстановления, а не прямое редактирование журнала или блокировок.
     recovered = subprocess.run(
         [cli, "update", "recover", "--root", str(live)],
         stdout=subprocess.PIPE,
@@ -807,7 +807,7 @@ def interrupt_and_recover(
         + " transaction",
     )
     verify_exact(live, prior_pkg)
-    # Continue with exact same release through the normal public API.
+    # Продолжайте точно с тем же релизом через обычный публичный API.
     updated = invoke(
         cli, "update", ["--package", str(current_path), *opts], case / "retry.json", env
     )

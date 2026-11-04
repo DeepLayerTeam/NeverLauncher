@@ -17,9 +17,9 @@ import (
 	"time"
 )
 
-// The build worker uses a separate OS process even when invoked by go test.
-// The parent sends a bounded, private request over stdin; the worker never
-// accepts remote requests or arbitrary shell commands.
+// Рабочий процесс сборки использует отдельный процесс ОС, даже при вызове из go
+// test. Родитель передаёт ограниченный приватный запрос через stdin; рабочий
+// процесс не принимает сетевые запросы или произвольные команды оболочки.
 const internalWorkerArgument0273 = "__internal-client-factory-worker-0273"
 const workerRequestLimit0273 = 128 << 10
 const workerLogLimit0273 = 2 << 20
@@ -50,8 +50,8 @@ func init() {
 }
 
 func workerEnvironment0273(tmp string) []string {
-	// Do not leak API tokens, cloud credentials, or Java injection flags into
-	// untrusted upstream installer processors.
+	// Не передавайте токены API, облачные учётные данные и флаги
+	// внедрения Java в недоверенные обработчики сторонних установщиков.
 	allowed := []string{"PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"}
 	env := []string{"LAUNCHER_BUILD_WORKER=1", "TMPDIR=" + tmp, "TMP=" + tmp, "TEMP=" + tmp, "LANG=C", "LC_ALL=C"}
 	for _, k := range allowed {
@@ -83,8 +83,8 @@ func runInternalProcessorWorker0273() error {
 	if err := os.MkdirAll(req.TempDirectory, 0o700); err != nil {
 		return err
 	}
-	// The process is already isolated from the CLI, with a different PID,
-	// sanitized environment, resource limits and an independent lifetime.
+	// Процесс уже изолирован от CLI: другой PID, очищенное
+	// окружение, ограничения ресурсов и отдельный жизненный цикл.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.TimeoutSeconds)*time.Second)
 	defer cancel()
 	args := append([]string{"-Xmx" + strconv.Itoa(req.HeapMiB) + "m", "-Djava.io.tmpdir=" + req.TempDirectory}, req.Args...)
@@ -101,8 +101,8 @@ func runInternalProcessorWorker0273() error {
 	cmd.Env = workerEnvironment0273(req.TempDirectory)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	prepareJavaChild0273(cmd)
-	// In case the parent is killed, this process inherits the parent's pipe;
-	// process-tree teardown is owned by the parent's OS-specific runner.
+	// Если родитель аварийно завершён, процесс наследует его канал; остановка дерева
+	// процессов находится под управлением специализированного обработчика ОС родителя.
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return fmt.Errorf("java timed out: %w", ctx.Err())
@@ -143,8 +143,8 @@ func (b *boundedWorkerLog0273) Write(p []byte) (int, error) {
 }
 func (b *boundedWorkerLog0273) Tail() string { b.mu.Lock(); defer b.mu.Unlock(); return string(b.tail) }
 
-// runIsolatedProcessor0273 is used by Forge and NeoForge, including the
-// unified Client Factory pipeline. No processor executes in the API/CLI PID.
+// Функция runIsolatedProcessor0273 применяется Forge и NeoForge, включая общий
+// Client Factory. Процессоры не выполняются внутри PID API или CLI.
 func runIsolatedProcessor0273(ctx context.Context, pc forgeProcessorContext, index int, args []string) (string, error) {
 	java, err := filepath.Abs(pc.JavaExecutable)
 	if err != nil {
@@ -223,8 +223,8 @@ func runIsolatedProcessor0273(ctx context.Context, pc forgeProcessorContext, ind
 	return logPath, nil
 }
 
-// A content hash of every executable input invalidates cache journal reuse
-// if a JAR (or its classpath) changes while an installer version stays fixed.
+// Хеш содержимого каждого исполняемого входа запрещает повторно использовать
+// журнал кэша при изменении JAR или classpath с той же версией установщика.
 func hashProcessorInputs0273(java string, classpath []string) (string, error) {
 	h := sha256.New()
 	for _, f := range append([]string{java}, classpath...) {

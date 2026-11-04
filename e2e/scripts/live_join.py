@@ -57,7 +57,7 @@ def no_duplicates(pairs):
 def atomically_write(path, payload):
     path = Path(path)
     contents = (json.dumps(payload, sort_keys=True, indent=2) + '\n').encode()
-    # Refuse replacing a malicious preexisting receipt or following symlinks.
+    # Запрещайте замену заранее созданной вредоносной квитанции и следование символическим ссылкам.
     with path.open('xb') as stream:
         os.chmod(path, 0o600)
         stream.write(contents)
@@ -77,7 +77,7 @@ def load_pinned_bundle(args):
     require(type(entry) is dict, 'target has no approved dedicated server distribution: ' + args.target)
     require(all(entry.get(k) == getattr(args, attribute) for k, attribute in
                 (('loader', 'loader'), ('minecraft', 'minecraft'))), 'server bundle target version/loader mismatch')
-    # Pinned loader version is the *resolved* installed client loader, not 'latest'.
+    # Закреплённая версия загрузчика — РАЗРЕШЁННАЯ версия установленного клиентского загрузчика, а не latest.
     require(entry.get('loaderVersion', '') == args.loader_version, 'server bundle loader version mismatch')
     sha = entry.get('sha256')
     require(type(sha) is str and SHA.fullmatch(sha), 'bundle SHA-256 pin invalid')
@@ -130,8 +130,8 @@ def serve(args):
             'port': server.port, 'serverPid': server.process.pid,
             'serverArtifactSha256': server.artifact_sha, 'pinManifestSha256': pins_sha,
         })
-        # Observe the server and RCON while the real JVM client is still present.
-        # A later client timeout cannot manufacture this contemporaneous evidence.
+        # Наблюдайте сервер и RCON, пока реальный JVM-клиент ещё работает. Последующий таймаут
+        # клиента не может создать это одновременное доказательство задним числом.
         started = time.monotonic()
         while running and time.monotonic() - started < args.monitor_seconds:
             if (runtime / 'live-server-stop.request').exists():
@@ -159,8 +159,8 @@ def serve(args):
                                 'tickBefore': before, 'tickAfter': after,
                                 'joinedAtUnix': int(time.time()),
                             })
-                            # Keep server running for independent verification, then
-                            # shut down gracefully when shell's cleanup trap fires.
+                            # Оставляйте сервер работающим для независимой проверки, затем
+                            # корректно завершайте его при срабатывании ловушки очистки shell.
                             while running and server.process.poll() is None:
                                 if (runtime / 'live-server-stop.request').exists():
                                     normal_stop = True
@@ -174,14 +174,14 @@ def serve(args):
             if running:
                 raise RuntimeError('real Minecraft join was not observed before deadline')
     finally:
-        # A successful witness is not sufficient if the dedicated game JVM died
-        # before the caller finished the client run. Seal only an orderly stop.
+        # Успешного наблюдения недостаточно, если выделенная игровая JVM завершилась до окончания
+        # клиентского запуска у вызывающей стороны. Подтверждайте только штатное завершение.
         healthy_at_stop = (normal_stop and server.process is not None
                            and server.process.poll() is None
                            and (runtime / 'live-server-witness.json').is_file())
         if healthy_at_stop:
-            # Ask the *actual* server JVM to save and stop through authenticated
-            # RCON; a killed process or a crashing server must never get PASS.
+            # Попросите НАСТОЯЩУЮ серверную JVM сохранить данные и завершиться через аутентифицированный
+            # RCON; убитый процесс или аварийно завершившийся сервер не должны получать PASS.
             try:
                 server.rcon.query('stop')
             except (OSError, ValueError, RuntimeError, PermissionError, ConnectionError):

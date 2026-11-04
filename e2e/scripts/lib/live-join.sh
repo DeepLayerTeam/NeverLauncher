@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Real localhost Minecraft server lifecycle for required native compatibility runs.
-# This is sourced by the five installed-client certification scripts.
+# Реальный жизненный цикл локального Minecraft-сервера для обязательных проверок нативной
+# совместимости. Используется в пяти сценариях сертификации установленных клиентов.
 
 certification_live_cleanup() {
   if [[ -n "${LIVE_JOIN_DAEMON_PID:-}" ]]; then
-    # The coordinator must stop the actual JVM and close its final server log
-    # before receipts can be SHA-256 bound. Cross-platform stop marker works on
-    # Windows Git Bash too, where SIGTERM may bypass Python finally blocks.
+    # Координатор должен остановить настоящую JVM и закрыть окончательный журнал сервера,
+    # прежде чем привязать квитанции по SHA-256. Межплатформенный маркер остановки работает
+    # и в Windows Git Bash, где SIGTERM может обойти блоки finally Python.
     : > "$ROOT/e2e/runtime/live-server-stop.request"
     local attempt
     for ((attempt=0;attempt<120;attempt++)); do
@@ -27,7 +27,7 @@ certification_live_start() {
   local -a args=(serve --runtime "$root" --target "$TARGET_ID" --minecraft "$MINECRAFT_VERSION"
     --loader "$loader" --loader-version "$resolved" --java "$JAVA_BIN" --cli "$cli"
     --pins "${LAUNCHER_E2E_SERVER_PINS:-}" --bundle-dir "${LAUNCHER_E2E_SERVER_BUNDLE_DIR:-}")
-  # Don't use a stale receipt or leave a previous server running in a reused workspace.
+  # Не используйте старую квитанцию и не оставляйте предыдущий сервер в повторно используемом рабочем каталоге.
   [[ ! -e "$root/live-server-ready.json" && ! -e "$root/live-server-witness.json" && ! -e "$root/live-server-stopped.json" && ! -e "$root/live-server-stop.request" && ! -e "$root/live-join.json" ]] || {
     echo '[live-join] stale matching-server receipt' >&2; return 2;
   }
@@ -52,8 +52,8 @@ if ready.get('targetId') != sys.argv[2] or type(p) is not int or not 1 <= p <= 6
 print(p)
 PY
 )" || return 3
-  # Setup only this disposable client root. This avoids Minecraft's first-run
-  # multiplayer warning that would block Quick Play even when the server is up.
+  # Настраивайте только этот одноразовый корневой каталог клиента. Это предотвращает предупреждение
+  # Minecraft о мультиплеере при первом запуске, которое мешало бы Quick Play даже при доступном сервере.
   if [[ ! -e "$profile_root/options.txt" ]]; then
     cat > "$profile_root/options.txt" <<'OPTIONS'
 onboardAccessibility:false
@@ -67,8 +67,8 @@ OPTIONS
 certification_live_finish() {
   local loader="$1" resolved="$2" profile="$3"
   local root="$ROOT/e2e/runtime"
-  # Runtime has finished; seal the server log only after the dedicated JVM
-  # terminates, otherwise late shutdown lines invalidate its SHA-256.
+  # Runtime завершился; запечатывайте журнал сервера только после остановки
+  # выделенной JVM, иначе поздние строки завершения нарушат его SHA-256.
   [[ -s "$root/live-server-witness.json" ]] || {
     echo '[live-join] no contemporaneous client-online RCON witness' >&2
     return 3

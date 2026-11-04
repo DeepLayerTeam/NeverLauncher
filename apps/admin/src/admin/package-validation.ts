@@ -1,5 +1,5 @@
-/** Package validate is a semantic decision, not an HTTP transport result.
- * Backend intentionally returns 200 with status=invalid and detailed blockers. */
+/** Валидация пакета — смысловое решение, а не результат HTTP-передачи. Backend
+ * намеренно возвращает 200 со status=invalid и подробными причинами блокировки. */
 export type PackageValidation0390 = {
   status?: string;
   checks?: Array<{id:string;status:string;reasonCode?:string;message?:string}>;

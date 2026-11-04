@@ -217,7 +217,7 @@ export function ReleaseWorkspace({
       live = false;
     };
   }, [api, projectId, canPrepare, recoveryKey]);
-  // Keep a fresh, unsaved draft aligned with the owner's explicit navigation.
+  // Поддерживайте новый несохранённый черновик в соответствии с явным переходом владельца.
   useEffect(() => {
     if (!draft && !dirty && !pending && !form.packageId)
       setForm((current) => ({
@@ -372,7 +372,7 @@ export function ReleaseWorkspace({
       try {
         pkg = await api.createPackage(form);
       } catch (err) {
-        // Reattach to an existing exact package after a lost response. A mismatch is rejected by the draft binding.
+        // После потери ответа повторно привяжитесь к уже существующему точно соответствующему пакету. Несовпадение отклоняется проверкой привязки черновика.
         const id = `${projectId}-${form.profileId}-${form.version}`;
         try {
           pkg = await api.package(id);
@@ -536,8 +536,8 @@ export function ReleaseWorkspace({
     )
       return;
     const job = await perform(async () => {
-      // Re-read the head immediately before submission. Backend will also check
-      // the revision in its worker, even if it changes after this read.
+      // Непосредственно перед отправкой повторно считайте активный релиз. Backend также
+      // проверит ревизию в обработчике, даже если она изменится после этого чтения.
       const latest = await api.channelHead(
         exact.intent.projectId,
         exact.intent.profileId,
@@ -550,13 +550,13 @@ export function ReleaseWorkspace({
         throw Error(
           "Канал изменился после preview. Обновите и повторите проверку.",
         );
-      // Another tab may already have sent a mutation while this preview was open.
-      // Never overwrite its recovery key with a second operation.
+      // Другая вкладка могла отправить изменение, пока открыт предварительный
+      // просмотр. Не перезаписывайте ключ восстановления второй операцией.
       if (readOwnerPending(localStorage, recoveryKey, projectId))
         throw Error(
           "В другой вкладке есть незавершённая операция. Обновите страницу и восстановите исходный job.",
         );
-      // BEFORE network I/O. An ACK loss must not produce a second operation.
+      // До сетевого ввода-вывода. Потеря подтверждения ACK не должна создавать вторую операцию.
       saveOwnerPending(localStorage, recoveryKey, exact);
       setPending(exact);
       const accepted = await api.executeOperation(exact.intent);
@@ -582,7 +582,7 @@ export function ReleaseWorkspace({
     setPreview(null);
     setRollbackPreview(null);
     if (job && kind === "package-publish") {
-      // Failure to update the draft does not lose the persisted operation.
+      // Ошибка обновления черновика не означает потерю сохранённой операции.
       const saved = await perform(
         () => api.save({ ...draft, ...form, step: "channel", jobId: job.id }),
         "Job привязан к черновику.",
@@ -620,7 +620,7 @@ export function ReleaseWorkspace({
     )
       return;
     await perform(async () => {
-      // Check again before a replay; no new key or payload is ever generated.
+      // Перед повтором перепроверьте состояние; новый ключ или полезная нагрузка не создаются.
       const found = await findOriginalOwnerJob(api, pending);
       const accepted = found ?? (await api.executeOperation(pending.intent));
       if (
@@ -643,7 +643,7 @@ export function ReleaseWorkspace({
   useEffect(() => {
     if (!pending || pending.jobId) return;
     let live = true;
-    // Read-only reconciliation is safe after authentication/session rotation.
+    // Сверка только для чтения безопасна после повторной аутентификации или смены сеанса.
     void findOriginalOwnerJob(api, pending)
       .then((job) => {
         if (!live || !job) return;

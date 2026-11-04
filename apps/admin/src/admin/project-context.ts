@@ -1,6 +1,6 @@
-/** Owner navigation is a non-secret, authenticated preference, an authority.
- * Project/profile/channel IDs must be rechecked against a fresh access-filtered
- * Admin overview before any UI uses them. The API remains the access gate. */
+/** Навигационный выбор владельца — несекретная авторизованная настройка, а не источник
+ * полномочий. Перед использованием UI идентификаторы проекта, профиля и канала
+ * перепроверяются по свежему обзору Admin с фильтрацией доступа. Решение о доступе остаётся за API. */
 export type ProjectContext = {
   projectId: string;
   profileId: string;
@@ -17,7 +17,7 @@ export type ProjectCatalog = {
   projects: readonly ProjectResource[];
   profiles: readonly ProjectResource[];
   channels: readonly ProjectResource[];
-  // Omit until a real, project-scoped ServerBridge overview has arrived.
+  // Не показывайте данные, пока не получен настоящий обзор ServerBridge для выбранного проекта.
   servers?: readonly (ProjectResource & { profileId?: string })[];
 };
 const bound = (value: unknown): value is string =>
@@ -78,7 +78,7 @@ export function resolveProjectContext(
       (item) =>
         item.id === id && (!item.projectId || item.projectId === projectId),
     );
-  // A saved subresource from another project must be reused.
+  // Сохранённый вложенный ресурс другого проекта нельзя повторно использовать.
   const sameSavedProject = saved.projectId === projectId;
   const sameUrlProject = url.projectId === projectId;
   const profileId = sameUrlProject
@@ -93,8 +93,8 @@ export function resolveProjectContext(
     : sameSavedProject
       ? saved.serverId
       : undefined;
-  // Fail closed once the scoped inventory has loaded; accept a node from another project
-  // or a node bound to another selected profile. Until then, preserve only the navigation hint.
+  // После загрузки списка проекта при ошибке отказывайте по умолчанию; нельзя принимать узел другого проекта
+  // или связанный с другим выбранным профилем. До загрузки сохраняйте только подсказку навигации.
   const server =
     serverCandidate &&
     bound(serverCandidate) &&

@@ -273,15 +273,15 @@ export function BuildWorkspacePanel({
           `Загружено ${uploaded}/${accepted.length}; защищённых пользовательских файлов пропущено ${skipped.length}.`,
         );
       } catch (e) {
-        // A lost response may still have committed bytes. Never retry blindly:
-        // re-read the server revision and let the operator inspect the result.
+        // При потере ответа байты могли уже сохраниться. Не повторяйте запрос вслепую:
+        // повторно считайте серверную ревизию и дайте оператору проверить результат.
         try {
           current = await api<BuildWorkspace>(
             `/api/v1/build-workspaces/${encodeURIComponent(current.id)}`,
           );
           load(current);
         } catch {
-          /* preserve last confirmed revision */
+          /* Сохранить последнюю подтверждённую ревизию. */
         }
         setProgress(
           `Подтверждено ${uploaded}/${accepted.length}. Состояние перечитано из Backend.`,

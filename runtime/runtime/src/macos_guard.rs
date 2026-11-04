@@ -148,7 +148,7 @@ impl GuardSupervisor {
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
     pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; self.ping_running().await }
-    /// A running protected game must never silently restart its Guard authority.
+    /// Работающая защищённая игра никогда не должна незаметно перезапускать свой контролирующий Guard.
     pub async fn ping_running(&self)->Result<(),String>{
         let mut s=self.inner.lock().await;
         let h=s.as_mut().ok_or("macOS Guard disappeared during game")?;

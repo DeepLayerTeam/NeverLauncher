@@ -221,7 +221,7 @@ pub async fn ensure_managed_java_from_distribution(
     fs::create_dir_all(&runtime_root)
         .await
         .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
-    // No generic cached candidate may bypass a pinned release target.
+    // Никакой общий кэшированный кандидат не должен обходить закреплённую цель релиза.
     let (manifest_bytes, archive_base) = load_distribution_manifest(manifest_location).await?;
     if let Some(expected) = manifest_sha256.filter(|value| !value.trim().is_empty()) {
         let expected = normalize_sha256(expected)?;
@@ -1651,7 +1651,7 @@ async fn cleanup_interrupted_java_staging(platform_dir: &Path) -> Result<(), Str
         let meta = fs::symlink_metadata(&path).await
             .map_err(|e| format!("Java abandoned staging metadata: {e}"))?;
         if meta.file_type().is_symlink() {
-            // Unlink without following an attacker-controlled path.
+            // Удаляйте ссылку без следования по пути, управляемому злоумышленником.
             fs::remove_file(&path).await.map_err(|e| format!("Java abandoned staging link: {e}"))?;
         } else if meta.is_dir() {
             fs::remove_dir_all(&path).await.map_err(|e| format!("Java abandoned staging: {e}"))?;

@@ -1,8 +1,8 @@
 package main
 
-// Offline operator-side policy lifecycle. The signing key is never copied to
-// any Launcher/Guard client. Rollback means a signed NEW policy epoch that
-// restores an earlier approved configuration; it never lowers the client floor.
+// Жизненный цикл политики на стороне оператора без подключения к сети. Ключ подписи никогда не копируется
+// на клиент Launcher/Guard. Откат означает НОВУЮ подписанную эпоху политики, которая восстанавливает
+// ранее утверждённые настройки; минимальная допустимая эпоха клиента при этом не понижается.
 import (
 	"bytes"
 	"crypto/ed25519"
@@ -208,7 +208,7 @@ func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, dige
 	if err != nil {
 		return err
 	}
-	// Existing schema fields are all retained; operators cannot clear older revocations.
+	// Все существующие поля схемы сохраняются; оператор не может очистить старые отзывы.
 	payload, err := json.Marshal(next)
 	if err != nil {
 		return err

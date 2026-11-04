@@ -89,9 +89,9 @@ async fn collect_guard_identity_0438(
     guard: &GuardSupervisor,
     previous: Option<&GuardIdentity0438>,
 ) -> Result<GuardIdentity0438, String> {
-    // The client-side Guard IPC authenticates every response, validates its
-    // integrity-evidence digest and its protocol sequence. Do not accept a
-    // newly started Guard as continuation of an already launched game.
+    // Клиентский IPC Guard аутентифицирует каждый ответ, проверяет дайджест
+    // доказательства целостности и последовательность протокола. Не принимайте
+    // вновь запущенный Guard за продолжение уже начатой игровой сессии.
     let status = guard.status().await?;
     guard.ping().await?;
     let policy = guard.process_policy().await?;
@@ -180,8 +180,8 @@ pub(crate) fn start_game_watchdog_0438(
                 Ok(Err(error)) => error,
                 Err(_) => "Guard runtime verification timed out".into(),
             };
-            // No retries/fail-open grace period: stale/unavailable Guard
-            // evidence cannot authorize continuing an active game session.
+            // Никаких повторов или льготного периода с разрешением по умолчанию: устаревшие или
+            // недоступные доказательства Guard не позволяют продолжать активную игровую сессию.
             let _ = supervisor.stop_for_guard_violation_0438(&game.id, &failure).await;
             break;
         }

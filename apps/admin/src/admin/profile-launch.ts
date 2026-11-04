@@ -1,4 +1,4 @@
-/** Validation shared by the profile editor and Admin regression tests. */
+/** Общие проверки для редактора профилей и регрессионных тестов Admin. */
 export interface ProfileLaunchForm0382 {
   id:string; name:string; minecraftVersion:string; loader:string; loaderVersion:string; javaMajor:number;
 }

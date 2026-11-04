@@ -171,8 +171,8 @@ func writeExtensionScaffold02010(root string, targets []string, id, name string)
 func backendTemplate02010(id string) string {
 	return `package main
 
-// The SDK authenticates with LAUNCHER_EXTENSION_HOST_URL and LAUNCHER_EXTENSION_HOST_TOKEN.
-// It performs POST /v1/hello before starting heartbeat and capability traffic.
+// SDK аутентифицируется через LAUNCHER_EXTENSION_HOST_URL и
+// LAUNCHER_EXTENSION_HOST_TOKEN. Перед началом heartbeat и обмена возможностями он вызывает POST /v1/hello.
 
 import (
   "context"
@@ -203,8 +203,8 @@ func main() {
 func cliTemplate02010() string {
 	return `package main
 
-// The SDK authenticates with LAUNCHER_EXTENSION_HOST_URL and LAUNCHER_EXTENSION_HOST_TOKEN.
-// It performs POST /v1/hello before dispatching the declared status command.
+// SDK аутентифицируется через LAUNCHER_EXTENSION_HOST_URL и
+// LAUNCHER_EXTENSION_HOST_TOKEN. Перед отправкой объявленной команды статуса он вызывает POST /v1/hello.
 
 import (
   "context"

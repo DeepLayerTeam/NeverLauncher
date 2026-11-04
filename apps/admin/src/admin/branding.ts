@@ -1,4 +1,4 @@
-/** Owner-side signing. Private Ed25519 seeds cross the network or storage. */
+/** Подпись выполняется на стороне владельца. Закрытые исходные значения Ed25519 передаются по сети или хранятся в хранилище. */
 export type News0355 = { title: string; url: string };
 export type Branding0355 = {
   displayName: string;
@@ -330,7 +330,7 @@ export async function signBranding0355(
   const next = { ...input.payload, branding: validateBrand0355(branding) };
   const raw = bytes(JSON.stringify(next));
   assert(raw.length <= 1024 * 1024, "Новый payload превышает лимит bootstrap");
-  // 32-byte seed is imported non-extractably. No persistence and no Backend calls.
+  // 32-байтовое исходное значение импортируется без возможности извлечения. Нет сохранения и вызовов Backend.
   const prefix = hex("302e020100300506032b657004220420", 16);
   const pkcs8 = Uint8Array.from([...prefix, ...hex(seedHex.trim(), 32)]);
   const signer = await crypto.subtle.importKey(

@@ -594,8 +594,8 @@ pub fn validate(m:&Manifest)->Result<(),String>{
     for f in &m.files{if file_ownership::effective_ownership(f)=="optional"&&!owners.contains(&f.path.to_ascii_lowercase()){return Err(format!("unowned v3 optional file: {}",f.path))}}
     Ok(())
 }
-/// Signed preset => effective file paths (all non-component files remain active).
-/// v1 catalog selects all files, preserving 0.24.1 behavior.
+/// Подписанный пресет определяет эффективные пути файлов; все файлы вне компонентов
+/// остаются активными. Каталог v1 выбирает все файлы, сохраняя поведение версии 0.24.1.
 pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,String>{
     validate(m)?;
     let mut active:HashSet<String>=m.files.iter().filter(|f|file_ownership::effective_ownership(f)!="optional").map(|f|f.path.clone()).collect();
@@ -719,7 +719,7 @@ mod verified_server_permissions_0392_tests {
         let grant=VerifiedComponentScope0392{project_id:m.project_id.clone(),profile_id:m.profile_id.clone(),
             channel:m.channel.clone(),catalog_digest:cat.digest.clone(),valid_until:i64::MAX,
             permissions:HashSet::from(["component.perf".into()])};
-        // A context is task-local and cannot be reused by another task.
+        // Контекст привязан к текущей задаче и не может быть использован другой задачей.
         assert!(verified_environment_0392(&m).verified_permissions.is_empty());
         with_verified_component_scope_0392(grant.clone(),async {
             assert!(verified_environment_0392(&m).verified_permissions.contains("component.perf"));

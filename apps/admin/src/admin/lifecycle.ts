@@ -1,4 +1,4 @@
-/** Audit navigation stays in the same authenticated Admin session. */
+/** Переходы к аудиту остаются в том же авторизованном сеансе Admin. */
 export function auditHref(query: string): string {
   return `#/audit?query=${encodeURIComponent(query)}`;
 }

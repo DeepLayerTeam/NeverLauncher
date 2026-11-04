@@ -30,8 +30,8 @@ fn stage(raw: &str) -> &'static str { match raw {
     "checking" => "checking", "running" => "running", "failed" => "failed",
     "downloading" => "downloading", "staged" => "staged", "verifying" => "verifying",
     "launching" => "launching", _ => "other" } }
-// No free-form log data is ever preserved. Classify known operational conditions
-// and discard paths, URLs, account IDs, secrets, usernames, commands and stacks.
+// Произвольные данные журнала не сохраняются. Классифицируйте известные условия эксплуатации и
+// удаляйте пути, URL, ID учётных записей, секреты, имена пользователей, команды и стеки.
 fn classify(line: &str) -> &'static str {
     let s = line.to_ascii_lowercase();
     if s.contains("signature") || s.contains("подпис") || s.contains("ed25519") { "signature" }
@@ -47,7 +47,7 @@ fn classify(line: &str) -> &'static str {
 }
 fn make_report(lines: Vec<String>, raw_stage: String, at: u64) -> PlayerReport03510 {
     let mut summary = BTreeMap::<&'static str, u32>::new();
-    // Renderer input is bounded before classification. Raw strings escape this function.
+    // Ввод рендерера ограничивается до классификации. Сырые строки не покидают эту функцию.
     for line in lines.into_iter().take(80) {
         let code = classify(&line.chars().take(2048).collect::<String>());
         *summary.entry(code).or_default() += 1;
@@ -87,8 +87,8 @@ pub fn export_diagnostics_bundle_03510(review_token: String, session: State<'_, 
     let preview=guard.as_ref().ok_or("Create a new diagnostic preview first")?;
     if preview.token != review_token || now()?.saturating_sub(preview.created) > 600 {return Err("Diagnostic preview expired; review again".into());}
     let report=preview.report.clone();
-    // A report is only written into the app-owned config directory, into
-    // an arbitrary renderer-chosen path or a game-managed directory.
+    // Отчёт записывается только в принадлежащий приложению каталог
+    // конфигурации, а не в произвольный путь рендерера или каталог игры.
     let base=super::desktop_config_dir()?.join("diagnostics");
     let path=write_private_bundle(&base,&report)?;
     *guard=None;

@@ -44,7 +44,7 @@ async def main():
         raise AssertionError(
             "E2E_EXPECTED_COMMIT must be a lowercase 40-digit SHA-1 commit ID"
         )
-    # A stale staging deployment is not a release candidate of this checkout.
+    # Устаревшее тестовое развёртывание не является релиз-кандидатом этой версии исходников.
     async with async_playwright() as probe:
         request = await probe.request.new_context()
         try:
@@ -132,7 +132,7 @@ async def main():
                         "button", name=f"{fields['version']}", exact=False
                     ).wait_for(timeout=20000),
                 )
-                # Two tabs submit the SAME revision. The server must atomically reject one.
+                # Две вкладки отправляют ОДНУ И ТУ ЖЕ ревизию. Сервер обязан атомарно отклонить одну из них.
                 copy1, copy2 = dict(draft), dict(draft)
                 copy1["step"], copy2["step"] = "profile", "build"
                 target = api + "/api/v1/release-drafts/" + draft_id
@@ -143,7 +143,7 @@ async def main():
                 assert sorted([first.status, second.status]) == [200, 409], (
                     f"CAS failure: {first.status}, {second.status}"
                 )
-                # Browser loses connectivity, but the already stored draft survives.
+                # Браузер теряет соединение, но ранее сохранённый черновик остаётся.
                 await ctx.set_offline(True)
                 await page1.get_by_role(
                     "button", name="Обновить", exact=True
@@ -154,7 +154,7 @@ async def main():
                 await page1.get_by_role(
                     "button", name=f"{fields['version']}", exact=False
                 ).wait_for(timeout=20000)
-                # Backend must not leak a foreign project to an operator.
+                # Backend не должен раскрывать оператору чужой проект.
                 denied = await ctx.request.get(
                     api + "/api/v1/operations/jobs?projectId=" + other,
                     headers={"Authorization": "Bearer " + operator},
@@ -174,7 +174,7 @@ async def main():
                     == 0
                 )
                 await op_ctx.close()
-                # A11y: the unauthenticated login form uses accessible labels.
+                # Доступность: форма входа без аутентификации использует доступные подписи полей.
                 login_ctx = await browser.new_context()
                 login_page = await login_ctx.new_page()
                 await login_page.goto(web)

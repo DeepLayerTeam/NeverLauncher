@@ -1,9 +1,9 @@
 package main
 
-// A live JVM inventory is compiled ONLY from the externally Ed25519-verified
-// compatibility policy. It is not a user-editable allowlist. Legacy ClientFactory
-// does not have the native Rust Manifest's complete effective classpath, so it
-// must not assert complete classpath-source enforcement (strictCode=false).
+// Перечень действующей JVM формируется ТОЛЬКО из политики совместимости, внешне
+// проверенной по Ed25519. Это не список исключений, редактируемый пользователем. Старый
+// ClientFactory не имеет полного эффективного classpath из нативного Rust Manifest и не
+// должен заявлять полную проверку источников classpath (strictCode=false).
 import (
 	"encoding/base64"
 	"fmt"

@@ -8,8 +8,8 @@ import (
     "unsafe"
 )
 
-// Test a real Windows sharing violation rather than a mocked permission error.
-// The updater must fail safely without modifying a locked live binary.
+// Проверяйте настоящую ошибку совместного доступа Windows, а не имитацию отсутствия прав.
+// Обновлятор должен безопасно завершиться, не изменив заблокированный рабочий бинарник.
 func TestLockedWindowsExecutablePreservesOldRelease02313(t *testing.T) {
     dir := t.TempDir()
     dst := filepath.Join(dir, "guard.exe")
@@ -23,7 +23,7 @@ func TestLockedWindowsExecutablePreservesOldRelease02313(t *testing.T) {
     create := kernel.NewProc("CreateFileW")
     name, err := syscall.UTF16PtrFromString(dst)
     if err != nil { t.Fatal(err) }
-    // GENERIC_READ | GENERIC_WRITE, dwShareMode = 0: no delete/rename access.
+    // GENERIC_READ | GENERIC_WRITE, dwShareMode = 0: удаление и переименование запрещены.
     h, _, callErr := create.Call(uintptr(unsafe.Pointer(name)), 0xC0000000, 0, 0, 3, 0x80, 0)
     if h == ^uintptr(0) {
         t.Fatalf("CreateFileW exclusive handle failed: %v", callErr)

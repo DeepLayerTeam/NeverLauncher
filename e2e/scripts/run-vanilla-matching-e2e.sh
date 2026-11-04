@@ -212,10 +212,10 @@ while time.monotonic() < deadline:
 else: raise SystemExit('1.17.1 void-world server did not become ready')
 with open(log, encoding='utf-8', errors='replace') as inp:
     body = inp.read()
-# The 1.17.1 server prints "Not a registry ops" even while it continues
-# loading the saved level.dat. This is not a fatal exit and the first-stage
-# offline world NBT was already validated. Keep the diagnostic, then prove
-# actual matching-server join and client runtime in the mandatory E2E below.
+# Сервер 1.17.1 печатает Not a registry ops даже при продолжении загрузки
+# сохранённого level.dat. Это не аварийный выход, а офлайн-NBT мира уже проверен на
+# первом этапе. Сохраните диагностику, затем докажите реальное подключение к точной
+# версии сервера Mojang и работу Runtime клиента в обязательном E2E ниже.
 if 'Not a registry ops' in body or 'No key structures in MapLike' in body:
     print('[matching-e2e] 1.17.1 nonfatal world codec warning; verifying by real client join')
 PYREADY
@@ -243,11 +243,11 @@ biomeBlendRadius:0
 OPTIONS
 fi
 
-# Minecraft 1.17.1 can enter a chunk while its initial blocks texture atlas
-# is still being created by Mesa/llvmpipe. Do not fake client readiness or
-# delay a fixed number of seconds. Defer only the TCP handshake until the
-# actual Mojang client emits its texture-atlas creation marker, then forward
-# unmodified protocol bytes to the verified exact-version Mojang server.
+# Minecraft 1.17.1 может войти в чанк, пока Mesa/llvmpipe ещё создаёт исходный
+# атлас текстур блоков. Не подделывайте готовность клиента и не задерживайте
+# фиксированное число секунд. Отложите только TCP-handshake, пока подлинный
+# клиент Mojang не выдаст маркер создания атласа; затем пересылайте неизменённые
+# байты протокола проверенному серверу Mojang точно этой версии.
 CERT_PORT="$SERVER_PORT"
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   python3 "$ROOT/e2e/scripts/vanilla-1171-resource-ready-proxy.py" \

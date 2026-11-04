@@ -35,8 +35,8 @@ pub fn retryable_status(status: StatusCode) -> bool {
     status == StatusCode::REQUEST_TIMEOUT || status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error()
 }
 
-// RFC 9110 IMF-fixdate, strictly parsed without accepting arbitrary timezone offsets.
-// Convert a Gregorian civil date to Unix days (Howard Hinnant's civil algorithm).
+// Дата RFC 9110 IMF-fixdate строго разбирается без произвольных смещений часовых поясов.
+// Гражданская григорианская дата переводится в дни Unix по алгоритму Говарда Хиннанта.
 fn civil_days(y: i64, m: u32, d: u32) -> i64 {
     let y = y - i64::from(m <= 2);
     let era = if y >= 0 { y } else { y - 399 } / 400;
@@ -69,9 +69,9 @@ pub fn parse_http_date(value: &str, now: SystemTime) -> Option<Duration> {
     Some(deadline.duration_since(now).unwrap_or(Duration::ZERO))
 }
 
-// Providers use either RFC 9110 Retry-After (seconds/HTTP-date) or
-// X-RateLimit-Reset (Unix epoch seconds). We obey the longer server hint,
-// bounded to keep cancellation responsive and prevent unbounded stalls.
+// Провайдеры используют RFC 9110 Retry-After в секундах или дате HTTP либо
+// X-RateLimit-Reset в секундах эпохи Unix. Соблюдайте большую подсказанную сервером
+// задержку с пределом для отзывчивой отмены и предотвращения бесконечного ожидания.
 fn retry_after_value(value: &str, now: SystemTime) -> Option<Duration> {
     if let Ok(seconds) = value.trim().parse::<u64>() {
         return Some(Duration::from_secs(seconds));
@@ -100,7 +100,7 @@ pub fn retry_after(response: &Response) -> Option<Duration> {
     }
 }
 
-// Structured transient error marker consumed only by the worker retry loop.
+// Структурированный маркер временной ошибки используется только циклом повторов рабочего процесса.
 pub fn transient(reason: impl AsRef<str>, retry_after: Option<Duration>) -> String {
     format!("[retry:{}] {}", retry_after.unwrap_or(Duration::ZERO).as_millis().min(MAX_SERVER_WAIT_MS as u128), reason.as_ref())
 }

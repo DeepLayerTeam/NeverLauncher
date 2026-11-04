@@ -233,8 +233,8 @@ capture_health_evidence() {
     return 1
   }
 }
-# 0.41.13: observe the actual JVM in Docker only after allow + revoke
-# were exercised through the real game protocol. Never synthesize PASS fields.
+# 0.41.13: наблюдайте реальную JVM в Docker только после проверки разрешения и
+# отзыва через настоящий игровой протокол. Никогда не подделывайте поля PASS.
 record_live_serverbridge_04113() {
   local service="$1" node="$2" port="$3" cid
   cid="$(compose ps -q "$service")"
@@ -872,9 +872,9 @@ validate_join() {
     [[ "$code" == 403 ]] && jq -e '.data.allowed == false and (.data.reason == "launcher_session_or_handoff_missing_or_expired" or .data.reason == "launcher_session_missing_or_expired")' "$out" >/dev/null
   fi
 }
-# 0.39.8: real negative ServerBridge requests against the live PostgreSQL-backed
-# API, signed by the enrolled Paper node. All must be denied BEFORE the genuine
-# player ticket is redeemed; a failed check aborts the actual JVM test.
+# 0.39.8: настоящие отрицательные запросы ServerBridge к работающему API на
+# PostgreSQL, подписанные зарегистрированным узлом Paper. Все должны отклоняться ДО
+# погашения подлинного билета игрока; провал проверки прерывает тест настоящей JVM.
 player_negative_0398() {
   local case_id="$1" reported_uuid="$2" reported_username="$3" reported_project="$4" reported_profile="$5" reported_channel="$6" reported_server="$7" expected_reason="$8"
   local request="$RUNTIME_DIR/player-0398-request-${case_id}.json"
@@ -909,7 +909,7 @@ player_negative_0398 channel-mismatch "$PLAYER_AUTHORIZED_UUID" "$PLAYER_USERNAM
 player_negative_0398 server-mismatch "$PLAYER_AUTHORIZED_UUID" "$PLAYER_USERNAME" e2e-project "$PROFILE_ID" stable velocity-e2e-p3 serverbridge_node_server_id_mismatch
 player_negative_0398 unissued-player "$PLAYER_AUTHORIZED_UUID" NotIssued0398 e2e-project "$PROFILE_ID" stable paper-e2e-p3 launcher_session_or_handoff_missing_or_expired
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
-# The same ticket must be rejected on second redemption.
+# Тот же билет должен отклоняться при повторном погашении.
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 
 consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed'")"
@@ -941,10 +941,10 @@ jq -e '.timedOut == true or .success == true' "$RUNTIME_DIR/runtime-launch-minec
 wait_log paper "launcher.join.allowed username=$PLAYER_USERNAME"
 wait_log paper "$PLAYER_USERNAME joined the game"
 
-# Since 0.36.4 the real player cycle must include a second, distinct signed
-# server release AND actual Go transactional update/rollback + JVM joins.
-# Other compatibility runs keep their own smaller scope; the full CI E2E
-# cannot mark itself passed without this path.
+# Начиная с 0.36.4 реальный цикл игрока должен включать второй отдельный
+# подписанный релиз сервера И фактическое транзакционное обновление/откат
+# Go с присоединением JVM. Другие проверки совместимости имеют меньшую
+# область; полный CI E2E не может пройти без этого пути.
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head -1)" == "0.36.4" ]]; then
   printf '[e2e] execute genuine 0.36.4 production client lifecycle on Mojang files\n'
   cycle_args=(--root "$ROOT" --work "$RUNTIME_DIR" --package "$CLIENT_PACKAGE" --cli "$RUNTIME_DIR/nl" --version "$VERSION" --profile "$PROFILE_ID")
@@ -974,8 +974,8 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
       --pinned-public-key "$PINNED_PUBLIC_KEY" > "$RUNTIME_DIR/cycle-runtime-verify-update.json"
   )
   jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/cycle-runtime-verify-update.json" >/dev/null
-  # These preferences are written outside the managed package by the player;
-  # the transactional rollback must leave them intact.
+  # Эти настройки игрок записывает вне управляемого пакета;
+  # транзакционный откат обязан оставить их нетронутыми.
   cp "$RUNTIME_DIR/client/options.txt" "$RUNTIME_DIR/cycle-client/options.txt"
   cycle_join_counts() {
     local kind="$1" log
@@ -1155,9 +1155,9 @@ if [[ "$MODE" == "full" ]]; then
   certify_aux_bridge neoforge-e2e-p3 "$NEOFORGE_NODE_KEY" "$NEOFORGE_BRIDGE_SHA" neoforge 25579
 fi
 
-# Real-world GA: after the actual client has joined, gracefully stop Paper,
-# back up its persisted UUID/playerdata and plugin files with the production
-# Host CLI, and independently verify a restoration. Only for >= 0.29.0.
+# Реальная проверка GA: после подключения настоящего клиента штатно остановите Paper,
+# сохраните через промышленный Host CLI данные UUID/playerdata и файлы плагинов,
+# затем независимо проверьте восстановление. Только для версии от 0.29.0.
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
   (cd "$ROOT/cli" && go build -trimpath -ldflags "-X main.version=${VERSION}" -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/launcher)
   python3 "$ROOT/e2e/scripts/verify-real-world-backup-0290.py" \
@@ -1233,9 +1233,9 @@ if [[ "$MODE" == "full" ]]; then
   mv "$RUNTIME_DIR/result-04113-tmp.json" "$RUNTIME_DIR/result.json"
   echo '[e2e] real JVM + network probes verified for 10 core targets; bukkit/quilt/sponge/vanilla are NOT certified by this suite' >&2
 fi
-# 0.50.12: retain the real Paper log while Docker is still running.
-# Both ServerBridge-authorized admission and the genuine Minecraft join must
-# be present; a client main-class or fixture verdict alone cannot certify it.
+# 0.50.12: сохраните реальный журнал Paper, пока Docker ещё работает. Должны
+# присутствовать и разрешение ServerBridge на вход, и настоящее соединение
+# Minecraft; одного результата main-class клиента или фикстуры недостаточно.
 compose logs --no-color paper > "$RUNTIME_DIR/paper-live-05012.log"
 chmod 0600 "$RUNTIME_DIR/paper-live-05012.log"
 python3 "$ROOT/scripts/guard_ci/adversarial_pilot_05012.py" verify-game \

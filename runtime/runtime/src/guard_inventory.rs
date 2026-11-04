@@ -35,8 +35,8 @@ fn check(id: &str, status: &'static str, detail: impl Into<String>) -> GuardInve
 }
 
 fn java_major(value: &str) -> Option<u32> {
-    // java.version is printed by -XshowSettings:properties on supported JVMs.
-    // Support legacy 1.8 and versions with patch/build suffixes.
+    // java.version выводится параметром -XshowSettings:properties в поддерживаемых
+    // JVM. Учитывайте старый формат 1.8 и версии с суффиксами патча/сборки.
     let version = value.lines().find_map(|line| {
         line.trim().strip_prefix("java.version =").map(str::trim)
     })?;
@@ -88,8 +88,8 @@ fn inspect_installed_version(root: &Path, version: &str) -> Result<String, Strin
         .map_err(|err| format!("Minecraft metadata invalid: {err}"))?;
     let main = metadata.get("mainClass").and_then(|v| v.as_str())
         .ok_or("Minecraft metadata missing mainClass")?;
-    // A loader name here identifies installed metadata only, NOT successful launch
-    // or runtime instrumentation/Guard compatibility.
+    // Имя загрузчика здесь обозначает только установленные метаданные, а НЕ
+    // успешный запуск или совместимость инструментации Runtime/Guard.
     let lower = main.to_ascii_lowercase();
     let loader = if lower.contains("quiltmc") { "quilt" }
         else if lower.contains("fabricmc") { "fabric" }
@@ -100,8 +100,8 @@ fn inspect_installed_version(root: &Path, version: &str) -> Result<String, Strin
     Ok(loader.to_string())
 }
 
-/// Tests the actual authenticated Guard IPC and validated reports. No mock PASS,
-/// no assumption that the in-process Windows sensor is armed without a game launch.
+/// Проверяет настоящий аутентифицированный IPC Guard и проверенные отчёты. Никакого фиктивного
+/// PASS и предположения о включении внутрипроцессного датчика Windows без запуска игры.
 pub async fn collect_guard_inventory_0501(
     guard_executable: Option<PathBuf>, java: Option<PathBuf>,
     game_root: Option<PathBuf>, minecraft_version: Option<String>,
@@ -167,8 +167,8 @@ pub async fn collect_guard_inventory_0501(
     if let Err(err) = supervisor.shutdown().await {
         checks.push(check("guard.shutdown", "BLOCKED", format!("Guard could not stop cleanly: {err}")));
     }
-    // These require a REAL Minecraft process and certified native runner. A local
-    // inventory never upgrades them to PASS on the strength of library files.
+    // Для этого требуется НАСТОЯЩИЙ процесс Minecraft и сертифицированный нативный исполнитель.
+    // Локальный список никогда не повышает статус до PASS только из-за наличия библиотек.
     if cfg!(windows) {
         checks.push(check("sensor.windows.in-process", "BLOCKED", "Requires real game startup and authenticated pre-main sensor report"));
         checks.push(check("sensor.jvm-awareness", "BLOCKED", "Requires live JVM and native sensor reports"));

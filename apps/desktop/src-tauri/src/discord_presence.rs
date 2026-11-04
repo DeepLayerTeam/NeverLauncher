@@ -174,9 +174,9 @@ pub async fn discord_presence_set(
     }
     if let Some(session) = guard.as_mut() {
         if let Err(error) = session.set_activity(Some(activity.clone())).await {
-            // The SET_ACTIVITY operation replaces the previous state. Retry
-            // only transport failures (including a restart mid-ack), never
-            // an explicit Discord RPC rejection or malformed payload.
+            // Операция SET_ACTIVITY заменяет предыдущее состояние. Повторяйте
+            // только при ошибках транспорта, включая перезапуск до ACK, но никогда
+            // при явном отказе Discord RPC или некорректном содержимом.
             let disconnected = transport_failure(&error);
             *guard = None;
             if !disconnected { return Err(error); }

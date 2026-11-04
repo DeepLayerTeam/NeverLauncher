@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import "./styles.css";
 import { AdminApp } from "./admin/AdminApp";
 
-// Release provenance is public metadata, not an authentication mechanism.
+// Происхождение релиза — публичные метаданные, а не механизм аутентификации.
 const sourceCommitMeta = document.createElement("meta");
 sourceCommitMeta.name = "launcher-source-commit";
 sourceCommitMeta.content = __LAUNCHER_SOURCE_COMMIT__;

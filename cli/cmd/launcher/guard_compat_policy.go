@@ -1,9 +1,9 @@
 package main
 
-// Guard compatibility policy v1: an external Ed25519 key authorizes exactly
-// the code the operator permits to enter a Minecraft JVM. A policy is checked
-// on installation AND immediately before game execution. Missing/expired or
-// rolled-back policy fails closed for profiles that require Guard compatibility.
+// Политика совместимости Guard v1: внешний ключ Ed25519 разрешает строго тот код,
+// который оператор допускает в JVM Minecraft. Политика проверяется при установке И
+// непосредственно перед игрой. Отсутствующая, истёкшая или откатившаяся политика
+// приводит к отказу для профилей с обязательной совместимостью Guard.
 import (
 	"bytes"
 	"crypto/ed25519"
@@ -344,8 +344,8 @@ func guardCompatInstall0502(root, policyFile, keyFile string) error {
 	if err != nil {
 		return err
 	}
-	// Atomic mkdir is a cross-platform exclusive writer barrier. A crash leaves
-	// a fail-closed lock requiring operator recovery, not a racy older epoch.
+	// Атомарный mkdir — межплатформенный барьер единственного писателя. После сбоя остаётся блокировка
+	// с отказом по умолчанию, требующая восстановления оператором, а не гонка старых эпох.
 	lock, err := guardCompatPath0502(root, ".launcher/guard/.install-lock")
 	if err != nil {
 		return err
@@ -376,8 +376,8 @@ func guardCompatInstall0502(root, policyFile, keyFile string) error {
 		return err
 	}
 	state, _ := json.Marshal(guardCompatFloor0502{Epoch: v.Policy.Epoch, Digest: v.Digest, RootSHA256: v.RootSHA256})
-	// Persist the floor FIRST: after a crash the old policy is refused, never
-	// incorrectly accepted. Re-installing the same signed epoch completes recovery.
+	// СНАЧАЛА сохраните минимальную допустимую эпоху: после сбоя старая политика отклоняется, а не
+	// принимается ошибочно. Повторная установка той же подписанной эпохи завершает восстановление.
 	if err = trustedAtomic0306(floor, append(state, '\n')); err != nil {
 		return err
 	}

@@ -71,8 +71,8 @@ const initialFields = {
   enabled: true,
   command: "",
 };
-// Session storage avoids persisting potentially sensitive console payloads on disk.
-// Verified actor ID, not rotating session ID, is the scope across login refresh.
+// SessionStorage предотвращает длительное хранение потенциально конфиденциальных консольных данных на диске.
+// Область действия после повторного входа определяется проверенным ID пользователя, а не меняющимся ID сеанса.
 const pendingStorageKey = (
   projectId: string,
   backendUrl: string,
@@ -136,7 +136,7 @@ const readPending = (
     )
       return data as BridgeCommandRequest;
   } catch {
-    /* stale browser state */
+    /* Устаревшее состояние браузера. */
   }
   return null;
 };
@@ -179,7 +179,7 @@ export function ServerBridgeWorkspace({
   const [fields, setFields] = useState(initialFields);
   const [capacityDraft, setCapacityDraft] = useState("");
   const [capacityBusy, setCapacityBusy] = useState(false);
-  // Update selection when RBAC or the signed runtime's capabilities change.
+  // Обновляйте выбранный ресурс при изменении RBAC или возможностей подписанного Runtime.
   useEffect(() => {
     const current = overview?.nodes.find((item) => item.id === selectedServer);
     const possible = actions.filter(
@@ -193,7 +193,7 @@ export function ServerBridgeWorkspace({
   const [pending, setPending] = useState<BridgeCommandRequest | null>(() =>
     readPending(projectId, backendUrl, userId),
   );
-  // A ref closes the double-click window before React commits busy=true.
+  // Ссылка ref закрывает окно двойного нажатия до того, как React зафиксирует busy=true.
   const submitInFlight = useRef(false);
   const [clock, setClock] = useState(Date.now());
   const nodes = overview?.nodes ?? [];
@@ -251,7 +251,7 @@ export function ServerBridgeWorkspace({
             })
             .catch(() => undefined);
       } catch {
-        /* outdated monitor entry */
+        /* Устаревшая запись мониторинга. */
       }
     }
   }, [api, backendUrl, token, projectId, userId]);
@@ -351,8 +351,8 @@ export function ServerBridgeWorkspace({
   }
   async function submit(existing?: BridgeCommandRequest) {
     if (submitInFlight.current || busy) return;
-    // Refuse to submit on stale overview or when a previous request has an
-    // indeterminate outcome. The saved payload is the only safe retry.
+    // Не отправляйте запрос при устаревшем обзоре или неопределённом исходе предыдущего
+    // запроса. Для безопасного повторения используйте только сохранённую полезную нагрузку.
     if (
       !node ||
       !canControl ||

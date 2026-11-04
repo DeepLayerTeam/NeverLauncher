@@ -85,7 +85,7 @@ def safe_bundle_extract(bundle, directory):
             total += item.file_size
             if total > 8 * 1024 * 1024 * 1024:
                 raise ValueError("server bundle uncompressed size exceeds limit")
-        # Canonicalized paths have been checked; extract only under new isolated root.
+        # Нормализованные пути уже проверены; распаковывайте только в новый изолированный корневой каталог.
         for item in archive.infolist():
             target = directory.joinpath(*PurePosixPath(item.filename.rstrip("/")).parts)
             if item.is_dir():
@@ -175,7 +175,7 @@ class Rcon:
         with socket.create_connection(("127.0.0.1", self.port), timeout=2) as sock:
             sock.settimeout(3)
             self.send(sock, 5, 3, self.password)
-            # Source RCON may emit a type=0 response before type=2 auth.
+            # Исходный RCON может прислать ответ type=0 до подтверждения аутентификации type=2.
             for _ in range(3):
                 request_id, kind, _ = self.recv(sock)
                 if request_id == -1:
@@ -194,7 +194,7 @@ class Rcon:
                 )
             self.send(sock, 6, 2, command_text)
             response = []
-            # Some servers split long responses; evidence commands are short.
+            # Некоторые серверы делят длинные ответы; команды сбора доказательств короткие.
             for _ in range(4):
                 request_id, _, part = self.recv(sock)
                 if request_id != 6:
@@ -206,7 +206,7 @@ class Rcon:
 
 
 def player_online(response, username):
-    # RCON `list` response includes an enumerated player list after ':'.
+    # Ответ RCON `list` содержит перечисление игроков после двоеточия.
     if ":" not in response or not re.search(r"(?i)\bThere are\s+\d+\s+of\b", response):
         return False
     return username in [part.strip() for part in response.split(":", 1)[1].split(",")]
@@ -366,8 +366,8 @@ class MatchingServer:
                     "ServerBridge must be in loader plugin/mod directory"
                 )
         (self.root / "eula.txt").write_text("eula=true\n")
-        # Dedicated, ephemeral loopback-only offline integration server. This
-        # does NOT certify official login, custom auth or a production Guard policy.
+        # Выделенный временный интеграционный сервер только для loopback в офлайн-режиме. Он НЕ
+        # удостоверяет официальный вход, пользовательскую авторизацию или промышленную политику Guard.
         props = {
             "server-ip": "127.0.0.1",
             "server-port": str(self.port),
@@ -387,7 +387,7 @@ class MatchingServer:
             "max-players": "2",
             "motd": "Launcher isolated staged gameplay test",
         }
-        # Do not allow an attacker-provided server.properties to override loopback.
+        # Не позволяйте предоставленному злоумышленником server.properties переопределить loopback.
         (self.root / "server.properties").write_text(
             "".join(f"{key}={value}\n" for key, value in props.items())
         )
@@ -434,8 +434,8 @@ class MatchingServer:
                     self.requires_bridge,
                     self.bridge_version,
                 )
-                # A reachable TCP socket alone is not startup; positively query
-                # a server command after verifying complete boot & bridge.
+                # Одна доступность TCP-сокета не доказывает запуск: подтвердите
+                # выполнение команды сервера после полной загрузки и запуска моста.
                 try:
                     if parse_gametime(self.rcon.query("time query gametime")) >= 0:
                         return self
@@ -446,9 +446,9 @@ class MatchingServer:
                     RuntimeError,
                     PermissionError,
                 ):
-                    # RCON binds after the world-ready console marker on some
-                    # server versions; never confuse TCP readiness with a
-                    # successful authenticated command.
+                    # В некоторых версиях RCON привязывается после маркера
+                    # готовности мира в консоли; не путайте готовность TCP с
+                    # успешной аутентифицированной командой.
                     pass
             time.sleep(1)
         raise TimeoutError("matching server did not prove world/loader readiness")
@@ -548,7 +548,7 @@ class GameplayObserver:
             self.failure = "matching server fatal state during gameplay"
             self.status = "failed"
             return
-        # A late crash cannot be hidden by a previously observed movement.
+        # Позднее аварийное завершение нельзя скрыть ранее наблюдавшимся движением.
         healthy, health_detail = log_health(self.client_dir, None, self.loader)
         if health_detail.startswith(("fatal", "crash")):
             self.failure = health_detail
@@ -604,7 +604,7 @@ class GameplayObserver:
                     move_forward(wid, 2)
                 else:
                     command(["xdotool", "windowfocus", "--sync", wid], 5)
-                    # Actual window input, never server-side teleport.
+                    # Фактический ввод в окно, никогда не телепортация через сервер.
                     command(["xdotool", "keydown", "--clearmodifiers", "w"], 5)
                     try:
                         time.sleep(2)
@@ -645,8 +645,8 @@ class GameplayObserver:
                 self.blocked = str(exc)[:240]
                 self.status = "blocked"
                 return
-            # A missing positive signal is not PASS; retry short-lived RCON/GUI
-            # contention, but retain why a completed attempt was inconclusive.
+            # Отсутствие положительного сигнала — не PASS. Повторяйте краткие конфликты
+            # RCON/GUI, но сохраняйте причину неопределённого результата завершённой попытки.
             self.last_error = str(exc)[:240]
 
     def evidence(self):

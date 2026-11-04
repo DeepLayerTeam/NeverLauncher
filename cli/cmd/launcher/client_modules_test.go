@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// A MirrorHelper cache repair is verified before replacing existing bytes.
-// A bad download cannot overwrite a cached object even when it is corrupt.
+// Восстановление кэша MirrorHelper проверяется до замены существующих байтов. Плохая
+// загрузка не может перезаписать кэшированный объект, даже если он повреждён.
 func TestMirrorInstallerCacheRepair0427(t *testing.T) {
 	root := t.TempDir()
 	dest := filepath.Join(root, "cache", "installer.jar")
@@ -46,7 +46,7 @@ func TestMirrorInstallerCacheRepair0427(t *testing.T) {
 	if err != nil || string(bytes) != "original corrupted cache" {
 		t.Fatalf("failed repair changed destination: %v", err)
 	}
-	// Exercise the actual CLI dispatcher and its pinned offline recovery path.
+	// Проверяйте реальный диспетчер CLI и закреплённый офлайн-путь восстановления.
 	if err := handleRuntimeMirror0274([]string{
 		"repair-installer", "--cache-file", dest,
 		"--source-file", source, "--sha256", art.SHA256,

@@ -36,7 +36,7 @@ def request(api: str, path: str, token: str, method="GET", payload=None, key=Non
             result = json.load(res)
             return result.get("data", result)
     except urllib.error.HTTPError as error:
-        # Do not expose bearer tokens or a response containing other secrets.
+        # Не раскрывайте bearer-токены и ответы, содержащие другие секреты.
         raise RuntimeError(f"{method} {path} returned HTTP {error.code}") from error
 
 
@@ -76,7 +76,7 @@ def execute(api: str, server: str, token: str, kind: str, payload: dict[str, str
     try:
         first = request(api, path, token, "POST", body, key)
     except (TimeoutError, urllib.error.URLError):
-        # An unknown response must reuse the same payload and idempotency key.
+        # При неопределённом ответе используйте ту же полезную нагрузку и ключ идемпотентности.
         first = request(api, path, token, "POST", body, key)
     command = first["command"]
     command_id = command.get("id")
@@ -142,7 +142,7 @@ def main() -> None:
         )
     finally:
         if drain_attempted:
-            # Do not leave a test server in maintenance/drain after the probe.
+            # Не оставляйте тестовый сервер в режиме обслуживания или drain после проверки.
             execute(
                 api,
                 server,

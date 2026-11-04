@@ -117,7 +117,7 @@ func TestGuardCompatibility0502RealFileEnforcementAndRevocation(t *testing.T) {
 	if err := launch(); err == nil || !strings.Contains(err.Error(), "transformation revoked") {
 		t.Fatalf("revoked transform accepted: %v", err)
 	}
-	// A signed old policy cannot roll back a revocation.
+	// Старая подписанная политика не может отменить отзыв.
 	p.Epoch = 1
 	p.RevokedTransforms = nil
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err == nil {
@@ -200,8 +200,8 @@ func TestGuardCompatibility0502SymlinkAndUnknownArtifact(t *testing.T) {
 	}
 }
 
-// Integration: the *real Java agent* must enforce the signed per-plugin
-// transformation list, not just a CLI inspection of JSON declarations.
+// Интеграция: НАСТОЯЩИЙ Java-агент должен принудительно соблюдать подписанный список
+// преобразований для каждого плагина, а не просто проверять объявления JSON в CLI.
 func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 	if _, err := exec.LookPath("javac"); err != nil {
 		t.Skip("JDK unavailable")
@@ -238,8 +238,8 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 			Kind: "java-plugin", Path: trustedRoot0306 + "/releases/" + record.PackageSHA256 + "/plugins/" + plugin.Name, SHA256: plugin.SHA256,
 		})
 	}
-	// An actual installed mod is part of the same signed launch scope.
-	// The Java process is never spawned when a different mod appears.
+	// Фактически установленный мод входит в ту же подписанную область
+	// запуска. При появлении другого мода процесс Java не создаётся.
 	approvedMod := artifact0502(t, root, "mod", "mods/approved.jar", "fixture-mod-0503")
 	p.Artifacts = append(p.Artifacts, approvedMod)
 	p.Artifacts = append(p.Artifacts, artifact0502(t, root, "loader-library", "libraries/fabric-loader.jar", "fixture-loader-0504"))
@@ -281,7 +281,7 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 	if err := os.Remove(intruder); err != nil {
 		t.Fatal(err)
 	}
-	// Upgrade to an equally valid signed policy that authorizes NO transformations.
+	// Обновление до равноправно действительной подписанной политики, которая не разрешает НИКАКИХ преобразований.
 	p.Epoch = 2
 	p.Transformations = nil
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err != nil {

@@ -1,6 +1,6 @@
 import { requestJSON } from './client.ts';
 
-/** Existing ServerBridge v3 REST API. No changes to node protocol, command or ACK envelopes. */
+/** Существующий REST API ServerBridge v3. Протокол узла, команды и конверты ACK не меняются. */
 export type ServerBridgeTelemetry = {
   sampledAtUnixMillis?: number; windowMillis?: number; runtimeId?: string; runtimeEpoch?: number;
   playersOnline?: number; playersMax?: number; tps?: number | null; mspt?: number | null;
@@ -23,8 +23,8 @@ export type BridgeCommandType =
   'player.kick' | 'message.broadcast' | 'whitelist.add' | 'whitelist.remove' |
   'whitelist.enable' | 'whitelist.disable' | 'ban.add' | 'ban.remove' |
   'server.save' | 'server.maintenance' | 'server.drain' | 'server.shutdown' | 'server.console';
-// UI visibility mirrors the API's closed, server-authoritative command policy.
-// In particular, a game broadcast can NEVER grant backend restart or host shell.
+// Отображение в UI повторяет строгую серверную политику команд. В частности, игровое широковещательное
+// сообщение НИКОГДА не даёт права перезапускать Backend или выполнять команды оболочки хоста.
 export const gameCommandPermissions: Record<BridgeCommandType, string> = {
   'player.kick': 'gameserver:moderate',
   'message.broadcast': 'gameserver:broadcast',
@@ -37,7 +37,7 @@ export const gameCommandPermissions: Record<BridgeCommandType, string> = {
 };
 export function gameCommandPermission(kind: BridgeCommandType): string { return gameCommandPermissions[kind]; }
 
-// This describes an observed, node-signed capability, NOT an E2E certificate.
+// Здесь описана наблюдаемая возможность, подписанная узлом, а НЕ сертификат E2E.
 const commandAdapterCapability: Record<BridgeCommandType, string> = {
   'player.kick': 'adapter.control.kick', 'message.broadcast': 'adapter.control.broadcast',
   'whitelist.add': 'adapter.control.whitelist', 'whitelist.remove': 'adapter.control.whitelist',
@@ -84,7 +84,7 @@ export function networkStateFresh(state: BridgeNetworkState, now = Date.now()): 
     now - observed < 90_000 && now - heartbeat < 90_000 &&
     state.routingRevision > 0 && /^[0-9a-f]{64}$/i.test(state.runtimeId) && state.runtimeEpoch > 0;
 }
-/** Blank removes an operator override; zero explicitly closes admission. */
+/** Пустое значение снимает переопределение оператора; ноль явно закрывает приём подключений. */
 export function parseCapacityDraft(input: string): number | null {
   if (!input.trim()) return null;
   if (!/^(0|[1-9][0-9]*)$/.test(input.trim())) throw new Error('Capacity: целое число 0–1000000 или пустое поле');
@@ -98,8 +98,8 @@ export type BridgeOverview = {
   metrics?: { nodesTotal?: number; nodesFresh?: number; nodesStale?: number; controlStatus?: Record<string, number> };
   topology?: BridgeTopologyEdge[]; network?: BridgeNetworkState[]; audit?: Array<Record<string, unknown>>;
 };
-/** Confirm routing changes against both the write receipt and a fresh Backend
- * PostgreSQL overview. A 2xx response alone does not prove applied admission. */
+/** Проверяйте изменение маршрутизации по квитанции записи и свежему обзору PostgreSQL в
+ * Backend. Одного ответа 2xx недостаточно для доказательства применения правил допуска. */
 export function capacityApplied04111(serverId: string, previousRevision: number, expectedLimit: number | null,
   receipt: { nodeId: string; operatorCapacityMax: number | null; operatorCapacityRevision: number },
   overview: BridgeOverview): boolean {
@@ -116,7 +116,7 @@ export type BridgeEnrollmentRequest = {
   keyAlgorithm: 'ed25519'; publicKey: string; keyFingerprint: string; backendUrl: string;
   artifactFile: string; artifactSha256: string;
 };
-/** Verify the exported public request, not a private-key file. Backend revalidates everything. */
+/** Проверяйте экспортированный открытый запрос, а не файл закрытого ключа. Backend повторно проверяет всё. */
 export function parseBridgeEnrollment(input: string, projectId: string): BridgeEnrollmentRequest {
   if (input.length > 16_384) throw new Error('Слишком большой enrollment request');
   const raw: unknown = JSON.parse(input);
@@ -208,7 +208,7 @@ export function canControlNode(node: ServerBridgeNode, now = Date.now()): boolea
 
 const username = /^[A-Za-z0-9_]{3,16}$/;
 const consoleAllowlist = new Set(['say', 'list', 'whitelist', 'ban', 'ban-ip', 'pardon', 'pardon-ip', 'save-all', 'save-off', 'save-on', 'kick', 'time', 'weather', 'difficulty', 'gamerule', 'title', 'tellraw']);
-/** Client-side validation for operator feedback. The Backend validates again authoritatively. */
+/** Клиентская валидация для обратной связи с оператором. Backend повторно выполняет обязательную проверку. */
 export function buildControlPayload(type: BridgeCommandType, fields: { username: string; reason: string; message: string; enabled: boolean; command: string }): Record<string, string> {
   const reason = fields.reason.trim();
   switch (type) {

@@ -511,7 +511,7 @@ code {
   }
 }
 
-/* 0.21.6: production Admin navigation, contextual collections and detail cards. */
+/* 0.21.6: навигация производственной панели Admin, контекстные коллекции и карточки деталей. */
 .nav button[aria-current="page"] {
   box-shadow: inset 3px 0 0 #93c5fd;
 }
@@ -726,7 +726,7 @@ code {
   }
 }
 
-/* Unified operations: accessible typed forms and inspectable attempt journal. */
+/* Общие операции: доступные типизированные формы и доступный для проверки журнал попыток. */
 .field select {
   width: 100%;
   border: 1px solid #334155;
@@ -809,7 +809,7 @@ code {
   border-radius: 10px;
 }
 
-/* 0.21.9: ServerBridge operations, scoped runtime snapshots and actual Bridge ACKs. */
+/* 0.21.9: операции ServerBridge, снимки Runtime в пределах области доступа и реальные подтверждения Bridge ACK. */
 .bridgeWorkspace {
   display: grid;
   gap: 16px;
@@ -902,7 +902,7 @@ code {
   }
 }
 
-/* 0.21.11 - typed configuration and server-side audit */
+/* 0.21.11: типизированная конфигурация и серверный аудит. */
 .configFields,
 .auditFilters {
   display: grid;
@@ -928,7 +928,7 @@ code {
   max-width: 320px;
 }
 
-/* 0.24.8: component editor is part of the release lifecycle, not a JSON textarea */
+/* 0.24.8: редактор компонентов входит в жизненный цикл релиза, а не представляет собой поле ввода JSON. */
 .componentEditor0248 {
   margin-top: 1.25rem;
 }
@@ -997,7 +997,7 @@ code {
   }
 }
 
-/* Client Factory 0.27.10: responsive, keyboard-operable build workflow */
+/* Client Factory 0.27.10: адаптивный процесс сборки с управлением клавиатурой. */
 .clientFactory {
   margin-block: 1rem;
   min-width: 0;
@@ -1062,7 +1062,7 @@ code {
     flex: 1 1 42%;
   }
 }
-/* 0.35.5 trusted branding editor: preview data renders as HTML. */
+/* 0.35.5: редактор доверенного оформления; данные предварительного просмотра отображаются как HTML. */
 .brandingStudio0355 input,
 .brandingStudio0355 select {
   max-width: 100%;
@@ -1152,7 +1152,7 @@ code {
   }
 }
 
-/* 0.38.1: authenticated project/resource context and direct navigation. */
+/* 0.38.1: авторизованный контекст проекта и ресурсов и прямая навигация. */
 .ownerNavigation0381 {
   display: grid;
   gap: 12px;

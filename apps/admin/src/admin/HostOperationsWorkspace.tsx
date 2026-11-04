@@ -53,8 +53,8 @@ type Props = {
   serverName: string;
   allowed: boolean;
 };
-/** All host actions go through the existing PostgreSQL -> RemoteControl -> real Host Supervisor path.
- * No local or browser-side command execution, and no new key for an uncertain response. */
+/** Все действия с хостом проходят по существующей цепочке PostgreSQL → RemoteControl → реальный Host Supervisor.
+ * Локальное выполнение команд или выполнение в браузере запрещено; при неопределённом ответе новый ключ не создаётся. */
 export function HostOperationsWorkspace04111({
   backendUrl,
   token,
@@ -92,7 +92,7 @@ export function HostOperationsWorkspace04111({
     setSnapshot(null);
     setError("");
   }, [scope]);
-  // Never show a snapshot from the preceding server after the user changes selection.
+  // После смены выбранного сервера нельзя показывать снимок предыдущего сервера.
   useEffect(() => {
     setSelectedId("");
     setSelected(null);
@@ -106,7 +106,7 @@ export function HostOperationsWorkspace04111({
     if (!allowed || !serverId || !token) return;
     let alive = true;
     async function refresh() {
-      // These reads must fail independently: a missing host does not hide the durable journal.
+      // Эти запросы должны отказывать независимо: отсутствие хоста не должно скрывать устойчивый журнал.
       const [s, h] = await Promise.allSettled([
         api.status(serverId),
         api.list(serverId),
@@ -127,8 +127,8 @@ export function HostOperationsWorkspace04111({
             ? (h.value.find((op) => op.id === old.id) ?? old)
             : old,
         );
-        // Read-only reconciliation: GET can promote accepted to succeeded after
-        // JVM/Bridge startup, but it can dispatch another host action.
+        // Сверка только для чтения: GET может перевести состояние accepted в succeeded
+        // после запуска JVM/Bridge, но не должен отправлять новое действие хосту.
         if (h.value[0]?.status === "accepted") {
           try {
             const result = await api.get(serverId, h.value[0].id, true);
@@ -144,7 +144,7 @@ export function HostOperationsWorkspace04111({
               );
             }
           } catch {
-            /* journal remains accepted: infer completion */
+            /* Запись в журнале остаётся в состоянии accepted; нельзя предполагать завершение. */
           }
         }
       } else {

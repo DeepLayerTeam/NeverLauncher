@@ -31,8 +31,8 @@ public final class ServerBridgeSecurityCertification01912Harness {
         SigningKey attacker = signingKey();
         String digest = BridgeProtocolSecurity.expectedCapabilityDigest();
 
-        // A perfectly valid signature must not authorize a command before
-        // signed capability negotiation establishes a pinned trust anchor.
+        // Даже полностью корректная подпись не должна разрешать команду, пока
+        // подписанное согласование возможностей не закрепило корень доверия.
         BridgeControlCommand unpinned = new BridgeControlCommand(serverId, "pre-pin", "a".repeat(64), 1, 1,
             "server.save", Map.of(), "1".repeat(64), 1, "pre-pin-channel", "pre-pin-lease", 1,
             1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
@@ -73,9 +73,9 @@ public final class ServerBridgeSecurityCertification01912Harness {
         BridgeControlCommand unsigned = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 3, "server.save", Map.of(), payloadHash,
             11, "0123456789abcdef0123456789abcdef", "lease-token-01912", 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
-        // Delivery metadata may vary on retries without changing the stable
-        // exactly-once identity. Those same fields remain bound by the v3
-        // signature, so an attacker cannot change them in a signed command.
+        // Метаданные доставки могут различаться при повторах без изменения
+        // стабильной идентичности exactly-once. Эти же поля защищены подписью v3,
+        // поэтому злоумышленник не может изменить их в подписанной команде.
         BridgeControlCommand retry = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 3,
             "server.save", Map.of(), payloadHash, 500, "different-channel", "new-lease", 7,
             5000, 9000, BridgeProtocolSecurity.PROFILE, digest,

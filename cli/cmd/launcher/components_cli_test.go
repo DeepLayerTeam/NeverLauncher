@@ -167,17 +167,17 @@ func TestCLIComponentsRejectTamperingAndDiff0249(t *testing.T) {
 	if !diff.Verified || !reflect.DeepEqual(diff.ChangedComponents, []string{"shaders"}) || len(diff.AddedFiles) != 3 {
 		t.Fatalf("invalid component diff: %s", contents)
 	}
-	// A tampered signed payload must be rejected even when its catalog digest is valid.
+	// Изменённая подписанная полезная нагрузка должна отклоняться, даже когда дайджест её каталога корректен.
 	wire.ComponentCatalog = json.RawMessage(strings.Replace(string(nextCatalog), "Enhanced shader preset", "Tampered", 1))
 	tampered := writeWire0249(t, wire)
 	if _, e = loadComponents0249(tampered, key, false); e == nil {
 		t.Fatal("signature bypass")
 	}
-	// Explicit draft mode does not bypass catalog digest validation.
+	// Явный режим черновика не отменяет проверку дайджеста каталога.
 	if _, e = loadComponents0249(tampered, "", true); e == nil {
 		t.Fatal("digest bypass")
 	}
-	// An attacker with a self-declared signing key must not be trusted.
+	// Нельзя доверять злоумышленнику с самостоятельно объявленным ключом подписи.
 	randomKey := filepath.Join(t.TempDir(), "other.pub")
 	other, _, _ := ed25519.GenerateKey(rand.Reader)
 	os.WriteFile(randomKey, []byte(hex.EncodeToString(other)), 0600)

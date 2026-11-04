@@ -213,7 +213,7 @@ public final class Control0415Harness {
     status(call(plugin,"message.broadcast",Map.of("message","hi")),"executed");
    }
    status(call(plugin,"server.shutdown",Map.of()),"accepted");
-   // A command awaiting a real quit must not receive optimistic success.
+   // Команда, ожидающая настоящего выхода, не должна получать оптимистичное подтверждение успеха.
    Player ghost=new Player("Ghost"); ghost.emitQuit=false; Bukkit.players.add(ghost);
    java.util.concurrent.CompletableFuture<BridgeControlResult> waiting=java.util.concurrent.CompletableFuture.supplyAsync(() -> {
      try {return call(plugin,"player.kick",Map.of("username","Ghost"));}

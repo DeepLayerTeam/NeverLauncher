@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Executes the real production bridge-common Java sources and fails on overclaims.
-# Explicitly NOT a Minecraft process / login runtime certification.
+# Выполняет настоящие производственные исходники Java bridge-common и отклоняет преувеличенные
+# заявления о возможностях. Это НЕ сертификация процесса Minecraft или игровой авторизации.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT

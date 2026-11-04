@@ -1,4 +1,4 @@
-/** HTTP contract shared by Admin screens. Authorization decisions remain server-side. */
+/** Общий HTTP-контракт экранов Admin. Решения об авторизации принимаются на сервере. */
 export interface ApiFailure { code?: number | string; message?: string; reasonCode?: string; blockers?: Array<{reasonCode:string;resource:string;message:string;action:string}> }
 export type ApiEnvelope<T> = T | { data: T; error?: ApiFailure };
 export type Collection<T> = { items: T[]; count?: number; total?: number; nextCursor?: string };
@@ -8,8 +8,8 @@ export class ApiError extends Error {
   constructor(status: number, message: string, reasonCode?: string, blockers: NonNullable<ApiFailure['blockers']> = []) { super(message); this.name = 'ApiError'; this.status = status; this.reasonCode = reasonCode; this.blockers = blockers; }
 }
 
-/** A mutation may have reached Backend even if its HTTP response was lost.
- * Never automatically replay it using a fresh idempotency key. */
+/** Изменение могло достичь Backend, даже если ответ HTTP потерян. Никогда
+ * не повторяйте его автоматически с новым ключом идемпотентности. */
 export class IndeterminateApiError extends Error {
   readonly method: string;
   constructor(method: string, message: string) { super(message); this.name = 'IndeterminateApiError'; this.method = method; }

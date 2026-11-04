@@ -1,5 +1,5 @@
-// Player-facing adaptation of native Runtime download events.
-// Never interpret wire bytes as verified files or "staged" as a committed release.
+// Адаптация событий загрузки нативного Runtime для игрока. Не считайте переданные
+// байты проверенными файлами, а состояние staged — зафиксированным релизом.
 export type NativeTransfer0354 = {
   operationId: string;
   phase: string;
@@ -72,7 +72,7 @@ export function progress0354(progress: NativeTransfer0354 | null) {
   const expected = numeric(progress.bytesExpected),
     verified = numeric(progress.bytesVerified);
   const finished = progress.phase === "completed";
-  // Percentage means verified bytes, not HTTP bytes (which include retries).
+  // Процент означает проверенные байты, а не байты HTTP, включающие повторные загрузки.
   const percent =
     expected > 0
       ? Math.min(

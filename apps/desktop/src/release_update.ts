@@ -1,4 +1,4 @@
-// User approval is scoped to the exact signed target, not a release label.
+// Согласие пользователя относится к конкретной подписанной цели, а не к названию релиза.
 export type SignedTarget0359 = {
   projectId: string; profileId: string; channel: string; version: string;
   signature?: { signature?: string };
@@ -15,8 +15,8 @@ export function updateIdentity0359(manifest: SignedTarget0359): string {
   }
   return JSON.stringify([manifest.projectId, manifest.profileId, manifest.channel, signature]);
 }
-/** Approval includes the exact choice. A signed release may contain several
- * independently installable plans; accepting one must not authorize another. */
+/** Согласие включает точный выбор. Подписанный релиз может содержать несколько
+ * независимо устанавливаемых планов; согласие на один не разрешает остальные. */
 export function approvedSelectionIdentity0393(manifest:SignedTarget0359,preset:string):string {
   return JSON.stringify([updateIdentity0359(manifest),preset]);
 }

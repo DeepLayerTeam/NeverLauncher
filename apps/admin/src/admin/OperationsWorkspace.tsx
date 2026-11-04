@@ -38,7 +38,7 @@ type OperationIntent = {
   idempotencyKey: string;
 };
 type Recoverable = { intent: OperationIntent; jobId?: string };
-// No credentials are stored; use the verified account identity, not a rotating session.
+// Учётные данные не сохраняются; используйте проверенный идентификатор учётной записи, а не изменяемый идентификатор сеанса.
 const recoveryKey = (base: string, project: string, userId: string) =>
   durableOwnerKey(base, userId, project, "operations");
 function readRecovery(
@@ -59,7 +59,7 @@ function readRecovery(
     )
       return value;
   } catch {
-    /* Untrusted browser state is not executable */
+    /* Недоверенное состояние браузера нельзя использовать как исполняемый код. */
   }
   return null;
 }
@@ -299,7 +299,7 @@ export function OperationsWorkspace({
       setBusy(false);
     }
   }
-  // Read-only check after login or refresh. A missing record does not create a job.
+  // Проверка только для чтения после входа или обновления страницы. Отсутствие записи не создаёт задание.
   useEffect(() => {
     if (!recoverable || recoverable.jobId || !token) return;
     let live = true;

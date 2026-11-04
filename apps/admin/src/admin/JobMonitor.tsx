@@ -8,7 +8,7 @@ type Page = { items: Job[]; hasMore: boolean; offset: number; limit: number };
 const terminal = new Set(['succeeded', 'failed', 'dead', 'revoked']);
 const states = ['', 'pending', 'running', 'succeeded', 'failed', 'revoked', 'dead'];
 
-/** Backend is authoritative. Disconnection and browser reload do not cancel work. */
+/** Источник истины — Backend. Разрыв соединения и перезагрузка браузера не отменяют выполняемую работу. */
 export function JobMonitor({ backendUrl, token, projectId, initialId = '', canPublish }: { backendUrl: string; token: string; projectId: string; initialId?: string; canPublish: boolean }) {
   const [jobId, setJobId] = useState(() => initialId || new URLSearchParams(window.location.hash.split('?')[1] || '').get('job') || '');
   const [job, setJob] = useState<Job | null>(null);

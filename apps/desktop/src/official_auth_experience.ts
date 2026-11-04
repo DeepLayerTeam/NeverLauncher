@@ -6,7 +6,7 @@ import type {
   NeverOfficialLink0268,
 } from "./official_minecraft_0257";
 
-/** Public, non-sensitive desktop view of the native identity manager. */
+/** Публичное отображение нативного менеджера идентификации в Desktop без чувствительных данных. */
 export type AuthenticationActivity02610 =
   | "loading"
   | "cancel"
@@ -45,7 +45,7 @@ export const initialAuthenticationState02610: AuthenticationState02610 =
     initialized: false,
   });
 
-/** Never put a raw provider/native exception into the UI (it can contain OAuth query params). */
+/** Никогда не выводите сырое исключение провайдера или нативного слоя в UI: оно может содержать параметры OAuth. */
 export function describeAuthenticationFailure02610(error: unknown): string {
   const raw =
     typeof error === "string"
@@ -96,8 +96,8 @@ export function describeAuthenticationFailure02610(error: unknown): string {
 }
 
 /**
- * Serializes all account mutations and invalidates late OAuth results. Native Rust
- * remains the sole owner of tokens; this class only transports verified profiles.
+ * Последовательно обрабатывает все изменения учётных записей и отклоняет запоздалые результаты OAuth.
+ * Единственный владелец токенов — нативный Rust; этот класс передаёт только проверенные профили.
  */
 export class AuthenticationExperience02610 {
   private value: AuthenticationState02610 = initialAuthenticationState02610;
@@ -134,7 +134,7 @@ export class AuthenticationExperience02610 {
     profile: OfficialProfile0257 | null,
     issue: string | null = null,
   ): Promise<void> {
-    // Directory data is local vault metadata. A links Backend outage must not hide playable accounts.
+    // Данные каталога — локальные метаданные защищённого хранилища. Недоступность Backend для привязок не должна скрывать учётные записи, пригодные для игры.
     const [accountsResult, linksResult] = await Promise.allSettled([
       this.client.accounts(),
       this.client.Links(),
@@ -145,7 +145,7 @@ export class AuthenticationExperience02610 {
         ? accountsResult.value
         : this.value.accounts;
     const active = accounts.find((account) => account.active);
-    // Prevent displaying a stale name/UUID as launch-ready after a native account switch.
+    // Не показывайте устаревшие имя или UUID как готовые к запуску после смены учётной записи в нативной части.
     const verified =
       profile && active && profile.id.toLowerCase() === active.id.toLowerCase()
         ? profile
@@ -230,7 +230,7 @@ export class AuthenticationExperience02610 {
       const profile = await this.client.waitDevice();
       if (this.current(token)) await this.accepted(token, profile);
     });
-    // Ignore a stale finally after cancel and a new flow.
+    // Игнорируйте устаревший блок finally после отмены и запуска нового процесса.
     if (!this.disposed && this.value.activity === null)
       this.update({ device: null, deviceExpiresAt: null });
   }
@@ -238,8 +238,8 @@ export class AuthenticationExperience02610 {
     if (this.value.activity !== "browser" && this.value.activity !== "device")
       return;
     const token = ++this.generation; // synchronous fence, before the awaited IPC operation
-    // Keep the UI locked until native cancellation finishes; a new login must not
-    // race an in-flight cancellation that could destroy its native flow.
+    // Сохраняйте блокировку UI до завершения нативной отмены. Новый вход не должен
+    // конкурировать с незавершённой отменой, которая может уничтожить нативный процесс входа.
     this.update({
       activity: "cancel",
       device: null,
@@ -270,7 +270,7 @@ export class AuthenticationExperience02610 {
         await this.accepted(token, profile);
       } catch (e) {
         if (this.current(token)) {
-          // A revoked/expired credential must not remain launch-ready.
+          // Отозванные или истёкшие учётные данные не должны оставаться готовыми к запуску.
           this.publishProfile(null);
         }
         throw e;
@@ -292,8 +292,8 @@ export class AuthenticationExperience02610 {
       try {
         await this.accepted(token, await this.client.logout(id));
       } catch (e) {
-        // Local removal can succeed even when the following provider check fails.
-        // Do not keep a potentially deleted account launch-ready.
+        // Локальное удаление может завершиться успешно, даже если следующая проверка провайдера
+        // завершилась ошибкой. Не оставляйте потенциально удалённую учётную запись доступной для запуска.
         if (this.current(token)) this.publishProfile(null);
         throw e;
       }

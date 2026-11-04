@@ -9,7 +9,7 @@ import (
 	"unicode"
 )
 
-// guardCompatClassName0504 validates signed JVM binary class names.
+// guardCompatClassName0504 проверяет бинарные имена классов JVM по подписанной политике.
 func guardCompatClassName0504(class string) bool {
 	if len(class) == 0 || len(class) > 256 || !strings.Contains(class, ".") {
 		return false
@@ -28,9 +28,9 @@ func guardCompatClassName0504(class string) bool {
 	return true
 }
 
-// guardLoaderConfig0504 materializes only previously Ed25519-verified policy
-// artifact entries into the guarded Java premain. This is not a new trust root.
-// Loader code-source SHA-256 is rechecked inside the JVM at class definition.
+// guardLoaderConfig0504 помещает в защищённый Java premain только записи артефактов,
+// ранее проверенные по Ed25519. Это не новый корень доверия. SHA-256 источника
+// классов загрузчика повторно проверяется внутри JVM при определении класса.
 func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error) {
 	loader := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(p.Loader, "-", ""), "_", ""))
 	switch loader {
@@ -66,7 +66,7 @@ func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error)
 	var out strings.Builder
 	fmt.Fprintf(&out, "loader.id=%s\nloader.count=%d\n", loader, len(library))
 	for i, a := range library {
-		// Go path validation is relative to the checked client root.
+		// Проверка путей Go выполняется относительно проверенного клиентского корня.
 		path, err := guardCompatPath0502(root, a.Path)
 		if err != nil {
 			return "", err

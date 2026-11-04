@@ -550,9 +550,9 @@ func validateLoaderProfileID(id string) error {
 	return nil
 }
 
-// Materialize only libraries relevant to the selected operating systems and
-// architectures. Metadata for other platforms stays in the immutable profile,
-// but it must not force a Windows-only repository fetch on Linux, for example.
+// Подготавливайте только библиотеки, относящиеся к выбранным ОС и
+// архитектурам. Метаданные других платформ остаются в неизменяемом профиле,
+// но не должны принуждать Linux, например, загружать Windows-зависимости.
 func materializeLoaderLibraries(ctx context.Context, client *http.Client, clientDir string, profile *loaderVersionProfile, workers int, strict bool, selectedTargets ...vanillaTarget) ([]vanillaDownloadedFile, error) {
 	if len(selectedTargets) == 0 {
 		selectedTargets = []vanillaTarget{currentVanillaTarget()}
@@ -677,8 +677,8 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 }
 
 func strictMavenPath(name string) (string, error) {
-	// Fabric/Quilt Maven coordinates may explicitly specify @jar. Reject
-	// non-JAR extensions: classpath entries must be loadable archives.
+	// Координаты Maven для Fabric/Quilt могут явно задавать @jar. Другие расширения
+	// отклоняются: элементы classpath должны быть загружаемыми архивами.
 	coordinate, extension, hasExtension := strings.Cut(strings.TrimSpace(name), "@")
 	if hasExtension && extension != "jar" {
 		return "", fmt.Errorf("loader Maven coordinate %q has unsupported classpath extension", name)

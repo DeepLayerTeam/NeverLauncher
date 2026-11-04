@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Performs actual Minecraft JVM launch via Runtime on a verified Client Factory build.
-# This is NOT a fixture-only check; missing Java, graphics, Minecraft or network fails closed.
+# Выполняет настоящий запуск JVM Minecraft через Runtime на проверенной сборке Client Factory. Это НЕ
+# проверка только тестовых данных: отсутствие Java, графики, Minecraft или сети приводит к отказу.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOADER="${LAUNCHER_CERT_LOADER:?set LAUNCHER_CERT_LOADER}"
@@ -27,7 +27,7 @@ if [[ ! -f "$RT" ]]; then
  cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 fi
 [[ -f "$RT" ]] || { echo "Runtime binary missing" >&2; exit 2; }
-# Runtime itself is pinned before the test; Go checks its hash before and after execution.
+# Сам Runtime закрепляется до теста; Go проверяет его хеш до исполнения и после него.
 RT_SHA="$(python3 - "$RT" <<'PY'
 from pathlib import Path
 import hashlib,sys
@@ -62,6 +62,6 @@ else
  "${CMD[@]}" > "$DEST/run-result.json"
 fi
 "$BIN" runtime client-factory certify-verify --client-dir "$CLIENT" --certificate "$CERT" --public-key "$PUB" --output "$DEST/certificate-verification.json"
-# Never publish this ephemeral CI private key as a build artifact.
+# Никогда не публикуйте этот временный закрытый ключ CI как артефакт сборки.
 if [[ -z "${LAUNCHER_CERT_SIGNING_KEY:-}" && "${LAUNCHER_CERT_KEEP_TEST_KEY:-0}" != 1 ]]; then rm -f "$KEY"; fi
 printf '[client-factory-certification] certified loader=%s mc=%s target=%s output=%s\n' "$LOADER" "$MC" "$TARGET" "$CERT"

@@ -9,14 +9,14 @@ export interface AdminIdentity {
   authorizationSource?: string;
 }
 
-/** Used for presentation only; every operation is checked again on the backend. */
+/** Только для отображения; каждая операция повторно проверяется на сервере. */
 export function can(identity: AdminIdentity | null, permission: string, projectId?: string): boolean {
   if (!identity) return false;
   const globals = identity.permissions || [];
   if (globals.includes('*') || globals.includes(permission)) return true;
   if (!projectId || projectId === '*') return false;
   const scoped = identity.projectPermissions?.[projectId] ?? [];
-  // Project wildcard must not be interpreted as a host or backend grant.
+  // Подстановочный символ проекта нельзя трактовать как разрешение для хоста или Backend.
   if (permission.startsWith('host:') || permission.startsWith('backend:')) return false;
   return scoped.includes('*') || scoped.includes(permission);
 }
@@ -36,7 +36,7 @@ export function canSeeSection(identity: AdminIdentity | null, section: string, p
   const global = globalPermissionForSection[section];
   if (global) {
     if (section === 'storage') return can(identity, global) || can(identity, global, projectId);
-    // These routes currently require a global permission (not a project-scoped one).
+    // Этим маршрутам сейчас требуется глобальное право, а не ограниченное конкретным проектом.
     return can(identity, global);
   }
   return can(identity, 'project:read', projectId);

@@ -18,8 +18,8 @@ import (
 	"testing"
 )
 
-// Forge must not fetch incompatible library coordinates while creating a
-// target-specific client; irrelevant entries remain in its launch profile.
+// Forge не должен загружать несовместимые координаты библиотек при создании клиента
+// для конкретной цели; несущественные записи остаются в профиле запуска.
 func TestForgeNeoForgeLibrariesOnlyForSelectedTargets0404(t *testing.T) {
 	for _, loader := range []string{"forge", "neoforge"} {
 		t.Run(loader, func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestForgeLibraryRejectsMavenArtifactSubstitution0404(t *testing.T) {
 	if _, err := materializeForgeLibraries(context.Background(), nil, t.TempDir(), &libraries, "forge", 2, true); err == nil || !strings.Contains(err.Error(), "Maven identity") {
 		t.Fatalf("incorrect artifact path accepted: %v", err)
 	}
-	// Irrelevant incompatible entry must not make a Linux-only install fail.
+	// Неподходящая несовместимая запись не должна ломать установку только для Linux.
 	libraries[0].Rules = []map[string]any{{"action": "allow", "os": map[string]any{"name": "windows"}}}
 	if files, err := materializeForgeLibraries(context.Background(), nil, t.TempDir(), &libraries, "forge", 2, true, vanillaTarget{OS: "linux", Arch: "x86_64"}); err != nil || len(files) != 0 {
 		t.Fatalf("irrelevant Windows artifact should be skipped: %v %+v", err, files)
@@ -117,9 +117,9 @@ func makeForgeTestJar0404(t *testing.T, className, source string, withMainManife
 	return buf.Bytes()
 }
 
-// Exercise a modern Forge/NeoForge installer with a real JVM processor and
-// actual Java class loading, not a shell stand-in for the processor command.
-// The Minecraft base/loader entrypoint here are deterministic fixtures, not Mojang binaries.
+// Проверяйте современный установщик Forge/NeoForge с настоящим процессором JVM и действительной
+// загрузкой Java-классов, а не имитацией процессора через shell. Базовый Minecraft и точка
+// входа загрузчика здесь — детерминированные тестовые данные, не бинарники Mojang.
 func TestForgeNeoForgeInstallerRunsRealJVMProcessorAndPatchedClasspath0404(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("test fixture uses the OS java executable; CI JVM target varies")
@@ -129,7 +129,7 @@ func TestForgeNeoForgeInstallerRunsRealJVMProcessorAndPatchedClasspath0404(t *te
 		t.Skip("java unavailable")
 	}
 	generated := makeForgeTestJar0404(t, "cpw.mods.bootstraplauncher.BootstrapLauncher", `package cpw.mods.bootstraplauncher; public class BootstrapLauncher { public static void main(String[] args) { System.out.println("LOADER_STARTED " + String.join(" ", args)); } }`, false)
-	// Processor transforms the installer patch input into a verified runtime JAR.
+	// Процессор преобразует входной патч установщика в проверенный JAR Runtime.
 	importBase64 := "java.util.Base64.getDecoder().decode(\"" + javaBase64Encode0404(generated) + "\")"
 	source := `import java.nio.file.*; public class PatchProcessor { public static void main(String[] args) throws Exception { Path patch=null,out=null; for (int i=0;i<args.length;i++) { if (args[i].equals("--patch")) patch=Path.of(args[++i]); else if(args[i].equals("--out")) out=Path.of(args[++i]); } if(patch==null||out==null||!Files.readString(patch).equals("binary-patch-fixture")) throw new IllegalStateException("patch input missing or corrupt"); Files.createDirectories(out.getParent()); Files.write(out, ` + importBase64 + `); } }`
 	processorJar := makeForgeTestJar0404(t, "PatchProcessor", source, true)

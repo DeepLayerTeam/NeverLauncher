@@ -1,5 +1,5 @@
-// Operator workflow: only independently pinned Ed25519 public keys may verify
-// Guard envelopes. The web Admin never receives private signing keys.
+// Порядок действий оператора: конверты Guard проверяются только независимо закреплёнными
+// открытыми ключами Ed25519. Веб-панель Admin никогда не получает закрытые ключи подписи.
 export type GuardContent05011 = {
   schemaVersion: 'launcher.guard-compatibility.v1';
   projectId: string; minecraft: string; loader: string;

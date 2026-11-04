@@ -16,9 +16,9 @@ import (
 	"testing"
 )
 
-// This integration test executes an actual Java entrypoint after HTTP-backed
-// materialization. It verifies Maven dependency resolution, not a Mojang game
-// boot (which requires licensed upstream artifacts and a graphical host).
+// Интеграционный тест выполняет настоящую точку входа Java после подготовки через
+// HTTP. Он проверяет разрешение зависимостей Maven, а не запуск игры Mojang,
+// требующий лицензированных внешних артефактов и графического хоста.
 func TestFabricQuilt0403MaterializedClasspathRunsOnJVM(t *testing.T) {
 	for _, binary := range []string{"java", "javac", "jar"} {
 		if _, err := exec.LookPath(binary); err != nil {
@@ -75,9 +75,9 @@ func TestFabricQuilt0403MaterializedClasspathRunsOnJVM(t *testing.T) {
 						"libraries": []any{
 							map[string]any{"name": tc.coordinate, "url": base + "/maven"},
 							map[string]any{"name": dependencyName, "url": base + "/maven"},
-							// This unavailable Windows-only dependency must not prevent Linux installation.
+							// Эта отсутствующая зависимость только для Windows не должна мешать установке на Linux.
 							map[string]any{"name": "org.example:windows-only:1.0", "url": base + "/unavailable", "rules": []any{map[string]any{"action": "allow", "os": map[string]any{"name": "windows"}}}},
-							// Server-only library must never enter the client classpath.
+							// Библиотека только для сервера никогда не должна попадать в classpath клиента.
 							map[string]any{"name": "org.example:server-only:1.0", "clientreq": false},
 						},
 						"arguments": map[string]any{"jvm": []any{"-Dloader.fixture=" + tc.loader}},

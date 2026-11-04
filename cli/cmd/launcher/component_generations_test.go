@@ -54,7 +54,7 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	if err != nil || floor.Generation != 7 {
 		t.Fatalf("floor=%+v %v", floor, err)
 	}
-	// A replay of exactly the installed signed set is safe (repair/idempotency).
+	// Повторное применение точно того же установленного подписанного набора безопасно: восстановление идемпотентно.
 	if err := checkComponentGeneration02311(root, m); err != nil {
 		t.Fatal(err)
 	}
@@ -79,8 +79,8 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	if err != nil || floor.Generation != 8 {
 		t.Fatalf("floor after update=%+v %v", floor, err)
 	}
-	// Crash after committed state but before watermark: recover advances floor
-	// only after hashing ALL actual installed binaries.
+	// Сбой после фиксации состояния, но до записи контрольного значения: восстановление
+	// поднимает границу лишь после хеширования ВСЕХ фактически установленных бинарников.
 	m.SecurityGeneration = 9
 	m.ProductVersion = "0.23.13"
 	signComponentGenerationFixture02311(t, bundle, m, private)
@@ -98,8 +98,8 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	if err != nil || floor.Generation != 9 {
 		t.Fatalf("recovery floor=%+v %v", floor, err)
 	}
-	// Neither deleting nor rewriting an installed state to the older version
-	// can pass the retained security watermark.
+	// Ни удаление, ни перезапись установленного состояния более старой
+	// версией не должны обходить сохранённую нижнюю границу безопасности.
 	if err := os.Remove(filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))); err != nil {
 		t.Fatal(err)
 	}

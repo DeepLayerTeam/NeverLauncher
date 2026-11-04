@@ -38,10 +38,10 @@ export function ResourceGrid({ section, payload, onSelect, selectedId, columns }
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
   const [openId, setOpenId] = useState<string | null>(null);
-  // Admin overview is the access-filtered source of projects. Public /projects is not.
+  // Обзор Admin, отфильтрованный по правам, — источник проектов. Публичный /projects таковым не является.
   const source = section === 'projects' && isRecord(payload) ? payload.projects : payload;
   const rows = useMemo(() => collection<Item>(source), [source]);
-  // The overview returns arrays at named keys rather than `items`.
+  // Обзор возвращает массивы по именованным ключам, а не в `items`.
   const projectRows = section === 'projects' && Array.isArray(source) ? source.filter(isRecord) : rows;
   const cols = columns ?? definitions[section] ?? [];
   const facets = cols.filter(c => c.facet);

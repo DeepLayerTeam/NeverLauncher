@@ -1,5 +1,5 @@
-// Actual Launcher startup state, not an invented percentage or optimistic ready flag.
-// Operations update Stage in the Native/Backend UI flow; this view only describes it.
+// Фактическое состояние запуска Launcher, без выдуманного процента или оптимистичного флага готовности.
+// Операции обновляют Stage в цепочке Native/Backend/UI; это представление только описывает его.
 export type StartupStage0427 =
   | "idle" | "connecting" | "session" | "project" | "profile"
   | "manifest" | "java" | "files" | "repair" | "cleanup"

@@ -26,8 +26,8 @@ def validate(folder, source_commit, version, run_id, run_attempt):
         raise ValueError("version, CI run ID and attempt are mandatory")
     folder = Path(folder)
     present = {p.stem for p in folder.glob("*.json")}
-    # The final certificate is downloaded into this same directory by Actions.
-    # Never treat it as a seventh platform; reject every other unexpected JSON.
+    # Итоговый сертификат скачивается Actions в тот же каталог. Не считайте его
+    # седьмой платформой; отклоняйте любой другой неожиданный JSON.
     present.discard("extension-acceptance-certificate")
     if present != set(TARGETS):
         raise ValueError(
