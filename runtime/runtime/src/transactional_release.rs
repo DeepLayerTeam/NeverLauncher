@@ -1,6 +1,6 @@
-//! Crash-recoverable, whole-release client installation. Network workers only write
-//! into staging. A durable write-ahead journal is published before touching any
-//! live file, and old file bytes are preserved until the next release is safe.
+//! Установка клиента целым релизом с восстановлением после сбоя. Сетевые обработчики записывают файлы только
+//! в промежуточный каталог. Устойчивый журнал опережающей записи публикуется до изменения любого
+//! рабочего файла, а прежние байты сохраняются до подтверждения безопасности следующего релиза.
 use crate::{download_scheduler::{self, DownloadLimits, ProgressSink}, file_ownership, platform_fs,
     network_resilience::Directive, safe_join, sha256_file, release_generations,
     verify_manifest_signature, resolved_download_0246, DownloadResult, Manifest};
@@ -78,8 +78,8 @@ fn write_slot<T: Serialize>(root: &Path, kind: &str, generation: u64, value: &T)
         created = true;
         f.write_all(&data).and_then(|_| f.sync_all()).map_err(|e| e.to_string())?;
         drop(f);
-        // Never unlink a pointer slot before replacing it. A sharing violation
-        // or power failure must leave the last durable pointer intact.
+        // Никогда не удаляйте ячейку указателя перед заменой. Ошибка совместного доступа
+        // или отключение питания должны оставить последний устойчивый указатель целым.
         platform_fs::replace_file(root, &temp, &dest)?;
         sync_dir(&base(root))
     })();
@@ -146,8 +146,8 @@ fn validate_release(release: &Release, key: &str) -> Result<(), String> {
             return Err(format!("invalid release ownership record: {p}"));
         }
     }
-    // Manifest v3 requires the complete selected set, including optional
-    // components, rather than treating an absent selected JAR as disposable.
+    // Manifest v3 требует полного выбранного набора, включая необязательные
+    // компоненты: отсутствие выбранного JAR нельзя считать основанием для его удаления.
     if release.manifest.schema_version == "3.0" {
         for file in &plan.files {
             if !seen.contains(&file.path) {
@@ -211,17 +211,17 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
     }
     Ok(())
 }
-// Keep the last genuinely different, verified release available after a repair.
-// A repair replaces bytes within the SAME signed selection; its backup may
-// contain the damaged files being repaired and is not a rollback candidate.
-// The earlier A -> B checkpoint is still valid after B -> repaired B, provided
-// the previously active release is exactly the one that checkpoint installed.
+// После восстановления сохраняем последний действительно другой проверенный релиз.
+// Восстановление заменяет байты внутри ТОГО ЖЕ подписанного набора; резервная копия может
+// содержать повреждённые исправляемые файлы и потому не годится для отката.
+// Контрольная точка перехода A → B остаётся действительной после B → исправленный B, если
+// ранее активный релиз точно совпадает с релизом, установленным этой точкой.
 fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Option<Journal>, String> {
     if completed.state != "complete" {
         return Err("rollback checkpoint requires a completed switch".into());
     }
     let Some(previous) = completed.previous.as_ref() else {
-        // A clean installation has nothing to roll back to.
+        // При чистой установке откатываться не к чему.
         return Ok(None);
     };
     let same_selection = previous.manifest.signature.as_ref().map(|s| (&s.signature, &s.public_key))
@@ -230,19 +230,19 @@ fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Op
         && previous.installed.iter().collect::<BTreeSet<_>>()
             == completed.next.installed.iter().collect::<BTreeSet<_>>();
     if !same_selection {
-        // A true update or preset switch: retain the verified predecessor.
+        // При настоящем обновлении или смене пресета сохраняем проверенного предшественника.
         return Ok(Some(completed.clone()));
     }
     let Some(mut saved) = last_known_good(root)? else { return Ok(None); };
     verify_journal(root, &saved, key)?;
     if saved.next.id != previous.id || saved.previous.is_none() {
-        // No matching earlier, distinct release. Never call the corrupted
-        // pre-repair bytes a last-known-good backup.
+        // Нет совпадающего более раннего, отличного релиза. Никогда не считайте повреждённые
+        // байты до восстановления последней заведомо исправной резервной копией.
         return Ok(None);
     }
-    // The signed file selection is identical, so the stored A -> B backup and
-    // ownership entries still describe A -> repaired B. Only the active release
-    // identity advances; the trusted A bytes stay in the original backup.
+    // Подписанный набор файлов идентичен, поэтому сохранённая копия перехода A → B и
+    // записи владения всё ещё описывают переход A → исправленный B. Меняется только идентичность
+    // активного релиза; доверенные байты A остаются в прежней резервной копии.
     saved.next = completed.next.clone();
     saved.generation = saved.generation.max(completed.generation)
         .checked_add(1).ok_or("release journal generation overflow")?;
@@ -262,7 +262,7 @@ fn copy_durable(src: &Path, dest: &Path) -> Result<(), String> {
     let mut created = false;
     let result = (|| {
         let mut input = fs::File::open(src).map_err(|e| format!("read backup source {}: {e}", src.display()))?;
-        // create_new refuses a substituted symlink/existing backup path.
+        // create_new отклоняет подставленную символическую ссылку или существующий путь резервной копии.
         let mut output = fs::OpenOptions::new().write(true).create_new(true).open(dest)
             .map_err(|e| format!("create durable copy {}: {e}", dest.display()))?;
         created = true;
@@ -285,11 +285,11 @@ fn switch_file(root: &Path, source: &Path, destination: &Path) -> Result<(), Str
 }
 fn restore(root: &Path, j: &Journal) -> Result<(), String> {
     let back = backup_dir(root, &j.backup_id);
-    // Fail on case aliases, hostile reparse points or denied destinations
-    // BEFORE any restoration makes a change to the live tree.
+    // Отклоняйте альтернативные регистры путей, вредоносные точки перенаправления и запрещённые назначения
+    // ДО того, как восстановление изменит хотя бы один рабочий файл.
     let destinations: Vec<_> = j.entries.iter().map(|e| safe_join(root, &e.path)).collect::<Result<_, _>>()?;
     platform_fs::preflight_targets(root, &destinations)?;
-    // Validate ALL backup bytes before modifying even the first destination.
+    // Проверьте ВСЕ резервные байты до изменения даже первого целевого файла.
     for e in &j.entries {
         if let Some(ref digest) = e.old_sha256 {
             let saved = safe_join(&back, &e.path)?;
@@ -347,10 +347,10 @@ fn recover_locked(root: &Path, key: &str) -> Result<(), String> {
     }
     Ok(())
 }
-/// Return only signed catalog identities to the native application, so it
-/// can fetch independent server permissions before a multi-release rollback
-/// or crash recovery. No disk operations or permission lists are accepted
-/// from the renderer. Journals/ownership are fully verified during execution.
+/// Возвращает нативному приложению только идентичности подписанного каталога, чтобы оно
+/// получило независимые разрешения сервера перед откатом на несколько релизов
+/// или восстановлением после сбоя. Операции с диском и перечни разрешений из
+/// интерфейса не принимаются. Журналы и владение проверяются при выполнении.
 pub fn release_manifests_for_permissions_0393(root:&Path,key:&str,include_last_known_good:bool)->Result<Vec<Manifest>,String>{
     let _guard=lock(root)?;
     let root=root.canonicalize().map_err(|e|e.to_string())?;
@@ -375,9 +375,9 @@ pub fn release_manifests_for_permissions_0393(root:&Path,key:&str,include_last_k
     }
     Ok(manifests)
 }
-/// Reads only the signed identity needed to request fresh server rights.
-/// This is NOT installed-file verification. Callers MUST subsequently run
-/// verified_active_selection under the authenticated runtime permission scope.
+/// Читает только подписанную идентичность, необходимую для запроса новых прав сервера.
+/// Это НЕ проверка установленных файлов. Вызывающие стороны ОБЯЗАНЫ затем выполнить
+/// verified_active_selection в области авторизованных разрешений Runtime.
 pub fn active_manifest_for_permissions_0392(root:&Path,key:&str)->Result<Option<Manifest>,String>{
     let _guard=lock(root)?;
     let canonical=root.canonicalize().map_err(|e|e.to_string())?;
@@ -390,8 +390,8 @@ pub fn active_manifest_for_permissions_0392(root:&Path,key:&str)->Result<Option<
         None=>Ok(None),
     }
 }
-/// Called before ANY launch/plan and before staging another release. If a switch
-/// was interrupted, restore the complete old set before permitting game launch.
+/// Вызывается перед ЛЮБЫМ запуском или планом и до подготовки следующего релиза. Если переключение
+/// прервалось, восстановите полный старый набор до разрешения запуска игры.
 pub async fn recover(root: &Path, key: &str) -> Result<(), String> {
     let root = root.to_path_buf(); let key = key.to_owned();
     crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
@@ -400,8 +400,8 @@ pub async fn recover(root: &Path, key: &str) -> Result<(), String> {
         recover_locked(&root, &key)
     }).await.map_err(|e| e.to_string())?
 }
-/// Reject launch with an unrelated (even validly signed) manifest when an active
-/// release is registered. The caller still performs its full file integrity check.
+/// Запретите запуск с посторонним манифестом, даже корректно подписанным, при зарегистрированном
+/// активном релизе. Вызывающий код всё равно выполняет полную проверку целостности файлов.
 pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -> Result<std::sync::Arc<fs::File>, String> {
     verify_manifest_signature(manifest, key)?;
     let root = root.to_path_buf(); let key = key.to_owned(); let signed = manifest.clone();
@@ -412,8 +412,8 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
         let path = base(&root).join("release.lock");
         file_ownership::ensure_no_symlinks(&root, &path)?;
         let file = fs::OpenOptions::new().read(true).write(true).create(true).open(&path).map_err(|e| e.to_string())?;
-        // Recover first if there is no running game. If a different game holds
-        // a shared lease, the journal must already be complete.
+        // Сначала восстановите данные, если игра не запущена. Если другая игра удерживает
+        // общую аренду, журнал уже должен быть завершён.
         match file.try_lock_exclusive() {
             Ok(()) => {
                 let recovered = recover_locked(&root, &key);
@@ -439,8 +439,8 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
     }).await.map_err(|e| e.to_string())?
 }
 
-// Compare the requested selection with the active verified release before launch.
-// Changing the UI dropdown alone must never silently launch the older preset.
+// Сравните запрошенный набор с активным проверенным релизом до запуска.
+// Одна только смена пункта интерфейса не должна незаметно запускать старый пресет.
 pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:Option<&str>)->Result<(),String>{
     verify_manifest_signature(manifest,key)?;
     let wanted_plan=resolved_download_0246::resolve(manifest,preset)?;
@@ -455,8 +455,8 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
     if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("active client release does not match signed manifest".into())}
     let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
     if wanted!=actual {return Err("selected component preset is not installed: install selected preset first".into())}
-    // Two selections can contain the same files but different signed launch
-    // actions. Never accept a UI-only preset change as an installed selection.
+    // Два набора могут содержать одинаковые файлы, но разные подписанные действия
+    // запуска. Не принимайте смену пресета только в интерфейсе за установленный набор.
     if manifest.component_catalog.as_ref().is_some_and(|c|c.schema_version=="5.0") {
         let requested=preset.filter(|s|!s.is_empty()).unwrap_or_default();
         let installed=active.preset.as_deref().filter(|s|!s.is_empty()).unwrap_or_default();
@@ -466,8 +466,8 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
     }
     Ok(())
 }
-// v5 actions cannot be applied against a merely downloaded but uncommitted
-// manifest. An identical signed active release is required even for default presets.
+// Действия v5 нельзя применять к лишь скачанному, но не зафиксированному
+// манифесту. Даже пресеты по умолчанию требуют идентичного подписанного активного релиза.
 pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Option<String>,String>{
     let active=pointer(root)?.active.ok_or("signed component actions require installed active release")?;
     let expected=manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
@@ -481,7 +481,7 @@ pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Opti
     Ok(active.preset)
 }
 
-// Used for the exact installed selection when verifying files before launch.
+// Используется для точного установленного набора при проверке файлов перед запуском.
 pub fn active_preset_for_manifest(manifest:&Manifest,root:&Path)->Option<String>{
     let active=pointer(root).ok()?.active?;
     if active.manifest.signature.as_ref().map(|s|&s.signature)==manifest.signature.as_ref().map(|s|&s.signature){active.preset}else{None}
@@ -492,9 +492,9 @@ pub async fn ready_for_launch(manifest: &Manifest, root: &Path, key: &str) -> Re
     Ok(())
 }
 
-// Only a file in the previous VERIFIED managed ownership record, with the
-// identical signed size and digest, can be reused without staging. A matching
-// player-owned file is NEVER promoted into managed ownership implicitly.
+// Без повторной подготовки можно использовать только файл из прежней ПРОВЕРЕННОЙ записи управляемого
+// владения с идентичными подписанными размером и хешем. Совпадающий файл игрока
+// НИКОГДА не становится управляемым автоматически.
 fn reusable_file(root:&Path, previous:Option<&Release>, next:&Release, path:&str)->Result<bool,String>{
     let Some(old)=previous else {return Ok(false)};
     if !old.installed.iter().any(|p|p==path) {return Ok(false)}
@@ -506,8 +506,8 @@ fn reusable_file(root:&Path, previous:Option<&Release>, next:&Release, path:&str
     Ok(matches_digest(&location,new_sha,new_size))
 }
 
-// A staged file or an unchanged, verified previously-owned file is required
-// for every output path, before publishing ANY switching journal.
+// До публикации ЛЮБОГО журнала переключения для каждого целевого пути требуется
+// подготовленный файл или неизменённый проверенный файл из прежнего управляемого набора.
 fn verify_prepared(root:&Path,stage:&Path, next:&Release, previous:Option<&Release>)->Result<(),String>{
     for p in &next.installed {
         if reusable_file(root,previous,next,p)? {continue}
@@ -527,12 +527,12 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     crate::trust_policy::check(root,&next.manifest,key)?;
     let current = pointer(root)?;
     verify_prepared(root,stage,&next,current.active.as_ref())?;
-    // Persistence barrier for all verified staged bytes and their directory
-    // entries. The journal may be published only after these bytes are durable.
+    // Барьер устойчивости для всех проверенных подготовленных байтов и записей
+    // каталогов. Журнал можно публиковать только после их устойчивой записи.
     let mut parents = BTreeSet::new();
     for path in &next.installed {
-        // The previously owned, SHA-256-verified live file is already
-        // durable. It has no staging counterpart in a delta transaction.
+        // Ранее управляемый рабочий файл, проверенный по SHA-256, уже
+        // устойчиво записан. В дельта-транзакции ему не соответствует промежуточный файл.
         if reusable_file(root,current.active.as_ref(),&next,path)? {continue}
         let file_path = safe_join(stage, path)?;
         fs::File::open(&file_path).and_then(|f| f.sync_all())
@@ -542,11 +542,11 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     for parent in parents { sync_dir(&parent)?; }
     if let Some(ref old) = current.active {
         validate_release(old, key)?;
-        // Cross-check the active signed release in addition to the durable
-        // watermark: losing one local journal file must never enable a replay.
-        // Generation 0 is the legacy, pre-watermark mode. Preserve its normal
-        // signed update path; once a positive generation is used, reject any
-        // downgrade or equivocation, including attempts to return to zero.
+        // Дополнительно сверяйте активный подписанный релиз с устойчивой
+        // контрольной меткой: утрата одного локального журнала не должна разрешить повтор.
+        // Поколение 0 — прежний режим без контрольной метки. Сохраняем обычный
+        // порядок подписанного обновления; после использования положительного поколения запрещаем любой
+        // откат или двусмысленность, включая возврат к нулю.
         if (next.manifest.game_release_generation > 0 || old.manifest.game_release_generation > 0) &&
            (next.manifest.game_release_generation < old.manifest.game_release_generation ||
             (next.manifest.game_release_generation == old.manifest.game_release_generation &&
@@ -568,8 +568,8 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     let backup_id = format!("{:032x}", rand::random::<u128>());
     let back = backup_dir(root, &backup_id);
     safe_dir(root, &back)?;
-    // Reserve the current bytes plus one potential restore temp per file.
-    // If disk capacity is already insufficient, NO live file has changed.
+    // Резервируем текущие байты и один возможный временный файл восстановления на каждый файл.
+    // Если места на диске уже недостаточно, НИ ОДИН рабочий файл ещё не изменён.
     let mut rollback_bytes = 0u64;
     let all_paths: Vec<_> = all.iter().map(|p| safe_join(root, p)).collect::<Result<_, _>>()?;
     platform_fs::preflight_targets(root, &all_paths)?;
@@ -588,8 +588,8 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     for p in all {
         let live = safe_join(root, &p)?;
         platform_fs::check_target(root, &live)?;
-        // A newly referenced path was not previously managed. A player-owned
-        // file at that path must not be silently replaced by the new release.
+        // На ранее неуправляемый путь теперь есть ссылка. Находящийся там файл игрока
+        // не должен незаметно заменяться новым релизом.
         let was_managed = previous.as_ref().is_some_and(|old| old.installed.contains(&p));
         if !was_managed && live.exists() {
             return Err(format!("untracked user file conflicts with new managed path: {p}"));
@@ -612,8 +612,8 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     }
     sync_dir(&back)?;
     if let Some(ref old) = previous {
-        // Repair may replace corrupt *selected* files only if the selection is
-        // unchanged. Switching presets must not retire a locally modified JAR.
+        // Восстановление может заменять повреждённые ВЫБРАННЫЕ файлы только при неизменном наборе.
+        // Смена пресетов не должна удалять локально изменённый JAR.
         let repairing_same_selection = old.manifest.signature.as_ref().map(|s| &s.signature)
             == next.manifest.signature.as_ref().map(|s| &s.signature) && old.preset == next.preset;
         if !repairing_same_selection && !verify_installed(root, old)? {
@@ -624,14 +624,14 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     let mut j = Journal { schema: SCHEMA, generation: prior_generation + 1, state: "switching".into(),
         previous, next: next.clone(), backup_id, entries };
     verify_journal(root, &j, key)?;
-    // Durable write-ahead barrier: no live bytes change before this succeeds.
+    // Устойчивый барьер опережающей записи: до его успеха ни один рабочий байт не изменяется.
     write_slot(root, "switch", j.generation, &j)?;
     let result = (|| -> Result<(), String> {
         for e in &j.entries {
             let target = safe_join(root, &e.path)?;
             if e.new_sha256.is_some() {
-                // Reuse does not write to the live tree. Re-check immediately
-                // before switch in case the file changed since preflight.
+                // Повторное использование не записывает данные в рабочее дерево. Перепроверьте файл непосредственно
+                // перед переключением: он мог измениться после предварительной проверки.
                 if reusable_file(root,j.previous.as_ref(),&j.next,&e.path)? {continue}
                 let staged = safe_join(stage, &e.path)?;
                 switch_file(root, &staged, &target)?;
@@ -644,9 +644,9 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         if !verify_installed(root, &next)? { return Err("installed client set failed post-switch verification".into()); }
         let generation = pointer(root)?.generation + 1;
         write_slot(root, "active", generation, &Pointer { schema: SCHEMA, generation, active: Some(next.clone()) })?;
-        // Persist the previous GOOD release before publishing completion.
-        // A repair must not replace a valid A -> B checkpoint with the bad
-        // pre-repair bytes of B -> B. Recovery uses exactly the same rule.
+        // Сохраняйте предыдущий ИСПРАВНЫЙ релиз до публикации завершения.
+        // Восстановление не должно подменять действительную контрольную точку A → B повреждёнными
+        // байтами B → B до восстановления. Восстановление после сбоя подчиняется тому же правилу.
         j.state = "complete".into(); j.generation += 1;
         persist_rollback_checkpoint(root, &j, key)?;
         write_slot(root, "switch", j.generation, &j)?;
@@ -655,8 +655,8 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         Ok(())
     })();
     if let Err(err) = result {
-        // If recovery fails (disk full / file locked), leave journal and old
-        // backups intact. The next launch retries before any execution.
+        // При ошибке восстановления (диск заполнен, файл заблокирован) сохраняйте журнал и старые
+        // резервные копии без изменений. Следующий запуск повторит восстановление до выполнения игры.
         match recover_locked(root, key) {
             Ok(()) => Err(format!("client release switch failed and previous installation recovered: {err}")),
             Err(recovery) => Err(format!("client switch failed: {err}; recovery pending: {recovery}")),
@@ -664,8 +664,8 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     } else { Ok(()) }
 }
 
-/// Stage all selected files (including offline cache hits), verify the entire
-/// set, and commit only if every required staged file passed SHA-256.
+/// Подготовьте все выбранные файлы, включая попадания из офлайн-кэша, проверьте весь
+/// набор и фиксируйте его только после проверки SHA-256 каждого обязательного файла.
 pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>, preset:Option<String>) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, key)?;
@@ -676,8 +676,8 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     let root = root.canonicalize().map_err(|e| e.to_string())?;
     release_generations::check(&root,manifest)?;
     crate::trust_policy::check(&root,manifest,key)?;
-    // Stage only delta bytes. The journal/rollback still tracks the complete
-    // final managed set, not just files transferred during this operation.
+    // Подготавливайте только изменившиеся байты. Журнал и откат охватывают полный
+    // итоговый управляемый набор, а не только переданные в этой операции файлы.
     let previous=pointer(&root)?.active;
     if let Some(ref old)=previous {
         validate_release(old,key)?;
@@ -687,8 +687,8 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
             return Err("previous active release was modified: repair it before switching signed components".into());
         }
     }
-    // Fail before network traffic if a newly selected signed path would take
-    // over an existing player-owned file. Commit repeats this check under lock.
+    // До сетевых запросов откажите, если новый выбранный подписанный путь займёт
+    // существующий файл игрока. При фиксации повторите проверку под блокировкой.
     for f in &plan.files {
         if previous.as_ref().is_some_and(|old|old.installed.contains(&f.path)){continue}
         let target=safe_join(&root,&f.path)?;
@@ -705,15 +705,15 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     for file in &plan.files {
         if reusable_file(&root,previous.as_ref(),&desired,&file.path)? { reused.insert(file.path.clone()); }
     }
-    // Operation ID is generated by durable_downloads, but never use its raw
-    // input as a filesystem path (durable journals may be user modified).
+    // Идентификатор операции создаётся durable_downloads, но не используйте его исходное
+    // значение как путь файловой системы: устойчивые журналы могли быть изменены пользователем.
     let stage_id = hex::encode(Sha256::digest(operation_id.as_bytes()));
     let work = base(&root).join("work").join(&stage_id);
     let stage = work.join("files");
     safe_dir(&root, &stage)?;
-    // Verify available capacity BEFORE starting a multi-GB staging operation.
-    // Existing verified stage bytes do not need to be reserved twice; the
-    // up to six active .part/cache copies may coexist during parallel delivery.
+    // Проверьте свободное место ДО начала подготовки нескольких гигабайт.
+    // Уже проверенные подготовленные байты не нужно резервировать повторно; при
+    // параллельной доставке могут сосуществовать до шести активных копий .part/кэша.
     let mut required_stage = 0u64;
     let mut largest_pending = Vec::new();
     for f in &manifest.files {
@@ -737,9 +737,9 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         inflight_space = platform_fs::checked_add(inflight_space, size)?;
     }
     platform_fs::require_free_space(&root, platform_fs::checked_add(required_stage, inflight_space)?)?;
-    // The scheduler always verifies SHA-256 on its staged/cache/network bytes.
-    // Previously owned, unchanged files need no copy or network transfer.
-    // An untracked file is never used as an implicit cache hit.
+    // Планировщик всегда проверяет SHA-256 подготовленных файлов, кэша и сетевых данных.
+    // Ранее управляемые неизменённые файлы не требуют копирования или передачи по сети.
+    // Неучтённый файл никогда автоматически не считается попаданием в кэш.
     let to_download:std::collections::HashSet<String>=selected.iter().filter(|p|!reused.contains(*p)).cloned().collect();
     let last_progress:Arc<Mutex<Option<crate::download_scheduler::DownloadProgress>>> = Arc::new(Mutex::new(None));
     let relay: Option<ProgressSink> = sink.clone().map(|output| {
@@ -761,7 +761,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
             }
         }
     };
-    // Distinguish byte-for-byte verified reuse from network/cache transfers.
+    // Отличайте повторное использование байтов после проверки от передач из сети или кэша.
     result.skipped += reused.len();
     for f in &plan.files {
         if reused.contains(&f.path) {
@@ -791,9 +791,9 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         report_phase("failed");
         return Err(error);
     }
-    // Do not leave a newly activated release behind if the user cancelled or
-    // paused after the irreversible switch phase began. Switching itself must
-    // run to completion, then use the same durable rollback procedure.
+    // Не оставляйте вновь активированный релиз, если пользователь отменил или
+    // приостановил операцию после начала необратимой фазы переключения. Само переключение
+    // необходимо завершить, затем применить ту же устойчивую процедуру отката.
     if *control.borrow() != Directive::Running && manifest.game_release_generation == 0 {
         rollback(&restore_root, &restore_key).await?;
     }
@@ -804,10 +804,10 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
 }
 
 
-/// Adopt only byte-verified files from an independently materialized staged
-/// package. This uses the ordinary durable release commit but NEVER contacts
-/// manifest file URLs. It is the staged-E2E bridge from client install to the
-/// selected native runtime plan, not a general untracked-file takeover API.
+/// Принимайте только проверенные побайтово файлы из независимо сформированного промежуточного
+/// пакета. Используется обычная устойчивая фиксация релиза, но НИКОГДА не запрашиваются
+/// URL файлов манифеста. Это мост E2E от установки клиента к выбранному нативному
+/// плану Runtime, а не универсальный API присвоения неучтённых файлов.
 pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     key:&str, preset:Option<String>) -> Result<(usize,String),String> {
     verify_manifest_signature(manifest,key)?;
@@ -826,8 +826,8 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     if pointer(&root)?.active.is_some() {
         return Err("offline staged adoption requires a new, empty runtime release root".into());
     }
-    // The exclusive switch lock is held during commit; neither an untracked
-    // live file nor a changed staged file can be silently adopted.
+    // Эксклюзивная блокировка переключения удерживается при фиксации; ни неучтённый
+    // рабочий файл, ни изменённый подготовленный файл нельзя незаметно принять.
     let id=format!("{:032x}",rand::random::<u128>());
     let stage=base(&root).join("work").join(&id).join("files");
     safe_dir(&root,&stage)?;
@@ -861,8 +861,8 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     Ok((count,digest))
 }
 
-/// Explicit rollback of the most recently committed release. It restores only
-/// registered managed paths; non-managed player files are never enumerated.
+/// Явный откат последнего зафиксированного релиза. Восстанавливаются только
+/// зарегистрированные управляемые пути; неуправляемые файлы игрока не перечисляются.
 pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
     let root = root.to_path_buf(); let key = key.to_owned();
     crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
@@ -874,9 +874,9 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         if j.previous.is_none() {
             return Err("no previous working client release to roll back to".into());
         }
-        // A repair may have backed up already corrupted managed bytes to make
-        // a failed repair crash-recoverable. Such bytes are *not* a usable
-        // last-known-good release and must never be offered for user rollback.
+        // Во время восстановления повреждённые управляемые байты могли быть сохранены в резервную копию,
+        // чтобы пережить сбой неудачной попытки исправления. Эти байты НЕ подходят как
+        // последняя исправная версия, поэтому их нельзя предлагать пользователю для отката.
         if let Some(ref old)=j.previous {
             for p in &old.installed {
                 let backup=safe_join(&backup_dir(&root,&j.backup_id),p)?;
@@ -891,8 +891,8 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         if active.manifest.game_release_generation > 0 { return Err("game rollback requires a NEW signed gameReleaseGeneration; publish the old content as a new release".into()); }
         if active.id != j.next.id { return Err("last-known-good is not the previous active release".into()); }
         if !verify_installed(&root, &active)? { return Err("current release was modified; refusing to overwrite local changes".into()); }
-        // Publish switching intent before the first restoration so a power
-        // failure during explicit rollback is also recoverable.
+        // Публикуйте намерение переключения до первого восстановления, чтобы отключение
+        // питания во время явного отката также можно было исправить.
         j.state = "reverting".into();
         j.generation = journal(&root)?.map_or(0, |current| current.generation) + 1;
         write_slot(&root, "switch", j.generation, &j)?;
@@ -932,9 +932,9 @@ mod tests {
         assert_eq!(manifest.files.len(), bytes.len());
         dir
     }
-    // A new signed selection may retire old optional JARs. Nothing else in
-    // mods/, config/, saves/, or player settings may be swept by the switch or
-    // its inverse, including user-added mods not mentioned by either manifest.
+    // Новый подписанный набор может удалить старые необязательные JAR. Никакие другие файлы
+    // в mods/, config/, saves/ и настройках игрока не должны удаляться переключением или
+    // обратным действием, включая пользовательские моды, не указанные ни в одном манифесте.
     #[tokio::test]
     async fn update_and_rollback_touch_untracked_player_files_0393() {
         let root=std::env::temp_dir().join(format!("nl-player-update-0393-{}-{:x}",std::process::id(),rand::random::<u64>()));
@@ -1009,8 +1009,8 @@ mod tests {
     fn signed_optional_fixture_0246(root:&Path)->(Manifest,String){
         let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
         let catalog=m.component_catalog.as_mut().unwrap();
-        // The fixture test must run on all OSes even when it declares Linux
-        // specific optional conditions in the published reference manifest.
+        // Тестовый сценарий должен работать на всех ОС, даже если в эталонном манифесте
+        // указаны необязательные условия, характерные для Linux.
         for component in &mut catalog.components {component.conditions=None;}
         catalog.digest=crate::component_actions_0245::digest_v5(catalog);
         for f in &mut m.files {
@@ -1089,8 +1089,8 @@ mod tests {
         let (recorded,preset)=verified_active_selection_02410(&root,&key).unwrap().unwrap();
         assert_eq!(recorded.signature.as_ref().unwrap().signature,manifest.signature.as_ref().unwrap().signature);
         assert_eq!(preset.as_deref(),Some("minimal"));
-        // User-modified bytes must not be exported as if they were an installed
-        // signed choice, even when the pointer itself is valid.
+        // Изменённые пользователем байты нельзя экспортировать как установленный
+        // подписанный вариант, даже если сам указатель действителен.
         fs::write(root.join("mods/core.jar"),b"TAMPERED").unwrap();
         assert!(verified_active_selection_02410(&root,&key).is_err());
         fs::remove_dir_all(root).unwrap();
@@ -1108,8 +1108,8 @@ mod tests {
         fs::write(root.join("mods/player-custom.jar"),b"PLAYER").unwrap();
         #[cfg(unix)]
         let inode_before={use std::os::unix::fs::MetadataExt;fs::metadata(root.join("mods/core.jar")).unwrap().ino()};
-        // Only the changed subset is staged: the unchanged core is verified
-        // from the previous release record instead of copied or downloaded.
+        // Подготавливается только изменённая часть: неизменённое ядро проверяется
+        // по записи предыдущего релиза, а не копируется или скачивается.
         let stage_two=base(&root).join("test-quality");
         fs::create_dir_all(stage_two.join("mods")).unwrap();
         fs::write(stage_two.join("mods/sodium.jar"),b"SODIUM").unwrap();
@@ -1209,9 +1209,9 @@ mod tests {
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         fs::remove_dir_all(root).unwrap();
     }
-    // The previous working release must remain recoverable even after a repair
-    // of the current release. Otherwise a B -> B repair overwrites the A -> B
-    // rollback checkpoint with potentially corrupted B bytes.
+    // Предыдущий исправный релиз должен оставаться доступным для восстановления даже после ремонта
+    // текущего. Иначе восстановление B → B перезапишет контрольную точку A → B
+    // потенциально повреждёнными байтами B.
     #[tokio::test]
     async fn repair_keeps_the_previous_verified_release_for_explicit_rollback_0409() {
         let root=std::env::temp_dir().join(format!("nl-lkg-repair-0409-{}-{:x}",std::process::id(),rand::random::<u64>()));
@@ -1225,7 +1225,7 @@ mod tests {
         fs::create_dir_all(root.join("saves/test-world")).unwrap();
         fs::write(root.join("saves/test-world/level.dat"),b"PLAYER_WORLD").unwrap();
         fs::write(root.join("mods/custom.jar"),b"PLAYER_MOD").unwrap();
-        // Simulate the corruption for which the player requests repair.
+        // Имитируем повреждение, ради которого игрок запросил восстановление.
         fs::write(root.join("mods/core.jar"),b"BAD").unwrap();
         let repaired=Release{manifest:b.clone(),installed:vec!["mods/core.jar".into(),"mods/added.jar".into()],id:format!("{:032x}",403),preset:None,plan_sha256:None};
         commit(&root,repaired,&key,&staged(&root,&b,&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")])).unwrap();
@@ -1233,7 +1233,7 @@ mod tests {
         let checkpoint=last_known_good(&root).unwrap().unwrap();
         assert_eq!(checkpoint.backup_id,original_backup,"repair must retain the A backup");
         assert_eq!(checkpoint.next.id,format!("{:032x}",403));
-        // A second repair must not lose the original A checkpoint either.
+        // Повторное восстановление тоже не должно терять исходную контрольную точку A.
         fs::write(root.join("mods/core.jar"),b"SECOND_BAD").unwrap();
         let second_repair=Release{manifest:b.clone(),installed:vec!["mods/core.jar".into(),"mods/added.jar".into()],id:format!("{:032x}",404),preset:None,plan_sha256:None};
         commit(&root,second_repair,&key,&staged(&root,&b,&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")])).unwrap();
@@ -1259,8 +1259,8 @@ mod tests {
         let before_repair=last_known_good(&root).unwrap().unwrap();
         fs::write(root.join("libraries/game.jar"),b"DAMAGED").unwrap();
         commit(&root,release(b.clone(),413),&key,&staged(&root,&b,&[("libraries/game.jar",b"B")])).unwrap();
-        // Fault injection: commit published the repaired pointer, but power
-        // failed before the new checkpoint and complete switch were durable.
+        // Внедрение сбоя: фиксация опубликовала указатель исправленной версии, но питание
+        // исчезло до устойчивого сохранения новой контрольной точки и полного переключения.
         for slot in 0..2 { let _=fs::remove_file(state_path(&root,"last-known-good",slot)); }
         write_slot(&root,"last-known-good",before_repair.generation,&before_repair).unwrap();
         let mut pending=journal(&root).unwrap().unwrap();
@@ -1384,7 +1384,7 @@ mod tests {
         let mut entry = journal(&root).unwrap().unwrap();
         entry.state = "reverting".into(); entry.generation += 1;
         write_slot(&root,"switch",entry.generation,&entry).unwrap();
-        // Simulate crash before any old bytes are restored.
+        // Имитируем сбой до восстановления любых старых байтов.
         recover_locked(&root,&key).unwrap();
         assert_eq!(fs::read(root.join("mods/a.jar")).unwrap(),b"OLD");
         assert_eq!(pointer(&root).unwrap().active.unwrap().manifest.version,"1");
@@ -1522,7 +1522,7 @@ mod tests {
             next, backup_id, entries };
         write_slot(&root,"switch",generation,&j).unwrap();
         fs::write(root.join("mods/a.jar"),b"NEW_A").unwrap();
-        // A restart must block launching a mixed set and replay the journal.
+        // После перезапуска необходимо блокировать запуск смешанного набора и воспроизвести журнал.
         recover_locked(&root,&key).unwrap();
         assert_eq!(fs::read(root.join("mods/a.jar")).unwrap(),b"OLD_A");
         assert_eq!(fs::read(root.join("mods/b.jar")).unwrap(),b"OLD_B");
@@ -1592,8 +1592,8 @@ mod tests {
 
 }
 
-/// Read the VERIFIED installed ownership record for desktop component diffs.
-/// Never infer ownership by scanning disk and never read an unsigned client list.
+/// Прочитать ПРОВЕРЕННУЮ запись владения установленными файлами для сравнения компонентов Desktop.
+/// Никогда не определять владение сканированием диска и не читать неподписанный список клиента.
 pub fn installed_component_state_0247(manifest:&Manifest,root:&Path,key:&str)->Result<(Option<String>,Vec<String>),String>{
     verify_manifest_signature(manifest,key)?;
     if journal(root)?.is_some_and(|j|j.state!="complete"){

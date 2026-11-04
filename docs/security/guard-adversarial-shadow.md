@@ -1,10 +1,10 @@
-# NeverLauncher 0.50.12 — Adversarial E2E & Shadow Pilot
+# NeverLauncher 0.50.12 — сквозные испытания на обходы защиты и теневой пилот
 
-**Status: source implementation with live Java/Go regression checks, not a certified Guard/Minecraft rollout.** This milestone adds an executable test runner and authentic server-observation journal. Nothing in the repository pre-populates 10,000 player-hours or claims fake Minecraft joins.
+**Статус: реализация в исходниках с реальными регрессионными проверками Java/Go, а не сертифицированное развёртывание Guard/Minecraft.** Этот этап добавляет исполняемый набор тестов и подлинный журнал серверных наблюдений. Репозиторий не содержит заранее созданных 10 000 часов игры и не заявляет о вымышленных подключениях Minecraft.
 
-## Live server observations (not disabled enforcement)
+## Наблюдения работающего сервера (без отключения защитных мер)
 
-In the control-plane API service environment:
+В окружении API-службы плоскости управления:
 
 ```sh
 install -d -m 0700 /var/lib/launcher/guard-shadow
@@ -14,9 +14,9 @@ export LAUNCHER_GUARD_SHADOW_DIR=/var/lib/launcher/guard-shadow
 export LAUNCHER_GUARD_SHADOW_KEY_FILE=/etc/launcher/guard-shadow-key.hex
 ```
 
-Both variables must be set; absent variables disable the recorder, mismatched variables or inaccessible/unsafe key/directory fail closed when the authoritative Guard session is checked. The reader must be an operator with OS access to the private key and journal. Never ship or expose that key to Admin/Desktop or the game client. Journal files are private (0600), per-process and append-only. Each observation is HMAC-SHA256 authenticated, linked to the previous per-process observation, and has a monotonic sequence. The server records no username, UUID, raw session correlation ID, IP address, Minecraft token, device identifier or JVM memory dump. Session/node pseudonyms are HMAC-derived from the server-only key. Rotating this key separates cohorts; an external recorder must keep the previous key secured to verify its cohort.
+Необходимо задать обе переменные. Если переменные отсутствуют, запись наблюдений отключается; если они заданы несогласованно либо ключ/каталог недоступны или небезопасны, при проверке авторитетной сессии Guard применяется отказ по умолчанию. Чтение должно выполняться оператором с доступом на уровне ОС к закрытому ключу и журналу. Никогда не передавайте этот ключ в Admin, Desktop либо игровой клиент и не раскрывайте его. Файлы журналов приватные (0600), отдельные для каждого процесса и допускают только добавление записей. Каждое наблюдение удостоверяется HMAC-SHA256, ссылается на предыдущее наблюдение того же процесса и имеет монотонно возрастающий номер. Сервер не записывает имя игрока, UUID, исходный корреляционный идентификатор сессии, IP-адрес, токен Minecraft, идентификатор устройства либо дамп памяти JVM. Псевдонимы сессий и узлов вычисляются по HMAC с использованием ключа, доступного только серверу. Смена ключа разделяет когорты: для проверки прежней когорты внешний регистратор должен безопасно хранить предыдущий ключ.
 
-`allowed` is written **after** the signed ServerBridge heartbeat drives a successful PostgreSQL session check. `revoked` is written only after successful invalidation of that exact session and enqueue of the existing correlated `player.kick`. This is *observation of the existing enforcement path*; it does not disable necessary security decisions and does not certify new detectors without a separate pilot. A server heartbeat is not a fresh client-memory measurement.
+Значение `allowed` записывается **после** того, как подписанный heartbeat ServerBridge привёл к успешной проверке сессии в PostgreSQL. Значение `revoked` записывается только после успешного аннулирования именно этой сессии и постановки в очередь связанной с ней команды `player.kick`. Это *наблюдение за существующим механизмом применения политики*: обязательные решения безопасности не отключаются, а новые датчики не считаются сертифицированными без отдельного пилота. Heartbeat сервера не заменяет новое измерение памяти клиентского процесса.
 
 ```sh
 python3 scripts/guard_ci/adversarial_pilot_05012.py analyze-shadow \
@@ -26,24 +26,24 @@ python3 scripts/guard_ci/adversarial_pilot_05012.py analyze-shadow \
   --output /private/shadow-result-05012.json
 ```
 
-Optional manual reviews are JSONL with exactly `eventMac`, `verdict` (`true_positive`, `false_positive`, `inconclusive`), `reviewerId` (nonsecret reference). Every real revoke requires a review. A candidate without review, a false positive or inconclusive review keeps the gate blocked. Reviews are operator assertions, not signed independent adjudication; do not treat them as independently proven. Keep the review history and restricted original evidence separately. **Only intervals bounded by two actual successful server verifications within 30 seconds count** towards the conservative `observedGuardActiveHoursLowerBound`. These are not certified player-hours; independent real-player evidence is required. A journal HMAC prevents undetected edits/reordering to retained records but cannot prove that a privileged operator did not delete an entire journal or truncate its final records. Archive periodic signed receipts and independent checks for GA.
+Необязательные ручные заключения передаются в JSONL с полями `eventMac`, `verdict` (значения `true_positive`, `false_positive`, `inconclusive`) и `reviewerId` (несекретная ссылка на проверяющего). Каждый реальный отзыв требует рассмотрения. Нерассмотренный случай, ложное срабатывание или неопределённое заключение сохраняют блокировку допуска. Эти заключения являются утверждениями оператора, а не подписанной независимой экспертизой; считать их независимо доказанными нельзя. Историю заключений и ограниченные в доступе исходные подтверждения храните отдельно. В консервативный показатель `observedGuardActiveHoursLowerBound` **засчитываются только интервалы между двумя реально успешными серверными проверками с промежутком не более 30 секунд**. Это не сертифицированные часы игры; для них нужны независимые доказательства активности реальных игроков. HMAC-цепочка журнала защищает сохранённые записи от незаметного редактирования и перестановки, но не доказывает, что привилегированный оператор не удалил журнал целиком или его последние строки. Для GA периодически архивируйте подписанные подтверждения и результаты независимых проверок.
 
-Retain full private raw evidence only for an approved investigation period (initial operational suggestion: 30 days). Limit access to approved incident responders; publish aggregate counts and redacted samples only.
+Полные приватные исходные подтверждения храните только на утверждённый срок расследования (первоначальная эксплуатационная рекомендация — 30 дней). Доступ предоставляйте лишь назначенным специалистам по реагированию на инциденты; публикуйте только агрегированные показатели и обезличенные примеры.
 
-## Run real adversarial JVM processes
+## Запуск реальных JVM для испытаний обходов
 
 ```sh
 python3 scripts/guard_ci/test_adversarial_pilot_05012.py
 python3 scripts/guard_ci/adversarial_pilot_05012.py run-jvm --output /private/guard-adversarial-05012.json
 ```
 
-The runner executes the production Java Agent against actual Java child processes for loader provenance, unauthorized or modified classpath/mods, native ELF, the continuous JVM watchdog, and Linux process restrictions. Raw test stdout is stored privately; the report includes duration, exit code, test count, log SHA-256 and scenario status. Absent executables, missing tests, skipped mandatory tests and timeouts are not `PASS`. Linux native probe requires GCC and a configured Java toolchain. The CI workflow runs these scenarios on six OS/CPU targets. A real JVM fixture is **not** a real Minecraft client nor proof of anti-cheat efficacy against arbitrary privileged code.
+Исполнитель запускает промышленный Java Agent в настоящих дочерних процессах Java и проверяет происхождение загрузчика, неразрешённый или изменённый classpath и моды, нативные ELF, непрерывный сторожевой контроль JVM и ограничения процессов Linux. Исходный stdout тестов сохраняется приватно. Отчёт содержит длительность, код завершения, число тестов, SHA-256 журнала и состояние сценария. Отсутствующий исполняемый файл, недостающие или пропущенные обязательные тесты и тайм-ауты не считаются `PASS`. Нативный пробник Linux требует GCC и настроенной среды Java. Процесс CI выполняет эти сценарии для шести сочетаний ОС и архитектур CPU. Настоящий тестовый процесс JVM — **не настоящий клиент Minecraft** и не доказательство эффективности античита против любого привилегированного кода.
 
-For additional native Windows/Rust sensor adversarial checks use the existing `scripts/guard_ci/windows_adversarial.py` and the per-OS Guard CI workflows; missing Rust/Windows execution is `BLOCKED` for final certification.
+Для дополнительных нативных испытаний датчиков Windows/Rust используйте существующий `scripts/guard_ci/windows_adversarial.py` и соответствующие процессы Guard CI для каждой ОС. Отсутствие выполнения на Rust/Windows означает `BLOCKED` для итоговой сертификации.
 
-## Real Minecraft and gameplay evidence
+## Подтверждения реальной игры и игрового процесса Minecraft
 
-Run the repository's existing `e2e/scripts/run-minecraft-e2e.sh` with the authorized Minecraft account, real upstream files, backend, PostgreSQL, signed published package and Paper/loader server. Retain its complete output directory, original Paper server log and exact release commit. Then verify:
+Выполните существующий `e2e/scripts/run-minecraft-e2e.sh` с разрешённой учётной записью Minecraft, настоящими исходными файлами, backend, PostgreSQL, подписанным опубликованным пакетом и сервером Paper/загрузчика. Сохраните полный каталог результатов, исходный журнал сервера Paper и точный коммит релиза. Затем проверьте:
 
 ```sh
 python3 scripts/guard_ci/adversarial_pilot_05012.py verify-game \
@@ -52,11 +52,11 @@ python3 scripts/guard_ci/adversarial_pilot_05012.py verify-game \
   --output /private/real-game-05012.json
 ```
 
-This command checks the actual Mojang-client `result.json` assertions, signed release and package checks, mandatory evidence file existence and SHA-256, the runtime launch result, and both authenticated server admission and Paper's *real* `joined the game` log line for the designated test player. Usernames are not included in the resulting public report. It does not certify gameplay duration, Guard's inaccessible host sensors, or an independent operator's identity. False/missing evidence refuses the run. The unit test only checks this verifier with generated fixtures; it is not a genuine game join.
+Команда проверяет фактические утверждения `result.json` клиента Mojang, подпись релиза и проверки пакета, наличие обязательных подтверждающих файлов и их SHA-256, результат запуска runtime, а также аутентифицированный допуск на сервер и **реальную** строку `joined the game` из журнала Paper для назначенного тестового игрока. Имена игроков не включаются в итоговый публичный отчёт. Команда не сертифицирует продолжительность игры, недоступные датчики хоста Guard или идентичность независимого оператора. Ложные и отсутствующие подтверждения приводят к отказу. Модульный тест проверяет только этот верификатор на созданных тестовых данных и не является подлинным подключением к игре.
 
-## Actual game-frame performance
+## Производительность на реальных игровых кадрах
 
-Record identical scenes with Guard off/on on identical hardware, JVM, Minecraft version, loader, game build and graphics settings. Export genuine per-frame times (`frameTimeMs`) from PresentMon, MangoHud, CapFrameX or the other named supported profilers, at least 600 frames per capture. Each capture folder contains `frames.csv` and `capture.json` with `os`, `arch`, `cpu`, `gpu`, `minecraftVersion`, `loader`, `scene`, `buildSha256`, `sourceTool`. The two `capture.json` files must match exactly. The engine computes empirical interpolated p95 and the relative regression; the roadmap's suggested initial target is no worse than 3%.
+Запишите одинаковые сцены с включённым и выключенным Guard на идентичном оборудовании, с той же JVM, версией Minecraft, загрузчиком, сборкой игры и настройками графики. Экспортируйте настоящие времена каждого кадра (`frameTimeMs`) из PresentMon, MangoHud, CapFrameX либо других перечисленных поддерживаемых профилировщиков; не менее 600 кадров на каждый замер. Каждый каталог замера содержит `frames.csv` и `capture.json` с полями `os`, `arch`, `cpu`, `gpu`, `minecraftVersion`, `loader`, `scene`, `buildSha256`, `sourceTool`. Значения обоих `capture.json` должны точно совпадать. Анализатор вычисляет эмпирический интерполированный p95 и относительное ухудшение; первоначальный ориентир дорожной карты — ухудшение не более 3%.
 
 ```sh
 python3 scripts/guard_ci/adversarial_pilot_05012.py compare-frame-times \
@@ -64,8 +64,8 @@ python3 scripts/guard_ci/adversarial_pilot_05012.py compare-frame-times \
   --output /private/guard-performance-05012.json
 ```
 
-The code refuses missing/mismatched metadata, fewer than 600 frames, invalid values and implausibly small/huge frame times. It does **not** generate synthetic gameplay FPS. Frame capture provenance remains operator-asserted until the independent reviewer verifies raw captures, profiler version, benchmark scene and source hashes. Measure startup and RSS separately; this report is p95 frame time only.
+Код отклоняет отсутствующие или несовпадающие метаданные, менее 600 кадров, недопустимые значения и неправдоподобно маленькие или большие времена кадра. Он **не генерирует синтетический FPS игрового процесса**. Происхождение замеров кадров остаётся подтверждением оператора, пока независимый проверяющий не проверит исходные данные, версию профилировщика, тестовую сцену и хеши исходников. Время запуска и RSS измеряйте отдельно: этот отчёт касается только p95 времени кадра.
 
-## Release gate remains blocked until real evidence exists
+## Допуск релиза остаётся заблокированным до получения реальных подтверждений
 
-For 0.50.12/0.51.0 acceptance, require real Windows/Linux/macOS x64/ARM64 Guard binaries and authenticated ServerBridge heartbeats; actual Mojang client joins with Vanilla/Fabric/Quilt/Forge/NeoForge; authorized mods/agents; deliberate unauthorized tamper/instrumentation; supported OBS/overlays/AV/GPU scenarios; matched frame-time captures; independently reviewed false positives; at least 10,000 **independently verified legitimate player-hours**; external release signatures and a second reviewer for exact final packages. The code does not imply these occurred. No kernel driver or universal cheat-detection claim is introduced.
+Для приёмки 0.50.12/0.51.0 необходимы настоящие бинарные файлы Guard для Windows/Linux/macOS x64 и ARM64 и аутентифицированные heartbeat ServerBridge; действительные подключения клиента Mojang через Vanilla/Fabric/Quilt/Forge/NeoForge; разрешённые моды и агенты; намеренные попытки неразрешённой модификации и инструментирования; совместимые сценарии с OBS, оверлеями, антивирусами и GPU; сопоставимые замеры кадров; независимо рассмотренные ложные срабатывания; не менее 10 000 **независимо подтверждённых часов игры добросовестных игроков**; внешние подписи релиза и второй проверяющий для точных окончательных пакетов. Наличие кода не означает, что всё перечисленное уже выполнено. Реализация не вводит драйвер ядра и не заявляет универсальное обнаружение читов.

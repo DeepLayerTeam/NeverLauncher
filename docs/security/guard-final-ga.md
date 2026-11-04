@@ -1,48 +1,48 @@
-# NeverLauncher 0.51.0 — Client Guard independent GA procedure
+# NeverLauncher 0.51.0 — независимая приёмка Client Guard перед выпуском GA
 
-**This release is BLOCKED until the listed tests have run on the actual final signed packages.** An uploaded source ZIP, green unit tests, cross-build, synthetic player hours, signed manifest or an approval from the release publisher is insufficient. The scripts in this change implement the *enforcement and actual native acceptance path*, not a claim that the independent tests have happened.
+**Выпуск ЗАБЛОКИРОВАН, пока перечисленные испытания не проведены на реальных окончательных подписанных пакетах.** Загруженного ZIP-архива исходников, успешных модульных тестов, кросс-компиляции, синтетически подсчитанных часов игры, подписанного манифеста или одобрения издателя релиза недостаточно. Скрипты этого изменения реализуют *применение защитной политики и реальную приёмку на целевых платформах*, но не свидетельствуют о том, что независимые испытания уже состоялись.
 
-## 1. Required final-byte evidence
+## 1. Обязательные подтверждения для окончательных бинарных файлов
 
-Prepare an evidence directory (without credentials, personal data or signing keys), using exact unmodified outputs from separate native hosts. The file paths below are consumed by `scripts/guard_ci/guard_ga_0510.py`:
+Подготовьте каталог с подтверждающими материалами без учётных данных, персональных данных и ключей подписи. Используйте точные неизменённые результаты, полученные на отдельных машинах с нативными платформами. Следующие пути обрабатывает `scripts/guard_ci/guard_ga_0510.py`:
 
 ```text
 evidence/
-  signed/                         # exact six final signed installers + manifests + signatures, copied as bytes
+  signed/                         # шесть окончательных подписанных установщиков, манифесты и подписи; точные байты
   native-signed/
-    windows-x64.json              # output of native_signed_0510.py on the actual Windows x64 host
+    windows-x64.json              # результат native_signed_0510.py на настоящем узле Windows x64
     windows-arm64.json
     linux-x64.json
     linux-arm64.json
     darwin-x64.json
     darwin-arm64.json
-  native-game/                    # six raw v10-native-*-gui-<CI_RUN_ID> folders, not a summary alone
+  native-game/                    # шесть исходных каталогов v10-native-*-gui-<CI_RUN_ID>, а не только сводка
   adversarial/<target>/
-    result.json                   # captured run-jvm output for the exact target
-    logs/*.log                    # exact test output bytes, hashes checked
+    result.json                   # сохранённый результат run-jvm для конкретной платформы
+    logs/*.log                    # исходные байты журналов тестов с проверкой хешей
   performance/<target>/
-    baseline/capture.json         # Guard OFF; actual instrumented Minecraft scene
+    baseline/capture.json         # Guard выключен; настоящая инструментированная сцена Minecraft
     baseline/frames.csv
-    guard/capture.json            # Guard ON; same scene, OS/CPU/GPU/game build
+    guard/capture.json            # Guard включён; та же сцена, ОС, CPU, GPU и сборка игры
     guard/frames.csv
   real-game/<target>/<loader>/
-    run-identity.json             # exact {target, version, loader, packageSha256, username, commit}
-    result.json                   # authentic Minecraft E2E result with actual join
+    run-identity.json             # точные {target, version, loader, packageSha256, username, commit}
+    result.json                   # реальный результат Minecraft E2E с фактическим подключением
     runtime-launch-minecraft.json
-    paper.log                     # authenticated ServerBridge admission and player joined the game
-    ...                           # the real evidence files named in result.json
-  shadow/guard-shadow-<bootId>.jsonl  # raw HMAC-chained PostgreSQL/ServerBridge observations
-  shadow-reviews.jsonl            # independent review of EVERY revocation
-  shadow-certification.json       # independent legitimate-player-hours review; not auto-generated
+    paper.log                     # подтверждённый допуск ServerBridge и вход игрока в игру
+    ...                           # реальные файлы подтверждений, перечисленные в result.json
+  shadow/guard-shadow-<bootId>.jsonl  # исходные наблюдения PostgreSQL/ServerBridge, связанные цепочкой HMAC
+  shadow-reviews.jsonl            # независимое рассмотрение КАЖДОГО отзыва
+  shadow-certification.json       # независимый анализ часов игры добросовестных игроков; не формируется автоматически
 ```
 
-`<target>` must cover exactly `windows-x64`, `windows-arm64`, `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`. `<loader>` must cover Vanilla, Fabric, Quilt, Forge and NeoForge, all on **actual installed and launched** packages. Full gaming smoke + adversarial native outputs are checked by the existing `verify_six_native_game_0440.py` against the exact commit, package ID and CI run.
+`<target>` должен включать ровно `windows-x64`, `windows-arm64`, `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`. `<loader>` должен охватывать Vanilla, Fabric, Quilt, Forge и NeoForge — во всех случаях на **действительно установленных и запущенных** пакетах. Существующий `verify_six_native_game_0440.py` проверяет результаты игровых smoke-тестов и нативных испытаний обходов с привязкой к точному коммиту, идентификатору пакета и запуску CI.
 
-All files in `evidence/` (including the six release assets) must be signed in one independent review inventory. Store the detached `approval.json` and `approval.sig` **outside** the inventory to avoid circular file hashes. The reviewer key must remain external to the release, test runners and source tree.
+Все файлы в `evidence/`, включая шесть релизных пакетов, необходимо подписать как единый реестр независимой проверки. Отдельные `approval.json` и `approval.sig` храните **за пределами** реестра, иначе возникнет циклическая зависимость хешей. Ключ проверяющего должен находиться вне релизного комплекта, исполнителей тестов и дерева исходников.
 
-## 2. Native signature capture
+## 2. Сбор подтверждений нативных подписей
 
-On each **physical/native** Windows, macOS or Linux host with publisher trust anchors installed externally, run:
+На каждом **физическом или нативном** узле Windows, macOS либо Linux, где доверенные корни издателя установлены извне, выполните:
 
 ```sh
 python3 scripts/guard_ci/native_signed_0510.py \
@@ -57,17 +57,17 @@ python3 scripts/guard_ci/native_signed_0510.py \
   --output /evidence/native-signed/linux-x64.json
 ```
 
-The executable verifier checks the *actual final bundle* through the production CLI; on Windows it independently invokes Authenticode chain/timestamp validation for the actual extracted EXE/DLL payloads, and on macOS it checks `codesign`, Gatekeeper and stapled notarization for the actual app. Linux requires the production CLI's cryptographic release and distribution verification against externally trusted roots. Each report includes the SHA-256 of the final archive and final release manifest.
+Исполняемый верификатор проверяет **фактический окончательный комплект** через промышленную версию CLI. В Windows дополнительно выполняется независимая проверка цепочки и временной метки Authenticode у извлечённых EXE/DLL. В macOS проверяются `codesign`, Gatekeeper и прикреплённое подтверждение нотариализации приложения. Для Linux требуется криптографическая проверка релиза и дистрибутива производственным CLI относительно внешних доверенных корней. Каждый отчёт содержит SHA-256 окончательного архива и окончательного манифеста релиза.
 
-Both performance `capture.json` files must additionally include the identical `packageSha256` of the final signed installer; `buildSha256` continues to identify the installed Minecraft build itself.
+Оба файла измерений производительности `capture.json` также должны содержать одинаковое значение `packageSha256` окончательного подписанного установщика. Поле `buildSha256` по-прежнему определяет саму установленную сборку Minecraft.
 
-For each real modded/vanilla game run, use `capture_game_0510.py` on that actual native host after the normal Minecraft E2E completes; it validates the Paper join and existing game logs **before** writing `run-identity.json`, and refuses a different final installer. Never edit `run-identity.json` by hand.
+После обычного Minecraft E2E для каждого запуска игры с модами и без них используйте `capture_game_0510.py` на том же нативном узле. Скрипт проверяет подключение к Paper и существующие игровые журналы **до** записи `run-identity.json` и отклоняет другой окончательный установщик. Никогда не редактируйте `run-identity.json` вручную.
 
-Run JVM adversarial regressions with `adversarial_pilot_05012.py run-jvm` on each target. Run the existing native Minecraft E2E on all six platforms and additionally the real Minecraft loader-specific E2Es. Signed policies must allow explicitly selected Java agents and class transformers; unknown classes/JARs/native modules must remain blocked. Obtain real ON/OFF frame captures, not synthetic arrays. The server shadow pilot must cover **at least 10,000 independently reviewed legitimate player-hours**, with all potential false-positive revocations investigated before auto-sanction eligibility.
+На каждой целевой платформе запустите регрессионные испытания JVM на обходы через `adversarial_pilot_05012.py run-jvm`. Выполните существующие нативные Minecraft E2E на всех шести платформах и дополнительные реальные E2E для каждого загрузчика. Подписанные политики должны разрешать явно выбранные агенты Java и трансформаторы классов, а неизвестные классы, JAR и нативные модули — оставаться заблокированными. Получите настоящие замеры кадров при включённом и отключённом Guard, а не синтетические массивы. Теневой пилот на сервере должен охватить **не менее 10 000 часов игры добросовестных игроков, подтверждённых независимой проверкой**. Все потенциально ложноположительные отзывы должны быть расследованы до допуска автоматических санкций.
 
-## 3. Independent off-host approval
+## 3. Независимое одобрение вне тестовых узлов
 
-An **independent reviewer** confirms installed gameplay, hashes, incident reviews, native signing, provenance and operator identities; the reviewer is not the release publisher or any platform test operator. The reviewer signs exactly the complete observed directory with a dedicated, previously pinned Ed25519 private key:
+**Независимый проверяющий** подтверждает игровой процесс на установленных пакетах, хеши, разбор инцидентов, нативные подписи, происхождение артефактов и идентичности операторов. Он не может одновременно быть издателем релиза или исполнителем платформенных тестов. Проверяющий подписывает строго полный проверенный каталог отдельным, заранее закреплённым закрытым ключом Ed25519:
 
 ```sh
 python3 scripts/guard_ci/reviewer_sign_0510.py \
@@ -77,11 +77,11 @@ python3 scripts/guard_ci/reviewer_sign_0510.py \
   --approval /review/approval.json --signature /review/approval.sig
 ```
 
-This signing command does **not** itself certify checks. The independent reviewer must inspect genuine outputs and sign only after all external tests have been executed. Re-sign when any evidence byte changes. The approval is valid for at most 72 hours under the verifier's timestamp policy; the independent public key is pinned by production release configuration.
+Сама команда подписи **не сертифицирует** выполненные проверки. Независимый проверяющий должен изучить подлинные результаты и подписать каталог только после завершения всех внешних испытаний. При изменении любого байта подтверждений подпись необходимо создать заново. Согласно политике проверки временных меток одобрение действительно не более 72 часов. Независимый открытый ключ закрепляется в промышленной конфигурации выпуска.
 
-## 4. Final release gate
+## 4. Заключительный контроль допуска релиза
 
-On the production release host, with access to the *same exact signed bytes that will be published*, run:
+На промышленном узле выпуска, имеющем доступ к **тем же точным подписанным байтам, которые будут опубликованы**, выполните:
 
 ```sh
 python3 scripts/guard_ci/guard_ga_0510.py \
@@ -94,8 +94,8 @@ python3 scripts/guard_ci/guard_ga_0510.py \
   --output /release/GUARD_GA0510.json
 ```
 
-The gate verifies the independent signature and checks **all** signed evidence files against their real SHA-256, including final installers, machine-specific native signature receipts, six native game receipts, all per-loader real joins, hostile JVM executions, original frame-capture CSV and the HMAC-chained shadow observations. A different published package, stale approval, skipped test, missing OS/CPU, wrong JVM version, mismatched build, unreviewed incident, inconclusive false positive, or insufficient legitimate player-hours makes the command exit nonzero and leaves no success receipt.
+Контроль проверяет независимую подпись и **все** подписанные файлы подтверждений по их фактическим SHA-256: окончательные установщики, подтверждения нативных подписей для каждого типа машины, шесть подтверждений нативной игры, реальные подключения для всех загрузчиков, запуски JVM со сценариями нападения, исходные CSV с измерениями кадров и теневые наблюдения, связанные HMAC-цепочкой. Иной публикуемый пакет, просроченное одобрение, пропущенный тест, отсутствующая ОС или архитектура CPU, неправильная версия JVM, несовпадающая сборка, нерассмотренный инцидент, неразрешённое сомнение в ложном срабатывании либо недостаточное число часов игры добросовестных игроков приводят к ненулевому коду завершения. Успешное подтверждение при этом не создаётся.
 
-`.github/workflows/production-release-candidate.yml` invokes this gate as a **mandatory fail-closed step before publication** when `VERSION=0.51.0`. Configure `guard_0510_evidence_run_id` and `guard_0510_native_ci_run` inputs and external `NL_GUARD_GA0510_REVIEWER_ED25519_PUBLIC_KEY_HEX`, `NL_GUARD_RELEASE_OPERATOR_ID`, `NL_GUARD_SHADOW_HMAC_KEY_HEX` settings. The review artifact name is `launcher-guard-ga0510-<commit>` and contains `evidence/`, `approval.json` and `approval.sig`. Missing settings are a blocker, not an implicit authorization.
+При `VERSION=0.51.0` процесс `.github/workflows/production-release-candidate.yml` выполняет эту проверку как **обязательный этап с отказом по умолчанию до публикации**. Настройте входные параметры `guard_0510_evidence_run_id`, `guard_0510_native_ci_run` и внешние значения `NL_GUARD_GA0510_REVIEWER_ED25519_PUBLIC_KEY_HEX`, `NL_GUARD_RELEASE_OPERATOR_ID`, `NL_GUARD_SHADOW_HMAC_KEY_HEX`. Артефакт проверки называется `launcher-guard-ga0510-<commit>` и содержит `evidence/`, `approval.json`, `approval.sig`. Отсутствующие параметры блокируют выпуск и не считаются неявным разрешением.
 
-The prior general signed-target GA approval, 0.50.0 migration evidence, main CI and existing native delivery checks remain separately required. Passing this Guard-specific gate alone does not waive any unrelated product-wide GA criteria. A Trusted JVM agent has in-process trust, **not** isolation; user-mode sensors cannot guarantee detection of every kernel or privileged-host compromise.
+Ранее обязательные одобрение GA для подписанных целевых платформ, подтверждения миграции версии 0.50.0, основной CI и существующие проверки нативной поставки остаются самостоятельными требованиями. Успешное прохождение именно этого контроля Guard не отменяет других критериев GA всего продукта. Доверенный агент JVM получает доверие внутри процесса, **но не изоляцию**. Датчики пользовательского режима не гарантируют обнаружения любой компрометации ядра или узла с повышенными привилегиями.

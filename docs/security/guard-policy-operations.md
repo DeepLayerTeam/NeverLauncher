@@ -1,14 +1,14 @@
-# NeverLauncher 0.50.11 — Guard Diagnostics & Policy Operations
+# NeverLauncher 0.50.11 — диагностика Guard и эксплуатация политик
 
-## Trust model
+## Модель доверия
 
-The client may only accept an Ed25519-signed compatibility policy from an **externally pinned** public key. The private signing key must remain offline and outside the Minecraft root, Admin, and release archives. Installing or rolling back an authorized configuration does not disable file/JVM/runtime protection and cannot reduce the accepted epoch. The accepted floor is written before the active envelope for fail-closed crash handling.
+Клиент может принимать только подписанную Ed25519 политику совместимости, проверенную **внешне закреплённым** открытым ключом. Закрытый ключ подписи должен храниться автономно и за пределами каталога Minecraft, Admin и релизных архивов. Установка либо откат разрешённой конфигурации не отключает защиту файлов, JVM или Runtime и не может снизить принятую эпоху. Минимально принятая эпоха записывается перед активным подписанным контейнером, чтобы при сбое применялся отказ по умолчанию.
 
-Admin's Diagnostics → Guard section verifies submitted envelopes using browser WebCrypto and a pinned **external** public key, prepares unsigned revoke/rollback candidates, verifies an offline-signed replacement, and reads local CLI diagnostic reports. The browser cannot deploy files to a user's computer or sign with a server-held secret. Actual client deployment uses the trusted CLI.
+Раздел Admin → Diagnostics → Guard проверяет отправленные подписанные контейнеры средствами браузерного WebCrypto и закреплённым **внешним** открытым ключом, готовит неподписанные варианты отзыва/отката, проверяет отдельно подписанную замену и читает локальные диагностические отчёты CLI. Браузер не может разворачивать файлы на компьютере пользователя либо подписывать секретным ключом сервера. Фактическое развёртывание на клиенте выполняет доверенный CLI.
 
-## CLI — verify, inspect and diagnose
+## CLI — проверка, просмотр и диагностика
 
-Use the compiled `launcher` executable (the following commands refer to its top-level `runtime client-factory` dispatcher):
+Используйте скомпилированный `launcher` (следующие команды относятся к его диспетчеру верхнего уровня `runtime client-factory`):
 
 ```sh
 launcher runtime client-factory guard-policy-status --client-dir /path/to/minecraft --public-key /external/guard.pub
@@ -16,13 +16,13 @@ launcher runtime client-factory guard-policy-history --client-dir /path/to/minec
 launcher runtime client-factory guard-policy-diagnose --client-dir /path/to/minecraft --public-key /external/guard.pub --project PROJECT_ID --minecraft 1.21.1 --loader fabric
 ```
 
-`guard-policy-diagnose` hashes the actual authorized artifacts, checks for unknown JARs in `mods` and unauthorized native libraries and ensures scope and epoch match. It emits JSON with `status=pass|blocked`, and a nonzero exit code on failure. It does not claim to inspect arbitrary running memory, bypass SIP, or prove actual game join. Include explicit `--agents /absolute/client/path.jar` and `--plugins ...` for those launch arguments.
+`guard-policy-diagnose` рассчитывает хеши настоящих разрешённых артефактов, ищет неизвестные JAR в `mods` и неразрешённые нативные библиотеки, проверяет совпадение области действия и эпохи. Команда выводит JSON со значением `status=pass|blocked` и ненулевой код завершения при ошибке. Она не заявляет о проверке произвольной памяти работающего процесса, обходе SIP или доказательстве фактического подключения к игре. Для соответствующих аргументов запуска явно указывайте `--agents /absolute/client/path.jar` и `--plugins ...`.
 
-History is stored as immutable, signed envelopes at `.launcher/guard/history/<epoch>-<payload_sha256>.json`. It is validated on read against the external key, including expired historical signatures at their issue time. Manual edits of archived bytes are detected. Snapshots are not substitutes for protected backups. A new install records both old and new verified envelopes before raising the accepted floor. If a crash interrupts the floor-first install, re-applying the *same* signed candidate completes recovery; never delete `accepted.json` to force a downgrade.
+История хранится в виде неизменяемых подписанных контейнеров по пути `.launcher/guard/history/<epoch>-<payload_sha256>.json`. При чтении они проверяются внешним ключом, включая исторические подписи истёкших политик с учётом времени их выпуска. Ручные изменения архивных байтов обнаруживаются. Снимки истории не заменяют защищённые резервные копии. Новая установка записывает и прежний, и новый проверенные контейнеры перед повышением минимально принятой эпохи. Если установка прервалась между записью порога и активной политики, повторное применение **того же** подписанного кандидата завершает восстановление. Никогда не удаляйте `accepted.json` ради принудительного отката.
 
-## Offline revocation
+## Автономный отзыв разрешений
 
-Use the **separate** `guard-policy-sign` utility on an offline operator machine:
+На автономной операторской машине используйте **отдельную** утилиту `guard-policy-sign`:
 
 ```sh
 guard-policy-sign --mode revoke \
@@ -37,9 +37,9 @@ launcher runtime client-factory guard-policy-install \
   --policy revoked.signed.json
 ```
 
-The issuer verifies the current signature with the public half of the signing key, increments the epoch, preserves all previous revocations, and issues a fresh seven-day validity window. It writes a new file exclusively rather than overwriting it. The policy must be distributed and installed on every applicable client; this version does not implement a remote live-policy push service.
+Издатель проверяет текущую подпись открытой частью подписывающего ключа, увеличивает эпоху, сохраняет все прежние отзывы и устанавливает новый семидневный срок действия. Новый файл создаётся исключительно как новый, без перезаписи старого. Политику нужно распространить и установить на каждом соответствующем клиенте. В этой версии нет службы удалённой доставки активной политики.
 
-## Restore an approved historical configuration (rollback)
+## Восстановление ранее одобренной конфигурации (откат)
 
 ```sh
 guard-policy-sign --mode rollback \
@@ -53,9 +53,9 @@ launcher runtime client-factory guard-policy-rollback \
   --policy restored.signed.json
 ```
 
-The restored envelope is **not** a replay of the earlier epoch: it uses the latest epoch + 1, copies previously authorized artifacts/settings, and keeps the union of current and historical revocations. The CLI rejects a signed rollback that changes project/game/loader scope, lowers the epoch, or clears any current revocation. This is a configuration restore, not a bypass of previous security decisions. The exact files still must match their signed SHA-256, and previously revoked files remain forbidden. A fully expired policy must first be replaced by a newly signed active version.
+Восстановленный контейнер **не** повторяет предыдущую эпоху: в нём используется последняя эпоха + 1, копируются прежние разрешённые артефакты и настройки, а также сохраняется объединение текущих и исторических отзывов. CLI отклоняет подписанный откат, меняющий проект, игру или загрузчик, снижающий эпоху либо очищающий любой текущий отзыв. Это восстановление конфигурации, а не обход ранее принятых решений безопасности. Точные файлы по-прежнему должны совпадать с подписанными SHA-256, а ранее отозванные файлы остаются запрещёнными. Полностью просроченную политику сначала необходимо заменить новой подписанной активной версией.
 
-## Operator verification and release gates
+## Операторская проверка и контроль допуска релиза
 
 ```sh
 cd cli
@@ -66,4 +66,4 @@ node --experimental-strip-types --test tests/guard_policy_05011.test.mjs
 npm ci && npm run build
 ```
 
-Go and WebCrypto tests cover valid signatures, tampering, no-rollback floors, crash recovery, active/historical inspection, unwanted JARs, bad scope, offline revocation, and irreversible revocation-preserving rollback. Independent native Windows/macOS/Linux and real Minecraft+Guard multiplayer acceptance must still be performed on signed release artifacts; GA remains BLOCKED until those results exist.
+Тесты Go и WebCrypto проверяют действительные подписи, подмену, минимальную эпоху без отката, восстановление после сбоя, просмотр активных и исторических данных, нежелательные JAR, неверную область действия, автономный отзыв и необратимый откат с сохранением отзывов. Независимая нативная приёмка Windows/macOS/Linux и реальная многопользовательская проверка Minecraft+Guard по-прежнему обязательны на подписанных релизных артефактах. GA остаётся `BLOCKED`, пока не получены соответствующие результаты.

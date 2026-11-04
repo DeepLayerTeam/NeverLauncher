@@ -1,18 +1,16 @@
-# Guard 0.50.1 — native inventory and baseline
+# Guard 0.50.1 — инвентаризация нативных возможностей и исходный уровень защиты
 
-This feature **executes** installed Java and the existing Guard child-process
-boundary. It does **not** start Minecraft or certify in-process protection.
-`BLOCKED`/`UNSUPPORTED` are intentional, not successful release gates.
+Эта функция **реально запускает** установленную Java и существующую границу дочернего процесса Guard. Она **не** запускает Minecraft и не сертифицирует защиту внутри процесса. Статусы `BLOCKED` и `UNSUPPORTED` намеренны и не означают успешного прохождения допуска к релизу.
 
-## Native command
+## Нативная команда
 
-Build **both** executables with the same release source/toolchain:
+Соберите **оба** исполняемых файла из одинаковых релизных исходников с одним набором инструментов:
 
 ```sh
 cargo build --manifest-path runtime/runtime/Cargo.toml --bins
 ```
 
-Linux/macOS (replace `.exe` suffix on Windows):
+Linux/macOS (в Windows используйте суффикс `.exe`):
 
 ```sh
 python3 scripts/guard_ci/inventory_0501.py local \
@@ -24,77 +22,48 @@ python3 scripts/guard_ci/inventory_0501.py local \
   --output guard-inventory-linux-x64.json
 ```
 
-`runtime guard-inventory` can also be called directly. Supported flags:
-`--guard-executable`, `--java`, `--game-root`, `--minecraft-version`.
-The `--game-root` and `--minecraft-version` pair is mandatory when
-inspecting installed Minecraft metadata. A version ID must be a single
-safe filename. The scanner reads at most 2 MiB of version JSON and refuses
-escaping the resolved Minecraft root.
+Можно также вызвать `runtime guard-inventory` напрямую. Поддерживаются параметры `--guard-executable`, `--java`, `--game-root`, `--minecraft-version`. При проверке метаданных установленного Minecraft параметры `--game-root` и `--minecraft-version` обязательны вместе. Идентификатор версии должен представлять собой одно безопасное имя файла. Сканер читает не более 2 МиБ JSON версии и запрещает выход за пределы разрешённого корневого каталога Minecraft.
 
-The local wrapper creates a private 0700 Linux IPC directory and invokes the
-native Runtime with a 50-second maximum duration. Runtime starts a **real**
-Guard process through the production platform supervisor; requests authenticated
-status, enforced process policy, validated image/module integrity and a fresh
-remote attestation challenge; then shuts it down. Failed checks stay `BLOCKED`.
-No simulator or fake IPC responder is used. In debug builds the release package
-manifest is not asserted as verified: `guard.release-package = BLOCKED`.
+Локальная обёртка создаёт приватный каталог IPC в Linux с правами 0700 и запускает нативный Runtime с ограничением в 50 секунд. Runtime через промышленный менеджер процессов запускает **настоящий** Guard, запрашивает аутентифицированный статус, действующую политику процессов, проверенную целостность образа и модулей и новую задачу удалённой аттестации, затем завершает Guard. Неуспешные проверки остаются в состоянии `BLOCKED`. Симуляторы и фиктивные ответчики IPC не применяются. В отладочных сборках проверенная подлинность манифеста релизного пакета не утверждается: `guard.release-package = BLOCKED`.
 
-The Java probe runs `-XshowSettings:properties -version` with an eight-second
-limit and without inherited JVM injection options. It does not certify an
-individual Minecraft/JDK combination. The loader probe identifies the
-`mainClass` of installed version metadata (Vanilla, Fabric, Quilt, Forge,
-NeoForge or unknown). No JAR is executed. This does not prove that the loader,
-optional mods, native libraries or agents can start successfully.
+Проверка Java выполняет `-XshowSettings:properties -version` с ограничением в восемь секунд и без унаследованных параметров внедрения JVM. Она не сертифицирует конкретную комбинацию Minecraft/JDK. Проверка загрузчика определяет `mainClass` в метаданных установленной версии (Vanilla, Fabric, Quilt, Forge, NeoForge или неизвестный вариант). JAR при этом не исполняется. Нельзя считать доказанным успешный запуск загрузчика, дополнительных модов, нативных библиотек или агентов.
 
-## Native baseline matrix
+## Матрица исходных нативных возможностей
 
-CI workflow `.github/workflows/guard-inventory-0501.yml` builds and runs native
-reports independently on:
+Процесс CI `.github/workflows/guard-inventory-0501.yml` независимо собирает и запускает нативные отчёты на следующих платформах:
 
 - Linux x86_64 / aarch64;
 - Windows x86_64 / aarch64;
 - macOS x86_64 / aarch64.
 
-Each report is preserved as a separate downloadable CI artifact. Consolidate:
+Каждый отчёт хранится как отдельный скачиваемый артефакт CI. Объединение:
 
 ```sh
 python3 scripts/guard_ci/inventory_0501.py matrix \
   --output guard-inventory-matrix-0501.json guard-inventory-*.json
 ```
 
-The merger enforces the exact 0.50.1 report schema, checks, version, target
-uniqueness, `UNSUPPORTED` for non-Windows in-process sensors and `BLOCKED` for
-all unexecuted real-game/loader/authorized-agent scenarios. Missing native
-OS/CPU reports are `BLOCKED`, never implicit `PASS`. Reports are local,
-self-reported observations; they are **not cryptographic endorsements by
-independent operators**. `certified=false` is always explicit.
+Объединитель проверяет точную схему отчёта 0.50.1, результаты проверок, версию, уникальность целевых платформ, состояние `UNSUPPORTED` для внутрипроцессных датчиков вне Windows и состояние `BLOCKED` для всех невыполненных сценариев с реальной игрой, загрузчиками и разрешёнными агентами. Отсутствующий нативный отчёт для сочетания ОС/CPU означает `BLOCKED`, а не подразумеваемый `PASS`. Это локальные наблюдения, основанные на самоотчётах, **а не криптографические подтверждения независимых операторов**. Значение `certified=false` указывается явно.
 
-## Baseline and acceptance boundary
+## Исходные возможности и границы приёмки
 
-| Mechanism | Windows | Linux | macOS |
+| Механизм | Windows | Linux | macOS |
 |---|---|---|---|
-| Guard subprocess and authenticated IPC | Actively probed | Actively probed | Actively probed |
-| Guard process hardening/policy | Actively probed | Actively probed | Actively probed |
-| Guard + launcher binary integrity | Actively probed | Actively probed | Actively probed |
-| Fresh Guard attestation challenge | Actively probed | Actively probed | Actively probed |
-| Release package identity | Verified only if supervisor verifies production package | Same | Same |
-| Windows in-process Sensor | BLOCKED without game | UNSUPPORTED | UNSUPPORTED |
-| JVM awareness + continuous Sensor | BLOCKED without game | UNSUPPORTED | UNSUPPORTED |
-| Vanilla/Fabric/Quilt/Forge/NeoForge runtime compatibility | BLOCKED until real launch/join | BLOCKED | BLOCKED |
-| Trusted Java Agent + Guard | BLOCKED until approved real-agent run (0.50.3) | BLOCKED | BLOCKED |
+| Дочерний процесс Guard и аутентифицированный IPC | Проверяется активным запуском | Проверяется активным запуском | Проверяется активным запуском |
+| Усиление защиты и политика процессов Guard | Проверяется активным запуском | Проверяется активным запуском | Проверяется активным запуском |
+| Целостность бинарных файлов Guard и лаунчера | Проверяется активным запуском | Проверяется активным запуском | Проверяется активным запуском |
+| Новая задача аттестации Guard | Проверяется активным запуском | Проверяется активным запуском | Проверяется активным запуском |
+| Идентичность релизного пакета | Проверяется только при проверке промышленного пакета менеджером процессов | То же | То же |
+| Внутрипроцессный датчик Windows | `BLOCKED` без игры | `UNSUPPORTED` | `UNSUPPORTED` |
+| Осведомлённость о JVM и непрерывный датчик | `BLOCKED` без игры | `UNSUPPORTED` | `UNSUPPORTED` |
+| Совместимость Runtime с Vanilla/Fabric/Quilt/Forge/NeoForge | `BLOCKED` до реального запуска и подключения | `BLOCKED` | `BLOCKED` |
+| Trusted Java Agent + Guard | `BLOCKED` до разрешённого реального запуска агента (0.50.3) | `BLOCKED` | `BLOCKED` |
 
-The existing Windows source rejects `-javaagent` in the sensor startup path.
-0.50.1 **does not disable that defense**. Work to reconcile owner-approved
-agents with signed Guard policies is explicitly scoped to 0.50.2–0.50.4.
+Существующий исходный код для Windows отклоняет `-javaagent` при запуске датчика. Версия 0.50.1 **не отключает эту защиту**. Согласование одобренных владельцем агентов с подписанными политиками Guard предусмотрено версиями 0.50.2–0.50.4.
 
-A real production acceptance requires signed final installers; actual
-Vanilla and modded Minecraft gameplay with official sessions as applicable;
-loader/JDK/OS/arch coverage; runtime sensor, watchdog and ServerBridge evidence;
-independent native-runner reports; and verification of corresponding package
-hashes and signatures. None is inferred from the existence of this command or
-from a successful CI diagnostic job.
+Настоящая промышленная приёмка требует окончательных подписанных установщиков; реального игрового процесса Minecraft с Vanilla и модами и официальными сессиями, где это применимо; покрытия загрузчиков, JDK, ОС и архитектур; подтверждений работы датчиков Runtime, сторожевого контроля и ServerBridge; независимых отчётов нативных исполнителей; а также проверки соответствующих хешей и подписей пакетов. Ничто из этого не следует из простого существования команды или успешной диагностической задачи CI.
 
-## Regression checks
+## Регрессионные проверки
 
 ```sh
 python3 scripts/guard_ci/test_inventory_0501.py
@@ -102,7 +71,4 @@ cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_inventory_0501
 cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory_0501
 ```
 
-The third command is Linux-only (the Rust integration test is conditionally
-compiled). CI runs it on native Linux architectures. An IPC failure remains a
-failure of the native integration test; it is not converted into a successful
-capability row.
+Третья команда предназначена только для Linux (интеграционный тест Rust компилируется условно). CI выполняет её на нативных архитектурах Linux. Ошибка IPC остаётся ошибкой нативного интеграционного теста и не преобразуется в успешную строку матрицы возможностей.

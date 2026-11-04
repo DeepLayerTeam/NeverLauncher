@@ -1,12 +1,12 @@
-# NeverLauncher 0.50.4 — verified loader class origins and authorized JVM hooks
+# NeverLauncher 0.50.4 — проверка происхождения классов загрузчика и разрешённые JVM-хуки
 
-## What is enforced by running code
+## Какие ограничения реально применяются исполняемым кодом
 
-With an installed operator-signed Guard compatibility policy and an active Trusted JVM package, both the Rust Runtime and the Go legacy launcher now pass the **signed loader identity and pinned runtime loader JARs** into the Java `premain`. The agent registers an actual `ClassFileTransformer` **before** loading extension hooks or executing the original loader entrypoint. It checks the `ProtectionDomain.CodeSource` of loaded loader infrastructure classes, compares the source to an approved canonical JAR pathname, and verifies SHA-256. The source must belong to the signed policy's `loader-library` entries. Wrong loader, unpinned classes, changed JAR, missing policy binding, missing code source, and revoked loader JARs fail closed. Exceptions from Java Instrumentation are not relied upon for denial: the process halts with code 79.
+При установленной подписанной оператором политике совместимости Guard и активном пакете Trusted JVM как Rust Runtime, так и прежний лаунчер Go передают **подписанную идентичность загрузчика и закреплённые JAR-библиотеки загрузчика** в Java `premain`. Агент регистрирует настоящий `ClassFileTransformer` **до** загрузки хуков расширений или выполнения исходной точки входа загрузчика. Он проверяет `ProtectionDomain.CodeSource` загружаемых инфраструктурных классов загрузчика, сверяет источник с разрешённым каноническим путём JAR и проверяет SHA-256. Источник должен принадлежать записям `loader-library` подписанной политики. Неверный загрузчик, незакреплённые классы, изменённый JAR, отсутствие связи с политикой, отсутствие источника кода и отозванные JAR загрузчика приводят к отказу по умолчанию. Для отказа не используются исключения Java Instrumentation: процесс завершается с кодом 79.
 
-Classification covers `net.fabricmc.loader.impl.*` (Fabric), `org.quiltmc.loader.impl.*` (Quilt), `net.minecraftforge.fml.loading.*` (Forge), `net.neoforged.fml.loading.*` (NeoForge), `cpw.mods.modlauncher.*` (Forge/NeoForge), and Sponge Mixin launch/service/transform packages. Class origin verification is **not** a demonstration that all final bytecode produced by a loader has been observed: Java Instrumentation is not a universal observer of third-party Mixin/ClassLoader changes. Transforms returned by a `MinecraftHook` remain checked against signed **plugin SHA-256 + exact binary class name**, with forbidden results terminating the JVM.
+Распознаются `net.fabricmc.loader.impl.*` (Fabric), `org.quiltmc.loader.impl.*` (Quilt), `net.minecraftforge.fml.loading.*` (Forge), `net.neoforged.fml.loading.*` (NeoForge), `cpw.mods.modlauncher.*` (Forge/NeoForge) и пакеты запуска, служб и преобразований Sponge Mixin. Проверка происхождения классов **не доказывает**, что наблюдался весь итоговый байт-код, созданный загрузчиком: Java Instrumentation не обеспечивает универсального контроля изменений сторонних Mixin/ClassLoader. Результаты преобразований `MinecraftHook` по-прежнему проверяются по сочетанию **SHA-256 плагина и точного бинарного имени класса**, а запрещённые результаты завершают JVM.
 
-The optional signed `loaderClassBytes` list pins exact observed class-definition bytes for selected binary class names, at the agent's observation point **after bytes are handed to Java Instrumentation and before NeverLauncher's Trusted Java hooks run**. An unequal hash terminates the JVM. Example within the same signed policy JSON:
+Необязательный подписанный список `loaderClassBytes` закрепляет точные наблюдаемые байты определений выбранных классов по их бинарным именам. Точка наблюдения агента находится **после передачи байтов в Java Instrumentation и до выполнения доверенных Java-хуков NeverLauncher**. Несовпадающий хеш завершает JVM. Пример внутри того же JSON подписанной политики:
 
 ```json
 "loaderClassBytes": [
@@ -14,26 +14,26 @@ The optional signed `loaderClassBytes` list pins exact observed class-definition
 ]
 ```
 
-These hashes must be measured and approved for the exact Minecraft/loader/mod combination by an operator; they are **not** the SHA-256 of a class name or necessarily the untransformed `.class` from a vanilla JAR. Missing class entries are not pinned and class checks do not prove the result of subsequently registered third-party Java transformers. For `loaderClassBytes`, omitted means no per-class fingerprint enforcement; nonempty entries are validated by the signed Go/Rust policy verifiers and checked live in the Java agent.
+Оператор обязан измерить и одобрить эти хеши для точной комбинации Minecraft, загрузчика и модов. Это **не** SHA-256 имени класса и не обязательно хеш неизменённого `.class` из Vanilla JAR. Отсутствующие классы не закрепляются, а проверки классов не доказывают результат работы сторонних Java-трансформаторов, зарегистрированных позднее. Для `loaderClassBytes` отсутствие поля означает, что контроль отпечатков отдельных классов не применяется. Непустые записи проверяются подписанными верификаторами политик Go/Rust и в процессе работы Java-агента.
 
-This code does not disable loader transformations or grant broad exemptions for `-javaagent`, `-agentpath`, debugging or unapproved mods. The independently signed Guard policy and all existing pre-spawn checks remain mandatory.
+Код не отключает преобразования загрузчика и не создаёт широких исключений для `-javaagent`, `-agentpath`, отладки или неодобренных модов. Независимо подписанная политика Guard и все существующие проверки до запуска процесса остаются обязательными.
 
-## Operator instructions
+## Инструкции оператору
 
-1. Prepare and verify the exact Minecraft profile, runtime and loader libraries that the signed build references. The JVM source JARs for Fabric/Quilt/Forge/NeoForge, ModLauncher (Forge/NeoForge) and Mixin must be included individually. Determine the **actual class source JARs**, not just their dependency names. Do not guess hashes.
-2. Add each library to the existing `artifacts` array in the policy payload, retaining the signed project, Minecraft version and loader:
+1. Подготовьте и проверьте точный профиль Minecraft, runtime и библиотеки загрузчика, на которые ссылается подписанная сборка. JAR-источники JVM для Fabric/Quilt/Forge/NeoForge, ModLauncher (Forge/NeoForge) и Mixin должны быть включены по отдельности. Определите **реальные JAR, содержащие классы**, а не только имена зависимостей. Не угадывайте хеши.
+2. Добавьте каждую библиотеку в существующий массив `artifacts` полезной нагрузки политики с сохранением подписанного проекта, версии Minecraft и загрузчика:
 
    ```json
    {"kind":"loader-library","path":"libraries/net/fabricmc/fabric-loader/0.16.0/fabric-loader-0.16.0.jar","sha256":"<actual lowercase 64-character SHA-256>"}
    ```
 
-   This path is illustrative only. Use the actual installed relative path, revision and SHA-256. Add ModLauncher/Mixin libraries where applicable; no wildcard or universal hash exemptions are available. Vanilla profiles must have no `loader-library` entries.
-3. Increase the policy `epoch`, sign offline using the existing `cli/cmd/guard-policy-sign` tool and install via `guard-policy-install` with the external Ed25519 public key. Keep `LAUNCHER_GUARD_COMPAT_REQUIRED=1` and the trust key outside the client root. A policy from 0.50.3 that lacks loader-library entries **must be updated** before launching a guarded modded client; this is intentionally fail closed.
-4. Start via the existing native Runtime or ClientFactory. On a denied launch, inspect stderr for `[Launcher Guard 0.50.4]` and verify the exact signed library paths. Do not disable the agent to bypass denial. Revocation of any pinned source digest prevents the next launch.
+   Этот путь приведён только для примера. Используйте фактические относительные пути, редакции и SHA-256 установленных файлов. При необходимости добавьте библиотеки ModLauncher/Mixin. Шаблоны со звёздочкой и универсальные исключения для хешей не предусмотрены. Профили Vanilla не должны содержать записей `loader-library`.
+3. Увеличьте `epoch` политики, подпишите её автономно существующей утилитой `cli/cmd/guard-policy-sign` и установите через `guard-policy-install` с внешним открытым ключом Ed25519. Сохраняйте `LAUNCHER_GUARD_COMPAT_REQUIRED=1` и ключ доверия за пределами корня клиента. Политику 0.50.3 без записей `loader-library` **необходимо обновить** перед запуском защищённого клиента с модами. Такой отказ по умолчанию преднамерен.
+4. Запускайте клиент существующим нативным Runtime либо ClientFactory. Если запуск отклонён, проверьте stderr на наличие `[Launcher Guard 0.50.4]` и сверьте точные подписанные пути библиотек. Не отключайте агент ради обхода запрета. Отзыв любого закреплённого хеша источника блокирует следующий запуск.
 
-## Verified locally versus not certified
+## Что проверено локально, а что не сертифицировано
 
-- `scripts/tests/guard_loader_0504.py` compiles real JAR files and executes Java 21 with a real `-javaagent` on synthetic loader marker classes. It tests all four loader families, Mixin, ModLauncher and negative cases. `go test` exercises the signed-policy/Trusted JVM integration and Guard loader list rules.
-- A Rust compiler and Windows/macOS native runners are not available in the local environment. The 6-target CI workflow is provided but was **not executed** as part of this source patch.
-- A full real Minecraft client, official login, server join, real upstream loader transformation pipeline, full Windows Sensor and independent signed-installer acceptance are **not** tested here. These remain `BLOCKED`; there is no claim of `0.50.4 GA` or of complete mediation of third-party Java bytecode changes.
-- A trusted plugin has full JVM privileges, including Instrumentation and reflection. In-process CodeSource checking is not a security boundary against fully trusted malicious Java code or arbitrary native agents; such code must not be installed. Operational revocation while a game is already running is outside this release.
+- `scripts/tests/guard_loader_0504.py` собирает настоящие JAR и запускает Java 21 с реальным `-javaagent` для синтетических маркировочных классов загрузчиков. Проверяются все четыре семейства загрузчиков, Mixin, ModLauncher и негативные сценарии. `go test` проверяет интеграцию подписанной политики с Trusted JVM и правила списка загрузчиков Guard.
+- Компилятор Rust и нативные исполнители Windows/macOS в локальном окружении недоступны. Предусмотрен процесс CI для шести целевых платформ, но при внесении этого изменения в исходники он **не выполнялся**.
+- Полный реальный клиент Minecraft, официальная авторизация, подключение к серверу, реальные преобразования исходного загрузчика, полноценный Windows Sensor и независимая приёмка подписанных установщиков здесь **не тестировались**. Эти пункты остаются `BLOCKED`. Нет заявления ни о `0.50.4 GA`, ни о полном контроле всех изменений байт-кода сторонней Java.
+- Доверенный плагин обладает всеми привилегиями JVM, включая Instrumentation и рефлексию. Проверка CodeSource внутри процесса не создаёт границу безопасности против полностью доверенного вредоносного Java-кода или произвольных нативных агентов; такой код нельзя устанавливать. Отзыв разрешения во время уже запущенной игры выходит за рамки этого релиза.
