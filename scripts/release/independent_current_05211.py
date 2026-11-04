@@ -18,7 +18,7 @@ import sys
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from reproducible_0470 import (TARGETS, atomic_json, visit_archive, require_path,
+from reproducible_0470 import (TARGETS, contract, atomic_json, visit_archive, require_path,
     sha256_file, signed_json)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,15 +51,7 @@ def inputs() -> dict:
     return output
 
 def expected_archives():
-    return {key: filename.replace('0.47.0', VERSION)
-            for key, filename in {
-                'windows-x64': 'launcher-desktop-0.47.0-windows-x64.zip',
-                'windows-arm64': 'launcher-desktop-0.47.0-windows-arm64.zip',
-                'linux-x64': 'launcher-linux-x64-0.47.0.tar.gz',
-                'linux-arm64': 'launcher-linux-arm64-0.47.0.tar.gz',
-                'darwin-x64': 'launcher-desktop-0.47.0-macos-x64.zip',
-                'darwin-arm64': 'launcher-desktop-0.47.0-macos-arm64.zip',
-            }.items()}
+    return dict(contract()['targets'])
 
 def scan(directory: Path):
     require(directory.is_absolute() and directory.is_dir() and not directory.is_symlink(),

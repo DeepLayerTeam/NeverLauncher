@@ -5028,16 +5028,21 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in sensor_bootstrap_0182:
             fail(f"0.18.2 Guard Sensor fail-closed bootstrap incomplete: {required}")
+    # Vanilla certification uses the generic bootstrap; game launches use the
+    # stronger, manifest-bound prepare_sensor_command_for_game introduced later.
+    # Both launch routes must still authenticate the sensor before proceeding.
     if (
-        sensor_runtime_0182.count("prepare_sensor_command(&mut command)") < 2
+        sensor_runtime_0182.count("prepare_sensor_command(&mut command)") < 1
+        or sensor_runtime_0182.count(
+            "prepare_sensor_command_for_game(&mut command, root, manifest)"
+        ) < 1
         or sensor_runtime_0182.count(
             "authenticate_sensor_or_kill(sensor_bootstrap, &mut child)"
-        )
-        < 2
+        ) < 2
     ):
-        fail("0.18.2 Guard Sensor is not enforced in both direct JVM launch paths")
+        fail("Guard Sensor is not enforced in both direct JVM launch paths")
     for required in [
-        "prepare_sensor_command(&mut command)",
+        "prepare_sensor_command_for_game(&mut command, root, manifest)",
         "authenticate_sensor_or_kill(sensor_bootstrap, &mut child)",
         "windows_sensor: Option<crate::WindowsSensorReport>",
     ]:

@@ -1,13 +1,13 @@
 {
   "schema": "neverlauncher.primary-payload.v1",
-  "version": "0.47.0",
-  "scope": "six OS/CPU targets; compare exact unsigned archives and each regular member; signed delivery requires separately authenticated native acceptance",
+  "version": "0.53.0",
+  "scope": "six real OS/CPU unsigned artifacts; native independent comparison and separately signed final-byte acceptance required",
   "targets": {
-    "windows-x64": "launcher-desktop-0.47.0-windows-x64.zip",
-    "windows-arm64": "launcher-desktop-0.47.0-windows-arm64.zip",
-    "linux-x64": "launcher-linux-x64-0.47.0.tar.gz",
-    "linux-arm64": "launcher-linux-arm64-0.47.0.tar.gz",
-    "darwin-x64": "launcher-desktop-0.47.0-macos-x64.zip",
-    "darwin-arm64": "launcher-desktop-0.47.0-macos-arm64.zip"
+    "windows-x64": "launcher-desktop-0.53.0-windows-x64.zip",
+    "windows-arm64": "launcher-desktop-0.53.0-windows-arm64.zip",
+    "linux-x64": "launcher-linux-x64-0.53.0.tar.gz",
+    "linux-arm64": "launcher-linux-arm64-0.53.0.tar.gz",
+    "darwin-x64": "launcher-desktop-0.53.0-macos-x64.zip",
+    "darwin-arm64": "launcher-desktop-0.53.0-macos-arm64.zip"
   }
 }

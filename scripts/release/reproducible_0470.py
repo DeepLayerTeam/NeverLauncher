@@ -35,8 +35,9 @@ from delivery_verify_0462 import ARCH, EXPECTED, verify_bundle
 from check_payload_0461 import secure_name
 
 ROOT = Path(__file__).resolve().parents[2]
-CONTRACT_PATH = ROOT / 'reproducibility/primary-payload-0.47.0.json'
-BASELINE_PATH = ROOT / 'reproducibility/baseline-0.47.0.json'
+CONTRACT_PATH = ROOT / 'reproducibility/primary-payload.json'
+BASELINE_PATH = ROOT / 'reproducibility/baseline.json'
+RELEASE_VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 HEX = re.compile(r'^[a-f0-9]{40,64}$')
 MAX_TOTAL_BYTES = 3 * 1024**3
 MAX_FILE_BYTES = 1024**3
@@ -82,7 +83,7 @@ def load_json(path: Path) -> dict:
 
 def contract() -> dict:
     data = load_json(CONTRACT_PATH)
-    if data.get('schema') != 'neverlauncher.primary-payload.v1' or data.get('version') != '0.47.0':
+    if data.get('schema') != 'neverlauncher.primary-payload.v1' or data.get('version') != RELEASE_VERSION:
         raise ValueError('wrong primary payload contract')
     if data.get('targets', {}).keys() != TARGETS:
         raise ValueError('six-target payload contract incomplete')
@@ -223,9 +224,11 @@ def capture(bundle: Path, *, builder: str, runner: str, commit: str) -> dict:
     if not BASELINE_PATH.is_file():
         raise ValueError('missing pinned input baseline')
     baseline = load_json(BASELINE_PATH)
-    if baseline.get('release') != '0.47.0':
+    if baseline.get('release') != RELEASE_VERSION:
         raise ValueError('unexpected baseline version')
-    return {'schema':'neverlauncher.unsigned-build.v1','version':'0.47.0',
+    from inputs_guard_0461 import record, verify
+    verify(baseline, record())
+    return {'schema':'neverlauncher.unsigned-build.v1','version':RELEASE_VERSION,
             'commit':commit,'builder':builder,'runner':runner,
             'inputBaselineSha256':sha256_file(BASELINE_PATH),
             'contractSha256':sha256_file(CONTRACT_PATH),
@@ -267,7 +270,7 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
     for k in ('version','commit','inputBaselineSha256','contractSha256'):
         if a.get(k) != b.get(k):
             raise ValueError(f'independent inputs differ: {k}')
-    if a['version'] != '0.47.0' or not HEX.fullmatch(a['commit']):
+    if a['version'] != RELEASE_VERSION or not HEX.fullmatch(a['commit']):
         raise ValueError('invalid release source identity')
     if a['inputBaselineSha256'] != sha256_file(BASELINE_PATH) or a['contractSha256'] != sha256_file(CONTRACT_PATH):
         raise ValueError('input baseline or declared payload changed')
@@ -278,7 +281,7 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
         raise ValueError('signed builder report disagrees with actual files')
     if a['targets'] != b['targets'] or set(a['targets'])!=TARGETS:
         raise ValueError('unsigned builds are not bit-for-bit identical for all six targets')
-    return {'schema':'neverlauncher.reproducibility-compared.v1', 'version':'0.47.0',
+    return {'schema':'neverlauncher.reproducibility-compared.v1', 'version':RELEASE_VERSION,
             'commit':a['commit'],'inputBaselineSha256':a['inputBaselineSha256'],
             'contractSha256':a['contractSha256'], 'builders':[{'builder':a['builder'],'runner':a['runner']},
                                                              {'builder':b['builder'],'runner':b['runner']}],
@@ -288,9 +291,9 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
 
 
 def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, b_key: Path, approval_key: Path, native_reports_dir: Path) -> dict:
-    if comparison.get('schema')!='neverlauncher.reproducibility-compared.v1' or comparison.get('version')!='0.47.0' or set(comparison.get('targets',{}))!=TARGETS:
+    if comparison.get('schema')!='neverlauncher.reproducibility-compared.v1' or comparison.get('version')!=RELEASE_VERSION or set(comparison.get('targets',{}))!=TARGETS:
         raise ValueError('missing complete independent comparison')
-    if approval.get('schema')!='neverlauncher.native-signing-approval.v1' or approval.get('version')!='0.47.0':
+    if approval.get('schema')!='neverlauncher.native-signing-approval.v1' or approval.get('version')!=RELEASE_VERSION:
         raise ValueError('invalid OS-native signing approval')
     if approval.get('commit') != comparison['commit'] or approval.get('comparisonSha256') != hashlib.sha256(canonical(comparison)).hexdigest():
         raise ValueError('signing approval does not refer to compared unsigned bytes')
@@ -326,7 +329,7 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
         native=signed_json(native_path,native_reports_dir/(target+'.sig'),approval_key)
         if (row.get('nativeReceiptSha256')!=sha256_file(native_path)
                 or native.get('schema')!='neverlauncher.native-verification.v1'
-                or native.get('version')!='0.47.0' or native.get('target')!=target
+                or native.get('version')!=RELEASE_VERSION or native.get('target')!=target
                 or native.get('nativeCheck')!=row['nativeCheck']
                 or native.get('unsignedSha256')!=row['unsignedSha256']
                 or native.get('signedSha256')!=row['signedSha256']
@@ -335,7 +338,7 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
             raise ValueError('OS-native validator receipt does not cover signed target: '+target)
         if row.get('boundPayload') is not True:
             raise ValueError('operator did not approve unsigned-to-final transformation: '+target)
-    return {'schema':'neverlauncher.reproducibility-linked.v1','version':'0.47.0',
+    return {'schema':'neverlauncher.reproducibility-linked.v1','version':RELEASE_VERSION,
             'commit':comparison['commit'],'comparisonSha256':approval['comparisonSha256'],
             'nativeApprovalSha256':hashlib.sha256(canonical(approval)).hexdigest(),
             'releaseManifestSha256':approval['releaseManifestSha256'],

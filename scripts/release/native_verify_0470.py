@@ -22,7 +22,7 @@ import zipfile
 
 from delivery_verify_0462 import EXPECTED, read_archive, verify_target
 from reproducible_0470 import (
-    TARGETS, contract, visit_archive, require_path, sha256_file, atomic_json,
+    TARGETS, RELEASE_VERSION, contract, visit_archive, require_path, sha256_file, atomic_json,
 )
 
 
@@ -75,7 +75,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
     file=contract()['targets'][target]
     unsigned_file=require_path(unsigned,file)
     visit_archive(unsigned_file,plat,arch)
-    actual=verify_target(signed_root,target,file,'0.47.0')
+    actual=verify_target(signed_root,target,file,RELEASE_VERSION)
     # Existing compiled release CLI checks exact manifest, signed Ed25519 and
     # operator trust policy. Native checks do not replace that trust gate.
     call([str(release_cli),'release','verify',str(signed_root),
@@ -131,7 +131,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
         # codesign modifies Mach-O executable load commands/linkedit; the
         # independent signing operator must audit the transformation too.
         actual_check='codesign-gatekeeper-and-notarization-verified'
-    return {'schema':'neverlauncher.native-verification.v1','version':'0.47.0',
+    return {'schema':'neverlauncher.native-verification.v1','version':RELEASE_VERSION,
             'target':target,'unsignedSha256':sha256_file(unsigned_file),
             'signedSha256':actual['sha256'], 'nativeCheck':actual_check,
             'releaseManifestSha256':sha256_file(signed_root/'RELEASE_MANIFEST.json'),

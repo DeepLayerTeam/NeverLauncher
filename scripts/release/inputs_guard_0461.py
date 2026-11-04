@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release baseline guard for actual tool input files in the 0.47.0 tree.
+"""Release baseline guard for actual tool inputs in the current release tree.
 
 This is deliberately a *source-input* guard, not a false claim that native
 compilers, network packages or output binaries were independently verified.
@@ -10,11 +10,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-BASELINE = ROOT/'reproducibility'/'baseline-0.47.0.json'
+BASELINE = ROOT/'reproducibility'/'baseline.json'
 SOURCES = (
     'VERSION', 'schemas/openapi.yaml',
     'scripts/release/inputs_guard_0461.py',
@@ -28,7 +29,7 @@ SOURCES = (
     'scripts/release/publish_0370.py',
     'scripts/operations/operations_ga_0460.py',
     'cli/cmd/launcher/release_commands.go',
-    'reproducibility/primary-payload-0.47.0.json',
+    'reproducibility/primary-payload.json',
     'scripts/build/bridge-plugins.sh',
     'sdk/api/go/client.go', 'sdk/api/go/stream_0463_test.go',
     'sdk/api/typescript/client.ts',
@@ -76,6 +77,18 @@ def inputs() -> list[str]:
             continue
         if path.is_file() and path.name in SUFFIXES:
             result.add(path.relative_to(ROOT).as_posix())
+    # Release tools and both embedded migration chains affect what is shipped.
+    # Pin the full executable tool set and migration bytes, not only lockfiles.
+    for folder, pattern in (
+        ('scripts/release', '*.py'),
+        ('scripts/release', '*.sh'),
+        ('cli/internal/dbmigrate/sql', '*.sql'),
+        ('services/api/internal/dbmigrate/sql', '*.sql'),
+    ):
+        for path in (ROOT/folder).glob(pattern):
+            if path.is_symlink():
+                raise ValueError('symlink in release sources: '+str(path))
+            result.add(path.relative_to(ROOT).as_posix())
     for path in (ROOT/'.github/workflows').glob('*.yml'):
         if path.is_symlink(): raise ValueError('symlink in workflow: '+str(path))
         result.add(path.relative_to(ROOT).as_posix())
@@ -99,7 +112,7 @@ def record() -> dict:
 
 
 def verify(snapshot: dict, current: dict) -> None:
-    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != '0.47.0':
+    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != current.get('release'):
         raise ValueError('unrecognized input baseline or release')
     if current != snapshot:
         old = snapshot.get('files', {})
@@ -115,7 +128,8 @@ def main():
     try:
         snapshot=record()
         if args.mode=='freeze':
-            if snapshot['release'] != '0.47.0': raise ValueError('wrong release')
+            if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', snapshot['release']):
+                raise ValueError('invalid release version')
             BASELINE.write_text(json.dumps(snapshot, indent=2, sort_keys=True)+'\n',encoding='utf8')
             print(f'frozen {len(snapshot["files"])} real source inputs')
         else:

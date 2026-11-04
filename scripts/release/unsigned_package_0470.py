@@ -26,13 +26,14 @@ def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path
         raise ValueError('unsupported target')
     if not mapping:
         raise ValueError('empty unsigned payload')
-    # This tool is used by *current* production builds, not only historical 0.47.0.
-    # Keep the archived 0.47.0 contract's canonical target names but replace the
-    # release component: otherwise 0.52.x emits misleading 0.47.0 artifacts.
+    # Use the exact filenames from the current, validated release contract.
     version=(Path(__file__).resolve().parents[2]/'VERSION').read_text(encoding='utf-8').strip()
     if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version):
         raise ValueError('unsafe product version')
-    expected=contract()['targets'][target].replace('0.47.0',version)
+    current_contract=contract()
+    if current_contract['version'] != version:
+        raise ValueError('release version differs from unsigned payload contract')
+    expected=current_contract['targets'][target]
     paths=set()
     for arc,path in mapping.items():
         safe_member(arc)

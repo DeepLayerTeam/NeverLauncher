@@ -9,6 +9,26 @@ class PayloadChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError,'missing/non-production'):
                 payload.inventory(Path(tmp))
+    def test_tracked_contract_matches_current_version_and_six_names(self):
+        import json
+        release=(payload.ROOT/'VERSION').read_text(encoding='utf-8').strip()
+        current=json.loads(payload.CONTRACT.read_text(encoding='utf-8'))
+        self.assertEqual(current['version'],release)
+        self.assertEqual(len(current['targets']),6)
+        for target,filename in current['targets'].items():
+            self.assertIn(release,filename)
+            self.assertEqual(filename,Path(filename).name)
+    def test_stale_contract_refuses_even_if_staging_exists(self):
+        import json
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            wrong=Path(tmp)/'stale.json'
+            current=json.loads(payload.CONTRACT.read_text(encoding='utf-8'))
+            current['version']='0.47.0'
+            wrong.write_text(json.dumps(current),encoding='utf-8')
+            with patch.object(payload,'CONTRACT',wrong):
+                with self.assertRaisesRegex(ValueError,'wrong release version'):
+                    payload.inventory(Path(tmp))
     def test_traversal_entry_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'test.zip'

@@ -8,7 +8,7 @@ on:
       - 'scripts/guard_ci/test_guard_ga_0510.py'
       - 'scripts/release/check_payload_0461.py'
       - 'scripts/release/delivery_verify_0462.py'
-      - 'reproducibility/primary-payload-0.51.0.json'
+      - 'reproducibility/primary-payload.json'
       - '.github/workflows/guard-final-ga-0510.yml'
       - '.github/workflows/production-release-candidate.yml'
   pull_request:

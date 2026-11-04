@@ -42,7 +42,7 @@ def create_bundle(where:Path, mutate=False):
         platform,arch=target.split('-')
         prefix='launcher/' if platform=='linux' else 'Launcher.app/' if platform=='darwin' else ''
         files={prefix+name:fake_binary(platform,arch) for name in repro.EXPECTED[platform]}
-        files[prefix+'version.txt']=b'0.47.0\n'
+        files[prefix+'version.txt']=(repro.RELEASE_VERSION+'\n').encode('ascii')
         if mutate and target=='linux-arm64':files[prefix+'version.txt']=b'TAMPER!\n'
         if filename.endswith('.zip'):
             with zipfile.ZipFile(where/filename,'w',compression=zipfile.ZIP_STORED) as z:
@@ -119,7 +119,7 @@ class ReproTests(unittest.TestCase):
 
     def test_signed_link_requires_real_native_approval_and_manifest_binding(self):
         a,b=self.reports();comparison=repro.compare(a,b,self.a,self.b)
-        approval={'schema':'neverlauncher.native-signing-approval.v1','version':'0.47.0',
+        approval={'schema':'neverlauncher.native-signing-approval.v1','version':repro.RELEASE_VERSION,
                   'commit':self.commit,'comparisonSha256':hashlib.sha256(repro.canonical(comparison)).hexdigest(),
                   'operator':'independent-native-operator','releaseSignatureVerified':True,
                   'releaseManifestSha256':'f'*64,'targets':{}}
@@ -135,7 +135,7 @@ class ReproTests(unittest.TestCase):
         native_dir=self.dir/'native';native_dir.mkdir()
         for target in repro.TARGETS:
             row=approval['targets'][target]
-            report={'schema':'neverlauncher.native-verification.v1','version':'0.47.0',
+            report={'schema':'neverlauncher.native-verification.v1','version':repro.RELEASE_VERSION,
                     'target':target,'unsignedSha256':row['unsignedSha256'],
                     'signedSha256':row['signedSha256'],'nativeCheck':row['nativeCheck'],
                     'releaseManifestSha256':repro.sha256_file(self.dir/'RELEASE_MANIFEST.json'),

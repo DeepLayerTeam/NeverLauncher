@@ -15,7 +15,7 @@ import tarfile
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[2]
-CONTRACT=ROOT/'reproducibility/primary-payload-0.47.0.json'
+CONTRACT=ROOT/'reproducibility/primary-payload.json'
 
 
 def secure_name(name: str) -> None:
@@ -57,8 +57,9 @@ def inspect(path: Path) -> tuple[str,int]:
 
 def inventory(bundle: Path) -> dict:
     version = (ROOT/'VERSION').read_text().strip()
-    current_contract = ROOT / 'reproducibility' / f'primary-payload-{version}.json'
-    contract=json.loads((current_contract if current_contract.is_file() else CONTRACT).read_text())
+    if CONTRACT.is_symlink() or not CONTRACT.is_file():
+        raise ValueError('missing canonical primary payload contract')
+    contract=json.loads(CONTRACT.read_text(encoding='utf-8'))
     if contract.get('version') != version:
         raise ValueError('wrong release version for primary contract')
     targets=contract.get('targets',{})

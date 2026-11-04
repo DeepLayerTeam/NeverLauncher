@@ -1,14 +1,21 @@
-# NeverLauncher 0.47.0 — independent native reproducibility gate
+# NeverLauncher 0.53.0 — source baseline and independent native reproducibility
+
+## Canonical tracked files
+
+- `primary-payload.json` defines the exact six unsigned artifact names for `VERSION` (0.53.0).
+- `baseline.json` pins the actual current build/release inputs, lockfiles, SDK/tooling and workflows.
+- `python3 scripts/release/inputs_guard_0461.py verify` must pass before and after release builds; `freeze` is an explicit reviewed rebaseline, **not** verification.
+- Legacy `*_0470.py` filenames identify the origin of tools, not a hard-coded release version.
 
 ## Boundaries
 
-The six **unsigned** packages in `primary-payload-0.47.0.json` contain the real compiled executable payload captured **before** platform signing. Both builder cohorts must produce byte-for-byte identical ZIP/TAR.GZ archives including all regular members. They are not copies of already-signed packages. Reproducibility does not turn a fabricated executable into a valid launcher; native acceptance and existing release/signature gates remain mandatory.
+The six **unsigned** packages in `primary-payload.json` contain the real compiled executable payload captured **before** platform signing. Both builder cohorts must produce byte-for-byte identical ZIP/TAR.GZ archives including all regular members. They are not copies of already-signed packages. Reproducibility does not turn a fabricated executable into a valid launcher; native acceptance and existing release/signature gates remain mandatory.
 
 `reproducible_0470.py` is executable Python, not a contract-only scaffold. It verifies CPU format (PE64/ELF64/Mach-O), required compiled components, path safety, extraction size limits, entire archive SHA-256 and every member's digest and mode. `unsigned_package_0470.py` builds canonical packages from actual compiled component files before Authenticode/codesign and refuses missing executables/overwrites.
 
 ## Independent runs
 
-The GitHub Actions `reproducibility-0470.yml` workflow requires explicit dispatch for an exact immutable commit. It executes two separate builder cohorts on native Windows, Linux x64/ARM64 and macOS runners; each builds the real application, and independent capture runners sign six-target digests with different pinned Ed25519 keys. The comparison runner re-reads both archive sets and verifies each independently signed report before issuing a comparison report. The release gate rejects missing, altered or cross-commit evidence. Windows and macOS capture occurs before platform signing, Linux before delegated package signing. Developer ad-hoc packages are never treated as signed production deliverables.
+The source-based reproducibility tests run in `.github/workflows/ci.yml`; separate native builder cohorts and independently signed, exact-byte evidence are required for an actual release. No automated six-platform release PASS is implied by those unit tests. Both builders must build real OS/CPU artifacts; the comparison verifier re-reads all archived bytes and validates signatures. The release gate rejects missing, altered or cross-commit evidence. Windows and macOS capture occurs before platform signing, Linux before delegated package signing. Developer ad-hoc packages are never treated as signed production deliverables.
 
 External prerequisites: native runners, compatible Go/Rust/Java/Node dependencies, `LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY` (the exact public key embedded into both builds), separate builder Ed25519 signing identities, their independently pinned public keys, and a clean exact commit. A successful workflow requires actual native builds; the local source tests cannot satisfy it.
 
@@ -39,7 +46,7 @@ The approval report is created **after** final signing and native acceptance; an
 ## Hard acceptance threshold
 
 - Two independent *real* build cohorts on the six named OS/CPU targets; six full archive SHA-256 pairs must match.
-- Full trusted input baseline, source commit and immutable release contract match; no uncontrolled lockfile changes.
+- The tracked `baseline.json` source-input hashes (regenerated only by reviewed `inputs_guard_0461.py freeze`), source commit and immutable release contract match; no uncontrolled lockfile changes.
 - Native validators inspect each actual final signed package and verify the applicable platform signature; release CLI verifies the final Ed25519 manifest.
 - Different pinned keys authenticate builder A, builder B and operator; all evidence applies to the same exact bytes.
 - Missing/cancelled/skipped/failed targets are **BLOCKED**, never `PASS`.
