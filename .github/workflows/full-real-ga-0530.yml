@@ -1,0 +1,237 @@
+name: 0.53.0 Full Real User Acceptance GA
+
+on:
+  push:
+    paths:
+      - 'scripts/release/full_real_acceptance_0530.py'
+      - 'scripts/release/publication_ga_0530.py'
+      - 'scripts/acceptance/sdk_live_0530.py'
+      - 'sdk/api/go/cmd/live-acceptance/**'
+      - 'sdk/api/typescript/test/live_acceptance.mjs'
+      - 'sdk/java/http-client/src/test/java/ru/neverlauncher/api/LiveAcceptance.java'
+      - '.github/workflows/full-real-ga-0530.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Immutable 40-character approved GA release commit
+        required: true
+        type: string
+      project:
+        description: Exact distribution project slug
+        required: true
+        type: string
+      source_index_sha256:
+        description: Out-of-band pinned SHA-256 of six-platform signed download index
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: full-real-ga-0530-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run fail-closed GA, release and signature regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'cryptography>=42,<47' 'PyYAML>=6,<7'
+          PYTHONPATH=scripts/release:scripts/acceptance:scripts/operations python -m unittest -q \
+            scripts.release.test_full_real_acceptance_0530 \
+            scripts.release.test_defect_rehearsal_05212 \
+            scripts.acceptance.test_sweep_05211 \
+            scripts.release.test_independent_current_05211
+          python scripts/version/manage.py check
+
+  freeze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: [regressions]
+    runs-on: [self-hosted, linux, x64, release-freeze]
+    environment: ga0530-release-freeze
+    timeout-minutes: 40
+    env:
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      PROJECT: ${{ inputs.project }}
+      INDEX_SHA: ${{ inputs.source_index_sha256 }}
+      INBOX: ${{ vars.LAUNCHER_GA0530_FREEZE_INBOX }}
+      RELEASE_PRIVATE_KEY: ${{ vars.LAUNCHER_GA0530_RELEASE_PRIVATE_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - name: Freeze six actual final package bytes, signed by release authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = 0.53.0
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$INDEX_SHA" =~ ^[0-9a-f]{64}$ ]]
+          test -n "$RELEASE_PRIVATE_KEY" && test -n "$INBOX"
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ga0530-freeze"
+          python scripts/release/defect_rehearsal_05212.py freeze \
+            --commit "$SOURCE_COMMIT" --project "$PROJECT" \
+            --packages "$INBOX/packages" --index "$INBOX/source-index.json" \
+            --index-sha "$INDEX_SHA" --release-private-key "$RELEASE_PRIVATE_KEY" \
+            --output "$RUNNER_TEMP/ga0530-freeze/freeze.json" \
+            --signature "$RUNNER_TEMP/ga0530-freeze/freeze.sig"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ga0530-freeze-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/ga0530-freeze/
+          if-no-files-found: error
+          retention-days: 90
+
+  live-qa:
+    needs: [freeze]
+    runs-on: [self-hosted, linux, x64, independent-review]
+    environment: ga0530-independent-live-qa
+    timeout-minutes: 1440
+    env:
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      PROJECT: ${{ inputs.project }}
+      INDEX_SHA: ${{ inputs.source_index_sha256 }}
+      INBOX: ${{ vars.LAUNCHER_GA0530_QA_INBOX }}
+      RELEASE_KEY: ${{ vars.LAUNCHER_GA0530_RELEASE_KEY_PATH }}
+      RELEASE_PIN: ${{ vars.LAUNCHER_GA0530_RELEASE_KEY_SHA256 }}
+      ISSUE_KEY: ${{ vars.LAUNCHER_GA0530_ISSUE_KEY_PATH }}
+      ISSUE_PIN: ${{ vars.LAUNCHER_GA0530_ISSUE_KEY_SHA256 }}
+      QA_KEY: ${{ vars.LAUNCHER_GA0530_QA_KEY_PATH }}
+      QA_PIN: ${{ vars.LAUNCHER_GA0530_QA_KEY_SHA256 }}
+      QA_PRIVATE: ${{ vars.LAUNCHER_GA0530_QA_PRIVATE_KEY_PATH }}
+      VERIFIER_KEY: ${{ vars.LAUNCHER_GA0530_VERIFIER_KEY_PATH }}
+      VERIFIER_PIN: ${{ vars.LAUNCHER_GA0530_VERIFIER_KEY_SHA256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ga0530-freeze-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/ga0530-freeze
+      - name: Execute live E2E-01 to E2E-18 on independent physical/game lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$INBOX" && test -n "$QA_PRIVATE" && test -n "$VERIFIER_PIN"
+          mkdir -p "$RUNNER_TEMP/ga0530-live" "$RUNNER_TEMP/ga0530-regressions" "$RUNNER_TEMP/ga0530-review"
+          python scripts/release/full_real_acceptance_0530.py review \
+            --commit "$SOURCE_COMMIT" --project "$PROJECT" --index-sha "$INDEX_SHA" \
+            --freeze "$RUNNER_TEMP/ga0530-freeze/freeze.json" \
+            --freeze-sig "$RUNNER_TEMP/ga0530-freeze/freeze.sig" \
+            --release-key "$RELEASE_KEY" --release-pin "$RELEASE_PIN" \
+            --packages "$INBOX/packages" --index "$INBOX/source-index.json" \
+            --issues "$INBOX/issues.json" --issues-sig "$INBOX/issues.sig" \
+            --issues-key "$ISSUE_KEY" --issues-pin "$ISSUE_PIN" \
+            --config "$INBOX/full-sweep-paths.json" \
+            --regression-logs "$RUNNER_TEMP/ga0530-regressions" \
+            --lab-plan "$INBOX/live-plan.json" --lab-work "$RUNNER_TEMP/ga0530-live" \
+            --qa-report "$RUNNER_TEMP/ga0530-review/qa.json" \
+            --qa-sig "$RUNNER_TEMP/ga0530-review/qa.sig" \
+            --qa-key "$QA_KEY" --qa-pin "$QA_PIN" --qa-private-key "$QA_PRIVATE" \
+            --verifier-key "$VERIFIER_KEY" --verifier-pin "$VERIFIER_PIN" \
+            --ga-report "$RUNNER_TEMP/ga0530-review/unused-ga.json" \
+            --ga-sig "$RUNNER_TEMP/ga0530-review/unused-ga.sig"
+      - name: Preserve QA signature (raw private evidence is transferred via protected lab transport)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ga0530-qa-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/ga0530-review/qa.*
+          if-no-files-found: error
+          retention-days: 90
+
+  independent-verifier:
+    needs: [live-qa]
+    runs-on: [self-hosted, linux, x64, independent-verifier]
+    environment: ga0530-independent-verifier
+    timeout-minutes: 240
+    env:
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      PROJECT: ${{ inputs.project }}
+      INDEX_SHA: ${{ inputs.source_index_sha256 }}
+      INBOX: ${{ vars.LAUNCHER_GA0530_VERIFY_INBOX }}
+      RELEASE_KEY: ${{ vars.LAUNCHER_GA0530_RELEASE_KEY_PATH }}
+      RELEASE_PIN: ${{ vars.LAUNCHER_GA0530_RELEASE_KEY_SHA256 }}
+      ISSUE_KEY: ${{ vars.LAUNCHER_GA0530_ISSUE_KEY_PATH }}
+      ISSUE_PIN: ${{ vars.LAUNCHER_GA0530_ISSUE_KEY_SHA256 }}
+      QA_KEY: ${{ vars.LAUNCHER_GA0530_QA_KEY_PATH }}
+      QA_PIN: ${{ vars.LAUNCHER_GA0530_QA_KEY_SHA256 }}
+      VERIFIER_KEY: ${{ vars.LAUNCHER_GA0530_VERIFIER_KEY_PATH }}
+      VERIFIER_PIN: ${{ vars.LAUNCHER_GA0530_VERIFIER_KEY_SHA256 }}
+      VERIFIER_PRIVATE: ${{ vars.LAUNCHER_GA0530_VERIFIER_PRIVATE_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ga0530-freeze-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/ga0530-freeze
+      - uses: actions/download-artifact@v4
+        with:
+          name: ga0530-qa-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/ga0530-qa
+      - name: Replay original signed 280/native/soak/build and all 18 real E2E results
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$INBOX" && test -n "$VERIFIER_PRIVATE"
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ga0530-final"
+          python scripts/release/full_real_acceptance_0530.py approve \
+            --commit "$SOURCE_COMMIT" --project "$PROJECT" --index-sha "$INDEX_SHA" \
+            --freeze "$RUNNER_TEMP/ga0530-freeze/freeze.json" \
+            --freeze-sig "$RUNNER_TEMP/ga0530-freeze/freeze.sig" \
+            --release-key "$RELEASE_KEY" --release-pin "$RELEASE_PIN" \
+            --packages "$INBOX/packages" --index "$INBOX/source-index.json" \
+            --issues "$INBOX/issues.json" --issues-sig "$INBOX/issues.sig" \
+            --issues-key "$ISSUE_KEY" --issues-pin "$ISSUE_PIN" \
+            --config "$INBOX/full-sweep-paths.json" \
+            --regression-logs "$INBOX/regression-logs" \
+            --lab-plan "$INBOX/live-plan.json" --lab-work "$INBOX/live-results" \
+            --qa-report "$RUNNER_TEMP/ga0530-qa/qa.json" \
+            --qa-sig "$RUNNER_TEMP/ga0530-qa/qa.sig" \
+            --qa-key "$QA_KEY" --qa-pin "$QA_PIN" \
+            --verifier-key "$VERIFIER_KEY" --verifier-pin "$VERIFIER_PIN" \
+            --verifier-private-key "$VERIFIER_PRIVATE" \
+            --ga-report "$RUNNER_TEMP/ga0530-final/approval.json" \
+            --ga-sig "$RUNNER_TEMP/ga0530-final/approval.sig"
+          cp -- "$INBOX/source-index.json" "$RUNNER_TEMP/ga0530-final/source-index.json"
+          cp -a -- "$INBOX/packages" "$RUNNER_TEMP/ga0530-final/packages"
+      - name: Publish exact independently certified unsigned-to-final binding for protected release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ga0530-final-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/ga0530-final/
+          if-no-files-found: error
+          retention-days: 90

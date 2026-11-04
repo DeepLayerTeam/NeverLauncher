@@ -1,4 +1,4 @@
-name: 0.52.12 real one-hour Minecraft and HTTPS soaks
+name: 0.53.0 real one-hour Minecraft and HTTPS soaks
 on:
   push:
     paths:

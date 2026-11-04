@@ -241,7 +241,7 @@ def main(argv=None):
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args(argv)
     try:
-        require(VERSION == '0.52.9', 'wrong source version for 0.52.9 acceptance')
+        require(tuple(map(int, VERSION.split('.')[:3])) >= (0,52,9), 'Guard/Bridge requires 0.52.9+')
         require(args.mode == 'local' or args.config is not None, 'external live config required')
         report=run_local(args.output, set(args.only_suite) if args.only_suite else None) if args.mode=='local' else run_live(read_json(args.config))
         require(not args.output.exists() and args.output.is_absolute(), 'new absolute output path required')

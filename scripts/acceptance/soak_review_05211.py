@@ -12,9 +12,10 @@ import sys
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sweep_05211 import raw_soak, signed_soak, ROOT
+import inventory_0521 as inventory
 from inventory_0521 import safe_file, public_key, canonical, write_exclusive
 
-DOMAIN = b'neverlauncher.soak.real.0.52.12\x00'
+DOMAIN = ('neverlauncher.soak.real.' + inventory.VERSION + '\x00').encode()
 
 def sign(a):
     raw_soak(a.report_dir, a.commit, a.run_id, a.attempt, a.mode)

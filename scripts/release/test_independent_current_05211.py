@@ -14,7 +14,7 @@ spec.loader.exec_module(r)
 class CurrentIndependentTests(unittest.TestCase):
     def test_current_release_archives_not_0470(self):
         self.assertEqual(len(r.expected_archives()),6)
-        self.assertTrue(all('0.52.12' in value for value in r.expected_archives().values()))
+        self.assertTrue(all('0.53.0' in value for value in r.expected_archives().values()))
         self.assertEqual(len(set(r.expected_archives().values())),6)
     def test_missing_build_blocks(self):
         with tempfile.TemporaryDirectory() as p:

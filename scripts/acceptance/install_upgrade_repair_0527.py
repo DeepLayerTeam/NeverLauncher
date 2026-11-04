@@ -218,7 +218,7 @@ def main() -> int:
             add_event(events,'uninstall-preserve-saves',native('uninstall'))
             preserved()
             require(not (root/'.launcher-installer').exists(),'uninstall retained installer internals')
-            report = {'schemaVersion':'1.0','version':'0.52.7', 'status':'PASS',
+            report = {'schemaVersion':'1.0','version':(Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'status':'PASS',
                       'installerSHA256':args.installer_sha256,'oldConfigSHA256':args.old_config_sha256,
                       'newConfigSHA256':args.new_config_sha256,'managedFileSHA256':args.managed_repair_sha256,
                       'checks':events,'finalSavedFileSHA256':user_digest}

@@ -34,8 +34,8 @@ class SweepTests(unittest.TestCase):
             with ledger.open('wb') as stream:
                 for i in range(10000):
                     stream.write(struct.pack('!QdI', 10000000000+i*360010000, 25.0,8))
-            row={'schema':'neverlauncher.real-soak/0.52.12',
-                 'status':'OBSERVED_NOT_GA','version':'0.52.12',
+            row={'schema':'neverlauncher.real-soak/0.53.0',
+                 'status':'OBSERVED_NOT_GA','version':'0.53.0',
                  'commit':'a'*40,'runId':'1234','attempt':1,'mode':'https',
                  'seconds':3601.0,'requests':10000,'failed':0,'concurrency':8,
                  'p95Ms':25.0,'responseBytes':80000,
@@ -49,7 +49,7 @@ class SweepTests(unittest.TestCase):
                                     serialization.PublicFormat.SubjectPublicKeyInfo)
             pubpath=root/'reviewer.pub';pubpath.write_bytes(pem)
             pin=hashlib.sha256(der).hexdigest()
-            (root/'soak.sig').write_bytes(key.sign(b'neverlauncher.soak.real.0.52.12\x00'+m.inventory.canonical(row)))
+            (root/'soak.sig').write_bytes(key.sign(b'neverlauncher.soak.real.0.53.0\x00'+m.inventory.canonical(row)))
             self.assertEqual(m.signed_soak(root,pubpath,pin,'a'*40,'1234',1,'https')['requests'],10000)
             with ledger.open('r+b') as handle:
                 handle.seek(2)

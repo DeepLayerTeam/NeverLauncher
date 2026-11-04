@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 sys.path.insert(0, str(ROOT / 'scripts/compatibility'))
 import inventory_0521 as inventory
 
-SCHEMA = 'neverlauncher.real-soak/0.52.12'
+SCHEMA = 'neverlauncher.real-soak/' + inventory.VERSION
 MAX_LOG = 32 * 1024 * 1024
 COMMIT = re.compile(r'[a-f0-9]{40}\Z')
 RUN = re.compile(r'[1-9][0-9]*\Z')
@@ -67,7 +67,7 @@ def write_receipt(path: Path, data):
 def check_identity(args):
     require(COMMIT.fullmatch(args.commit or '') is not None and RUN.fullmatch(args.run_id or '') is not None
             and type(args.attempt) is int and args.attempt > 0, 'real CI commit/run identity required')
-    require(inventory.VERSION == '0.52.12', 'requires product version 0.52.12')
+    require(inventory.VERSION >= '0.53.0', 'requires product version 0.53.0 or later')
     require(3600 <= args.min_seconds <= 24*3600, 'soak must run for at least one real hour')
 
 def copy_selected(raw: Path, destination: Path, names):

@@ -39,6 +39,10 @@ on:
         type: string
         required: false
         description: 'Protected independently signed live 0.48.0 staging migration, legacy, game and exact signed-package acceptance run ID (mandatory for 0.48.0 publication)'
+      ga0530_evidence_run_id:
+        type: string
+        required: false
+        description: 'Protected independent 0.53.0 E2E-01..18 GA verifier run ID (mandatory for 0.53.0 publication)'
       publish_release:
         type: boolean
         required: true
@@ -1165,6 +1169,24 @@ jobs:
           path: guard-0510-independent
           run-id: ${{ inputs.guard_0510_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download protected 0.53.0 all-user-E2E signed approval and exact six final installers
+        if: ${{ inputs.ga0530_evidence_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ga0530-final-${{ github.sha }}
+          path: ga0530-final
+          run-id: ${{ inputs.ga0530_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pin independent 0.53.0 final GA verifier key without a private signer
+        if: ${{ inputs.ga0530_evidence_run_id != '' }}
+        shell: bash
+        env:
+          GA0530_VERIFIER_PUBLIC_PEM: ${{ vars.NL_GA0530_VERIFIER_PUBLIC_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          test -n "$GA0530_VERIFIER_PUBLIC_PEM"
+          umask 077
+          printf '%s\n' "$GA0530_VERIFIER_PUBLIC_PEM" > "$RUNNER_TEMP/ga0530-verifier.pub"
       - name: Mandatory independent Guard 0.51.0 exact-final-byte admission
         shell: bash
         env:
@@ -1201,6 +1223,11 @@ jobs:
           LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NL0480_TRUSTED_KEY_HEX: ${{ vars.NL_GA0480_OPERATOR_ED25519_PUBLIC_KEY_HEX }}
+          NL_GA0530_INBOX: ${{ github.workspace }}/ga0530-final
+          NL_GA0530_VERIFIER_KEY: ${{ runner.temp }}/ga0530-verifier.pub
+          NL_GA0530_VERIFIER_PIN: ${{ vars.NL_GA0530_VERIFIER_KEY_SHA256 }}
+          NL_GA0530_INDEX_SHA256: ${{ vars.NL_GA0530_INDEX_SHA256 }}
+          NL_GA0530_PROJECT: ${{ vars.NL_GA0530_PROJECT }}
         shell: bash
         run: |
           set -euo pipefail

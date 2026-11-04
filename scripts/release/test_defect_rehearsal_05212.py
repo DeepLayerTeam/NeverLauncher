@@ -59,8 +59,8 @@ def index_fixture(root):
 
 class CandidateTests(unittest.TestCase):
     def test_version_is_real_candidate(self):
-        self.assertEqual(m.VERSION,'0.52.12')
-        self.assertEqual(m.SCHEMA,'neverlauncher.candidate-freeze/0.52.12')
+        self.assertEqual(m.VERSION,'0.53.0')
+        self.assertEqual(m.SCHEMA,'neverlauncher.candidate-freeze/0.53.0')
 
     def test_six_exact_bytes_are_verified(self):
         with tempfile.TemporaryDirectory() as t:

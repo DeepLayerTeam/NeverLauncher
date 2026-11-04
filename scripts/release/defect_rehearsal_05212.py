@@ -34,12 +34,12 @@ import native_packages_0522 as native
 import sweep_05211 as sweep
 
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
-SCHEMA = 'neverlauncher.candidate-freeze/0.52.12'
-REPORT = 'neverlauncher.independent-rehearsal/0.52.12'
-ISSUES = 'neverlauncher.defect-closure-export/0.52.12'
-FREEZE_DOMAIN = b'neverlauncher.candidate-freeze.0.52.12\x00'
-ISSUE_DOMAIN = b'neverlauncher.defect-closure.0.52.12\x00'
-REHEARSAL_DOMAIN = b'neverlauncher.independent-rehearsal.0.52.12\x00'
+SCHEMA = 'neverlauncher.candidate-freeze/' + VERSION
+REPORT = 'neverlauncher.independent-rehearsal/' + VERSION
+ISSUES = 'neverlauncher.defect-closure-export/' + VERSION
+FREEZE_DOMAIN = ('neverlauncher.candidate-freeze.'+VERSION+'\x00').encode()
+ISSUE_DOMAIN = ('neverlauncher.defect-closure.'+VERSION+'\x00').encode()
+REHEARSAL_DOMAIN = ('neverlauncher.independent-rehearsal.'+VERSION+'\x00').encode()
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
 
@@ -57,6 +57,9 @@ REGRESSIONS = (
  'scripts.acceptance.test_guard_device_bridge_real_0529',
  'scripts.operations.test_physical_ha_dr_05210',
  'scripts.release.test_defect_rehearsal_05212',
+ 'scripts.release.test_full_real_acceptance_0530',
+ 'scripts.release.test_publication_ga_0530',
+ 'scripts.acceptance.test_sdk_live_0530',
 )
 
 class Blocked(ValueError):
@@ -94,8 +97,8 @@ def git(*args):
     return p.stdout.strip()
 
 def source_identity(expected: str):
-    require(VERSION == '0.52.12' and COMMIT.fullmatch(expected or '') is not None,
-            'exact 0.52.12 version and 40-digit approved commit required')
+    require(VERSION == '0.53.0' and COMMIT.fullmatch(expected or '') is not None,
+            'exact 0.53.0 version and 40-digit approved commit required')
     require(git('rev-parse', 'HEAD') == expected, 'candidate checkout commit changed')
     require(git('status','--porcelain','--untracked-files=all') == '',
             'checkout is dirty or has untracked source files')

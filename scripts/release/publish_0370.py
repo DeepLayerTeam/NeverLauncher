@@ -365,6 +365,26 @@ def validate(
             verify_public(bundle, Path(operator_key), release_key)
         except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
             raise Blocked('0.46.0 GA BLOCKED: independent operations evidence validation failed') from exc
+    if version == '0.53.0':
+        # Explicit admission before even attempting GitHub publication.
+        # Protected release environment supplies read-only original approved
+        # package files and a separate pinned independent-verifier key.
+        from publication_ga_0530 import verify as verify_0530
+        base = os.environ.get('NL_GA0530_INBOX','')
+        key = os.environ.get('NL_GA0530_VERIFIER_KEY','')
+        pin = os.environ.get('NL_GA0530_VERIFIER_PIN','')
+        index_pin = os.environ.get('NL_GA0530_INDEX_SHA256','')
+        project = os.environ.get('NL_GA0530_PROJECT','')
+        require(all((base,key,pin,index_pin,project)),
+                '0.53.0 release BLOCKED: independent Full User Acceptance GA inputs missing')
+        root=Path(base)
+        require(root.is_absolute() and root.is_dir(), '0.53.0 GA inbox unavailable')
+        try:
+            verify_0530(root/'approval.json',root/'approval.sig',Path(key),pin,
+                        root/'packages',root/'source-index.json',index_pin,
+                        bundle.absolute(),commit,project)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise Blocked('0.53.0 FULL REAL USER ACCEPTANCE GA BLOCKED: '+str(exc)) from exc
     verify_ci(json_object(ci), version, commit, run_id, attempt)
     approval = verify_ga(bundle, ga_key, version, commit, run_id, attempt)
     dry = json_object(dryrun)
