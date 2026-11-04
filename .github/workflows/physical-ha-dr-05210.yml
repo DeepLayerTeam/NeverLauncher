@@ -160,7 +160,8 @@ jobs:
           python3 - "$incident" <<'PY'
           import json,sys
           doc=json.load(open(sys.argv[1], encoding='utf-8'))
-          assert doc['status']=='PASS' and doc['version']=='0.52.10'
+          from pathlib import Path
+          assert doc['status']=='PASS' and doc['version']==Path('VERSION').read_text().strip()
           PY
       - name: State acceptance boundary accurately
         run: |

@@ -1,0 +1,231 @@
+name: 0.52.11 independent exact-byte native builds
+
+on:
+  push:
+    paths:
+      - 'scripts/release/independent_current_05211.py'
+      - 'scripts/release/test_independent_current_05211.py'
+      - 'scripts/release/unsigned_package_0470.py'
+      - '.github/workflows/reproducibility-current-05211.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Exact approved 40-character commit (protected environment)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: repro-05211-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install 'cryptography>=42,<47'
+          PYTHONPATH=scripts/release:scripts/acceptance python -m unittest -v scripts/release/test_reproducible_0470.py scripts/release/test_unsigned_package_0470.py scripts/release/test_independent_current_05211.py
+          python scripts/version/manage.py check
+
+  build:
+    # Real independent native compiler/toolchain executions, not two checksum
+    # reports manufactured from a single build directory.
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: [regression]
+    environment: production-acceptance
+    timeout-minutes: 160
+    strategy:
+      fail-fast: false
+      matrix:
+        builder: [builder-a, builder-b]
+        target: [windows, linux-x64, linux-arm64, macos]
+        include:
+          - {target: windows, runner: windows-2022}
+          - {target: linux-x64, runner: ubuntu-24.04}
+          - {target: linux-arm64, runner: ubuntu-24.04-arm}
+          - {target: macos, runner: macos-15-intel}
+    runs-on: ${{ matrix.runner }}
+    env:
+      LAUNCHER_UNSIGNED_ONLY: '1'
+      LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.7.1'
+      - name: Verify clean immutable source and pinned dependencies
+        env:
+          EXPECTED_SHA: ${{ inputs.source_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(cat VERSION)" = 0.52.11
+          git diff --exit-code HEAD --
+          git diff --cached --exit-code HEAD --
+      - name: Install Linux native build dependencies
+        if: startsWith(matrix.target, 'linux')
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - name: Native executable compilation and deterministic unsigned packaging
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LAUNCHER_UNSIGNED_OUTPUT_DIR="${GITHUB_WORKSPACE}/dist/unsigned-0.52.11"
+          case "$TARGET" in
+            windows) pwsh -NoProfile -File scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage ;;
+            linux-x64) bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.52.11" --expected-arch x64 ;;
+            linux-arm64) bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.52.11" --expected-arch arm64 ;;
+            macos) bash scripts/release/build-macos-production.sh --allow-ad-hoc ;;
+            *) exit 2 ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-05211-${{ matrix.builder }}-${{ matrix.target }}-${{ inputs.source_commit }}
+          path: dist/unsigned-0.52.11/*
+          if-no-files-found: error
+          retention-days: 90
+
+  capture:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [build]
+    runs-on: ubuntu-24.04
+    environment: production-acceptance
+    strategy:
+      matrix:
+        builder: [builder-a, builder-b]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unsigned-05211-${{ matrix.builder }}-*-${{ inputs.source_commit }}
+          path: dist/unsigned-capture
+          merge-multiple: true
+      - name: Reopen real archives and sign complete six-target observation
+        env:
+          BUILDER: ${{ matrix.builder }}
+          SOURCE_SHA: ${{ inputs.source_commit }}
+          PRIVATE_PEM: ${{ matrix.builder == 'builder-a' && secrets.LAUNCHER_REPRO_BUILDER_A_PRIVATE_KEY_PEM || secrets.LAUNCHER_REPRO_BUILDER_B_PRIVATE_KEY_PEM }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -n "$PRIVATE_PEM"
+          mkdir -p dist/repro-receipts
+          python scripts/release/independent_current_05211.py capture \
+            --bundle "$PWD/dist/unsigned-capture" --builder "$BUILDER" \
+            --runner "github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${BUILDER}" \
+            --commit "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" --out "$PWD/dist/repro-receipts/unsigned.json"
+          umask 077
+          printf '%s\n' "$PRIVATE_PEM" > "$RUNNER_TEMP/signing.pem"
+          trap 'rm -f "$RUNNER_TEMP/signing.pem"' EXIT
+          python scripts/release/reproducible_0470.py sign \
+            --report dist/repro-receipts/unsigned.json \
+            --private-key "$RUNNER_TEMP/signing.pem" --out dist/repro-receipts/unsigned.sig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: independent-05211-${{ matrix.builder }}-${{ inputs.source_commit }}
+          path: dist/repro-receipts/*
+          if-no-files-found: error
+          retention-days: 90
+
+  compare:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [capture]
+    runs-on: ubuntu-24.04
+    environment: production-acceptance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unsigned-05211-builder-a-*-${{ inputs.source_commit }}
+          merge-multiple: true
+          path: dist/a
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unsigned-05211-builder-b-*-${{ inputs.source_commit }}
+          merge-multiple: true
+          path: dist/b
+      - uses: actions/download-artifact@v4
+        with:
+          name: independent-05211-builder-a-${{ inputs.source_commit }}
+          path: dist/a-receipt
+      - uses: actions/download-artifact@v4
+        with:
+          name: independent-05211-builder-b-${{ inputs.source_commit }}
+          path: dist/b-receipt
+      - name: Independently pin public keys and rehash every archive member
+        env:
+          A_PUBLIC: ${{ vars.LAUNCHER_REPRO_BUILDER_A_PUBLIC_KEY_PEM }}
+          B_PUBLIC: ${{ vars.LAUNCHER_REPRO_BUILDER_B_PUBLIC_KEY_PEM }}
+          A_PIN: ${{ vars.LAUNCHER_REPRO_BUILDER_A_PUBLIC_SHA256 }}
+          B_PIN: ${{ vars.LAUNCHER_REPRO_BUILDER_B_PUBLIC_SHA256 }}
+          SOURCE_SHA: ${{ inputs.source_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -n "$A_PUBLIC" && test -n "$B_PUBLIC" && test -n "$A_PIN" && test -n "$B_PIN"
+          umask 077
+          printf '%s\n' "$A_PUBLIC" > "$RUNNER_TEMP/repro-a.pub"
+          printf '%s\n' "$B_PUBLIC" > "$RUNNER_TEMP/repro-b.pub"
+          mkdir -p dist/compared
+          python scripts/release/independent_current_05211.py compare \
+            --a-report "$PWD/dist/a-receipt/unsigned.json" --a-sig "$PWD/dist/a-receipt/unsigned.sig" \
+            --a-key "$RUNNER_TEMP/repro-a.pub" --a-key-sha256 "$A_PIN" --a-dir "$PWD/dist/a" \
+            --b-report "$PWD/dist/b-receipt/unsigned.json" --b-sig "$PWD/dist/b-receipt/unsigned.sig" \
+            --b-key "$RUNNER_TEMP/repro-b.pub" --b-key-sha256 "$B_PIN" --b-dir "$PWD/dist/b" \
+            --commit "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+            --out "$PWD/dist/compared/comparison.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-reproducibility-05211-${{ inputs.source_commit }}
+          path: dist/compared/comparison.json
+          if-no-files-found: error
+          retention-days: 90

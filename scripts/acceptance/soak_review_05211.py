@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""Independent signer for independently rechecked, actual 0.52.11 soaks.
+
+Run this on a separate protected reviewer host. It rechecks *each* original
+Minecraft session before signing. The signing key must stay outside checkout.
+"""
+import argparse
+from pathlib import Path
+import os
+import sys
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from sweep_05211 import raw_soak, signed_soak, ROOT
+from inventory_0521 import safe_file, public_key, canonical, write_exclusive
+
+DOMAIN = b'neverlauncher.soak.real.0.52.11\x00'
+
+def sign(a):
+    raw_soak(a.report_dir, a.commit, a.run_id, a.attempt, a.mode)
+    if a.private_key.resolve().is_relative_to(ROOT):
+        raise ValueError('reviewer signing key must be outside source checkout')
+    key_file = safe_file(a.private_key,8192)
+    if key_file.stat().st_mode & 0o077:
+        raise ValueError('private signer key must be mode 0600')
+    key = serialization.load_pem_private_key(key_file.read_bytes(),password=None)
+    pub = public_key(a.public_key,a.pin)
+    if not isinstance(key,Ed25519PrivateKey) or key.public_key().public_bytes(
+        serialization.Encoding.Raw,serialization.PublicFormat.Raw) != pub.public_bytes(
+        serialization.Encoding.Raw,serialization.PublicFormat.Raw):
+        raise ValueError('independent signing key mismatch')
+    from inventory_0521 import read_json
+    payload = read_json(a.report_dir / 'soak.json')
+    dest = a.report_dir / 'soak.sig'
+    write_exclusive(dest,key.sign(DOMAIN + canonical(payload)))
+    signed_soak(a.report_dir,a.public_key,a.pin,a.commit,a.run_id,a.attempt,a.mode)
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--report-dir',type=Path,required=True)
+    p.add_argument('--commit',required=True)
+    p.add_argument('--run-id',required=True)
+    p.add_argument('--attempt',type=int,required=True)
+    p.add_argument('--mode',choices=('game','https'),required=True)
+    p.add_argument('--private-key',type=Path,required=True)
+    p.add_argument('--public-key',type=Path,required=True)
+    p.add_argument('--pin',required=True)
+    a=p.parse_args()
+    try:
+        sign(a)
+        print('PASS: independently reviewed actual soak observations signed (NOT GA)')
+        return 0
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print('SOAK REVIEW BLOCKED: ' + str(exc),file=sys.stderr)
+        return 3
+
+if __name__=='__main__':
+    raise SystemExit(main())

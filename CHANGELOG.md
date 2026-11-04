@@ -1,3 +1,12 @@
+## 0.52.11 — Full Compatibility Sweep & Soak (runnable acceptance; GA BLOCKED)
+
+- Correct compatibility jobs to use the actual Go toolchain declared by `services/api/go.mod`, instead of an incompatible hardcoded Go 1.23.
+- Fix the production unsigned package builder, including Windows PowerShell, macOS and Linux release scripts, to capture versioned compiled executables for releases after 0.47.0 instead of leaving 0.52.x with 0.47.0 filenames or skipping the unsigned capture entirely.
+- Add independent current-release reproducibility: two separately executed native build sets, six inspected unsigned packages per builder, pinned distinct Ed25519 builder keys, replay of all 12 actual archives, archived member checksums, exact source and lockfile binding.
+- Add real Minecraft and HTTP soak executors. A gameplay soak requires at least eight actual client/server joins across at least 60 minutes per declared loader anchor, preserves and revalidates original logs and JVM/server evidence; an HTTPS soak performs real concurrent TLS requests for at least 60 minutes, keeps a hash-bound binary request ledger and measures tail latency and errors. Failures, timeouts and insecure certificate paths block acceptance.
+- Add independent reviewer signatures after rechecking each original soak, and a fail-closed sweep of 280 required Minecraft cases, six signed final installers, six native GUI games, five game soaks, HTTP load and the two signed independent builds. Integrate the 280-target replay into `compatibility.yml`; add protected workflows for independent builds and physical-lab soaks.
+- **External GA remains BLOCKED:** no claim is made that the 280 real target runs, six native machines, 60-minute game/load soaks or two independent final builds have completed in this environment. A successful unit test or signature on a self-reported JSON does not substitute for executing them. Final 0.53.0 acceptance remains separate.
+
 ## 0.52.10 — Physical HA & Disaster Recovery Acceptance (real hardware executor; external GA BLOCKED)
 
 - Add an actual physical-server outage drill using authenticated HTTPS Redfish BMC `ForceOff`/`On`, strict CA validation and pinned approved serial number. Persist an exclusive fsynced recovery journal before disrupting hardware; independently observe BMC power state, host reachability, surviving physical API/worker nodes and public HTTPS ingress; restore power on error and refuse PASS without full recovered-cluster observation.

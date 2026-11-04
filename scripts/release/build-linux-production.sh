@@ -72,7 +72,7 @@ chmod 0755 \
 # Preserve actual unsigned executables before Linux package manifests and
 # delegated signatures are applied. Reproducible tar/gzip is independent of
 # filesystem timestamps, UID, current username or output directory.
-if [[ "${VERSION}" == "0.47.0" ]]; then
+if [[ "${VERSION}" == "0.47.0" || "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
   UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
   python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \
     --platform linux --arch "${ARCH}" --out-dir "${UNSIGNED_DIR}" \
@@ -83,7 +83,7 @@ if [[ "${VERSION}" == "0.47.0" ]]; then
     --file "launcher/runtime=${OUT_DIR}/runtime-linux-${ARCH}"
 fi
 
-if [[ "${VERSION}" == "0.47.0" && "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
+if [[ "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
   echo "Launcher ${VERSION} Linux ${ARCH} unsigned executable payload captured"
   exit 0
 fi

@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version-file: services/api/go.mod
       - name: Install target Java ${{ matrix.javaMajor }}
         uses: actions/setup-java@v5
         with:
@@ -266,7 +266,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version-file: services/api/go.mod
       - name: Install target Java ${{ matrix.javaMajor }}
         uses: actions/setup-java@v5
         with:
@@ -539,11 +539,22 @@ jobs:
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --gate minecraft \
             --output "$PWD/acceptance-0521/inventory.json"
+      - name: 0.52.11 full required-target independent log replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/acceptance/sweep_05211.py minecraft \
+            --compat-results "$PWD/compatibility-results" \
+            --commit "$GITHUB_SHA" --compat-run-id "$GITHUB_RUN_ID" \
+            --compat-attempt "$GITHUB_RUN_ATTEMPT" \
+            --output "$PWD/acceptance-0521/sweep-05211.json"
       - name: Upload observed inventory (not independent GA)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: launcher-acceptance-inventory-0521-${{ github.run_id }}-${{ github.run_attempt }}
-          path: acceptance-0521/inventory.json
+          path: |
+            acceptance-0521/inventory.json
+            acceptance-0521/sweep-05211.json
           if-no-files-found: warn
           retention-days: 90

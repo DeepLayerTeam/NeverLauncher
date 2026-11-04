@@ -196,7 +196,7 @@ $SignTool = $null
 try {
     $SigningContext = Resolve-CodeSigningCertificate
     $SignedProduction = $null -ne $SigningContext
-    $UnsignedOnly = ($Version -eq "0.47.0") -and ([Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_ONLY") -eq "1")
+    $UnsignedOnly = ([Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_ONLY") -eq "1")
     if ($UnsignedOnly -and $RequireCodeSigning) { throw "unsigned-only mode cannot require platform signing" }
     $SigningRequired = (-not $UnsignedOnly) -and ($RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage))
     if ($SigningRequired -and -not $SignedProduction) {
@@ -267,7 +267,7 @@ try {
 
         # Capture real compiled PE bytes BEFORE Authenticode changes them.
         # Each independent builder writes into its own unsigned artifact root.
-        if ($Version -eq "0.47.0") {
+        if (($Version -eq "0.47.0") -or $UnsignedOnly) {
             $UnsignedRoot = [Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_OUTPUT_DIR")
             if ([string]::IsNullOrWhiteSpace($UnsignedRoot)) { $UnsignedRoot = Join-Path $Root "dist\unsigned-$Version" }
             $UnsignedPacker = Join-Path $Root "scripts\release\unsigned_package_0470.py"

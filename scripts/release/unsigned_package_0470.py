@@ -14,6 +14,7 @@ from pathlib import Path
 import sys
 import tarfile
 import hashlib
+import re
 
 from canonical_zip_0461 import write_zip, safe_member, safe_file
 from reproducible_0470 import inspect_exe, contract, visit_archive
@@ -25,7 +26,13 @@ def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path
         raise ValueError('unsupported target')
     if not mapping:
         raise ValueError('empty unsigned payload')
-    expected=contract()['targets'][target]
+    # This tool is used by *current* production builds, not only historical 0.47.0.
+    # Keep the archived 0.47.0 contract's canonical target names but replace the
+    # release component: otherwise 0.52.x emits misleading 0.47.0 artifacts.
+    version=(Path(__file__).resolve().parents[2]/'VERSION').read_text(encoding='utf-8').strip()
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version):
+        raise ValueError('unsafe product version')
+    expected=contract()['targets'][target].replace('0.47.0',version)
     paths=set()
     for arc,path in mapping.items():
         safe_member(arc)
