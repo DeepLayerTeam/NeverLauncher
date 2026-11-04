@@ -236,36 +236,49 @@ func newInstall(opts Options) (*installation, error) {
 	}
 	return &installation{root: root, base: filepath.Join(root, ".launcher-installer"), key: opts.TrustedKey}, nil
 }
+
+// verifiedSlot never trusts the active marker by itself: the retained signed
+// configuration, executable and offline objects must all still match.
+func (i *installation) verifiedSlot(slot string) (*record, error) {
+	if slot != "active-0.json" && slot != "active-1.json" {
+		return nil, errors.New("invalid installer activation slot")
+	}
+	buf, err := regular(filepath.Join(i.base, slot), 16384)
+	if err != nil {
+		return nil, err
+	}
+	var r record
+	if err := json.Unmarshal(buf, &r); err != nil || r.Generation == 0 || r.Release == "" || strings.ContainsAny(r.Release, "/\\") || strings.Contains(r.Release, "..") || len(r.ConfigHash) != 64 || len(r.BinaryHash) != 64 {
+		return nil, errors.New("invalid installation activation record")
+	}
+	releaseDir := filepath.Join(i.base, "releases", r.Release)
+	raw, err := regular(filepath.Join(releaseDir, "bootstrap.signed.json"), 1024*1024)
+	if err != nil || digest(raw) != r.ConfigHash {
+		return nil, errors.New("installed bootstrap is missing or corrupted")
+	}
+	cfg, id, err := verifyBundleConfig02312(releaseDir, raw, i.key)
+	if err != nil || id+"-"+runtime.GOOS+"-"+runtime.GOARCH != r.Release {
+		return nil, errors.New("installed bootstrap signature or platform mismatch")
+	}
+	art, err := cfg.InstallerFor(runtime.GOOS, runtime.GOARCH)
+	if err != nil || art.SHA256 != r.BinaryHash || verifyFile(filepath.Join(releaseDir, binaryName()), art) != nil {
+		return nil, errors.New("installed Prestarter signature/hash mismatch")
+	}
+	if r.Offline && verifyOffline(filepath.Join(i.base, "offline", r.Release), cfg) != nil {
+		return nil, errors.New("retained offline objects are incomplete or corrupted")
+	}
+	return &r, nil
+}
+
 func (i *installation) current() (*record, error) {
 	var result *record
 	for _, slot := range []string{"active-0.json", "active-1.json"} {
-		buf, e := regular(filepath.Join(i.base, slot), 16384)
-		if e != nil {
-			continue
-		}
-		var r record
-		if json.Unmarshal(buf, &r) != nil || r.Release == "" || strings.ContainsAny(r.Release, "/\\") || strings.Contains(r.Release, "..") || len(r.ConfigHash) != 64 || len(r.BinaryHash) != 64 {
-			continue
-		}
-		releaseDir := filepath.Join(i.base, "releases", r.Release)
-		raw, e := regular(filepath.Join(releaseDir, "bootstrap.signed.json"), 1024*1024)
-		if e != nil || digest(raw) != r.ConfigHash {
-			continue
-		}
-		cfg, id, e := verifyBundleConfig02312(releaseDir, raw, i.key)
-		if e != nil || id+"-"+runtime.GOOS+"-"+runtime.GOARCH != r.Release {
-			continue
-		}
-		art, e := cfg.InstallerFor(runtime.GOOS, runtime.GOARCH)
-		if e != nil || art.SHA256 != r.BinaryHash || verifyFile(filepath.Join(releaseDir, binaryName()), art) != nil {
-			continue
-		}
-		if r.Offline && verifyOffline(filepath.Join(i.base, "offline", r.Release), cfg) != nil {
+		r, err := i.verifiedSlot(slot)
+		if err != nil {
 			continue
 		}
 		if result == nil || r.Generation > result.Generation {
-			v := r
-			result = &v
+			result = r
 		}
 	}
 	if result == nil {
@@ -537,6 +550,81 @@ func install(ctx context.Context, opts Options, updateOnly bool) error {
 // Install commits a new active slot only after Prestarter has completed.
 func Update(ctx context.Context, opts Options) error {
 	return install(ctx, opts, true)
+}
+
+// Rollback provisions the previous independently verified signed generation
+// before atomically activating it as a NEW generation. A failing, interrupted,
+// tampered or missing prior release cannot advance the active pointer. Game
+// saves, account state and user files are not deleted or rewound.
+func Rollback(ctx context.Context, opts Options) error {
+	i, err := newInstall(opts)
+	if err != nil {
+		return err
+	}
+	if err = secureDir(i.base); err != nil {
+		return err
+	}
+	lock, err := prestarter.AcquireInstallerLock(filepath.Join(i.base, "installer.lock"))
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	active, err := i.current()
+	if err != nil {
+		return err
+	}
+	if active.Generation == ^uint64(0) {
+		return errors.New("generation overflow")
+	}
+	priorSlot := "active-0.json"
+	if active.Generation%2 == 0 {
+		priorSlot = "active-1.json"
+	}
+	previous, err := i.verifiedSlot(priorSlot)
+	if err != nil {
+		return fmt.Errorf("previous signed generation unavailable: %w", err)
+	}
+	if previous.Generation >= active.Generation || previous.Release == active.Release {
+		return errors.New("no distinct, older verified release to roll back to")
+	}
+	oldDir := filepath.Join(i.base, "releases", active.Release)
+	newDir := filepath.Join(i.base, "releases", previous.Release)
+	activeRaw, err := regular(filepath.Join(oldDir, "bootstrap.signed.json"), 1024*1024)
+	if err != nil {
+		return err
+	}
+	activeCfg, _, err := verifyBundleConfig02312(oldDir, activeRaw, i.key)
+	if err != nil {
+		return err
+	}
+	previousRaw, err := regular(filepath.Join(newDir, "bootstrap.signed.json"), 1024*1024)
+	if err != nil {
+		return err
+	}
+	previousCfg, _, err := verifyBundleConfig02312(newDir, previousRaw, i.key)
+	if err != nil {
+		return err
+	}
+	if activeCfg.ProjectID != previousCfg.ProjectID || activeCfg.ProfileID != previousCfg.ProfileID || activeCfg.Channel != previousCfg.Channel || activeCfg.ProfilePublicKey != previousCfg.ProfilePublicKey {
+		return errors.New("rollback changes project, profile, channel or pinned game trust")
+	}
+	if err := i.provision(ctx, *previous, opts.NoStart); err != nil {
+		return fmt.Errorf("rollback provisioning failed, active generation not changed: %w", err)
+	}
+	if err := i.createShortcut(*previous, previousCfg); err != nil {
+		_ = i.createShortcut(*active, activeCfg)
+		return err
+	}
+	previous.Generation = active.Generation + 1
+	data, err := json.Marshal(previous)
+	if err == nil {
+		err = atomicWrite(filepath.Join(i.base, "active-"+strconv.FormatUint(previous.Generation%2, 10)+".json"), data)
+	}
+	if err != nil {
+		_ = i.createShortcut(*active, activeCfg)
+		return err
+	}
+	return nil
 }
 
 // VerifyInstalled checks both redundant active pointers and the retained

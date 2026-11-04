@@ -1,0 +1,120 @@
+name: NeverLauncher 0.52.7 real install upgrade repair rollback
+
+on:
+  push:
+    paths:
+      - 'prestarter/installer/**'
+      - 'prestarter/network_fault_0527_test.go'
+      - 'prestarter/cmd/installer/**'
+      - 'cli/cmd/launcher/transactional_updater*'
+      - 'scripts/acceptance/*0527*'
+      - '.github/workflows/install-upgrade-repair-0527.yml'
+  pull_request:
+    paths:
+      - 'prestarter/installer/**'
+      - 'prestarter/network_fault_0527_test.go'
+      - 'prestarter/cmd/installer/**'
+      - 'cli/cmd/launcher/transactional_updater*'
+      - 'scripts/acceptance/*0527*'
+      - '.github/workflows/install-upgrade-repair-0527.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-integration-regressions:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, platform: linux-x64}
+          - {runner: ubuntu-24.04-arm, platform: linux-arm64}
+          - {runner: windows-2022, platform: windows-x64}
+          - {runner: windows-11-arm, platform: windows-arm64}
+          - {runner: macos-15-intel, platform: macos-x64}
+          - {runner: macos-15, platform: macos-arm64}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: prestarter/go.mod
+          cache-dependency-path: prestarter/go.sum
+          cache: false
+      - name: Run genuine TLS network cut/resume and signed installer generation rollback
+        working-directory: prestarter
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -count=1 . -run 'Test(TLSDownloadInterruptedResumeExactSHA0527|TLSResumeRejectsWrongServerValidator0527)'
+          go test -count=1 ./installer -run 'Test(InstallerRollback.*0527|InstallRepairUninstallKeepsGameData|TamperedSignedBundleRejected)'
+          go build ./cmd/installer
+      - name: Run real updater stage/hash/recovery regressions and CLI compile
+        working-directory: cli
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -count=1 ./cmd/launcher -run 'Test(Updater.*0527|TransactionalUpdater)'
+          go build ./cmd/launcher
+      - name: Validate physical runner rejects malformed inputs
+        if: runner.os == 'Linux'
+        run: |
+          python3 -m unittest scripts/acceptance/test_install_upgrade_repair_0527.py -v
+          python3 scripts/version/manage.py check
+
+  real-linux-enospc-and-network-isolation:
+    # This job consumes GB of real tmpfs blocks and executes signed installers.
+    # Only a dedicated, privileged, disposable machine is suitable.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64, neverlauncher-0527-isolated]
+    environment: installer-physical-acceptance
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Execute signed old/new installers, real disconnect/ENOSPC, repair, rollback
+        env:
+          NL_INSTALLER: ${{ vars.NL_0527_INSTALLER }}
+          NL_INSTALLER_SHA256: ${{ vars.NL_0527_INSTALLER_SHA256 }}
+          NL_BUNDLE_OLD: ${{ vars.NL_0527_OLD_BUNDLE }}
+          NL_BUNDLE_OLD_SHA256: ${{ vars.NL_0527_OLD_CONFIG_SHA256 }}
+          NL_BUNDLE_NEW: ${{ vars.NL_0527_NEW_BUNDLE }}
+          NL_BUNDLE_NEW_SHA256: ${{ vars.NL_0527_NEW_CONFIG_SHA256 }}
+          NL_MANAGED_FILE: ${{ vars.NL_0527_MANAGED_REPAIR_FILE }}
+          NL_MANAGED_SHA256: ${{ vars.NL_0527_MANAGED_REPAIR_SHA256 }}
+          NL_SCRATCH: ${{ vars.NL_0527_SCRATCH_PARENT }}
+          NL_TMPFS_MIB: ${{ vars.NL_0527_TMPFS_MIB }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${NL_INSTALLER:?Pinned final neverinstaller path required}"
+          : "${NL_INSTALLER_SHA256:?Independent installer digest required}"
+          : "${NL_BUNDLE_OLD:?Exact old signed bundle path required}"
+          : "${NL_BUNDLE_OLD_SHA256:?Old config SHA required}"
+          : "${NL_BUNDLE_NEW:?Exact new signed bundle path required}"
+          : "${NL_BUNDLE_NEW_SHA256:?New config SHA required}"
+          : "${NL_MANAGED_FILE:?Real managed game/runtime file required}"
+          : "${NL_MANAGED_SHA256:?Managed file digest required}"
+          : "${NL_SCRATCH:?Dedicated scratch required}"
+          : "${NL_TMPFS_MIB:?Explicit isolated tmpfs capacity required}"
+          umask 077
+          python3 scripts/acceptance/install_upgrade_repair_0527.py \
+            --installer "$NL_INSTALLER" --installer-sha256 "$NL_INSTALLER_SHA256" \
+            --old-bundle "$NL_BUNDLE_OLD" --old-config-sha256 "$NL_BUNDLE_OLD_SHA256" \
+            --new-bundle "$NL_BUNDLE_NEW" --new-config-sha256 "$NL_BUNDLE_NEW_SHA256" \
+            --managed-repair-file "$NL_MANAGED_FILE" --managed-repair-sha256 "$NL_MANAGED_SHA256" \
+            --tmpfs-mib "$NL_TMPFS_MIB" --scratch-parent "$NL_SCRATCH" \
+            --confirm DESTRUCTIVE-ISOLATED-0527 \
+            --output "$RUNNER_TEMP/real-install-upgrade-repair-0527.json"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: real-install-upgrade-repair-0527-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/real-install-upgrade-repair-0527.json
+          if-no-files-found: error
+          retention-days: 90

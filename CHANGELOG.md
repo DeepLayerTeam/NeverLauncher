@@ -1,3 +1,10 @@
+## 0.52.7 — Install, Upgrade, Repair & Rollback E2E (working installer recovery; external GA BLOCKED)
+
+- Add genuine `neverinstaller rollback` for a previous retained **signed** revision. Revalidate the old bootstrap, project/profile/channel/trust binding, exact native Prestarter hash and offline objects; provision it before committing a new generation. Reject missing, damaged or equal releases and canceled provisioning while preserving user worlds and files.
+- Harden Go transactional updater against rollback of tampered backup bytes: persist per-original SHA-256 and size in new durable journals, verify copied backup bytes and reverify before restoration. Prevent temporary-file symlink/truncation attacks with exclusive creation and random atomic journal names; clean interrupted swap, rollback and staging temporary files during retry/recovery, including crashes while rolling back.
+- Add real subprocess SIGKILL/restart/recovery checks, tampered-backup and package-integrity tests, and a real TLS connection-drop/206 Range/ETag recovery test. Add destructive physical Linux E2E with two independently pinned signed offline bundles, protected tmpfs ENOSPC, network namespace isolation, real update/repair/rollback/uninstall and user-save hash readback. Provision its own protected workflow and runbook; it refuses unavailable native facilities instead of declaring PASS.
+- Sync product version metadata to 0.52.7. **No six-native, real disk-exhaustion or published signed-package acceptance was executed locally; independent 0.53.0 GA remains BLOCKED.**
+
 ## 0.52.6 — Modpacks, Textures & Game Publication (production changes; live game acceptance BLOCKED)
 
 - Fix Native Runtime's selected-file integrity invariant: a selected optional JAR that is missing is `missing`, never a tolerated `optional-missing`. Enforce exact `ok` checks for `sync`, `sync-local` and preset verification, including repair after file deletion. Excluded catalog components are not installed, and unrelated user files remain untouched.

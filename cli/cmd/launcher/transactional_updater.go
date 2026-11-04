@@ -41,9 +41,11 @@ type updaterRequest0156 struct {
 }
 
 type updaterTouchedPath0156 struct {
-	Path         string `json:"path"`
-	HadOriginal  bool   `json:"hadOriginal"`
-	OriginalMode uint32 `json:"originalMode,omitempty"`
+	Path           string `json:"path"`
+	HadOriginal    bool   `json:"hadOriginal"`
+	OriginalMode   uint32 `json:"originalMode,omitempty"`
+	OriginalSize   int64  `json:"originalSize,omitempty"`
+	OriginalSHA256 string `json:"originalSha256,omitempty"`
 }
 
 type updaterJournal0156 struct {
@@ -329,8 +331,19 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 			touched.HadOriginal = true
 			touched.OriginalMode = uint32(info.Mode().Perm())
 			backup := filepath.Join(backupDir, filepath.FromSlash(rel))
+			// Persist the original digest before any live switch. An incomplete
+			// rollback must never restore altered/corrupted backup bytes.
+			originalSHA, originalSize, err := hashFile(dst)
+			if err != nil || originalSize != info.Size() {
+				return nil, fmt.Errorf("hash original %s: %v", rel, err)
+			}
+			touched.OriginalSize = originalSize
+			touched.OriginalSHA256 = originalSHA
 			if err := copyUpdaterSource0156(dst, backup, info.Mode().Perm()); err != nil {
 				return nil, fmt.Errorf("backup %s: %w", rel, err)
+			}
+			if err := verifyUpdaterFile0156(backup, originalSize, originalSHA); err != nil {
+				return nil, fmt.Errorf("backup integrity %s: %w", rel, err)
 			}
 		} else if !errors.Is(statErr, os.ErrNotExist) {
 			return nil, fmt.Errorf("inspect target %s: %w", rel, statErr)
@@ -522,7 +535,23 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
+		// Journals created before 0.52.7 did not persist backup checksums.
+		// They remain recoverable, but all new transactions verify exact
+		// original bytes before touching the live target.
+		if touched.OriginalSHA256 != "" {
+			if err := verifyUpdaterFile0156(backup, touched.OriginalSize, touched.OriginalSHA256); err != nil {
+				return fmt.Errorf("rollback backup integrity %s: %w", touched.Path, err)
+			}
+		} else if info, err := os.Lstat(backup); err != nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("rollback source missing or not regular: %s", touched.Path)
+		}
 		tmp := dst + ".nl0156-rollback-" + journal.ID
+		// If the updater was killed while *restoring* a prior generation,
+		// its exclusive temporary file may still exist. Retry from verified
+		// backup bytes, never append or truncate through the stale path.
+		if err := removeUpdaterSwapTemp0527(tmp); err != nil {
+			return err
+		}
 		if err := copyUpdaterSource0156(backup, tmp, mode); err != nil {
 			_ = os.Remove(tmp)
 			return fmt.Errorf("rollback copy %s: %w", touched.Path, err)
@@ -533,12 +562,63 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 	}
+	if err := u.cleanTransactionTemps0527(journal); err != nil {
+		return err
+	}
 	journal.Phase = "rolled-back"
 	if err := u.writeJournal(journal); err != nil {
 		return err
 	}
 	if err := removeUpdaterTerminalPayload01510(u.transactionDir(journal.ID)); err != nil {
 		return fmt.Errorf("cleanup rolled-back transaction payload: %w", err)
+	}
+	return nil
+}
+
+func removeUpdaterSwapTemp0527(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("unsafe updater temporary file: %s", path)
+	}
+	if err := os.Remove(path); err != nil {
+		return err
+	}
+	syncDirBestEffort0156(filepath.Dir(path))
+	return nil
+}
+
+// cleanTransactionTemps0527 removes only updater-owned in-place swap files
+// for this random transaction ID. Every path is revalidated against symlink
+// traversal. A non-regular collision blocks recovery rather than following it.
+func (u *transactionalUpdater0156) cleanTransactionTemps0527(journal *updaterJournal0156) error {
+	for _, touched := range journal.Touched {
+		dst, err := u.safeLivePath(touched.Path)
+		if err != nil {
+			return err
+		}
+		for _, suffix := range []string{".nl0156-", ".nl0156-rollback-"} {
+			tmp := dst + suffix + journal.ID
+			info, err := os.Lstat(tmp)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if !info.Mode().IsRegular() {
+				return fmt.Errorf("unsafe updater temporary file: %s", tmp)
+			}
+			if err := os.Remove(tmp); err != nil {
+				return err
+			}
+			syncDirBestEffort0156(filepath.Dir(tmp))
+		}
 	}
 	return nil
 }
@@ -569,10 +649,14 @@ func (u *transactionalUpdater0156) recoverIncompleteLocked() ([]string, error) {
 		case "committed", "rolled-back":
 			continue
 		case "staging":
-			// Активные байты ещё не менялись; зафиксируйте конечное состояние отката.
+			// Active files are untouched; free the interrupted download/staging
+			// payload immediately rather than retaining space until a later run.
 			journal.Phase = "rolled-back"
 			journal.Error = "recovered incomplete staging transaction"
 			if err := u.writeJournal(journal); err != nil {
+				return recovered, err
+			}
+			if err := removeUpdaterTerminalPayload01510(u.transactionDir(journal.ID)); err != nil {
 				return recovered, err
 			}
 		default:
@@ -682,11 +766,29 @@ func (u *transactionalUpdater0156) writeJournal(journal *updaterJournal0156) err
 		return err
 	}
 	raw = append(raw, '\n')
-	if err := writeUpdaterBytes0156(path+".tmp", raw, 0o600); err != nil {
+	// A unique O_EXCL temporary file prevents a stale/crash-left symlink or
+	// competing writer from redirecting this privileged durable journal write.
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".journal-*")
+	if err != nil {
 		return err
 	}
-	if err := replaceFileAtomicPortable(path+".tmp", path); err != nil {
-		_ = os.Remove(path + ".tmp")
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(raw); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := replaceFileAtomicPortable(tmp.Name(), path); err != nil {
 		return err
 	}
 	syncDirBestEffort0156(filepath.Dir(path))
@@ -837,7 +939,7 @@ func copyUpdaterSource0156(src, dst string, mode os.FileMode) error {
 		return err
 	}
 	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
 	if err != nil {
 		return err
 	}

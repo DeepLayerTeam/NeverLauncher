@@ -13,7 +13,7 @@ import (
 )
 
 var embeddedRootPublicKey string // filled by linker from release-time provisioned key
-var version = "0.47.7"
+var version = "0.52.7"
 
 func rootDir() (string, error) {
 	home, e := os.UserHomeDir()
@@ -91,6 +91,8 @@ func main() {
 		_, _, e = installer.VerifyBundle(opts.Bundle, opts.TrustedKey, opts.Offline)
 	case "repair":
 		e = installer.Repair(ctx, opts)
+	case "rollback":
+		e = installer.Rollback(ctx, opts)
 	case "uninstall":
 		e = installer.Uninstall(opts)
 	default:
