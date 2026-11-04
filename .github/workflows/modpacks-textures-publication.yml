@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.6 modpacks textures and game publication
+name: NeverLauncher 0.52.6 — модпаки, текстуры и публикация игры
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Local Auth FileAuth Rehash 0.29.5
+name: Локальная авторизация и пересчёт хешей FileAuth 0.29.5
 on:
   push:
     paths:

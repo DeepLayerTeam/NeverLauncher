@@ -1,4 +1,4 @@
-name: 0.53.0 independent exact-byte native builds
+name: 0.53.0 — независимые нативные сборки с точным совпадением байтов
 
 on:
   push:

@@ -1,8 +1,8 @@
-# NeverLauncher 0.48.3 — Java SPI and live extension provider registry
+# NeverLauncher 0.48.3 — Java SPI и действующий реестр провайдеров расширений
 
 A signed Java extension can define a typed SPI contract, register multiple implementations and choose one provider at runtime. This is a working **in-process registry scoped to a single supervised extension JVM**, not a cross-extension service bus, a new HTTP endpoint, a package installer or a way to bypass Go capabilities. The JVM continues to use the locked nested-JAR dependency loading from 0.48.2; `ru.launcher.sdk.*` remains parent-loaded.
 
-## Production API
+## Промышленный API
 
 An SPI service is a Java interface extending `JavaProvider`, for example `GreetingProvider` with `greet(String)`. In `Extension.start(ExtensionContext ctx)`:
 
@@ -23,7 +23,7 @@ String text = ctx.providers().call(greeting, p -> p.greet("Ada"));
 
 `ExtensionLifecycle.stop()` first calls the extension's stop callback, then drains and stops all active registered providers. Extension startup errors also close already-started providers. Concurrent close callers wait for the first shutdown's result. A Java callback ignoring interruption may remain alive in a daemon worker, but **cannot be forcibly terminated by the JDK**: the existing Go process supervisor and OS isolation remain mandatory. Provider code has exactly the extension JVM's privileges and must use Go RuntimeServices for backend operations; this SPI is not a security sandbox.
 
-## Executable integration
+## Работающая интеграция
 
 ```sh
 sh sdk/java/core/build.sh test

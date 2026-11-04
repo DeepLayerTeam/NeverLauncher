@@ -1,4 +1,4 @@
-# NeverLauncher 0.47.3 — SQLite Core → SQLRepository (live data)
+# NeverLauncher 0.47.3 — SQLite Core → SQLRepository (действующие данные)
 
 ## поддерживаемые входные данные и границы безопасности
 

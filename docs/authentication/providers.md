@@ -82,7 +82,7 @@ On startup the SQL connector opens a **read-only transaction** and executes a ze
 Run live tests with `LAUNCHER_SQL_TEST_POSTGRES_DSN`, `LAUNCHER_SQL_TEST_MYSQL_DSN`, and `LAUNCHER_SQL_TEST_MARIADB_DSN` pointing to isolated disposable test databases. The `sql-mapping-legacy-hash-0294.yml` workflow provisions all three engines and must pass wrong-password, correct-password, mapping-failure, and unknown-hash fail-closed cases before a production rollout. Gravit reference: https://gravitlauncher.com/auth/ (PasswordVerifier); AdditionalHash: https://github.com/GravitLauncher/LauncherModules.
 
 
-## Live Gravit FileAuthSystem — 0.42.6
+## Работающий Gravit FileAuthSystem — 0.42.6
 
 Never can authenticate directly against a **read-only** Gravit `FileAuthSystem/Database.json`; the previous one-time import remains available. The connector is opt-in, separate from the `local` provider, and does not consume `Sessions.json`. The Gravit UUID is the immutable external identity subject and `minecraftUuid` claim. Never issues its own sessions, and does **not** import Gravit administrator roles, access tokens, permissions, skins, or source sessions.
 

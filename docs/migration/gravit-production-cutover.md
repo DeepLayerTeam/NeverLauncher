@@ -1,10 +1,10 @@
-# NeverLauncher 0.49.11 — operational Gravit production ingress cutover
+# NeverLauncher 0.49.11 — промышленное переключение входящего трафика Gravit
 
 **Production source implementation, not independent GA certification.** This is a **real two-phase operator tool** for one already-staged Gravit migration `runId/profileId/channel`, operating a **dedicated HAProxy v2/v3 runtime Unix socket** for *both* the public login and game TCP backends. It calls the existing PostgreSQL-backed NeverLauncher route activation, verifies the actual target login on HTTPS, opens the new HAProxy servers, and requires a real local Minecraft launch/RCON join through the configured public game endpoint. It cannot create a Minecraft account, a signed release, a certified MIG10 stage, a source backup or a Linux host.
 
 No distributed transaction can atomically change PostgreSQL, two independent HAProxy backends, external Gravit auth state, DNS and Minecraft world storage. Consequently, failures are **fail-closed**: servers remain in `MAINT` and operator reconciliation is required; the tool never silently reopens the old source or discards new world writes.
 
-## Existing prerequisites (must be genuine, not generated from fixtures)
+## Необходимые условия (реальные, а не созданные тестовыми фикстурами)
 
 - Already completed 0.49.10 real independent source/rehearsal, staged Never release and verified signed target, target running on PostgreSQL, with stable runtime permit when required. Backend must expose `/api/v1/admin/migration-runs/RUN/cutovers`; CLI must actually work on the operator machine.
 - A dedicated **single HAProxy process** with separate `auth` and `game` backends. Each backend contains exactly the old and new server, or all other servers are already `MAINT`. HAProxy has functioning health checks: `UP` means healthy. The admin socket must be a real local Unix socket owned by root or the operator executing this tool. Keep the HAProxy configuration and runtime state controlled by the same trusted operator.
@@ -56,7 +56,7 @@ Create `/srv/never-cutover/config.json` as mode `0600`; make `/srv/never-cutover
 
 `targetDigest` is the route's signed manifest digest, not the ZIP digest or source snapshot. `baselineRevision` is the old Never `channel_heads.revision`, not the cutover row's `expectedRevision`. The two fields are checked independently. The journal binds the complete configuration **bytes**; you cannot edit config and silently resume. The `fenceReceipt` path is specified **before** phase 1, but the receipt itself is produced **after** traffic has been drained and closed. It must be a **fresh** verified receipt with the same run/profile/channel/stage and typed source snapshot digest.
 
-## Two-phase execution
+## Двухэтапное выполнение
 
 On the operator host, set `LAUNCHER_TOKEN` in the secure process environment (never include it in shell history). Keep `config.json` unchanged throughout these steps.
 
@@ -95,7 +95,7 @@ python3 tools/gravit-port/production_cutover_04911.py status \
 
 **HAProxy reload/reboot limitation:** runtime socket states are **not** durable HAProxy configuration. No HAProxy reload, worker replacement, deployment or auto-restart is permitted during this cutover; the tool detects PID changes across its two phases. Before ending the maintenance window, the operator must persist the *new target-only* routing configuration (and remove old source servers) using their own production HAProxy configuration management and validate a reload with separate ingress E2E. A reload after this script exits is **not** automatically protected; without that permanent configuration update old traffic can reopen. Alternative frontends/DNS/load balancers also require separate acceptance. This is a hard blocker for declaring production cutover completed.
 
-## Evidence and limitations
+## Подтверждения и ограничения
 
 The audit directory contains route-before/pre-activate/activation/after/final JSON, post-switch Minecraft report, non-overwriting journal and a lock. Files are mode `0600`, directory `0700`. No bearer token, canary password or auth response is written to evidence. A second `prepare` in the same directory is rejected. The tool does not update Minecraft world files, migrate database writers, move player inventories, modify DNS, generate release signatures or certify HAProxy persistence, and should not be run on a real project until the staging exercise, external fencing and recovery procedures are proven.
 

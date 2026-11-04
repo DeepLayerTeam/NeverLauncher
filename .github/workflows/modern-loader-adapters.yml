@@ -1,4 +1,4 @@
-name: Modern Loader Adapters 0.27.2
+name: Адаптеры современных загрузчиков 0.27.2
 on:
   push:
     paths:

@@ -573,8 +573,8 @@ export function TexturesPanel0258({
                             setModel(e.target.value as SkinModel0258)
                           }
                         >
-                          <option value="classic">Classic (Steve)</option>
-                          <option value="slim">Slim (Alex)</option>
+                          <option value="classic">Классическая (Стив)</option>
+                          <option value="slim">Узкая (Алекс)</option>
                         </select>
                       </label>
                     )}
@@ -709,8 +709,8 @@ export function TexturesPanel0258({
                             setModel(e.target.value as SkinModel0258)
                           }
                         >
-                          <option value="classic">Classic</option>
-                          <option value="slim">Slim</option>
+                          <option value="classic">Классическая</option>
+                          <option value="slim">Узкая</option>
                         </select>
                       </label>
                       <div className="textureUpload0258">

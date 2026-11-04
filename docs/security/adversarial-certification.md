@@ -39,7 +39,7 @@ Live Linux test verifies actual namespace setup (not merely `Available()`), no b
 
 The test executor requires each named test to appear as `PASS` in Go's JSON test events. A `SKIP`, absent test, failing command or insufficient platform yields `BLOCKED`/`FAIL` and exit code 1. CI artifacts include the code fingerprint, host platform, run time, statuses and failure excerpts. **Evidence is not cryptographically signed by the Python tool**; use CI artifact provenance and restricted runner permissions.
 
-## Additional mandatory **manual / hardware** scenarios
+## Дополнительные обязательные **ручные / аппаратные** сценарии
 
 These are not marked successful by the offline runner and cannot be replaced with a simulator:
 

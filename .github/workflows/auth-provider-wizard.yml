@@ -1,4 +1,4 @@
-name: Auth Provider Wizard 0.29.10
+name: Мастер провайдера аутентификации 0.29.10
 on:
   push:
     paths:

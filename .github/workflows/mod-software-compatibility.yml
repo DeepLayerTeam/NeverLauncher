@@ -1,4 +1,4 @@
-name: Guard 0.50.10 native software and JVM compatibility
+name: Guard 0.50.10 — совместимость нативного ПО и JVM
 on:
   push:
     paths:

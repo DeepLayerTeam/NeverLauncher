@@ -1,10 +1,10 @@
-# 0.34.2 — Real staged package execution (V01 / V02)
+# 0.34.2 — настоящий запуск подготовленного пакета (V01 / V02)
 
 This is executable staging validation, **not stable release certification**.
 The 0.34.1 database and application stable gate remain in force even if every
 staged execution report says `passed`.
 
-## Packaging the actual client
+## Упаковка настоящего клиента
 
 1. Build the Minecraft client with the existing Client Factory **before** signing
    the Backend release, or deliver another complete executable Minecraft client
@@ -47,7 +47,7 @@ bytes are readable only through the short-lived grant-specific delivery route.
 Never publish a staging grant in Actions logs, artifact uploads, issue trackers
 or diagnostics. The result report never includes the grant or login token.
 
-## Local validation
+## Локальная проверка
 
 ```
 python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v

@@ -1,61 +1,37 @@
-# Launcher 0.32.16 — Production RC (test gate, not GA certification)
+# Launcher 0.32.16 — промышленный RC (контроль тестов, не сертификация GA)
 
-This release adds an executable, fail-closed test gate and fixes a real
-capacity-measurement defect. It does **not** make the SQLite-only HTTP backend
-available, implement SQLite → PostgreSQL cutover, or prove multi-host HA.
+Версия добавляет работающую проверку допуска с запретом по умолчанию и исправляет реальный дефект измерения ёмкости. Она **не** обеспечивает HTTP Backend только на SQLite, не реализует переход SQLite → PostgreSQL и не доказывает высокую доступность нескольких узлов.
 
-## что запускается
+## Что действительно запускается
 
 `python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/launcher-03216-rc.json"`
 
-The gate calls **real** `go test -json -race -count=1` under Go 1.27+ on the
-pinned project dependencies. It enforces named tests for: SQLite auth, MFA,
-revocation, Minecraft UUID/session, join tickets, replay nonces, durable jobs,
-leases/fencing, outbox, ServerBridge, package verification, SQLite crash and
-owner locks, online backup/restore, SQLite coordinator, the PostgreSQL staging
-migration, live PostgreSQL advisory locks, live Redis coordinator, live S3
-cross-client write/read/hash/delete, existing HTTP authentication and the
-capacity benchmark's failure handling. All expected tests must report PASS.
-SKIP, missing test, package failure and timeout **block** release; a green
-`go test` without executed assertions is insufficient.
+Контроль допуска запускает **настоящий** `go test -json -race -count=1` на Go 1.27+ с закреплёнными зависимостями проекта. Обязательные именованные тесты охватывают: авторизацию SQLite, MFA, отзывы, UUID/сессии Minecraft, билеты подключения, одноразовые nonce против повторов, долговременные задания, аренды/fencing, outbox, ServerBridge, проверку пакетов, сбои SQLite и блокировки владельца, оперативное резервное копирование/восстановление, координатор SQLite, промежуточную миграцию в PostgreSQL, реальные advisory locks PostgreSQL, действующий координатор Redis, запись/чтение/проверку хеша/удаление в живом S3 из разных клиентов, существующую HTTP-аутентификацию и обработку ошибок в нагрузочном тесте ёмкости. Все ожидаемые тесты должны вернуть PASS. SKIP, отсутствие теста, ошибка пакета и тайм-аут **блокируют** релиз; одного успешного завершения `go test` без выполненных проверок недостаточно.
 
-The Redis/PG and live S3 tests use **isolated ephemeral CI systems**, never
-production. S3 probe objects use temporary names and must be cleaned up.
-The concurrency exercise is a bounded correctness stress case; the observed
-throughput belongs only to that runner and is not a production SLO.
+Тесты Redis/PG и действующего S3 используют **изолированные временные системы CI**, а не производство. Проверочные объекты S3 получают временные имена и должны удаляться. Проверка конкурентности — ограниченный стресс-сценарий корректности; наблюдаемая пропускная способность относится только к этому исполнителю и не является производственным SLO.
 
-## Required environment
+## Обязательное окружение
 
-Use an isolated ext4/XFS/Btrfs directory with mode `0700`, Go 1.27.3, an
-isolated PostgreSQL database, Redis and an S3-compatible test bucket.
+Используйте изолированный каталог на ext4/XFS/Btrfs с правами `0700`, Go 1.27.3, отдельную базу PostgreSQL, Redis и тестовый бакет, совместимый с S3.
 
-- `LAUNCHER_SQLITE_TEST_ROOT` and `LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1`
+- `LAUNCHER_SQLITE_TEST_ROOT` и `LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1`
 - `LAUNCHER_PG_TEST_DSN`, `LAUNCHER_GROWTH_TEST_PG_DSN`
 - `LAUNCHER_GROWTH_TEST_REDIS_URL`
 - `LAUNCHER_RC_S3_ENDPOINT`, `_BUCKET`, `_REGION`, `_ACCESS_KEY`, `_SECRET_KEY`
 
-These are secrets/isolated fixtures supplied by the CI environment, not
-bundled with a release. Missing configuration blocks the gate. The gate
-creates a restricted JSON evidence file **only after all suites pass**; the
-file is a test execution receipt, not a signature or an authorization to GA.
+Эти секреты и изолированные фикстуры задаются окружением CI и не поставляются с релизом. Отсутствие настроек блокирует проверку. Закрытый JSON с подтверждениями создаётся **только после успешного прохождения всех наборов тестов**. Это расписка о выполнении тестов, а не подпись или разрешение на GA.
 
-To run the self-tests of the receipt verifier (these are not product tests):
+Для самопроверки валидатора расписок (это не тесты продукта) выполните:
 
 ```bash
 python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
 ```
 
-## Required before labeling 0.32.16 production-certified
+## Что необходимо до заявления о промышленной сертификации 0.32.16
 
-1. Successful exact-commit live RC workflow plus existing platform signing,
-   native launcher, Guard, ServerBridge and independent GA gates.
-2. Real end-to-end smoke with an installed production configuration, a player
-   login, Minecraft server join and access revocation. The checked HTTP tests
-   are real HTTP handler tests but **not** that complete deployment scenario.
-3. Separate controlled multi-host Network/HA failover, partition, stale
-   worker/fencing and restore exercises under representative load.
-4. Validation of an actual release artifact's BOM, signatures and rollback.
+1. Успешный действующий workflow RC для точного коммита, а также существующие условия подписания платформ, нативного лаунчера, Guard, ServerBridge и независимой приёмки GA.
+2. Настоящий сквозной smoke-тест установленной промышленной конфигурации: вход игрока, подключение к серверу Minecraft и отзыв доступа. Проверяемые HTTP-тесты обращаются к настоящим обработчикам, но **не** заменяют полный сценарий развёртывания.
+3. Отдельные контролируемые испытания нескольких узлов Network/HA на переключение при отказе, разделение сети, устаревшего обработчика/fencing и восстановление под репрезентативной нагрузкой.
+4. Проверка BOM, подписей и отката настоящего артефакта выпуска.
 
-Never derive capacity limits from the bounded synthetic rate-limiter stress
-or benchmark fixture. Never use this gate to override the existing unsupported
-SQLite-only HTTP deployment prohibition.
+Никогда не выводите пределы ёмкости из ограниченного синтетического стресс-теста ограничителя запросов или фикстуры бенчмарка. Никогда не используйте этот контроль допуска для обхода существующего запрета на неподдерживаемое развёртывание HTTP только с SQLite.

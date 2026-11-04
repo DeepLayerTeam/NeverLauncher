@@ -1,4 +1,4 @@
-# Launcher ядро Java SDK / Runtime 0.31.0
+# Ядро Launcher Java SDK / Runtime 0.31.0
 
 A **working Java 17+** SDK for the existing Extensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
 
@@ -86,7 +86,7 @@ Java 17+ is required on the backend host. The Java runtime itself is an external
 
 The `java-host` sample includes a deliberately noncooperative `hang` command strictly for supervisor resilience tests. Do not deploy this sample in production.
 
-## 0.42.1: Host/SDK 1.0 binary and wire compatibility
+## 0.42.1 — двоичная и протокольная совместимость Host/SDK 1.0
 
 `Host Protocol` and `Extension API` remain `1.0` when the product version changes.
 The authenticated JSON `POST /v1/hello` request retains all 0.42.0 fields,
@@ -172,7 +172,7 @@ other callback failures request retry. **Do not assume exactly-once external
 effects**. See `docs/extensions/java-events-hooks.md`.
 
 
-### 0.48.8 ServerBridge Java Integration
+### 0.48.8 — интеграция ServerBridge с Java
 
 `context.runtime().serverBridge()` exposes real, permission-scoped ServerBridge
 v3 project nodes, live status, advisory pre-existing join-ticket checks,

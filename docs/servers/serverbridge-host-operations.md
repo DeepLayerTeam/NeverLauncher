@@ -1,4 +1,4 @@
-# 0.41.3: Backend → RemoteControl → Host Supervisor
+# 0.41.3 — Backend → RemoteControl → Host Supervisor
 
 This is the **live** host lifecycle path. ServerBridge Java game commands and host
 process commands have deliberately separate authorization domains. Backend does

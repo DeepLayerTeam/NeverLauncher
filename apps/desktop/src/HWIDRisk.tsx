@@ -31,7 +31,7 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
     setBusy(true); setMessage('');
     try { await action(); await reload(); setMessage(note); } catch (err) { setMessage(String(err)); } finally { setBusy(false); }
   }
-  return <section className="panel" aria-label="HWID risk">
+  return <section className="panel" aria-label="Риск HWID">
     <h4>HWID: добровольная оценка риска и восстановление</h4>
     <p>Локально хешируется ограниченный системный сигнал. Исходные идентификаторы не отправляются. Это изменяемый, подделываемый риск-сигнал, а не доказательство личности. Сам по себе он не вызывает бан. Данные наблюдения хранятся до 30 дней; отправка только по нажатию кнопки.</p>
     <p>Устройство: {deviceId}; состояние: <strong>{status?.state || 'неизвестно'}</strong>{status?.expiresAt ? `; срок хранения до ${new Date(status.expiresAt).toLocaleString()}` : ''}</p>

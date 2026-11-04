@@ -1,24 +1,24 @@
-# Deep Java Platform 0.49.0 — source patch and acceptance status
+# Deep Java Platform 0.49.0 — исправления исходного кода и состояние приёмки
 
-## реально исполняемые изменения
+## Реально исполняемые изменения
 
-- Java callback entrypoint now refuses mutations before RUNNING and after STOPPING; a STOPPING callback health response is non-responsive. Shutdown cancels outstanding callbacks, refuses new submissions and prevents re-use of the old callback token when an instance restarts.
-- `RuntimeCallbacks0490Tests` exercises real loopback TCP/HTTP, a blocking Java handler, concurrent shutdown, token rotation, and new process state; these are not mocks of the Java callback implementation.
-- `scripts/java/deep_java_e2e_0490.py` compiles three different **existing** Java extension implementations against a published binary SDK JAR only. It runs separate real JVM subprocesses for (1) Admin/Desktop/CLI actions and persisted settings, (2) Content SPI asset/texture/metadata/prepare/delivery plus SHA-256, and (3) Java SPI with a pinned nested library, live provider selection and CLI. The Host in these particular integration tests is a local Python test double, **not** the installed Go service.
-- The 0.48.12 Java external-consumer workflow previously published the Maven SDK into `$RUNNER_TEMP` while Maven, Gradle and its integrity tests looked for `dist/java-sdk/maven`. This is corrected; the example build definitions accept an explicit SDK version so the same example exercises 0.49.0 rather than silently compiling against an older artifact.
+- Точка входа обратных вызовов Java теперь отклоняет изменения до состояния RUNNING и после начала STOPPING. Проверка доступности обратного вызова в STOPPING не возвращает подтверждение работоспособности. Остановка отменяет ожидающие вызовы, запрещает новые задания и не позволяет повторно использовать прежний токен обратных вызовов после перезапуска экземпляра.
+- `RuntimeCallbacks0490Tests` проверяет настоящие TCP/HTTP-соединения loopback, блокирующий Java-обработчик, конкурентное завершение, ротацию токена и новое состояние процесса. Это не имитации реализации обратных вызовов Java.
+- `scripts/java/deep_java_e2e_0490.py` компилирует три разные **существующие** реализации расширений Java исключительно по опубликованному двоичному JAR SDK. Затем запускаются отдельные реальные подпроцессы JVM для (1) действий Admin/Desktop/CLI и сохранённых настроек, (2) Content SPI: ресурсов/текстур/метаданных/подготовки/доставки и SHA-256, а также (3) Java SPI с закреплённой вложенной библиотекой, действующим выбором провайдера и CLI. В этих конкретных интеграционных испытаниях Host заменён локальной тестовой реализацией на Python, **а не** установленной службой Go.
+- Ранее workflow внешних потребителей Java для 0.48.12 публиковал Maven SDK в `$RUNNER_TEMP`, хотя Maven, Gradle и тесты целостности искали его в `dist/java-sdk/maven`. Ошибка исправлена. Определения сборки примеров принимают явную версию SDK, поэтому проверяется именно 0.49.0, а не незаметно подставленный старый артефакт.
 
-## проверка и область подтверждений
+## Проверка и границы подтверждений
 
-A local OpenJDK 21 acceptance run covers independent public SDK publication, three JVM subprocess extensions, callbacks, CLI, heartbeat, shutdown, wrong-token denial and version metadata. The 0.49.0 CI workflow repeats these checks using Java 17 and 21. Merely adding workflow jobs does **not** prove they have run.
+Локальная приёмка на OpenJDK 21 охватывает независимую публикацию открытого SDK, три JVM-подпроцесса расширений, обратные вызовы, CLI, heartbeat, остановку, отклонение неверного токена и метаданные версии. Workflow CI 0.49.0 повторяет проверки под Java 17 и 21. Одно лишь добавление заданий workflow **не доказывает**, что они выполнялись.
 
-## невыполненные требования GA
+## Оставшиеся требования GA
 
-**The source version number is 0.49.0, but full production GA certification is NOT established.** The following must be completed independently on a real deployment before signing a GA release:
+**Версия исходников — 0.49.0, однако полная промышленная сертификация GA НЕ подтверждена.** До подписания выпуска GA следующие проверки должны быть независимо выполнены в настоящем развёртывании:
 
-1. Signed `.nlext` installation of several third-party extensions from independently built packages, real Go Host Broker authorization and audit, privileges revoked during outstanding operations, and safe restart.
-2. PostgreSQL state migration through an actual interrupted upgrade, rollback, reinstallation and crash recovery; compare before/after data, not just manifests.
-3. Linux/Windows/macOS runtime and native sandbox enforcement including direct JVM network and filesystem denial, on required x64/arm64 targets; unsupported strict isolation must remain fail-closed.
-4. Real Minecraft client/ServerBridge integration, genuine signed production packages and all inherited 0.47.0/0.48.0 release and reproducibility checks.
-5. Independent CI on Java 17/21, Go Backend integration/race suites, external Maven/Gradle builds and externally signed release evidence tied to the exact source commit and artifact digests.
+1. Установка подписанных `.nlext` нескольких сторонних расширений из независимо собранных пакетов, реальная авторизация и аудит Go Host Broker, отзыв привилегий во время операций и безопасный перезапуск.
+2. Миграция состояния PostgreSQL при фактически прерванном обновлении, откате, переустановке и восстановлении после аварии; сравнивайте данные до и после, а не одни манифесты.
+3. Применение правил Runtime и нативной изоляции на Linux/Windows/macOS, включая запрет прямого сетевого/файлового доступа JVM на обязательных x64/arm64; неподдерживаемая строгая изоляция должна приводить к отказу по умолчанию.
+4. Интеграция настоящего клиента Minecraft/ServerBridge, реальные подписанные промышленные пакеты и все наследуемые требования выпуска и воспроизводимости 0.47.0/0.48.0.
+5. Независимый CI под Java 17/21, интеграционные тесты Go Backend и проверки гонок, внешние сборки Maven/Gradle и независимо подписанные свидетельства релиза, привязанные к точному коммиту и хешам артефактов.
 
-No production GA attestation, signature, independent CI result, installed Backend result or native OS sandbox acceptance is included with this patch. Do not use its local test report as a production acceptance certificate.
+Это изменение не включает аттестацию GA, подпись, результат независимого CI, подтверждение установленного Backend или приёмку нативной изоляции ОС. Не используйте отчёт локальных тестов как сертификат промышленной приёмки.

@@ -1,4 +1,4 @@
-# Launcher 0.34.4: actual matching-server and gameplay verification
+# Launcher 0.34.4 — реальная проверка соответствующего сервера и игрового процесса
 
 This implementation **executes** the exact signed staged client already installed
 by 0.34.2, not a Client Factory rebuild or an invented test package. The
@@ -7,7 +7,7 @@ launch** connects that same installation to a real local Minecraft dedicated
 server via `--matching-server-port`. The launched Java PID is observed from X11,
 not inferred from a CI-generated `joined the game` JSON field.
 
-## Isolated server provisioning
+## Подготовка изолированного сервера
 
 * Vanilla: `nl runtime vanilla-server --minecraft <signed version>` downloads
   the Mojang distribution and verifies the Mojang SHA-1/derived SHA-256. The
@@ -36,7 +36,7 @@ world; the server process tree is terminated after each run. Never expose the
 RCON password in artifacts. These local offline server settings are **not**
 equivalent to real custom/official authentication validation (V07).
 
-## Positive checks
+## Положительные проверки
 
 1. The real dedicated server logs the exact Minecraft version, matching
    loader/version and, when required, ServerBridge identity/version; it finishes
@@ -66,7 +66,7 @@ launch result. The backend stores only stage summaries / SHA-256 references,
 while CI preserves detailed artifacts. Grant credentials and RCON passwords are
 excluded.
 
-## Intentional limits
+## Преднамеренные ограничения
 
 This target requires an actual compatible server distribution, initialized
 ServerBridge and a Linux X11 GUI-capable runner with `xdotool`, `scrot`,

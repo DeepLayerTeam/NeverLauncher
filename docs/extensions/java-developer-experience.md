@@ -1,6 +1,6 @@
 # NeverLauncher 0.48.12 — инструменты Java-разработчика и E2E
 
-## Delivered SDK publication (actual built artifacts)
+## Публикация готового SDK (реально собранные артефакты)
 
 `dist/java-sdk/maven/ru/launcher/` contains the published **0.48.12** Java 17 ABI artifacts:
 
@@ -45,7 +45,7 @@ python3 scripts/java/test_developer_e2e_04812.py
 
 The generated directory contains `launcher-extension.json`, `backend/workspace.jar`, `cli/workspace.jar`, `admin/index.html` and `desktop/index.html`. Use the existing `nl extension pack` with a real publisher's Ed25519 signing key and the normal trusted installation workflow; this tool deliberately does not sign, install or grant capabilities.
 
-## Independent functional evidence and adversarial checks
+## Независимые подтверждения функций и атакующие проверки
 
 The E2E harness compiles **only** the sample source against the Maven **binary** SDK. It reads its own signed-package-compatible manifest and starts a real `java -jar` process against an authenticated, loopback-only Python HTTP Host implementation. Tests cover:
 
@@ -60,7 +60,7 @@ The E2E harness compiles **only** the sample source against the Maven **binary**
 
 The Python Host is a test double for the real Go Broker: **the test confirms Java-to-Host protocol behavior, not end-to-end Go persistence, installed signatures, production RBAC or Minecraft sessions.** The Go 1.27.3 integration suite and release certification remain separate blockers.
 
-## Compatibility matrix and evidence interpretation
+## Матрица совместимости и интерпретация подтверждений
 
 | OS | Java 17 | Java 21 | Evidence |
 |---|---|---|---|
@@ -70,6 +70,6 @@ The Python Host is a test double for the real Go Broker: **the test confirms Jav
 
 Cross-platform job: `.github/workflows/java-developer-experience-04812.yml`. Its six OS/JDK combinations execute SDK tests, publication from built classes, external JDK consumer, negative security tests, Maven and Gradle compilation and upload per-job evidence. An independent Linux job repeats the publication twice and compares its binary output. **Adding CI configuration is not evidence the remote jobs have run**. No Java 17 local runtime, Maven, Gradle, Windows or macOS executable is installed in the local acceptance environment used for the 0.48.12 source patch.
 
-## Security boundaries and GA limitations
+## Границы безопасности и ограничения GA
 
 All Java code in this example is **trusted for the purpose of the local test**; it runs inside a process with the OS permissions of its launcher. Go Host Broker permissions and the signed package trust chain remain necessary in a real deployment. This release does **not** add OS sandbox enforcement, secure arbitrary third-party JVM bytecode, migrate a live PostgreSQL installation, certify Minecraft integrations or satisfy earlier independent GA gates. In particular the previous 0.48.11 Linux/Windows/macOS sandbox restrictions remain unverified and cannot be substituted by a passing SDK test.

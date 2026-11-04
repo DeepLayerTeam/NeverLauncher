@@ -1,51 +1,21 @@
-# 0.34.3: staged startup and loader readiness
+# 0.34.3 — подготовленный запуск и готовность загрузчика
 
-The existing staged-package workflow now launches the **downloaded staged bytes**
-via the normal Runtime `launch` command and observes the actual GUI process.
-It does not rebuild Minecraft or use a mock runtime. It still produces **untrusted,
-observational** evidence; stable publication remains blocked until V04–V06/V11.
+Существующий процесс проверки подготовленных пакетов теперь запускает **фактически скачанные байты подготовленного пакета** через стандартную команду Runtime `launch` и наблюдает реальный процесс с графическим интерфейсом. Minecraft не пересобирается, имитатор runtime не используется. Результаты по-прежнему имеют статус **недоверенных наблюдений**; публикация стабильного выпуска заблокирована до выполнения V04–V06/V11.
 
-## Linux GUI execution
+## Выполнение GUI в Linux
 
-The 0.34.3 probe supports an isolated Linux X11/Xvfb runner with a usable GLX
-renderer, `xwininfo`, `xprop`, `glxinfo` (Mesa utilities), `scrot`, ImageMagick `identify`, and Tesseract
-with English recognition data. The workflow installs these dependencies.
-Windows/macOS/native Wayland require their own GUI observers (V10) and
-return `blocked`, not a Minecraft compatibility failure.
+Проверка 0.34.3 поддерживает изолированный исполнитель Linux с X11/Xvfb и работоспособным GLX-рендерером, утилитами `xwininfo`, `xprop`, `glxinfo` (Mesa), `scrot`, ImageMagick `identify` и Tesseract с данными для распознавания английского языка. Workflow устанавливает эти зависимости. Для Windows/macOS/нативного Wayland требуются отдельные средства наблюдения GUI (V10); результатом будет `blocked`, а не ошибка совместимости Minecraft.
 
-A startup PASS requires all of the following from the *same Runtime run*:
+Для успешного результата запуска PASS необходимо подтвердить **в рамках одного и того же запуска Runtime** все условия:
 
-- The normal runtime verifies the signed manifest and installed package, and
-  starts the actual JVM. The X11 PID of the Minecraft window must belong to
-  its process tree and execute the selected Java binary; a screenshot from another application cannot pass.
-- At least two separate captures of that Minecraft window contain at least
-  two recognizable **English** title-menu buttons (Singleplayer, Multiplayer,
-  Options, Quit Game). Image entropy must exceed the minimum threshold.
-- Rendered frames must differ and remain active until the end of observation
-  (a 12-second liveness window rejects a frozen UI).
-- If the manifest selects Fabric, Quilt, Forge or NeoForge, its corresponding
-  loader bootstrap must be observed in the actual client log. Loader stage is
-  reported separately. Vanilla has no external loader requirement.
-- No JVM crash file, Minecraft crash report, OOM, fatal log/Guard violation,
-  or unexpected JVM exit may occur during the run.
+- Стандартный runtime проверил подписанный манифест и установленный пакет, затем запустил настоящую JVM. PID окна Minecraft в X11 должен принадлежать дереву этого процесса и исполнять выбранный бинарный файл Java; снимок экрана другого приложения не принимается.
+- Не менее двух независимых снимков окна Minecraft содержат хотя бы две распознаваемые **англоязычные** кнопки главного меню: Singleplayer, Multiplayer, Options или Quit Game. Энтропия изображения должна превышать минимальный порог.
+- Последовательные кадры различаются; интерфейс остаётся активным до конца наблюдения. Контрольное окно активности длительностью 12 секунд исключает зависший GUI.
+- Если манифест выбирает Fabric, Quilt, Forge либо NeoForge, в настоящем журнале клиента должно наблюдаться соответствующее начало загрузки. Этап загрузчика фиксируется отдельно. Для Vanilla внешний загрузчик не требуется.
+- Во время прогона отсутствуют файлы падения JVM, отчёты о сбое Minecraft, OOM, фатальные сообщения журнала, нарушения Guard и неожиданный выход JVM.
 
-A mere PID, timeout, LWJGL marker, loader log or a stale screenshot never
-passes. If positive menu evidence is unavailable before the configured time
-limit, startup fails; absence of a functioning GUI probe is reported blocked.
-Unsupported languages or visually modified menus may give a false negative;
-this conservative detector must never be used to claim those clients are
-incompatible with Minecraft. For such distributions, provide a dedicated
-verified UI probe rather than weakening PASS criteria.
+Одного PID, таймаута, метки LWJGL, записи загрузчика или старого снимка недостаточно для PASS. Если до заданного срока не получено положительное подтверждение меню, запуск считается неуспешным; если исправный GUI-детектор отсутствует, результат `blocked`. Другие языки и нестандартное оформление меню могут дать ложноотрицательный результат. Такой консервативный детектор **не должен** использоваться для утверждения о несовместимости клиента с Minecraft. Для этих сборок нужен отдельный проверенный наблюдатель интерфейса, а не ослабление критериев PASS.
 
-The worker writes `startup-readiness.json`, two frame images,
-`runtime-launch.json`, plus existing staged execution / install evidence.
-Only hashed observational stage results are posted to Backend. Restricted CI
-artifacts must have the same access controls as other runtime diagnostics;
-redaction/retention hardening remains V12. No signing key or delivery grant
-is included in the diagnostic report.
+Исполнитель создаёт `startup-readiness.json`, два изображения кадров, `runtime-launch.json` и существующие свидетельства установки/исполнения подготовленного пакета. Backend получает только хешированные результаты наблюдений. Артефакты ограниченного доступа из CI должны иметь те же правила доступа, что и другая диагностика runtime; доработка маскирования и сроков хранения относится к V12. Диагностический отчёт не содержит ключа подписи или разрешения на доставку.
 
-The legacy Factory `certify-vanilla` and `certify-run` routes lack real GUI/menu
-observation and now refuse to issue or accept positive startup certification
-from only a successful JVM exit, a log marker or a timeout. Their old v1
-certificate path is deliberately fail-closed until migrated to equivalent
-positive readiness evidence. Do not use v1 certificates for promotion.
+Устаревшие маршруты Factory `certify-vanilla` и `certify-run` не наблюдают настоящее GUI/меню и теперь отказываются выдавать либо принимать положительную сертификацию запуска только на основании успешного завершения JVM, метки в журнале или таймаута. Их прежний путь сертификатов v1 намеренно закрыт до перехода на эквивалентное положительное подтверждение готовности. Не используйте сертификаты v1 для продвижения выпуска.

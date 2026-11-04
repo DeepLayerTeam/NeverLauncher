@@ -1,6 +1,6 @@
-//! Portable component preferences and release-to-release migration.
-//! Preferences are UNTRUSTED: they never contain paths/actions and can only
-//! select component IDs from a pinned, signature-verified target manifest.
+//! Переносимые настройки компонентов и миграция между релизами.
+//! Настройки НЕДОВЕРЕННЫЕ: они не содержат путей/действий и могут выбирать
+//! только ID компонентов из закреплённого манифеста с проверенной подписью.
 use crate::{component_catalog_0241::{self, ComponentCatalog}, Manifest};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
@@ -85,7 +85,7 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
        (target.project_id.as_str(),target.profile_id.as_str(),target.channel.as_str()){
         return Err("selection belongs to a different project/profile/channel".into())
     }
-    // The Tauri boundary MUST verify target Ed25519 against the pinned key.
+    // На границе Tauri ОБЯЗАТЕЛЬНО проверять подпись Ed25519 по закреплённому ключу.
     component_catalog_0241::validate(target)?;
     let cat: &ComponentCatalog=target.component_catalog.as_ref().ok_or("target release has no signed catalog")?;
     if cat.schema_version=="1.0" {return Err("target catalog v1 does not support selection migration".into())}
@@ -93,8 +93,8 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
     let selected:BTreeSet<&str>=canonical.iter().map(String::as_str).collect();
     let preserved_ids:Vec<_>=canonical.iter().filter(|id|existing.contains_key(id.as_str())).cloned().collect();
     let removed_ids:Vec<_>=canonical.iter().filter(|id|!existing.contains_key(id.as_str())).cloned().collect();
-    // Preserve a named preset if it still exists. Otherwise use default as a
-    // base and reconcile explicit IDs with overrides.
+    // Сохраняйте именованный пресет, если он ещё существует. Иначе берите
+    // пресет по умолчанию и согласуйте явные ID с переопределениями.
     let old_base=source.source_preset.strip_prefix("@custom:v1:")
         .and_then(|s|s.split_once(':').map(|x|x.0)).unwrap_or(source.source_preset.as_str());
     let base=if !old_base.is_empty()&&cat.presets.iter().any(|p|p.id==old_base){old_base}else{""};
@@ -102,8 +102,8 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
     let mut pending:Vec<String>=preserved_ids.clone();
     let mut dependency_ids=BTreeSet::new();
     for c in &cat.components{if c.required && needed.insert(c.id.clone()){pending.push(c.id.clone())}}
-    // New dependencies of retained IDs cannot be explicitly disabled, even
-    // when not present in the older signed release.
+    // Новые зависимости сохранённых ID нельзя явно отключать, даже если
+    // их не было в прежнем подписанном релизе.
     while let Some(id)=pending.pop(){
         if let Some(c)=existing.get(id.as_str()){
             for dep in &c.dependencies {

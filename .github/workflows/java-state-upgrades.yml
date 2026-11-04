@@ -1,4 +1,4 @@
-name: Java State Migrations and Durable Upgrade 0.48.10
+name: Миграции состояния Java и долговременное обновление 0.48.10
 on:
   push:
     paths:

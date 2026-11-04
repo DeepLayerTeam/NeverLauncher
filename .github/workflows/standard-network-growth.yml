@@ -1,4 +1,4 @@
-name: Standard and Network/HA live infrastructure checks (0.32.12)
+name: Проверки реальной инфраструктуры Standard и Network/HA (0.32.12)
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Global Session Revocation 0.29.7
+name: Глобальный отзыв сессий 0.29.7
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-# Launcher 0.25.3 — Local/S3 texture storage operations
+# Launcher 0.25.3 — эксплуатация локального хранилища текстур и S3
 
 The 0.25.3 release adds **operational storage** to the 0.25.2 secure PNG upload pipeline.
 It is a local-project-only service and does not write or impersonate official Mojang textures.

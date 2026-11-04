@@ -1,4 +1,4 @@
-name: Provider Routing and Linking 0.29.3
+name: Маршрутизация и привязка провайдеров 0.29.3
 on:
   push:
     paths:

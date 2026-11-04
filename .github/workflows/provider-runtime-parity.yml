@@ -1,4 +1,4 @@
-name: Provider Runtime Parity 0.29.6
+name: Соответствие провайдеров Runtime 0.29.6
 on:
   push:
     paths:

@@ -1,6 +1,6 @@
 # OBSERVATIONAL ONLY. Do not publish, sign or promote this CI output as
 # ValidationEvidence. A trusted, independent 0.34.5 host attestor is required.
-name: Staged package, live auth and matching gameplay (observation only)
+name: Подготовленный пакет, настоящая авторизация и игровой процесс (только наблюдение)
 on:
   workflow_call:
     inputs:

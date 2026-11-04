@@ -1,4 +1,4 @@
-name: Legacy Client Adapters 0.27.8
+name: Адаптеры устаревших клиентов 0.27.8
 on:
   push:
     paths:

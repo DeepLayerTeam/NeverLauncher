@@ -1,4 +1,4 @@
-name: Gravit Content & Profile Migration 0.33.7
+name: Миграция содержимого и профилей Gravit 0.33.7
 on:
   push:
     paths:

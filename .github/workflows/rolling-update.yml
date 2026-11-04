@@ -1,4 +1,4 @@
-name: Rolling Update Controller 0.51.7
+name: Контроллер поэтапного обновления 0.51.7
 on:
   push:
     paths:

@@ -117,7 +117,7 @@ exist for each checkout. **For release certification** it must be run on the
 release candidate and its successful log recorded. Do not mark a skipped job
 as an executed real-service test.
 
-## Outstanding release gates: must be executed before 0.26.0 GA
+## Оставшиеся условия выпуска: обязательны до GA версии 0.26.0
 
 These require actual owned accounts/hardware and **cannot** be certified from
 repository unit tests or mock services:

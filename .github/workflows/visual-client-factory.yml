@@ -1,4 +1,4 @@
-name: Visual Client Factory Builder 0.27.10
+name: Визуальный конструктор фабрики клиентов 0.27.10
 on:
   push:
     paths:

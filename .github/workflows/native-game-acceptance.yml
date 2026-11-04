@@ -1,4 +1,4 @@
-name: Real Minecraft positive and adversarial gameplay on six native platforms 0.43.14
+name: Настоящий Minecraft — позитивные и атакующие сценарии на шести нативных платформах 0.43.14
 on:
   workflow_dispatch:
     inputs:

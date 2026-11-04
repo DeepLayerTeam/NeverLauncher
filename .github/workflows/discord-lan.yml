@@ -1,4 +1,4 @@
-name: Discord Rich Presence and LAN discovery 0.30.8
+name: Расширенный статус Discord и обнаружение локальной сети 0.30.8
 on:
   push:
     paths:

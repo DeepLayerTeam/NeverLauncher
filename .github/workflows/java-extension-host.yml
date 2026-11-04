@@ -1,4 +1,4 @@
-name: Java Extension Host 0.30.4 — production JVM subprocess, RPC, supervisor and signing
+name: Java Extension Host 0.30.4 — промышленный процесс JVM, RPC, супервизор и подписи
 on:
   push:
     paths:

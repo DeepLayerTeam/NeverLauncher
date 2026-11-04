@@ -1,4 +1,4 @@
-name: Native Xbox and Minecraft Exchange 0.26.5
+name: Нативный обмен токенами Xbox и Minecraft 0.26.5
 on:
   push:
     paths:

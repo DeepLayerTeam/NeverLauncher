@@ -1,4 +1,4 @@
-name: Protection SDK and Policy 0.29.8
+name: SDK и политика защиты 0.29.8
 on:
   push:
     paths:

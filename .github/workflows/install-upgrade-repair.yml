@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.7 real install upgrade repair rollback
+name: NeverLauncher 0.52.7 — реальные установка, обновление, восстановление и откат
 
 on:
   push:

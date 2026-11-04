@@ -1,8 +1,8 @@
-# NeverLauncher 0.51.10 — multi-host chaos and observability
+# NeverLauncher 0.51.10 — хаос-тестирование нескольких узлов и наблюдаемость
 
 This document describes **executable fault injection** against two or more *independent Docker hosts* with NeverLauncher multi-host deployment. It is **not** a production GA certificate. Commands here intentionally disrupt live containers; run only on an authorized disposable/test deployment with separate, independently managed PostgreSQL/Redis/S3 and externally load-balanced HTTPS ingress.
 
-## Preconditions (fail closed)
+## Предварительные условия (запрет при ошибке)
 
 1. Deploy `deploy/production/docker-compose.multi-host.yml` on at least two different Docker hosts; run the multi-host 0.51.2/0.51.7 health/inventory checks beforehand. Never run the chaos CLI with the single-host Network-HA Compose file. The tool validates immutable images, distinct machine IDs, API+worker readiness and shared external PG/Redis/S3 round trips via `multi_host_0512.py` before fault injection.
 2. Install **both** `scripts/operations/multi_host_chaos_05110.py` and `scripts/operations/multi_host_0512.py` with the same files/paths on the operator workstation and each Docker host. Allow the SSH operator only the required Docker operations. Strict known_hosts verification, noninteractive SSH and an explicit `I-ACCEPT-REAL-OUTAGE` token are mandatory. Use separate SSH principals for each host. Do not run unrelated application releases or database migrations concurrently with drills.
@@ -15,7 +15,7 @@ This document describes **executable fault injection** against two or more *inde
 
 The expiration must be in the future and within four hours. Replace this illustrative timestamp with a valid UTC expiry. `host-stop` instead needs the operator's explicit disruption token. Never commit approval files or credentials.
 
-## Real fault injection and recovery
+## Реальное внедрение сбоев и восстановление
 
 Run from a trusted operator host (absolute remote paths are mandatory):
 
@@ -59,7 +59,7 @@ python3 scripts/operations/multi_host_chaos_05110.py recover \
 
 This reconnects the original verified container IDs **with the original Compose DNS aliases** (required for ingress to resolve `api`) or restarts a stopped host and verifies the baseline. If the original container was replaced, the tool **refuses** to reconnect an unverified replacement: repair manually and keep the journal as evidence. Recovery is never a database/world rollback and cannot silently undo confirmed writes.
 
-## Alerting and repeatable observation
+## Оповещения и воспроизводимые наблюдения
 
 `deploy/production/docker-compose.observability.yml` now supports distinct Prometheus alerts via `LAUNCHER_PROMETHEUS_ALERT_RULES`. Generate operator-owned Prometheus scrape/alert configs for **different direct host ingress names**, not two DNS names backed by the same LB:
 
@@ -76,7 +76,7 @@ The generated files are JSON documents with `.yml` extension (strictly valid YAM
 
 Three real alert rules are generated: per-host ingress down; fewer than two healthy host ingresses; public HTTPS ingress down. They fire after a real 30-second fault; the default Alertmanager check waits up to 100 seconds. To require observation of an active Alertmanager alert in the fault test, append `--alertmanager-url https://alerts.example.org --alert-name NeverLauncherHostIngressDown`. Without these arguments report field `alertState=UNVERIFIED` does not claim notification delivery. A monitored drill cannot report PASS if the expected alert was not observed.
 
-## Evidence and independent admission
+## Подтверждения и независимый допуск
 
 Each result is written to a new `0600` JSON file only after recovery has been attempted. Result fields distinguish actual fault, survivor checks, edge samples, Alertmanager observation, duration, recovered state and unverified conditions. Never record credentials, bearer headers, full environment or raw Docker logs. The `recover` journal survives a failed restore, with a strict manual fix path.
 

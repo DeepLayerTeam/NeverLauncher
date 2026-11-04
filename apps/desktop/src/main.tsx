@@ -5290,7 +5290,7 @@ function App() {
             )}
             {screen === "auth" && /(Win|Linux)/i.test(navigator.platform) && (
               <section className="panel">
-                <h3>Windows/Linux TPM Key Attestation</h3>
+                <h3>Аттестация ключа TPM Windows/Linux</h3>
                 <p>
                   TPM2_Certify для существующего зарегистрированного P-256
                   ключа. AK должен быть заранее выпущен доверенным TPM
@@ -5350,7 +5350,7 @@ function App() {
                     : "Подтвердить TPM-происхождение"}
                 </button>
                 <p role="status">{tpmStatus0313}</p>
-                <h4>Measured Boot / PCR Verification</h4>
+                <h4>Измеряемая загрузка / проверка PCR</h4>
                 <p>
                   Отдельная проверка TPM Quote и разрешённых PCR через серверную
                   политику. Требуется ранее подтверждённый TPM Certify в этой же
@@ -6865,7 +6865,7 @@ function SettingsPanel({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               patchSettings("javaPath", e.target.value)
             }
-            placeholder="auto / managed Java"
+            placeholder="автоматически / управляемая Java"
           />
         </label>
         <label>

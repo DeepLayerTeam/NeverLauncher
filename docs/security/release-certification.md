@@ -27,7 +27,7 @@ python3 scripts/smoke/offline/repository-policy.py
 
 См. [troubleshooting/ci](../troubleshooting/ci.md) и [COMPATIBILITY.md](../../COMPATIBILITY.md).
 
-## Profile/Workspace 0.23.0 gate
+## Контроль допуска Profile/Workspace 0.23.0
 
 `python3 scripts/release/certify-profiles-ga-0230.py` runs actual unit,
 HTTP and PostgreSQL E2E tests with the Go race detector and rejects missing or

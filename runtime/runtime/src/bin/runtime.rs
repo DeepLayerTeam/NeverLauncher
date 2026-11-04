@@ -57,8 +57,8 @@ async fn command_verify(args: &[String]) -> Result<serde_json::Value, String> {
     let signature = verify_manifest_signature(&manifest, &pinned)?;
     let root = optional_flag(args, "--root");
     let selection = optional_flag(args, "--preset");
-    // Explicit selection is resolved by the same native graph used for installation;
-    // it must never be interpreted as a modified or unsigned manifest.
+    // Явный выбор разрешается по тому же нативному графу, что используется при установке;
+    // его нельзя интерпретировать как изменённый или неподписанный манифест.
     let files = if let Some(root) = root {
         if selection.is_some() {check_files_with_preset(&manifest, Path::new(&root), selection.as_deref()).await?}
         else {check_files(&manifest, Path::new(&root)).await?}
@@ -89,10 +89,11 @@ async fn command_sync(args: &[String]) -> Result<serde_json::Value, String> {
     Ok(json!({"status":"ready","download":download,"files":files,"manifest":{"projectId":manifest.project_id,"profileId":manifest.profile_id,"version":manifest.version}}))
 }
 
-/// Bootstrap offline/verified-manifest path: never fetch an unauthenticated
-/// second manifest after Prestarter verified and cached this signed release.
-/// The same transactional download scheduler, cache, recovery and SHA-256
-/// checks used by Desktop/Repair run here; only manifest transport differs.
+/// Автономная загрузка по проверенному манифесту: никогда не запрашивайте
+/// второй неподтверждённый манифест после проверки и кеширования подписанного
+/// релиза в Prestarter. Здесь применяются те же транзакционный планировщик
+/// загрузок, кеш, восстановление и проверки SHA-256, что в Desktop/Repair;
+/// отличается только способ доставки манифеста.
 async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String> {
     let manifest = read_manifest_required(args)?;
     let key = required_flag(args, "--pinned-public-key")?;
@@ -101,8 +102,8 @@ async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String
     let selection = optional_flag(args, "--preset");
     let downloaded = download_missing_files_with_preset(&manifest, &root, &key, None, selection.clone()).await?;
     let files = check_files_with_preset(&manifest, &root, selection.as_deref()).await?;
-    // Every file returned by check_files_with_preset is selected by the
-    // signed catalog. A selected optional mod is not optional to install.
+    // Каждый файл, возвращённый check_files_with_preset, выбран подписанным
+    // каталогом. Выбранный опциональный мод становится обязательным для установки.
     let ready = downloaded.failed == 0 && files.iter().all(|file| file.status == "ok");
     if !ready {
         return Err(format!("sync-local: download failed={}, invalid={}", downloaded.failed,
@@ -147,14 +148,15 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
     let server_port = optional_flag(args, "--matching-server-port")
         .map(|value| value.parse::<u16>().map_err(|_| "invalid matching server port".to_string()))
         .transpose()?;
-    // Runtime validation must execute exactly the installed signed preset,
-    // not whichever selection a previous launch happened to leave active.
+    // При проверке Runtime необходимо запускать именно установленный подписанный
+    // пресет, а не выбор, случайно оставшийся активным после предыдущего запуска.
     if let Some(preset) = optional_flag(args, "--preset") {
         runtime::transactional_release::ensure_active_preset(
             &manifest, &root, &pinned, Some(&preset)).await?;
     }
-    // Credentials arrive only through a rootless-container read-only 0600
-    // secret file; command line arguments never carry the token.
+    // Учётные данные поступают только через файл секретов с правами 0600,
+    // доступный для чтения внутри контейнера без root; аргументы командной
+    // строки никогда не содержат токен.
     let creds = if let Some(path) = optional_flag(args, "--credentials-file") {
         let path = PathBuf::from(path);
         let meta = std::fs::symlink_metadata(&path).map_err(|_| "authentication credential file unavailable")?;
@@ -178,7 +180,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
         &manifest, &root, optional_flag(args, "--java"), optional_flag(args, "--username"),
         &pinned, max_runtime_seconds, server_port, creds.clone(),
     ).await?;
-    // Never disclose an account token in diagnostic output/structured JSON.
+    // Никогда не раскрывайте токен учётной записи в диагностике или JSON.
     if let Some(c) = creds {
         result.stdout = result.stdout.replace(&c.access_token, "[REDACTED]");
         result.stderr = result.stderr.replace(&c.access_token, "[REDACTED]");
@@ -294,8 +296,9 @@ fn optional_flag(args: &[String], name: &str) -> Option<String> {
 }
 
 
-/// Run native Guard handshake, policy, evidence and challenge probes, without
-/// claiming that a Minecraft game or an in-process sensor was exercised.
+/// Выполняйте нативную проверку рукопожатия Guard, политики, подтверждений
+/// и контрольных запросов, не утверждая, что запускалась игра Minecraft
+/// или проверялся датчик внутри процесса.
 async fn command_guard_inventory_0501(args: &[String]) -> Result<serde_json::Value, String> {
     const FLAGS: [&str; 4] = ["--guard-executable", "--java", "--game-root", "--minecraft-version"];
     let mut used = std::collections::HashSet::new();

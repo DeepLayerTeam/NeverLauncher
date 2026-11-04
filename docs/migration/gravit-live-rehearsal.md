@@ -1,4 +1,4 @@
-# 0.44.7: live Minecraft migration rehearsal (MIG10)
+# 0.44.7 — репетиция настоящей миграции Minecraft (MIG10)
 
 The operator runs `nl migrate gravit rehearse` **on an isolated, disposable staging machine** that has a full Never client and a Minecraft Java server already running. The CLI checks an actual foreground client process and a new multiplayer join observed by the staging server through an authenticated loopback RCON connection. It **does not** run downloaded Gravit JARs, grant production permission or switch release channels.
 

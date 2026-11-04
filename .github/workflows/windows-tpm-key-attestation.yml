@@ -1,4 +1,4 @@
-name: Windows TPM Key Attestation 0.31.3
+name: Windows TPM — аттестация ключа 0.31.3
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Release BOM 0.32.14
+name: BOM выпуска 0.32.14
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: NeverLauncher 0.43.10 Windows AppContainer and Job Objects native acceptance
+name: NeverLauncher 0.43.10 — нативная приёмка Windows AppContainer и Job Objects
 
 on:
   push:

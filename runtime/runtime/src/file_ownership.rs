@@ -17,9 +17,9 @@ pub fn effective_ownership(f: &ManifestFile) -> &str {
 fn valid_ownership(s: &str) -> bool {
     matches!(s, "managed" | "required" | "optional" | "user-owned" | "generated")
 }
-/// Validate names for every supported operating system, regardless of which
-/// platform signs the manifest. In particular Linux publishers must not sign
-/// Windows device names, ADS paths or names differing only in casing.
+/// Проверяйте имена для каждой поддерживаемой ОС независимо от платформы,
+/// подписывающей манифест. В частности, издатели Linux не должны подписывать
+/// имена устройств Windows, пути ADS и имена, отличающиеся только регистром.
 fn valid_component(part: &str, pattern: bool) -> bool {
     if part.is_empty() || part == "." || part == ".." ||
         (part.ends_with(' ') || part.ends_with('.')) || part.starts_with(' ') ||
@@ -28,7 +28,7 @@ fn valid_component(part: &str, pattern: bool) -> bool {
     }
     if !pattern && part.chars().any(|c| matches!(c, '*' | '?' | '[' | ']')) { return false; }
     if pattern && part.chars().any(|c| matches!(c, '?' | '[' | ']')) { return false; }
-    // Windows treats CON.txt, NUL.jar, COM¹, etc. as devices as well.
+    // Windows считает имена CON.txt, NUL.jar, COM¹ и подобные именами устройств.
     let stem = part.split('.').next().unwrap_or("").to_uppercase();
     if matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$") {
         return false;
@@ -49,8 +49,8 @@ fn valid_path(p: &str, pattern: bool) -> bool {
     let prefix = if pattern { p.strip_suffix("/**").unwrap_or(p) } else { p };
     prefix.split('/').all(|component| valid_component(component, false))
 }
-/// Refuse file-vs-directory collisions and aliases on case-insensitive hosts.
-/// This is checked on *all* platforms so signed releases stay portable.
+/// Отклоняйте конфликты файлов с каталогами и псевдонимы на системах
+/// без учёта регистра. Проверяйте это на *всех* платформах для переносимости релизов.
 fn validate_name_collisions(paths: impl Iterator<Item = String>) -> Result<(), String> {
     let mut directories: HashMap<String, String> = HashMap::new();
     let mut files: HashSet<String> = HashSet::new();
@@ -138,8 +138,9 @@ pub fn can_quarantine(m: &Manifest, path: &str) -> bool {
     m.file_rules.iter().any(|r| r.action == "include" && matches!(r.ownership.as_str(), "managed" | "required") && matches(&r.pattern,path))
 }
 
-// Windows junctions, mount points and arbitrary reparse points can redirect IO
-// without having Metadata::file_type().is_symlink() set.
+// Соединения каталогов Windows, точки монтирования и произвольные точки
+// повторного разбора могут перенаправлять ввод-вывод, даже когда
+// Metadata::file_type().is_symlink() возвращает false.
 fn is_link_or_reparse(meta: &std::fs::Metadata) -> bool {
     if meta.file_type().is_symlink() { return true; }
     #[cfg(windows)] {
@@ -150,8 +151,9 @@ fn is_link_or_reparse(meta: &std::fs::Metadata) -> bool {
     false
 }
 
-// Never read through symlinked parent directories or final targets. This also
-// rejects an attacker-created symlink at the destination of an atomic rename.
+// Никогда не читайте через символические ссылки родительских каталогов
+// и конечных путей. Это также отклоняет ссылку, созданную злоумышленником
+// в точке назначения атомарного переименования.
 pub fn ensure_no_symlinks(root: &Path, target: &Path) -> Result<(), String> {
     if !target.starts_with(root) { return Err("file outside of installation root".to_string()) }
     match std::fs::symlink_metadata(root) {
@@ -248,7 +250,8 @@ mod tests {
     }
 }
 
-// Verified by release signing and again before any network/filesystem mutation.
+// Проверяется при подписании релиза и повторно перед любым изменением
+// сети или файловой системы.
 pub fn validate_download_targets(m: &Manifest) -> Result<(), String> {
     validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
     for f in &m.files {

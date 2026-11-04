@@ -1,4 +1,4 @@
-name: Gravit 0.33.4 Identity and UUID Mapping
+name: Gravit 0.33.4 — сопоставление идентичности и UUID
 on:
   push:
     paths:

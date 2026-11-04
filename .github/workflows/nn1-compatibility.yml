@@ -1,4 +1,4 @@
-name: N/N-1 API worker and PostgreSQL compatibility 0.51.6
+name: Совместимость N/N-1 для API, обработчика и PostgreSQL 0.51.6
 on:
   push:
     paths:

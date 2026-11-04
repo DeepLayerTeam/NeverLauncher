@@ -1,4 +1,4 @@
-# Launcher 0.31.5 — TPM2 Quote, Measured Boot & PCR Verification
+# Launcher 0.31.5 — TPM2 Quote, измеряемая загрузка и проверка PCR
 
 ## гарантии и ограничения
 

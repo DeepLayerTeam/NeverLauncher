@@ -1,4 +1,4 @@
-name: Auth SDK v2 Conformance 0.29.2
+name: Соответствие Auth SDK v2 спецификации 0.29.2
 on:
   push:
     paths:

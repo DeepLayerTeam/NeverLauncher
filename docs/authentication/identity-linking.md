@@ -1,4 +1,4 @@
-# Launcher 0.26.8 — Never ↔ Official Minecraft Identity Linking
+# Launcher 0.26.8 — привязка идентичностей Never и официального Minecraft
 
 ## поведение в промышленной среде
 

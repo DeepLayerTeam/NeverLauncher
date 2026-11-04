@@ -1,4 +1,4 @@
-# 0.34.8 — actual staged optional runtime matrix
+# 0.34.8 — фактическая матрица подготовленного опционального Runtime
 
 Every required target has a separate backend-issued nonce, scoped staged grant,
 rootless OCI worker, fresh installation, selected preset, Minecraft menu, real
@@ -6,7 +6,7 @@ matching-server join, gameplay observation, live authentication test and
 independently signed ValidationEvidence. A default-preset run is never counted
 for a different preset. Stable remains denied pending V11.
 
-## Derivation / fail-closed behavior
+## Расчёт и поведение с запретом при ошибке
 
 The Backend rejects non-executable legacy catalog choices (manifest schema before 3.0 or catalog schema 1.0). It generates mandatory selection IDs from the **signed immutable
 release Component Catalog**: every named publishable preset (or `default` when

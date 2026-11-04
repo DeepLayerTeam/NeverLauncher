@@ -1,4 +1,4 @@
-# NeverLauncher 0.49.10 — three-project live Gravit migration and client update rehearsal
+# NeverLauncher 0.49.10 — реальная репетиция миграции трёх проектов Gravit и обновления клиентов
 
 This is an **operator-run executable** for three **independently sourced real**
 Gravit projects. It does not generate project fixtures, invent Minecraft observations,

@@ -1,4 +1,4 @@
-name: Dependency Review
+name: Проверка зависимостей
 
 on:
   pull_request:

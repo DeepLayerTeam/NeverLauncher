@@ -1,4 +1,4 @@
-name: Official Minecraft Integration & Compatibility 0.26.12
+name: Интеграция и совместимость с официальным Minecraft 0.26.12
 
 # This workflow runs actual native builds and offline fault-injection tests on
 # all target operating systems. LIVE provider sign-in and real game-join checks

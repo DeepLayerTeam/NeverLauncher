@@ -1,19 +1,19 @@
-# Java Extension Host: subprocess recovery (0.42.2)
+# Java Extension Host: восстановление подпроцесса (0.42.2)
 
-The extension package must already be installed, verified and **enabled** by the lifecycle manager. Its `backend` target must be an inspected executable `.jar` containing the published `JavaExtensionHost` entrypoint; the JVM is launched as a separate OS process by the Go Extension Host Supervisor, not loaded into the Backend JVM. Host Protocol and Extension API remain at `1.0`.
+Пакет расширения должен быть заранее установлен, проверен и **включён** менеджером жизненного цикла. Его цель `backend` должна представлять собой проверенный исполняемый `.jar` с опубликованной точкой входа `JavaExtensionHost`. Go Extension Host Supervisor запускает JVM как отдельный процесс ОС, а не загружает её внутрь JVM Backend. Версии Host Protocol и Extension API остаются `1.0`.
 
-## Operational behavior
+## Поведение при эксплуатации
 
-- `StartInstallation` checks persistent kill-switch/quarantine, the enabled state, the package manifest, and the granted effective permissions. It validates its payload entrypoint and resolves a trusted configured absolute Java path (or Java from PATH). The JVM receives only the minimum host instance credentials and a sanitized environment.
-- Java sends an authenticated `hello`, starts the extension, then sends `ready`. A failed OS start or missing Java installation records `state=failed` with `lastError` and retires the one-time token. Fixing the executable or package permits a new start; the old credential is not reused.
-- Unexpected JVM exit, heartbeat expiry or a nonresponsive authenticated Java RPC callback ends the process tree and starts **bounded** recovery. Each attempt rereads the durable installation, requiring the same generation, package identity and enabled state; no retry is permitted after a stop, disable, uninstall, upgrade or replace operation revokes the recovery epoch. No Java bytecode is loaded into the Go Backend.
-- When a retry fails before `exec` or during the startup readiness handshake, the system reaps the failed process and retries with bounded exponential backoff. Exceeding `CrashLimit` within `CrashWindow` transitions to `crashloop` and invokes the configured emergency-disable handler. Manual `Restart` clears the in-memory crash counter, but does not bypass the repository's persistent emergency disable.
-- `Reconcile` skips already healthy installations, stops missing/disabled/obsolete generations and attempts restart of previously failed instances. It never automatically resets a crash-loop for the same package generation.
-- The status reports JVM PID, `java-jvm` runtime, process/resource metrics (where supported), last heartbeat, exit code and reason, instance ID, restarts, and explicitly reported isolation. Java Host requires a **trusted** Java process and is not an OS sandbox by virtue of running out of process. The isolated Java mode stays unsupported until its reverse RPC transport meets the sandbox requirements.
+- `StartInstallation` проверяет долговременный аварийный выключатель/карантин, состояние включения, манифест пакета и действующие разрешения. Затем проверяет точку входа и разрешает доверенный абсолютный путь Java из конфигурации (или Java из PATH). JVM получает только минимальные учётные данные экземпляра Host и очищенное окружение.
+- Java отправляет аутентифицированное `hello`, запускает расширение и затем отправляет `ready`. Ошибка запуска процесса ОС или отсутствие Java фиксируются как `state=failed` с `lastError`; одноразовый токен выводится из обращения. После исправления исполняемого файла или пакета допустим новый запуск, но старые учётные данные повторно не используются.
+- Неожиданный выход JVM, истечение времени ожидания heartbeat или отсутствие ответа на аутентифицированный обратный RPC Java приводят к завершению дерева процессов и запуску **ограниченного** восстановления. Перед каждой попыткой заново считывается долговременная запись установки; поколение, идентичность пакета и состояние включения должны совпадать. Повторы запрещены после остановки, отключения, удаления, обновления или замены, которые отзывают эпоху восстановления. Java-байткод в Go Backend не загружается.
+- Если повторный запуск не удаётся до `exec` или на этапе подтверждения готовности, система собирает завершившийся процесс и повторяет попытку с ограниченной экспоненциальной задержкой. Превышение `CrashLimit` за интервал `CrashWindow` переводит экземпляр в `crashloop` и вызывает настроенный обработчик аварийного отключения. Ручной `Restart` обнуляет счётчик аварий в памяти, но не обходит долговременную блокировку в репозитории.
+- `Reconcile` пропускает здоровые установки, останавливает отсутствующие/отключённые/устаревшие поколения и пытается перезапустить ранее неудачные экземпляры. Для одного поколения пакета цикл аварий никогда не сбрасывается автоматически.
+- Статус содержит PID JVM, среду `java-jvm`, метрики процесса/ресурсов (если доступны), последний heartbeat, код и причину завершения, ID экземпляра, количество перезапусков и явно определённую степень изоляции. Java Host требует **доверенного** Java-процесса; запуск вне основного процесса сам по себе не создаёт изоляцию ОС. Изолированный режим Java остаётся неподдерживаемым до выполнения требований песочницы для обратного RPC.
 
-## валидация
+## Проверка
 
-Build the original runnable extension JAR:
+Соберите исходный запускаемый JAR расширения:
 
 ```sh
 sh examples/extensions/java-host/build.sh
@@ -21,7 +21,7 @@ python3 examples/extensions/java-host/test-runner.py
 sh sdk/java/core/build.sh test
 ```
 
-On Linux with **Go 1.27.3 or newer** and Java 17/21, test the actual JVM Supervisor:
+В Linux с **Go 1.27.3 или новее** и Java 17/21 проверьте настоящий супервизор JVM:
 
 ```sh
 cd services/api
@@ -30,11 +30,11 @@ LAUNCHER_TEST_JAVA_HOST_JAR="$PWD/../../examples/extensions/java-host/build/pack
 go test -race -count=1 -run '^TestJavaLateHelloCannotUndoOperatorStop0422$' ./internal/extensionhost
 ```
 
-The tests kill a **real Java child JVM**, observe a new PID/instance/health response, simulate missing Java during restart and repair the executable, check idempotent reconciliation, and prove that an explicit stop cancels scheduled resurrection. CI repeats this under the checked-in Java Host workflow. A green Java-only test does **not** certify Go process recovery or the six target OS platforms.
+Тесты завершают **настоящий дочерний процесс JVM**, наблюдают новый PID/экземпляр/ответ о работоспособности, имитируют отсутствие Java при перезапуске с последующим восстановлением исполняемого файла, проверяют идемпотентность согласования и доказывают, что явная остановка отменяет запланированное восстановление. CI повторяет это в существующем workflow Java Host. Успешные тесты только Java **не подтверждают** восстановление процессов Go и работу на всех шести целевых платформах ОС.
 
-## Deliberate boundaries
+## Преднамеренные границы
 
-- The backend keeps the Host Protocol `1.0` envelope; no arbitrary Gravit JAR binary compatibility is claimed.
-- Operator stop/disable and package quarantine take precedence over automatic recovery. Crash-loop operator intervention is intentional.
-- Linux process groups and RSS counts are not equivalent to Java OS sandboxing on every platform; check `Status.IsolationStatus`, not the process name.
-- The project's existing final ServerBridge release acceptance and source-commit-bound evidence remain mandatory; version 0.42.2 does not imply production release certification.
+- Backend сохраняет формат сообщений Host Protocol `1.0`; двоичная совместимость с произвольными JAR Gravit не заявляется.
+- Остановка/отключение оператором и карантин пакета имеют приоритет над автоматическим восстановлением. Вмешательство оператора при `crashloop` требуется намеренно.
+- Группы процессов Linux и подсчёт RSS не равнозначны изоляции Java средствами ОС на всех платформах. Проверяйте `Status.IsolationStatus`, а не имя процесса.
+- Обязательными остаются существующие требования окончательной приёмки релиза ServerBridge и доказательств, привязанных к исходному коммиту; версия 0.42.2 не означает сертификацию промышленного выпуска.

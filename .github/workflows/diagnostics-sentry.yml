@@ -1,4 +1,4 @@
-name: Diagnostics and Sentry 0.30.9
+name: Диагностика и Sentry 0.30.9
 on:
   push:
     paths:

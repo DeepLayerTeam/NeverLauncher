@@ -1,4 +1,4 @@
-# NeverLauncher 0.51.1 — HA Inventory & Failure-Domain Baseline
+# NeverLauncher 0.51.1 — инвентаризация HA и базовая оценка доменов отказа
 
 ## Реальный инструмент и назначение
 

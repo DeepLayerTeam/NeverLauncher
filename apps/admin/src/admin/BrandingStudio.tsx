@@ -40,7 +40,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
   }
   const previewValid=(()=>{try{validateBrand0355(brand);return true}catch{return false}})();
   return <section className="card wide brandingStudio0355">
-    <h2>Branding Studio · 0.35.5</h2>
+    <h2>Студия оформления · 0.35.5</h2>
     <p className="muted">Предпросмотр меняется сразу. Исходный bootstrap проверяется Ed25519, новый подписывается в браузере. Ключ не передаётся в Backend и не сохраняется. Владелец затем помещает новый <code>bootstrap.signed.json</code> в распространяемый installer bundle.</p>
     <div className="formGrid">
       <article className="subcard">
@@ -75,7 +75,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
       </article>
     </div>
     <article className="subcard brandPreviewWrapper0355">
-      <h3>3. Live Preview · Desktop</h3>
+      <h3>3. Предпросмотр в реальном времени · Desktop</h3>
       <div className="brandPreview0355" style={{backgroundColor:brand.backgroundColor||'#0f172a',color:brand.textColor||'#e5e7eb',borderColor:brand.accentColor||'#22c55e'}}>
         <aside>
           {brand.iconPng&&<img width={44} height={44} alt="Иконка" src={brandImage(brand.iconPng)} />}

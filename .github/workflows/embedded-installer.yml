@@ -1,4 +1,4 @@
-name: Launcher 0.32.9 signed installer and embedded Admin
+name: Launcher 0.32.9 — подписанный установщик и встроенная Admin
 on:
   push:
     paths:

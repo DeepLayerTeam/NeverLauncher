@@ -33,7 +33,7 @@ The package manifest remains covered by the existing Ed25519 package signature, 
 
 A manifest request alone never grants access. The operator must approve the separate `storage:read`, `storage:write`, `http:outbound`, and `secrets:read` permissions. Revoking one blocks subsequent broker operations even for an already-running process.
 
-## Host Protocol operations
+## Операции Host Protocol
 
 The isolated process continues to POST JSON to `/v1/capabilities/{name}` with the existing per-instance bearer credential.
 

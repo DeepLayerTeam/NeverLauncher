@@ -1,4 +1,4 @@
-# NeverLauncher 0.51.2 — executable cross-host API + worker deployment
+# NeverLauncher 0.51.2 — работающее развёртывание API и обработчиков на нескольких узлах
 
 **Result:** two independent Docker Engines, one API process + one durable worker
 per host, one Admin + HTTPS ingress per host. Both processes connect to the
@@ -13,7 +13,7 @@ This file is a separate production deployment. **Do not overlay it on
 `docker-compose.yml` or `docker-compose.network-ha.yml`**: those files launch
 single-host Redis/PostgreSQL or rely on Docker-local service discovery.
 
-## Prerequisites and non-negotiable boundaries
+## Предварительные условия и обязательные ограничения
 
 - At least two separately administered Linux machines/VMs with Docker Engine
   and Docker Compose v2, with **different real** `/etc/machine-id` values.
@@ -50,7 +50,7 @@ single-host Redis/PostgreSQL or rely on Docker-local service discovery.
   considered authoritative for the advertised operations; local runtime
   auth/passkey/legacy snapshot consistency requires separate E2E.
 
-## Installation on *each* Docker host
+## Установка на *каждом* хосте Docker
 
 Install the identical checked-out 0.51.2 source tree at `/opt/launcher` on each
 machine. From the independent machine's console:
@@ -104,7 +104,7 @@ container loopback; API and worker have **no host-published port**. Per-process
 writable volumes and image digest are checked. Container images must include
 working `launcher-api`, `wget` and the official Admin package.
 
-## Coordinate a cluster from a third, trusted machine
+## Управление кластером с третьей доверенной машины
 
 Use dedicated SSH operator credentials with exact pinned host keys in
 `known_hosts`, `BatchMode=yes`, and the installed code and pre-provisioned `.env`
@@ -133,7 +133,7 @@ real service. Check actual UUID, idempotency key, database revisions and S3
 hashes. Current `/ready` and S3/Redis growth probes alone are *insufficient*
 for claiming cross-replica session or game-state coherence.
 
-## Controlled node-stack outage test (disruptive)
+## Контролируемый тест отказа стека узла (с нарушением работы)
 
 On a maintained staging cluster, with an independent LB and data backups:
 
@@ -158,7 +158,7 @@ Docker environment blocks. Store reports access-controlled. CLI status:
 `0`=requested operation/check succeeded, `2`=not executed/error, `3`=runtime
 was observed but a required condition failed.
 
-## Known limitations (not silently certified)
+## Известные ограничения (не считать автоматически сертифицированными)
 
 1. PostgreSQL/Redis/S3 failover and their RPO/RTO are not handled by this release
    (0.51.3); a shared single dependency can still take down both product nodes.

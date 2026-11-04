@@ -1,4 +1,4 @@
-name: Java SPI Registry 0.48.3 - real lifecycle and provider integration
+name: Реестр Java SPI 0.48.3 — настоящий жизненный цикл и интеграция провайдеров
 on:
   push:
     paths:

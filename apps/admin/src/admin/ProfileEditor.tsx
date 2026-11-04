@@ -67,14 +67,14 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
     <h3>{selectedProfile?`Настройка профиля ${selectedProfile.id}`:'Создать профиль Minecraft'}</h3>
     <p className="muted">Minecraft, загрузчик и Java сохраняются на Backend и входят в неизменяемую ревизию профиля. Уже опубликованные сборки не изменяются.</p>
     <div className="formGrid">
-      <label className="field">ID профиля<input disabled={working||!!selectedProfile} value={form.id} onChange={e=>edit('id',e.target.value.trim())} placeholder="survival" /></label>
+      <label className="field">ID профиля<input disabled={working||!!selectedProfile} value={form.id} onChange={e=>edit('id',e.target.value.trim())} placeholder="выживание" /></label>
       <label className="field">Название<input disabled={working} value={form.name} onChange={e=>edit('name',e.target.value)} /></label>
       <label className="field">Minecraft<input disabled={working} value={form.minecraftVersion} onChange={e=>edit('minecraftVersion',e.target.value.trim())} placeholder="1.21.1" /></label>
       <label className="field">Загрузчик<select disabled={working} value={form.loader} onChange={e=>{edit('loader',e.target.value);if(e.target.value==='vanilla')edit('loaderVersion','')}}>
         {['vanilla','fabric','quilt','forge','neoforge'].map(loader=><option key={loader} value={loader}>{loader}</option>)}
       </select></label>
       {form.loader!=='vanilla'&&<label className="field">Точная версия загрузчика<input disabled={working} value={form.loaderVersion} onChange={e=>edit('loaderVersion',e.target.value.trim())} placeholder="Без latest" /></label>}
-      <label className="field">Java major<input disabled={working} type="number" min="8" max="255" value={form.javaMajor} onChange={e=>edit('javaMajor',Number(e.target.value))} /></label>
+      <label className="field">Основная версия Java<input disabled={working} type="number" min="8" max="255" value={form.javaMajor} onChange={e=>edit('javaMajor',Number(e.target.value))} /></label>
       <label className="field">Пресет компонентов<input disabled={working} value={form.preset} onChange={e=>edit('preset',e.target.value)} /></label>
       <label className="field">Описание<textarea disabled={working} rows={3} value={form.description} onChange={e=>edit('description',e.target.value)} /></label>
     </div>

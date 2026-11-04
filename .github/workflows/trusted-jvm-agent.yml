@@ -1,4 +1,4 @@
-name: Trusted Minecraft JVM Agent 0.30.6 — signed bundle and real JVM hooks
+name: Доверенный JVM Agent Minecraft 0.30.6 — подписанный пакет и настоящие хуки JVM
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Launcher CI
+name: Непрерывная интеграция Launcher
 
 on:
   push:

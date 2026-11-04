@@ -1,4 +1,4 @@
-name: Gravit Isolated Migration Rehearsal 0.33.10
+name: Изолированная репетиция миграции Gravit 0.33.10
 on:
   push:
     paths:

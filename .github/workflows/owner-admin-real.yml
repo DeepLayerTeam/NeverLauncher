@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.3 real owner and admin acceptance
+name: NeverLauncher 0.52.3 — реальная приёмка владельца и администратора
 on:
   push:
     paths:

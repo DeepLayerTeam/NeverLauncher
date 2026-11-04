@@ -1,4 +1,4 @@
-name: SQLite/PostgreSQL verified bidirectional offline transfer 0.37.7
+name: Проверенный двусторонний автономный перенос SQLite/PostgreSQL 0.37.7
 on:
   push:
     paths:

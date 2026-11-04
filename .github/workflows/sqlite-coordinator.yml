@@ -1,4 +1,4 @@
-name: SQLite single-node coordinator (0.32.7)
+name: Координатор SQLite на одном узле (0.32.7)
 on:
   push:
     paths:

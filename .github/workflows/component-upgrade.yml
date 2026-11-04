@@ -1,4 +1,4 @@
-name: NeverLauncher 0.45.8 Component Upgrade
+name: NeverLauncher 0.45.8 — обновление компонентов
 on:
   push:
     paths:

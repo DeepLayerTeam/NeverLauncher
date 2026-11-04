@@ -1,4 +1,4 @@
-name: Migration Center 0.45.0 Migration GA acceptance
+name: Migration Center 0.45.0 — приёмка миграции GA
 
 on:
   pull_request:

@@ -1,4 +1,4 @@
-name: macOS Production Delivery
+name: Промышленная поставка macOS
 
 on:
   workflow_call:

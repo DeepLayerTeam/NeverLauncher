@@ -1,4 +1,4 @@
-# Gravit OptionalFile / OptionalView → Launcher 0.24.11
+# Перенос Gravit OptionalFile / OptionalView в Launcher 0.24.11
 
 This migration is **an executable Admin workflow**, not a direct import of
 Gravit code or unverified filesystem paths. It converts recognized
@@ -93,6 +93,6 @@ The last command requires the repository's external Go dependencies; full
 end-to-end release signing, Desktop download and Minecraft launch must also
 pass in production CI before declaring the full release certified.
 
-## 0.44.5 source-content import alignment
+## 0.44.5 — согласование импорта содержимого исходников
 
 The Migration Center content importer now recognizes both supported Gravit `file` action path forms: an empty destination and a destination exactly equal to its source. The previous converter already accepted both, but the source ZIP file selector only staged the empty-destination form. Each selected file is now SHA-256 verified and assigned `optional` ownership rather than silently becoming mandatory. `updateOptional: null` is handled as an empty collection and does not block a valid baseline profile. Unsupported source-to-target relocations **still block** the migration; no unmanaged or unverified path is added to the workspace. The normal draft catalog validation, CAS and signing pipeline is unchanged.

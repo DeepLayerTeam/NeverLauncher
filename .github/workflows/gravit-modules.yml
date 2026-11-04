@@ -1,4 +1,4 @@
-name: Gravit Module & ServerWrapper Migration 0.33.8
+name: Миграция модулей Gravit и ServerWrapper 0.33.8
 on:
   push:
     paths:

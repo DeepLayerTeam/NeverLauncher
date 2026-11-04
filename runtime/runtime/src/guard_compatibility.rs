@@ -1,6 +1,7 @@
-//! Real signed compatibility enforcement shared by the native Runtime/Guard
-//! launcher. The operator's Ed25519 public key is pinned outside client root.
-//! The trusted JVM premain separately restricts authorized hook callbacks.
+//! Настоящее применение подписанной политики совместимости, общее
+//! для нативного Runtime/Guard. Открытый ключ Ed25519 оператора закреплён
+//! вне корня клиента. Доверенный premain JVM отдельно ограничивает
+//! разрешённые обратные вызовы хуков.
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::Deserialize;
@@ -155,7 +156,8 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
  }
  Ok(Some(Verified{policy:p,digest:sha(&payload)}))
 }
-/// A scoped, verified operator policy exposed only to the native Trusted JVM bridge.
+/// Проверенная политика оператора с ограниченной областью действия,
+// доступная только нативному мосту Trusted JVM.
 /// Artifacts are SHA-256 checked again immediately before spawn.
 pub struct GamePolicy0503 { policy:Policy, digest:String }
 impl GamePolicy0503 {

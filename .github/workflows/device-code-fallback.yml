@@ -1,4 +1,4 @@
-name: Device Code Fallback 0.26.4
+name: Резервная авторизация по коду устройства 0.26.4
 on:
   push:
     paths:

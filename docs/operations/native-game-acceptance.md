@@ -1,43 +1,16 @@
-# 0.43.14 — native Minecraft gameplay acceptance
+# 0.43.14 — приёмка нативного игрового процесса Minecraft
 
-This is a **real-execution gate**, not a declaration of platform support.
+Это **контроль допуска с реальным выполнением**, а не декларация поддержки платформ.
 
-Run `.github/workflows/native-game-acceptance-04314.yml` for one immutable,
-properly signed staging package. It dispatches the existing GUI-capable staged
-runner on six **dedicated native hosts**: Windows, Linux and macOS, each on
-x64 and ARM64. Each host must have a physical/logged-in GUI session with
-rendering and input permissions, the required Java and signing configuration,
-a real matching Minecraft server/ServerBridge distribution, a registered
-external authentication provider and dedicated test accounts.
+Запустите `.github/workflows/native-game-acceptance-04314.yml` для одного неизменяемого правильно подписанного подготовленного пакета. Workflow запускает существующий исполнитель, поддерживающий GUI, на шести **выделенных нативных хостах**: Windows, Linux и macOS, каждая на x64 и ARM64. На каждом хосте требуется настоящая графическая сессия с вошедшим пользователем, разрешения на графику и ввод, необходимая версия Java и настройки подписания, подходящий настоящий сервер Minecraft/дистрибутив ServerBridge, зарегистрированный внешний провайдер авторизации и отдельные тестовые учётные записи.
 
-A successful run requires the full existing sequence: exact staged-byte
-materialization, selected loader and native Java, Minecraft GUI and JVM startup,
-provider authentication including negative device/Guard checks, signed matching
-server, player join and server-confirmed movement with changing rendered frames,
-followed by real transactional update/recovery/rollback. After successful
-Minecraft play, the actual production Runtime must reject a modified signed
-manifest and the production Go CLI must reject a corrupted *required* client
-file. The isolated test copy is then restored and verified again. Errors,
-timeouts, missing toolchains, missing GUI, SKIP, mismatched architecture or
-unsuccessful rejection produce a **blocked** run. x64 emulation is not ARM64.
+Для успешного прохождения требуется вся действующая цепочка: подготовка точных файлов пакета, выбранного загрузчика и нативной Java, запуск GUI Minecraft и JVM, вход через провайдера, включая негативные проверки устройства/Guard, подключение к подписанному подходящему серверу, вход игрока, подтверждённое сервером перемещение и изменение отображаемых кадров, а затем настоящее транзакционное обновление/восстановление/откат. После успешной игры промышленный Runtime должен отклонить изменённый подписанный манифест, а промышленный CLI на Go — повреждённый *обязательный* файл клиента. После этого изолированная тестовая копия восстанавливается и проверяется повторно. Ошибки, тайм-ауты, отсутствие инструментов или GUI, SKIP, несовпадение архитектуры либо неуспешное отклонение приводят к статусу **blocked**. Эмуляция x64 не считается ARM64.
 
-`run_native_validation_03410.py` checks the real host identity and verifies
-the positive/negative reports. The `adversarial-gameplay-04314.json` result is
-SHA-256-bound into the gameplay proof. Independent host-side validation checks
-this result and the exact restored package bytes; the Backend refuses signed
-0.43.14+ gameplay evidence without the new artifact hash. These observations
-are **not themselves signatures or approval to publish**. Final GA still
-requires separately approved, current, independently signed evidence for the
-exact release bytes from the trusted platform verification process.
+`run_native_validation_03410.py` проверяет настоящую идентичность хоста и положительные/негативные отчёты. Результат `adversarial-gameplay-04314.json` связывается по SHA-256 с подтверждением игрового процесса. Независимая проверка на хосте контролирует этот результат и точные восстановленные байты пакета. Backend отказывается принимать подписанные подтверждения игры для 0.43.14+, если отсутствует хеш нового артефакта. Такие наблюдения **сами по себе не являются подписью или разрешением на публикацию**. Для окончательной GA по-прежнему нужны отдельно утверждённые, актуальные, независимо подписанные подтверждения точных файлов релиза от доверенного процесса проверки платформы.
 
-Linux-only validation-attestor 0345 remains Linux/amd64; it must **not** be
-represented as a six-platform attestor. The six-target GUI workflow is a native
-observational acceptance, not a substitute for the independent release
-security-capability matrix and platform signing. If a platform host or trusted
-attestor is missing, that target is unverified and release certification stays
-blocked. This release does not claim these tests have already run.
+Исполнитель validation-attestor 0345 работает только на Linux/amd64 и **не может** называться аттестатором шести платформ. Шестиконфигурационный GUI-workflow даёт нативные наблюдения приёмки, но не заменяет независимую матрицу защитных возможностей релиза и подписи платформ. Если недоступен хост платформы или доверенный аттестатор, соответствующая конфигурация остаётся непроверенной, а сертификация релиза — заблокированной. В выпуске не утверждается, что такие испытания уже выполнены.
 
-Unit regression commands (not a substitute for Minecraft E2E):
+Команды модульной регрессии (не замена Minecraft E2E):
 
 ```sh
 python3 tools/validation-attestor/test_attestor.py

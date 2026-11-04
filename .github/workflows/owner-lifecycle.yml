@@ -1,4 +1,4 @@
-name: Launcher 0.35.13 Owner Lifecycle and G-M Acceptance
+name: Launcher 0.35.13 — жизненный цикл владельца и приёмка G-M
 on:
   workflow_dispatch:
   pull_request:

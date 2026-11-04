@@ -1,4 +1,4 @@
-name: Auth Migration and Compatibility 0.29.11
+name: Миграция авторизации и совместимость 0.29.11
 on:
   push:
     paths:

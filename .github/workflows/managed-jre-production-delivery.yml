@@ -1,4 +1,4 @@
-name: Managed JRE Production Delivery
+name: Промышленная поставка управляемой JRE
 
 on:
   workflow_dispatch:

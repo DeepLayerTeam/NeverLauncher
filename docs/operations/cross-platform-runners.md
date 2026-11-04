@@ -1,6 +1,6 @@
-# 0.34.10 V10 — Native runtime runner operations
+# 0.34.10 V10 — операции нативного исполнителя Runtime
 
-## Guarantees and trust boundary
+## Гарантии и граница доверия
 
 - The capability registry runs **on the worker**, not in CI configuration. It verifies the actual selected Java binary, native display and OpenGL renderer, OS and architecture. GPU inventory, PID, `DISPLAY` alone, a completed timeout and an uploaded JSON are **not** positive startup evidence.
 - Supported OS/architectures: Windows amd64/arm64, Linux amd64/arm64, macOS amd64/arm64. A host which cannot actually supply the GUI driver, desktop session, renderer or required permission returns **blocked**. Hardware compatibility is **not** certified by being listed here.
@@ -16,7 +16,7 @@
 - GUI proof is only for an English main menu with two recognizable Minecraft controls and an actual window belonging to the selected Java binary. Other localizations/themes require separate real probes; they are not auto-certified.
 - On Windows, modded matching servers may use a pinned `run.bat` or direct Java JAR; Unix `run.sh` is rejected. Windows local workers need Git Bash if using the supplied workflow. Headless does not run a matching server.
 
-## CI and local execution
+## CI и локальное выполнение
 
 `native-runtime-v10-03410.yml` is opt-in `workflow_dispatch` (package ID, OS, architecture, execution mode). A matching dedicated runner must bear **all** labels: `self-hosted`, `nl-validation`, `nl-<os>`, `nl-<arch>`, `nl-<mode>`. Only explicitly provisioned runners execute these jobs. Jobs compile the real production CLI and Runtime, run platform probes, use a private per-job temporary directory, and export a restricted set of JSON diagnostics. Failure or lack of a renderer means **BLOCKED**, not false incompatible-Minecraft **FAILED**. The published CI artifact is observational.
 
@@ -30,7 +30,7 @@ Exit 0 means the worker is ready to **attempt** the chosen scenario, not that Mi
 
 Use `run_native_validation_03410.py --mode gui --report-dir /safe/reports -- [run-staged-package flags, excluding --output]` for the bounded and isolated observational run. For headless use `--mode headless` and do not present completion as gameplay. Worker stdout/stderr are not exported because they may contain live provider secrets; the allowlisted JSON reports are copied before the whole isolated work directory is deleted. Do not retain jobs' grant, token files or raw logs on shared hosts. Centralized redaction/retention remains V12.
 
-## Negative acceptance
+## Негативные приёмочные испытания
 
 1. Stop or disconnect the GUI session / make OpenGL context creation fail: capability status `blocked`, startup not `passed`, no attestor signature.
 2. Provide wrong/nonexecutable Java: `blocked` before Minecraft launch.
@@ -39,6 +39,6 @@ Use `run_native_validation_03410.py --mode gui --report-dir /safe/reports -- [ru
 5. Drop macOS Accessibility or Screen Recording permission: `blocked` even if Java and GPU are installed.
 6. Terminate updater in staging and committing: invoke public recovery, require a verified retry and rollback; merely killing a PID is not PASS.
 
-## Scope of verification
+## Область проверки
 
 This source tree includes executable native observers, capability checks and process-tree lifecycle handling; only Linux tests can be executed in a Linux development container. To claim target-specific production readiness, execute the **actual** native workflows on dedicated Windows/macOS/arm64 hardware with the real signed staged package, GUI permissions, Java, server and account fixtures. A green unit test does not establish platform compatibility.

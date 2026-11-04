@@ -1,4 +1,4 @@
-name: Player Migration Assistant 0.33.9
+name: Помощник переноса игроков 0.33.9
 on:
   push:
     paths:

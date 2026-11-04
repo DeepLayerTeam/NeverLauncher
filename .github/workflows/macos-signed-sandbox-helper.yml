@@ -1,4 +1,4 @@
-name: macOS Signed Sandbox Helper 0.31.12
+name: Подписанный помощник изоляции macOS 0.31.12
 on:
   push:
     paths:

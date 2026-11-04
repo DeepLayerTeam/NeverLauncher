@@ -1,6 +1,6 @@
-# Launcher 0.32.11 — DEP07: SQLite → PostgreSQL staging transfer
+# Launcher 0.32.11 — DEP07: промежуточный перенос SQLite → PostgreSQL
 
-## Important: no production cutover in this release
+## Важно: промышленное переключение в этой версии отсутствует
 
 The SQLite Core v326 and the native PostgreSQL HTTP Repository have different
 security/authentication, release, audit and lease schemas. Importing data by
@@ -10,7 +10,7 @@ transactional, checked data-transfer stage, NOT an operable PostgreSQL Backend
 migration or a full DEP07 delivery. Do not shut down SQLite or route players
 to the imported schema.** `readyForBackendCutover` is always `false`.
 
-## Safe supported operation
+## Поддерживаемая безопасная операция
 
 1. Keep the SQLite service running and create a fresh online snapshot:
 
@@ -66,7 +66,7 @@ to the imported schema.** `readyForBackendCutover` is always `false`.
   action, a database administrator can drop ONLY the dedicated import schema,
   after explicitly verifying no investigation/compliance need remains.
 
-## Remaining DEP07 acceptance gates
+## Оставшиеся условия приёмки DEP07
 
 - Translate every SQLite 326 state machine into the native PostgreSQL runtime
   schema and update the HTTP Repository to use it; do not rely on staging tables.

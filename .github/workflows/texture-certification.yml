@@ -1,4 +1,4 @@
-name: Texture Integration & Compatibility 0.25.12
+name: Интеграция и совместимость текстур 0.25.12
 on:
   workflow_call:
   push:

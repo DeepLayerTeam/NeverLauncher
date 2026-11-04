@@ -1,4 +1,4 @@
-name: Gravit TextureProvider migration 0.25.10
+name: Миграция Gravit TextureProvider 0.25.10
 on:
   push:
     paths:

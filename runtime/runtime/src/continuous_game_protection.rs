@@ -1,6 +1,7 @@
 //! Active, fail-closed checks during the lifetime of the Minecraft JVM.
-//! This is independent of the in-process Java file watcher. It does not
-//! attest to every in-memory class mutation or replace server-side anti-cheat.
+//! Проверка независима от наблюдателя файлов внутри Java-процесса.
+//! Она не подтверждает отсутствие всех изменений классов в памяти
+//! и не заменяет серверную античит-защиту.
 use crate::{Manifest, LaunchPlan};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, fs::{self, File}, io::Read, path::{Component, Path, PathBuf}};
@@ -81,7 +82,8 @@ impl LiveGameGuard0506 {
                 }
             }
         }
-        // Launcher-generated JVM entrypoint artifacts must be in the signed inventory.
+        // Артефакты точки входа JVM, созданные Launcher, должны входить
+// в подписанную инвентаризацию.
         for entry in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
             let canonical = fs::canonicalize(entry).map_err(|e| format!("live Guard classpath missing: {e}"))?;
             if !pinned.contains_key(&canonical) {
@@ -163,7 +165,8 @@ impl LiveGameGuard0506 {
         self.macos_daemon.as_ref().ok_or("macOS Guard daemon not bound")?.ping_running().await
     }
 
-    /// Called on a blocking worker; never runs hashing on an async executor thread.
+    /// Вызывается в блокирующем обработчике; хеширование никогда не выполняется
+// в потоке асинхронного исполнителя.
     pub fn verify(&self) -> Result<(), String> {
         let current = crate::guard_compatibility_0502::verified_for_game(&self.root,
             &self.project, &self.minecraft, &self.loader)?;
@@ -191,9 +194,10 @@ impl LiveGameGuard0506 {
     }
 }
 
-/// Native entrypoint: monitor until the actual child exits, a signed file/policy
-/// changes, or the caller's total runtime limit expires. Violations terminate
-/// the child and cannot be reported as a successful game exit.
+/// Нативная точка входа: наблюдайте до фактического завершения дочернего
+/// процесса, изменения подписанного файла/политики или истечения общего
+/// лимита времени. При нарушении завершайте процесс; такой исход
+/// нельзя считать успешным завершением игры.
 pub struct ProtectedExit0506 {
     pub status: Option<std::process::ExitStatus>,
     pub timed_out: bool,

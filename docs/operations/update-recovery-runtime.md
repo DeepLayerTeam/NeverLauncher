@@ -1,4 +1,4 @@
-# Launcher 0.34.9 — V09 real update / recovery / rollback runtime certification
+# Launcher 0.34.9 — V09: сертификация настоящего обновления, восстановления и отката Runtime
 
 ## что действительно запускается
 
@@ -20,7 +20,7 @@ The previous release and alternate JRE are mounted read-only into an isolated, i
 
 For the **observational CI workflow**, configure `NL_VALIDATION_PREVIOUS_BUNDLE_URL` (HTTPS), `NL_VALIDATION_PREVIOUS_BUNDLE_SHA256`, `NL_VALIDATION_REPLACEMENT_JAVA`, `NL_VALIDATION_MANAGED_JRE_BUNDLE_URL`, `NL_VALIDATION_MANAGED_JRE_BUNDLE_SHA256`, and `NL_VALIDATION_MANAGED_JRE_MANIFEST_SHA256`. The CI downloader checks the prior bundle digest before running; the worker checks the internal manifests and file hashes again. This workflow never signs stable certification evidence.
 
-## Real failure scenarios
+## Реальные сценарии сбоев
 
 1. Install and verify the older version on an empty client tree. Flip a byte in the **current signed input file** and run the normal update: it must fail, leaving all previous installed file hashes unchanged.
 2. Restore the real staged bytes and upgrade with `client update`. Require `applied-and-verified` and a durable rollback snapshot.

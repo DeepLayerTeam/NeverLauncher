@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.8 — ServerBridge Java Integration
+# NeverLauncher 0.48.8 — интеграция Java с ServerBridge
 
 Java extensions use `context.runtime().serverBridge()` to access the actual
 ServerBridge v3 PostgreSQL repository through the **existing authenticated Go
@@ -6,7 +6,7 @@ Extension Host broker**. This is an operational integration, not an alternate
 ServerBridge server, raw SQL API, Minecraft auth endpoint or in-process classpath
 patch. The SDK is Java 17-compatible, including Java 21 hosts.
 
-## Live data and permissions
+## Действующие данные и разрешения
 
 | Java SDK call | Broker operation | Required live permissions |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ consume a ticket or validate a Mojang/Microsoft identity. Actual admission
 still goes exclusively through authenticated ServerBridge `hasJoined` and its
 one-time ticket redemption, continuous trust and official Minecraft validation.
 
-## Queued control, never OS commands
+## Управление через очередь, без команд ОС
 
 `command()` inserts into the existing ServerBridge v3 durable command store.
 Queueing returns `pending` and a command ID; it does not mean the game server
@@ -74,7 +74,7 @@ bridge.subscribeEvents(event -> {
 });
 ```
 
-## Verification and remaining release gates
+## Проверка и оставшиеся условия выпуска
 
 Run `sh sdk/java/core/build.sh test`. The new Java suite uses an actual
 loopback HTTP server with bearer authentication and capability negotiation,

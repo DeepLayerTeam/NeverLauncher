@@ -1317,7 +1317,7 @@ export function MigrationCenter0331({
   }
   return (
     <section className="card wide" aria-label="Центр миграции 0.33.7">
-      <h2>Migration Center · 0.33.7</h2>
+      <h2>Центр миграции · 0.33.7</h2>
       <p>
         Durable workflow для проверки целевого проекта Never и фиксации
         инвентаризации. Статус «prepared» означает только сохранённый baseline;
@@ -1402,7 +1402,7 @@ export function MigrationCenter0331({
       </div>
       {run && (
         <form onSubmit={(e) => void assess(e)} className="subcard">
-          <h3>Gravit Compatibility Detector</h3>
+          <h3>Проверка совместимости Gravit</h3>
           <p>
             Архив исходного проекта (LaunchServer.json, profiles/, runtime,
             modules/). Конфигурации и секреты не сохраняются на сервере.
@@ -1449,7 +1449,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Source Inventory &amp; Export · MIG03</h3>
+          <h3>Инвентаризация исходников и экспорт · MIG03</h3>
           <p>
             Инвентаризация использует выбранный ZIP (до 512 MiB), проверяет
             каждый файл и сохраняет только контрольные суммы и категории. Для
@@ -1506,7 +1506,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Identity &amp; UUID Mapping · MIG04</h3>
+          <h3>Сопоставление идентичности и UUID · MIG04</h3>
           <p>
             Читает FileAuthSystem/Database.json либо sql-export/users.csv из
             исходного ZIP. Сопоставляет UUID с Never, блокирует конфликтные
@@ -1547,7 +1547,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Authentication Migration · MIG05</h3>
+          <h3>Миграция аутентификации · MIG05</h3>
           <p>
             Импортируются только новые local-аккаунты с проверенными исходными
             UUID и поддерживаемыми хешами. SQL: sql-export/users.csv с
@@ -1642,7 +1642,7 @@ export function MigrationCenter0331({
               </button>
             </>
           )}
-          <h3>Security &amp; Trust Reset · 0.33.6</h3>
+          <h3>Сброс безопасности и доверия · 0.33.6</h3>
           <p>
             Для новых импортированных пользователей: транзакционный отзыв всех
             старых сеансов Never, привязок устройств, challenges,
@@ -1726,7 +1726,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Content &amp; Profile Migration · MIG07</h3>
+          <h3>Миграция содержимого и профиля · MIG07</h3>
           <p>
             Проверяемый перенос одного Gravit ClientProfile и содержимого
             updates/&lt;dir&gt;, clients/&lt;dir&gt;, libraries/,
@@ -1933,7 +1933,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Module &amp; ServerWrapper Migration · MIG08</h3>
+          <h3>Миграция модулей и ServerWrapper · MIG08</h3>
           <p>
             Статическая проверка JAR без запуска. Неизвестные исполняемые модули
             блокируют миграцию до переноса исходников либо сертифицированного
@@ -2000,7 +2000,7 @@ export function MigrationCenter0331({
                     />
                   </label>
                   <label className="field">
-                    <span>Kind</span>
+                    <span>Тип</span>
                     <select
                       value={bridgeKind0338}
                       onChange={(e) => setBridgeKind0338(e.target.value)}
@@ -2087,7 +2087,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Isolated Migration Rehearsal · MIG10</h3>
+          <h3>Изолированная репетиция миграции · MIG10</h3>
           <p>
             Проверки исполняются CLI на отдельном изолированном стенде. Backend
             сверяет результаты с MIG03–MIG08 и UUID из сохранённой карты.
@@ -2133,7 +2133,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Staged Cutover · MIG11</h3>
+          <h3>Подготовленное переключение · MIG11</h3>
           <p>
             Переключает рабочий указатель <code>channel_heads</code> на
             проверенный и подписанный релиз Never. Пока канал staged, PostgreSQL
@@ -2268,7 +2268,7 @@ export function MigrationCenter0331({
               )}
               {route.state === "active" && (
                 <div>
-                  <h4>Operational Rollback · MIG12</h4>
+                  <h4>Эксплуатационный откат · MIG12</h4>
                   <p>
                     Только безопасное обратное переключение Never. Перед планом
                     остановите запись Never и обоих игровых серверов вне панели;
@@ -2401,7 +2401,7 @@ export function MigrationCenter0331({
       )}
       {run && (
         <article className="subcard">
-          <h3>Reports &amp; Certification RC · MIG13</h3>
+          <h3>Отчёты и сертификация RC · MIG13</h3>
           <p>
             Отчёт формируется из реальных MIG03–MIG12 receipts. Статус blocked
             запрещает утверждение; review_required означает только необходимость
@@ -2452,7 +2452,7 @@ export function MigrationCenter0331({
                 <pre>{JSON.stringify(report03313.items, null, 2)}</pre>
               </details>
               <details>
-                <summary>Source ID → UUID → Never user ID</summary>
+                <summary>ID источника → UUID → ID пользователя Never</summary>
                 <pre>{JSON.stringify(report03313.identities, null, 2)}</pre>
               </details>
               <label className="field">
@@ -2542,7 +2542,7 @@ export function MigrationCenter0331({
           <p>
             <strong>Статус:</strong> {run.status} ·{" "}
             <strong>Текущий шаг:</strong> {run.step} ·{" "}
-            <strong>Revision:</strong> {run.revision} · <strong>Fence:</strong>{" "}
+            <strong>Редакция:</strong> {run.revision} · <strong>Барьер:</strong>{" "}
             {run.fence}
           </p>
           {run.lastError && <p className="error">{run.lastError}</p>}

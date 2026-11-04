@@ -2,7 +2,7 @@
 
 **Scope:** authenticated, local Launcher Minecraft profiles only. Official Minecraft identities are not writable by this feature.
 
-## HTTP import (implemented in the existing backend)
+## HTTP-импорт (реализован в существующем Backend)
 
 `POST /api/v1/me/textures/{kind}/import` (`kind` = `skin` or `cape`) requires an authenticated Bearer session. Send one JSON object with `url`, `expectedRevision` (0 to create, latest revision to replace), optional `model` (`classic` or `slim`, capes must be `classic`), `visibility` (`public`, `unlisted`, `private`), and optional `profileUuid` owner assertion. An assertion for another player's UUID fails before any remote network request. No arbitrary player UUID is accepted as the authorization identity.
 

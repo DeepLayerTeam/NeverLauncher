@@ -1,8 +1,8 @@
-# RemoteControl TLS, systemd and signed release operations (0.42.8)
+# RemoteControl TLS, systemd и работа с подписанными релизами (0.42.8)
 
 RemoteControl is a **host supervisor**, not an arbitrary remote shell. Its HTTPS API accepts only `host.status`, `host.start`, `host.stop`, and `host.restart`, with short-lived, scoped tokens, CIDR allowlists, auditable requests and durable idempotency receipts. It does not execute arbitrary Java arguments or shell commands.
 
-## Provision TLS certificates (real X.509, no OpenSSL subprocess)
+## Подготовка сертификатов TLS (настоящие X.509, без подпроцесса OpenSSL)
 
 Run on a trusted operator machine with a secure, **new** directory (the command refuses to overwrite existing credentials):
 
@@ -30,7 +30,7 @@ nl server-bridge host remote serve --server-root /srv/minecraft/survival \
 
 The server verifies the client certificate against the CA *and* verifies its scoped bearer token. Obtain the scoped token with `remote issue --subject ... --scope ... --source ... --ttl-seconds ... --token-file ...` and keep that token file private (`0600`). The client must use `--ca-file`, `--client-cert`, `--client-key` when calling the server. Never use `--insecure`/skip-verification; those modes do not exist.
 
-## systemd service operation
+## Эксплуатация службы systemd
 
 Use `nl server-bridge host service install --component remote --scope system --name remote-survival --server-root ... --service-user ... --tls-cert ... --tls-key ... --client-ca ... --listen ... --allow-source ... --now`. The installed service remains an unprivileged unit. A SIGTERM causes the remote HTTPS listener to stop accepting new work, allows up to **90 seconds** for existing requests and their durable command receipts to finish, and then fails visibly if that drain cannot complete. The generated unit sets `TimeoutStopSec=105s` rather than killing the listener at its previous 45-second timeout. Never automatically repeat a command with a different idempotency key after loss of acknowledgement; inspect the receipt first.
 

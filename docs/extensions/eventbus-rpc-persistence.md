@@ -1,4 +1,4 @@
-# Launcher 0.42.3 — EventBus, hooks, JVM RPC and durable runtime storage
+# Launcher 0.42.3 — EventBus, хуки, RPC JVM и долговременное хранилище Runtime
 
 This release changes **executable behavior**, not protocol identifiers. Host Protocol, Event Protocol and Extension API stay at `1.0`. No new public endpoint or manifest format is required.
 

@@ -1,4 +1,4 @@
-name: Adapter Lifecycle 0.27.11
+name: Жизненный цикл адаптера 0.27.11
 on:
   push:
     paths:

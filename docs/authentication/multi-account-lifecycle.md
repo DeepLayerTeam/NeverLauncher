@@ -1,4 +1,4 @@
-# Launcher 0.26.7 — Official Minecraft multi-account and session lifecycle
+# Launcher 0.26.7 — жизненный цикл официальных учётных записей и сессий Minecraft
 
 ## действующее поведение
 

@@ -1,4 +1,4 @@
-name: Desktop player workspace 0.35.3
+name: Рабочее пространство игрока Desktop 0.35.3
 on:
   push:
     paths:

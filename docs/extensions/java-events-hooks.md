@@ -1,11 +1,8 @@
-# NeverLauncher 0.48.7 — Advanced Java Events and Hooks
+# NeverLauncher 0.48.7 — расширенные события и хуки Java
 
-The real Go EventBus remains the single source of truth for subscription state,
-leased deliveries, event ordering, publication idempotency, exponential retry,
-and PostgreSQL-backed dead-letter entries. Java modules **do not create a second
-queue** and cannot bypass project grants, signing or the core mutation routes.
+Настоящий EventBus на Go остаётся единственным источником истины для состояния подписок, доставки по арендам, порядка событий, идемпотентности публикаций, экспоненциальных повторов и сообщений dead-letter с хранением в PostgreSQL. Java-модули **не создают вторую очередь** и не могут обходить разрешения проектов, подписи или основные маршруты изменения состояния.
 
-## JVM SDK использование
+## Использование JVM SDK
 
 ```java
 services.events().subscribeJob("project.saved", projectSchema,
@@ -26,41 +23,17 @@ services.events().subscribeHook("release.before-publish", releaseSchema,
             : RuntimeEvents.HookDecision.deny("release policy rejected"));
 ```
 
-`subscribeJob()` is a durable **event-triggered async task consumer**, not a
-new arbitrary job-scheduling API. Host callback processing is bounded and
-retries occur only after the callback fails/does not ACK. Failure semantics:
+`subscribeJob()` — долговременный **асинхронный обработчик задач, запускаемых событием**, а не новый API произвольного планирования заданий. Выполнение обратных вызовов Host ограничено ресурсами, а повторы выполняются только после ошибки обработчика или отсутствия ACK. Семантика отказов:
 
-- `200 {"accepted":true}`: the Go supervisor checks the JSON acknowledgement
-  and rechecks extension authorization before ACKing the leased delivery.
-- `503 {"code":"EVENT_RETRY"}`: temporary handler failure; the Go worker
-  schedules exponential retry, then dead-letters after its configured limit.
-- `422 {"code":"EVENT_REJECTED"}`: the handler explicitly declares work
-  permanently invalid (`PermanentFailure`) or the event cannot be decoded;
-  the Go worker sends it directly to dead-letter, preserving its event and
-  attempt metadata. Other 4xx/5xx codes do not silently become ACK.
-- Sync hooks require an explicit `HookDecision.allow()`. A deny, null,
-  exception, timeout, missing callback, revoked permission or malformed
-  response must abort the protected core operation.
+- `200 {"accepted":true}`: супервизор Go проверяет JSON-подтверждение и повторно проверяет разрешение расширения перед ACK арендованной доставки.
+- `503 {"code":"EVENT_RETRY"}`: временная ошибка обработчика; обработчик Go планирует экспоненциальный повтор, а после настроенного лимита переводит сообщение в dead-letter.
+- `422 {"code":"EVENT_REJECTED"}`: обработчик явно признаёт задание окончательно некорректным (`PermanentFailure`) либо событие не удалось декодировать. Обработчик Go сразу отправляет его в dead-letter, сохраняя метаданные события и попыток. Прочие коды 4xx/5xx не должны незаметно превращаться в ACK.
+- Синхронные хуки требуют явного `HookDecision.allow()`. Запрет, `null`, исключение, тайм-аут, отсутствие обратного вызова, отозванное разрешение или некорректный ответ должны прервать защищаемую основную операцию.
 
-Both publishers and handlers must use stable idempotency keys. The bus provides
-**at-least-once delivery**, not exactly-once external effects. A callback can
-commit an external side effect and crash before the Go ACK; consumers must
-commit their own deduplication record in the **same transactional boundary**
-as the external effect (or use a remote idempotency key). SDK-local process
-memory is not a durable deduplication mechanism. Dispatch is bounded by the
-existing Host timeout, queue, leasing and process limits. Subscription removal
-is explicit; lifecycle shutdown retains the pending durable backlog.
+Издатели и обработчики обязаны использовать стабильные ключи идемпотентности. Шина гарантирует **доставку не менее одного раза**, а не однократность внешних эффектов. Обратный вызов может зафиксировать внешний результат и аварийно завершиться до ACK в Go. Поэтому получатели должны фиксировать собственную запись дедупликации **в той же транзакционной границе**, что и внешний эффект (либо использовать удалённый ключ идемпотентности). Память процесса SDK не является долговременным механизмом дедупликации. Рассылка ограничена существующими тайм-аутами Host, размерами очередей, арендами и лимитами процессов. Удаление подписки выполняется явно; остановка жизненного цикла сохраняет ожидающие долговременные сообщения.
 
-Existing `subscribe(eventType,mode,...)` listeners remain source/binary
-compatible, while new handlers can read `DetailedEnvelope` metadata. The
-protocol remains `1.0`; new Java error codes only add status detail, and
-legacy Java callbacks using `accepted:true` continue to work.
+Существующие слушатели `subscribe(eventType,mode,...)` сохраняют совместимость на уровне исходного кода и двоичных файлов, а новые обработчики могут читать метаданные `DetailedEnvelope`. Версия протокола остаётся `1.0`. Новые коды ошибок Java только уточняют состояние, а старые обратные вызовы Java с `accepted:true` продолжают работать.
 
-## Validation and admission
+## Проверка и допуск
 
-Run `sh sdk/java/core/build.sh test` with Java 17 and 21 and run the Go
-`./internal/eventbus` and `./internal/extensionhost` suites using Go 1.27.3.
-Test the actual PostgreSQL lease/retry/dead-letter store, project permissions,
-callback loss/restart, signing and Minecraft release publication separately.
-This patch is **not** independent GA certification. Historical 0.48.0
-PostgreSQL cutover and release gates remain in force.
+Запустите `sh sdk/java/core/build.sh test` под Java 17 и 21, а также наборы тестов Go `./internal/eventbus` и `./internal/extensionhost` с Go 1.27.3. Отдельно проверьте настоящее хранилище PostgreSQL для аренды/повторов/dead-letter, разрешения проектов, потерю обратных вызовов и перезапуск, подписи и публикацию релиза Minecraft. Это изменение **не является** независимой сертификацией GA. По-прежнему действуют прежние требования перехода PostgreSQL и выпуска версии 0.48.0.

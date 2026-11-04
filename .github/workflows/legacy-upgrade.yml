@@ -1,4 +1,4 @@
-name: NeverLauncher legacy upgrade 0.47.6
+name: Обновление старых версий NeverLauncher 0.47.6
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: DevTools and Test Isolation 0.30.10
+name: Изоляция инструментов разработчика и тестов 0.30.10
 on:
   push:
     paths:

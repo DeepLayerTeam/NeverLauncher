@@ -1,4 +1,4 @@
-name: Minecraft Java Profile Verification 0.26.6
+name: Проверка профиля Minecraft Java 0.26.6
 on:
   push:
     paths:

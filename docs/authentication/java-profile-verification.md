@@ -1,6 +1,6 @@
-# Launcher 0.26.6 — Minecraft Java profile, entitlements and identity gate
+# Launcher 0.26.6 — проверка профиля Minecraft Java, игровых прав и идентичности
 
-## Runtime behavior (native Rust/Tauri)
+## Поведение Runtime (нативный Rust/Tauri)
 
 The Minecraft token is never sufficient alone to mark an account game-ready. Every new native Microsoft/Xbox/XSTS/Minecraft grant is followed by **two real, authenticated HTTPS requests using the same Minecraft access token**:
 

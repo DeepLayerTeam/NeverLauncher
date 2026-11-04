@@ -1,6 +1,6 @@
-# 0.22.1: Profile/Manifest schema v2
+# 0.22.1 — схема Profile/Manifest v2
 
-## Production upgrade
+## Промышленное обновление
 
 1. Back up PostgreSQL and release object storage. Use the **0.22.1** API and CLI binaries together.
 2. Stop publishers and background workers, deploy the updated backend/runtime clients and apply API migrations using the existing `nl db migrate apply --dsn <postgres-dsn>` command, or start the 0.22.1 API with `LAUNCHER_DATABASE_AUTO_MIGRATE=true` (verify the exact variable in `services/api/internal/config/config.go`). The `0056_profile_manifest_schema_evolution_0221` SQL file is embedded in CLI `cli/internal/dbmigrate/catalog.zip`, generated and checked against the API migration catalog.
@@ -16,7 +16,7 @@
 4. Upgrade desktop builds before publishing Manifest v2 to affected clients. v1 signed manifests remain accepted without modifications.
 5. Verify the release pipeline in staging: create profile → create new draft → edit profile → sign draft → run validations → publish. The published manifest must contain the original immutable `profileSnapshot` revision; no profile edit may rewrite it.
 
-## Data and compatibility guarantees
+## Гарантии сохранности данных и совместимости
 
 - Existing `release_versions.manifest` JSON and their Ed25519 signatures are **not changed** by the migration. There is no silent re-sign of public releases.
 - Existing mutable profiles become schema v2, revision 1. Migration seeds append-only `profile_revisions_0221` with the exact backfilled metadata and sha256 digest.
@@ -27,7 +27,7 @@
 - `GET /api/v1/projects/{projectId}/profiles/{profileId}/manifest` returns only published versions, not drafts. New v2 public manifests are signature-checked before being returned.
 - `GET /api/v1/projects/{projectId}/profiles/{profileId}/revisions` returns immutable revision history; `?revision=N` selects exactly that revision or responds 404.
 
-## Profile v2 wire format
+## Формат передачи Profile v2
 
 `GET /api/v1/projects/{projectId}/profiles` exposes `schemaVersion`, `revision`, and `digest` on each profile. An immutable manifest snapshot contains:
 

@@ -1,21 +1,21 @@
-# условия компонентов в подписанном каталоге 4.0 (Launcher 0.24.4)
+# Условия компонентов в подписанном каталоге 4.0 (Launcher 0.24.4)
 
-Catalog `schemaVersion=4.0` is embedded in signed Manifest v3. Per-component optional `conditions` has **mandatory** `schemaVersion=1.0`. The component's conditions are framed into the catalog's v4 SHA-256 digest, covered again by the release Ed25519 signature. The old v1/v2/v3 digest algorithms remain byte-for-byte unchanged. Unknown condition keys are rejected by Runtime; invalid or v4-only conditions in older schemas are rejected.
+Каталог `schemaVersion=4.0` включён в подписанный Manifest v3. Необязательное поле `conditions` каждого компонента обязательно содержит **`schemaVersion=1.0`**. Условия компонентов входят в канонический формат хеша SHA-256 каталога v4, который дополнительно покрывается подписью релиза Ed25519. Алгоритмы хеширования v1/v2/v3 остались побайтово неизменными. Runtime отклоняет неизвестные ключи условий, а также недопустимые условия и условия только для v4 в более старых схемах.
 
-Supported AND predicates: `os` (`windows`, `linux`, `macos`), `arch` (`x86_64`, `aarch64`), `javaMajorMin`/`javaMajorMax`, `minecraftVersions` (exact values, including snapshots), `minecraftVersionRange` (MAJOR.MINOR.PATCH SemVer), `loaders` (`vanilla`, `fabric`, `quilt`, `forge`, `neoforge`), `loaderVersionRange` (SemVer) and `permissions` (all granted). Arrays in each predicate are OR. Empty fields are unrestricted. The native resolver derives OS and architecture from the executable and game/loader/Java target from the verified manifest. **A user-supplied permissions array is never accepted by the native resolver.** Until the server issues a separately verified, session-bound entitlement attestation, any catalog component with nonempty `permissions` is fail-closed on the client, including required components. Authorization must be based on verified server grants, not desktop JSON.
+Поддерживаются предикаты, объединённые логическим И: `os` (`windows`, `linux`, `macos`), `arch` (`x86_64`, `aarch64`), `javaMajorMin`/`javaMajorMax`, `minecraftVersions` (точные версии, включая снимки), `minecraftVersionRange` (SemVer MAJOR.MINOR.PATCH), `loaders` (`vanilla`, `fabric`, `quilt`, `forge`, `neoforge`), `loaderVersionRange` (SemVer) и `permissions` (все права выданы). Массивы внутри каждого предиката объединяются логическим ИЛИ; пустые поля не накладывают ограничений. Нативный обработчик определяет ОС и архитектуру по исполняемой программе, а целевые значения игры, загрузчика и Java — по проверенному манифесту. **Нативный обработчик никогда не принимает массив прав, переданный пользователем.** Пока сервер не выдаёт отдельно проверяемую аттестацию прав, привязанную к сессии, любой компонент каталога с непустым `permissions` отклоняется на клиенте, включая обязательные компоненты. Решение об авторизации должно основываться на подтверждённых серверных правах, а не на JSON Desktop.
 
-Automatic defaults whose conditions fail are skipped, while an explicitly selected preset, required component or transitive dependency with unsatisfied conditions fails before staging/download. For example:
+Необязательные компоненты, включаемые по умолчанию, пропускаются, если их условия не выполнены. Для явно выбранного пресета, обязательного компонента или транзитивной зависимости невыполнение условий блокирует установку до подготовки и загрузки. Пример:
 
 ```json
 { "id":"perf-fabric", "name":"Performance", "version":"1.0.0", "files":["mods/perf.jar"], "default":true, "visible":true,
   "conditions":{"schemaVersion":"1.0", "os":["linux","windows"], "arch":["x86_64"], "javaMajorMin":17, "minecraftVersions":["1.21.1"], "loaders":["fabric"]}}
 ```
 
-The Go code supports caller-provided `ComponentEnvironment0244.VerifiedPermissions` **only when populated by trusted server authorization**, never raw JSON from the client. Native execution currently rejects permissions-gated components without attested proof. JVM version is resolved from the release's signed target and the Java launcher enforces version consistency at launch; an upgrade is required if the actual Java executable changes independently. Loader/Minecraft version ranges accept SemVer only; use exact version arrays for snapshot and non-SemVer identifiers.
+Код Go поддерживает предоставленное вызывающим кодом `ComponentEnvironment0244.VerifiedPermissions` **только при заполнении доверенной серверной авторизацией**, а не произвольным JSON клиента. Нативное выполнение сейчас отклоняет компоненты, требующие прав, без аттестованного доказательства. Версия JVM определяется подписанной целью релиза, а Java-лаунчер при запуске обеспечивает согласованность версий; если сам исполняемый файл Java независимо изменился, необходимо обновление. Диапазоны версий загрузчиков/Minecraft поддерживают только SemVer. Для снимков и идентификаторов не в SemVer используйте массивы точных версий.
 
-## проверки сборки
+## Проверки сборки
 
 - `cd services/api && go test ./internal/model ./internal/dbmigrate`
 - `cd cli && go test ./internal/dbmigrate`
-- `cd runtime/runtime && cargo test` (requires Rust toolchain)
+- `cd runtime/runtime && cargo test` (требуется Rust toolchain)
 - `cd apps/desktop && npm ci && npm run build`

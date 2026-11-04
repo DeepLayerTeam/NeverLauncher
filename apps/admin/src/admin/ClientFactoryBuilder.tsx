@@ -396,7 +396,7 @@ export function ClientFactoryBuilder02710({
                 setSource(e.target.value as "version" | "modpack")
               }
             >
-              <option value="version">Minecraft + loader</option>
+              <option value="version">Minecraft + загрузчик</option>
               <option value="modpack">Modrinth / CurseForge modpack</option>
             </select>
           </label>
@@ -474,10 +474,10 @@ export function ClientFactoryBuilder02710({
               {configuration.loader !== "vanilla" &&
                 configuration.loaderVersion}
             </dd>
-            <dt>Target</dt>
+            <dt>Цель</dt>
             <dd>{configuration.target}</dd>
             <dt>Этапы</dt>
-            <dd>Resolution → Downloads → Processors → SHA-256 verification</dd>
+            <dd>Разрешение зависимостей → загрузки → обработка → проверка SHA-256</dd>
           </dl>
           <p className="muted">
             Точный InstallPlan, список библиотек, natives, Java и hashes
@@ -549,7 +549,7 @@ export function ClientFactoryBuilder02710({
           )}
           {step === "run" && (
             <>
-              <h5>Processor / installer logs</h5>
+              <h5>Журналы обработки / установщика</h5>
               <pre
                 className="clientFactoryLog"
                 aria-label="Журнал Client Factory"
@@ -567,15 +567,15 @@ export function ClientFactoryBuilder02710({
                 </dd>
                 <dt>Minecraft</dt>
                 <dd>{plan.minecraftVersion}</dd>
-                <dt>Loader</dt>
+                <dt>Загрузчик</dt>
                 <dd>
                   {plan.loader} {plan.loaderVersion || ""}
                 </dd>
                 <dt>Java</dt>
                 <dd>{plan.java.major}</dd>
-                <dt>Files</dt>
+                <dt>Файлы</dt>
                 <dd>{plan.outputs.length}</dd>
-                <dt>Processors</dt>
+                <dt>Обработчики</dt>
                 <dd>{plan.processors.length}</dd>
               </dl>
               <div className="buttonRow">

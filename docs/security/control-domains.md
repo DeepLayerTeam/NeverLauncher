@@ -24,7 +24,7 @@ The control endpoint rejects anything else (including `host.exec`, `backend.rest
 5. Persist with the existing idempotency key and runtime identity. The node's signed poll/ACK flow remains unchanged.
 6. On command GET and overview, re-authorize against the current role; do not return command payload/results to viewers or users whose privileges have been revoked.
 
-## Upgrade / deployment
+## Обновление и развёртывание
 
 - Apply the new `0077_control_domains_rbac_0281.sql` migration as part of the existing schema migration runner before starting new API instances. The migration adds game-only privileges to the canonical `admin`/`operator` roles **if they still have legacy `serverbridge:control`**. An operator's old ability to request shutdown/console is intentionally not migrated; grant these separately after review.
 - **Custom roles are fail-closed**: their legacy `serverbridge:control`/`serverbridge:console` strings grant none of the new command permissions. Administrators must explicitly assign each required `gameserver:*` right. Old strings can be removed after migration.

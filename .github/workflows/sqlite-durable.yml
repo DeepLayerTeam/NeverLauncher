@@ -1,4 +1,4 @@
-name: SQLite durable jobs, leases, outbox DEP01-02 (0.32.5)
+name: SQLite — долговременные задания, аренды, outbox DEP01-02 (0.32.5)
 on:
   push:
     paths:

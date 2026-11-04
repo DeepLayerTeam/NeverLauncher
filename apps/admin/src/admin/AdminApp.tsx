@@ -1682,7 +1682,7 @@ export function AdminApp() {
         </header>
         <section className="card wide">
           <label className="field">
-            <span>URL Backend</span>
+            <span>URL серверной части</span>
             <input
               value={backendUrl}
               onChange={(event) => {
@@ -1940,15 +1940,15 @@ export function AdminApp() {
                   Подтвердить passkey
                 </button>
                 <select
-                  aria-label="MFA policy"
+                  aria-label="Политика MFA"
                   value={mfaPolicy}
                   onChange={(event) =>
                     setMfaPolicy(event.target.value as typeof mfaPolicy)
                   }
                 >
-                  <option value="optional">MFA optional</option>
-                  <option value="required">MFA required</option>
-                  <option value="phishing-resistant">Phishing-resistant</option>
+                  <option value="optional">MFA необязательна</option>
+                  <option value="required">MFA обязательна</option>
+                  <option value="phishing-resistant">Защита от фишинга</option>
                 </select>
                 <button
                   onClick={() =>

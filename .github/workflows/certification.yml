@@ -1,4 +1,4 @@
-name: Launcher 0.24.13 Component Integration Certification
+name: Launcher 0.24.13 — сертификация интеграции компонентов
 on:
   pull_request:
     paths:

@@ -1,5 +1,5 @@
-//! Owner-signed, executable optional actions. No local JSON or process environment
-//! is allowed to introduce launch flags, paths or classpath entries.
+//! Исполняемые опциональные действия, подписанные владельцем. Локальный JSON
+//! или окружение процесса не могут добавлять флаги запуска, пути и элементы classpath.
 use crate::{Manifest,LaunchPlan,component_catalog_0241::{ComponentCatalog,CatalogComponent}};
 use serde::{Serialize,Deserialize};
 use sha2::{Digest,Sha256};
@@ -91,16 +91,17 @@ pub fn validate_actions(cat:&ComponentCatalog)->Result<(),String> {
     Ok(())
 }
 
-/// File actions select the exact signed file subset. In their absence,
-/// preserve existing component file semantics. ClassPath always selects its JAR.
+/// Файловые действия выбирают точно определённое подмножество подписанных файлов.
+/// При их отсутствии сохраняйте прежнюю семантику файлов компонентов.
+/// ClassPath всегда выбирает соответствующий JAR.
 pub fn effective_files(c:&CatalogComponent)->Vec<String> {
     if !c.actions.iter().any(|a|a.kind=="File") {return c.files.clone()}
     let names:HashSet<&str>=c.actions.iter().filter(|a|matches!(a.kind.as_str(),"File"|"ClassPath")).map(|a|a.path.as_str()).collect();
     c.files.iter().filter(|path|names.contains(path.as_str())).cloned().collect()
 }
 
-/// This is invoked for the actual installed release after signature/preset checks.
-/// It never reads actions from launch preferences, nor permits a new JVM entrypoint.
+/// Вызывается для действительно установленного релиза после проверки подписи и пресета.
+/// Действия никогда не читаются из настроек запуска; новая точка входа JVM запрещена.
 pub fn apply_installed_actions(manifest:&Manifest,root:&Path,plan:&mut LaunchPlan)->Result<(),String> {
     let Some(cat)=manifest.component_catalog.as_ref().filter(|cat|cat.schema_version=="5.0") else {return Ok(())};
     validate_actions(cat)?;
@@ -144,7 +145,8 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
             }
         }
     }
-    // Re-use the existing signed runtime constraints after adding optional flags.
+    // После добавления опциональных флагов повторно применяйте действующие
+// подписанные ограничения Runtime.
     Ok(())
 }
 

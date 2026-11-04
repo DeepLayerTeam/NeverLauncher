@@ -1,4 +1,4 @@
-name: Server-Bound Guard Sessions 0.50.7
+name: Сессии Guard с привязкой к серверу 0.50.7
 on:
   push:
     paths:

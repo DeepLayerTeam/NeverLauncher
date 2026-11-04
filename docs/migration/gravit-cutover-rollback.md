@@ -1,4 +1,4 @@
-# Gravit → Never 0.44.8: operational cutover and rollback
+# Gravit → Never 0.44.8 — эксплуатационное переключение и откат
 
 **Supported scope:** one migration run, one profile and one Never release channel at a time. Backend route changes require PostgreSQL and a signed/published Never release. No operation here modifies Gravit worlds, player inventories, plugins, proxy configuration, DNS, account stores or externally running Minecraft processes. Operators must freeze every independent writer, back up both systems and switch all external entry points themselves; the tool only fences the named systemd writer. A masked unit can still be bypassed by a separately launched process. Successful Go tests do not certify a real server cutover.
 

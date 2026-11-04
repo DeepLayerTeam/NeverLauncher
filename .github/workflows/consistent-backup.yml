@@ -1,4 +1,4 @@
-name: Consistent Backup and PITR 0.51.8
+name: Согласованное резервное копирование и PITR 0.51.8
 on:
   push:
     paths:

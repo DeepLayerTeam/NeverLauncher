@@ -1,4 +1,4 @@
-name: NeverLauncher 0.48.0 real integration and native upgrade matrix
+name: NeverLauncher 0.48.0 — матрица реальной интеграции и нативного обновления
 on:
   push:
     paths:

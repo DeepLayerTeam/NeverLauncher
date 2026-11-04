@@ -1,4 +1,4 @@
-name: macOS Device Trust and Recovery 0.31.6
+name: Доверие к устройству и восстановление macOS 0.31.6
 on:
   push:
     paths:

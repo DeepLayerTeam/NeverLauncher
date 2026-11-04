@@ -1,4 +1,4 @@
-name: Native final package acceptance 0.52.2 regressions (not native GA)
+name: Нативные итоговые пакеты 0.52.2 — регрессия приёмки (не GA)
 
 on:
   push:

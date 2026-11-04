@@ -1,4 +1,4 @@
-# 0.51.6 — N/N−1 compatibility: API, worker, ServerBridge, PostgreSQL
+# 0.51.6 — совместимость N/N−1: API, обработчик, ServerBridge, PostgreSQL
 
 This release supports the **specific 0.51.5 ↔ 0.51.6 control-plane binary pair** on the same PostgreSQL database. It does **not** claim that arbitrary older or future versions are compatible.
 

@@ -583,7 +583,7 @@ export function ServerBridgeWorkspace({
     <section className="card wide bridgeWorkspace">
       <header className="bridgeHero">
         <div>
-          <h2>ServerBridge Operations</h2>
+          <h2>Операции ServerBridge</h2>
           <p className="muted">
             Проект <code>{projectId}</code> · Protocol v3 frozen · данные
             обновляются каждые 15 секунд
@@ -799,7 +799,7 @@ export function ServerBridgeWorkspace({
           <article className="bridgeSection">
             <h3>{node.name || node.id} · Runtime</h3>
             <dl className="bridgeFacts">
-              <dt>Heartbeat</dt>
+              <dt>Пульс (heartbeat)</dt>
               <dd>
                 {timeLabel(node.lastHeartbeatAt)} ·{" "}
                 {usable ? "active" : "stale / unavailable"}
@@ -808,34 +808,34 @@ export function ServerBridgeWorkspace({
               <dd>
                 {node.status} · {node.runtimeTransition || "переход неизвестен"}
               </dd>
-              <dt>Protocol</dt>
+              <dt>Протокол</dt>
               <dd>
                 v{node.protocolVersion} · {node.protocolMode || "unknown"} ·{" "}
                 {node.protocolMigrationRequired
                   ? "нужна миграция"
                   : "migration n/a"}
               </dd>
-              <dt>Plugin / integrity</dt>
+              <dt>Плагин / целостность</dt>
               <dd>
                 {node.pluginVersion || "—"} ·{" "}
                 {node.integrityStatus || "unknown"}{" "}
                 {node.upgradeRecommended ? " · upgrade recommended" : ""}
               </dd>
-              <dt>Runtime ID</dt>
+              <dt>ID Runtime</dt>
               <dd>
                 <code>{node.runtimeId || "неизвестен"}</code>
               </dd>
-              <dt>Runtime epoch</dt>
+              <dt>Эпоха Runtime</dt>
               <dd>{node.runtimeEpoch || "неизвестно"}</dd>
-              <dt>Host / Java</dt>
+              <dt>Хост / Java</dt>
               <dd>
                 {node.hostname || "—"} · {node.javaVersion || "—"}
               </dd>
-              <dt>Loader</dt>
+              <dt>Загрузчик</dt>
               <dd>
                 {node.loaderName || "—"} {node.loaderVersion || ""}
               </dd>
-              <dt>Adapter capabilities</dt>
+              <dt>Возможности адаптера</dt>
               <dd>
                 {node.runtimeCapabilities?.filter((c) =>
                   c.startsWith("adapter."),
@@ -844,7 +844,7 @@ export function ServerBridgeWorkspace({
                 {timeLabel(node.runtimeLastSeenAt)}. Это не сертификат Minecraft
                 E2E.
               </dd>
-              <dt>Login gate</dt>
+              <dt>Проверка входа</dt>
               <dd>
                 {node.kind === "vanilla"
                   ? "Нет: sidecar/RCON не перехватывает вход до логина"
@@ -854,7 +854,7 @@ export function ServerBridgeWorkspace({
                     ? "Заявлен адаптером (runtime E2E отдельно)"
                     : "Не подтверждён"}
               </dd>
-              <dt>Maintenance / drain</dt>
+              <dt>Обслуживание / вывод из нагрузки</dt>
               <dd>
                 {networkFresh
                   ? `Подписанный routing: ${network?.state}; admission: ${network?.reason}`
@@ -873,7 +873,7 @@ export function ServerBridgeWorkspace({
                 : tele?.reason || "нет данных"}
             </span>
             <dl className="bridgeFacts">
-              <dt>Online / max</dt>
+              <dt>В сети / максимум</dt>
               <dd>
                 {tele?.state === "fresh" &&
                 snapshotFresh &&
@@ -888,13 +888,13 @@ export function ServerBridgeWorkspace({
                   ? `${formatMetric(t?.tps)} / ${formatMetric(t?.mspt)}`
                   : "неизвестно"}
               </dd>
-              <dt>Tick health</dt>
+              <dt>Состояние тиков</dt>
               <dd>
                 {tele?.state === "fresh" && snapshotFresh
                   ? t?.tickHealth || "неизвестно"
                   : "неизвестно"}
               </dd>
-              <dt>Heap</dt>
+              <dt>Куча</dt>
               <dd>
                 {tele?.state === "fresh" && snapshotFresh
                   ? `${bytes(t?.heapUsedBytes)} / ${bytes(t?.heapMaxBytes)}`
@@ -906,13 +906,13 @@ export function ServerBridgeWorkspace({
                   ? `${formatMetric(t?.processId)} / ${typeof t?.processCpuLoad === "number" ? (t.processCpuLoad * 100).toFixed(1) + "%" : "неизвестно"}`
                   : "неизвестно"}
               </dd>
-              <dt>Host memory free / total</dt>
+              <dt>Память хоста: свободно / всего</dt>
               <dd>
                 {tele?.state === "fresh" && snapshotFresh
                   ? `${bytes(t?.hostFreeMemoryBytes)} / ${bytes(t?.hostTotalMemoryBytes)}`
                   : "неизвестно"}
               </dd>
-              <dt>Worlds / chunks</dt>
+              <dt>Миры / чанки</dt>
               <dd>
                 {tele?.state === "fresh" && snapshotFresh
                   ? `${formatMetric(t?.loadedWorlds)} / ${formatMetric(t?.loadedChunks)}`
@@ -1016,7 +1016,7 @@ export function ServerBridgeWorkspace({
                       ? "без лимита"
                       : network.availableSlots}
                   </dd>
-                  <dt>Capacity</dt>
+                  <dt>Ёмкость</dt>
                   <dd>
                     Подписанный лимит{" "}
                     {network.capacityMax === 0
@@ -1160,7 +1160,7 @@ export function ServerBridgeWorkspace({
                 <table>
                   <thead>
                     <tr>
-                      <th>Proxy</th>
+                      <th>Прокси</th>
                       <th>Backend</th>
                       <th>Маршрут</th>
                       <th>Игроки / ёмкость</th>

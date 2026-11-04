@@ -1,4 +1,4 @@
-name: SQLite core repository DEP01 (0.32.2)
+name: Основной репозиторий SQLite DEP01 (0.32.2)
 on:
   push:
     paths:

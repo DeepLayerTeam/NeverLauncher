@@ -1,4 +1,4 @@
-name: Player and Operator Diagnostics 0.35.10
+name: Диагностика игроков и операторов 0.35.10
 on:
   push:
     paths:

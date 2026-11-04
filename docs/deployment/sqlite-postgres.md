@@ -1,10 +1,10 @@
-# Launcher 0.37.7 — verified SQLite ↔ PostgreSQL offline transfer
+# Launcher 0.37.7 — проверенный автономный перенос SQLite ↔ PostgreSQL
 
 **Status: runnable offline transfer, not live backend cutover.** Importing rows into the `launcher_sqlite_import_03211` schema or a complete minimal backup into `launcher_minimal_transfer_0377` does **not** populate PostgreSQL HTTP Repository production tables. The current PostgreSQL `SQLRepository` cannot serve these imported schemas. Consequently `readyForBackendCutover` is always `false`, including for a successful import/export. No CLI flag promotes an unverified migration to production.
 
 Run all operations on a local, operator-controlled, private filesystem, with an isolated PostgreSQL database. The PostgreSQL account must have permission to create a new schema and triggers. The transfer stores password hashes, secrets, signing keys, tokens, audit trails, and user data in PostgreSQL **unencrypted at the application layer**; apply transport encryption, full-disk encryption, strict role privileges, and backups. Never point the command at a shared or untrusted database.
 
-## Complete minimal installation, including HTTP/Coordinator SQLite + project files
+## Полная минимальная установка, включая HTTP/Coordinator SQLite и файлы проекта
 
 1. Stop API and every file writer. Acquire a consistent offline backup using the existing installer:
 
@@ -29,7 +29,7 @@ Run all operations on a local, operator-controlled, private filesystem, with an 
 
 The transfer validates the SHA-256 and length of each file and chunk, checks both SQLite databases for logical/foreign-key corruption, and preserves original JSON manifests and byte-exact file data. The destination cannot be overwritten. A second import into the same transfer schema is rejected. User/role/device trust, nonce history, durable jobs, published heads and identity data remain in the original SQLite bytes, not a lossy reinterpreted data model.
 
-## Independent SQLite Core schema 326 transfer
+## Независимый перенос схемы SQLite Core 326
 
 If working with an existing `sqlitecore` backup (created by `launcher-sqlite backup`), the separate SQL row-preserving transfer supports:
 
@@ -48,7 +48,7 @@ The `launcher_sqlite_import_03211` schema includes immutable row mirrors and the
 - A true live SQLite → PostgreSQL → SQLite backend cutover still requires mapping and verifying every active HTTP Repository and runtime store, a service maintenance window, fencing, dual-mode application acceptance, and reverse failover tests. Do not claim this production gate passed based solely on the offline transfer.
 - Required CI runs actual PostgreSQL and modernc SQLite integration tests, including import/reverse export, hash parity, immutable-table enforcement, missing/duplicate target rejection, and reconstruction of both SQLite databases plus binary files. The checked-in tests require the repository's Go toolchain and an isolated PostgreSQL fixture.
 
-## New in 0.47.3: live SQLRepository data import
+## Новое в 0.47.3: импорт действующих данных SQLRepository
 
 The existing `sqlite-to-postgres --ack-staging-only` command documented above
 remains an **immutable quarantine** transfer. For the separate, explicit offline

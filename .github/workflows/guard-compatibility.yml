@@ -1,4 +1,4 @@
-name: Guard 0.50.2 signed compatibility policy
+name: Guard 0.50.2 — подписанная политика совместимости
 on:
   push:
     paths:

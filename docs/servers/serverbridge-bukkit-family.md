@@ -1,4 +1,4 @@
-# ServerBridge Bukkit-family — 0.41.5
+# Семейство Bukkit для ServerBridge — 0.41.5
 
 ## Исполняемые команды и уровень подтверждения
 

@@ -75,7 +75,7 @@ export function SupportDiagnostics03510({
   const detail = reports.find((v) => v.id === selected);
   return (
     <section className="card wide" aria-label="Операторская диагностика">
-      <h2>Operator Diagnostics & Support</h2>
+      <h2>Диагностика оператора и поддержка</h2>
       <p>
         Отчёты игроков содержат только категории событий, без файлов, токенов,
         URL и имён. Доступ ограничен разрешением diagnostics:read.

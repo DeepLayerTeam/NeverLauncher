@@ -1,4 +1,4 @@
-name: Launcher current-version native source RC acceptance
+name: Launcher — нативная приёмка исходников кандидата текущей версии
 on:
   workflow_call:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: Guard 0.50.5 runtime file and module enforcement
+name: Guard 0.50.5 — проверка файлов и модулей Runtime
 on:
   push:
     paths:

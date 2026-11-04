@@ -1,4 +1,4 @@
-name: Launcher 0.35.0 trusted runtime GA acceptance
+name: Launcher 0.35.0 — доверенная приёмка Runtime GA
 on:
   workflow_call:
     inputs:

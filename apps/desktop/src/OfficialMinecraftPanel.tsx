@@ -300,7 +300,7 @@ export function OfficialMinecraftPanel0257({
       <div className="officialAuthSection02610">
         <div className="officialAuthSectionHeader02610">
           <h4>Активная игровая сессия</h4>
-          {ready && <span>Official Java Edition</span>}
+          {ready && <span>Официальная Java Edition</span>}
         </div>
         {ready && profile ? (
           <>
@@ -429,8 +429,8 @@ export function OfficialMinecraftPanel0257({
                   setVariant(e.target.value as "classic" | "slim")
                 }
               >
-                <option value="classic">Classic</option>
-                <option value="slim">Slim</option>
+                <option value="classic">Классическая</option>
+                <option value="slim">Узкая</option>
               </select>
               <button
                 disabled={busy || !skin}

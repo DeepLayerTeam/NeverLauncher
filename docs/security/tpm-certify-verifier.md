@@ -1,4 +1,4 @@
-# Launcher 0.31.2 — TPM Certify verifier and AK trust roots
+# Launcher 0.31.2 — проверка TPM Certify и корни доверия AK
 
 ## принудительно обеспечиваемое поведение
 

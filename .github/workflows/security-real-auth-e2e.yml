@@ -1,4 +1,4 @@
-name: Security and Real Auth E2E 0.29.12
+name: Безопасность и настоящая авторизация — E2E 0.29.12
 on:
   push:
     paths:

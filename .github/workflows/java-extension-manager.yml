@@ -1,4 +1,4 @@
-name: Java Extension Manager 0.30.5 — signed packages, lifecycle, diagnostics
+name: Java Extension Manager 0.30.5 — подписанные пакеты, жизненный цикл и диагностика
 on:
   push:
     paths:

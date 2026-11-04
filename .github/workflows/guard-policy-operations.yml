@@ -1,4 +1,4 @@
-name: Guard policy operations 0.50.11
+name: Эксплуатация политики Guard 0.50.11
 on:
   push:
     paths:

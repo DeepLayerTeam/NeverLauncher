@@ -1,4 +1,4 @@
-name: ServerBridge Operator 0.28.12
+name: Оператор ServerBridge 0.28.12
 on:
   push:
     paths:

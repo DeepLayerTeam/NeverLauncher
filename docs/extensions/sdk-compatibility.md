@@ -1,6 +1,6 @@
-# Extensions: Java SDK, API and Host Protocol — 0.42.1
+# Расширения: Java SDK, API и Host Protocol — 0.42.1
 
-## Compatibility boundary
+## Граница совместимости
 
 Product version `0.42.1` **does not change** Host Protocol `1.0`, Extension API `1.0`, package format `1.0` or manifest schema `2.0`. The Go host still accepts the canonical SDK `1.0` hello and the legacy manifest API `3.7` hello behavior. The wire hello request deliberately has no new mandatory fields, so a Java SDK compiled against 0.42.0 can communicate with the updated host. The updated SDK communicates with the original host for operations it actually advertises; the old 0.42.0 Go host did not advertise `runtime.config.delete` or `runtime.storage.delete` even when the underlying broker supported them.
 
@@ -16,7 +16,7 @@ Product version `0.42.1` **does not change** Host Protocol `1.0`, Extension API 
 | Repeated authenticated hello | HTTP `409` with `HOST_HELLO_ALREADY_COMPLETED`; existing runtime identity not reset |
 | Invalid readiness acknowledgement | SDK rejects; supervisor marks a JVM ready only after verified `POST /v1/ready` |
 
-## Executable API
+## Работающий API
 
 `HostSession.connect()` and `connect(callbackUrl)` remain supported. To require permission before initiating callbacks:
 
@@ -48,6 +48,6 @@ python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.
 
 The Go command requires the repository's declared Go `1.27.3` toolchain. The CI Java SDK workflow tests JDK 17/21 on Linux, macOS and Windows; local Linux tests alone do not certify those targets.
 
-## Release limitation
+## Ограничение выпуска
 
 **The product-wide 14-target ServerBridge Minecraft/JVM/Proxy release gate remains mandatory in 0.42.1.** The gate now recognizes versions `>=0.42.0`, but checks the version and source commit **exactly** in live proofs and on the final release JARs. It rejects missing or incompatible evidence, including absent Go fault/race logs. Until the four outstanding live target runners and full evidence are supplied, production certification remains blocked; this patch must not be presented as a verified production release.

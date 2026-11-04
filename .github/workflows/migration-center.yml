@@ -1,4 +1,4 @@
-name: Migration Center 0.33.1 — durable execution
+name: Migration Center 0.33.1 — долговременное выполнение
 on:
   push:
     paths:

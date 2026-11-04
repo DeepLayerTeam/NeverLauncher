@@ -1,4 +1,4 @@
-name: Gravit Migration Reports and RC Review 0.33.13
+name: Отчёты миграции Gravit и проверка RC 0.33.13
 on:
   push:
     paths:

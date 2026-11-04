@@ -1,6 +1,6 @@
-# NeverLauncher 0.50.0 — Gravit Migration & Module Parity GA
+# NeverLauncher 0.50.0 — GA переноса Gravit и функционального соответствия модулей
 
-## Definition of acceptance
+## Определение приёмки
 
 `VERSION=0.50.0` is not certification. **GA is blocked until external, independently verified evidence exists for three distinct real Gravit projects, all 36 migration checks, all 19 module checks, signed installable 0.50.0 packages and real rollback drills.** A `go test` PASS, signed schema, mock, module registration or a JSON fixture is not such evidence.
 
@@ -12,7 +12,7 @@ The executable checks are composed from the existing real implementations, not a
 4. Independent review: the reviewer must actually inspect executable test bodies, raw logs, signed packages, the 0.49.11 production cutover and 0.49.12 restore/rollback drills, relevant authority boundaries, identity, Minecraft, plugins, worlds and negative tests. They sign an approval **outside the build/test process** using a distinct Ed25519 key, over hashes of every file in the release evidence directory (including all 19 module evidence files and all six signed packages). Reviewer identity must differ from each Migration GA review identity. This external approval is not created by the code.
 5. `scripts/release/ga_gate_0500.py`: validates the detached independent approval, every file digest, original reviewer independence, full six-target installable release via the existing delivery verifier, and repeats the *live* three-project Backend validation after approval. Stale evidence (over 72 hours), revocation, package mismatch or missing module proof blocks release.
 
-## Operator execution
+## Выполнение оператором
 
 On a protected, isolated, real Linux runner with a working Backend/PostgreSQL, 3 real Gravit source projects and game nodes, verified Microsoft account where required, HAProxy/systemd, three OS desktop runners, real test module services and signed published packages:
 
@@ -49,7 +49,7 @@ python3 scripts/release/ga_gate_0500.py \
 
 Or use the protected `.github/workflows/gravit-ga-0500.yml` twice: `witness` to run actual live probes, then, after *out-of-band independent review and signing*, `promote` to verify the same final bytes. Runner variables `GA0500_CONFIG`, `GA0500_EVIDENCE_ROOT`, `GA0500_REVIEW_APPROVAL`, `GA0500_REVIEW_SIGNATURE`, `GA0500_REVIEW_TRUSTED_KEY` are **absolute paths to separately provisioned private files**, not paths populated from build outputs; the admin token is a protected secret. No raw evidence is uploaded to CI artifacts. A missing external system, reviewer or runner is **BLOCKED**.
 
-## Boundary and remaining work
+## Границы и оставшиеся работы
 
 The 0.49.12 file restore tool recovers only verified local world/player/config files, **not PostgreSQL, plugin databases or S3**. Before declaring Gravit cutover/return complete, independent operators must prove fenced writers, HAProxy routes across reload/restart (runtime socket changes are ephemeral), real database and plugin restoration, post-return UUID/players, all signing/trust scopes and native packages. The 36-check `operational-rollback-drill` and `negative-rollback` checks must use those real scenarios; canned success JSON is invalid. The safe alternative to arbitrary `UnsafeCommandPack` execution is separately audited, not literal unsafe binary compatibility.
 

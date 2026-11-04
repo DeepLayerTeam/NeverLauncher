@@ -1,4 +1,4 @@
-name: SQLite DEP00 durable storage (0.32.1)
+name: SQLite DEP00 — долговременное хранилище (0.32.1)
 on:
   push:
     paths:

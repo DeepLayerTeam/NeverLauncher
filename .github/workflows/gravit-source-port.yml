@@ -1,4 +1,4 @@
-name: Gravit source-port 0.42.11 — real JVM, signed package and 19-module audit
+name: Перенос исходников Gravit 0.42.11 — настоящая JVM, подписанный пакет и аудит 19 модулей
 on:
   push:
     paths:

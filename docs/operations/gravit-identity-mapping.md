@@ -1,8 +1,8 @@
-# Launcher 0.33.4 — Identity & UUID Mapping (MIG04)
+# Launcher 0.33.4 — сопоставление идентичностей и UUID (MIG04)
 
 This release is an executable identity reconciliation step. It does **not** create users, transfer password hashes, accept legacy credentials or cut over servers. A `prepared` run is not a successful migration.
 
-## Supported source layouts
+## Поддерживаемые форматы исходных данных
 
 Provide the exact same protected ZIP that was previously inventoried using MIG03:
 
@@ -11,7 +11,7 @@ Provide the exact same protected ZIP that was previously inventoried using MIG03
 
 The ZIP may contain both layouts. Duplicates or collisions across the two are reported and blocked. Unknown custom auth stores or providers are not silently interpreted as supported.
 
-## Operator workflow
+## Порядок действий оператора
 
 ```sh
 nl migrate gravit create --backend https://.example --token "$TOKEN" --project my-project --key migration-ticket-42
@@ -24,7 +24,7 @@ nl migrate gravit verify-identities --backend https://never.example --token "$TO
 
 For `map-identities`, the API checks the exact SHA-256 and size against the persisted MIG03 inventory, validates ZIP contents/CRC and confirms its inventory manifest hash. No trusted source-directory path or ZIP extraction destination is accepted on the Backend. HTTPS is required by the CLI except explicit IP loopback.
 
-## Result meanings
+## Значения результатов
 
 - `matched`: source UUID **and** case-insensitive Minecraft username match one existing Never user. The target user ID is stored as a reference only, and its ownership must be verified again after auth import and before any cutover.
 - `pending_import`: no existing Never user has that UUID/name. Mapping is persisted for subsequent authenticated account import (MIG05); **no account is created** by MIG04.
@@ -32,7 +32,7 @@ For `map-identities`, the API checks the exact SHA-256 and size against the pers
 
 `ready=true` is a narrow identity-map condition: every row currently matches an existing target. **It is not authorization to migrate passwords, move inventory/world data, import modules, deploy or cut over.** Reverification compares stored IDs against the live Never profile and official identity tables and emits a new audit event only when results change.
 
-## Safety and consistency
+## Безопасность и согласованность
 
 PostgreSQL tables `migration_identity_snapshots_0334` and `migration_identity_rows_0334` retain the source UUID mapping and cleaned status. Raw credential hashes, user sessions, tokens, keys and source files do not enter these tables. The first accepted account set is pinned by a SHA-256 digest. Sending a different account set under the same run returns a conflict instead of overwriting a reviewed identity map. A new project source requires a separate migration run and re-inventory.
 

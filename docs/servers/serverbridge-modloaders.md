@@ -1,25 +1,25 @@
 # Launcher 0.41.6 — Fabric, Quilt, Forge, NeoForge, Vanilla, Sponge
 
-## реально исполняемые изменения
+## Реально исполняемые изменения
 
-* Fabric/Quilt and Forge/NeoForge now read the authoritative Java game-server whitelist and profile-ban collections **after** dispatch. Where a target API does not expose a readable state, they return `executed` (never a fabricated `succeeded`). An observed mismatch returns `failed`.
-* Each of these four adapters registers the exact player UUID with `KickConfirmations` **before** invoking the real platform disconnect method. Only the native disconnect callback for the same name and UUID proves `player.kick`; on timeout, shutdown, or missing UUID the response remains `executed`/`indeterminate`. A concurrently pending kick on the same username does not trigger a second disconnect.
-* Routing-mode commands read back the local, live admission flags; asynchronous JVM stop is `accepted`, not completed.
-* Sponge now correlates kicks with its native `ServerSideConnectionEvent.Disconnect`, verifies whitelist mode only when the state is readable, and does not hide broadcast partial delivery. It still returns `unsupported` for whitelist-entry/ban/save/console actions that its universal SpongeAPI adapter does not implement; those operations have **not** been advertised as newly supported.
-* The Vanilla sidecar issues real RCON commands, follows whitelist and ban changes with `whitelist list` / `banlist players`, and proves membership only when Mojang's English count and full list are self-consistent. Non-English/ambiguous/truncated responses remain `executed`. Stop is `accepted`. Vanilla cannot authenticate players through a plugin or prove a kick from a UUID-bound game API.
-* `BridgeControlResult` remains the signed ServerBridge control response, with `succeeded` evidence checked by the existing Backend 0.41.5 logic; no parallel command path or fake production endpoints were added.
+* Fabric/Quilt и Forge/NeoForge теперь считывают фактическое состояние белого списка игрового Java-сервера и списков блокировки профилей **после** отправки действия. Если API не позволяет прочитать состояние, возвращается `executed`, но никогда — вымышленное `succeeded`. Подтверждённое расхождение возвращает `failed`.
+* Каждый из этих четырёх адаптеров регистрирует точный UUID игрока в `KickConfirmations` **до** вызова штатного механизма отключения на платформе. Подтверждением `player.kick` служит только собственный callback отключения с теми же именем и UUID. При таймауте, остановке или отсутствии UUID ответ остаётся `executed`/`indeterminate`. Если отключение пользователя с тем же именем уже ожидает подтверждения, второе отключение не инициируется.
+* Команды маршрутизации повторно считывают локальные действующие флаги допуска; асинхронная остановка JVM имеет статус `accepted`, а не завершённой операции.
+* Sponge теперь сопоставляет отключения с собственным событием `ServerSideConnectionEvent.Disconnect`, проверяет режим белого списка, только когда состояние доступно для чтения, и не скрывает частичную доставку широковещательных сообщений. Для действий с записями белого списка, блокировками, сохранением и консолью, не реализованных универсальным адаптером SpongeAPI, он по-прежнему возвращает `unsupported`. Эти операции **не** объявляются вновь поддержанными.
+* Вспомогательный процесс Vanilla отправляет реальные RCON-команды, после изменений белого списка и блокировок выполняет `whitelist list` / `banlist players` и подтверждает присутствие записи, только когда английские счётчики Mojang согласуются с полным списком. Для локализованного, неоднозначного или обрезанного ответа сохраняется `executed`. Остановка имеет статус `accepted`. Vanilla не может проверить игрока через плагин или доказать отключение с использованием API игры, привязанного к UUID.
+* `BridgeControlResult` остаётся подписанным ответом управления ServerBridge; доказательство `succeeded` проверяется существующей логикой Backend 0.41.5. Параллельный путь команд или фиктивные production-endpoint не добавлялись.
 
-## локально выполненная проверка
+## Локально выполненная проверка
 
 ```
 e2e/scripts/test-serverbridge-control-0416.sh
 python3 e2e/scripts/test-bukkit-control-0415.py
 ```
 
-The first command compiles all production Java 21 source files from `plugins/bridge-common` and `plugins/vanilla-bridge`, then runs readback, exact UUID event-matching and real localhost TCP-RCON tests. The second is the preexisting Bukkit family regression suite. These are not substitutes for testing against upstream game-server JARs.
+Первая команда компилирует все production-исходники Java 21 из `plugins/bridge-common` и `plugins/vanilla-bridge`, затем проверяет повторное считывание состояния, точное соответствие UUID в событиях и настоящий TCP-RCON через localhost. Вторая запускает существующие регрессионные тесты семейства Bukkit. Ни одна из проверок не заменяет испытания с настоящими JAR игрового сервера.
 
-## реальная сертификация по-прежнему обязательна
+## Реальная сертификация по-прежнему обязательна
 
-On hosts with the actual upstream server distributions and Gradle dependencies, build each module and deploy the output JARs against each declared Minecraft/loader/SpongeAPI target. Test whitelist/ban state before and after changes, kick with a real player and native disconnect event, player reconnect, failed console commands, routing modes, plugin stop during pending control, and shutdown while the Backend is unavailable. Test Vanilla with a real dedicated server configured with a protected loopback RCON port and a live backend identity. Never mark a missing loader/server JAR as PASS or use a simulated API outcome as proof of upstream compatibility.
+На узлах с оригинальными серверными дистрибутивами и зависимостями Gradle соберите каждый модуль и разверните полученные JAR для каждой заявленной комбинации Minecraft/загрузчика/SpongeAPI. Проверьте состояние белых списков и блокировок до/после изменений, отключение настоящего игрока с собственным событием соединения, повторное подключение, ошибочные консольные команды, режимы маршрутизации, остановку плагина во время ожидающего ответа и завершение сервера при недоступном Backend. Для Vanilla используйте настоящий выделенный сервер с защищённым RCON-портом на loopback и действующей идентификацией backend. Не ставьте PASS при отсутствии серверного JAR или загрузчика и не принимайте симулированный ответ API за доказательство совместимости с оригинальной платформой.
 
-**Status:** Java 21 common + Vanilla integration and local TCP-RCON passed; authentic Fabric, Quilt, Forge, NeoForge, Vanilla Minecraft, Sponge server-JAR runs and full Backend/PostgreSQL E2E are **not certified** by this patch environment.
+**Статус:** общие компоненты Java 21, интеграция Vanilla и локальный TCP-RCON прошли проверки; подлинные прогоны серверных JAR Fabric, Quilt, Forge, NeoForge, Vanilla Minecraft, Sponge и полноценный E2E Backend/PostgreSQL **не сертифицированы** в этом окружении.

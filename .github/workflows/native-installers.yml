@@ -1,4 +1,4 @@
-name: Native branded installers (notarized 0.52.2)
+name: Нативные брендированные установщики (нотариально заверенная версия 0.52.2)
 on:
   pull_request:
     paths:

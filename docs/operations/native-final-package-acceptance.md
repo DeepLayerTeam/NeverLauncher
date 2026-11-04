@@ -1,4 +1,4 @@
-# NeverLauncher 0.52.2 — native final installer acceptance
+# NeverLauncher 0.52.2 — приёмка окончательного нативного установщика
 
 ## что действительно запускается
 
@@ -30,7 +30,7 @@ the trusted native runner scheduling / hardware inventory requires separate
 operational validation for GA. A successful self-reported CI run is not an
 independent 0.53.0 release approval.
 
-## Prepare and independently pin final bytes
+## Подготовка и независимое закрепление окончательных файлов
 
 1. Run the protected `native-installers.yml` production job from the **exact
    release commit**. Windows signs Authenticode, Linux signs detached `.asc`,
@@ -90,7 +90,7 @@ Run on freshly provisioned, dedicated GitHub-hosted disposable runners only.
 The installed Linux package/macOS app is left for hosted-runner disposal; it
 must **not** run on an employee workstation or persistent self-hosted runner.
 
-## Independent, cryptographically pinned post-CI review
+## Независимая проверка после CI с криптографическим закреплением
 
 The CI summary is **not** a trusted human or physical-machine attestation. An
 independent operator must separately inspect the six native runner logs and
@@ -125,7 +125,7 @@ band. Receipt is exclusive-create and signed over all six raw receipt digests
 and package/source binding. Verified review returns
 `CI_OBSERVED_SIGNED_REVIEW_NOT_GA`; it does not elevate CI into GA.
 
-## What a PASS means and what it does not
+## Что означает PASS и чего он не подтверждает
 
 - A full candidate matrix yields `CI_OBSERVED_REVIEW_REQUIRED`, not `GA_PASS`.
   It binds six SHA-256-pinned native packages, operating-system signature and

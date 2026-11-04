@@ -1,4 +1,4 @@
-name: ServerBridge 0.28.6 Adapter Capabilities
+name: ServerBridge 0.28.6 — возможности адаптеров
 on:
   push:
     paths:

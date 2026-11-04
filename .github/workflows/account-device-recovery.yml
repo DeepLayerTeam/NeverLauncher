@@ -1,4 +1,4 @@
-name: Account and revoked-device recovery 0.43.5
+name: Восстановление учётной записи и отозванного устройства 0.43.5
 on:
   push:
     paths:

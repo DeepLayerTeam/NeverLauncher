@@ -717,7 +717,7 @@ export function AdminExtensions({
     <section className="adminExtensionsWorkspace">
       <div className="registryHeading">
         <div>
-          <h2>Admin Extensions</h2>
+          <h2>Расширения Admin</h2>
           <p className="muted">
             UI extensions работают только в sandboxed iframe. Скрипт extension
             не загружается в основной React bundle; данные доступны только через
@@ -789,7 +789,7 @@ export function AdminExtensions({
             />
           ) : (
             <div className="extensionEmpty">
-              <strong>Extension pages</strong>
+              <strong>Страницы расширений</strong>
               <p className="muted">
                 Выберите вкладку из extension navigation или action.
               </p>
@@ -823,15 +823,15 @@ export function AdminExtensions({
             setTargetScope(e.target.value as "global" | "project")
           }
         >
-          <option value="global">Global</option>
-          <option value="project">Project</option>
+          <option value="global">Глобально</option>
+          <option value="project">Проект</option>
         </select>
         {targetScope === "project" && (
           <input
             aria-label="ID проекта"
             value={targetScopeId}
             onChange={(e) => setTargetScopeId(e.target.value)}
-            placeholder="project ID"
+            placeholder="ID проекта"
           />
         )}
       </div>
@@ -916,7 +916,7 @@ export function AdminExtensions({
           </article>
         ))}
       </div>
-      <h2>Extension Manager</h2>
+      <h2>Управление расширениями</h2>
       <div className="extensionManagerGrid">
         {(manager.items ?? []).map((item, index) => {
           const install = item.install ?? {};
@@ -952,7 +952,7 @@ export function AdminExtensions({
                   : "—"}{" "}
                 · processes {runtime.processCount ?? "—"}
               </p>
-              <section aria-label="OS sandbox security state">
+              <section aria-label="Состояние защиты изоляции ОС">
                 <p>
                   <strong>
                     Исполнение:{" "}

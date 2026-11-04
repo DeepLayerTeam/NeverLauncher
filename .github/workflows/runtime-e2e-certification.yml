@@ -1,4 +1,4 @@
-name: Client Factory 0.27.12 Runtime E2E and Certification
+name: Фабрика клиентов 0.27.12 — E2E и сертификация Runtime
 on:
   push:
     paths:

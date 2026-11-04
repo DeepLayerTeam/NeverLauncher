@@ -1,4 +1,4 @@
-name: Prestarter native bootstrap (0.23.9)
+name: Нативная начальная загрузка Prestarter (0.23.9)
 on:
   push:
     paths:

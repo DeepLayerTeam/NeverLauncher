@@ -2,7 +2,7 @@
 
 This release modifies **existing execution paths**, not the Gravit module ABI. Its supported outputs are a safer legacy password verifier, an offline FileAuthSystem writer, root-signed certificate rotation, stricter Guard gating, and stricter official Minecraft profile verification. This is **not** evidence that every Gravit AdditionalHash / FileAuthSystem / GenerateCertificate / LauncherGuard / MojangSupport JAR is binary compatible.
 
-## FileAuthSystem Database.json — explicit offline writer
+## FileAuthSystem Database.json — явный автономный механизм записи
 
 1. Stop LaunchServer/Gravit and **all other users of Database.json**. NeverLauncher's live FileAuth connector is read-only and automatically re-reads the changed source; the offline writer's local advisory lock does not stop a foreign writer that ignores it.
 2. Secure `Database.json` (private regular file), take a full backup of any separate `Sessions.json` and Gravit state using your normal backup system, and obtain an exact SHA-256 digest of `Database.json`. The writer **does not read or modify Sessions.json**, revoke all upstream sessions separately before restarting the source.

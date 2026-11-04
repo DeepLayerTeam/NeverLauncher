@@ -1,4 +1,4 @@
-name: Launcher Device Trust Matrix
+name: Матрица доверия к устройствам Launcher
 
 on:
   push:

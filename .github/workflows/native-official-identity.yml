@@ -1,4 +1,4 @@
-name: Native Minecraft Identity 0.26.2
+name: Нативная идентичность Minecraft 0.26.2
 on:
   push:
     paths:

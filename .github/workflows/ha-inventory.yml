@@ -1,4 +1,4 @@
-name: HA inventory 0.51.1 regression
+name: Инвентаризация HA 0.51.1 — регрессия
 on:
   push:
     paths:

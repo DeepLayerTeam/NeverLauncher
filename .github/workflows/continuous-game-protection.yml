@@ -1,4 +1,4 @@
-name: Guard 0.50.6 continuous game supervision
+name: Guard 0.50.6 — непрерывное наблюдение за игрой
 on:
   push:
     paths:

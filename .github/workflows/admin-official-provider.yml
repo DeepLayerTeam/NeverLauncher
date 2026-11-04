@@ -1,4 +1,4 @@
-name: Admin Official Provider 0.26.11
+name: Официальный провайдер в Admin 0.26.11
 on:
   push:
     paths:

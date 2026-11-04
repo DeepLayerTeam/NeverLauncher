@@ -1,4 +1,4 @@
-name: Linux Guard 0.50.8 real runtime enforcement
+name: Linux Guard 0.50.8 — реальное применение защиты Runtime
 on:
   push:
     paths:

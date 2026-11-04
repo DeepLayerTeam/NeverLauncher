@@ -1,8 +1,8 @@
-# Extensions 0.42.12: executable acceptance
+# Extensions 0.42.12: приёмка с фактическим выполнением
 
-The acceptance runner executes **four real Java processes/examples** on the target OS: Java Host, Runtime EventBus/storage/CLI, Lifecycle, and a Gravit source-port module. It checks authenticated Host Protocol, Java callbacks, events, restart behavior, error cases, actual JARs, CLI packaging, Ed25519 signatures and rejection of modified JAR payloads and wrong keys.
+Средство приёмочных испытаний запускает **четыре настоящих Java-процесса/примера** на целевой ОС: Java Host, Runtime EventBus/хранилище/CLI, Lifecycle и модуль, перенесённый из исходников Gravit. Проверяются аутентифицированный Host Protocol, обратные вызовы Java, события, перезапуски, негативные сценарии, настоящие JAR-файлы, упаковка CLI, подписи Ed25519, а также отклонение модифицированных JAR и неверных ключей.
 
-Run from a fresh checkout with Java 21, Python 3.12+, OpenSSL and the project's Go toolchain:
+Запускайте из чистой рабочей копии с Java 21, Python 3.12+, OpenSSL и комплектом инструментов Go, используемым проектом:
 
 ```sh
 sh sdk/java/core/build.sh test
@@ -15,14 +15,14 @@ sh examples/extensions/gravit-compat/build.sh
 python3 e2e/extensions/accept_04212.py --target linux-x64 --cli ./nl --evidence evidence/linux-x64.json
 ```
 
-On Windows use the native `.exe` and Git Bash `sh`; pass `windows-x64`/`windows-arm64` as appropriate. Runner checks the **actual host** and JVM architecture; cross-compilation, emulation and fabricated target labels do not certify native execution. CI runs this on Linux, Windows and macOS x64 and arm64; an unavailable runner **blocks** the aggregate rather than becoming a pass. Run the Go supervisor suite separately using the project's Backend toolchain and built Java Host JAR:
+В Windows используйте нативный `.exe` и `sh` из Git Bash; укажите `windows-x64` или `windows-arm64` в зависимости от архитектуры. Средство проверяет **фактический хост** и архитектуру JVM. Кросс-компиляция, эмуляция и вымышленные метки целевых платформ не подтверждают нативное выполнение. В CI проверка запускается на Linux, Windows и macOS для x64 и arm64. Недоступный исполнитель **блокирует** общий результат, а не засчитывается как успешный. Отдельно запустите тесты супервизора Go с инструментами Backend и собранным JAR Java Host:
 
 ```sh
 (cd services/api && LAUNCHER_TEST_JAVA_HOST_JAR="$(cd ../.. && pwd)/examples/extensions/java-host/build/package/backend/java-host.jar" go test -race -count=1 ./internal/extensionhost)
 ```
 
-Only a successful real-runner invocation may write `status: pass`. Evidence includes exact JAR hashes, CLI hash, source commit (on CI), OS architecture and JVM info. The aggregate requires all six target records for the exact CI commit and the independent Go Supervisor job to succeed. `e2e/extensions/aggregate_04212.py` refuses missing/failed/stale/wrong-architecture results, unverified signatures and missing negative cases.
+Только успешный запуск на реальной платформе вправе записать `status: pass`. Подтверждения содержат точные хеши JAR, хеш CLI, исходный коммит (в CI), архитектуру ОС и сведения о JVM. Сводная проверка требует записи по всем шести целевым конфигурациям для **того же коммита CI** и успешного независимого задания Go Supervisor. `e2e/extensions/aggregate_04212.py` отклоняет отсутствующие, неуспешные, устаревшие результаты, данные с неверной архитектурой, непроверенные подписи и отсутствие негативных проверок.
 
-## Interpretation
+## Интерпретация результатов
 
-This suite validates extension delivery and protocol behavior; **it does not certify** all 19 Gravit feature replacements, launch a Minecraft client, demonstrate a complete PostgreSQL/HA install/update/rollback cycle, validate Guard native sandboxes across the OS matrix, or certify the final production packages. Guard and Java Extension Host have distinct trust boundaries: the Java host is a separate **trusted** JVM process, not an OS sandbox for untrusted JARs. No public production release or verified status for the 19 Gravit modules is implied by this suite.
+Этот набор тестов проверяет доставку расширений и поведение протокола. Он **не сертифицирует** все 19 замен функций Gravit, не запускает клиент Minecraft, не демонстрирует полный цикл установки/обновления/отката PostgreSQL/HA, не проверяет нативную изоляцию Guard на всей матрице ОС и не сертифицирует окончательные производственные пакеты. У Guard и Java Extension Host разные границы доверия: Java Host — отдельный **доверенный** процесс JVM, а не изолированная среда ОС для недоверенных JAR. Эти тесты не означают разрешение на публичный выпуск или подтверждённую готовность всех 19 модулей Gravit.

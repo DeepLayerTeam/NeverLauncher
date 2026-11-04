@@ -1,4 +1,4 @@
-name: Gravit Security Migration 0.33.6
+name: Миграция безопасности Gravit 0.33.6
 on:
   push:
     paths:

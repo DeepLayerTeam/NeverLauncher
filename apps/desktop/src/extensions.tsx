@@ -434,7 +434,7 @@ export function DesktopExtensions0209({
     <section className="desktopExtensions0209">
       <div className="desktopExtensionsHeader">
         <div>
-          <h3>Desktop Extensions</h3>
+          <h3>Расширения Desktop</h3>
           <p>
             Standalone extension UI runs in an opaque-origin sandbox. Tauri
             access is available only through the permission-aware parent bridge.

@@ -1,4 +1,4 @@
-name: Launcher 0.33.0 Single-Node GA verifier
+name: Launcher 0.33.0 — проверка GA на одном узле
 on:
   push:
     paths:

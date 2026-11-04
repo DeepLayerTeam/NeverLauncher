@@ -1,4 +1,4 @@
-name: SQLite to PostgreSQL migration failure recovery 0.47.7
+name: Восстановление при сбое миграции SQLite → PostgreSQL 0.47.7
 on:
   push:
     paths:

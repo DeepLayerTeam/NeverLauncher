@@ -1,4 +1,4 @@
-# 0.49.1 — Live Backend / PostgreSQL / Java Host audit
+# 0.49.1 — аудит работающих Backend / PostgreSQL / Java Host
 
 This is a **running integration test**, not a manifest or a status endpoint test. It does not migrate a Gravit project, publish a release or certify 0.50 GA on its own. It does not modify migration, user, world, extension or release data.
 
@@ -10,7 +10,7 @@ This is a **running integration test**, not a manifest or a status endpoint test
 - An operator-trusted executable `psql` and a read-only PostgreSQL account with `SELECT` on `projects`, `migration_runs_0331`, `extension_installs`. The Backend's normal PostgreSQL DSN is **not** appropriate for a read-only audit account; use a separate least-privileged DSN pointing to the same database.
 - A fresh, private output directory. This command refuses to overwrite an existing receipt.
 
-## Execute against real installed services
+## Выполнение на настоящих установленных службах
 
 ```bash
 export LAUNCHER_POSTGRES_DSN='postgresql://audit_reader@db.example/launcher?sslmode=verify-full'
@@ -27,7 +27,7 @@ GOTOOLCHAIN=local go run . integration-audit \
 
 Use `--scope global` (without `--scope-id`) for global Java installations. `--dsn-env` selects a different variable name; `--psql` accepts an explicitly trusted PostgreSQL client binary. `psql` reads the connection string through its `PGDATABASE` environment, not argv. The tool sets read-only transactions and a connect timeout. The output is an **unsigned** local observation, not a substitute for independent receipts or final signed release acceptance.
 
-## Executed checks
+## Выполненные проверки
 
 1. `/ready` returns HTTP 200 with PostgreSQL repository health and current SQL migrations. The CLI rejects SQLite, unavailable PostgreSQL and schema drift.
 2. The authenticated migration API returns the requested run and project, with `sourceKind=gravit`.
@@ -37,7 +37,7 @@ Use `--scope global` (without `--scope-id`) for global Java installations. `--ds
 
 The check verifies one consistent observed state at two moments. It cannot provide an atomic distributed snapshot or guarantee that the state will never change after it returns. Use the existing fenced cutover procedures and independent production migration GA runner for that purpose.
 
-## Local verification boundary
+## Граница локальной проверки
 
 ```bash
 (cd tools/migration-ga && GOTOOLCHAIN=local GOPROXY=off go test ./... && GOTOOLCHAIN=local GOPROXY=off go vet ./...)

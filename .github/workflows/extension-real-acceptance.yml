@@ -1,4 +1,4 @@
-name: Extensions - six-platform real JVM and signed package acceptance
+name: Расширения — реальная приёмка JVM и подписанных пакетов на шести платформах
 on:
   workflow_call:
   push:

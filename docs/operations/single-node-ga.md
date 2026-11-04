@@ -1,6 +1,6 @@
-# Launcher 0.33.0 — Production Single-Node GA release & operations
+# Launcher 0.33.0 — выпуск и эксплуатация промышленного GA на одном узле
 
-## Release status and supported deployment modes
+## Состояние выпуска и поддерживаемые режимы развёртывания
 
 **Do not advertise or publish this version as independently certified GA until the
 real SQLite-only HTTP Backend has been completed and tested.** The previous
@@ -19,7 +19,7 @@ single-node evidence is absent. It does not turn the SQLite coordinator into
 an alternative HTTP Repository, perform unsupported SQLite→PostgreSQL cutover,
 or bless an untested HA topology.
 
-## Production prerequisites
+## Предварительные условия для промышленной эксплуатации
 
 - Install on dedicated Linux host with a supported local ext4/XFS/Btrfs filesystem
   (not NFS/SMB, container overlayfs, or multiple shared writers). Dedicated
@@ -33,7 +33,7 @@ or bless an untested HA topology.
   it in an isolated acceptance environment. **Until then, run Standard with
   PostgreSQL** as described in `docs/releases/0.32.13-production-deployment.md`.
 
-## Live acceptance before GA signature
+## Реальная приёмка до подписания GA
 
 Run the 0.33.0 RC gate on a native filesystem with real PostgreSQL, Redis, S3
 and SQLite CI fixtures (not live customer data):
@@ -99,7 +99,7 @@ Required exact filenames in `/secure/evidence`:
 `SINGLE_NODE_GA_RC.json`. A certificate derived from a fixture or self-signed
 by the release signing key does not constitute GA evidence.
 
-## Building, verifying, publishing
+## Сборка, проверка и публикация
 
 `production-release-candidate.yml` requires independent signed evidence from
 an approved same-commit workflow dispatch and compares the embedded RC receipt
@@ -139,7 +139,7 @@ If external evidence, commit, independent key, CI, BOM, release artifacts,
 or signed delivery approval are missing, **do not publish** and do not substitute
 stubs, downgraded modes, disabled tests or memory fallbacks.
 
-## Standard operating procedures (currently supported runtime)
+## Стандартные процедуры эксплуатации (поддерживаемый Runtime)
 
 - **Before install:** provision TLS, PostgreSQL, the SQLite coordinator's
   durable directory, signed release, S3/local blobs and approved policies.
@@ -171,7 +171,7 @@ stubs, downgraded modes, disabled tests or memory fallbacks.
   Schedule a separately validated cutover and player UUID/revocation testing;
   do not switch DSNs and assume continuity.
 
-## Evidence, reproducibility and release limitations
+## Подтверждения, воспроизводимость и ограничения выпуска
 
 Run the verifier regression tests without external accounts:
 

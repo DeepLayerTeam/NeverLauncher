@@ -1,4 +1,4 @@
-name: Capacity & Diagnostics 0.32.15
+name: Ёмкость и диагностика 0.32.15
 on:
   push:
     paths:

@@ -1,24 +1,24 @@
-# Gravit modules → Never ServerBridge (0.44.6)
+# Модули Gravit → Never ServerBridge (0.44.6)
 
-## Source inspection
+## Проверка исходников
 
-1. Inventory a ZIP with `nl migrate gravit inventory` and produce a pinned `dry-run` for the target project and selected profile.
-2. Run `nl migrate gravit analyze-modules --run <run-id> --source <original-gravit.zip>` using the **same source SHA-256** as the inventory. The report includes each source JAR and module JSON config by path and hash, without persisting configuration secrets.
-3. Treat unknown auth/launch modules, missing JARs and invalid configs as blockers. A valid config with a matching JAR is **not** a compatible Never module: port the module's behavior to the supported SDK and independently test it. Never upload or execute foreign Gravit binaries in the backend.
+1. Составьте инвентаризацию ZIP командой `nl migrate gravit inventory` и подготовьте закреплённый `dry-run` для целевого проекта и выбранного профиля.
+2. Запустите `nl migrate gravit analyze-modules --run <run-id> --source <original-gravit.zip>` с **тем же SHA-256 исходников**, что и при инвентаризации. Отчёт содержит каждый JAR исходного проекта и конфигурацию модуля JSON с путём и хешем, но не сохраняет секреты конфигурации.
+3. Неизвестные модули авторизации/запуска, отсутствующие JAR и некорректные конфигурации блокируют миграцию. Корректная конфигурация с подходящим JAR **не** означает совместимость модуля с Never. Перенесите поведение модуля на поддерживаемый SDK и отдельно проверьте его. Никогда не загружайте и не исполняйте чужие двоичные файлы Gravit в Backend.
 
-## Connecting a replacement node
+## Подключение заменяющего узла
 
-1. Resolve the migration blockers. Preview the destination, then import and verify its selected client profile and files. The new game node must reference exactly that imported profile, not any other profile with an equivalent display name.
-2. On the *new* ServerBridge host, generate an independent Ed25519 keypair and configure the server plugin/adapter. Never copy Gravit `checkServerToken`, signing keys, authorization tokens or JVM private keys.
-3. Enroll using Migration Center or `nl migrate gravit enroll-serverbridge --run <run-id> --wrapper <source-wrapper-path> --server-id <new-node-id> --name <name> --kind paper --profile-id <destination-profile-id> --public-key <new-public-key> --fresh-keys-confirmed true`. The enrolment has an immutable server ID/key fingerprint reservation and can be retried only with the same source wrapper, ID and key.
-4. Start the game server with its Never ServerBridge adapter. Check `nl migrate gravit serverbridge-status --run <run-id> --wrapper <source-wrapper-path> --out <private-report.json>`. The command fails unless a **recent signed runtime heartbeat** matches the immutable identity, project and profile. The Admin page can query the same live status. Node registration is not a runtime heartbeat.
-5. Prove actual login, one-time session join, player UUID continuity and a real Minecraft connection with the rehearsal runner. A successful `online` status does **not** authorize cutover. Use the separately confirmed cutover/rollback process.
+1. Устраните препятствия миграции. Предварительно просмотрите целевую конфигурацию, импортируйте и проверьте выбранный профиль клиента и файлы. Новый игровой узел должен ссылаться именно на этот импортированный профиль, а не на другой с таким же отображаемым названием.
+2. На **новом** хосте ServerBridge создайте независимую пару ключей Ed25519 и настройте серверный плагин/адаптер. Не копируйте `checkServerToken` Gravit, ключи подписания, токены авторизации или закрытые ключи JVM.
+3. Зарегистрируйте узел через Migration Center или командой `nl migrate gravit enroll-serverbridge --run <run-id> --wrapper <source-wrapper-path> --server-id <new-node-id> --name <name> --kind paper --profile-id <destination-profile-id> --public-key <new-public-key> --fresh-keys-confirmed true`. Регистрация закрепляет неизменяемые ID сервера и отпечаток ключа; повтор допустим только с тем же исходным wrapper, ID и ключом.
+4. Запустите игровой сервер с адаптером Never ServerBridge. Проверьте `nl migrate gravit serverbridge-status --run <run-id> --wrapper <source-wrapper-path> --out <private-report.json>`. Команда завершается ошибкой, если **недавний подписанный heartbeat Runtime** не совпадает с закреплённой идентичностью, проектом и профилем. Страница Admin может запросить тот же фактический статус. Регистрация узла сама по себе не равнозначна heartbeat Runtime.
+5. Подтвердите настоящий вход, одноразовое подключение по сессии, сохранение UUID игрока и действительное соединение Minecraft с помощью средства репетиции. Успешный статус `online` **не разрешает** переключение. Используйте отдельно подтверждённую процедуру переключения/отката.
 
-## Failure handling
+## Обработка отказов
 
-- `awaiting_registration`: reservation exists but the node was not stored; retry enrollment with exactly the same ID/key after checking the node is absent.
-- `awaiting_runtime`: start the adapter, configure its local Ed25519 private key and ensure signed traffic reaches the backend; check runtime ID, identity epoch and last heartbeat.
-- `blocked`: node was disabled, key rotated unexpectedly, or project/profile ownership differs. **Do not adopt the existing node or copy a Gravit key.** Reconcile identity and start a new verified migration if necessary.
-- HTTP 409 on enrollment: the plan, the imported profile or the reserved node identity no longer matches. Do not bypass the guard with direct SQL.
+- `awaiting_registration`: резервирование существует, но узел не сохранён. После проверки отсутствия узла повторите регистрацию с точно теми же ID/ключом.
+- `awaiting_runtime`: запустите адаптер, настройте его локальный закрытый ключ Ed25519 и убедитесь, что подписанный трафик поступает в Backend. Проверьте ID Runtime, эпоху идентичности и время последнего heartbeat.
+- `blocked`: узел отключён, ключ неожиданно сменился либо отличается владение проектом/профилем. **Не присваивайте существующий узел и не копируйте ключ Gravit.** Согласуйте идентичность и при необходимости начните новую проверенную миграцию.
+- HTTP 409 при регистрации: план, импортированный профиль или зарезервированная идентичность узла больше не совпадают. Не обходите защиту через прямой SQL.
 
-The current scope is a **single selected profile per migration run**; migrate other profiles independently. Static JAR scanning and signed heartbeat checks are not module behavior or gameplay E2E certification.
+Текущая область действия — **один выбранный профиль на запуск миграции**; остальные профили переносите отдельно. Статическое сканирование JAR и проверка подписанного heartbeat не сертифицируют поведение модулей или сквозной игровой сценарий.

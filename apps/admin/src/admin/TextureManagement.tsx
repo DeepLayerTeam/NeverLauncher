@@ -94,7 +94,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
         </select>
       </label>
       <label className="field">Модель стандартного скина
-        <select value={policy.defaultSkinModel} onChange={e => change('defaultSkinModel', e.target.value as 'classic' | 'slim')}><option value="classic">Classic (Steve)</option><option value="slim">Slim (Alex)</option></select>
+        <select value={policy.defaultSkinModel} onChange={e => change('defaultSkinModel', e.target.value as 'classic' | 'slim')}><option value="classic">Классическая (Стив)</option><option value="slim">Узкая (Алекс)</option></select>
       </label>
       <label className="field">Стандартный плащ
         <select value={policy.defaultCapeDigest} onChange={e => change('defaultCapeDigest', e.target.value)}>
@@ -110,7 +110,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
           {policy.fallbackSkinDigest && !options.some(o => o.digest === policy.fallbackSkinDigest) && <option value={policy.fallbackSkinDigest}>Текущий: {policy.fallbackSkinDigest.slice(0, 18)}…</option>}
         </select>
       </label>
-      <label className="field">Модель резервного скина<select value={policy.fallbackSkinModel} onChange={e => change('fallbackSkinModel', e.target.value as 'classic' | 'slim')}><option value="classic">Classic</option><option value="slim">Slim</option></select></label>
+      <label className="field">Модель резервного скина<select value={policy.fallbackSkinModel} onChange={e => change('fallbackSkinModel', e.target.value as 'classic' | 'slim')}><option value="classic">Классическая</option><option value="slim">Узкая</option></select></label>
       <label className="field">Резервный плащ
         <select value={policy.fallbackCapeDigest} onChange={e => change('fallbackCapeDigest', e.target.value)}>
           <option value="">Без резервного плаща</option>

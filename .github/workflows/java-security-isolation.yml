@@ -1,4 +1,4 @@
-name: Java Security and Isolation 0.48.11
+name: Безопасность и изоляция Java 0.48.11
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: NeverLauncher 0.43.12 native extension lifetime revocation
+name: NeverLauncher 0.43.12 — отзыв нативных расширений в ходе работы
 on:
   push:
     paths:

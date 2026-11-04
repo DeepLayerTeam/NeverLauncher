@@ -1,4 +1,4 @@
-name: Physical HA and disaster recovery 0.52.10
+name: Физический HA и аварийное восстановление 0.52.10
 on:
   push:
     paths:

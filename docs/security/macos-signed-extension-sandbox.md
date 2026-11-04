@@ -1,4 +1,4 @@
-# 0.31.12 — macOS Signed App Sandbox helper
+# 0.31.12 — подписанный помощник App Sandbox для macOS
 
 Updated for 0.43.11: native macOS isolated execution is **not** a general-purpose sandbox for every
 extension package. This stage supports **self-contained, single-file Mach-O**

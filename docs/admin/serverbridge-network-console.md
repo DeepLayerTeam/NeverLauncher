@@ -1,4 +1,4 @@
-# ServerBridge network operations in Admin (0.41.11)
+# Сетевые операции ServerBridge в Admin (0.41.11)
 
 Admin → project → ServerBridge provides a live overview, network admission controls,
 game commands, signed command ACKs, and a separate **Host Supervisor / JVM** panel.

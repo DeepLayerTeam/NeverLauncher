@@ -1,4 +1,4 @@
-name: Launcher Production Release Candidate
+name: Кандидат на промышленный выпуск Launcher
 
 on:
   workflow_dispatch:

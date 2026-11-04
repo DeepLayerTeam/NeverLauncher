@@ -1,4 +1,4 @@
-name: Desktop authentication experience 0.26.10
+name: Сценарии аутентификации Desktop 0.26.10
 on:
   pull_request:
     paths:

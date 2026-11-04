@@ -1,4 +1,4 @@
-name: Multi-host chaos and observability 0.51.10
+name: Хаос-тестирование нескольких узлов и наблюдаемость 0.51.10
 on:
   push:
     paths:

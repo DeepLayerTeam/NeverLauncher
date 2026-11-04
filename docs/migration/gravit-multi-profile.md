@@ -1,4 +1,4 @@
-# NeverLauncher 0.49.2 — complete Gravit profile discovery and verifiable dry-run
+# NeverLauncher 0.49.2 — полное обнаружение профилей Gravit и проверяемый пробный запуск
 
 The existing `migrate gravit inventory` and `assess` operations establish a
 verified source baseline. The new `dry-run-all` operation converts **each**
@@ -90,7 +90,7 @@ multi-profile report is not persisted as an alternate source of trust and
 cannot bypass the ordinary import gates. Subsequent 0.49.3+ work addresses
 full content migration and operational cutover.
 
-## Acceptance evidence and limits
+## Подтверждения приёмки и ограничения
 
 Local Go unit/regression tests demonstrate archive inventory, content
 conversion and plan hashing on synthetic multi-profile ZIPs, including source

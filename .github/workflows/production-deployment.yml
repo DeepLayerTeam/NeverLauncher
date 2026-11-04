@@ -1,4 +1,4 @@
-name: Production deployment and first-run 0.45.1
+name: Промышленное развёртывание и первый запуск 0.45.1
 on:
   push:
     paths:

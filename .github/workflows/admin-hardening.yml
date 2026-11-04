@@ -1,4 +1,4 @@
-name: Admin Hardening 0.21.12
+name: Усиление защиты Admin 0.21.12
 on:
   pull_request:
     paths:

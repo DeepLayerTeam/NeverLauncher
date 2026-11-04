@@ -1,4 +1,4 @@
-# NeverLauncher 0.51.8 — executable consistent backup and PostgreSQL PITR
+# NeverLauncher 0.51.8 — работающее согласованное резервное копирование и PITR PostgreSQL
 
 **This is a maintenance-window, write-fenced, multi-host checkpoint.** It intentionally interrupts API/worker writes and gracefully stops affected Minecraft servers; it is not an online atomic transaction across PostgreSQL/S3/game JVMs. A physical PostgreSQL backup with continuous WAL archiving provides database PITR. The cohort's S3 objects, extension state, identities and game worlds are coordinated with one recorded PostgreSQL LSN. Restoring PostgreSQL to an *arbitrary other time* is **not** a coherent S3/game-world restore.
 

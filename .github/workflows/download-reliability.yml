@@ -1,4 +1,4 @@
-name: Download reliability 0.35.4
+name: Надёжность загрузок 0.35.4
 on:
   pull_request:
     paths:

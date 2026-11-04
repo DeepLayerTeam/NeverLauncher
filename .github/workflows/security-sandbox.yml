@@ -1,4 +1,4 @@
-name: 0.35.6 Sandbox, CSP and bridge hardening
+name: 0.35.6 — усиление изоляции, CSP и моста
 on:
   push:
     paths:

@@ -33,7 +33,7 @@ struct ResolvedPlanIdentity {
 fn normalize(value: &str, root: &Path, credentials: Option<&MinecraftLaunchCredentials>) -> String {
     let mut normalized = value.to_string();
     if let Some(credentials) = credentials {
-        // Replacing before rooting matters if a token contains path separators.
+        // Замена до определения корня важна, если токен содержит разделители пути.
         for (value, placeholder) in [
             (credentials.access_token.as_str(), "${session.accessToken}"),
             (credentials.uuid.as_str(), "${session.uuid}"),
@@ -44,8 +44,8 @@ fn normalize(value: &str, root: &Path, credentials: Option<&MinecraftLaunchCrede
             }
         }
     }
-    // Only replace a root as an entire path prefix, never the incidental
-    // substring "." or "/" found inside normal JVM arguments.
+    // Заменяйте корень только как полный префикс пути, а не случайную
+    // подстроку «.» или «/» внутри обычных аргументов JVM.
     let mut roots = Vec::new();
     roots.push(root.to_string_lossy().to_string());
     if let Ok(canonical) = root.canonicalize() {

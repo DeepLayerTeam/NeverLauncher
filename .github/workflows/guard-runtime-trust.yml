@@ -1,4 +1,4 @@
-name: Guard Runtime Trust Enforcement 0.31.7
+name: Guard 0.31.7 — принудительная проверка доверия Runtime
 on:
   push:
     paths:

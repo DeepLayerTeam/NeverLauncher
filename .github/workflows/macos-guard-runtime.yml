@@ -1,4 +1,4 @@
-name: macOS Guard 0.50.9 runtime protection
+name: macOS Guard 0.50.9 — защита Runtime
 on:
   push:
     paths:

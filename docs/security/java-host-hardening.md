@@ -1,22 +1,22 @@
-# 0.48.11 Java Host security hardening and acceptance boundaries
+# 0.48.11 — усиление защиты Java Host и границы приёмки
 
-Java Host runs as an OS process but **does not acquire kernel filesystem/network isolation** from `URLClassLoader`, `-Xmx`, or an authenticated loopback RPC token. Never label a legacy JVM launch as `os-isolated`.
+Java Host работает как процесс ОС, однако `URLClassLoader`, `-Xmx` и аутентифицированный RPC-токен loopback **не создают изоляцию файловой системы или сети средствами ядра**. Никогда не помечайте обычный запуск JVM как `os-isolated`.
 
-Implemented in the actual Java Host and Java CLI startup paths:
+Фактически реализовано в Java Host и путях запуска Java CLI:
 
-- Java executable selected via absolute verified path; PATH-based selection resolves the JDK alternatives symlink and verifies the resulting file.
-- Heap/metaspace/direct memory/code cache limits, attach disabled, core dumps disabled, unchanged Go RSS and process count monitor. The process tree monitor runs periodically and is not a hard kernel memory cgroup limit.
-- Per-instance temporary directory (0700) for Java user home, caches and temp files, removed when a persistent JVM exits or transient CLI completes. This does not prevent direct reads of other paths by a JVM running under the same OS user.
-- `secret.get` rejects JVM callers. Only OS-confined trusted brokers should handle opaque credentials; do not send raw secrets to legacy JVM.
-- Authenticated Java clients receive existing per-instance host request limits (rate, concurrent requests, output budget). Host/CLI logs mask the live host/callback bearer credentials and key-labeled secret fields; **arbitrary extension-supplied values cannot be proven secret-free**.
-- Existing outbound HTTP broker pins DNS results to an approved public IP, forbids private/special-use addresses, verifies TLS and disables redirects. **Unconfined Java code can bypass the broker through its own sockets.**
-- An extension requesting `sandbox.mode=isolated` with a JVM backend is rejected before exec because authenticated reverse callbacks across the current native sandbox boundary are not implemented. There is no insecure fallback to ordinary Java.
+- Исполняемый файл Java выбирается по проверенному абсолютному пути. При выборе через PATH ссылка на альтернативную JDK разрешается, после чего проверяется конечный файл.
+- Ограничиваются heap, metaspace, прямая память и кеш кода; attach и дампы памяти ядра отключены. Сохранён монитор Go по RSS и количеству процессов. Периодическая проверка дерева процессов не равнозначна строгому ограничению памяти cgroup на уровне ядра.
+- Для каждого экземпляра создаётся отдельный временный каталог (0700) под пользовательский каталог Java, кеши и временные файлы. Он удаляется после завершения постоянной JVM или временного CLI. Это не мешает JVM под той же учётной записью ОС непосредственно читать другие пути.
+- `secret.get` отклоняет вызовы из JVM. Непрозрачные учётные данные должны обрабатывать только доверенные брокеры, изолированные средствами ОС; не передавайте необработанные секреты в обычную JVM.
+- Аутентифицированные клиенты Java получают действующие ограничения запросов к Host на экземпляр: частоту, параллельные запросы и объём вывода. Журналы Host/CLI маскируют действующие Bearer-токены Host и обратных вызовов, а также поля секретов по именам ключей. **Невозможно доказать отсутствие секретов в произвольных значениях, предоставленных расширением**.
+- Существующий исходящий HTTP-брокер закрепляет DNS-результаты за разрешённым публичным IP, запрещает частные и специальные адреса, проверяет TLS и отключает перенаправления. **Java-код без изоляции может обойти брокер собственными сокетами.**
+- Расширение с целью JVM и запросом `sandbox.mode=isolated` отклоняется до `exec`: аутентифицированные обратные вызовы через текущую границу нативной изоляции пока не реализованы. Небезопасного отката к обычной Java нет.
 
-## Release acceptance
+## Приёмка перед выпуском
 
-1. Java 17 and 21: compile and run SDK, launch actual Host JAR and CLI, verify scratch and resource constraints, reject raw secrets and test revocation/quotas.
-2. Linux amd64/arm64: run existing cgroup2/userns/seccomp native sandbox adversarial tests in a delegated unprivileged service identity. Check JVM `isolated` fail-closed. Do not mark Java as kernel-isolated.
-3. Windows x64 and macOS ARM64/x64: run their native AppContainer and signed App Sandbox helper tests on real OS runners with required privileges/signatures; verify JVM `isolated` fail-closed, process stop/cleanup and network denial for genuinely confined **native** processes.
-4. Run full Go 1.27.3 race and HTTP integration suites, Java Host subprocess regression, production signed-payload release gates, PostgreSQL + Minecraft integration and independent operator acceptance. A green Java SDK suite alone is insufficient.
+1. Java 17 и 21: соберите и запустите SDK, настоящий JAR Host и CLI; проверьте временное хранилище и ограничения ресурсов, отклонение необработанных секретов, отзыв разрешений и квоты.
+2. Linux amd64/arm64: под делегированной непривилегированной служебной учётной записью выполните существующие атакующие тесты нативной изоляции cgroup2/userns/seccomp. Проверьте, что `isolated` для JVM запрещается при ошибке. Не заявляйте изоляцию Java средствами ядра.
+3. Windows x64 и macOS ARM64/x64: выполните нативные тесты AppContainer и подписанного помощника App Sandbox на настоящих исполнителях с необходимыми привилегиями и подписями. Проверьте отклонение `isolated` для JVM, остановку/очистку процессов и запрет сети для действительно изолированных **нативных** процессов.
+4. Запустите полный набор тестов Go 1.27.3 с детектором гонок и HTTP-интеграцией, регрессию подпроцесса Java Host, проверки выпуска подписанных пакетов, интеграцию PostgreSQL + Minecraft и независимую приёмку оператором. Одних успешных тестов Java SDK недостаточно.
 
-Until a dedicated Java reverse IPC broker inside OS sandbox is implemented and certified separately on each OS, this release provides **JVM defense in depth**, not secure confinement of arbitrary untrusted Java code. Do not run untrusted Java extensions with backend privileges.
+Пока отдельный обратный IPC-брокер Java внутри песочницы ОС не будет реализован и независимо сертифицирован на каждой ОС, версия обеспечивает **многоуровневую защиту JVM**, но не безопасное ограничение произвольного недоверенного Java-кода. Не запускайте недоверенные Java-расширения с привилегиями Backend.

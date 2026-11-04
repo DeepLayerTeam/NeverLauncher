@@ -1,4 +1,4 @@
-name: Operations and Delivery GA 0.46.0 gates
+name: Эксплуатация и поставка GA 0.46.0 — контроль допуска
 on:
   push:
     paths:

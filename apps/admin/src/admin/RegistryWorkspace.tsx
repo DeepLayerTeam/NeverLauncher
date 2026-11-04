@@ -524,7 +524,7 @@ export function RegistryWorkspace({
             install повторно проверяет bytes и signature из storage.
           </p>
         </div>
-        <span className="badge ok">verified-only install</span>
+        <span className="badge ok">установка только проверенных пакетов</span>
       </div>
       {lastOperation && (
         <article className="subcard" role="status">
@@ -554,8 +554,8 @@ export function RegistryWorkspace({
             setExtensionScope(event.target.value as "global" | "project")
           }
         >
-          <option value="global">global</option>
-          <option value="project">project</option>
+          <option value="global">глобально</option>
+          <option value="project">проект</option>
         </select>
         {extensionScope === "project" && (
           <input
@@ -595,7 +595,7 @@ export function RegistryWorkspace({
           placeholder="Версия лаунчера"
         />
         <input
-          aria-label="Registry OS"
+          aria-label="ОС реестра"
           value={registryOS}
           onChange={(event) => setRegistryOS(event.target.value)}
           placeholder="OS: linux"
@@ -604,7 +604,7 @@ export function RegistryWorkspace({
           aria-label="Архитектура реестра"
           value={registryArch}
           onChange={(event) => setRegistryArch(event.target.value)}
-          placeholder="arch: amd64"
+          placeholder="архитектура: amd64"
         />
         <button
           onClick={() =>
@@ -616,9 +616,9 @@ export function RegistryWorkspace({
       </div>
       <div className="formGrid">
         <article className="subcard">
-          <h3>Publisher trust</h3>
+          <h3>Доверие к издателю</h3>
           <TextInput
-            label="Publisher ID"
+            label="ID издателя"
             value={registryPublisherId}
             onChange={setRegistryPublisherId}
           />
@@ -628,7 +628,7 @@ export function RegistryWorkspace({
             onChange={setRegistryPublisherName}
           />
           <label className="field">
-            <span>Ed25519 raw public key, Base64</span>
+            <span>Открытый ключ Ed25519 без упаковки, Base64</span>
             <textarea
               value={registryPublicKey}
               onChange={(event) => setRegistryPublicKey(event.target.value)}
@@ -659,9 +659,9 @@ export function RegistryWorkspace({
           </div>
         </article>
         <article className="subcard">
-          <h3>Publish signed .nlext</h3>
+          <h3>Опубликовать подписанный .nlext</h3>
           <label className="field">
-            <span>Artifact</span>
+            <span>Артефакт</span>
             <input
               accept=".nlext,application/octet-stream"
               type="file"
@@ -739,7 +739,7 @@ export function RegistryWorkspace({
                       {channel}
                     </span>
                   ))}
-                  {item.yankedAt && <span className="badge warn">yanked</span>}
+                  {item.yankedAt && <span className="badge warn">отозвано</span>}
                 </div>
               </div>
               <p>{item.manifest?.description || "Без описания"}</p>
@@ -812,7 +812,7 @@ export function RegistryWorkspace({
       </section>
       <section className="registryResults">
         <div className="registryHeading">
-          <h3>Install Lifecycle</h3>
+          <h3>Жизненный цикл установки</h3>
           <span className="muted">{extensionInstalls.length} installs</span>
         </div>
         <p className="muted" role="status">

@@ -1,4 +1,4 @@
-# 0.31.11 — Windows AppContainer and Job Objects
+# 0.31.11 — Windows AppContainer и объекты заданий
 
 This release integrates the existing signed `sandbox.mode=isolated` policy into **native Windows process creation**, rather than labelling a normal process as isolated.
 

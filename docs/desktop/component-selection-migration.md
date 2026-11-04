@@ -1,25 +1,25 @@
-# сохранение и миграция выбора компонентов (0.24.10)
+# Сохранение и миграция выбора компонентов (0.24.10)
 
-## использование
+## Использование
 
-1. Install a signed component selection in **Desktop → Profile and components**. The chosen preset/overrides are written to DesktopConfig only **after** Runtime commits and verifies the resolved download plan.
-2. Load a later signed manifest of the same project, profile and channel. Desktop does **not** discard an old preset just because it was removed from the catalog. Open **Profile and components → Transfer and selection backup**. A native migration preview reads the verified installed release pointer, expands the old selected component IDs, and resolves them against the new signed catalog.
-3. Review preserved IDs, disappeared IDs, added dependencies, changed preset, managed-file removal and maximum download size. Explicitly confirm the proposed configuration. The existing transactional downloader verifies SHA-256 and managed ownership, and settings are saved only after successful installation.
-4. Use **Export installed selection to JSON** to save a selection profile. The generated JSON remains visible in Desktop if the platform's file download handler is unavailable. Use **Import from JSON file** or paste JSON to preview, then confirm installation.
-5. **Rollback to last-known-good** restores the verified previous release and its original component selection. Desktop reloads its signed manifest and updates DesktopConfig only after validating the active pointer and selected files. Published releases with positive `gameReleaseGeneration` still require a newly authorized generation to roll back.
+1. Установите подписанный набор компонентов через **Desktop → Профиль и компоненты**. Выбранный пресет и переопределения записываются в DesktopConfig **только после** фиксации и проверки разрешённого плана загрузки в Runtime.
+2. Загрузите более поздний подписанный манифест того же проекта, профиля и канала. Desktop **не** отбрасывает старый пресет только потому, что его больше нет в каталоге. Откройте **Профиль и компоненты → Перенос и резервная копия выбора**. Нативный предварительный просмотр миграции читает указатель проверенного установленного релиза, разворачивает прежние выбранные ID компонентов и сопоставляет их с новым подписанным каталогом.
+3. Проверьте сохранённые и исчезнувшие ID, новые зависимости, изменённый пресет, удаляемые управляемые файлы и максимальный объём загрузки. Явно подтвердите предложенную конфигурацию. Существующий транзакционный загрузчик проверяет SHA-256 и владение управляемыми файлами; настройки сохраняются только после успешной установки.
+4. Используйте **Экспорт установленного выбора в JSON** для сохранения профиля. Сформированный JSON остаётся видимым в Desktop, если системный обработчик скачивания недоступен. Выберите **Импорт из JSON-файла** или вставьте JSON, просмотрите результат и подтвердите установку.
+5. **Откат к последней проверенной исправной версии** восстанавливает прежний проверенный релиз и исходный выбор компонентов. Desktop заново загружает подписанный манифест и обновляет DesktopConfig лишь после проверки активного указателя и выбранных файлов. Для опубликованных релизов с положительным `gameReleaseGeneration` при откате всё равно требуется вновь авторизованное поколение.
 
-## переносимый JSON выбора
+## Переносимый JSON выбора
 
-`schemaVersion: "1.0"`, `projectId`, `profileId`, `channel`, `sourceVersion`, `sourceCatalogDigest`, `sourcePreset`, and `selectedIds` (stable signed component IDs). Source version/digest are informational, **not proof** that an imported selection was signed: import is an untrusted user preference. It contains no URLs, paths, JVM arguments, executable actions or authentication material. Import rejects unknown fields, duplicate IDs, malformed names, files larger than 1 MiB, and cross-profile/channel imports. Runtime verifies the **target** manifest with the pinned Ed25519 key before resolving any imported ID.
+Поля: `schemaVersion: "1.0"`, `projectId`, `profileId`, `channel`, `sourceVersion`, `sourceCatalogDigest`, `sourcePreset` и `selectedIds` (стабильные ID подписанных компонентов). Версия и хеш источника информативны, но **не доказывают**, что импортированный выбор был подписан: импорт — недоверенные предпочтения пользователя. JSON не содержит URL, путей, аргументов JVM, исполняемых действий или материалов аутентификации. Импорт отклоняет неизвестные поля, повторяющиеся ID, некорректные имена, файлы больше 1 МиБ и данные другого профиля/канала. Перед разрешением любого импортированного ID Runtime проверяет **целевой** манифест по закреплённому ключу Ed25519.
 
-New dependencies and mandatory components are resolved by the same native resolver as installation; incompatible conditions or signed conflicts return blockers and cannot be installed. Missing old components are reported and do not authorize deletion of user-owned files. No operation directly modifies `.minecraft` outside the existing signed managed-ownership transaction.
+Новые зависимости и обязательные компоненты определяются тем же нативным обработчиком, что и при установке. Несовместимые условия или подписанные конфликты дают блокирующие причины и не допускаются к установке. Отсутствующие старые компоненты отражаются в отчёте и не разрешают удалять файлы пользователя. Никакая операция не изменяет `.minecraft` напрямую вне существующей подписанной транзакции управления файлами.
 
-## реализация и проверка
+## Реализация и проверка
 
-- `runtime/runtime/src/component_selection_02410.rs`: strict portable JSON, migration, signed-ID reconciliation, native tests.
-- `runtime/runtime/src/transactional_release.rs`: verified active selection extraction under release lock, reuses existing journal recovery and installed-byte verification.
-- `apps/desktop/src-tauri/src/main.rs`: native export/import/migration and active snapshot commands; Ed25519 trust boundary.
-- `apps/desktop/src/ComponentPortability02410.tsx`: file import/export, proposed selection, resolved diff, explicit confirmation.
-- `apps/desktop/src/main.tsx`: preserves previous preference across manifest refreshes, synchronizes DesktopConfig after rollback.
+- `runtime/runtime/src/component_selection_02410.rs`: строгий переносимый JSON, миграция, согласование подписанных ID, нативные тесты.
+- `runtime/runtime/src/transactional_release.rs`: получение проверенного активного выбора под блокировкой релиза с повторным использованием восстановления по журналу и проверки установленных байтов.
+- `apps/desktop/src-tauri/src/main.rs`: нативные команды экспорта/импорта/миграции и снимка активного релиза; граница доверия Ed25519.
+- `apps/desktop/src/ComponentPortability02410.tsx`: импорт/экспорт файлов, предложенный выбор, разрешённые различия, явное подтверждение.
+- `apps/desktop/src/main.tsx`: сохранение прежних предпочтений при обновлении манифеста и синхронизация DesktopConfig после отката.
 
-Run `cargo test --manifest-path runtime/runtime/Cargo.toml component_selection_02410` and `npm --prefix apps/desktop run build` with the project dependencies installed. Full Minecraft integration should exercise `old selection → new signed release → migrate → install → launch → rollback`, including simulated failure and user-owned file collisions.
+Запустите `cargo test --manifest-path runtime/runtime/Cargo.toml component_selection_02410` и `npm --prefix apps/desktop run build` с установленными зависимостями проекта. Полная интеграция Minecraft должна охватывать последовательность `old selection → new signed release → migrate → install → launch → rollback`, включая имитируемый отказ и конфликты с файлами пользователя.

@@ -1,4 +1,4 @@
-# Launcher 0.26.5 — Native Microsoft → Xbox Live → XSTS → Minecraft
+# Launcher 0.26.5 — нативная авторизация Microsoft → Xbox Live → XSTS → Minecraft
 
 This release moves the **token exchange itself** from the Go Backend into the trusted Rust/Tauri Desktop process. It is a functional implementation; **external Minecraft Services approval and live game-server entry are not claimed**.
 

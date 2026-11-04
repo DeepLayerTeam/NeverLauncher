@@ -1,19 +1,16 @@
-# 0.32.1 — SQLite Driver, WAL, durable commits (DEP00)
+# 0.32.1 — драйвер SQLite, WAL и долговременная фиксация транзакций (DEP00)
 
-**Scope:** A physically durable SQLite transactional component and preflight command.
-This is **not** a Launcher SQLite application backend. Do not set
-`LAUNCHER_REPOSITORY_DRIVER=sqlite` in production until DEP01–DEP03 parity
-has been implemented, tested, and reviewed. The HTTP API continues to require PostgreSQL.
+**Область применения:** физически устойчивый компонент транзакций SQLite и команда предварительной проверки. Это **не** реализация SQLite в качестве основного хранилища приложения Launcher. Не устанавливайте `LAUNCHER_REPOSITORY_DRIVER=sqlite` в производственной среде, пока совместимость DEP01–DEP03 не реализована, проверена и принята. HTTP API по-прежнему требует PostgreSQL.
 
-## Pinned build inputs
+## Закреплённые входные данные сборки
 
-- Go toolchain: **1.27.3** (backend Docker build stage).
-- `modernc.org/sqlite` **v1.61.0**; compiled-in SQLite **3.54.1**.
-- `modernc.org/libc` **v1.79.0** (same as the driver upstream go.mod).
-- Supported SQLite host for DEP00: **Linux with local ext4, XFS, or Btrfs**, effective user owns private `0700` DB directory. All other mounts including NFS/CIFS, overlay, tmpfs and foreign OSes fail closed until certified.
-- The local database is private (0600), parents must contain no symlinks, and single-owner fencing uses a persistent `.owner.lock` flock file. Do not unlink the lock file while the store runs. A second process is refused while the lock inode and path remain unchanged; do not rename or replace the database directory while a backend is running.
+- Инструментарий Go: **1.27.3** (этап сборки backend в Docker).
+- `modernc.org/sqlite` **v1.61.0**; встроенная SQLite **3.54.1**.
+- `modernc.org/libc` **v1.79.0** (совпадает с зависимостью из исходного go.mod драйвера).
+- Поддерживаемая среда DEP00: **Linux с локальными ext4, XFS либо Btrfs**; действующий пользователь владеет закрытым каталогом БД с режимом `0700`. Все другие файловые системы, включая NFS/CIFS, overlay, tmpfs и чужие ОС, отклоняются до сертификации.
+- Файл БД закрыт (`0600`), родительские каталоги не должны содержать символьных ссылок. Для исключительного владения используется постоянный файл блокировки `.owner.lock` через flock. Не удаляйте этот файл при работающем хранилище. Второй процесс отклоняется, пока inode и путь блокировки неизменны; не переименовывайте и не подменяйте каталог БД во время работы backend.
 
-## сборка/проверка
+## Сборка и проверка
 
 ```sh
 cd services/api
@@ -27,24 +24,11 @@ chmod 0700 /var/lib/launcher/sqlite
 ./launcher-sqlite verify --db /var/lib/launcher/sqlite/state.db
 ```
 
-The probe actually creates a test table, commits a nonce challenge, closes and
-reopens the database, reads the committed data from a new connection, removes
-the challenge, and queries WAL checkpoint progress. It does not verify that
-kernel, disk-controller, and physical storage all honor flush barriers. This
-requires a certified deployment environment and crash/power-loss testing.
+Команда `probe` действительно создаёт пробную таблицу, фиксирует проверочное значение nonce, закрывает и заново открывает БД, читает зафиксированные данные из нового подключения, удаляет проверочное значение и запрашивает прогресс контрольной точки WAL. Она не проверяет соблюдение барьеров сброса данных ядром, контроллером диска и физическим накопителем. Для этого необходимы сертифицированная среда развертывания и испытания при сбоях питания.
 
-## Guarantees and caveats
+## Гарантии и оговорки
 
-- Both reader and writer PRAGMAs are installed via driver DSNs on every physical
-  connection. A successful writer opening verifies WAL, FK enforcement, FULL
-  synchronization, timeout, trusted schema, engine version and compile options.
-- `Write` uses `BEGIN IMMEDIATE`, one writer connection, context-aware statements,
-  rollback with a fresh timeout on callback errors/cancellation, and successful
-  `COMMIT` as the only success path. Unknown commit outcome is explicitly returned
-  as `ErrCommitUnknown` (caller must reconcile using immutable operation ID).
-- Busy timeout is bounded at 1ms–60s. Bounded read connections, checkpoint
-  progress, and lock contention can be observed without in-memory success
-  fallbacks. `Checkpoint` is not a backup.
-- This component has no business-domain tables, no auth/session replay logic, no
-  durable coordinator, no online backup and no SQLite-to-PostgreSQL migration.
-  These are separate DEP01–DEP10 deliverables.
+- PRAGMA для чтения и записи задаются через DSN драйвера для каждого физического подключения. При открытии соединения на запись проверяются WAL, внешние ключи, полная синхронизация, таймаут, доверенность схемы, версия движка и параметры компиляции.
+- `Write` использует `BEGIN IMMEDIATE`, одно соединение записи, выражения с учётом контекста, откат с новым таймаутом при ошибке или отмене callback и успешный `COMMIT` как единственный путь успешного завершения. Неопределённый результат фиксации явно возвращается как `ErrCommitUnknown`; вызывающая сторона обязана сверить состояние по неизменному идентификатору операции.
+- Время ожидания блокировки ограничено диапазоном от 1 мс до 60 с. Количество читающих соединений, прогресс контрольной точки и конкуренция за блокировки наблюдаемы без ложного подтверждения через оперативную память. `Checkpoint` не является резервной копией.
+- Компонент не содержит предметных таблиц, повторного воспроизведения авторизации/сессий, устойчивого координатора, резервного копирования без остановки или миграции SQLite → PostgreSQL. Это отдельные задачи DEP01–DEP10.

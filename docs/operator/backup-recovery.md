@@ -61,7 +61,7 @@ sudo python3 scripts/operations/dr_03512.py restore-fresh \
 
 Проверьте прямую готовность восстановленного контейнера, затем публичный URL, старого владельца и blobs. [Ограничения](../releases/0.45.3-standard-backup-restore.md).
 
-## Network-HA: worlds, PostgreSQL, S3 и fencing
+## Network-HA: миры, PostgreSQL, S3 и fencing
 
 Остановите Minecraft JVM/сохраните миры через [механизм world-backup](../servers/serverbridge-world-backup.md), затем прекратите всех API/workers и внешних writers. Используйте `dr_03512.py backup --network-ha` с действительным S3 bucket и повторяемыми `--world-backup name=/absolute/backup-id`; проверяйте снимок штатной командой `verify`. Для восстановления используйте **новый** S3 bucket, новые пустые volumes и `--world-destination name=/absolute/fresh/server-root` для каждого сохранённого мира. Подробная последовательность и обязательные аргументы даны в [Network-HA Recovery](../releases/0.45.4-network-ha-recovery.md).
 

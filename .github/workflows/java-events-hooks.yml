@@ -1,4 +1,4 @@
-name: Java Advanced Events 0.48.7
+name: Расширенные события Java 0.48.7
 on:
   push:
     paths:

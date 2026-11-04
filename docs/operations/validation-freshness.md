@@ -1,12 +1,12 @@
 > **0.34.7 compatibility:** V07 requires ValidationEvidence v4 and the explicit `authenticationMode` target field. The v3 procedure below is historical; follow [live-authentication.md](live-authentication.md) for new trusted runs. Older evidence never satisfies the new required authentication stage.
 
-# 0.34.6 — live V05 evidence applicability, expiry and emergency key revocation
+# 0.34.6 — применимость действующих подтверждений V05, истечение срока и аварийный отзыв ключей
 
 This upgrade **does not** open stable: the 0.34.1 database/Backend stable gate
 remains in effect. It implements actual verification, rejection and revocation
 of attestation evidence for staged releases, and reports required-target coverage.
 
-## Before starting an attestor
+## Перед запуском службы аттестации
 
 1. Apply PostgreSQL migration `0104_validation_freshness_0346.sql` (also mirrored
    to the CLI migration bundle). Ensure all API instances use the same DB.
@@ -47,7 +47,7 @@ confer an all-passed verdict.
 stored attestations. `allRequiredTargetsVerified` is deliberately separate from
 `stablePublishEligible` (still `false`).
 
-## Emergency signing-key revocation
+## Аварийный отзыв ключа подписи
 
 Authenticate with `settings:manage` and fresh MFA, then POST:
 
@@ -64,7 +64,7 @@ read consults that store and fails closed if unavailable. A key cannot be
 unrevoked by the API. Rotating the configured trusted public key immediately
 invalidates previous evidence even without explicit revocation.
 
-## Invalidation and concurrency
+## Признание недействительным и конкурентность
 
 - Changing manifest/files means a different staged snapshot: no reuse.
 - Changing Java binary/version, preset, install adapter, source/build, loader,
@@ -79,7 +79,7 @@ invalidates previous evidence even without explicit revocation.
   the separate V11 implementation replaces them atomically. No currently
   allowed stable publication race exists.
 
-## Compatibility and rollout
+## Совместимость и развёртывание
 
 ValidationEvidence v2 is **not** accepted as v3 and does not satisfy V05 target
 coverage. The attestation host and Backend must be upgraded together. V01/V02

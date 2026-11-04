@@ -32,16 +32,16 @@ export function ValidationHistory03412({api,packageId}:Props) {
     finally{setBusy(false)}
   }
   if (!packageId) return null;
-  return <section className="subcard" aria-label="Validation V12 audit trail">
+  return <section className="subcard" aria-label="Журнал аудита проверок V12">
     <h3>Runtime validation · журнал V12</h3>
     <div className="buttonRow"><button disabled={busy} onClick={()=>void load(0)}>Обновить аудит</button></div>
     {error && <p role="alert" className="error">{error}</p>}
     {report && <>
-      <p><strong>Policy:</strong> {report.policy.requiredLevel}; stable: {report.coverage.stablePublishEligible?'подтверждено':'заблокировано'}; targets: {report.coverage.verified}/{report.coverage.required}.</p>
+      <p><strong>Политика:</strong> {report.policy.requiredLevel}; stable: {report.coverage.stablePublishEligible?'подтверждено':'заблокировано'}; targets: {report.coverage.verified}/{report.coverage.required}.</p>
       <p className="muted">Доказательства проверяются Backend при каждом запросе. Административная отметка certified не предусмотрена.</p>
       {Object.keys(report.coverage.targetBlockers).length>0 && <details open><summary>Причины блокировки ({Object.keys(report.coverage.targetBlockers).length})</summary><ul>{Object.entries(report.coverage.targetBlockers).map(([target,reason])=><li key={target}><code>{target}</code>: {reason}</li>)}</ul></details>}
       <details open><summary>Попытки и решения ({events.length}{report.hasMore?' +':''})</summary>
-        {events.length===0?<p>Попыток не обнаружено.</p>:<table><thead><tr><th>Время</th><th>Событие</th><th>Результат</th><th>Причина</th><th>Run / SHA-256</th></tr></thead><tbody>
+        {events.length===0?<p>Попыток не обнаружено.</p>:<table><thead><tr><th>Время</th><th>Событие</th><th>Результат</th><th>Причина</th><th>Запуск / SHA-256</th></tr></thead><tbody>
         {events.map(ev=><tr key={ev.id}><td>{readableTime(ev.createdAt)}</td><td>{ev.kind}</td><td>{ev.outcome}</td><td>{ev.reasonCode}</td><td>{ev.runId?<button disabled={busy} onClick={()=>void drill(ev.runId)}>{ev.runId}</button>:'—'}<p><code title={ev.payloadSha256}>{ev.payloadSha256.slice(0,20)}…</code></p></td></tr>)}
         </tbody></table>}
         {next>0 && <button disabled={busy} onClick={()=>void load(next)}>Загрузить предыдущие события</button>}
@@ -52,7 +52,7 @@ export function ValidationHistory03412({api,packageId}:Props) {
         {selected.evidence.map(ev=><p key={ev.runId}>Evidence: {ev.status} · SHA-256 <code>{ev.evidenceSha256}</code> · expires {readableTime(ev.expiresAt)}</p>)}
       </section>}
       <details><summary>Запуски и стадии ({report.runs.length})</summary>
-        {report.runs.map(run=><article key={run.runId} className="subcard"><strong>Run <code>{run.runId}</code></strong> · {readableTime(run.receivedAt)} · observation (не сертификат)
+        {report.runs.map(run=><article key={run.runId} className="subcard"><strong>Запуск <code>{run.runId}</code></strong> · {readableTime(run.receivedAt)} · observation (не сертификат)
           <ul>{Object.entries(run.stages).map(([name,stage])=><li key={name}><strong>{name}</strong>: {stage.status} {stage.detail&&<span>· {stage.detail}</span>} {stage.evidenceSha256&&<code title={stage.evidenceSha256}> · SHA {stage.evidenceSha256.slice(0,16)}…</code>}</li>)}</ul>
         </article>)}
       </details>

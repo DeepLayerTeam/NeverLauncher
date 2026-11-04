@@ -1,51 +1,19 @@
-# 0.21.11 Config & Audit — operational usage
+# 0.21.11 Конфигурация и аудит — эксплуатация
 
-## настройка в рабочей системе
+## Настройка в рабочей системе
 
-`Admin → Конфигурация` is available only to global `settings:manage`. The editor
-contains **six explicitly whitelisted, non-secret settings** (audit and jobs API
-pagination, default audit query lookback and audit search client detail exposure).
-These values are read from the shared PostgreSQL store on each request, so all API
-replicas observe the latest committed revision without a process restart. No
-application secret, auth configuration, signing key, CORS, network, storage or
-database connection parameter is editable in Admin.
+Раздел `Admin → Конфигурация` доступен только пользователям с глобальным разрешением `settings:manage`. Редактор содержит **шесть явно разрешённых несекретных настроек**: постраничную выдачу API аудита и заданий, стандартную глубину поиска в журнале и степень раскрытия сведений о клиенте в результатах поиска. Настройки считываются из общего хранилища PostgreSQL при каждом запросе. Поэтому все реплики API получают последнюю зафиксированную ревизию без перезапуска процессов. Секреты приложения, параметры аутентификации, ключи подписи, CORS, сеть, хранилище и параметры подключения к БД в Admin не редактируются.
 
-Each `PUT /api/v1/admin/config` requires live authorization, recent MFA,
-`expectedRevision`, full typed `settings`, and human-readable `reason`. Use
-`POST /api/v1/admin/config/validate` before applying. The server computes the
-diff and validates bounds. The actual update is guarded by PostgreSQL CAS; a
-409 `revision_conflict` indicates that a different session already committed a
-new revision. Refresh, review the diff, and validate again. Do not silently
-retry a stale update. Restore via `POST /api/v1/admin/config/restore` with the
-target `restoreRevision`; it creates a new revision instead of deleting history.
-The UI requires a matching textual confirmation and MFA for applying/restoring.
+Каждый `PUT /api/v1/admin/config` требует действующей авторизации, недавнего подтверждения MFA, поля `expectedRevision`, полного типизированного объекта `settings` и понятного человеку объяснения `reason`. Перед применением используйте `POST /api/v1/admin/config/validate`. Сервер вычисляет различия и проверяет допустимые диапазоны. Изменение защищено атомарным сравнением и заменой (CAS) в PostgreSQL. Ответ 409 `revision_conflict` означает, что другая сессия уже зафиксировала новую ревизию. Обновите данные, изучите различия и повторно выполните проверку. Не повторяйте автоматически запись с устаревшей ревизией. Для восстановления вызовите `POST /api/v1/admin/config/restore` с требуемой `restoreRevision`: будет создана новая ревизия, история не удаляется. При применении и восстановлении интерфейс требует соответствующее текстовое подтверждение и MFA.
 
-Database migration: `0055_config_audit_02111.sql` seeds revision 1 and indexes
-audit correlations. Deployment must apply migrations before sending traffic.
-The history API returns the latest 50 revisions; restoring a target more than
-100 revisions old requires operational handling rather than bypassing the CAS.
+Миграция БД `0055_config_audit_02111.sql` создаёт начальную ревизию 1 и индексы корреляции аудита. Миграции должны применяться до приёма пользовательских запросов. API истории возвращает последние 50 ревизий; восстановление конфигурации старше 100 ревизий требует отдельной эксплуатационной процедуры, а не обхода CAS.
 
-## поиск в журнале аудита
+## Поиск в журнале аудита
 
-`GET /api/v1/admin/audit` requires global `audit:read`. Backend filtering includes
-`search`, `actor`, `action`, `target`, `correlationId`, `reasonCode`, `jobId`,
-`from`, `to`, `limit` and `offset`; result includes `items`, `total`, `limit`, and
-`offset`. Without `from`, `auditLookbackDays` determines the default range.
-`limit` is bounded by `auditMaxPageSize` and `offset` by 100000. The search
-queries the PostgreSQL audit table, not an in-browser copy of its most recent
-500 entries. Correlation IDs are server-generated (`X-Correlation-ID` response
-header), not accepted as arbitrary caller authority. Authorization failures
-made by global and project middleware emit `authorization:denied` audit entries
-with `insufficient_permissions` reason. Events with a known job ID link to the
-Job Monitor. Existing events predating this migration do not gain retroactive
-correlation/reason metadata.
+`GET /api/v1/admin/audit` требует глобального разрешения `audit:read`. Сервер фильтрует по `search`, `actor`, `action`, `target`, `correlationId`, `reasonCode`, `jobId`, `from`, `to`, `limit` и `offset`; результат содержит `items`, `total`, `limit` и `offset`. Если `from` не указан, стандартный период задаёт `auditLookbackDays`. Предел `limit` определяется `auditMaxPageSize`, а `offset` ограничен 100000. Поиск обращается к таблице аудита PostgreSQL, а не к браузерной копии последних 500 записей. Идентификаторы корреляции создаются сервером (заголовок ответа `X-Correlation-ID`) и не принимаются как произвольное удостоверение вызывающей стороны. Ошибки глобального и проектного middleware авторизации создают записи `authorization:denied` с причиной `insufficient_permissions`. События с известным идентификатором задания содержат ссылку на монитор заданий. Старые записи, созданные до этой миграции, не получают метаданные корреляции и причин задним числом.
 
-Audit records do not establish exactly-once status for synchronous destructive
-operations. Inspect the target service's own state and job details before
-retrying. Export/other legacy audit consumers are separate interfaces.
+Журнал аудита не гарантирует семантику «ровно один раз» для синхронных разрушающих операций. Перед повторением действия проверяйте фактическое состояние целевого сервиса и сведения о задании. Экспорт и другие прежние потребители аудита используют отдельные интерфейсы.
 
-## оговорки
+## Оговорки
 
-Go integration and full production Admin builds must be exercised in an
-environment with the pinned Go and npm dependencies plus PostgreSQL. Do not
-interpret static checks as production certification.
+Интеграционные тесты Go и полноценную production-сборку Admin необходимо выполнять в окружении с закреплёнными зависимостями Go/npm и PostgreSQL. Статические проверки сами по себе не подтверждают готовность к эксплуатации.

@@ -1,4 +1,4 @@
-name: NeverGuard live-game enforcement 0.43.8
+name: NeverGuard 0.43.8 — защита на всём протяжении игры
 on:
   push:
     paths:

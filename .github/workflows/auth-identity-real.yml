@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.5 authentication and identity real acceptance
+name: NeverLauncher 0.52.5 — реальная приёмка аутентификации и идентичности
 on:
   push:
     paths:

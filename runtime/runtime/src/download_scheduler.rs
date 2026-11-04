@@ -1,6 +1,7 @@
-//! Bounded, host-aware streaming downloads for signed client manifests.
-//! Each queued file owns one worker slot; a host permit is acquired before spawning.
-//! HTTP bodies are never collected in memory and disk writes exert natural backpressure.
+//! Ограниченные потоковые загрузки по подписанным манифестам с учётом хоста.
+//! Каждому файлу очереди выделяется один слот обработчика; разрешение хоста
+//! захватывается до его запуска. Тело HTTP не накапливается в памяти,
+//! а запись на диск естественным образом создаёт обратное давление.
 use crate::{content_cache::{self, CacheStore}, file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
     DownloadResult, Manifest, ManifestFile};
 use serde::Serialize;
@@ -11,8 +12,9 @@ use std::{collections::{HashMap, VecDeque}, path::{Path, PathBuf}, sync::{Arc, M
 use tokio::{fs, sync::{OwnedSemaphorePermit, Semaphore, watch}, task::JoinSet};
 
 pub const DOWNLOAD_PROGRESS_EVENT: &str = "launcher-download-progress";
-// Cap aggregate transfers across concurrent Desktop/Repair invocations in this process.
-// The per-run scheduler may request stricter limits but cannot exceed these ceilings.
+// Ограничивайте суммарную передачу при параллельных вызовах Desktop/Repair
+// внутри процесса. Планировщик одного запуска вправе ужесточить ограничения,
+// но не может превышать общие пределы.
 const PROCESS_GLOBAL_LIMIT: usize = 6;
 const PROCESS_HOST_LIMIT: usize = 3;
 static PROCESS_SLOTS: OnceLock<Arc<Semaphore>> = OnceLock::new();
@@ -47,13 +49,13 @@ pub struct DownloadProgress {
     pub failed: usize,
     pub skipped: usize,
     pub bytes_expected: u64,
-    /// Wire bytes consumed, including invalid responses (not verified bytes).
+    /// Принятые сетевые байты, включая некорректные ответы (не проверенные данные).
     pub bytes_transferred: u64,
-    /// Bytes already verified against their signed SHA-256 (network or cache).
+    /// Байты, уже проверенные по подписанному SHA-256 (из сети или кеша).
     pub bytes_verified: u64,
-    /// Current-window measured incoming wire bytes per second; zero while stalled.
+    /// Входящие сетевые байты в секунду за текущее окно; при зависании — ноль.
     pub speed_bytes_per_second: u64,
-    /// Approximate time to finish staged downloads, never a promise about commit time.
+    /// Приблизительное время окончания загрузок, не обещание времени фиксации.
     pub eta_seconds: Option<u64>,
     pub elapsed_seconds: u64,
     pub cache_hits: usize,
@@ -94,8 +96,8 @@ struct Job {
     order: usize,
 }
 
-// Critical Minecraft metadata and executable dependencies should complete before bulk assets.
-// Stable within a priority band: manifest order is preserved.
+// Критичные метаданные Minecraft и исполняемые зависимости должны загружаться
+// раньше массовых ресурсов. Внутри одного приоритета сохраняется порядок манифеста.
 fn priority(file: &ManifestFile) -> u8 {
     if file.executable || file.path.starts_with("versions/") { 0 }
     else if file.path.starts_with("libraries/") || file.path.starts_with("natives/") { 1 }
@@ -137,7 +139,7 @@ struct Statistics {
 impl Statistics {
     fn emit(&self, phase: &str, path: Option<&str>, force: bool) {
         let Some(sink) = &self.sink else { return };
-        // Avoid emitting one Tauri event for every small network packet.
+        // Не создавайте отдельное событие Tauri для каждого небольшого сетевого пакета.
         let Ok(mut last) = self.last_emit.try_lock() else { return };
         if !force && last.elapsed() < Duration::from_millis(100) { return }
         let now = Instant::now();
@@ -160,9 +162,9 @@ impl Statistics {
             let active = metrics.in_flight.values().copied().fold(0u64, u64::saturating_add);
             (speed, active)
         };
-        // Retries and mirror failover are wire bytes, not new verified progress.
-        // Active bytes count only the current attempt for each file; both values
-        // remain bounded by the signed selection's expected size.
+        // Повторы и переключения зеркал учитываются как сетевой трафик,
+        // а не новый проверенный прогресс. Активные байты относятся лишь к текущей
+        // попытке каждого файла; обе величины ограничены подписанным ожидаемым размером.
         let remaining = self.expected.saturating_sub(verified.saturating_add(in_flight).min(self.expected));
         let eta = if matches!(phase, "downloading" | "retrying" | "starting") {
             eta_for_remaining(remaining, speed)
@@ -185,7 +187,7 @@ impl Statistics {
             bytes_reused: self.bytes_reused.load(Ordering::Relaxed),
             current_file: path.map(ToOwned::to_owned),
         };
-        // Do not hold the mutex while notifying clients.
+        // Не удерживайте мьютекс во время уведомления клиентов.
         drop(last);
         sink(snapshot);
     }
@@ -201,8 +203,9 @@ fn file_host(url: &str) -> Result<String, String> {
         parsed.port_or_known_default().unwrap_or(0)))
 }
 
-// The content lock is held through the entire operation, including mirrors and
-// publication, so two profiles cannot download the same SHA-256 concurrently.
+// Блокировка содержимого удерживается на всём протяжении операции,
+// включая зеркала и публикацию: два профиля не могут одновременно скачивать
+// один объект с одинаковым SHA-256.
 async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics,
     mut control: watch::Receiver<Directive>, initial_permits: (OwnedSemaphorePermit, OwnedSemaphorePermit),
     local_hosts: &HashMap<String, Arc<Semaphore>>,
@@ -225,8 +228,8 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
     for (source_index, source) in job.sources.iter().enumerate() {
         network_resilience::check(&control)?;
         if source_index != 0 {
-            // Release the old host's slots BEFORE waiting for a mirror's slots,
-            // to prevent deadlocks between two jobs failing over A->B and B->A.
+            // Освобождайте слоты старого хоста ДО ожидания слотов зеркала,
+            // чтобы не возникали взаимные блокировки заданий, переключающихся A->B и B->A.
             drop(permits.take());
             let local = Arc::clone(local_hosts.get(&source.host).ok_or("missing mirror host semaphore")?);
             let global_host = Arc::clone(process_hosts.get(&source.host).ok_or("missing process mirror host semaphore")?);
@@ -240,14 +243,15 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
             };
             permits = Some((local_slot, process_slot));
         }
-        // Resume metadata is bound to the exact URL. Switching mirrors safely
-        // discards a partial with a validator from another server (HTTP Resume v0.23.2).
+        // Метаданные возобновления привязаны к точному URL. При переключении
+        // зеркала безопасно отбрасывается частичный файл с валидатором другого сервера
+        // (HTTP Resume v0.23.2).
         let mut requested = job.file.clone();
         requested.url = source.url.clone();
         for attempt in 0..network_resilience::MAX_ATTEMPTS {
             network_resilience::check(&control)?;
-            // Each retry starts with a fresh progress contribution. Never treat
-            // repeated or invalid network bytes as installed bytes.
+            // При каждом повторе прогресс учитывается заново. Никогда не считайте
+            // повторные или некорректные сетевые байты установленными данными.
             stats.metrics.lock().expect("download metrics lock poisoned")
                 .in_flight.insert(job.file.path.clone(), 0);
             let outcome = crate::http_resume::download_verified_controlled(client, root, &requested,
@@ -261,8 +265,8 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
                 }, control.clone()).await;
             match outcome {
                 Ok(()) => {
-                    // Cache storage exhaustion should not turn a successfully
-                    // verified and installed client file into a failed download.
+                    // Исчерпание места в кеше не должно превращать успешно проверенный
+                    // и установленный файл клиента в неуспешную загрузку.
                     if lease.publish(&job.file, &job.target).await.is_err() {
                         stats.emit("cache-write-failed", Some(&job.file.path), true);
                     }
@@ -290,14 +294,16 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
     Err(format!("{}: all signed sources failed: {}", job.file.path, failures.join("; ")))
 }
 
-/// Stream only the missing/mismatched files using bounded workers. Errors are
-/// collected per file; an unhealthy mirror/file never cancels unrelated jobs.
-/// This is also the engine used by repair_client, not a separate downloader.
+/// Скачивайте потоком только отсутствующие или несовпадающие файлы,
+/// используя ограниченное число обработчиков. Ошибки учитываются по каждому
+/// файлу; неисправное зеркало/файл не отменяет остальные задания.
+/// Этот же механизм используется в repair_client, отдельного загрузчика нет.
 pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits,
                  sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
     run_with_store(manifest, root, limits, sink, operation_id, control, CacheStore::standard()?).await
 }
-// Execute a signed preset: only allowlisted manifest paths reach the scheduler.
+// Выполняйте подписанный пресет: в планировщик попадают только
+// разрешённые пути из манифеста.
 pub(crate) async fn run_selected(manifest:&Manifest,root:&Path,limits:DownloadLimits,
     sink:Option<ProgressSink>,operation_id:String,control:watch::Receiver<Directive>,
     selected:&std::collections::HashSet<String>)->Result<DownloadResult,String>{
@@ -312,8 +318,8 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
     let limits = limits.validate()?;
     let client = reqwest::Client::builder()
         .connect_timeout(network_resilience::CONNECT_TIMEOUT)
-        // Redirects could move a request to a different host after admitting a
-        // per-host slot. Never follow redirects implicitly.
+        // Перенаправление может перевести запрос на другой хост уже после выдачи
+        // слота исходного хоста. Никогда не переходите по редиректам автоматически.
         .redirect(reqwest::redirect::Policy::none())
         .pool_max_idle_per_host(limits.per_host)
         .build().map_err(|e| format!("download HTTP client: {e}"))?;
@@ -339,8 +345,8 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
         };
         if actual { result.skipped += 1; continue; }
         let urls = std::iter::once(&file.url).chain(file.mirrors.iter());
-        // Validate every source *before* starting any network work. Distinct
-        // URLs are kept in the signed priority order; duplicate URLs are ignored.
+        // Проверяйте каждый источник *до* начала любой сетевой операции.
+        // Уникальные URL сохраняют подписанный порядок приоритетов, дубликаты игнорируются.
         let mut sources = Vec::new();
         let mut seen = std::collections::HashSet::new();
         let mut invalid = None;
@@ -397,7 +403,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
     while !pending.is_empty() || !workers.is_empty() {
         if *control.borrow() != Directive::Running && workers.is_empty() { break; }
         while *control.borrow() == Directive::Running && workers.len() < limits.global && !pending.is_empty() {
-            // Do not block on the first saturated host while another host can run.
+            // Не блокируйте выполнение на первом перегруженном хосте, если доступен другой.
             let mut chosen: Option<(usize, OwnedSemaphorePermit, OwnedSemaphorePermit, OwnedSemaphorePermit)> = None;
             for (idx, job) in pending.iter().enumerate() {
                 let Some(local) = host_limits.get(&job.host) else { continue };
@@ -430,14 +436,14 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
             });
         }
         if workers.is_empty() && !pending.is_empty() {
-            // A different download invocation may currently hold all process-wide
-            // permits. Yield instead of hot-spinning with an empty JoinSet.
+            // Другой вызов скачивания может удерживать все общепроцессные разрешения.
+            // Освободите выполнение вместо активного ожидания с пустым JoinSet.
             tokio::time::sleep(Duration::from_millis(20)).await;
             continue;
         }
-        // A stalled HTTP body must not leave an obsolete nonzero speed/ETA on
-        // screen until the read timeout. Heartbeats re-evaluate the sliding
-        // window even when none of the active workers produces bytes.
+        // Зависшее тело HTTP не должно сохранять на экране устаревшие ненулевые
+        // скорость/ETA до тайм-аута чтения. Heartbeat пересчитывает скользящее окно,
+        // даже когда ни один активный обработчик не выдаёт байты.
         let outcome = tokio::time::timeout(Duration::from_secs(1), workers.join_next()).await;
         let outcome = match outcome {
             Ok(Some(outcome)) => outcome,
@@ -461,7 +467,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
                 },
                 Ok((path, _, Err(e))) if e == "download paused" || e == "download cancelled" => {
                     stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
-                    // The durable journal and all verified partials remain available.
+                    // Долговременный журнал и все проверенные частичные файлы сохраняются.
                 },
                 Ok((path, _, Err(e))) => {
                     stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
@@ -843,7 +849,7 @@ mod content_cache_mirror_integration_tests {
         assert_eq!(fs::read(first.join("libraries/common.jar")).await.unwrap(), trusted);
         assert_eq!(result.bytes_downloaded as usize, poisoned.len() + trusted.len());
 
-        // Simulate total network outage during a fresh profile installation.
+        // Имитируйте полный отказ сети при установке нового профиля.
         primary_server.abort();
         mirror_server.abort();
         let offline = run_with_store(&manifest, &second, DownloadLimits::default(), None,

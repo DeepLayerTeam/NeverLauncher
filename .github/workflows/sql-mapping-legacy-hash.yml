@@ -1,4 +1,4 @@
-name: SQL Mapping and Gravit Legacy Hash 0.29.4
+name: Сопоставление SQL и старые хеши Gravit 0.29.4
 on:
   push:
     paths:

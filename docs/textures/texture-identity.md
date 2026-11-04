@@ -1,4 +1,4 @@
-# Textures 0.25.1: canonical identity and revisioned selections
+# Текстуры 0.25.1 — каноническая идентичность и версии выбора
 
 ## область действия
 

@@ -1,4 +1,4 @@
-name: Official Minecraft Provider POC 0.26.1 (offline tests only)
+name: Прототип официального провайдера Minecraft 0.26.1 (только автономные тесты)
 
 on:
   pull_request:

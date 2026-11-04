@@ -300,7 +300,7 @@ export function HostOperationsWorkspace04111({
   if (!allowed)
     return (
       <section className="bridgeSection">
-        <h3>Host Supervisor · JVM</h3>
+        <h3>Супервизор хоста · JVM</h3>
         <p className="bridgeAttention">
           Для управления JVM требуется глобальное право{" "}
           <code>host:process</code>. Проектные игровые роли не дают доступ к
@@ -346,7 +346,7 @@ export function HostOperationsWorkspace04111({
               : "Процесс не обнаружен (OS-проверка)"
             : "неизвестно"}
         </dd>
-        <dt>Supervisor</dt>
+        <dt>Супервизор</dt>
         <dd>
           {host
             ? host.supervisorAlive
@@ -354,7 +354,7 @@ export function HostOperationsWorkspace04111({
               : "не обнаружен"
             : "неизвестно"}
         </dd>
-        <dt>PID / Session</dt>
+        <dt>PID / сессия</dt>
         <dd>
           {host
             ? `${host.telemetry?.processId || "—"} / ${host.sessionId || "—"}`
@@ -505,7 +505,7 @@ export function HostOperationsWorkspace04111({
         </div>
       )}
       <p className="muted">
-        При <code>accepted</code> или <code>indeterminate</code> новые действия
+        При <code>принято</code> или <code>неопределённо</code> новые действия
         заблокированы в панели. Только read-only сверка с хостом и журналом;
         принудительное снятие неопределённого состояния требует отдельной
         процедуры на Backend.

@@ -1,4 +1,4 @@
-name: Java Backend Services 0.48.4 - typed broker and permission E2E
+name: Службы Java Backend 0.48.4 — типизированный брокер и E2E разрешений
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-# ServerBridge Host 0.41.4: verified JVM lifecycle
+# ServerBridge Host 0.41.4 — проверенный жизненный цикл JVM
 
 The Host Supervisor executes the real configured Java executable. Minecraft `stop` is sent to **stdin** of the verified child process, never to a historical PID. The service must own an exclusive host session before starting a JVM. The remote host API remains narrowly scoped to `start`, `stop`, `restart`, and `status` — it is not a shell interface.
 

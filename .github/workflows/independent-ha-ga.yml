@@ -1,4 +1,4 @@
-name: Independent HA acceptance code 0.52.0
+name: Независимая приёмка HA 0.52.0 — проверки кода
 on:
   push:
     paths:

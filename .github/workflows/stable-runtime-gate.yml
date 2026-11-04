@@ -1,4 +1,4 @@
-name: Stable runtime gate 0.34.1 regression
+name: Контроль допуска стабильного Runtime 0.34.1 — регрессия
 
 on:
   pull_request:

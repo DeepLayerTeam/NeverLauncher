@@ -1,4 +1,4 @@
-name: Texture Lifecycle & Recovery 0.25.11
+name: Жизненный цикл текстур и восстановление 0.25.11
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Documentation Contracts
+name: Контракты документации
 
 on:
   push:

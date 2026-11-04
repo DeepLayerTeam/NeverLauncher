@@ -1,4 +1,4 @@
-name: ServerBridge real failover and receipt recovery (0.51.5)
+name: ServerBridge — реальное переключение при отказе и восстановление подтверждений (0.51.5)
 on:
   push:
     paths:

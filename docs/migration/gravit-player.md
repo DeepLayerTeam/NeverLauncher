@@ -1,6 +1,6 @@
-# Launcher 0.33.9 — Player Migration Assistant (MIG09)
+# Launcher 0.33.9 — помощник переноса игроков (MIG09)
 
-## Player workflow
+## Порядок действий игрока
 
 1. Obtain Launcher from the **project owner's official distribution**. Verify its publisher/signature via the existing Never installer/updater and operating-system signing guidance. MIG09 does **not** sign an installer or treat an arbitrary migration URL as trusted.
 2. Complete first-run Backend binding, choose your Never project/profile/channel and pin the owner's independent Never Ed25519 public key. Load a valid **signed** release manifest.
@@ -12,7 +12,7 @@
 8. With explicit player approval, only Minecraft `options.txt` display preferences (`fullscreen`, bounded `overrideWidth`, `overrideHeight`) are proposed; other preferences remain unchanged.
 9. Sign in to Launcher again and complete device enrollment / Guard attestation as required. Gravit auth sessions, device private keys and trust anchors are **not migrated**.
 
-## Security and operational boundaries
+## Границы безопасности и эксплуатации
 
 - Signed Never manifest is mandatory. The old source and arbitrary local files are always untrusted.
 - No bulk copying, autoexecution, symlink traversal, arbitrary extension imports, password transfer, credential storage, trusted key migration, or deletion of the old directory.

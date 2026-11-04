@@ -1,4 +1,4 @@
-name: Launcher 0.30.12 - executable integration and platform security gates
+name: Launcher 0.30.12 — исполняемые условия интеграции и защиты платформ
 on:
   push:
     paths:

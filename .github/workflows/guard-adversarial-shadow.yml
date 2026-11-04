@@ -1,4 +1,4 @@
-name: Guard 0.50.12 adversarial live JVM and shadow evidence
+name: Guard 0.50.12 — реальные атаки на JVM и подтверждения теневого режима
 on:
   push:
     paths:

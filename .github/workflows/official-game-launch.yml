@@ -1,4 +1,4 @@
-name: Official / Yggdrasil / Offline launch 0.26.9
+name: Запуск с официальной авторизацией / Yggdrasil / автономно 0.26.9
 on:
   push:
     paths:

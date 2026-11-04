@@ -1,4 +1,4 @@
-name: Auth Platform and Protection 0.30.0 - executable GA gates
+name: Платформа аутентификации и защита 0.30.0 — исполняемые условия GA
 on:
   push:
     paths:

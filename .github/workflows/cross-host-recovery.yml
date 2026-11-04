@@ -1,4 +1,4 @@
-name: Cross-host disaster recovery 0.51.9
+name: Аварийное восстановление между узлами 0.51.9
 on:
   push:
     paths:

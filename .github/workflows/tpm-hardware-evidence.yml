@@ -1,4 +1,4 @@
-name: TPM hardware attestation and PCR rejection 0.43.6
+name: Аппаратная аттестация TPM и отклонение PCR 0.43.6
 on:
   push:
     paths:

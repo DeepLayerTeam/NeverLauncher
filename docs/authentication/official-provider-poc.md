@@ -1,4 +1,4 @@
-# Launcher 0.26.1 — Own-app Microsoft → Xbox → Minecraft provider POC
+# Launcher 0.26.1 — прототип собственного провайдера Microsoft → Xbox → Minecraft
 
 ## что действительно реализовано
 
@@ -27,7 +27,7 @@ The entitlement **count is diagnostic**. Some Game Pass-enabled accounts have
 zero regular purchase-entitlement items. A working official Java profile is
 required; neither an Xbox login nor a Microsoft OAuth success is sufficient.
 
-## External prerequisites (mandatory)
+## Обязательные внешние предварительные условия
 
 - Register a **new app you own** in Microsoft Entra: *personal Microsoft
   accounts*; desktop/mobile (public client), **not** a confidential web client.
@@ -134,7 +134,7 @@ validation, status classification, callback state validation, report redaction,
 and stage ordering. There is intentionally **no mock/live selector** in the
 compiled CLI: production execution always targets fixed provider HTTPS hosts.
 
-## Added in 0.26.12: REAL sessionserver verification
+## Добавлено в 0.26.12: настоящая проверка sessionserver
 
 `official-provider-poc` now performs Mojang's live `join` and `hasJoined`
 challenge by default (`--online-session=true`), with the authenticated

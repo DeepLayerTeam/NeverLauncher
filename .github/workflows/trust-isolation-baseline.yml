@@ -1,4 +1,4 @@
-name: Trust and isolation baseline 0.31.1
+name: Базовая защита доверия и изоляции 0.31.1
 on:
   push:
     paths:

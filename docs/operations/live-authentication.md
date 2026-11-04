@@ -1,6 +1,6 @@
-# Launcher 0.34.7 — actual V07 authentication/Guard validation
+# Launcher 0.34.7 — фактическая проверка аутентификации/Guard V07
 
-## Scope and trust boundary
+## Область действия и граница доверия
 
 The independent, rootless Podman attestation host (not build/test CI and not a
 user-submitted JSON) runs the **exact immutable staged release** and real Minecraft
@@ -12,7 +12,7 @@ A `passed` from the observational GitHub Actions job is not an attestation.
 
 Stable remains **fail-closed** per 0.34.1. V07 is NOT approval to open stable.
 
-## Required backend matrix change
+## Обязательное изменение матрицы Backend
 
 Each exact target in `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` now MUST
 include `authenticationMode`: `official` or `custom`. A missing mode, a mock,
@@ -21,7 +21,7 @@ matrix remains bound to staged manifest/files/source/build/Java/adapter/Guard/
 ServerBridge/preset digests and the backend run nonce. Changing this configuration
 invalidates previous evidence. Deploy Backend and attestor together.
 
-## Dedicated test accounts (never production accounts)
+## Отдельные тестовые учётные записи (не промышленные)
 
 Run on a dedicated attestation host under an unprivileged local account with
 rootless Podman. The Ed25519 signing key and operator API token remain host-only;
@@ -30,7 +30,7 @@ credential files, private network and an isolated test backend/server. Do not
 put production user accounts, provider refresh tokens, attestor signing keys or
 server node keys into source control, GitHub artifacts or OCI images.
 
-### Official Microsoft account
+### Официальная учётная запись Microsoft
 
 Authorize a **Minecraft Java licensed** staging account using the existing
 first-party Microsoft browser PKCE or device flow. Save its `refresh_token` in
@@ -68,7 +68,7 @@ No OAuth refresh token goes into the worker. A transport outage is
 A Guard-enabled official target without a live negative Guard-policy proof is
 currently blocked (not falsely certified).
 
-### Custom Yggdrasil and ServerBridge
+### Пользовательские Yggdrasil и ServerBridge
 
 Set `--auth-mode custom --credentials-file /secure/custom-test-session.json`
 plus `--negative-credentials-file /secure/revocable-test-session.json` and
@@ -97,7 +97,7 @@ WARNING: custom provider validation alone must not be interpreted as proof
 that an unrelated offline-mode Vanilla server enforced authentication. The
 attestor therefore requires the pinned ServerBridge for custom targets.
 
-### Network and access
+### Сеть и доступ
 
 Do not allow generic outbound internet on production workers. The attestor
 network needs only the staging Backend, the approved provider endpoints and
@@ -106,7 +106,7 @@ controls; rootless Podman network isolation alone is not an egress allowlist.
 Do not send credentials in command-line arguments or place private token files
 under `/work`, which is inspected as attestation artifacts.
 
-## Status rules and diagnostics
+## Правила статуса и диагностика
 
 - `passed`: real provider identity, join/hasJoined and required negative
   policy tests, matching online-mode/ServerBridge server, actual gameplay.
@@ -122,7 +122,7 @@ The host independently checks the file hash and the signed report stage. Tests
 that mock provider HTTP endpoints are unit tests only, and cannot create an
 accepted provider certification.
 
-## Acceptance validation
+## Приёмочная проверка
 
 Test 0.34.7 on a dedicated staging cluster with *real provisioned accounts*:
 valid account, revoked custom session, replayed join, deleted trusted device,

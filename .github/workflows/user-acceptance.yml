@@ -1,4 +1,4 @@
-name: Launcher 0.35.1 functional user acceptance
+name: Launcher 0.35.1 — функциональная приёмка пользователя
 on:
   push:
     paths:

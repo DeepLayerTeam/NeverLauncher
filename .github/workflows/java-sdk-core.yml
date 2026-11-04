@@ -1,4 +1,4 @@
-name: Java SDK Core 0.30.3 — compile, unit and live protocol tests
+name: Ядро Java SDK 0.30.3 — компиляция, модульные тесты и проверка действующего протокола
 on:
   push:
     paths:

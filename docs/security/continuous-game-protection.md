@@ -1,26 +1,26 @@
 # Guard 0.50.6 — непрерывная защита игры
 
-## фактическое выполнение
+## Фактическое выполнение
 
-1. Runtime verifies the signed release, the active selected file set and the external Ed25519 Guard policy before creating Minecraft JVM.
-2. Both the blocking launch entrypoint and `ProcessSupervisor` keep an independent **native watchdog** for the whole game process. Every five seconds (plus actual filesystem verification time) the watchdog reopens and SHA-256 hashes approved JAR/native executables. It also verifies the current policy signature, project/Minecraft/loader scope, validity, revocations, and that the accepted policy digest has **not changed during this game session**. New/changed mods or native libraries in managed directories are rejected by the existing compatibility-policy checks. Checks execute on blocking workers outside the async reactor.
-3. On verification failure, the parent terminates the game. `ProcessSupervisor` stores `trust-blocked`/`guard_violation` so even a zero exit code cannot turn the incident into a successful game. The one-shot launcher writes the reason to the launch log and records unsuccessful launch history.
-4. On guarded JVMs, the existing Java Runtime Integrity watcher checks the executable files and Linux mapped native images. A **second JVM thread** terminates the game if the primary integrity watcher has exited or has not completed a verification for 90 seconds. The existing Windows Guard Sensor retains its authenticated process/event-chain heartbeats and native memory/module checks.
-5. The Desktop `ProcessSupervisor` now uses the same signed Trusted JVM agent preparation, JVM arguments and guarded original-main wrapper as the native one-shot launcher, and retains the private agent configuration until child exit.
+1. Runtime до создания JVM Minecraft проверяет подписанный релиз, активный набор выбранных файлов и внешнюю политику Guard с подписью Ed25519.
+2. И блокирующая точка запуска, и `ProcessSupervisor` поддерживают независимый **нативный наблюдатель (watchdog)** на всё время игры. Каждые пять секунд (плюс фактическое время проверки файловой системы) он повторно открывает разрешённые JAR/нативные исполняемые файлы и проверяет их SHA-256. Также проверяются подпись действующей политики, область проекта/Minecraft/загрузчика, срок действия, отзывы и то, что хеш принятой политики **не менялся в течение этой игровой сессии**. Новые/изменённые моды или нативные библиотеки в управляемых каталогах отклоняются действующими проверками совместимости. Проверки выполняются на блокирующих потоках вне асинхронного реактора.
+3. При неуспешной проверке родительский процесс завершает игру. `ProcessSupervisor` сохраняет `trust-blocked`/`guard_violation`, поэтому даже нулевой код выхода не превращает инцидент в успешный запуск. Одноразовый лаунчер записывает причину в журнал запуска и сохраняет запись о неуспешной попытке.
+4. В защищённых JVM существующий наблюдатель Java Runtime Integrity проверяет исполняемые файлы и отображённые в память нативные образы Linux. **Второй поток JVM** завершает игру, если основной поток контроля целостности завершился или не выполнил проверку за 90 секунд. Существующий Windows Guard Sensor продолжает обеспечивать аутентифицированные heartbeat процесса/цепочки событий и проверки нативной памяти/модулей.
+5. В Desktop `ProcessSupervisor` теперь использует такую же подготовку подписанного Trusted JVM Agent, аргументы JVM и обёртку оригинального метода main под Guard, что и нативный одноразовый лаунчер, сохраняя закрытую конфигурацию агента до выхода дочернего процесса.
 
-## предварительные требования к развёртыванию
+## Предварительные условия развёртывания
 
-- Keep the externally pinned `LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE` and accepted epoch state protected from the player's account where possible. Set `LAUNCHER_GUARD_COMPAT_REQUIRED=1` on protected deployments. The policy and release file set must be installed and valid for the exact active game build and loader.
-- A signed policy must remain unchanged for a running game. Publish changed/revoked policies by stopping or ending affected sessions and starting a new verified session. Mid-game policy rotation is intentionally a fail-closed decision.
-- Confirm supported Windows/macOS/Linux x64/ARM64 packages with the CI native matrix. Run real loader/Minecraft joins separately; synthetic OpenJDK tests are not Minecraft certification.
+- По возможности защищайте внешний закреплённый `LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE` и принятое состояние эпох от учётной записи игрока. В защищённых установках задайте `LAUNCHER_GUARD_COMPAT_REQUIRED=1`. Политика и набор файлов релиза должны быть установлены и корректны для точной активной сборки игры и загрузчика.
+- Подписанная политика не должна меняться во время игры. Публикуйте изменённые или отозванные политики после остановки/завершения затронутых сессий и создания новой проверенной сессии. Смена политики посреди игры намеренно приводит к запрету.
+- Подтвердите пакеты Windows/macOS/Linux для x64/ARM64 по нативной матрице CI. Проверки настоящих подключений загрузчиков/Minecraft выполняйте отдельно; синтетические тесты OpenJDK не равнозначны сертификации Minecraft.
 
-## тесты
+## Тесты
 
-- `python scripts/tests/continuous_game_protection_0506.py` — real JVM normal run and forced interruption of Java integrity watcher.
-- `python scripts/tests/guard_runtime_integrity_0505.py` — previous seven real-JVM file/native integrity regressions.
-- `cargo test --manifest-path runtime/runtime/Cargo.toml --lib continuous_game_protection_0506` — native hash-change and real subprocess termination tests on Unix; file integrity checks on other hosts.
-- `.github/workflows/continuous-game-protection-0506.yml` — six-platform native compilation and JVM regression jobs.
+- `python scripts/tests/continuous_game_protection_0506.py` — настоящий штатный запуск JVM и принудительное прерывание наблюдателя целостности Java.
+- `python scripts/tests/guard_runtime_integrity_0505.py` — семь прежних регрессионных проверок целостности файлов/нативных образов на реальной JVM.
+- `cargo test --manifest-path runtime/runtime/Cargo.toml --lib continuous_game_protection_0506` — на Unix проверка изменения хеша и фактического завершения подпроцесса, на других узлах — проверка целостности файлов.
+- `.github/workflows/continuous-game-protection-0506.yml` — задания нативной компиляции и регрессии JVM на шести платформах.
 
-## ограничения и обязательный запрет при сбое
+## Ограничения и обязательный запрет при ошибке
 
-User-mode observers cannot protect against malicious code with complete access to the same JVM or operating-system account. Native process checks rehash filesystem bytes, not all executable pages or third-party class transformations in memory. On Windows, the separate Sensor is required for native module/process/event-chain coverage; Linux `/proc/self/maps` monitoring is in-process, while macOS mapping coverage remains limited. No automatic server-side enforcement/penalty is introduced here; server-bound Guard sessions are the separate 0.50.7 milestone. Successful local tests do not constitute release GA acceptance.
+Наблюдатели пользовательского режима не защищают от вредоносного кода с полным доступом к той же JVM или учётной записи ОС. Нативные проверки процессов повторно хешируют байты в файловой системе, но не все исполняемые страницы или сторонние преобразования классов в памяти. В Windows для контроля нативных модулей, процессов и цепочек событий необходим отдельный Sensor. В Linux наблюдение за `/proc/self/maps` выполняется внутри процесса; на macOS охват отображений памяти пока ограничен. Автоматическое серверное применение санкций здесь не вводится; сессии Guard с привязкой к серверу относятся к отдельному этапу 0.50.7. Успешные локальные тесты не являются приёмкой GA-релиза.

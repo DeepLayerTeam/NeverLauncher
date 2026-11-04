@@ -1,4 +1,4 @@
-name: Acceptance inventory 0.52.1 integrity regressions
+name: Инвентаризация приёмки 0.52.1 — регрессия целостности
 on:
   push:
     paths:

@@ -1,8 +1,8 @@
-# NeverLauncher 0.51.7 — executable multi-host rolling update
+# NeverLauncher 0.51.7 — работающее поэтапное обновление нескольких узлов
 
 Scope: **control-plane API + worker only**, from **0.51.6 to 0.51.7**. No schema migration, database rewind, Minecraft process migration, unsigned component substitution or mass host restart. The external load balancer, PostgreSQL primary, Redis and S3 must already be working and independently monitored. Host-local extension files and world state are **not made highly available** by this procedure.
 
-## Preconditions
+## Предварительные условия
 
 1. At least **two distinct physical Docker hosts** run `deploy/production/docker-compose.multi-host.yml`; each has independently healthy API/worker/Admin/ingress. The public TLS LB routes `/ready` to a healthy surviving host, and keeps another route available while one host API is restarted. Use distinct node/replica IDs and independent Docker Engine identities.
 2. Release engineers independently verify the **0.51.7 API OCI image digest**, signed supply-chain evidence and package/commit identity. Its `/ready` and `/api/v1/status` must reflect `0.51.7` after startup. All other images (Admin, ingress, init) stay unchanged. Release certificates and production secrets are managed separately; this controller does not sign images or bypass trust gates.
@@ -11,7 +11,7 @@ Scope: **control-plane API + worker only**, from **0.51.6 to 0.51.7**. No schema
 5. On the operator machine create a 0600 file containing one PostgreSQL URL with `sslmode=verify-full` for the shared *writer*. The role needs read access to `schema_migrations` and information_schema and permission to obtain advisory locks. This URL is passed through the local file, not command-line credentials. No DDL may run while 0.51.6 is present. Verify all 117 migration file hashes match the pinned 0.51.5/0.51.6 catalog. Freeze other deployment tools on these hosts during the update (the PostgreSQL advisory lock is used by this controller, not by unrelated tools).
 6. Before cutover, independently test an explicit real ServerBridge command, background job/outbox processing, authentication, publication, and read/write traffic on the shared dependencies. The controller performs HTTP/live dependency checks; it does **not** reproduce every application workflow.
 
-## Per-host dry admission (does not modify containers)
+## Предварительная проверка каждого узла (без изменения контейнеров)
 
 On **each** host:
 

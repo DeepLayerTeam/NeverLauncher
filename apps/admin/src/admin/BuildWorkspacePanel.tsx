@@ -523,9 +523,9 @@ export function BuildWorkspacePanel({
                     setOwnership(e.target.value as typeof ownership)
                   }
                 >
-                  <option value="required">required</option>
-                  <option value="managed">managed</option>
-                  <option value="optional">optional</option>
+                  <option value="required">обязательно</option>
+                  <option value="managed">управляемый</option>
+                  <option value="optional">необязательно</option>
                 </select>
               </label>
               <label className="field">

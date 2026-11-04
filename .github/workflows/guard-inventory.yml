@@ -1,4 +1,4 @@
-name: Guard 0.50.1 native inventory (diagnostics, not game certification)
+name: Guard 0.50.1 — нативная инвентаризация (диагностика, не сертификация игры)
 on:
   push:
     paths:

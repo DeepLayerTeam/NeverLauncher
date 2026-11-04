@@ -1,4 +1,4 @@
-name: SQLite replay nonces and join tickets DEP01/02 (0.32.4)
+name: SQLite — защита от повторов и билеты подключения DEP01/02 (0.32.4)
 on:
   push:
     paths:

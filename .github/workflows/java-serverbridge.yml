@@ -1,4 +1,4 @@
-name: Java ServerBridge 0.48.8 - authenticated host integration
+name: Java ServerBridge 0.48.8 — аутентифицированная интеграция хоста
 on:
   push:
     paths:

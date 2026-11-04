@@ -1,4 +1,4 @@
-name: Guard 0.51.0 independent final-byte GA gate regressions
+name: Guard 0.51.0 — независимые регрессии допуска окончательных файлов GA
 on:
   push:
     paths:

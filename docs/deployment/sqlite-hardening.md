@@ -1,28 +1,28 @@
-# усиление защиты развёртывания SQLite — NeverLauncher 0.47.1
+# Усиление защиты развёртывания SQLite — NeverLauncher 0.47.1
 
-SQLite HTTP (`http.sqlite`), coordinator (`coordinator.sqlite`) and independent Core all use the single-owner `sqlitedurable` store. The hardening changes in 0.47.1 add no automatic destructive repair. A corrupt or structurally incompatible database must be examined and restored from an independently verified backup; NeverLauncher must not start with empty defaults or silently rebuild its state.
+SQLite HTTP (`http.sqlite`), координатор (`coordinator.sqlite`) и независимый Core используют общее хранилище `sqlitedurable` с одним владельцем. Изменения безопасности 0.47.1 не добавляют автоматического разрушительного восстановления. Повреждённую или структурно несовместимую БД необходимо исследовать и восстановить из независимо проверенной копии. NeverLauncher не должен запускаться с пустыми настройками по умолчанию или незаметно перестраивать состояние.
 
-## перед развёртыванием
+## Перед развёртыванием
 
-1. Stop the Backend or otherwise ensure no conflicting process owns a SQLite store. Place databases on a service-owned, private (`0700`) ext4, XFS or Btrfs local directory. Do not place a SQLite WAL database on NFS, SMB, overlayfs or tmpfs.
-2. Make and verify separate consistent online backups of the HTTP, coordinator and Core DBs using the existing SQLite backup facility. Do not copy a live `.db` file without its WAL. Retain original backups and `.json` manifests outside the upgrade workspace.
-3. Perform a full backup restore rehearsal before upgrading, including project/profile, owners and rate-limiter/lease state. Upgrade in a maintenance window and keep previous binaries and backup snapshots available.
-4. On startup, the store checks `PRAGMA integrity_check`, foreign keys and WAL mode and validates private SQLite sidecars. HTTP rejects malformed JSON state even with a recomputed checksum. Coordinator rejects drift from its declared schema and Core rejects arbitrary unversioned schemas.
-5. If startup fails, **do not delete** `-wal`, `-shm` or the DB itself, do not reset `user_version` and do not apply `CREATE TABLE` by hand. Stop all owners, preserve the full directory and restore from an independently verified backup after determining the failure cause.
+1. Остановите Backend или иным образом убедитесь, что нет конфликтующего процесса — владельца SQLite-хранилища. Размещайте БД в закрытом (`0700`) локальном каталоге ext4, XFS или Btrfs, принадлежащем службе. Не размещайте SQLite WAL на NFS, SMB, overlayfs или tmpfs.
+2. Создайте и проверьте раздельные согласованные оперативные копии БД HTTP, координатора и Core штатным механизмом SQLite. Не копируйте работающий `.db` без соответствующего WAL. Сохраняйте исходные копии и `.json`-манифесты вне рабочего каталога обновления.
+3. Перед обновлением проведите полную репетицию восстановления, включая проекты/профили, владельцев и состояние ограничителя запросов/аренд. Обновляйте в окне обслуживания и сохраняйте прежние исполняемые файлы и снимки для отката.
+4. При запуске хранилище проверяет `PRAGMA integrity_check`, внешние ключи, режим WAL и закрытые сопутствующие файлы SQLite. HTTP отклоняет некорректное JSON-состояние даже с пересчитанной контрольной суммой. Координатор отклоняет расхождения с объявленной схемой, а Core — произвольные схемы без версии.
+5. При неудачном запуске **не удаляйте** `-wal`, `-shm` или саму БД, не сбрасывайте `user_version` и не выполняйте `CREATE TABLE` вручную. Остановите всех владельцев, сохраните весь каталог, выясните причину отказа и восстановите независимо проверенную копию.
 
-## контрольные точки, откат и границы отказов
+## Контрольные точки, откат и границы отказов
 
-`Store.Checkpoint` now uses `wal_checkpoint(TRUNCATE)`, returning an error when a reader blocks completion instead of signaling maintenance success with outstanding WAL frames. Checkpointing is **not** a backup. A failed `COMMIT` may have completed in SQLite; the store becomes unusable until it has been closed and its last operation has been reconciled after reopen. A rollback failure poisons the store unless the underlying SQL connection has already been discarded by `database/sql`.
+`Store.Checkpoint` теперь использует `wal_checkpoint(TRUNCATE)` и возвращает ошибку, если читающий процесс блокирует завершение; нельзя объявлять обслуживание успешным при оставшихся кадрах WAL. Checkpoint **не** является резервной копией. Ошибочный `COMMIT` мог успеть зафиксироваться в SQLite; хранилище считается непригодным до закрытия и согласования последней операции после нового открытия. Неуспешный откат делает хранилище недействительным, если только нижележащее SQL-соединение уже не было отброшено `database/sql`.
 
-HTTP Repository Health verifies sequence, digest and the complete snapshot envelope, and becomes fail-closed after detecting inconsistency. New installations initialize empty state only when the database has no existing application tables. Existing databases with a missing HTTP snapshot never automatically reset to zero data.
+Проверка HTTP Repository Health контролирует последовательность, хеш и полный контейнер снимка, блокируя дальнейшие операции при обнаружении несогласованности. Новая установка создаёт пустое состояние только при отсутствии прежних таблиц приложения. Существующая БД без HTTP-снимка никогда автоматически не сбрасывается в нулевое состояние.
 
 ## CI и независимая приёмка
 
-On a host with Go 1.27.3, the pinned SQLite module and an ext4/XFS/Btrfs working directory, run:
+На узле с Go 1.27.3, закреплённым модулем SQLite и рабочим каталогом ext4/XFS/Btrfs запустите:
 
 ```bash
 cd services/api
 LAUNCHER_SQLITE_TEST_ROOT=/path/to/private/sqlite-test-dir LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1 go test -count=1 ./internal/sqlitedurable ./internal/sqlitecoord ./internal/sqlitecore ./internal/repository ./internal/sqliteacceptance
 ```
 
-Use a scratch test directory (`0700`, owned by the test user). The three-DB crash regression commits data to HTTP, Core and Coordinator, kills its child with `os.Exit(71)` without closing any DB, and verifies the acknowledged state after a new process takes ownership. Run these tests on the actual deployment filesystem and with the same pinned SQLite engine. Also test live OS-level termination, low-disk-space, storage I/O failures, competing readers, backup/restore and service readiness on a dedicated acceptance host. This source patch is not proof that those production checks have already run.
+Используйте временный тестовый каталог (`0700`, владелец — тестовый пользователь). Регрессионный тест аварии трёх БД записывает данные в HTTP, Core и Coordinator, завершает дочерний процесс через `os.Exit(71)` без закрытия БД и проверяет подтверждённое состояние после захвата владения новым процессом. Выполняйте эти тесты на настоящей файловой системе развёртывания и с тем же закреплённым движком SQLite. Отдельно проверьте принудительное завершение средствами ОС, недостаток дискового места, ошибки ввода-вывода, конкурирующих читателей, копирование/восстановление и готовность службы на выделенном приёмочном узле. Это изменение исходников не доказывает, что такие промышленные проверки уже выполнены.

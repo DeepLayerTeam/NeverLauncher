@@ -1,4 +1,4 @@
-name: Official Minecraft Multi-Account Lifecycle 0.26.7
+name: Жизненный цикл нескольких официальных учётных записей Minecraft 0.26.7
 on:
   push:
     paths:

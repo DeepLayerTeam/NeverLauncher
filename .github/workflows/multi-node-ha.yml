@@ -1,4 +1,4 @@
-name: Multi-node HA source and merged Compose verification (0.45.5)
+name: Проверка исходников HA и объединённого Docker Compose для нескольких узлов (0.45.5)
 on:
   push:
     paths:

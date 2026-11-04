@@ -1,4 +1,4 @@
-name: Multi-host 0.51.2 deployment regressions
+name: Развёртывание нескольких узлов 0.51.2 — регрессия
 on:
   push:
     paths:

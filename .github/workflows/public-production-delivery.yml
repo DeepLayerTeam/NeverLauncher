@@ -1,4 +1,4 @@
-name: Public Production Delivery E2E
+name: Публичная промышленная поставка — E2E
 
 on:
   release:

@@ -1,4 +1,4 @@
-name: DEP05 deployment mode and owner locks (0.32.8)
+name: DEP05 — режимы развёртывания и блокировки владельца (0.32.8)
 on:
   push:
     paths:

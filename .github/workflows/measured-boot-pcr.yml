@@ -1,4 +1,4 @@
-name: TPM2 Quote and Measured Boot 0.31.5
+name: TPM2 Quote и измеряемая загрузка 0.31.5
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Production RC 0.32.16 live security disaster load
+name: Промышленный RC 0.32.16 — реальные испытания безопасности, отказов и нагрузки
 
 on:
   workflow_call:

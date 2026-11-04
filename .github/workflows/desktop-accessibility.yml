@@ -1,4 +1,4 @@
-name: Desktop accessibility and platform regression 0.35.7
+name: Доступность Desktop и регрессия платформ 0.35.7
 on:
   push:
     paths:

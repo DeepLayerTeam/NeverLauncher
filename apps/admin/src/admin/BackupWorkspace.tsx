@@ -59,13 +59,13 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
   const filtered = (data?.backups ?? []).filter(item => item.backupId.toLowerCase().includes(search.trim().toLowerCase()));
   const current = data?.backups?.find(item => item.backupId === selected);
   return <section className="card wide" aria-label="Резервное копирование и восстановление">
-    <div className="registryHeading"><div><h2>Backup / Restore</h2><p className="muted">Настоящие архивы Backend; проверка SHA-256, dry-run и подтверждённое восстановление. Restore требует свежей phishing-resistant аутентификации.</p></div><div className="buttonRow"><button disabled={!!busy} onClick={() => void run('refresh', load)}>Обновить</button><button disabled={!!busy} onClick={create}>Создать backup</button></div></div>
+    <div className="registryHeading"><div><h2>Резервное копирование / восстановление</h2><p className="muted">Настоящие архивы Backend; проверка SHA-256, dry-run и подтверждённое восстановление. Restore требует свежей phishing-resistant аутентификации.</p></div><div className="buttonRow"><button disabled={!!busy} onClick={() => void run('refresh', load)}>Обновить</button><button disabled={!!busy} onClick={create}>Создать backup</button></div></div>
     <p className="muted">Состояние: {data?.status ?? 'загрузка'} · Режим: {data?.mode ?? '—'} · Архивов: {data?.backups?.length ?? '—'}</p>
     {error && <p className="error" role="alert">{error} <span className="muted">Проверьте полномочия, соединение и повторите чтение статуса. Для restore подтвердите passkey.</span></p>}
     {notice && <p className="success" role="status">{notice}</p>}
     <a href={auditHref(selected || 'backup:')} >Открыть журнал аудита backup</a>
     <div className="dataToolbar"><label>Поиск по ID<input type="search" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
-    <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Backup</th><th>Создан</th><th>Размер</th><th>SHA-256</th><th>Действия</th></tr></thead><tbody>
+    <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Резервное копирование</th><th>Создан</th><th>Размер</th><th>SHA-256</th><th>Действия</th></tr></thead><tbody>
       {filtered.map(item => <tr key={item.backupId}><td><code>{item.backupId}</code></td><td>{item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</td><td>{(item.size / 1024 / 1024).toFixed(1)} MiB</td><td><code>{item.sha256.slice(0, 18)}…</code></td><td><button disabled={!!busy} onClick={() => { choose(item.backupId); inspect(item.backupId); }}>Открыть</button></td></tr>)}
       {filtered.length === 0 && <tr><td colSpan={5}>Архивов нет либо поиск ничего не нашёл.</td></tr>}
     </tbody></table></div>
@@ -79,12 +79,12 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
         <h4>Восстановить данные</h4>
         <p className="muted">Доступно только после успешного dry-run. Backend создаёт safety backup. Операция синхронная, не является durable job; при обрыве соединения сначала проверьте состояние и аудит, не повторяйте запрос автоматически.</p>
         <label><input type="checkbox" checked={database} onChange={e => setDatabase(e.target.checked)} disabled={!canRestore || verified?.databaseDump !== 'valid' || !inspection?.manifest.databaseDump} /> PostgreSQL</label>
-        <label><input type="checkbox" checked={storage} onChange={e => setStorage(e.target.checked)} disabled={!canRestore || !verified} /> Storage</label>
+        <label><input type="checkbox" checked={storage} onChange={e => setStorage(e.target.checked)} disabled={!canRestore || !verified} /> Хранилище</label>
         <label className="field">Введите ID архива точно<input value={confirmId} onChange={e => setConfirmId(e.target.value)} autoComplete="off" placeholder={selected}/></label>
         {!canRestore && <p className="muted">Требуются глобальные права settings:manage и свежий passkey step-up.</p>}
         <button className="danger" disabled={!!busy || !canRestore || !verified || !inspection || confirmId !== selected || (!database && !storage)} onClick={executeRestore}>Выполнить подтверждённое восстановление</button>
       </div>
-      {restore && <article className="subcard"><h4>Ответ restore: {restore.status}</h4><p>Затронуто: {restore.restored?.join(', ') || '—'}</p><p>Safety backup: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}
+      {restore && <article className="subcard"><h4>Ответ restore: {restore.status}</h4><p>Затронуто: {restore.restored?.join(', ') || '—'}</p><p>Защитная копия: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}
     </article>}
   </section>;
 }

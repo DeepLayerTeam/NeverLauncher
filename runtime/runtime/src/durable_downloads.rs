@@ -1,7 +1,8 @@
-//! Durable signed download operations. The journal persists the *signed* manifest
-//! (not trusted paths) and the pinned public key. Partials remain in http_resume.
-//! Two alternating generations survive an interrupted journal rewrite, including
-//! Windows, where rename-over-existing is not available.
+//! Долговременные операции скачивания по подписанным данным. Журнал сохраняет
+//! *подписанный* манифест (но не доверенные пути) и закреплённый открытый ключ.
+//! Частично скачанные файлы остаются в http_resume. Два чередующихся поколения
+//! выдерживают прерванную перезапись журнала, включая Windows, где нельзя
+//! переименовать файл поверх существующего.
 use crate::{file_ownership, network_resilience::Directive,
     verify_manifest_signature, DownloadResult, Manifest, ProgressSink};
 use serde::{Deserialize, Serialize};
@@ -96,7 +97,7 @@ async fn write(root: &Path, job: &SavedJob) -> Result<(), String> {
         output.sync_all().await.map_err(|e| e.to_string())?;
         drop(output);
         if fs::try_exists(&target).await.map_err(|e| e.to_string())? {
-            // The other generation always remains intact until this slot is published.
+            // Другое поколение остаётся неизменным до публикации текущего слота.
             fs::remove_file(&target).await.map_err(|e| e.to_string())?;
         }
         fs::rename(&tmp, target).await.map_err(|e| e.to_string())
@@ -168,9 +169,9 @@ pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode
     perform(&root, job, sink, rx).await
 }
 
-/// Read only the signed, pinned manifest for requesting a new authorization.
-/// This entry point deliberately does not resolve components before a grant
-/// is available. The normal pending/resume path rechecks the entire plan.
+/// Для запроса новой авторизации читайте только подписанный закреплённый манифест.
+/// Эта точка входа намеренно не разрешает компоненты до получения прав.
+/// Обычный путь ожидания/возобновления повторно проверяет весь план.
 pub async fn pending_manifest_for_permissions_0392(root:&Path,expected_pinned_key:&str)
     ->Result<Option<Manifest>,String>{
     if !fs::try_exists(root).await.map_err(|e|e.to_string())?{return Ok(None)}
@@ -188,7 +189,7 @@ pub async fn pending(root: &Path, expected_pinned_key: &str) -> Result<Option<Pe
     if !fs::try_exists(root).await.map_err(|e| e.to_string())? { return Ok(None); }
     let root = normalized(root).await?;
     let Some(job) = read(&root).await else { return Ok(None); };
-    // The journal is user-writable: it MUST NOT set its own trust root.
+    // Журнал доступен пользователю для записи: он НЕ ДОЛЖЕН сам задавать корень доверия.
     if expected_pinned_key.trim().is_empty() || !job.pinned_public_key.eq_ignore_ascii_case(expected_pinned_key.trim()) {
         return Err("saved download public key differs from Desktop pinned trust key".into());
     }
@@ -226,8 +227,8 @@ pub async fn control(root: &Path, action: &str) -> Result<(), String> {
         .get(&root).cloned();
     let directive = if action == "pause" { Directive::Paused } else { Directive::Cancelled };
     if let Some(sender) = sender {
-        // Stop network waits immediately; persist the requested intent before
-        // acknowledging it, so Desktop termination right after the click is safe.
+        // Немедленно прекращайте сетевые ожидания и сохраняйте требуемое действие
+        // до его подтверждения, чтобы завершение Desktop сразу после нажатия было безопасным.
         sender.send_replace(directive);
     }
     if action == "cancel" {
@@ -276,7 +277,7 @@ mod tests {
             observed.lock().unwrap().push(first_headers);
             first.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 20\r\nETag: \"v1\"\r\nConnection: close\r\n\r\n01234567").await.unwrap();
             let _ = sent.send(());
-            // The first response remains open until the caller explicitly pauses.
+            // Первое соединение остаётся открытым до явной приостановки вызывающим кодом.
             let (mut second, _) = listener.accept().await.unwrap();
             let second_headers = read_headers(&mut second).await;
             observed.lock().unwrap().push(second_headers);
@@ -296,7 +297,7 @@ mod tests {
         let trust_key = key.clone();
         let worker = tokio::spawn(async move { start(&manifest, &root2, &key, "repair", None).await });
         received.await.unwrap();
-        // Allow the first chunk to reach the filesystem before the pause signal.
+        // До сигнала паузы дождитесь записи первого блока в файловую систему.
         tokio::time::sleep(Duration::from_millis(100)).await;
         control(&root, "pause").await.unwrap();
         let paused = tokio::time::timeout(Duration::from_secs(4), worker).await.unwrap().unwrap().unwrap();
@@ -304,7 +305,7 @@ mod tests {
         assert_eq!(pending(&root, &trust_key).await.unwrap().unwrap().status, "paused");
         assert_eq!(pending(&root, &trust_key).await.unwrap().unwrap().mode, "repair");
         assert!(pending(&root, &hex::encode([2u8; 32])).await.is_err());
-        // A new invocation (and HTTP client) only depends on durable on-disk state.
+        // Новый вызов (и HTTP-клиент) зависит только от долговременного состояния на диске.
         let restored = tokio::time::timeout(Duration::from_secs(5), resume(&root, &trust_key, None)).await.unwrap().unwrap();
         assert_eq!(restored.downloaded, 1, "{:?}", restored.messages);
         assert_eq!(restored.bytes_downloaded, 12);

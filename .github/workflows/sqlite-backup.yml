@@ -1,4 +1,4 @@
-name: SQLite online backup and restore (0.32.10)
+name: Оперативное резервное копирование и восстановление SQLite (0.32.10)
 on:
   push:
     paths:

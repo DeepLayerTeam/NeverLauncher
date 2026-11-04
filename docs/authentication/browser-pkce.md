@@ -1,4 +1,4 @@
-# Launcher 0.26.3 — Browser OAuth + PKCE (MS03 preparatory integration)
+# Launcher 0.26.3 — браузерный OAuth + PKCE (предварительная интеграция MS03)
 
 ## настройка оператором (обязательно до включения официальной авторизации)
 

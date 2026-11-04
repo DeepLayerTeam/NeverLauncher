@@ -1103,8 +1103,8 @@ export function ReleaseWorkspace({
                     setUploadOwnership(e.target.value as typeof uploadOwnership)
                   }
                 >
-                  <option value="required">required</option>
-                  <option value="managed">managed</option>
+                  <option value="required">обязательно</option>
+                  <option value="managed">управляемый</option>
                   <option value="optional">
                     optional (для каталога компонентов)
                   </option>
@@ -1211,12 +1211,12 @@ export function ReleaseWorkspace({
             </button>
           </div>
           <p>
-            <strong>Integrity:</strong>{" "}
+            <strong>Целостность:</strong>{" "}
             {report?.integrity?.result || "не выполнено"} · Manifest:{" "}
             <code>{report?.integrity?.manifestDigest || "—"}</code>
           </p>
           <p>
-            <strong>Policy:</strong>{" "}
+            <strong>Политика:</strong>{" "}
             {report?.effectivePolicy?.requiredLevel ||
               policy?.requiredLevel ||
               "не загружена"}{" "}
@@ -1228,7 +1228,7 @@ export function ReleaseWorkspace({
                 : ""}
           </p>
           <p>
-            <strong>Legacy runtime v1:</strong>{" "}
+            <strong>Устаревший Runtime v1:</strong>{" "}
             {report?.runtime?.filter((x) => x.result === "passed").length || 0}{" "}
             результатов · не являются сертификацией stable
           </p>
@@ -1321,7 +1321,7 @@ export function ReleaseWorkspace({
           {form.channel.toLowerCase() === "stable" && (
             <section aria-label="Сертификация стабильного Runtime">
               <p>
-                <strong>Production Runtime Gate V11:</strong>{" "}
+                <strong>Допуск промышленного Runtime V11:</strong>{" "}
                 {report?.effectivePolicy?.publishEligible
                   ? "Все обязательные targets подтверждены"
                   : "Публикация заблокирована до подтверждения всех обязательных targets"}{" "}

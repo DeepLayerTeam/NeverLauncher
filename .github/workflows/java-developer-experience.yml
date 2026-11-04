@@ -1,4 +1,4 @@
-name: Java Developer Experience 0.48.12 — real external SDK consumers
+name: Инструменты разработчика Java 0.48.12 — реальные внешние потребители SDK
 on:
   push:
     paths:

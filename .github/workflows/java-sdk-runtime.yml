@@ -1,4 +1,4 @@
-name: Java SDK Runtime API 0.30.3 — actual processes, Go broker and signed packages
+name: Java SDK Runtime API 0.30.3 — настоящие процессы, Go Broker и подписанные пакеты
 on:
   push:
     paths:

@@ -559,7 +559,7 @@ export function OperationsWorkspace({
           {job && (
             <>
               <p>
-                <strong>Correlation ID:</strong> <code>{job.id}</code>
+                <strong>ID корреляции:</strong> <code>{job.id}</code>
               </p>
               <p>
                 <strong>Состояние:</strong> {job.status} · попыток:{" "}

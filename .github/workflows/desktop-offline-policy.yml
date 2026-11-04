@@ -1,4 +1,4 @@
-name: Desktop signed offline policy 0.35.8
+name: Подписанная автономная политика Desktop 0.35.8
 on:
   push:
     paths:

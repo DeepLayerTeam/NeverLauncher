@@ -195,7 +195,7 @@ export function AuthProviderWizard02910({
   return (
     <section className="card wide" aria-label="Мастер настройки провайдера авторизации">
       <div className="registryHeading">
-        <h2>Auth Provider Wizard</h2>
+        <h2>Мастер настройки провайдера авторизации</h2>
         <button disabled={busy} onClick={() => void perform(load)}>
           Обновить
         </button>
@@ -226,7 +226,7 @@ export function AuthProviderWizard02910({
             <option value="http">HTTP (signed)</option>
             <option value="oidc">OIDC</option>
             <option value="microsoft">Microsoft Entra</option>
-            <option value="java">Java Identity SPI (approved global extension)</option>
+            <option value="java">Java Identity SPI (одобренное глобальное расширение)</option>
           </select>
         </label>
       </div>
@@ -380,7 +380,7 @@ export function AuthProviderWizard02910({
             <table className="table">
               <thead>
                 <tr>
-                  <th>Revision</th>
+                  <th>Редакция</th>
                   <th>Тип</th>
                   <th>Дата</th>
                   <th>Операция</th>

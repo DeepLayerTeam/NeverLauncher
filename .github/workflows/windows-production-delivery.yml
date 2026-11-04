@@ -1,4 +1,4 @@
-name: Windows production delivery
+name: Промышленная поставка Windows
 
 on:
   workflow_call:

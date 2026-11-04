@@ -1,4 +1,4 @@
-name: Gravit 0.33.3 Source Inventory & Export
+name: Gravit 0.33.3 — инвентаризация исходников и экспорт
 on:
   push:
     paths:

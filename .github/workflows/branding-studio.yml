@@ -1,4 +1,4 @@
-name: 0.35.5 Branding Studio and native trust
+name: 0.35.5 — студия оформления и нативное доверие
 on:
   push:
     paths:

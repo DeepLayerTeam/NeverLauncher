@@ -1,4 +1,4 @@
-name: Module parity inventory and executable regression audit 0.30.1
+name: Инвентаризация соответствия модулей и исполняемая регрессия 0.30.1
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: API-SDK Freeze Candidate 0.45.12
+name: Кандидат на фиксацию API/SDK 0.45.12
 on:
   push:
     paths:

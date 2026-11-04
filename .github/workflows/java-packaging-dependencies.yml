@@ -1,4 +1,4 @@
-name: Java Module Packaging 0.48.2 - real JAR dependencies and runtime isolation
+name: Упаковка модулей Java 0.48.2 — настоящие JAR-зависимости и изоляция Runtime
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: Gravit Compatibility Adapter 0.30.7 — source-port JVM E2E
+name: Адаптер совместимости Gravit 0.30.7 — перенос исходников и JVM E2E
 on:
   push:
     paths:

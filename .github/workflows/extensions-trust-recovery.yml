@@ -1,4 +1,4 @@
-name: Extensions Trust Recovery 0.20.12
+name: Восстановление доверия к расширениям 0.20.12
 
 on:
   push:

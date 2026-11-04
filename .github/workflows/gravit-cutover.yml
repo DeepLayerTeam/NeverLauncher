@@ -1,4 +1,4 @@
-name: Gravit Staged Cutover 0.33.11
+name: Поэтапное переключение с Gravit 0.33.11
 on:
   push:
     paths:

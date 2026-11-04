@@ -1,4 +1,4 @@
-name: TPM Certify verifier 0.31.2
+name: Проверка TPM Certify 0.31.2
 on:
   push:
     paths:

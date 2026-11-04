@@ -1,9 +1,9 @@
-# Launcher 0.36.1: independently signed release policy
+# Launcher 0.36.1 — независимо подписанная политика выпуска
 
 The release signer implements a **fail-closed exact-byte gate**. These are the
 operational inputs for real protected environments, not fixture certificates.
 
-## Version selection
+## Выбор версии
 
 - 0.36.0: legacy `launcher.ga036.targets.v1` domain and
   `GA_VERIFIED_TARGETS_0360.json`/`GA_TARGET_APPROVAL_0360.{json,sig}`.
@@ -18,7 +18,7 @@ operational inputs for real protected environments, not fixture certificates.
 - A prerelease version is not eligible for **stable GA**. All later stable
   versions require fresh approval for their own commit and final bytes.
 
-## Operator signing and immutable identity
+## Подписание оператором и неизменяемая идентичность
 
 The independent operator must run, for each of Windows/Linux/macOS x64 and
 ARM64, `nativeInstall`, `desktopLaunch`, `minecraftLaunch`, `serverJoin`,
@@ -58,7 +58,7 @@ Path('approval.sig').write_text(private.sign(b'launcher.ga.targets.v2\x00' + app
 The signing snippet signs an existing independently collected evidence set;
 it does **not** generate reports or claim to have executed Minecraft.
 
-## Protected workflow
+## Защищённый процесс работы
 
 1. CI builds all required jobs for one `GITHUB_SHA`. Independent protected
    execution produces and signs the 54 reports tied to the actual staged

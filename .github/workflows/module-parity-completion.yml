@@ -1,4 +1,4 @@
-name: 0.30.11 Gravit equivalents and desktop asset startup
+name: 0.30.11 — аналоги Gravit и запуск ресурсов Desktop
 on:
   push:
     paths:

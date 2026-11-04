@@ -1,4 +1,4 @@
-name: Java Admin Desktop CLI extensions 0.48.9
+name: Расширения Java для Admin, Desktop и CLI 0.48.9
 on:
   push:
     paths:

@@ -1,8 +1,8 @@
-# Discord, local discovery and Sentry (0.42.9)
+# Discord, локальное обнаружение и Sentry (0.42.9)
 
 The integrations use live network/IPC transports. They are **optional** and must not gate Minecraft authentication or launch. A test double in CI proves the protocol code, not availability of Discord, multicast networks or Sentry in a user's deployment.
 
-## Discord Rich Presence
+## Расширенный статус Discord Rich Presence
 
 Enable it in Desktop settings with a valid Discord application ID. The native Desktop process opens Discord's local `discord-ipc-N` socket/pipe and sends an acknowledged `SET_ACTIVITY`. Desktop refreshes the activity every 30 seconds; it recreates the connection after the Discord process restarts. When disabled, Desktop explicitly clears activity. No Discord bot token is used.
 

@@ -265,10 +265,10 @@ export function BackendOperations0289({
           <table className="table">
             <thead>
               <tr>
-                <th>Session</th>
-                <th>User</th>
-                <th>Provider</th>
-                <th>Last seen</th>
+                <th>Сессия</th>
+                <th>Пользователь</th>
+                <th>Провайдер</th>
+                <th>Последняя активность</th>
               </tr>
             </thead>
             <tbody>
@@ -284,15 +284,15 @@ export function BackendOperations0289({
               ))}
             </tbody>
           </table>
-          <h4>Launcher sessions</h4>
+          <h4>Сессии Launcher</h4>
           <table className="table">
             <thead>
               <tr>
-                <th>Session</th>
-                <th>User</th>
-                <th>Profile UUID</th>
-                <th>Launcher version</th>
-                <th>Last seen</th>
+                <th>Сессия</th>
+                <th>Пользователь</th>
+                <th>UUID профиля</th>
+                <th>Версия Launcher</th>
+                <th>Последняя активность</th>
               </tr>
             </thead>
             <tbody>

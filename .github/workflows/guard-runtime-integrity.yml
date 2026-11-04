@@ -1,4 +1,4 @@
-name: Guard runtime integrity 0.43.7
+name: Guard 0.43.7 — целостность Runtime
 on:
   push:
     paths:

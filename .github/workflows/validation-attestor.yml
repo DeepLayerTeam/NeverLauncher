@@ -1,4 +1,4 @@
-name: V04 V06 V07 V08 V09 trusted attestor, live auth and optional matrix
+name: V04 V06 V07 V08 V09 — доверенная аттестация, настоящая авторизация и опциональная матрица
 on:
   push:
     paths:

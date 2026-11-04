@@ -1,4 +1,4 @@
-name: Desktop migration and user-content preservation 0.35.9
+name: Миграция Desktop и сохранение пользовательских файлов 0.35.9
 on:
   push:
     paths:

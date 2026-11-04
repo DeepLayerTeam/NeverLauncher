@@ -1,4 +1,4 @@
-name: HWID Risk and Recovery 0.29.9
+name: Риски HWID и восстановление 0.29.9
 on:
   push:
     paths:

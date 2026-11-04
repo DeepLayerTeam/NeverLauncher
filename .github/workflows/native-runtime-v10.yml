@@ -1,5 +1,5 @@
 # Observational cross-platform execution. NEVER holds an attestation signing key.
-name: V10 native staged runtime (Windows Linux macOS)
+name: V10 — подготовленный нативный Runtime (Windows Linux macOS)
 on:
   workflow_call:
     inputs:

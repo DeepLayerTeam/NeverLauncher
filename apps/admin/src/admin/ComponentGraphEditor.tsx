@@ -96,7 +96,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
  const availableFiles=component?listAvailableFiles0248(catalog,snapshot.files,component.id):[];
  const entries=section==='components'?components:section==='categories'?categories:section==='groups'?groups:presets;
  return <article className="subcard componentEditor0248">
-  <h4>Component Graph Editor · 0.24.8</h4>
+  <h4>Редактор графа компонентов · 0.24.8</h4>
   <p className="muted">Manifest {snapshot.manifestSchemaVersion} · Catalog {snapshot.catalog?.schemaVersion} r{initialRevision} · SHA-256 {snapshot.catalog?.digest?.slice(0,16)}… · {snapshot.status}</p>
   {!eligible&&<p role="alert" className="error">Редактирование доступно только в неподписанном Manifest v3. Создайте новый v3-пакет; подписанные и опубликованные релизы неизменяемы.</p>}
   <div className="buttonRow"><button disabled={busy||saving||dirty} onClick={()=>void load()}>Перечитать с Backend</button><button disabled={!dirty||busy||saving} onClick={()=>{if(window.confirm('Сбросить несохранённые изменения?')){setCatalog(initialCatalog(snapshot.catalog!));setPreview(null);setPreviewKey('')}}}>Сбросить правки</button></div>

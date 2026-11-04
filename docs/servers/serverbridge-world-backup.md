@@ -1,8 +1,8 @@
 # Launcher 0.41.10 — проверенное резервное копирование и восстановление мира
 
-The CLI **does not** perform a live `save-all` snapshot. A consistent snapshot is accepted only after Host Supervisor has confirmed a graceful Minecraft `stop` and the JVM has exited. Hosts that run outside the managed supervisor are not automatically discoverable: an untracked Minecraft process must be stopped separately and its exit established by the operator.
+CLI **не** создаёт снимок работающего сервера командой `save-all`. Согласованный снимок принимается только после того, как Host Supervisor подтвердил корректную остановку Minecraft через `stop`, а JVM завершилась. Узлы вне управляемого супервизора не обнаруживаются автоматически: незарегистрированный процесс Minecraft должен быть отдельно остановлен, а оператор — убедиться, что он завершился.
 
-## снимок остановленного мира
+## Снимок остановленного мира
 
 ```bash
 nl server-bridge host world-backup create --server-root /srv/minecraft --backup-root /srv/mc-backups --consistency stop
@@ -10,25 +10,25 @@ nl server-bridge host world-backup list --server-root /srv/minecraft --backup-ro
 nl server-bridge host world-backup verify --server-root /srv/minecraft --backup-root /srv/mc-backups --id BACKUP_ID
 ```
 
-The host-level `world-maintenance.gate` prevents a new JVM spawn during snapshot creation, including the supervisor's crash-loop retry path. Only the backup agent owning the gate can release it. After a crash, the gate persists so that neither an automatic start nor a second backup can overwrite the uncertain state.
+Механизм `world-maintenance.gate` на узле предотвращает создание новой JVM во время резервного копирования, в том числе при автоматическом повторном запуске супервизора после падения. Снять блокировку может только владеющий ею агент резервного копирования. После сбоя она сохраняется, чтобы ни автоматический старт, ни вторая операция копирования не перезаписали состояние с неизвестным результатом.
 
-To inspect a crashed gate read `.launcher/server-bridge/host/world-maintenance.gate/owner.json`, Host Supervisor `runtime.json`, and the OS process identities. Only once the former owner, supervisor and game JVM are confirmed gone may the operator run:
+Для расследования оставшейся блокировки изучите `.launcher/server-bridge/host/world-maintenance.gate/owner.json`, `runtime.json` Host Supervisor и идентификаторы процессов ОС. Лишь подтвердив отсутствие прежнего владельца, супервизора и игровой JVM, оператор может выполнить:
 
 ```bash
 nl server-bridge host world-backup gate-recover --server-root /srv/minecraft --confirm stale-gate
 ```
 
-A missing/malformed owner is intentionally not cleared automatically. An active child process prevents recovery. If a backup process was interrupted, verify the last complete backup ID and inspect partial directories manually. Never delete active locks to accelerate deployment.
+Отсутствующий или повреждённый файл владельца намеренно не очищается автоматически. Активный дочерний процесс запрещает восстановление блокировки. Если резервное копирование было прервано, проверьте идентификатор последней полной копии и вручную осмотрите частично созданные каталоги. Не удаляйте действующие блокировки ради ускорения развёртывания.
 
-## восстановление в изолированный корневой каталог
+## Восстановление в изолированный корневой каталог
 
 ```bash
 nl server-bridge host world-backup restore --server-root /srv/minecraft --backup-root /srv/mc-backups --id BACKUP_ID --confirm BACKUP_ID --destination /srv/minecraft-recovered
 ```
 
-The destination must not exist and cannot overlap the live server or backup store. Files are hashed again while copied, staged privately, and atomically published only after verification. A second restore to the same destination fails; no automatic JVM restart occurs. After verifying UUID playerdata, region files, and plugin state, use a **separate maintenance/deployment procedure** to switch your managed server to the restored root. Do not copy a partial restore over a running server. Do not mistake isolated file restore for evidence that a real Minecraft server can load the world; use the Paper E2E for that test.
+Каталог назначения не должен существовать и пересекаться с рабочим сервером либо хранилищем резервных копий. При копировании файлы хешируются повторно, сначала помещаются в закрытый временный каталог и публикуются атомарно только после проверки. Повторное восстановление в тот же каталог завершается ошибкой; JVM не перезапускается автоматически. После проверки UUID в playerdata, файлов регионов и состояния плагинов выполните **отдельную процедуру обслуживания или развёртывания**, чтобы переключить управляемый сервер на восстановленный корень. Не накладывайте частичное восстановление на работающий сервер. Восстановление файлов само по себе не подтверждает, что настоящий сервер Minecraft сможет загрузить мир: для этого нужен E2E-тест Paper.
 
-## воспроизводимые интеграционные проверки
+## Воспроизводимые интеграционные проверки
 
 ```bash
 cd cli && go test -race ./cmd/launcher -run 'TestWorldBackup' -count=1
@@ -37,4 +37,4 @@ python3 scripts/test/world-backup-real-java-04110.py --cli /tmp/nl
 python3 scripts/test/world-backup-host-e2e-02810.py --cli /tmp/nl
 ```
 
-The OpenJDK test executes a **real JVM process**, but its minimal Java program is a fixture rather than an upstream Minecraft JAR. The repository's `e2e/scripts/verify-real-world-backup-0290.py` requires Docker, a real Paper container, a real player join, a stored player UUID, and persisted plugin data. That live test must pass before calling upstream Paper recovery fully certified.
+Тест с OpenJDK запускает **реальный процесс JVM**, однако его минимальная Java-программа является тестовым образцом, а не оригинальным JAR Minecraft. Для теста репозитория `e2e/scripts/verify-real-world-backup-0290.py` нужны Docker, настоящий контейнер Paper, подключение реального игрока, сохранённый UUID игрока и постоянные данные плагинов. Пока эта проверка не пройдена, восстановление мира на оригинальном Paper нельзя считать полностью сертифицированным.

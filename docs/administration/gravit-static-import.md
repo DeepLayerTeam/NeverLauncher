@@ -1,4 +1,4 @@
-# Launcher 0.22.10 — Static Gravit ClientProfile import
+# Launcher 0.22.10 — статический импорт ClientProfile Gravit
 
 The importer is accessible under **Admin → Profiles → Gravit static import**. It processes a single Gravit `ClientProfile` JSON document. Inputs must be valid JSON (remove JSONC comments with a JSON-aware editor), at most 1 MiB. Input is never evaluated; no Java code, loader agent, shell, optional action or module from Gravit is executed.
 

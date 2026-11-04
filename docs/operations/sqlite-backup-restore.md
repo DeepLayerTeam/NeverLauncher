@@ -1,19 +1,12 @@
-# Launcher 0.32.10 — DEP06 SQLite Backup & Restore
+# Launcher 0.32.10 — DEP06: резервное копирование и восстановление SQLite
 
-## Support boundary
+## Границы поддержки
 
-The SQLite durable store and Core CLI are operational code. The main HTTP
-Repository still uses PostgreSQL in this release. This functionality does not
-replace PostgreSQL `pg_dump`, S3/local storage backups, Redis/coordination
-backups, or a complete server recovery plan.
+Долговременное хранилище SQLite и Core CLI содержат рабочий код. Основной HTTP Repository в этом выпуске по-прежнему использует PostgreSQL. Эти механизмы не заменяют `pg_dump` для PostgreSQL, резервное копирование S3/локального хранилища, Redis/координации или полный план восстановления сервера.
 
-Use Linux on verified **ext4, XFS or Btrfs** with a private service-owned
-**0700** DB directory and **0600** DB and backup files. SQLite binaries and
-pinned driver must be available. Deployments on NFS, SMB, overlayfs or tmpfs
-fail closed. Snapshots contain auth and other sensitive state; protect the
-backup directory as strongly as the live DB, and encrypt copies off-host.
+Используйте Linux с проверенной файловой системой **ext4, XFS или Btrfs**, закрытым каталогом БД, принадлежащим служебной учётной записи, с правами **0700**, и файлами БД и резервных копий с правами **0600**. Должны присутствовать двоичные файлы SQLite и закреплённая версия драйвера. Развёртывания на NFS, SMB, overlayfs и tmpfs отклоняются. Снимки содержат данные аутентификации и другую чувствительную информацию. Защищайте каталог резервных копий не слабее рабочей БД, а копии вне хоста шифруйте.
 
-## Back up a running SQLite database
+## Резервное копирование работающей базы SQLite
 
 ```sh
 launcher-sqlite backup \
@@ -23,16 +16,9 @@ launcher-sqlite backup-verify \
   --backup /var/lib/launcher/backups/state-2026-10-27.db
 ```
 
-The snapshot reads committed pages from the live WAL using a **separate SQLite
-read-only connection** and `VACUUM INTO ?`, then fsyncs the output and its
-parent directory. It checks `integrity_check`, `foreign_key_check`, and schema
-version, records the file size and SHA-256 in an exclusive-created sidecar
-`.db.json`, and publishes the snapshot without overwriting previous files.
-It does not truncate the live WAL. The sidecar is not an Ed25519 signature:
-SHA-256 here detects accidental or unsynchronized changes, not attacker
-modification of both the backup and its manifest.
+Снимок считывает зафиксированные страницы работающего WAL через **отдельное соединение SQLite только для чтения** и `VACUUM INTO ?`, затем вызывает fsync для результата и родительского каталога. Проверяются `integrity_check`, `foreign_key_check` и версия схемы, размер файла и SHA-256 записываются в создаваемый эксклюзивно сопроводительный файл `.db.json`, после чего снимок публикуется без перезаписи прежних файлов. Рабочий WAL не обрезается. Сопроводительный файл не является подписью Ed25519: SHA-256 здесь обнаруживает случайные или несогласованные изменения, но не защищает от злоумышленника, одновременно подменившего копию и её манифест.
 
-## Mandatory pre-upgrade validation
+## Обязательная проверка перед обновлением
 
 ```sh
 launcher-sqlite pre-upgrade \
@@ -40,28 +26,13 @@ launcher-sqlite pre-upgrade \
   --backup /var/lib/launcher/backups/preupgrade-2026-10-27.db
 ```
 
-This operation fails closed unless the backup succeeds, checksum and SQLite
-integrity/foreign keys pass, and the snapshot can be restored to a temporary,
-private location and reopened with a passing **SQLite Core Repository Check**.
-The temporary restored copy is removed and the verified snapshot is retained.
-Additionally, **automatic SQLite Core schema migration** from 322–325 to 326
-now performs a verified backup and offline restore proof in a protected
-`pre-upgrade-backups/` subdirectory **before DDL**. A failed proof blocks the
-migration. New blank database initialization is not an upgrade.
+Операция отклоняется при любой ошибке создания копии, проверки хеша, целостности SQLite/внешних ключей или восстановления снимка во временный закрытый каталог с последующим успешным открытием и **SQLite Core Repository Check**. Временная восстановленная копия удаляется, а проверенный снимок сохраняется. Кроме того, **автоматическая миграция схемы SQLite Core** с версий 322–325 на 326 теперь создаёт проверенную резервную копию и подтверждает возможность автономного восстановления в защищённом подкаталоге `pre-upgrade-backups/` **до выполнения DDL**. Неуспешная проверка блокирует миграцию. Инициализация новой пустой БД не считается обновлением.
 
-IMPORTANT: The current release's general installer does not implement an
-in-place production fleet upgrade or an automatic HTTP SQLite database
-migration. Use the `pre-upgrade` gate in your deployment runbook for upgrades
-that are not performed through `sqlitecore.Open`.
+**Важно:** общий установщик текущей версии не реализует обновление промышленного парка на месте или автоматическую миграцию HTTP SQLite. Для обновлений не через `sqlitecore.Open` включайте проверку `pre-upgrade` в эксплуатационную процедуру.
 
-## Restore (offline only)
+## Восстановление (только автономно)
 
-Stop Launcher (all processes using this DB) first. A running Launcher
-holds an exclusive owner lock; restore refuses to proceed. SQLite `-wal`,
-`-shm` and `-journal` sidecars are **not automatically deleted**, even if they
-were left by a crash. Restart/repair and checkpoint the original DB, shut it
-down cleanly, and then restore. Never discard a WAL file containing uncommitted
-recovery state as part of an automated restore.
+Сначала остановите Launcher и все процессы, использующие эту БД. Работающий Launcher удерживает эксклюзивную блокировку владельца, поэтому восстановление откажет в выполнении. Сопутствующие файлы SQLite `-wal`, `-shm` и `-journal` **не удаляются автоматически**, даже если остались после сбоя. Перезапустите/восстановите исходную БД, выполните checkpoint и корректно остановите её, после чего приступайте к восстановлению. Никогда не удаляйте WAL с ещё не обработанным состоянием восстановления в ходе автоматической процедуры.
 
 ```sh
 launcher-sqlite restore \
@@ -71,24 +42,10 @@ launcher-sqlite core-status \
   --db /var/lib/launcher/sqlite/state.db
 ```
 
-`--replace` must be explicit when a target exists. Restore takes the same
-owner lock as normal SQLite startup, checks the snapshot twice, copies to a
-private staged file with fsync, rechecks the copy and SQLite constraints,
-retains the old database as a `state.db.pre-restore-*` hardlink, and atomically
-renames the new DB into place. Keep the rollback copy until real application
-smoke tests have passed. This protocol assumes all writers observe the
-Launcher owner lock; it does not forcibly terminate unrelated clients
-which bypass that lock.
+При существовании целевой БД необходимо явно указать `--replace`. Восстановление захватывает ту же блокировку владельца, что и обычный запуск SQLite, дважды проверяет снимок, копирует его во временный закрытый файл с fsync, повторно проверяет копию и ограничения SQLite, сохраняет прежнюю БД как жёсткую ссылку `state.db.pre-restore-*` и атомарно переименовывает новый файл на место БД. Сохраняйте копию для отката до прохождения реальных smoke-тестов приложения. Протокол предполагает, что все записывающие процессы соблюдают блокировку Launcher; посторонние клиенты, обходящие её, принудительно не завершаются.
 
-No backup tool can guarantee preservation of writes made **after** its
-snapshot. At recovery, inspect joined/auth sessions, one-time tickets,
-revocations, release heads, bridge commands and audit; account for RPO and
-post-snapshot state before admitting clients.
+Ни одно резервное копирование не гарантирует сохранение записей, сделанных **после** снимка. При восстановлении проверьте связанные/аутентифицированные сессии, одноразовые билеты, отзывы, указатели релизов, команды Bridge и аудит; учтите RPO и состояние после снимка до допуска клиентов.
 
-## Disaster recovery validation
+## Проверка аварийного восстановления
 
-Test on the same supported filesystem and runtime version: snapshot a live
-WAL DB during writes, restore to a separate directory, check Core invariants,
-check exact project/user/UUID data, test a cancelled/tampered backup, and
-verify that a second process cannot restore while the owner is running.
-The CI workflow `sqlite-backup-03210.yml` covers these gates.
+Проверьте на той же поддерживаемой файловой системе и версии Runtime: снимите работающую WAL-БД во время записи, восстановите в отдельный каталог, проверьте инварианты Core и точные данные проектов/пользователей/UUID, отменённую/подменённую копию и невозможность восстановления вторым процессом при работающем владельце. Эти условия проверяет workflow CI `sqlite-backup-03210.yml`.

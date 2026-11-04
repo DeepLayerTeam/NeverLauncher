@@ -1,6 +1,6 @@
-# Launcher 0.31.1 — executable Trust & Isolation baseline
+# Launcher 0.31.1 — работающая базовая защита доверия и изоляции
 
-## Implemented and enforced in 0.31.1
+## Реализовано и принудительно применяется в 0.31.1
 
 `TrustAssessment` is computed by the API from authenticated session binding and the stored device record. API paths `GET /api/v1/auth/device-trust` and `/api/v1/auth/devices` return per-profile decisions with stable machine-readable reasons. `GET /api/v1/auth/device-trust?requireProfile=standard|strict` returns HTTP 403 and the denial details when a requested profile is not satisfied (and 400 for an unknown profile). The ordinary status endpoint remains backwards compatible.
 

@@ -1,4 +1,4 @@
-name: Game World Backup 0.41.10
+name: Резервное копирование игрового мира 0.41.10
 on:
   push:
     paths:

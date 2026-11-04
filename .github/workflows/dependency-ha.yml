@@ -1,4 +1,4 @@
-name: Dependency HA 0.51.3 runtime and syntax regressions
+name: HA зависимостей 0.51.3 — регрессии Runtime и синтаксиса
 on:
   push:
     paths:

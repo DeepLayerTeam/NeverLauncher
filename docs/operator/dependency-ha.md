@@ -1,4 +1,4 @@
-# NeverLauncher 0.51.3 — Dependency HA & Ingress Failover
+# NeverLauncher 0.51.3 — высокая доступность зависимостей и переключение входящего трафика
 
 ## Что действительно работает
 

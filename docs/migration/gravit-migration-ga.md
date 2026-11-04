@@ -1,4 +1,4 @@
-# NeverLauncher 0.45.0 — Migration GA: operational procedure and limits
+# NeverLauncher 0.45.0 — GA миграции: процедура эксплуатации и ограничения
 
 **Status:** source implementation and verification tools. The existence of version 0.45.0 is **not** proof that the production Migration GA criteria have passed. Certification requires independently observed, real Gravit/Minecraft migration of all three reference classes and retained evidence. In the absence of that infrastructure the outcome is `BLOCKED`.
 
@@ -8,7 +8,7 @@ Migration GA requires three different Gravit source projects with independent mi
 
 **Supported Gravit source JARs for GA:** 5.7.0–5.7.12 after an independently approved JAR SHA-256. Inventory recognizing 5.7.13 does not authorize certifying it. Imported JAR modules are not binary-compatible by default. A source-port or functional replacement must be verified on the target project, otherwise it remains a manual/blocked item.
 
-## Snapshot preparation — a real file read, not an expected digest
+## Подготовка снимка — фактическое чтение файлов, а не ожидаемый хеш
 
 1. Fence *all* writers to each source and target environment, including Paper/Forge/NeoForge servers, proxy, external SQL data writers, upload jobs, and other independent processes. Stopping one systemd service alone does not fence the other processes.
 2. Produce **separate** immutable or quiesced source and target snapshots. Each snapshot directory must contain `world/`, `plugins/` and a UTF-8 `player-uuids.txt` (one lowercase hyphenated Minecraft UUID per line). The world directory must contain real world files. An empty `plugins/` directory is permitted for a Vanilla project with no plugin data, but **both** snapshots must match. A source and target cannot point to the same directory. Store snapshots on local operator-controlled storage. The checker rejects symlinks and unsupported filesystem entries; it reads file bytes, not caller-supplied hash values.
@@ -24,7 +24,7 @@ go -C tools/migration-ga run . audit-state \
 
 The command fails if a file, directory tree or UUID roster differs. The output is a private, immutable-on-creation JSON file containing exact tree digests, UUIDs, counts and exclusions. **Do not** run this on a live/writable world and treat the result as a consistent snapshot. The operator must ensure snapshot consistency before the read.
 
-## Plans and certification
+## Планы и сертификация
 
 For each reference add to the 0.44.9 GA JSON plan:
 
@@ -72,6 +72,6 @@ It requires `LAUNCHER_MIGRATION_GA_TOKEN` and rejects absent private evidence, i
 
 Record the source/target writer fence, deployment route revision, restore point, backup verification and post-rollback player world/UUID/inventory/economy checks. The `operational-rollback-drill` and `negative-rollback` checks must actually exercise the rollback and its refusal path on an isolated real copy. After players modify the Never world, an old Gravit backup is **not** a lossless restore. Reconcile the newer player and plugin data under fenced writers before switching traffic back. Never mark a failed, unsupported or untested case PASS.
 
-## What the local code checks do not prove
+## Чего не подтверждают локальные проверки кода
 
 Go unit/race tests validate hashing, signature verification, strict input handling, snapshot comparisons and live-backend validation using a test HTTP server. They do **not** constitute production PostgreSQL, Java Minecraft, RCON, ServerBridge, Windows/macOS or DNS/proxy cutover acceptance. The canonical workflow `.github/workflows/gravit-migration-ga-0340.yml` includes the full CI build matrix and three isolated live reference projects, but an authorized operator must run it and independently inspect raw evidence and the documented manual actions before declaring Migration GA certified.

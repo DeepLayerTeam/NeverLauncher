@@ -1,4 +1,4 @@
-name: Launcher 0.31.14 Adversarial Security Gate
+name: Launcher 0.31.14 — контроль защиты от атак
 on:
   push:
     paths:

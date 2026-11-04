@@ -1,4 +1,4 @@
-# NeverLauncher 0.46.2 — real delivery and independent acceptance
+# NeverLauncher 0.46.2 — настоящая поставка и независимая приёмка
 
 This is the executable verification path for *actual* release files. It does not
 mint signatures or substitute test data for native executables. No release

@@ -1,4 +1,4 @@
-name: Signed first-run 0.35.2
+name: Подписанный первый запуск 0.35.2
 on:
   pull_request:
     paths:

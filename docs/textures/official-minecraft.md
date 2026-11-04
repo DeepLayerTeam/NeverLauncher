@@ -1,6 +1,6 @@
 # Launcher 0.25.7 — интеграция с официальным Minecraft
 
-## Implemented (not a local-Yggdrasil impersonation)
+## Реализовано (не имитация локального Yggdrasil)
 
 Launcher 0.25.7 offers an **independent** Minecraft Java integration:
 Microsoft OAuth 2.0 device-code authorization → Xbox Live → XSTS → Minecraft

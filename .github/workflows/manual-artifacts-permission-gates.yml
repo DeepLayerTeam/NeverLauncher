@@ -1,4 +1,4 @@
-name: Manual Artifacts and Permission Gates 0.27.6
+name: Ручные артефакты и проверки разрешений 0.27.6
 on:
   push:
     paths:

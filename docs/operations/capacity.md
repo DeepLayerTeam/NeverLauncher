@@ -1,8 +1,8 @@
-# Launcher 0.32.15 — DEP10 Capacity & Diagnostics
+# Launcher 0.32.15 — DEP10: ёмкость и диагностика
 
 This release includes **real process and infrastructure measurements**, a 60-second rolling request window, a read-only bounded benchmark utility, and operator recommendations. It **does not** claim to know the maximum throughput of your infrastructure without measurements on it.
 
-## Operational interfaces
+## Эксплуатационные интерфейсы
 
 - `launcher-api diagnose capacity` — JSON with observed disk usage, PostgreSQL connections/DB size/job and outbox backlog, Go heap, goroutines, and recommendations. Exit `2` for failed probes or critical conditions. Run with the SAME environment as the service; secrets stay on the host.
 - `GET /api/v1/operations/capacity` — last sampled JSON, requires existing `diagnostics:read`; returns HTTP 503 if no verified/fresh sample.
@@ -10,7 +10,7 @@ This release includes **real process and infrastructure measurements**, a 60-sec
 - HTTP middleware — last-minute request count, 429 count, 5xx count, current in-flight, average and histogram-estimated p95. No route labels, tokens, IPs, or player identifiers.
 - `launcher-capacity-bench --confirm --url http://127.0.0.1:8080/api/v1/status --max-workers 16 --step 8s` — explicitly requested GET load test with 1,2,4,8,16 concurrent requests, automatically stopping on first failing step. `--allow-remote` is also required for non-loopback targets, which you must own/control. Responses contain observed RPS, p95/p99, failures and rate limiting. Do not run against third-party endpoints.
 
-## Measured conditions and actions
+## Измеряемые условия и действия
 
 | Measurement | Alert condition | Operational action |
 |---|---|---|
@@ -26,7 +26,7 @@ This release includes **real process and infrastructure measurements**, a 60-sec
 
 **These are operator-defined warning thresholds, not published benchmarked maximum limits.** No auto-scaling or automatic topology transitions occur. A return code of zero does not certify HA/failover. More than one Backend in Network/HA must pass independent lease/fencing, failover, network-partition, storage and authentication tests. SQLite-only HTTP Backend is still blocked in the existing deployment gate.
 
-## Coverage and caveats
+## Охват и оговорки
 
 - The API's current production HTTP repository is PostgreSQL; these measurements cannot certify unsupported SQLite-only HTTP production.
 - Filesystem sampling uses `statfs` on existing local paths. A missing volume is an explicit probe error, not zero usage. The report includes no storage paths.

@@ -1,4 +1,4 @@
-name: Never Official Identity Linking 0.26.8
+name: Привязка официальной идентичности Never 0.26.8
 on:
   push:
     paths:

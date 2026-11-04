@@ -1,4 +1,4 @@
-name: Host Service Installers and Watchdog 0.28.11
+name: Установщики служб хостов и наблюдатель 0.28.11
 on:
   push:
     paths:

@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.9 Guard Device Trust and ServerBridge real acceptance
+name: NeverLauncher 0.52.9 — реальная приёмка Guard, Device Trust и ServerBridge
 on:
   push:
     paths:

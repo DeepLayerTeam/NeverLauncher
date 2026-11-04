@@ -1,4 +1,4 @@
-name: Browser OAuth PKCE 0.26.3
+name: Браузерный OAuth PKCE 0.26.3
 on:
   push:
     paths:
