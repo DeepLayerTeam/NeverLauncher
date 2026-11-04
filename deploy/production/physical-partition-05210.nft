@@ -1,0 +1,14 @@
+# Install ONLY on a dedicated L3 router between the isolated host and
+# independent control plane. Out-of-band BMC/SSH management must not cross
+# this forwarding chain. Every injected element has a short kernel timeout.
+table inet launcher_partition_05210 {
+    set victims4 {
+        type ipv4_addr
+        flags timeout
+    }
+    chain forwarding {
+        type filter hook forward priority -150; policy accept;
+        ip saddr @victims4 drop
+        ip daddr @victims4 drop
+    }
+}

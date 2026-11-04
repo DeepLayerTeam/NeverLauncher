@@ -212,17 +212,19 @@ class DependencyHATests(unittest.TestCase):
         with patch.object(ha, 'stats', side_effect=[baseline, during, during]) as stats, \
              patch.object(ha, 'systemd_ssh', side_effect=lambda *args: calls.append(args)), \
              patch.object(ha, 'perform_verification', return_value={'healthy': True}), \
-             patch.object(ha.time, 'sleep'):
+             patch.object(ha.time, 'sleep'), \
+             patch.object(ha.multi, 'run', return_value='[{"addr_info":[{"family":"inet","local":"10.0.2.11"}]}]'):
             report = ha.drill(Path('/tmp/sock'), 'https://launcher.example', {}, 'patroni',
-                              'pg-a', 'operator@hosta', 20)
+                              'pg-a', 'operator@hosta', 20, self.config())
         self.assertTrue(report['testPassed'])
         self.assertEqual([a[2] for a in calls], ['stop', 'start'])
         with patch.object(ha, 'stats', return_value=baseline), \
              patch.object(ha, 'systemd_ssh', side_effect=lambda *args: calls.append(args)), \
-             patch.object(ha, 'perform_verification', side_effect=RuntimeError('interruption')):
+             patch.object(ha, 'perform_verification', side_effect=RuntimeError('interruption')), \
+             patch.object(ha.multi, 'run', return_value='[{"addr_info":[{"family":"inet","local":"10.0.2.11"}]}]'):
             with self.assertRaises(RuntimeError):
                 ha.drill(Path('/tmp/sock'), 'https://launcher.example', {}, 'patroni',
-                         'pg-a', 'operator@hosta', 20)
+                         'pg-a', 'operator@hosta', 20, self.config())
         self.assertEqual(calls[-1][2], 'start')
 
 

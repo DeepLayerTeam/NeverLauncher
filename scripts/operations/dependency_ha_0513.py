@@ -423,6 +423,33 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
         raise HAError('application and data baseline must be healthy before disruption')
     if initial[category].get(server) != 'UP':
         raise HAError('requested backend server is not currently UP; no meaningful failover test')
+    # A replica outage is not a primary failover. Require the exact service
+    # whose authority is being tested to own the active leader role first.
+    before_active = health(initial, redundant=True)['backends'][category]['active']
+    if service in ('patroni', 'redis-server') and before_active != [server]:
+        raise HAError('database/Redis failover must disrupt the actual active primary')
+    # Prevent silently disrupting an unrelated SSH host. SSH hostnames must
+    # resolve to the configured backend address, never rely on user assertion.
+    configured = cfg['postgres' if service == 'patroni' else
+                     'redis' if service == 'redis-server' else 's3'] if cfg else []
+    address = next((ip for name, ip, _ in configured if name == server), None)
+    if address is None:
+        raise HAError('backend identity absent from actual HA configuration')
+    # Management SSH commonly uses a separate out-of-band address. Verify
+    # *on the remote OS* that it actually owns the configured data-plane IP.
+    # DNS equality is both incorrect for OOB management and spoofable by aliases.
+    try:
+        raw = multi.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
+                         '-o', 'ConnectTimeout=8', '-o', 'NumberOfPasswordPrompts=0',
+                         target, 'ip -j -4 addr show'], timeout=15)
+        interface_list = json.loads(raw)
+        observed = {item.get('local') for dev in interface_list
+                    for item in dev.get('addr_info', [])
+                    if item.get('family') == 'inet'}
+    except (ValueError, TypeError, AttributeError, OSError, multi.DeploymentError) as exc:
+        raise HAError('cannot independently inspect backend interface identities') from exc
+    if address not in observed:
+        raise HAError('SSH target is not the configured backend physical host')
     # Requires operator's verified mapping from backend name to SSH host.
     # Never choose a random remote machine based only on a string in a report.
     stopped, checks, restored, outcome = False, [], False, False
@@ -437,7 +464,13 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
                 excluded = server not in selected['backends'][category]['active']
                 checks.append({'healthy': observation['healthy'], 'stoppedBackendExcluded': excluded,
                                'active': selected['backends'][category]['active']})
-                if observation['healthy'] and excluded:
+                # An observed leader change is mandatory for stateful leader
+                # services, not just a load balancer excluding a stopped node.
+                promoted = (service not in ('patroni', 'redis-server') or
+                            (len(selected['backends'][category]['active']) == 1 and
+                             selected['backends'][category]['active'][0] != server))
+                checks[-1]['newLeaderObserved'] = promoted
+                if observation['healthy'] and excluded and promoted:
                     outcome = True
                     break
             except (OSError, HAError, multi.DeploymentError, inventory.InventoryError):

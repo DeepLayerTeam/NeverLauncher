@@ -1,0 +1,167 @@
+name: Physical HA and disaster recovery 0.52.10
+on:
+  push:
+    paths:
+      - 'scripts/operations/physical_ha_dr_05210.py'
+      - 'scripts/operations/alert_receiver_05210.py'
+      - 'scripts/operations/dependency_ha_0513.py'
+      - 'scripts/operations/test_physical_ha_dr_05210.py'
+      - 'scripts/operations/test_alert_receiver_05210.py'
+      - 'scripts/operations/test_dependency_ha_0513.py'
+      - 'deploy/production/physical-partition-05210.nft'
+      - 'docs/operations/physical-ha-disaster-recovery-05210.md'
+      - '.github/workflows/physical-ha-dr-05210.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Destructive lab scenario (requires protected physical-ha-lab approval)'
+        type: choice
+        required: true
+        options: [host, partition, dependency, world]
+      victim:
+        description: 'Approved physical HA node label'
+        type: choice
+        required: true
+        options: [a, b]
+      service:
+        description: 'Dependency unit for dependency mode'
+        type: choice
+        required: true
+        options: [patroni, redis-server, minio]
+permissions:
+  contents: read
+concurrency:
+  group: physical-ha-05210-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Physical fault, durable receiver, dependency leader and recovery regressions (not GA)
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest -v \
+            scripts/operations/test_physical_ha_dr_05210.py \
+            scripts/operations/test_alert_receiver_05210.py \
+            scripts/operations/test_dependency_ha_0513.py \
+            scripts/operations/test_multi_host_chaos_05110.py \
+            scripts/operations/test_cross_host_recovery_0519.py \
+            scripts/operations/test_independent_ha_ga_0520.py
+          python3 -m py_compile scripts/operations/physical_ha_dr_05210.py scripts/operations/alert_receiver_05210.py
+          python3 scripts/version/manage.py check
+      - name: Ensure no physical receipt is produced without actual hardware and secrets
+        run: |
+          set +e
+          python3 scripts/operations/physical_ha_dr_05210.py host \
+            --state /tmp/nl-ci-05210-state.json --report /tmp/nl-ci-05210-report.json \
+            --allow-disruption I-ACCEPT-PHYSICAL-OUTAGE >/dev/null 2>&1
+          rc=$?
+          set -e
+          test "$rc" -eq 3
+          test ! -e /tmp/nl-ci-05210-report.json
+  physical-lab:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [regressions]
+    environment: physical-ha-lab
+    runs-on: [self-hosted, linux, physical-ha-05210]
+    timeout-minutes: 75
+    env:
+      MODE: ${{ inputs.mode }}
+      VICTIM: ${{ inputs.victim }}
+      SERVICE: ${{ inputs.service }}
+      NODE_A: ${{ vars.HA_NODE_A }}
+      NODE_B: ${{ vars.HA_NODE_B }}
+      ROUTER: ${{ vars.HA_ROUTER }}
+      VICTIM_IP_A: ${{ vars.HA_NODE_A_SERVICE_IP }}
+      VICTIM_IP_B: ${{ vars.HA_NODE_B_SERVICE_IP }}
+      BMC_URL_A: ${{ vars.HA_BMC_A_URL }}
+      BMC_URL_B: ${{ vars.HA_BMC_B_URL }}
+      BMC_SERIAL_A: ${{ vars.HA_BMC_A_SERIAL }}
+      BMC_SERIAL_B: ${{ vars.HA_BMC_B_SERIAL }}
+      BMC_CA: ${{ vars.HA_BMC_CA }}
+      EDGE_URL: ${{ vars.HA_EDGE_URL }}
+      ALERT_URL: ${{ vars.HA_ALERTMANAGER_URL }}
+      RECEIVER_URL: ${{ vars.HA_DELIVERY_URL }}
+      ALERT_NAME: ${{ vars.HA_EXPECTED_ALERT }}
+      WORKDIR: ${{ vars.HA_ACCEPTANCE_DIRECTORY }}
+      BACKEND_NAME: ${{ vars.HA_DEPENDENCY_BACKEND }}
+      BACKEND_TARGET: ${{ vars.HA_DEPENDENCY_TARGET }}
+      WORLD_BACKUP: ${{ vars.HA_WORLD_BACKUP }}
+      WORLD_DEST: ${{ vars.HA_WORLD_DEST }}
+      WORLD_START: ${{ vars.HA_WORLD_START }}
+      WORLD_STOP: ${{ vars.HA_WORLD_STOP }}
+      WORLD_CONFIG: ${{ vars.HA_WORLD_CONFIG }}
+      WORLD_PLAYER: ${{ vars.HA_WORLD_PLAYER }}
+      WORLD_MARKER_XYZ: ${{ vars.HA_WORLD_MARKER_XYZ }}
+      WORLD_MARKER_BLOCK: ${{ vars.HA_WORLD_MARKER_BLOCK }}
+      REDFISH_TOKEN: ${{ secrets.HA_BMC_TOKEN }}
+      READ_TOKEN: ${{ secrets.HA_DELIVERY_READ_TOKEN }}
+      RCON_PASSWORD: ${{ secrets.HA_RCON_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Destructive physical HA test (never runs on public GitHub CI)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          test -n "$WORKDIR" && test "${WORKDIR:0:1}" = '/'
+          test -d "$WORKDIR" && test "$(stat -c %a "$WORKDIR")" = 700
+          test -n "$NODE_A" && test -n "$NODE_B" && test -n "$EDGE_URL"
+          test -n "$BMC_CA" && test -n "$BMC_URL_A" && test -n "$BMC_URL_B"
+          test -n "$REDFISH_TOKEN" && test -n "$READ_TOKEN" && test -n "$ALERT_URL" && test -n "$RECEIVER_URL"
+          token_dir="$(mktemp -d "$WORKDIR/.secrets.XXXXXX")"
+          trap 'rm -rf -- "$token_dir"' EXIT
+          printf '%s' "$REDFISH_TOKEN" > "$token_dir/redfish"
+          printf '%s' "$READ_TOKEN" > "$token_dir/reader"
+          printf '%s' "$RCON_PASSWORD" > "$token_dir/rcon"
+          incident="$WORKDIR/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$MODE.json"
+          common=(--report "$incident" --state "$WORKDIR/active-physical-incident.json" \
+            --edge-url "$EDGE_URL" --allow-disruption I-ACCEPT-PHYSICAL-OUTAGE \
+            --redfish-url "$BMC_URL_A" --expected-serial "$BMC_SERIAL_A" \
+            --bmc-token-file "$token_dir/redfish" --bmc-ca "$BMC_CA" \
+            --alertmanager-url "$ALERT_URL" --delivery-url "$RECEIVER_URL" \
+            --delivery-token-file "$token_dir/reader" --alert-name "$ALERT_NAME" \
+            --node "a=$NODE_A" --node "b=$NODE_B")
+          if [[ "$VICTIM" == b ]]; then
+            common+=(--redfish-url "$BMC_URL_B" --expected-serial "$BMC_SERIAL_B")
+          fi
+          case "$MODE" in
+            host)
+              python3 scripts/operations/physical_ha_dr_05210.py host \
+                "${common[@]}" --victim "$VICTIM" ;;
+            partition)
+              if [[ "$VICTIM" == a ]]; then vip="$VICTIM_IP_A"; else vip="$VICTIM_IP_B"; fi
+              test -n "$ROUTER" && test -n "$vip"
+              python3 scripts/operations/physical_ha_dr_05210.py partition \
+                "${common[@]}" --victim "$VICTIM" --router "$ROUTER" \
+                --victim-ip "$vip" --ttl 190 ;;
+            dependency)
+              test -n "$BACKEND_NAME" && test -n "$BACKEND_TARGET"
+              python3 scripts/operations/physical_ha_dr_05210.py dependency \
+                "${common[@]}" --service "$SERVICE" --backend-server "$BACKEND_NAME" \
+                --target "$BACKEND_TARGET" --ha-env-file /etc/launcher/ha-0513.env ;;
+            world)
+              test -n "$WORLD_BACKUP" && test -n "$WORLD_DEST" && test -n "$WORLD_START" && test -n "$WORLD_STOP"
+              test -n "$WORLD_CONFIG" && test -n "$WORLD_PLAYER" && test -n "$WORLD_MARKER_XYZ" && test -n "$WORLD_MARKER_BLOCK"
+              python3 scripts/operations/physical_ha_dr_05210.py world \
+                "${common[@]}" --source-fenced --world-backup "$WORLD_BACKUP" \
+                --world-destination "$WORLD_DEST" --game-start "$WORLD_START" \
+                --game-stop "$WORLD_STOP" --game-config "$WORLD_CONFIG" \
+                --rcon-password-file "$token_dir/rcon" --expected-player "$WORLD_PLAYER" \
+                --marker-xyz "$WORLD_MARKER_XYZ" --marker-block "$WORLD_MARKER_BLOCK" ;;
+          esac
+          test -f "$incident"
+          python3 - "$incident" <<'PY'
+          import json,sys
+          doc=json.load(open(sys.argv[1], encoding='utf-8'))
+          assert doc['status']=='PASS' and doc['version']=='0.52.10'
+          PY
+      - name: State acceptance boundary accurately
+        run: |
+          echo 'Live hardware receipt observed. Independent signed 0.53.0 GA remains separately blocked.' >> "$GITHUB_STEP_SUMMARY"
