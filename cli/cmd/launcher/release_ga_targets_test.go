@@ -94,7 +94,7 @@ func TestGA0361AuthenticatesSixRealArtifactBytesAndSignedTraces(t *testing.T) {
 			PackageSHA string `json:"packageSha256"`
 			Checks     int    `json:"checksPassed"`
 		}{target, binary, row.BinarySHA, packageName, row.PackageSHA, len(gaCheckNames0361)}
-		// Populate the same (anonymous) receipt type via JSON below.
+		// Ниже заполняется тот же безымянный тип квитанции через JSON.
 		rb, _ := json.Marshal(rec)
 		var item struct {
 			Target     string `json:"target"`

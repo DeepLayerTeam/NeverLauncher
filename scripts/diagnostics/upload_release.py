@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             or (path.is_file() and path.stat().st_size == 0)
         ):
             parser.error(f"{name} not available: {path}")
-    # Upload before stripping maps; failed uploads retain artifacts for retry.
+    # Загружайте до удаления карт; неудачные выгрузки сохраняют артефакты для повтора.
     command(args.cli, "releases", "new", release)
     if args.js_dist:
         command(
@@ -173,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
             str(args.jvm_mapping.resolve()),
         )
     command(args.cli, "releases", "finalize", release)
-    # Only after *all* uploads completed successfully; source maps cannot leak in distributed bundles.
+    # Только после успешного завершения ВСЕХ загрузок; source maps не должны утекать в распространяемые пакеты.
     for sm in js_maps:
         sm.unlink()
     print(f"Sentry release {release} uploaded; removed {len(js_maps)} private JS maps")

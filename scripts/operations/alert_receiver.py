@@ -131,7 +131,7 @@ def make_handler(folder, alert, webhook_token, reader_token):
         server_version = 'NeverLauncher-Alert-Receiver/0.52.10'
         sys_version = ''
         def log_message(self, format, *args):
-            # Never log Authorization headers, source addresses, event labels.
+            # Не журналируйте заголовки Authorization, исходные адреса и метки событий.
             return
         def check(self, expected):
             raw = self.headers.get('Authorization', '').encode('utf-8', 'replace')

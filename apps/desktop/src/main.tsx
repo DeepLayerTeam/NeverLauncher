@@ -1991,7 +1991,7 @@ function App() {
     key: DeviceKeyInfo,
   ): Promise<AuthSession> {
     if (key.keyBinding !== "hardware" || key.keyAlgorithm !== "p256") {
-      setDeviceTrustStatus("verified · software proof-of-possession");
+      setDeviceTrustStatus("проверено · программное доказательство владения ключом");
       return session;
     }
     if (!key.deviceId)
@@ -2089,14 +2089,14 @@ function App() {
       !/(Win|Linux)/i.test(navigator.platform)
     )
       throw new Error(
-        "Windows/Linux TPM device and authenticated bound session required",
+        "Требуются устройство TPM Windows/Linux и привязанный аутентифицированный сеанс",
       );
     if (
       !windowsAkName0313.trim() ||
       !windowsAkCert0313.includes("-----BEGIN CERTIFICATE-----")
     ) {
       throw new Error(
-        "Provisioned Windows AK name / Linux AK persistent handle and issuer-certified AK PEM required",
+        "Требуются подготовленное имя AK Windows / постоянный дескриптор AK Linux и сертифицированный издателем PEM ключа AK",
       );
     }
     if (tpmBusy0313) return;
@@ -2199,7 +2199,7 @@ function App() {
       deviceKey.keyAlgorithm !== "p256"
     ) {
       throw new Error(
-        "TPM measured boot requires a registered hardware P-256 device",
+        "Измеренная загрузка TPM требует зарегистрированного аппаратного устройства P-256",
       );
     }
     if (
@@ -3625,7 +3625,7 @@ function App() {
         )
       ) {
         throw new Error(
-          "SHA-256 mismatch: repair did not restore all required files",
+          "Несовпадение SHA-256: восстановление не вернуло все обязательные файлы",
         );
       }
       if (manifest.runtime.launch?.offlineMode) {
@@ -3675,7 +3675,7 @@ function App() {
           restored.manifest.channel !== settings.channel
         ) {
           throw new Error(
-            "Rollback restored another profile/channel; select that profile explicitly",
+            "Откат восстановил другой профиль или канал; выберите его явно",
           );
         }
         await callTauri("save_installed_component_choice_0247", {
@@ -4083,7 +4083,7 @@ function App() {
     const deviceId = accessTokenDeviceId(authSession.accessToken);
     if (!userId || !deviceId)
       throw new Error(
-        "Device Trust session binding required for plan evidence",
+        "Для доказательств плана требуется привязка сеанса Device Trust",
       );
     return callTauri("attest_verified_component_plan_02412", {
       request: {
@@ -4156,12 +4156,12 @@ function App() {
       !officialProfile?.id
     ) {
       throw new Error(
-        "Official ServerBridge requires a selected Minecraft account and server",
+        "Для официального ServerBridge выберите учётную запись Minecraft и сервер",
       );
     }
     if (!profileServers.some((server) => server.id === settings.serverId)) {
       throw new Error(
-        "Official ServerBridge server is outside the current project/profile",
+        "Сервер официального ServerBridge не относится к текущему проекту или профилю",
       );
     }
     const planEvidence = await createVerifiedPlanEvidence02412(
@@ -5177,7 +5177,7 @@ function App() {
               (!nativeConfigLoaded0357 ? (
                 <section className="panel" role="status">
                   {ui0357.locale === "en"
-                    ? "Checking native configuration…"
+                    ? "Проверка нативной конфигурации…"
                     : "Проверка native-конфигурации…"}
                 </section>
               ) : bootstrapError0352 ? (

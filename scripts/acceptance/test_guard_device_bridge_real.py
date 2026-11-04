@@ -63,7 +63,7 @@ class Acceptance0529(unittest.TestCase):
             vanilla.rcon('127.0.0.1', 25575, 'secret', 'list')
 
     def test_actual_tcp_rcon_wire_protocol_rejects_wrong_auth_and_truncated_response(self):
-        # The socket is real; the test server is deliberately not Minecraft.
+        # Сокет настоящий; тестовый сервер намеренно не является Minecraft.
         listener=socket.socket()
         listener.bind(('127.0.0.1',0));listener.listen(1)
         port=listener.getsockname()[1]
@@ -74,7 +74,7 @@ class Acceptance0529(unittest.TestCase):
                 length=struct.unpack('<i',frame)[0]
                 data=vanilla.recv_exact(client,length)
                 req=struct.unpack('<i',data[:4])[0]
-                # Return a real RCON negative authentication response.
+                # Возвращайте реальный отрицательный ответ аутентификации RCON.
                 client.sendall(struct.pack('<iii',10,-1,2)+b'\0\0')
             listener.close()
         thread=threading.Thread(target=serve,daemon=True);thread.start()
@@ -92,7 +92,7 @@ class Acceptance0529(unittest.TestCase):
                 client.settimeout(3)
                 handshake_size=vanilla.read_varint(client)
                 vanilla.recv_exact(client,handshake_size)
-                # Status query 0 packet follows handshake.
+                # Пакет status query 0 следует после handshake.
                 query_size=vanilla.read_varint(client)
                 vanilla.recv_exact(client,query_size)
                 payload=json.dumps({'version':{'name':'1.21.1','protocol':767},'players':{'max':20}}).encode()

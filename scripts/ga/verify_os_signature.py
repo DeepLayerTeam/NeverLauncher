@@ -33,8 +33,8 @@ def verify(path: Path, signer: str):
         raise ValueError("installer missing or symlinked")
     system = platform.system()
     if system == "Windows":
-        # Powershell verifies the Authenticode trust chain and signer certificate.
-        # SIGNS may be timestamped; the OS remains the certificate-chain authority.
+        # PowerShell проверяет цепочку доверия Authenticode и сертификат подписанта. Подписи могут иметь
+        # временную метку; ОС остаётся источником истины для цепочки сертификатов.
         if not re.fullmatch("[0-9A-Fa-f]{40}", signer):
             raise ValueError("expected 40-hex Authenticode certificate thumbprint")
         script = (
@@ -69,8 +69,8 @@ def verify(path: Path, signer: str):
     elif system == "Linux":
         if not re.fullmatch("[0-9A-Fa-f]{40}", signer):
             raise ValueError("expected GPG fingerprint")
-        # Pinned public key is imported by protected CI into a dedicated keyring;
-        # a generic system keyring accepting any signer is not sufficient.
+        # Закреплённый открытый ключ импортируется защищённым CI в выделенное хранилище; общего
+        # системного хранилища, принимающего любого подписанта, недостаточно.
         keyring = os.environ.get("LAUNCHER_GA_GPG_KEYRING")
         if not keyring or not Path(keyring).is_file():
             raise ValueError("isolated trusted GPG keyring required")

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 )
 
-// UUID mappings contain account identifiers. Never publish them in a
-// world-readable file, overwrite an existing operator decision, or follow an
-// output symlink. stdout remains available explicitly for automation.
+// Сопоставления UUID содержат идентификаторы учётных записей. Не публикуйте их в
+// общедоступном файле, не перезаписывайте решения оператора и не переходите по символьной
+// ссылке для вывода. stdout явно доступен для автоматизации.
 func writePrivateIdentityReport0334(path string, data any) error {
 	if path == "" || path == "-" {
 		printJSON(data)
@@ -19,8 +19,8 @@ func writePrivateIdentityReport0334(path string, data any) error {
 	if e != nil {
 		return e
 	}
-	// Do not create parent directories with permissive defaults; the owner must
-	// select an existing protected output directory.
+	// Не создавайте родительские каталоги с разрешительными настройками по умолчанию;
+	// владелец обязан выбрать существующий защищённый каталог вывода.
 	if info, e := os.Stat(filepath.Dir(path)); e != nil {
 		return e
 	} else if !info.IsDir() {

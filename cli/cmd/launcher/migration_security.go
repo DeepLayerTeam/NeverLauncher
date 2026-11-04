@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// No raw keys or identity maps are ever sent by CLI. Confirmation is explicit,
-// not a default flag, and response files use the protected report writer.
+// CLI никогда не отправляет сырые ключи и сопоставления идентичностей. Подтверждение явное, а не флаг
+// по умолчанию; ответные файлы создаёт защищённый механизм записи отчётов.
 func postMigrationSecurity0336(endpoint, token, runID, out string, activate bool, confirmation string) error {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -46,13 +46,13 @@ func postMigrationSecurity0336(endpoint, token, runID, out string, activate bool
 	if res.StatusCode != 200 {
 		return fmt.Errorf("security reset HTTP %d", res.StatusCode)
 	}
-	// Do not duplicate request code: GET API uses the same response shape and
-	// private-output logic, but here use the bounded private output reader.
+	// Не дублируйте код запросов: GET API использует ту же структуру ответа и логику закрытого вывода,
+	// но здесь применяется ограниченный по объёму читатель закрытого вывода.
 	return readMigrationSecurityResponse0336(res, out)
 }
 
-// Authenticated administrative response has a fixed small summary; do not
-// trust Content-Length and cap body before decoding or writing a report.
+// Аутентифицированный административный ответ содержит небольшую сводку фиксированного размера; не
+// доверяйте Content-Length и ограничивайте тело до декодирования или записи отчёта.
 func readMigrationSecurityResponse0336(res *http.Response, out string) error {
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 64<<10))
 	if err != nil {

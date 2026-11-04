@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import ru.launcher.sdk.core.*;
 
-/** JVM host extension using *real* broker configuration to choose its active SPI. */
+/** Расширение JVM-хоста использует НАСТОЯЩУЮ конфигурацию брокера для выбора активного SPI. */
 public final class GreetingExtension implements Extension {
     private static final ProviderService<GreetingProvider> GREETINGS =
             new ProviderService<>("example.greetings", GreetingProvider.class, SemVer.parse("1.1.0"));
@@ -39,7 +39,7 @@ public final class GreetingExtension implements Extension {
                     private boolean live;
                     public void start(ProviderContext p) throws Exception {
                         p.cancellation().throwIfCancelled();
-                        // Service discovery in third-party libraries uses the TCCL.
+                        // Обнаружение сервисов в сторонних библиотеках использует TCCL.
                         if (!"example.terms.Terms".equals(Class.forName("example.terms.Terms", true,
                                 Thread.currentThread().getContextClassLoader()).getName()))
                             throw new IllegalStateException("SPI dependency classloader mismatch");

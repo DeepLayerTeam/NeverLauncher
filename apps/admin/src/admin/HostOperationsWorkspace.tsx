@@ -285,7 +285,7 @@ export function HostOperationsWorkspace04111({
         data.operation.id !== op.id ||
         data.operation.serverId !== op.serverId
       )
-        throw Error("Backend returned wrong operation");
+        throw Error("Backend вернул другую операцию");
       setSelected(data.operation);
       setSelectedId(data.operation.id);
       const refreshed = await api.list(serverId);

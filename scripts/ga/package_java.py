@@ -37,7 +37,7 @@ def package(cli: Path, private_key: Path, public_key: Path, output: Path) -> dic
         raise ValueError("package release must match VERSION=0.31.0")
     records = []
     for name in EXAMPLES:
-        # This script invokes the existing working Java compiler and signer.
+        # Скрипт вызывает существующие работающие компилятор Java и подписант.
         run(["sh", f"examples/extensions/{name}/build.sh"])
         package_path = output / f"{name}-{version}.nlext"
         run(

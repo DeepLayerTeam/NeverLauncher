@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// Operator workflows work against actual installed artifacts, the process supervisor,
-// and a freshly signed ServerBridge heartbeat observed by Backend. A successful copy
-// or enrollment response is deliberately NOT an indication of a healthy deployment.
+// Процедуры оператора работают с фактически установленными артефактами, супервизором процессов
+// и свежим подписанным heartbeat ServerBridge, наблюдаемым Backend. Успешное копирование или
+// регистрация намеренно НЕ означают здоровое развёртывание.
 type bridgeVerification02812 struct {
 	SchemaVersion   string `json:"schemaVersion"`
 	Status          string `json:"status"`
@@ -62,7 +62,7 @@ func bridgeInsideRoot02812(root, path string) error {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 		return fmt.Errorf("managed path outside server root: %s", path)
 	}
-	// Do not follow a symlink into another tenant's tree.
+	// Не переходите по символьной ссылке в дерево другого арендатора.
 	current := root
 	for _, segment := range strings.Split(rel, string(os.PathSeparator)) {
 		if segment == "" || segment == "." {
@@ -196,8 +196,8 @@ func verifyServerBridge02812(args []string) error {
 	return writeOrPrintJSON(flagValue(args, "--output", ""), result)
 }
 
-// Atomic lock for competing operator CLIs. An abandoned lock is not blindly
-// stolen: a human must reconcile the partially executed action first.
+// Атомарная блокировка конкурирующих CLI оператора. Заброшенную блокировку нельзя самовольно
+// перехватывать: человек должен сначала согласовать результаты частично выполненной операции.
 func bridgeOperatorLock02812(root string) (func(), error) {
 	lockPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "operator.lock")
 	if err := os.MkdirAll(filepath.Dir(lockPath), 0o700); err != nil {
@@ -225,8 +225,8 @@ func bridgeOperatorLock02812(root string) (func(), error) {
 	return func() { _ = os.Remove(lockPath) }, nil
 }
 
-// The game's stop acknowledgement can precede the supervisor releasing its
-// session lock. Never race that lock when starting a replacement process.
+// Подтверждение остановки игры может прийти раньше освобождения блокировки сеанса
+// супервизора. Не допускайте гонки за блокировку при запуске процесса замены.
 func bridgeWaitHostExit02812(root string) error {
 	path := hostPaths01910(root)["lock"]
 	until := time.Now().Add(8 * time.Second)
@@ -285,7 +285,7 @@ func bridgeRollout02812(args []string) error {
 			return fmt.Errorf("existing managed installation failed preflight: %w", err)
 		}
 	}
-	// Before modifying a live server, inspect all release metadata and arguments.
+	// Перед изменением работающего сервера проверьте все метаданные выпуска и аргументы.
 	detection, err := detectServerBridgePlatform0199(root, flagValue(args, "--platform", ""))
 	if err != nil {
 		return err
@@ -320,8 +320,8 @@ func bridgeRollout02812(args []string) error {
 			return err
 		}
 	}
-	// Every failed phase restores the previous managed artifact/config. Enrollment
-	// itself is not reversible on Backend; the operator receives an explicit warning.
+	// На любом неудачном этапе восстанавливайте прежние управляемые артефакт и конфигурацию.
+	// Регистрацию на Backend отменить нельзя; оператор явно предупреждается.
 	installationDone := false
 	rollback := func(problem error) error {
 		if !installationDone {
@@ -412,8 +412,8 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 	if len(tx.Changes) == 0 || len(tx.Changes) > 32 {
 		return errors.New("unexpected transaction change count")
 	}
-	// A transaction file lives on disk and must never be allowed to select
-	// arbitrary files under the Minecraft root (worlds, plugins, playerdata).
+	// Файл транзакции на диске не должен позволять выбирать произвольные файлы
+	// под корнем Minecraft (миры, плагины, playerdata).
 	state, err := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 	if err != nil || state.TransactionID != tx.ID || state.Platform != tx.Platform {
 		return errors.New("transaction does not match active managed installation")
@@ -454,7 +454,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 			if err := bridgeInsideRoot02812(root, change.BackupPath); err != nil {
 				return err
 			}
-			// Backups use the short sha256 of the exact destination name.
+			// Резервные копии используют короткий sha256 точного имени назначения.
 			sum := sha256.Sum256([]byte(filepath.Clean(change.Path)))
 			expected := hex.EncodeToString(sum[:8]) + "-" + filepath.Base(change.Path)
 			if filepath.Base(change.BackupPath) != expected {

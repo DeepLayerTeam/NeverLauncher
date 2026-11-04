@@ -1,7 +1,7 @@
-//! Shared SHA-256 object store for verified client files. Objects are copied,
-//! never hardlinked, into installations (players may subsequently modify them).
-//! An in-process mutex and an OS file lock cover the entire check/fetch/publish
-//! sequence so simultaneous profiles/processes fetch each object only once.
+//! Общее хранилище объектов SHA-256 для проверенных файлов клиента. Объекты копируются в установки, но
+//! никогда не связываются жёсткими ссылками, поскольку игроки могут их менять. Мьютекс процесса и
+//! блокировка файла ОС охватывают полную последовательность проверки, загрузки и публикации, поэтому
+//! параллельные профили и процессы загружают каждый объект только один раз.
 use crate::{file_ownership, replace_verified_managed_file_0224, set_executable_if_needed, ManifestFile};
 use fs2::FileExt;
 use sha2::{Digest, Sha256};

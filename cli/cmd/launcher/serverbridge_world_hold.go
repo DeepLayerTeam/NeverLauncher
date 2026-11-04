@@ -1,10 +1,10 @@
 package main
 
-// 0.51.8: Hold the *existing* Host Supervisor launch gate across an entire
-// PostgreSQL/S3/world cohort. The gate is acquired by world-backup create and
-// retained atomically before it can be released by the original process.
-// This prevents the gap between completing a world copy and freezing the DB.
-// A failed operator/SSH process leaves the gate in place (fail closed).
+// 0.51.8: удерживайте СУЩЕСТВУЮЩИЙ барьер запуска Host Supervisor на протяжении всей
+// согласованной группы PostgreSQL/S3/миров. Барьер захватывается при создании копии мира и
+// атомарно переводится в длительное удержание до возможного освобождения первоначальным
+// процессом. Это исключает промежуток между копированием мира и заморозкой БД. Сбой оператора
+// или SSH оставляет барьер (отказ при неопределённости).
 
 import (
 	"errors"
@@ -51,8 +51,8 @@ func worldBackupPersistCohortHold0518(root, holdID, backupID string) error {
 		err = worldBackupSyncDir02810(gate)
 	}
 	if err != nil {
-		// Never remove the gate when a persistent hold may have reached disk;
-		// an interrupted deployment must be investigated explicitly.
+		// Никогда не удаляйте барьер, если длительное удержание могло сохраниться на диске;
+		// прерванное развёртывание требует отдельного расследования.
 		return fmt.Errorf("cohort hold may be partially committed; gate must remain fenced: %w", err)
 	}
 	return nil
@@ -114,7 +114,7 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	if len(entries) != 2 || entries[0].Name() != worldCohortHoldFile0518 || entries[1].Name() != "owner.json" {
 		return errors.New("cohort gate contains unexpected entries")
 	}
-	// Cannot release while a supervised JVM is still running or starting.
+	// Нельзя освобождать барьер, пока управляемая JVM работает или запускается.
 	if err = worldBackupQuiesce02810(root, "stopped"); err != nil {
 		return err
 	}

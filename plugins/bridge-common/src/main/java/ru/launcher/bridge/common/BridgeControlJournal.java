@@ -19,11 +19,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeSet;
 
-/**
- * Durable, single-writer, fail-closed WAL for side-effecting ServerBridge commands.
- * Entries are never discarded: a previously executed command must remain a tombstone
- * even after the Backend has acknowledged it and even after the channel is rotated.
- */
+/**Надёжный WAL с единственным писателем и отказом при
+ * неопределённости для команд ServerBridge с побочными
+ * эффектами. Записи никогда не удаляются: ранее выполненная
+ * команда остаётся надгробной записью даже после ACK Backend и
+ */ротации канала. */
 final class BridgeControlJournal implements AutoCloseable {
     record State(String digest, String phase, BridgeControlResult result) {}
     record Receipt(String commandId, String runtimeId, long sequence, String channelId,
@@ -59,7 +59,7 @@ final class BridgeControlJournal implements AutoCloseable {
                     throw new IOException("invalid control journal", e);
                 }
                 String expected = props.getProperty(CHECKSUM);
-                // The unsealed 0.41.1 journal is upgraded on its next durable write.
+                // Незапечатанный журнал 0.41.1 обновляется при следующей долговечной записи.
                 if (expected != null && !expected.equalsIgnoreCase(digest(props)))
                     throw new IOException("control journal checksum mismatch: refuse to replay commands");
             }
@@ -135,7 +135,7 @@ final class BridgeControlJournal implements AutoCloseable {
         persist();
     }
 
-    /** Upgrade a 0.41.1 executed record after re-receiving the same verified signed delivery. */
+    /** Обновите реально существующую выполненную запись 0.41.1 после повторного получения той же проверенной подписанной доставки. */
     synchronized void bindLegacyReceipt(BridgeControlCommand command) throws IOException {
         ensureOpen();
         String p = prefix(command.commandId());
@@ -165,7 +165,7 @@ final class BridgeControlJournal implements AutoCloseable {
             String p = key.substring(0, key.length() - "phase".length());
             if (!runtimeId.equals(props.getProperty(p + "runtime")) || !channelId.equals(props.getProperty(p + "channel")) ||
                 "true".equals(props.getProperty(p + "acked"))) continue;
-            // Legacy entries have no lease metadata: they remain tombstones, never fabricated receipts.
+            // У старых записей нет метаданных аренды: они остаются надгробными записями, а не вымышленными квитанциями.
             String token = props.getProperty(p + "lease", "");
             if (token.length() < 16) continue;
             long sequence;
@@ -228,13 +228,13 @@ final class BridgeControlJournal implements AutoCloseable {
             try (var ch = FileChannel.open(tmp, StandardOpenOption.WRITE)) { ch.force(true); }
             Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             setOwnerOnly(path);
-            // Sync the directory entry as well as file contents on POSIX hosts.
+            // На POSIX-хостах синхронизируйте запись каталога вместе с содержимым файла.
             if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
                 try (var dir = FileChannel.open(path.getParent(), StandardOpenOption.READ)) { dir.force(true); }
             }
         } catch (IOException | RuntimeException e) {
-            // A partially persisted marker cannot authorize more actions.
-            // Operator must repair the journal/disk and restart the agent.
+            // Частично сохранённый маркер не вправе разрешать новые действия. Оператор
+            // должен исправить журнал или диск и перезапустить агента.
             poisoned = true;
             throw e;
         } finally { Files.deleteIfExists(tmp); }

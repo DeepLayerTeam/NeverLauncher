@@ -20,7 +20,7 @@ func acquireProcessLock(path string) (*processLock, error) {
 		return nil, e
 	}
 	var overlap syscall.Overlapped
-	// LOCKFILE_EXCLUSIVE_LOCK, 1 byte starting at zero.
+	// LOCKFILE_EXCLUSIVE_LOCK, один байт начиная с нулевого смещения.
 	r, _, err := lockFileEx.Call(f.Fd(), 2, 0, 1, 0, uintptr(unsafe.Pointer(&overlap)))
 	if r == 0 {
 		f.Close()

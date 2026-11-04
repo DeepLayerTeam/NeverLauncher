@@ -19,7 +19,7 @@ func atomicReplace(from, to string) error {
 	if e != nil {
 		return e
 	}
-	// MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH; no delete-then-rename gap.
+	// MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH; без промежутка «удалить, затем переименовать».
 	done, _, err := moveFileEx.Call(uintptr(unsafe.Pointer(src)), uintptr(unsafe.Pointer(dst)), 0x1|0x8)
 	if done == 0 {
 		return fmt.Errorf("MoveFileExW: %w", err)

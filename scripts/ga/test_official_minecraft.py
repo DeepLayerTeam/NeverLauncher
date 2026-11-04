@@ -269,7 +269,7 @@ class OfficialGATest(unittest.TestCase):
             signer.sign_attestation(folder, self.pub, seed, SHA)
 
     def test_release_has_local_approval_key(self):
-        # CI cannot fabricate external approval because the signing key is not in the repo.
+        # CI не может подделать внешнее одобрение, поскольку ключа подписи нет в репозитории.
         self.assertFalse((Path(__file__).parent / "official-ga-seed.key").exists())
 
 

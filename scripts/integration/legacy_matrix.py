@@ -149,7 +149,7 @@ def main(argv=None):
         rows = load_manifest(args.manifest)
         require(args.candidate_cli.is_file() and not args.candidate_cli.is_symlink(), 'candidate CLI missing')
         require(upgrade.native_binary_version(args.candidate_cli, allow_target=True) == upgrade.TARGET, 'candidate version mismatch')
-        # All artifacts are unpacked on an isolated, private test filesystem.
+        # Все артефакты распаковываются в отдельной закрытой тестовой файловой системе.
         with tempfile.TemporaryDirectory(prefix='nl-0480-real-legacy-') as tmp:
             workdir = Path(tmp)
             results = [run_one(row, args.candidate_cli.resolve(), workdir) for row in rows]

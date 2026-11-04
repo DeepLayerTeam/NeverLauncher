@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// An action is owner-authored data in the signed release. The user's preset
-// selects the action; a local preference cannot create or edit an action.
-// File and ClassPath always point to files owned by this same component.
+// Действие — данные, созданные владельцем, в подписанном выпуске. Пресет пользователя
+// выбирает действие; локальное предпочтение не может создавать или менять его. File и
+// ClassPath всегда ссылаются на файлы того же компонента.
 type ComponentAction0245 struct {
 	Type string   `json:"type"`
 	Path string   `json:"path,omitempty"`

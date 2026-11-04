@@ -184,7 +184,7 @@ func TestJVM0283ClasspathWildcardAndPathRejections(t *testing.T) {
 	}
 }
 
-// Exercises the real JVM, rather than only testing an exec argv fixture.
+// Проверяет настоящую JVM, а не только фикстуру аргументов exec.
 func TestJVM0283RealJavaClasspathAndModule(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fixture uses Unix filesystem layout")

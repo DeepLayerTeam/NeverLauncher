@@ -18,9 +18,9 @@ import (
 	"time"
 )
 
-// Runtime certification is bound to the *verified* Client Factory lock, not
-// to a mutable version selector or an assertion made by the caller. The probe
-// runs Runtime against a disposable copy, leaving locked outputs intact.
+// Сертификация Runtime привязывается к ПРОВЕРЕННОЙ блокировке Client Factory, а не к
+// изменяемому выбору версии или утверждению вызывающей стороны. Проверка запускает Runtime
+// на временной копии, сохраняя закреплённые результаты.
 const factoryCertSchema02712 = "launcher.factory.runtime-certificate.v1"
 
 type factoryProbe02712 struct {
@@ -127,7 +127,7 @@ func factoryCertKeygen02712(privatePath, publicPath string) error {
 	if err != nil {
 		return err
 	}
-	// O_EXCL forbids replacement of previously established trust roots.
+	// O_EXCL запрещает замену ранее установленных корней доверия.
 	for i, item := range []struct {
 		path string
 		data []byte
@@ -183,9 +183,9 @@ func certValidateProbe02712(plan factoryPlan0271, profile string, probe factoryP
 	if !probe.Success && !probe.TimedOut {
 		return errors.New("runtime process failed")
 	}
-	// V03: v1 probes carry neither a verified window/renderer observation
-	// nor a witnessed main-menu transition. A timeout, PID and LWJGL marker
-	// are not certification. Never sign/accept a v1 startup claim as PASS.
+	// V03: проверки v1 не содержат достоверного наблюдения окна/визуализатора и перехода в главное
+	// меню. Тайм-аут, PID и маркер LWJGL не являются сертификацией. Никогда не подписывайте и не
+	// принимайте как PASS утверждение v1 об успешном запуске.
 	return errors.New("legacy runtime certificate v1 cannot establish GUI/main-menu readiness; use staged startup observer 0.34.3")
 }
 func certHostTarget02712(target vanillaTarget) error {
@@ -359,7 +359,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	if err != nil {
 		return cert, err
 	}
-	// Copy verified immutable inputs: the game may write logs, options and caches.
+	// Копируйте проверенные неизменяемые входные файлы: игра может создавать журналы, настройки и кэши.
 	staging, err := os.MkdirTemp("", "launcher-cert-02712-")
 	if err != nil {
 		return cert, err
@@ -379,7 +379,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	defer cancel()
 	cmd := exec.CommandContext(runCtx, rt, "certify-vanilla", "--root", copyRoot, "--version", profile, "--java", java, "--required-java-major", strconv.Itoa(plan.Java.Major), "--max-runtime-seconds", strconv.Itoa(maxSeconds))
 	cmd.Dir = staging
-	// Avoid passing credentials / auth tokens to the subprocess.
+	// Не передавайте дочернему процессу учётные данные и токены авторизации.
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + staging, "TMPDIR=" + staging}
 	for _, key := range []string{"DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "LIBGL_ALWAYS_SOFTWARE", "DYLD_LIBRARY_PATH", "LD_LIBRARY_PATH", "SystemRoot", "WINDIR", "APPDATA", "LOCALAPPDATA"} {
 		if v, ok := os.LookupEnv(key); ok {
@@ -396,7 +396,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	if err = json.Unmarshal(stdout.Bytes(), &probe); err != nil {
 		return cert, fmt.Errorf("Runtime returned invalid JSON: %w", err)
 	}
-	// Never trust a supplied log path: it must be a real regular file underneath the disposable root.
+	// Не доверяйте предоставленному пути к журналу: нужен обычный файл под одноразовым корнем.
 	absLog, err := filepath.Abs(probe.LogPath)
 	if err != nil {
 		return cert, err
@@ -405,8 +405,8 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return cert, errors.New("runtime log escaped isolated client root")
 	}
-	// Reject parent-directory symlinks created by the tested JVM. A syntactically
-	// in-root path is insufficient if logs/ points outside the disposable tree.
+	// Запрещайте символьные ссылки на родительские каталоги, созданные проверяемой JVM. Синтаксически
+	// внутренний путь недостаточен, если logs/ указывает за пределы одноразового дерева.
 	if _, err := secureClientDestination(copyRoot, filepath.ToSlash(rel)); err != nil {
 		return cert, fmt.Errorf("unsafe runtime log path: %w", err)
 	}
@@ -450,7 +450,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	if err != nil {
 		return cert, err
 	}
-	// Do not leave partial evidence on failed write.
+	// При ошибке записи не оставляйте частичные доказательства.
 	probePath := filepath.Join(filepath.Dir(absOut), probeFile)
 	logPath := filepath.Join(filepath.Dir(absOut), logFile)
 	if err = writeAtomicBytes(probePath, append(probeJSON, '\n'), 0600); err != nil {
@@ -557,5 +557,5 @@ func handleRuntimeCertification02712(args []string) error {
 	}
 }
 
-// Used by automated checks and certificate verifier; changing implementation
-// does not alter signed InstallPlan bytes for existing deployments.
+// Используется автоматическими проверками и верификатором сертификатов; изменение реализации
+// не меняет подписанные байты InstallPlan в существующих установках.

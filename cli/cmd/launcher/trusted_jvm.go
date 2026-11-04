@@ -1,8 +1,8 @@
 package main
 
-// Trusted JVM plugins have unrestricted access to the Minecraft process.
-// They are not Extensions sandbox workers. No unverified JAR is ever
-// forwarded to Java, and the trust anchor must live outside the client tree.
+// Доверенные плагины JVM имеют неограниченный доступ к процессу Minecraft. Они не являются
+// изолированными работниками Extensions. Непроверенный JAR никогда не передаётся Java, а
+// корень доверия должен находиться вне клиентского дерева.
 import (
 	"archive/zip"
 	"bytes"
@@ -61,7 +61,7 @@ func trustedBytes0306(z *zip.File, capBytes int64) ([]byte, error) {
 }
 func trustedDigest0306(b []byte) string { sum := sha256.Sum256(b); return hex.EncodeToString(sum[:]) }
 
-// Never trust a publisher key shipped in the same client installation.
+// Никогда не доверяйте ключу издателя, поставленному вместе с клиентом.
 func trustedAnchor0306(root, key string) error {
 	if key == "" {
 		return fmt.Errorf("external %s trust anchor required", trustedPublicKeyEnv0306)
@@ -166,7 +166,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		if _, err = zip.NewReader(bytes.NewReader(b), int64(len(b))); err != nil {
 			return record, nil, fmt.Errorf("invalid trusted JAR %s: %w", rel, err)
 		}
-		// Structural validation prevents malformed archives from reaching the JVM.
+		// Проверка структуры не допускает попадания некорректных архивов в JVM.
 		temp, err := os.CreateTemp("", "nl-trusted-*.jar")
 		if err != nil {
 			return record, nil, err
@@ -191,8 +191,8 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		}
 		allowed[rel] = b
 		if rel == "agent.jar" {
-			// Reject arbitrary agents: bootstrap is our audited implementation,
-			// while third-party trusted hooks are packaged under plugins/.
+			// Отклоняйте произвольные агенты: bootstrap — наша проверенная реализация, а
+			// сторонние доверенные перехватчики упаковываются в plugins/.
 			zr, _ := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 			var found bool
 			for _, f := range zr.File {
@@ -235,7 +235,7 @@ func trustedInstall0306(root, archive, key string) (trustedRecord0306, error) {
 	if err != nil {
 		return rec, err
 	}
-	// Immutable release directories, switched with atomic active record.
+	// Неизменяемые каталоги выпусков переключаются атомарной записью active.
 	release := trustedRoot0306 + "/releases/" + rec.PackageSHA256
 	for name, b := range blobs {
 		target, err := trustedPath0306(root, release+"/"+name)
@@ -342,8 +342,8 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 }
 func mustJSON0306(x any) []byte { b, _ := json.Marshal(x); return b }
 
-// trustedPrepare returns JVM parameters and a wrapper main class. Caller MUST
-// call cleanup after the child exits; the config contains absolute plugin paths.
+// trustedPrepare возвращает параметры JVM и обёрточный main-класс. Вызывающая сторона ОБЯЗАНА вызвать cleanup
+// после завершения дочернего процесса; конфигурация содержит абсолютные пути плагинов.
 func trustedPrepare0306(root, originalMain string) ([]string, string, func(), error) {
 	key := strings.TrimSpace(os.Getenv(trustedPublicKeyEnv0306))
 	rec, release, err := trustedLoad0306(root, key)
@@ -362,8 +362,8 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 	}
 	var config strings.Builder
 	fmt.Fprintf(&config, "main=%s\n", base64.StdEncoding.EncodeToString([]byte(originalMain)))
-	// Compile the signed per-plugin class transformation allowlist into the
-	// private premain configuration. The Java agent enforces it at transform time.
+	// Скомпилируйте подписанный список разрешённых преобразований классов для каждого плагина в
+	// закрытую конфигурацию premain. Java-агент применяет его во время трансформации.
 	if guard, err := guardCompatLoad0502(root, strings.TrimSpace(os.Getenv(guardCompatKeyEnv0502))); err != nil {
 		return nil, "", nil, err
 	} else if guard != nil {

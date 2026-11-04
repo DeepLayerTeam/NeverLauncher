@@ -3,8 +3,8 @@
 use runtime::guard_inventory_0501::collect_guard_inventory_0501;
 use std::path::PathBuf;
 
-// Real Guard child, authenticated Unix IPC, process policy and fresh challenge.
-// No sensor/game PASS can originate from this local-only probe.
+// Настоящий дочерний Guard, аутентифицированный Unix IPC, политика процесса и новый challenge. Эта
+// локальная проверка не может создавать статус PASS для датчика или игры.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn linux_native_inventory_exercises_guard_instead_of_using_fixtures() {
     let dir = std::env::temp_dir().join(format!("launcher-inventory-real-{}", std::process::id()));

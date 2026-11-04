@@ -475,9 +475,9 @@ func remoteReadReceipt0284(path string) (remoteReceipt0284, error) {
 }
 func remotePersistReceipt0284(path string, r remoteReceipt0284) error { return remoteSave0284(path, r) }
 
-// A different idempotency key must never bypass an interrupted/uncertain
-// host action. The directory is private and guarded by the singleton agent;
-// malformed or unreadable receipts fail closed instead of being ignored.
+// Другой ключ идемпотентности никогда не обходит прерванное или неопределённое действие
+// хоста. Каталог закрыт и защищён единственным агентом; некорректные или нечитаемые
+// квитанции приводят к отказу, а не игнорируются.
 func remoteUnresolvedCommand04112(dir string) (bool, error) {
 	entries, err := os.ReadDir(filepath.Join(dir, "commands"))
 	if err != nil {
@@ -1064,10 +1064,10 @@ func remoteCall0284(args []string) error {
 		}
 		tlsConfig.Certificates = []tls.Certificate{pair}
 	}
-	// The Go transport treats an Idempotency-Key as permission to replay a
-	// request on a reused broken connection. Host side effects must NEVER be
-	// replayed after an uncertain reply: disable connection reuse entirely and
-	// recover only through the read-only receipt endpoint.
+	// Транспорт Go рассматривает Idempotency-Key как разрешение повторить запрос на
+	// переиспользованном повреждённом соединении. Побочные эффекты хоста НЕЛЬЗЯ повторять после
+	// неопределённого ответа: полностью отключите повторное использование соединения и
+	// восстанавливайте результат только через read-only endpoint квитанции.
 	client := &http.Client{Timeout: 90 * time.Second, Transport: &http.Transport{TLSClientConfig: tlsConfig, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	action := flagValue(args, "--action", "status")
 	var method, path string
@@ -1123,10 +1123,10 @@ func remoteCall0284(args []string) error {
 	return writeOrPrintJSON(flagValue(args, "--output", ""), json.RawMessage(content))
 }
 
-// remoteServeManaged0428 stops accepting new connections on SIGTERM while
-// allowing the durable command journal to finish and fsync receipts. A forced
-// timeout is returned as an error: an in-flight command may be indeterminate
-// and must be reconciled, never retried with a new idempotency key.
+// remoteServeManaged0428 при SIGTERM перестаёт принимать новые соединения, позволяя журналу
+// команд завершить запись и fsync квитанций. Принудительный тайм-аут возвращается как
+// ошибка: выполняемая команда может иметь неопределённый результат и требует согласования, а
+// не повтора с новым ключом идемпотентности.
 func remoteServeManaged0428(ctx context.Context, server *http.Server, listener net.Listener) error {
 	finished := make(chan error, 1)
 	go func() { finished <- server.Serve(listener) }()
@@ -1142,8 +1142,8 @@ func remoteServeManaged0428(ctx context.Context, server *http.Server, listener n
 	remoteServiceWatchdog0498(watchdogCtx)
 	select {
 	case err := <-finished:
-		// If the listener dies before a shutdown request, report failure so
-		// systemd restarts this control-plane service instead of marking it clean.
+		// Если прослушиватель умер до запроса остановки, сообщите об ошибке, чтобы systemd
+		// перезапустил службу управления вместо отметки чистого завершения.
 		if ctx.Err() == nil {
 			return fmt.Errorf("RemoteControl HTTPS listener stopped unexpectedly: %w", err)
 		}

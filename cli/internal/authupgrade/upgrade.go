@@ -1,7 +1,7 @@
-// Package authupgrade performs a real PostgreSQL, read-only preservation scan
-// before a Launcher authentication upgrade and checks it again afterwards.
-// It never copies credentials, active sessions or raw account identifiers into
-// the durable checkpoint. The normal sealed migration runner performs writes.
+// Пакет authupgrade выполняет настоящий предварительный и последующий скан PostgreSQL
+// только для чтения при обновлении авторизации Launcher. Он не копирует учётные данные,
+// активные сеансы и сырые идентификаторы в долговечную контрольную точку. Запись
+// выполняет обычный защищённый механизм миграций.
 package authupgrade
 
 import (
@@ -49,9 +49,9 @@ type scanRow struct {
 	D    string `json:"d"`
 }
 
-// ReadOnlyScanSQL supports both the pre-0081 canonical schema and the new one:
-// issuer is checked when present and fingerprinted using the exact legacy
-// backfill namespace when missing. A legitimate 0081 migration preserves it.
+// ReadOnlyScanSQL поддерживает и каноническую схему до 0081, и новую: issuer проверяется
+// при наличии, а при отсутствии хешируется в точном пространстве имён устаревшего
+// заполнения. Корректная миграция 0081 сохраняет это значение.
 const ReadOnlyScanSQL = `\set ON_ERROR_STOP on
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL statement_timeout = '120s';
@@ -102,8 +102,8 @@ SELECT row_to_json(v)::text FROM (
 COMMIT;
 `
 
-// ScanPSQL uses a child process because the CLI's migration runner also uses
-// psql. stdout is parsed incrementally; no secrets are written to report files.
+// ScanPSQL использует дочерний процесс, поскольку механизм миграций CLI также вызывает
+// psql. stdout разбирается потоково; секреты в отчёты не записываются.
 func ScanPSQL(ctx context.Context, executable, dsn string, allow []string) (Checkpoint, error) {
 	if strings.TrimSpace(dsn) == "" {
 		return Checkpoint{}, errors.New("LAUNCHER_DATABASE_DSN is required")
@@ -201,7 +201,7 @@ func ScanRows(r io.Reader, allow []string) (Checkpoint, error) {
 			if x.A == "" || x.B == "" {
 				return Checkpoint{}, errors.New("malformed identity record in database scan")
 			}
-			// Re-encode to canonical JSON, not psql-specific whitespace.
+			// Повторно кодируйте канонический JSON, а не пробельные последовательности в формате psql.
 			encoded, _ := json.Marshal(x)
 			_, _ = h[x.Kind].Write(encoded)
 			_, _ = h[x.Kind].Write([]byte{'\n'})

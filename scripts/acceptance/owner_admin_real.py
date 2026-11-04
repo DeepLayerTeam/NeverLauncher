@@ -181,7 +181,7 @@ def create_project(api, email, password):
                                data={'id': channel, 'name': 'Real acceptance', 'protected': True})
     require(made_channel.get('data', {}).get('channel', {}).get('id') == channel, 'channel creation invalid')
     verify_project(api, project, profile, channel, description, email, password)
-    # A draft is never readable as a published stable release.
+    # Черновик недоступен для чтения как опубликованный стабильный выпуск.
     api.request('GET', '/api/v1/projects/' + project + '/profiles/' + profile + '/manifest?channel=' + channel,
                 expected=(404,))
     return project, profile, channel, description
@@ -243,8 +243,8 @@ def establish_real_mfa(api, email, password):
                            data={'code': code})
     require(verified.get('data', {}).get('status') == 'totp-enabled',
             'TOTP verification did not enable MFA')
-    # The verification may consume the time step; give the next unique step
-    # if verification and step-up run in the same window (backend policy).
+    # Проверка может потребить временной шаг; предоставьте следующий уникальный шаг, если проверка и
+    # дополнительное подтверждение попадают в одно окно (политика Backend).
     stepped = api.request('POST', '/api/v1/auth/mfa/step-up/totp', token=access,
                           data={'totp': totp_now(secret)})
     result = stepped.get('data', {})
@@ -279,8 +279,8 @@ def real_game_command(api, server_id, token):
 
 
 def run_host(api, server_id, token, marker):
-    # Never treat an unreachable host, an accepted async command or an API
-    # response alone as proof of start/stop/restart of a real game process.
+    # Недоступный хост, принятая асинхронная команда или один ответ API не доказывают
+    # настоящий запуск, остановку или перезапуск игрового процесса.
     initial = host_status(api, server_id, token)
     require(initial['host']['status']['processAlive'] is True and
             initial['host']['status']['supervisorAlive'] is True and
@@ -349,7 +349,7 @@ def execute(args, report):
     report['serverId'] = args.server_id
     report['sourceCommit'] = os.environ.get('GITHUB_SHA', '')
     check(report, 'production_compose_preflight', lambda: deploy_call(env, 'check'))
-    # A failed run retains volumes for forensics. It never purges a database.
+    # Неудачный запуск сохраняет тома для расследования. База данных никогда не очищается.
     check(report, 'fresh_postgres_compose_install', lambda: deploy_call(env, 'up'))
     def first_ready():
         doc = api.request('GET', '/ready')
@@ -458,7 +458,7 @@ def main(argv=None):
         report['status'] = 'passed'
         code = 0
     except (Blocked, ValueError, UnicodeError, OSError, KeyError, RuntimeError, subprocess.TimeoutExpired) as exc:
-        # NEVER include server responses, secrets or environment values in published artifacts.
+        # НИКОГДА не включайте серверные ответы, секреты и значения окружения в опубликованные артефакты.
         report['failureType'] = type(exc).__name__
         report['failure'] = 'real installation/owner/host operation failed; consult private runner logs'
         print('BLOCKED owner/admin E2E: ' + type(exc).__name__, file=sys.stderr)

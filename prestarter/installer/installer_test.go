@@ -166,8 +166,8 @@ func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
 	}
 }
 
-// A canceled bootstrap must never publish a fresh active slot. In particular,
-// an interrupted reinstall must leave the already verified generation intact.
+// Отменённый bootstrap никогда не публикует новый активный слот. В частности, прерванная
+// переустановка обязана сохранить ранее проверенное поколение.
 func TestCanceledBootstrapNeverAdvancesActiveRelease0240(t *testing.T) {
 	root := t.TempDir()
 	opts := signedBundle(t, root, true)

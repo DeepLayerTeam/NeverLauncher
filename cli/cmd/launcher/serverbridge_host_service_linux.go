@@ -20,7 +20,7 @@ const hostServiceMarker02811 = "# Managed by Launcher Host Service Installer 0.2
 
 var hostServiceName02811 = regexp.MustCompile(`^[a-z][a-z0-9-]{0,47}$`)
 
-// Isolated for the installer integration tests. No shell interpreter is involved.
+// Изолировано для интеграционных тестов установщика. Интерпретатор shell не используется.
 var hostSystemctl02811 = func(args ...string) error {
 	cmd := exec.Command("/usr/bin/systemctl", args...)
 	output, err := cmd.CombinedOutput()
@@ -59,7 +59,7 @@ func hostUnitValue02811(value string) (string, error) {
 	if value == "" || strings.ContainsAny(value, "\n\r\x00") {
 		return "", errors.New("empty or multiline value forbidden in systemd unit")
 	}
-	// Escape both systemd specifiers and the quoted-word parser; no shell involved.
+	// Экранируйте и спецификаторы systemd, и синтаксис аргументов в кавычках; shell не участвует.
 	value = strings.ReplaceAll(value, "%", "%%")
 	value = strings.ReplaceAll(value, "\\", "\\\\")
 	value = strings.ReplaceAll(value, "\"", "\\\"")
@@ -129,15 +129,15 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	if spec.Component == "host" {
 		unit = strings.Replace(unit, "Type=simple", "Type=notify\nNotifyAccess=main\nWatchdogSec=30s", 1)
 	} else {
-		// The HTTPS agent can start the independently supervised JVM host.
-		// Killing its entire cgroup on remote-agent reload would kill healthy
-		// game servers. The host itself is managed by its own supervisor.
-		// The remote HTTPS listener reports READY only after bind and sends
-		// WATCHDOG pings only while the serving loop is active.
+		// HTTPS-агент может запускать JVM-хост под независимым супервизором. Убийство
+		// всей cgroup при перезагрузке удалённого агента остановило бы здоровые игровые
+		// серверы. Хост управляется собственным супервизором. Удалённый
+		// HTTPS-прослушиватель сообщает READY только после bind и посылает WATCHDOG,
+		// пока действует цикл обработки.
 		unit = strings.Replace(unit, "Type=simple", "Type=notify\nNotifyAccess=main\nWatchdogSec=30s", 1)
 		unit = strings.Replace(unit, "KillMode=mixed", "KillMode=process", 1)
-		// The HTTPS server drains already accepted, journaled commands for up
-		// to 90s on SIGTERM; the unit must not SIGKILL it at the default 45s.
+		// HTTPS-сервер при SIGTERM до 90 секунд завершает уже принятые журналируемые команды; сервис
+		// не должен получать SIGKILL по стандартному 45-секундному тайм-ауту.
 		unit = strings.Replace(unit, "TimeoutStopSec="+strconv.Itoa(spec.StopSeconds+15)+"s", "TimeoutStopSec=105s", 1)
 	}
 	if spec.Scope == "system" {
@@ -215,7 +215,7 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 	if !hostServiceName02811.MatchString(group.Name) {
 		return errors.New("service account primary group name is not safe for systemd unit")
 	}
-	// The private host-state root is a trust boundary, not a general shared directory.
+	// Закрытый корень состояния хоста — граница доверия, а не общий каталог.
 	fi, err := os.Stat(spec.Root)
 	if err != nil {
 		return err

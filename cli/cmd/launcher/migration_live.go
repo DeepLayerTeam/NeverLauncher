@@ -1,11 +1,11 @@
 package main
 
-// A native, fail-closed game-session witness for the isolated migration
-// rehearsal. Unlike operator-supplied probe scripts this code launches a real
-// foreground client process and observes its UUID on a live Java server over
-// authenticated loopback RCON. No RCON credentials, client output, or argv are
-// sent to the backend. This is an operator-owned staging observation, not a
-// remote attestation of the client or proof of Minecraft licensing.
+// Нативное проверяемое свидетельство игровой сессии для изолированной репетиции миграции с отказом
+// при неопределённости. В отличие от скриптов проверки, предоставленных оператором, этот код
+// запускает настоящий клиент в активном режиме и наблюдает его UUID на живом сервере Java через
+// аутентифицированный RCON loopback. Учётные данные RCON, вывод клиента и argv не отправляются в
+// Backend. Это наблюдение в тестовом окружении оператора, а не удалённая аттестация клиента и не
+// доказательство лицензии Minecraft.
 
 import (
 	"context"
@@ -164,8 +164,8 @@ func rehearsalRCONList0447(ctx context.Context, address, password string) (strin
 	return "", errors.New("RCON list uuids response missing")
 }
 func rehearsalRCONHasPlayer0447(result, name, uuid string) bool {
-	// Java Edition /list uuids prints `PlayerName (uuid)`. Never accept a
-	// UUID mentioned elsewhere in a message or another player's record.
+	// Команда Java Edition /list uuids выводит `PlayerName (uuid)`. Не принимайте UUID
+	// из другого места сообщения или записи другого игрока.
 	pattern := regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])` + regexp.QuoteMeta(name) + `\s*\(\s*` + regexp.QuoteMeta(uuid) + `\s*\)`)
 	return pattern.MatchString(result)
 }
@@ -253,8 +253,8 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 			cmd.Env = append(cmd.Env, key+"="+v)
 		}
 	}
-	// Discard all process output. Game logs may contain tokens; they must not be
-	// copied into evidence, stdout, the API or a diagnostic archive.
+	// Отбрасывайте весь вывод процесса. Журналы игры могут содержать токены; их нельзя
+	// копировать в доказательства, stdout, API или диагностический архив.
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err = cmd.Start(); err != nil {
@@ -319,8 +319,8 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 			if !rehearsalRCONHasPlayer0447(answer, cfg.PlayerName, cfg.PlayerUUID) {
 				continue
 			}
-			// Recheck the *same* live session after a hold interval. No cached logs
-			// or successful launcher exit substitute for an active multiplayer join.
+			// Повторно проверьте ТУ ЖЕ живую сессию после периода ожидания. Кэшированные журналы и успешное
+			// завершение лаунчера не заменяют активного подключения к многопользовательскому серверу.
 			select {
 			case e := <-exited:
 				return proof, noverify, noop, fmt.Errorf("client exited during join: %v", e)

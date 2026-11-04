@@ -284,7 +284,7 @@ func TestModpack0275CommandIntegrationAndExplicitMissing(t *testing.T) {
 	if _, e = os.Stat(client); !os.IsNotExist(e) {
 		t.Fatal("published incomplete client")
 	}
-	// Verified manual fallback through the exact same CLI route.
+	// Проверенная ручная замена через тот же маршрут CLI.
 	manual := filepath.Join(root, "manual")
 	if err = os.MkdirAll(manual, 0700); err != nil {
 		t.Fatal(err)

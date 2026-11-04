@@ -55,7 +55,7 @@ def run(argv: list[str], *, expect_ok: bool, timeout: int = 900) -> dict:
         require(completed.returncode == 0, f'{Path(argv[0]).name} failed (exit={completed.returncode})')
     else:
         require(completed.returncode != 0, f'{Path(argv[0]).name} incorrectly succeeded under fault')
-    # Do not publish stdout/stderr: upstream tools may emit private credentials.
+    # Не публикуйте stdout/stderr: инструменты источника могут вывести секретные учётные данные.
     return {'exitCode': completed.returncode, 'durationMs': round((time.monotonic() - started) * 1000),
             'stdoutSHA256': hashlib.sha256(completed.stdout).hexdigest(),
             'stderrSHA256': hashlib.sha256(completed.stderr).hexdigest()}
@@ -124,7 +124,7 @@ def main() -> int:
                 'config.json', 'options.txt', '.launcher-installer',
             }), 'repair target must be signed-managed game/runtime bytes, not a world, user file or installer control')
     require(len(args.managed_repair_sha256) == 64, 'managed repair checksum required')
-    # These are real existing release packages: fail before changing any state.
+    # Это настоящие существующие пакеты выпуска; при ошибке отказывайте до любого изменения состояния.
     for bundle in (args.old_bundle,args.new_bundle):
         run([str(args.installer),'verify','--bundle',str(bundle),'--offline'], expect_ok=True)
 
@@ -155,7 +155,7 @@ def main() -> int:
             user_digest = sha256(save)
             def preserved():
                 require(save.is_file() and sha256(save)==user_digest, 'user save unexpectedly changed')
-            # A real untrusted modified package must fail before provisioning.
+            # Настоящий недоверенный изменённый пакет должен отклоняться до подготовки.
             with tempfile.TemporaryDirectory(prefix='nl-corrupt-0527-',dir=args.scratch_parent) as bad_dir:
                 copy = Path(bad_dir) / 'untrusted'
                 shutil.copytree(args.new_bundle,copy,symlinks=True)
@@ -166,20 +166,20 @@ def main() -> int:
                 add_event(events,'corrupt-signed-package-rejected',native('update',copy,fail=True))
             require(active(root)==old,'bad package changed active release')
             preserved()
-            # First prove that an isolated network namespace was *actually*
-            # created. An EPERM/unshare failure is not a network fault PASS.
+            # Сначала докажите, что изолированное сетевое пространство имён ДЕЙСТВИТЕЛЬНО создано.
+            # Ошибка EPERM/unshare не считается успешной проверкой сетевого отказа.
             run(['unshare','-n','--','python3','-c',
                  "import socket; assert {name for _,name in socket.if_nameindex()} <= {'lo'}"],
                 expect_ok=True)
-            # A real network namespace with no external interfaces forces a
-            # *real* offline failure, provided new release needs remote inputs.
+            # Реальное сетевое пространство имён без внешних интерфейсов вызывает НАСТОЯЩИЙ
+            # офлайновый сбой, если новому выпуску нужны удалённые ресурсы.
             network_argv=['unshare','-n','--',str(args.installer),'update','--root',str(root),
                           '--bundle',str(args.new_bundle),'--no-start']
             add_event(events,'disconnected-network-rejected',run(network_argv,expect_ok=False))
             require(active(root)==old,'network failure switched active release')
             preserved()
-            # Physically consume available tmpfs blocks; this is kernel ENOSPC,
-            # not an artificial error returned by a fake filesystem or test hook.
+            # Физически израсходуйте доступные блоки tmpfs: это настоящий ENOSPC ядра, а не
+            # искусственная ошибка от поддельной ФС или тестового перехвата.
             free = shutil.disk_usage(mountpoint).free
             reserve = 128 * 1024  # enough for an error journal, not a real release
             require(free > reserve + (32 << 20),'insufficient scratch to create disk-full test')
@@ -226,7 +226,7 @@ def main() -> int:
             os.chmod(args.output,0o600)
         finally:
             if mounted:
-                # Never remove files while the private filesystem is mounted.
+                # Никогда не удаляйте файлы при смонтированной закрытой файловой системе.
                 subprocess.run(['umount',str(mountpoint)],check=True,stdout=subprocess.DEVNULL)
     print('0.52.7 real physical installer acceptance PASS; receipt saved privately')
     return 0
@@ -235,6 +235,6 @@ if __name__ == '__main__':
     try:
         raise SystemExit(main())
     except (AcceptanceError, OSError, subprocess.SubprocessError) as err:
-        # Do not expose full subprocess diagnostics or raw provider tokens.
+        # Не раскрывайте полную диагностику дочерних процессов и сырые токены провайдера.
         print(f'0.52.7 physical acceptance BLOCKED/FAIL: {err.__class__.__name__}: {err}',file=__import__('sys').stderr)
         raise SystemExit(1)

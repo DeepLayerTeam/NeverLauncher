@@ -1,10 +1,10 @@
 package main
 
-// Manual Artifacts & Permission Gates. A verified local acquisition is not a
-// grant to redistribute third-party files. The distribution operation has its
-// own fail-closed gate, bound to the import receipt, the exact content digest,
-// and an explicit operator-supplied rights record. No Minecraft binaries or
-// loader libraries are ever included in the exported artifact-only overlay.
+// Ручные артефакты и проверки прав. Проверенное локальное получение не даёт права
+// распространять сторонние файлы. У операции распространения собственная обязательная
+// проверка разрешений по квитанции импорта, точному хешу содержимого и явно предоставленной
+// оператором записи о правах. Экспортируемый оверлей содержит только артефакты, без бинарных
+// файлов Minecraft и библиотек загрузчиков.
 import (
 	"archive/zip"
 	"bytes"
@@ -233,7 +233,7 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 	w := zip.NewWriter(tmp)
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	fail := func(err error) (permissionGateReport0276, error) { _ = w.Close(); _ = tmp.Close(); return result, err }
-	// Artifact-only export: excludes Minecraft runtime, Mojang assets, and loader binaries.
+	// Экспорт только артефактов: без Runtime Minecraft, ресурсов Mojang и бинарных файлов загрузчиков.
 	for _, item := range files {
 		src, e := secureClientDestination(dir, item.Path)
 		if e != nil {
@@ -268,7 +268,7 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 		PackSHA256        string            `json:"packSha256"`
 		InstallPlanSHA256 string            `json:"installPlanSha256"`
 		Files             []modpackFile0275 `json:"files"`
-		// Human-declared provenance, not independent verification of licensing.
+		// Происхождение заявлено человеком; это не независимая проверка лицензии.
 		DeclaredRights []artifactGrant0276 `json:"declaredRights"`
 	}{SchemaVersion: "launcher.modpack-artifact-bundle.v1", PackSHA256: result.PackSHA256, InstallPlanSHA256: result.PlanSHA256, Files: files}
 	grants, _ := readArtifactPermissions0276(permissionsFile)
@@ -288,8 +288,8 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 	if e = tmp.Close(); e != nil {
 		return result, e
 	}
-	// Link is atomic and refuses to overwrite an existing export, including
-	// one created by another writer while we were preparing this ZIP.
+	// Создание ссылки атомарно и запрещает перезапись существующего экспорта, в том
+	// числе созданного другим процессом при подготовке ZIP.
 	if err = os.Link(tmp.Name(), output); err != nil {
 		return result, err
 	}
@@ -343,8 +343,8 @@ func missingModpackArtifact0276(f modpackFile0275, cause error) modpackMissing02
 	return modpackMissing0275{Code: code, Path: f.Path, Source: f.Source, Reason: message, ManualAction: "provide a rights-compliant source or --manual-dir artifact matching the upstream hashes", ExpectedSHA1: f.SHA1, ExpectedSHA512: f.SHA512, ExpectedSHA256: f.SHA256, ExpectedSize: f.Size, CanManual: f.SHA1 != "" || f.SHA512 != "" || f.SHA256 != ""}
 }
 
-// Resolve manual files without following symlink directories or symlink files.
-// The operator-supplied folder itself must be a real directory.
+// Находите ручные файлы без перехода по символьным ссылкам на каталоги или файлы.
+// Папка, выбранная оператором, должна быть настоящим каталогом.
 func secureManualSource0276(root, rel string) (string, error) {
 	if err := packOutputPath0275(rel); err != nil {
 		return "", err

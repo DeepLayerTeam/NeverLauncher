@@ -1,8 +1,8 @@
 package lanmdns
 
-// DNS-SD responders can split PTR, SRV, TXT and A across multiple UDP
-// datagrams. This bounded, per-discovery cache joins them by owner name and
-// honors TTL=0 goodbyes instead of treating a received record as trusted.
+// Ответы DNS-SD могут распределять PTR, SRV, TXT и A по нескольким UDP-пакетам. Этот
+// ограниченный кэш на каждое обнаружение объединяет их по имени владельца и учитывает
+// прощальные записи TTL=0, не считая полученную запись доверенной.
 
 import (
 	"encoding/binary"
@@ -33,7 +33,7 @@ func newDiscoveryCache0498() *discoveryCache0498 {
 	return &discoveryCache0498{ptr: map[string]cachedPTR0498{}, srv: map[string]cachedSRV0498{}, txt: map[string]cachedTXT0498{}, addr: map[string]map[string]time.Time{}}
 }
 func ttlDeadline0498(now time.Time, ttl uint32) time.Time {
-	// Long external TTLs cannot extend the cache indefinitely.
+	// Большие внешние TTL не могут продлевать жизнь кэша бесконечно.
 	if ttl > 3600 {
 		ttl = 3600
 	}

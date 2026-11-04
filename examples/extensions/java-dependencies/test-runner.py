@@ -83,7 +83,7 @@ def main():
         while Handler.readies < 1 and child.poll() is None and time.monotonic() < deadline:
             time.sleep(0.05)
         assert child.poll() is None and Handler.hellos == Handler.readies == 1, f"host did not reach ready: {child.poll()}"
-        # An actually executed Extension.start() must resolve the nested bytecode.
+        # Реально выполненный Extension.start() обязан разрешить вложенный байткод.
         deadline = time.monotonic() + 5
         while Handler.beats == 0 and child.poll() is None and time.monotonic() < deadline:
             time.sleep(0.05)

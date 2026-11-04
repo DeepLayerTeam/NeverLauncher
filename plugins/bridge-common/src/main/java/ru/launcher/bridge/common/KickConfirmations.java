@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/** Correlates a requested kick with the exact Minecraft session's native quit event. */
+/** Связывает запрошенное исключение игрока с нативным событием выхода именно его сеанса Minecraft. */
 public final class KickConfirmations implements AutoCloseable {
     private record Pending(UUID session, CompletableFuture<Boolean> quit) {}
     private final ConcurrentHashMap<String, Pending> pending = new ConcurrentHashMap<>();
@@ -44,7 +44,7 @@ public final class KickConfirmations implements AutoCloseable {
                 return new BridgeControlResult("succeeded", Map.of("username", username, "uuid", uuid.toString(), "online", "false", "verification", "player-quit-event"), "");
             }
         } catch (TimeoutException | java.util.concurrent.ExecutionException ignored) {
-            // Dispatch returned, but no correlated native quit event has arrived.
+            // Обработчик команды вернулся, но связанного нативного события выхода ещё нет.
         } finally { pending.remove(key, state); }
         return BridgeControlResult.ok(Map.of("username", username, "uuid", uuid.toString()));
     }

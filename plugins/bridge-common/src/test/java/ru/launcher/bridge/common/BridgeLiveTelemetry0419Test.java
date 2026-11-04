@@ -2,7 +2,7 @@ package ru.launcher.bridge.common;
 
 import java.util.List;
 
-/** JVM/host integration smoke: observes this *real* Java OS process, not a mock MXBean. */
+/** Дымовой интеграционный тест JVM-хоста наблюдает НАСТОЯЩИЙ процесс Java в ОС, а не имитацию MXBean. */
 public final class BridgeLiveTelemetry0419Test {
     public static void main(String[] args) {
         BridgeTelemetrySampler sampler = new BridgeTelemetrySampler();
@@ -14,7 +14,7 @@ public final class BridgeLiveTelemetry0419Test {
             require(initial.hostFreeMemoryBytes() != null && initial.hostTotalMemoryBytes() > 0, "host memory availability");
             require(initial.hostFreeMemoryBytes() <= initial.hostTotalMemoryBytes(), "host physical memory");
         }
-        // Deliberately future-dated platform observations may not claim a healthy game.
+        // Наблюдения платформы с намеренно будущими датами не могут подтверждать здоровье игры.
         sampler.recordPlatformSample(new BridgePlatformTelemetry(
             System.currentTimeMillis() + 120_000L, 20.0, 10.0, 42, 100,
             1, null, null, null, false, List.of("server.tick")));
@@ -22,7 +22,7 @@ public final class BridgeLiveTelemetry0419Test {
         BridgeTelemetrySnapshot future = sampler.sample("real-runtime");
         require("unavailable".equals(future.tickHealth()) && future.tps() == null, "future tick is unknown");
         require(future.playersOnline() == null && !future.toJson().contains("\"playersOnline\""), "missing players are not zero");
-        // The next valid observation is a real platform reading for the same JVM.
+        // Следующее корректное наблюдение — настоящее показание платформы для той же JVM.
         sampler.recordPlatformSample(BridgePlatformTelemetry.server(20.0, 13.0, 8, 100,
             1, null, 200L, null, false, List.of("server.tick")));
         BridgeTelemetrySnapshot fresh = sampler.sample("real-runtime");

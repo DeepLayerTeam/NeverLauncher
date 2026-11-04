@@ -26,7 +26,7 @@ func TestDiscoveryRejectsPacketsThatAreNotSuccessfulAnswers(t *testing.T) {
 	if _, err := ParseAdvertisement(badRCODE); err == nil {
 		t.Fatal("DNS error response accepted")
 	}
-	// A bad record class must not provide a verified endpoint.
+	// Некорректный класс записи не должен давать проверенный endpoint.
 	badClass := append([]byte(nil), b...)
 	_, rr, err := parsePacket(badClass)
 	if err != nil {

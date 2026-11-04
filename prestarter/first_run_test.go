@@ -55,8 +55,8 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 	if settings["serverPort"] != float64(25566) || settings["autoEnter"] != true {
 		t.Fatal("signed auto-enter was not provisioned")
 	}
-	// User preferences survive a legitimate Prestarter restart, while the
-	// verified envelope is republished from the signed owner configuration.
+	// Пользовательские настройки переживают корректный перезапуск Prestarter, а проверенный
+	// конверт повторно публикуется из подписанной конфигурации владельца.
 	settings["memoryMb"] = float64(6144)
 	edited, _ := json.Marshal(settings)
 	if err = os.WriteFile(filepath.Join(dir, "config.json"), edited, 0600); err != nil {

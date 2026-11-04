@@ -5,7 +5,7 @@ import ru.launcher.sdk.core.Extension;
 import ru.launcher.sdk.core.ExtensionContext;
 import ru.launcher.sdk.core.JsonSchema;
 
-/** External SDK consumer: one signed extension exposes Admin, Desktop and CLI callbacks. */
+/** Внешний потребитель SDK: одно подписанное расширение предоставляет обработчики Admin, Desktop и CLI. */
 public final class DeveloperExtension implements Extension {
     private static final JsonSchema THEME = JsonSchema.parse("""
         {"type":"object", "properties":{"theme":{"type":"string","enum":["light","dark"]}},

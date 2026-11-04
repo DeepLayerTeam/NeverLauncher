@@ -26,7 +26,7 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 	if err := OutsideBundle(bundle, inside); err == nil {
 		t.Fatal("accepted bundled key")
 	}
-	// Lexically outside the bundle, but resolves to bundled key.
+	// Лексически вне пакета, но разрешается в ключ внутри пакета.
 	outsideAlias := filepath.Join(root, "malicious-link.key")
 	if err := os.Symlink(inside, outsideAlias); err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 	if err := OutsideBundle(bundle, outsideAlias); err == nil {
 		t.Fatal("accepted symlink to bundled key")
 	}
-	// Lexically inside the bundle, pointing out, also forbidden.
+	// Лексически внутри пакета и указывает наружу — также запрещено.
 	insideAlias := filepath.Join(bundle, "external.key")
 	if err := os.Symlink(outside, insideAlias); err != nil {
 		t.Fatal(err)

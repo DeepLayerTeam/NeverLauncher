@@ -26,7 +26,7 @@ def verify_external(path: Path | None, target: str, commit: str, kind: str) -> b
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    # Receipt must result from a real test run and be bound to this source.
+    # Квитанция должна появиться из настоящего запуска теста и быть привязана к этому исходному коду.
     return (
         isinstance(doc, dict)
         and doc.get("kind") == kind
@@ -87,8 +87,8 @@ def collect(
         "target": target,
         "nativeComponents": component_doc,
         "checks": {
-            # The collector runs only after unit/Go/Rust/fault-suite CI steps succeed;
-            # source chain independently enforced by workflow 'needs' and set -e.
+            # Сборщик запускается только после успешных этапов CI unit/Go/Rust/fault-suite; цепочка
+            # исходников независимо обеспечивается зависимостями workflow 'needs' и set -e.
             "rustUnitTests": "passed"
             if component_doc.get("status") == "passed"
             else "missing",

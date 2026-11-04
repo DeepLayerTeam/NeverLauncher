@@ -12,7 +12,7 @@ SHA = 'a'*40
 class IntegrationCertificationTests(unittest.TestCase):
     def test_real_subprocess_and_report(self):
         with tempfile.TemporaryDirectory() as td:
-            # The runner really executes a subprocess: no path-based success.
+            # Runner действительно запускает дочерний процесс; успех не определяется только путём.
             with patch.dict(CASES, {'check': (("python3", "-c", "print('pass')"),)}):
                 report = run_cases(['check'], Path(td)/'report.json', timeout=5, cli='', commit=SHA)
             self.assertTrue(report['passed'])
@@ -29,8 +29,8 @@ class IntegrationCertificationTests(unittest.TestCase):
                     r = run_cases(['failure'], Path(td)/'report.json', timeout=.4, cli='', commit=SHA)
                     self.assertFalse(r['passed'])
                     self.assertEqual(r['results'][0]['status'],'failed')
-            # Simulate a Go suite that exits 0 but silently skips its E2E.
-            # It must never be interpreted as a successful certification.
+            # Имитируйте набор Go-тестов с кодом выхода 0, который молча пропустил E2E.
+            # Его никогда нельзя считать успешной сертификацией.
             with patch.dict(CASES, {'skip': (("go", "test", "-v", "./internal/lanmdns"),)}):
                 with patch("run_integration_03012.subprocess.Popen") as spawn:
                     child = spawn.return_value

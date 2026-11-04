@@ -731,7 +731,7 @@ export function ServerBridgeWorkspace({
               <strong>{n.name || n.id}</strong>
               <span>Профиль: {n.profileId || "не привязан"}</span>
               <span className={`badge ${fresh ? "ok" : "warn"}`}>
-                {fresh ? "heartbeat fresh" : "heartbeat stale/unknown"}
+                {fresh ? "пульс актуален" : "пульс устарел или неизвестен"}
               </span>
               <span>
                 {n.serverBrand || n.loaderName || n.kind || "Minecraft"} ·{" "}
@@ -900,7 +900,7 @@ export function ServerBridgeWorkspace({
                   ? `${bytes(t?.heapUsedBytes)} / ${bytes(t?.heapMaxBytes)}`
                   : "неизвестно"}
               </dd>
-              <dt>JVM process PID / CPU</dt>
+              <dt>Процесс JVM: PID / ЦП</dt>
               <dd>
                 {tele?.state === "fresh" && snapshotFresh
                   ? `${formatMetric(t?.processId)} / ${typeof t?.processCpuLoad === "number" ? (t.processCpuLoad * 100).toFixed(1) + "%" : "неизвестно"}`

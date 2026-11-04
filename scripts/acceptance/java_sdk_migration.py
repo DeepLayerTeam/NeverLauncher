@@ -44,8 +44,8 @@ def private_save(path: Path, obj):
 
 
 def command(args, *, timeout, cwd=ROOT):
-    # Fixed, audited commands. No shell, no arbitrary probe programs, and
-    # no unbounded stdout or inclusion of sensitive provider environment.
+    # Фиксированные проверенные команды. Без shell, произвольных программ-проверок,
+    # неограниченного stdout и конфиденциального окружения провайдера.
     env={k:v for k,v in os.environ.items() if not any(t in k.upper() for t in
          ('TOKEN','SECRET','PASSWORD','SIGNING','PRIVATE','DSN','CREDENTIAL','AUTH'))}
     env.pop('PYTHONPATH',None)

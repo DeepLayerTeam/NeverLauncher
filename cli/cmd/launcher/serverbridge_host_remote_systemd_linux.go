@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// Notify readiness for the *remote HTTPS listener*, independently of the
-// Minecraft child supervised by the host service.
+// Сообщайте о готовности именно УДАЛЁННОГО HTTPS-прослушивателя, независимо от
+// дочернего Minecraft, которым управляет супервизор службы хоста.
 func remoteServiceReady0498() error {
 	return hostNotify02811("READY=1\nSTATUS=RemoteControl TLS listener ready")
 }
@@ -30,7 +30,7 @@ func remoteServiceWatchdog0498(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-tick.C:
-				// A failed notification is detected by systemd's own watchdog.
+				// Неудачу уведомления обнаружит собственный watchdog systemd.
 				_ = hostNotify02811("WATCHDOG=1")
 			}
 		}

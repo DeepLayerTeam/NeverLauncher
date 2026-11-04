@@ -1,8 +1,8 @@
 package main
 
-// Signed operator evidence is verified independently before packaging. This
-// release-side check binds the resulting receipt to the signed SHA256SUMS and
-// RELEASE_MANIFEST and prevents substituting a status-only JSON placeholder.
+// Подписанные свидетельства оператора независимо проверяются до упаковки. Эта проверка на
+// стороне выпуска связывает итоговую квитанцию с подписанными SHA256SUMS и RELEASE_MANIFEST и
+// не допускает подмены JSON-заглушкой только со статусом.
 import (
 	"encoding/json"
 	"errors"

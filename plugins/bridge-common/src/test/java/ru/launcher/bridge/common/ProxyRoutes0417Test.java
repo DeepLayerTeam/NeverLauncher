@@ -2,7 +2,7 @@ package ru.launcher.bridge.common;
 
 import java.time.Instant;
 
-/** No framework needed: exercises the production route-response parser. */
+/** Не требует фреймворка: проверяет производственный парсер ответа маршрутов. */
 public final class ProxyRoutes0417Test {
     private static int checks;
     private static final String HASH = "a".repeat(64);

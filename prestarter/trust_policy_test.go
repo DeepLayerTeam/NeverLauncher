@@ -50,7 +50,7 @@ func TestRootSignedTrustRotationAndRevocation02312(t *testing.T) {
 	if _, _, e = VerifyTrustPolicy(altered, key, time.Now().UTC()); e == nil {
 		t.Fatal("bad root signature accepted")
 	}
-	// The next root-signed epoch revokes the previously active signer.
+	// Следующая эпоха с подписью корня отзывает ранее активного подписанта.
 	p.Epoch++
 	p.Keys[0].Status = "revoked"
 	_, replacement, e := ed25519.GenerateKey(rand.Reader)

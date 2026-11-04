@@ -4,8 +4,8 @@ import java.time.Duration;
 import java.util.*;
 import ru.launcher.sdk.core.*;
 
-/** Native Java source port: provider selection, synchronous veto, durable config and commands.
- * Actual identities and content are loaded via the authenticated Go document broker. */
+/** Нативный перенос исходников Java: выбор провайдера, синхронный запрет, долговечные конфигурация и команды.
+ * Реальные идентичности и содержимое загружаются через аутентифицированного брокера документов Go. */
 public final class PortedSuite implements Extension {
     @Override public void start(ExtensionContext ctx) throws Exception {
         var providers = ctx.providers();
@@ -13,7 +13,7 @@ public final class PortedSuite implements Extension {
         providers.register(new ProviderDescriptor<>(ContentServices.CONTRACT, "legacy-libraries", SemVer.parse("1.0.0"), "^1.0.0", "^1.0.0", LegacyLibraries::new));
         providers.select(IdentityServices.CONTRACT.id(), "legacy-password", Duration.ofSeconds(2));
         providers.select(ContentServices.CONTRACT.id(), "legacy-libraries", Duration.ofSeconds(2));
-        // This is a *pre-commit* policy hook wired to real Profile.create/update in the Go API.
+        // Это перехват политики ДО фиксации, подключённый к настоящим Profile.create/update в Go API.
         ctx.runtime().events().subscribeHook("profile.before-save", null, Json::object, event -> {
             Map<String,Object> payload = event.event().payload();
             Map<String,Object> p = Json.object(payload.get("profile"));
@@ -29,7 +29,7 @@ public final class PortedSuite implements Extension {
             return RuntimeEvents.HookDecision.allow();
         });
         ctx.runtime().stateMigrations().register("0.49.4", "0.49.5", (config, storage) -> {
-            // Migrated documents are checkpointed and restored by the Go update manager.
+            // Мигрированные документы сохраняются в контрольную точку и восстанавливаются менеджером обновлений Go.
             Object existing = storage.get("ported-settings", null).orElse(Map.of("updates", 0L));
             Map<String,Object> data = new LinkedHashMap<>(Json.object(existing));
             data.put("schema", 2L);
@@ -43,7 +43,7 @@ public final class PortedSuite implements Extension {
             return out;
         });
         ctx.runtime().commands().register("ported-save", null, Json::object, input -> {
-            // Explicit extension-scoped configuration mutation; the Go broker checks permission.
+            // Явное изменение конфигурации в области расширения; брокер Go проверяет разрешение.
             Map<String,Object> current = Json.object(ctx.runtime().storage().get("ported-settings", null).orElse(Map.of()));
             long count = current.get("updates") instanceof Number n ? n.longValue() : 0;
             if (count < 0 || count > 1_000_000) throw new IllegalStateException("invalid persisted counter");

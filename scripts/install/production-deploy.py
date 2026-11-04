@@ -329,7 +329,7 @@ def public_json(url, *, payload=None, headers=None, expected_status=None):
                 fail("unexpectedly large public API response")
             return json.loads(content)
     except urllib.error.HTTPError as exc:
-        # Never print response bodies: they can contain reflected secrets.
+        # Никогда не печатайте тела ответов: они могут отражать секреты.
         fail(f"public API returned HTTP {exc.code}; inspect server audit securely")
     except (urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
         fail(f"public HTTPS unavailable or untrusted ({type(exc).__name__})")
@@ -395,7 +395,7 @@ def bootstrap_first_admin(args):
             for c in after.get("checks", [])
         ):
             fail("administrator creation is not durable in installation status")
-        # A real authenticated login proves the password and local auth backend work.
+        # Настоящий аутентифицированный вход доказывает работу пароля и локального механизма авторизации.
         login = public_json(public + "/api/v1/admin/login", payload={"email": args.email, "password": password}, expected_status=200)
         if not login.get("token") or login.get("user", {}).get("email") != args.email:
             fail("administrator was created but a real password login did not succeed")
@@ -421,8 +421,8 @@ def exclusive_lock(path):
 
 
 def compose_project(values):
-    # Namespacing prevents an isolated acceptance deployment from touching the
-    # ordinary production project's containers, networks or named volumes.
+    # Пространство имён защищает изолированное приёмочное развёртывание от контейнеров,
+    # сетей и именованных томов обычного производственного проекта.
     project = values.get("LAUNCHER_COMPOSE_PROJECT", "launcher")
     if not re.fullmatch(r"[a-z][a-z0-9_-]{2,40}", project):
         fail("invalid LAUNCHER_COMPOSE_PROJECT (lowercase Docker Compose project)")
@@ -557,7 +557,7 @@ def managed_dir(path, marker, *, create=False):
     if not owner_marker.exists():
         if not create:
             fail(f"missing ownership marker: {path}")
-        # Refuse adopting an unrelated preexisting directory with content.
+        # Не присваивайте посторонний существующий непустой каталог.
         if any(path.iterdir()):
             fail(f"nonempty unmanaged installation directory: {path}")
         write_exclusive(owner_marker, MARKER_VALUE)
@@ -658,7 +658,7 @@ def native_install(args):
         fail("trusted installer and pinned public key must be root-owned")
     safe_file(args.bundle)
     with exclusive_lock(Path("/run/launcher-deploy.lock")):
-        # Never replace unmanaged systemd units.
+        # Не заменяйте неуправляемые unit-файлы systemd.
         if UNIT.exists() and UNIT_MARKER not in UNIT.read_text():
             fail("systemd unit is not managed by DEP09")
         managed_dir(INSTALL_ROOT, OWNER, create=True)
@@ -710,7 +710,7 @@ def native_install(args):
         )
         binary = target / "bin/launcher-api"
         safe_file(binary, executable=True)
-        # Only the dedicated API user may write durable state, not binaries/secrets.
+        # Только выделенный пользователь API может записывать долговечное состояние, но не бинарные файлы и секреты.
         if not STATE_ROOT.exists():
             STATE_ROOT.mkdir(mode=0o700)
             write_exclusive(STATE_ROOT / DATA_MARKER, MARKER_VALUE)
@@ -735,7 +735,7 @@ def native_install(args):
         identity = pwd.getpwnam("launcher")
         os.chown(STATE_ROOT, identity.pw_uid, identity.pw_gid)
         os.chmod(STATE_ROOT, 0o700)
-        # Provision runtime paths; no implicit writes outside the managed data root.
+        # Создавайте пути Runtime; никаких неявных записей вне управляемого корня данных.
         data_paths = [
             STATE_ROOT / p
             for p in ("storage", "backups", "coordinator", "extensions", "factory")
@@ -772,7 +772,7 @@ def native_install(args):
             safe_directory(directory)
             if directory.stat().st_uid != identity.pw_uid:
                 fail(f"runtime directory not owned by service user: {directory}")
-        # A managed first install must not collide with a third-party unit.
+        # Управляемая первичная установка не должна конфликтовать со сторонним unit.
         old_unit = UNIT.read_text() if UNIT.exists() else None
         if (
             execute(
@@ -832,7 +832,7 @@ def native_uninstall(args):
             no_symlinks_or_mounts(releases)
             shutil.rmtree(releases)
         (INSTALL_ROOT / OWNER).unlink()
-        # Preserve unexpected files instead of deleting operator data.
+        # Сохраняйте неожиданные файлы, не удаляя данные оператора.
         if not any(INSTALL_ROOT.iterdir()):
             INSTALL_ROOT.rmdir()
         if args.purge_data:
@@ -891,7 +891,7 @@ def main(argv=None):
             fail("native install requires --bundle and independent --trusted-key")
         native_install(args)
     else:
-        # Check destructive confirmation BEFORE any service or file mutation.
+        # Проверяйте подтверждение разрушительного действия ДО изменения файлов или служб.
         if args.purge_data and args.confirm != "PURGE-LAUNCHER-NATIVE-DATA":
             fail("purge requires --confirm PURGE-LAUNCHER-NATIVE-DATA")
         native_uninstall(args)

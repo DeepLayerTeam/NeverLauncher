@@ -1,5 +1,5 @@
-//! Certification-only fixture signer. Never used as a production signing service.
-//! The secret must be explicitly provided by the test harness (not bundled).
+//! Подписант только для фикстуры сертификации. Никогда не используется как производственный сервис
+//! подписания. Секрет обязан явно предоставить тестовый стенд, в пакет он не включается.
 use runtime::{sign_manifest, Manifest};
 use std::{env, fs, process};
 

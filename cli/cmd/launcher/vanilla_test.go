@@ -14,8 +14,8 @@ import (
 	"testing"
 )
 
-// These tests exercise the actual installer and ZIP extractor, not just a
-// version list or a manifest. The artifacts are served by a local HTTP CDN.
+// Эти тесты проверяют настоящий установщик и извлечение ZIP, а не только список
+// версий или манифест. Артефакты раздаются локальной CDN по HTTP.
 func TestVanilla0402NativeDuplicateIsPublishedOnce(t *testing.T) {
 	install, root := vanilla0402Fixture(t, vanillaTarget{OS: "linux", Arch: "x86_64"}, []nativeFixture0402{
 		{"org.example:one:1.0", "lib/one.jar", "libshared.so", "same-bytes"},
@@ -61,8 +61,8 @@ func TestVanilla0402MacOSArm64NativesAreLoadableFromRoot(t *testing.T) {
 	if !found {
 		t.Fatalf("native alias missing from verified file list: %s", alias)
 	}
-	// Repeat the extraction from the already verified files: a second
-	// identical signed archive must reuse the same alias, not overwrite it.
+	// Повторите извлечение из ранее проверенных файлов: второй идентичный подписанный
+	// архив должен использовать тот же алиас, не перезаписывая его.
 	nativeRoot := filepath.Join(root, "natives", "osx", "aarch64")
 	aliasPaths, err := flattenLWJGLMacOSNatives(nativeRoot,
 		[]string{"macos/arm64/org/lwjgl/libglfw.dylib"}, "aarch64")

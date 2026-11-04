@@ -27,7 +27,7 @@ class SweepTests(unittest.TestCase):
             with self.assertRaises((m.inventory.Blocked,OSError)):
                 m.signed_soak(Path(temp),Path('/tmp/missing.pem'),'0'*64,'f'*40,'1234',1,'game')
     def test_replay_real_format_https_ledger_and_signature_tamper(self):
-        # Synthetic timing records are only a verifier fixture, never live GA.
+        # Синтетические временные измерения — только фикстура верификатора, а не живое GA.
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             ledger=root/'requests.bin'

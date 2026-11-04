@@ -820,7 +820,7 @@ export function RegistryWorkspace({
           <strong>
             {sandboxDiagnostics0311?.enforced
               ? "isolated"
-              : "unsupported / not enforced"}
+              : "не поддерживается / не применяется"}
           </strong>{" "}
           · {sandboxDiagnostics0311?.platform || "unknown platform"} ·{" "}
           {sandboxDiagnostics0311?.reasonCodes?.join(", ") ||
@@ -842,8 +842,8 @@ export function RegistryWorkspace({
                 <div>
                   <strong>{item.extensionId}</strong>
                   <p className="muted">
-                    <code>{item.currentVersion || "absent"}</code> · desired{" "}
-                    <code>{item.desiredVersion}</code> · generation{" "}
+                    <code>{item.currentVersion || "отсутствует"}</code> · желаемая{" "}
+                    <code>{item.desiredVersion}</code> · поколение{" "}
                     {item.generation}
                   </p>
                 </div>
@@ -873,9 +873,9 @@ export function RegistryWorkspace({
                   <>
                     <p className="muted">
                       Host: <strong>{host.state}</strong> · trust{" "}
-                      <strong>{host.executionTrust ?? "unknown"}</strong> · OS
+                      <strong>{host.executionTrust ?? "неизвестно"}</strong> · OS
                       sandbox {host.osSandbox ?? "none"} · healthy{" "}
-                      {host.healthy ? "yes" : "no"} · PID {host.pid ?? "—"} ·
+                      {host.healthy ? "да" : "нет"} · PID {host.pid ?? "—"} ·
                       restarts {host.restarts} · RSS{" "}
                       {host.memoryBytes
                         ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB`
@@ -884,11 +884,11 @@ export function RegistryWorkspace({
                     </p>
                     <p className="muted">
                       Isolation:{" "}
-                      <strong>{host.isolationStatus ?? "unknown"}</strong> ·{" "}
+                      <strong>{host.isolationStatus ?? "неизвестно"}</strong> ·{" "}
                       {host.isolationReasonCodes?.join(", ") ||
                         "нет доказательств"}{" "}
                       · effective:{" "}
-                      {host.effectiveRestrictions?.join(", ") || "unknown"};
+                      {host.effectiveRestrictions?.join(", ") || "неизвестно"};
                       Network {host.networkSandbox ?? "none"}, FS{" "}
                       {host.filesystemSandbox ?? "none"}.
                     </p>

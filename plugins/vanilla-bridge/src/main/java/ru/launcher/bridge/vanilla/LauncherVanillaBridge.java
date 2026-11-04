@@ -75,9 +75,9 @@ public final class LauncherVanillaBridge implements AutoCloseable {
     void start() throws Exception {
         // Проверяйте учётные данные до публикации готовности.
         rcon("list");
-        // Do not advertise server.ready or operator availability until the
-        // authenticated, signed heartbeat was actually accepted by Backend.
-        // Previously this sidecar logged "ready" during a Backend outage.
+        // Не объявляйте server.ready и доступность для оператора, пока Backend
+        // реально не принял аутентифицированный подписанный heartbeat. Ранее этот
+        // sidecar писал «ready» при недоступном Backend.
         if (!api.heartbeat("vanilla", BridgeDefaults.VERSION))
             throw new IllegalStateException("authenticated Vanilla ServerBridge heartbeat was not accepted");
         api.setRoutingModes(false, false);
@@ -115,9 +115,9 @@ public final class LauncherVanillaBridge implements AutoCloseable {
     }
 
     private BridgeControlResult setRouteMode(boolean maintenanceMode, boolean enabled) {
-        // A local boolean is not a remotely acknowledged maintenance/drain state.
-        // Restore the previous advertisement if the signed Backend heartbeat
-        // fails, and never claim a verified operator control on transport loss.
+        // Локальный boolean не равен удалённо подтверждённому состоянию обслуживания или drain. При
+        // сбое подписанного heartbeat Backend восстанавливайте предыдущее объявление и не заявляйте
+        // проверенный контроль оператора после потери транспорта.
         boolean beforeMaintenance = maintenance.get();
         boolean beforeDraining = draining.get();
         if (maintenanceMode) maintenance.set(enabled); else draining.set(enabled);

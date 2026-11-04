@@ -85,8 +85,8 @@ def load_attested_file(
             if total > 4 * 1024**3:
                 raise ValueError(f"artifact exceeds maximum 4 GiB: {name}")
             hasher.update(chunk)
-            # Installer binaries are hashed as a stream. JSON proof files must
-            # remain small; never retain multi-gigabyte inputs in memory.
+            # Хешируйте бинарные установщики потоково. JSON-доказательства должны оставаться
+            # небольшими; не держите многогигабайтные входы в памяти.
             if not binary:
                 if len(raw) + len(chunk) > 8 * 1024 * 1024:
                     raise ValueError(f"oversized evidence JSON: {name}")
@@ -298,8 +298,8 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
     installer_sha = objects["installer"]["sha256"]
     if version == "0.25.0":
         components = proofs["components"]
-        # The component report must describe this exact installer, not a previous
-        # tested build of the same version or commit.
+        # Отчёт компонента должен относиться к ЭТОМУ точному установщику, а не к
+        # прежней проверенной сборке той же версии или коммита.
         if components.get("installerSha256") != installer_sha:
             raise ValueError("components certification belongs to another installer")
         if components["nativeEvidenceSha256"] != objects["nativeRun"]["sha256"]:

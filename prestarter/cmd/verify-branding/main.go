@@ -1,5 +1,5 @@
-// verify-branding independently checks an owner-signed bootstrap with the
-// production Prestarter Ed25519 verifier. It prints no private key material.
+// verify-branding независимо проверяет bootstrap, подписанный владельцем, с помощью
+// производственного верификатора Ed25519 Prestarter. Приватные ключи не выводятся.
 package main
 
 import (

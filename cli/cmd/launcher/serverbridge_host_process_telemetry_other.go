@@ -2,6 +2,6 @@
 
 package main
 
-// No portable, authoritative kernel process RSS data on this platform; the
-// RemoteControl status omits it rather than publishing fabricated zeroes.
+// На этой платформе нет переносимых достоверных данных ядра о RSS процесса; статус
+// RemoteControl не показывает их вместо поддельных нулей.
 func hostProcessTelemetry0419(pid int, identity string) map[string]any { return nil }

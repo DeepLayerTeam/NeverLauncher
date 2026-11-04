@@ -84,12 +84,12 @@ def check_evidence(
             "server.properties does not enforce online-mode=true"
         )
     if values.get("enforce-secure-profile", "").lower() == "false":
-        # This setting is independent of online-mode, but include it as a
-        # warning rather than treating legitimate older servers as unsafe.
+        # Этот параметр не зависит от online-mode; показывайте предупреждение, не
+        # считая законные старые серверы небезопасными.
         secure_profile = "disabled_by_server"
     else:
         secure_profile = "default_or_enabled"
-    # Keep the bounded reader to avoid accidentally ingesting large histories.
+    # Сохраняйте ограниченный читатель, чтобы случайно не загрузить большие истории.
     if log_path.stat().st_size > 32 * 1024 * 1024:
         raise CertificationFailure(
             "server log exceeds 32 MiB, provide the bounded actual run"

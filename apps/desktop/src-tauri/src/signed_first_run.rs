@@ -1,5 +1,5 @@
-//! Native verification of the exact owner-signed Prestarter bootstrap bytes.
-//! The renderer, localStorage, desktop config and URL parameters are NEVER trust roots.
+//! Нативная проверка точных байтов начальной загрузки Prestarter с подписью владельца. Визуализатор,
+//! localStorage, конфигурация Desktop и параметры URL НИКОГДА не являются корнями доверия.
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};

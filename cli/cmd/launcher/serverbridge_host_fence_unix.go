@@ -10,8 +10,8 @@ import (
 	"syscall"
 )
 
-// agent.fence MUST NOT be renamed/deleted while an agent runs: flock is
-// inode-scoped. Keep the stable private file, not a disposable lock pathname.
+// Нельзя переименовывать или удалять agent.fence во время работы агента: flock привязан к inode.
+// Сохраняйте постоянный приватный файл, а не временный путь блокировки.
 func remoteKernelFence04112(dir string) (func(), error) {
 	path := filepath.Join(dir, "agent.fence")
 	if err := remoteSecureDir0284(dir); err != nil {

@@ -29,8 +29,8 @@ class JavaGATests(unittest.TestCase):
             }
             self.assertEqual(one, two)
             self.assertEqual(len([p for p in one if p.endswith(".jar")]), 6)
-            # The public API compatibility test is historical; publication of
-            # current artifacts uses the version actually under test.
+            # Проверка совместимости публичного API историческая; для публикации текущих
+            # артефактов используется фактически проверяемая версия.
             version = (ROOT / "VERSION").read_text().strip()
             for name in MODULES:
                 path = a / "maven" / "ru" / "launcher" / name / version
@@ -49,7 +49,7 @@ class JavaGATests(unittest.TestCase):
 
     def test_requires_valid_release_version(self):
         with tempfile.TemporaryDirectory() as tmp:
-            # The publisher refuses reuse of nonempty target and won't replace it.
+            # Публикатор отклоняет повторное использование непустой цели и не заменяет её.
             target = Path(tmp) / "repo"
             target.mkdir()
             (target / "keep").write_text("data")

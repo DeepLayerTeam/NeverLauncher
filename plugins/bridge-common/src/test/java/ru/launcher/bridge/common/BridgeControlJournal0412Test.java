@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-/** Executable crash/ACK/lease/regression tests using an actual fsynced journal. */
+/** Исполняемые регрессионные тесты сбоев, ACK и аренды на настоящем журнале с fsync. */
 public final class BridgeControlJournal0412Test {
     private static int passed;
     private static void check(boolean condition, String message) {
@@ -48,7 +48,7 @@ public final class BridgeControlJournal0412Test {
             check(j.unacknowledged("runtime", channel).isEmpty(), "confirmed ACK must persist");
             check(j.acknowledgedSequence() == 1, "confirmed watermark must persist atomically");
             check(j.state(action) != null, "ACK must retain nonreplay tombstone");
-            // A response lost AFTER a real action: persist the result; retry only the ACK.
+            // Ответ потерян ПОСЛЕ реального действия: сохраните результат и повторите только ACK.
             var b = command("second", "b".repeat(64), 2, channel, "lease-token-123456780");
             j.begin(b);
             j.complete(b, BridgeControlResult.verified(Map.of("enabled", "true", "mode", "maintenance")));
@@ -70,8 +70,8 @@ public final class BridgeControlJournal0412Test {
             check(!newChannel.equals(channel) && j.unacknowledged("another-runtime", newChannel).isEmpty(),
                 "new JVM runtime must never replay old runtime commands");
         }
-        // Upgrade the actual 0.41.1 on-disk schema (which had no receipt fields)
-        // without erasing the already-executed command or invoking it again.
+        // Обновите реальную дисковую схему 0.41.1 без полей квитанции, не стирая
+        // уже выполненную команду и не запуская её снова.
         Path legacy = dir.resolve("legacy.journal");
         java.util.Properties old = new java.util.Properties();
         var oldCommand = command("legacy", "b".repeat(64), 50, channel, "lease-token-legacy123");

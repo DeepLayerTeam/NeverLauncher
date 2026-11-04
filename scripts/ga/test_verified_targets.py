@@ -16,8 +16,8 @@ from release_policy import policy, rc_extended, rc_supported
 
 
 class VersionIndependentGATests(TargetGateTests):
-    # Inherit all 15 existing negative tests but convert fixture to v2. The
-    # historic tests still run independently with the untouched 0.36.0 domain.
+    # Наследуйте все 15 отрицательных тестов, преобразовав фикстуру в v2. Исторические
+    # тесты независимо запускаются с неизменённым доменом 0.36.0.
     def setUp(self):
         super().setUp()
         cfg = policy("0.36.1")
@@ -114,8 +114,8 @@ class VersionIndependentGATests(TargetGateTests):
         with self.assertRaises(ValueError):
             policy("0.36.01")
 
-    # This historical test adds a 0.36.0 package; for v2 it must be rejected
-    # only if it matches the active version's unapproved target pattern.
+    # Исторический тест добавляет пакет 0.36.0; для v2 он должен отклоняться лишь при
+    # совпадении с шаблоном неутверждённой цели активной версии.
     def test_unapproved_new_platform_package_is_blocked(self):
         (self.bundle / "launcher-desktop-0.36.1-windows-riscv64.zip").write_bytes(
             b"unknown"

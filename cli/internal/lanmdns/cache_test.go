@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Each DNS response contains exactly one RR, as Bonjour/Avahi may deliver.
+// Каждый ответ DNS содержит ровно одну ресурсную запись RR, как может передавать Bonjour/Avahi.
 func TestMDNSSplitRepliesAndTTL0498(t *testing.T) {
 	now := time.Unix(1700000000, 0)
 	c := newDiscoveryCache0498()

@@ -679,9 +679,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return vanillaInstallResult{}, fmt.Errorf("native staging %s: %w", key, err)
 		}
 		publishFiles := make([]vanillaDownloadedFile, 0)
-		// Two verified native archives may contain the same binary. Keep a
-		// single package entry for an identical path, while rejecting conflicting
-		// bytes instead of creating a client that cannot pass package verification.
+		// Два проверенных нативных архива могут содержать одинаковый бинарный файл. Для
+		// совпадающего пути оставляйте одну запись пакета, а конфликтующие байты отклоняйте,
+		// иначе клиент не сможет пройти проверку пакета.
 		publishedNative := make(map[string]vanillaDownloadedFile)
 		failed := false
 		for _, task := range nativeByTarget[key] {
@@ -704,11 +704,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				extracted = append(extracted, aliases...)
 			}
-			// Mojang's modern Windows classifier stores DLLs below
-			// windows/{x64,arm64}/org/lwjgl/, whereas java.library.path
-			// and org.lwjgl.librarypath point at the platform natives root.
-			// Materialize exact-content flat copies so the JVM loads the
-			// signed-package native instead of extracting another DLL elsewhere.
+			// Современный classifier Windows Mojang размещает DLL в
+			// windows/{x64,arm64}/org/lwjgl/, хотя java.library.path и
+			// org.lwjgl.librarypath указывают на корень платформенных natives.
+			// Создавайте плоские копии с точным содержимым, чтобы JVM загрузила
+			// подписанный нативный файл пакета вместо извлечения другой DLL.
 			if target.OS == "windows" && strings.HasPrefix(task.Path, "libraries/org/lwjgl/") && strings.Contains(task.Path, "-natives-windows") {
 				aliases, aliasErr := flattenLWJGLWindowsNatives(stagingDir, extracted, target.Arch)
 				if aliasErr != nil {
@@ -717,9 +717,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				extracted = append(extracted, aliases...)
 			}
-			// Mojang's macOS LWJGL natives may be nested under macos/{arch}/org/lwjgl.
-			// Materialize byte-identical root aliases for java.library.path, just as
-			// the existing Windows and Linux ARM64 paths already do.
+			// Нативные библиотеки macOS LWJGL могут находиться в macos/{arch}/org/lwjgl.
+			// Создавайте побайтово идентичные алиасы в корне java.library.path, как уже
+			// делается для Windows и Linux ARM64.
 			if target.OS == "osx" && strings.HasPrefix(task.Path, "libraries/org/lwjgl/") && (strings.Contains(task.Path, "-natives-macos") || strings.Contains(task.Path, "-natives-osx")) {
 				aliases, aliasErr := flattenLWJGLMacOSNatives(stagingDir, extracted, target.Arch)
 				if aliasErr != nil {
@@ -1007,8 +1007,8 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	if err := validateRemoteURL(task.URL); err != nil {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: %w", task.Path, err)
 	}
-	// Shared CAS is opt-in, keyed by upstream checksum and reverified before
-	// copying into this particular client. Never hardlink writable client files.
+	// Общий CAS включается явно, индексируется контрольной суммой источника и повторно проверяется перед
+	// копированием в конкретный клиент. Не создавайте жёсткие ссылки на записываемые файлы клиента.
 	if cache := sharedArtifactsFromContext0277(ctx); cache != nil && task.SHA1 != "" && eligibleSharedArtifact0277(task.Kind) {
 		hit, digest, size, cacheErr := cache.restore(ctx, dest, task.SHA1, task.Size)
 		if cacheErr != nil {
@@ -1331,9 +1331,9 @@ func copyFileVerified(src, dst string, expectedSize int64, expectedSHA1 string) 
 	if err != nil {
 		return err
 	}
-	// Hash the bytes that were actually copied: the source could change after
-	// the initial cache verification (or while being copied). Never publish a
-	// resource/virtual asset whose final bytes no longer match its Mojang hash.
+	// Хешируйте фактически скопированные байты: источник мог измениться после начальной проверки
+	// кэша либо во время копирования. Никогда не публикуйте ресурс/виртуальный ресурс, если его
+	// итоговые байты больше не совпадают с хешем Mojang.
 	copiedHash := sha1.New()
 	copied, copyErr := io.Copy(io.MultiWriter(out, copiedHash), in)
 	if copyErr != nil || copied != expectedSize || !strings.EqualFold(hex.EncodeToString(copiedHash.Sum(nil)), expectedSHA1) {
@@ -1587,10 +1587,10 @@ func nativeClassifierForTarget(natives map[string]string, osName string) string 
 	return ""
 }
 
-// flattenLWJGLWindowsNatives copies only the exact native classifier layout
-// into java.library.path. The source JAR was SHA-1 verified by Mojang's
-// metadata, and both the original and the alias enter the SHA-256 package
-// manifest. Collisions or symlinks always fail closed.
+// flattenLWJGLWindowsNatives копирует только точную структуру нативного
+// classifier в java.library.path. Исходный JAR проверен по SHA-1 метаданных
+// Mojang, а оригинал и алиас включаются в манифест SHA-256 пакета. Любые коллизии
+// или символьные ссылки приводят к отказу.
 func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([]string, error) {
 	classifierArch := ""
 	switch arch {
@@ -1640,9 +1640,9 @@ func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([
 	return aliases, nil
 }
 
-// flattenLWJGLMacOSNatives exposes the exact platform native files at the
-// java.library.path root. It does not substitute x64 files on Apple Silicon.
-// Any collision fails rather than silently changing the library selected by JVM.
+// flattenLWJGLMacOSNatives предоставляет точные нативные файлы платформы в корне
+// java.library.path. Она не заменяет файлы x64 на Apple Silicon. При коллизии функция
+// отказывает вместо незаметной подмены библиотеки JVM.
 func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]string, error) {
 	archToken := ""
 	switch arch {
@@ -1695,8 +1695,8 @@ func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]s
 			if err != nil || sum != hex.EncodeToString(want[:]) {
 				return nil, fmt.Errorf("LWJGL macOS native content collision: %s", base)
 			}
-			// Multiple signed archives can include the same bytes. Reuse the
-			// already extracted alias rather than rejecting a valid install.
+			// Несколько подписанных архивов могут включать одинаковые байты. Повторно используйте
+			// извлечённый алиас вместо отклонения корректной установки.
 			aliases = append(aliases, base)
 			continue
 		} else if !errors.Is(err, os.ErrNotExist) {
@@ -1884,7 +1884,7 @@ func libraryArtifactAppliesToTarget(name string, target vanillaTarget) bool {
 	for _, osName := range aliases {
 		prefix := "natives-" + osName
 		if classifier == prefix {
-			// Unqualified legacy natives contain both 32/64-bit binaries.
+			// Нативные файлы прежнего формата без classifier содержат бинарные файлы и для 32, и для 64 бит.
 			return target.Arch == "x86" || target.Arch == "x86_64"
 		}
 		if !strings.HasPrefix(classifier, prefix+"-") {

@@ -2,7 +2,7 @@ package example.spi;
 
 import ru.launcher.sdk.core.JavaProvider;
 
-/** Example third-party SPI type that remains an interface across implementations. */
+/** Пример стороннего типа SPI, остающегося интерфейсом между реализациями. */
 public interface GreetingProvider extends JavaProvider {
     String greet(String name);
 }

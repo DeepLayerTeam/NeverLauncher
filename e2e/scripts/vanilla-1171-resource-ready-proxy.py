@@ -42,7 +42,7 @@ def write_atomic(path: Path, data: str) -> None:
 def atlas_ready(logs: Path) -> bool:
     if not logs.is_dir() or logs.is_symlink():
         return False
-    # Only inspect the logs created by this isolated certification root.
+    # Проверяйте только журналы, созданные под этим изолированным корнем сертификации.
     for path in logs.glob("runtime-vanilla-certification-1.17.1-*.log"):
         if path.is_symlink() or not path.is_file():
             continue
@@ -98,8 +98,8 @@ def serve(args: argparse.Namespace) -> None:
                 )
                 report()
                 raise TimeoutError(evidence["reason"])
-            # No game packets can reach the actual Mojang server until the
-            # real client writes the verified atlas creation marker.
+            # Ни один игровой пакет не должен дойти до настоящего сервера Mojang, пока реальный
+            # клиент не запишет проверенный маркер создания атласа.
             try:
                 upstream = socket.create_connection(
                     ("127.0.0.1", args.backend_port), timeout=5
@@ -140,7 +140,7 @@ def main() -> int:
         serve(args)
         return 0
     except (OSError, TimeoutError, ValueError) as exc:
-        # No raw client data, tokens, exception stack traces or paths.
+        # Никаких сырых данных клиента, токенов, стеков исключений или путей.
         print(f"[1.17.1 resource-ready proxy] {type(exc).__name__}", file=sys.stderr)
         return 1
 

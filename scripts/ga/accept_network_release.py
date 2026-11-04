@@ -79,8 +79,8 @@ def digest(path: Path) -> str:
 
 
 def verify_final_jars(root: Path, release: Path, version: str) -> dict:
-    # Compare three independent bytes/claims: Gradle-built JAR, the shipped JAR
-    # in the final release folder, and the frozen build manifest.
+    # Сравнивайте три независимых набора байтов и утверждений: JAR сборки Gradle,
+    # поставляемый JAR финального каталога и замороженный сборочный манифест.
     manifest = read_json(release / "BRIDGE_PLUGIN_MANIFEST.json")
     require(manifest.get("toolVersion") == version, "bridge manifest version mismatch")
     rows = manifest.get("artifacts")
@@ -192,8 +192,8 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
     )
     for name in required:
         read_json(runtime / name)
-    # The previous independently maintained verifiers inspect actual gameplay
-    # counters, file digests, one-time tickets, player identity, and restore.
+    # Прежние независимые верификаторы проверяют реальные счётчики игрового процесса, хеши
+    # файлов, одноразовые билеты, идентичности игроков и восстановление.
     checks_to_run = (
         (
             "scripts/ga/verify_server_control_0290.py",

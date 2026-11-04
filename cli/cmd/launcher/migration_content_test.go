@@ -37,7 +37,7 @@ func TestMigrationContent0337(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":{"complete":true,"plan":{"filesSha256":"` + strings.Repeat("f", 64) + `"}}}`))
 	}))
 	defer server.Close()
-	// Local httptest hostname is 127.0.0.1, explicitly permitted.
+	// Локальный тестовый сервер httptest имеет адрес 127.0.0.1, который явно разрешён.
 	err := postMigrationContent0337(server.URL, "token", file, "run-123", "profiles/demo.json", "demo", "", "vanilla", "stable", "1.0", filepath.Join(t.TempDir(), "result.json"), true, strings.Repeat("a", 64), "")
 	if err != nil {
 		t.Fatal(err)

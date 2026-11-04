@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// The host never sends a signal based on a historical PID alone. A request
-// identifies the running session and child, and is consumed by its supervisor.
+// Хост никогда не посылает сигнал только по историческому PID. Запрос определяет
+// работающий сеанс и дочерний процесс и обрабатывается его супервизором.
 type hostStopRequest0282 struct {
 	SessionID   string `json:"sessionId"`
 	ProcessPID  int    `json:"processPid"`
@@ -49,20 +49,20 @@ func hostTakeStopRequest0282(path, session string, pid int) bool {
 	if err := readJSONFile01910(path, &request); err != nil {
 		return false
 	}
-	// PID 0 is an explicit stop for this supervisor session, issued while
-	// there was no child (starting or crash backoff). It remains valid if a
-	// new JVM starts between the status read and this request being consumed.
+	// PID 0 означает явную остановку сеанса супервизора, запрошенную в отсутствие дочернего
+	// процесса (при старте или ожидании после сбоя). Запрос остаётся действительным, даже если
+	// новая JVM запустится между чтением статуса и обработкой.
 	if request.SessionID != session || (pid > 0 && request.ProcessPID != 0 && request.ProcessPID != pid) {
 		return false
 	}
-	// Best effort removal: the request is session scoped, so a leftover cannot
-	// stop a future, distinct supervisor session.
+	// Удаление по возможности: запрос привязан к сеансу, поэтому забытый запрос не
+	// сможет остановить будущий отдельный сеанс супервизора.
 	_ = os.Remove(path)
 	return true
 }
 
-// Poll rather than blocking in Wait so Minecraft can receive its supported
-// console 'stop' command. SIGTERM and SIGKILL are *last resort* stages only.
+// Используйте опрос вместо блокировки на Wait, чтобы Minecraft получил поддерживаемую
+// консольную команду 'stop'. SIGTERM и SIGKILL — только ПОСЛЕДНИЕ средства.
 func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requestPath, session string, timeoutSeconds int, stopSignals <-chan os.Signal) (error, bool, string) {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
@@ -78,8 +78,8 @@ func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requ
 		stopping = true
 		method = reason
 		if _, err := io.WriteString(stdin, "stop\n"); err != nil {
-			// Broken stdin cannot be treated as a graceful-stop ACK. Signal the
-			// exact verified process group immediately rather than waiting.
+			// Повреждённый stdin нельзя считать подтверждением корректной остановки. Немедленно
+			// посылайте сигнал точной проверенной группе процессов вместо ожидания.
 			if childIdentity != "" && hostIdentityMatches0282(pid, childIdentity) {
 				_ = hostTerminateProcess01910(pid)
 				method = "terminate"
@@ -117,8 +117,8 @@ func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requ
 	}
 }
 
-// Backoff is interruptible by service shutdown signals. A supervisor which
-// receives SIGTERM between JVM incarnations must not start another Java child.
+// Ожидание перед перезапуском прерывается сигналами завершения службы. Супервизор, получивший
+// SIGTERM между запусками JVM, не должен запускать новый Java-процесс.
 func hostWaitBackoff0414(delay time.Duration, requestPath, session string, signals <-chan os.Signal) bool {
 	deadline := time.Now().Add(delay)
 	for {
@@ -211,7 +211,7 @@ func hostUniqueSorted0282(values []string) []string {
 	return out
 }
 func hostChildEnvironment0282(config serverBridgeHostConfig01910) []string {
-	// Zero inheritance for old configs: no implicit credentials/tokens/JVM injections.
+	// Ничего не наследуйте от старых конфигураций: никаких неявных учётных данных, токенов и JVM-инъекций.
 	allow := config.EnvAllowlist
 	if len(allow) == 0 {
 		allow = hostBaseEnvAllowlist0282
@@ -278,8 +278,8 @@ func hostResolveDirectory0282(root, directory string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-// Rolling writers protect stdout, stderr and combined streams independently.
-// Every append and rename is serialized; rotated log files remain mode 0600.
+// Ротация журнальных потоков независимо защищает stdout, stderr и объединённый вывод. Каждая запись
+// и переименование сериализуются; права ротированных файлов остаются 0600.
 type hostRollingWriter0282 struct {
 	mu      sync.Mutex
 	path    string

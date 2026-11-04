@@ -14,8 +14,8 @@ import (
 	"strings"
 )
 
-// The independent GA signing key is an externally pinned trust anchor, never
-// read from a release bundle. Release-signing Ed25519 keys cannot substitute.
+// Ключ подписи независимого GA-оператора — внешний закреплённый корень доверия, не считываемый
+// из выпуска. Ключи подписания самого выпуска Ed25519 не заменяют его.
 var singleNodeGAFiles0330 = []string{
 	"SINGLE_NODE_GA_ATTESTATION.json",
 	"SINGLE_NODE_GA_ATTESTATION.sig",
@@ -247,8 +247,8 @@ func verifySingleNodeGABundle0330(dir, ver, commit, pub string) error {
 	return nil
 }
 
-// The independent operator must have exercised the SAME Linux release bytes
-// that the release signer is about to publish, not a different local build.
+// Независимый оператор обязан проверить ТЕ ЖЕ байты выпуска Linux, которые
+// собирается опубликовать подписант, а не другую локальную сборку.
 func verifySingleNodeGATestedArtifacts0330(dir string) error {
 	raw, err := singleNodeReadBounded0330(dir, singleNodeGAFiles0330[0])
 	if err != nil {

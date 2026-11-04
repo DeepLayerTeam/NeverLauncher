@@ -1,5 +1,5 @@
-//! Exact, deterministic signed file plan shared by staging, repair, install and
-//! installed-release verification. Never derive ownership from directory scans.
+//! Точный детерминированный подписанный план файлов для подготовки, восстановления, установки и проверки
+//! установленного выпуска. Никогда не выводите владение из сканирования каталогов.
 use crate::{component_catalog_0241, file_ownership, manifest_file_applies, Manifest};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
@@ -25,9 +25,9 @@ fn string_field(hasher: &mut Sha256, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `manifest` must be signature-verified by the caller using the pinned key.
-/// The plan digest binds the complete signed release, exact selected preset,
-/// final signed file set and file hashes. It cannot authorize any new path.
+/// Вызывающая сторона обязана проверить подпись manifest закреплённым ключом. Дайджест
+/// плана привязывает весь подписанный выпуск, выбранный пресет, окончательный набор
+/// подписанных файлов и их хеши. Он не разрешает новые пути.
 pub fn resolve(manifest: &Manifest, preset: Option<&str>) -> Result<ResolvedDownloadPlan, String> {
     let selected = component_catalog_0241::active_files(manifest, preset)?;
     let mut hasher = Sha256::new();
@@ -35,8 +35,8 @@ pub fn resolve(manifest: &Manifest, preset: Option<&str>) -> Result<ResolvedDown
     let signature = manifest.signature.as_ref().ok_or("resolved plan requires signed manifest")?;
     string_field(&mut hasher, &signature.public_key)?;
     string_field(&mut hasher, &signature.signature)?;
-    // Explicit/default presets may resolve to the same files but different
-    // launch actions; never treat them as the same installed selection.
+    // Явный и стандартный пресеты могут приводить к одним файлам, но разным действиям
+    // запуска; не считайте их одной установленной конфигурацией.
     string_field(&mut hasher, preset.unwrap_or_default())?;
     if let Some(catalog) = &manifest.component_catalog {
         string_field(&mut hasher, &catalog.digest)?;

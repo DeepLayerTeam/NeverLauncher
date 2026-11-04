@@ -159,8 +159,8 @@ def plan_test(path):
     """Dispatch ONLY existing test files, never shell-evaluate catalog data."""
     ref = referenced_file(path)
     if path.endswith("_test.go") or path.endswith("test.go"):
-        # Go package tests execute in their existing module context. The selected
-        # test file cannot be built alone without its production package.
+        # Тесты пакета Go выполняются в своём существующем контексте модуля. Выбранный тестовый
+        # файл невозможно собрать отдельно от производственного пакета.
         module = ref.parent
         while module != ROOT and not (module / "go.mod").is_file():
             module = module.parent
@@ -180,8 +180,8 @@ def plan_test(path):
     if path.endswith(".py") and "test_" in ref.name:
         return ((path,), [sys.executable, str(ref)], ROOT)
     if path.endswith(".sh"):
-        # E2E shell scripts require explicitly provisioned machines and are not
-        # assumed safe to execute in a local acceptance run.
+        # Для E2E shell-скриптов нужны явно подготовленные машины; их выполнение в
+        # локальной приёмке не считается безопасным по умолчанию.
         return None
     raise AuditError("unknown probe execution format: " + path)
 
@@ -219,8 +219,8 @@ def execute(journeys, ids, timeout, report):
                 continue
             print("Executing production test:", " ".join(cmd), flush=True)
             try:
-                # No shell, no credentials/keys serialized in evidence, output is
-                # hashed but not stored because test logs may contain secrets.
+                # Без shell и сериализации учётных данных или ключей в доказательствах; вывод хешируется, но
+                # не сохраняется, поскольку журналы тестов могут содержать секреты.
                 result = subprocess.run(
                     cmd,
                     cwd=cwd,
@@ -259,7 +259,7 @@ def execute(journeys, ids, timeout, report):
         runnable = [plan_test(p) for p in j["testRefs"]]
         keys = ["::".join(p[0]) for p in runnable if p is not None]
         statuses = [runs[k]["status"] for k in keys]
-        # A passed package-level Go test is still only local regression evidence.
+        # Успешный тест пакета Go — лишь локальное регрессионное свидетельство.
         status = (
             "local-regression-passed"
             if statuses and all(s == "passed" for s in statuses)

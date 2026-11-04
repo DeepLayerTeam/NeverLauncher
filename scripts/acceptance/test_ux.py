@@ -46,8 +46,8 @@ class InventoryTests(unittest.TestCase):
             data=json.loads(source.read_text())
             data['journeys'][0]['verification']='verified'
             path.write_text(json.dumps(data))
-            # If the catalog tries to promote itself into a certificate, validation
-            # MUST reject it before any ref checks or tests are run.
+            # Если каталог пытается выдавать себя за сертификат, валидация ОБЯЗАНА
+            # отклонить его до проверок ссылок и запуска тестов.
             with patch.object(ux,'ROOT',fake),self.assertRaises(ux.AuditError):
                 ux.load_inventory()
 

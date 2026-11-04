@@ -207,7 +207,7 @@ def main(argv=None) -> int:
         require(proc.returncode == 0, "live E2E process failed")
         live = json.loads(live_path.read_text(encoding="utf-8"))
         validate_live_report(live, item)
-        # Detect modification of the final asset between launch and signoff.
+        # Выявляйте изменение окончательного ресурса между запуском и окончательным подтверждением.
         require(
             identity(args.bundle.absolute(), args.version, args.commit) == item,
             "final artifact changed while E2E was running",
@@ -219,7 +219,7 @@ def main(argv=None) -> int:
         result["failureType"] = type(exc).__name__
         print("FINAL BUNDLE E2E BLOCKED: " + str(exc)[:250], file=sys.stderr)
     finally:
-        # Report intentionally outside the already-signed release directory.
+        # Отчёт намеренно хранится вне уже подписанного каталога выпуска.
         args.report.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(
             args.report, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600

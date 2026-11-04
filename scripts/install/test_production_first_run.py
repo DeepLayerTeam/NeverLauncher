@@ -143,8 +143,8 @@ class ProductionFirstRunTests(unittest.TestCase):
                 deploy.host_preflight(fresh=True)
 
     def test_real_https_transport_accepts_trusted_cert_and_rejects_redirect(self):
-        # The production code uses system SSL roots; this local test sets an
-        # explicit one-time test CA rather than disabling certificate checks.
+        # В производстве используются системные корни SSL; этот локальный тест задаёт отдельный
+        # одноразовый тестовый CA, не отключая проверку сертификатов.
         with tempfile.TemporaryDirectory() as path:
             root = Path(path)
             cert, key = root / "cert.pem", root / "key.pem"
@@ -206,7 +206,7 @@ class ProductionFirstRunTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "offline"):
                     deploy.compose_run(args)
             self.assertEqual(json.loads((root / ".launcher-compose-state.json").read_text())["mode"], "standard")
-            # Fresh install is represented by no state file.
+            # Свежая установка означает отсутствие файла состояния.
             (root / ".launcher-compose-state.json").unlink()
             with patch.object(deploy, "execute"), patch.object(deploy, "tls_paths"), patch.object(deploy, "verify_public_ready", side_effect=RuntimeError("offline")), patch.object(deploy, "host_preflight"):
                 with self.assertRaisesRegex(RuntimeError, "offline"):

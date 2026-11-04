@@ -1,6 +1,6 @@
-//! Native Minecraft runtime bridge for the already installed, signed Trusted JVM package.
-//! The independent operator-signed Guard policy authorizes exact agent/plugin bytes;
-//! this module never treats a mutable active.json record as a trust anchor.
+//! Нативный мост Minecraft Runtime для уже установленного подписанного пакета Trusted JVM.
+//! Независимо подписанная оператором политика Guard разрешает только точные байты агентов и
+//! плагинов; этот модуль не считает изменяемый active.json корнем доверия.
 use crate::guard_compatibility_0502;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use rand::{rngs::OsRng, RngCore};

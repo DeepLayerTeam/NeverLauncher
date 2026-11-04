@@ -1,10 +1,10 @@
 package main
 
-// Game-world backups are deliberately independent of Backend/PostgreSQL backups.
-// The only supported live-server consistency policy is a confirmed graceful
-// stop through Host Supervisor (which sends the Minecraft `stop` command).
-// Files are copied only after the game has stopped; no unacknowledged save-all
-// is ever treated as a consistent online snapshot.
+// Резервные копии игровых миров намеренно независимы от резервных копий Backend/PostgreSQL.
+// Единственная поддерживаемая политика согласованности живого сервера — подтверждённая
+// корректная остановка через Host Supervisor, который передаёт Minecraft команду `stop`.
+// Файлы копируются только после остановки игры; неподтверждённый save-all никогда не
+// считается согласованным онлайн-снимком.
 
 import (
 	"crypto/rand"
@@ -100,7 +100,7 @@ func worldBackupHandle02810(args []string) error {
 			return errors.New("--consistency must be stopped or stop")
 		}
 		worlds := multiFlagValues01910(args, "--world")
-		// Validate the selection before stopping a live server.
+		// Проверяйте выбор до остановки действующего сервера.
 		candidates, checkErr := worldBackupWorlds02810(root, worlds)
 		if checkErr != nil {
 			return checkErr
@@ -108,10 +108,10 @@ func worldBackupHandle02810(args []string) error {
 		if _, checkErr = worldBackupSources02810(root, candidates); checkErr != nil {
 			return checkErr
 		}
-		// Serialize the *entire* quiesce and copy interval against every JVM
-		// spawn (including crash-loop restarts) using an atomic host gate.
-		// The gate is acquired before observing host state so a new supervisor
-		// cannot enter after the stopped-state check.
+		// Сериализуйте ВЕСЬ интервал остановки записи и копирования относительно любого
+		// запуска JVM, включая перезапуски после сбоев, через атомарный барьер хоста.
+		// Барьер захватывается до чтения состояния хоста, чтобы новый супервизор не успел
+		// войти после проверки остановки.
 		releaseGate, gateErr := worldBackupHostGateAcquire04110(root, "backup")
 		if gateErr != nil {
 			return gateErr
@@ -128,7 +128,7 @@ func worldBackupHandle02810(args []string) error {
 		m, err = worldBackupCreate02810(root, dir, worlds, policy)
 		if err == nil {
 			if holdID := flagValue(args, "--hold-id", ""); holdID != "" {
-				// Never release the directory on a partial failed hold write.
+				// Никогда не освобождайте каталог после неудачной частичной записи удержания.
 				keepGate = true
 				err = worldBackupPersistCohortHold0518(root, holdID, m.ID)
 			}
@@ -174,7 +174,7 @@ func worldBackupLocation02810(root, requested string) (string, error) {
 	if err = worldBackupDisjoint02810(root, abs); err != nil {
 		return "", err
 	}
-	// Disallow symlink traversal along the backup storage path, including ancestors.
+	// Запретите переходы по символьным ссылкам на всём пути хранения резервных копий, включая родительские каталоги.
 	if err = worldBackupNoSymlinkAncestors02810(abs); err != nil {
 		return "", err
 	}
@@ -331,8 +331,8 @@ func worldBackupQuiesce02810(root, policy string) error {
 	paths := hostPaths01910(root)
 	state, err := readServerBridgeHostRuntime01910(paths["runtime"])
 	if errors.Is(err, os.ErrNotExist) {
-		// Absence of runtime.json is not proof of an idle host: a supervisor
-		// might hold the lock while preparing its first child process.
+		// Отсутствие runtime.json не доказывает простоя хоста: супервизор может
+		// держать блокировку, готовя первый дочерний процесс.
 		lock, lockErr := readServerBridgeHostLock01910(paths["lock"])
 		if lockErr == nil {
 			if lock.Identity == "" || hostIdentityMatches0282(lock.PID, lock.Identity) || updaterProcessAlive0156(lock.PID) {
@@ -359,8 +359,8 @@ func worldBackupQuiesce02810(root, policy string) error {
 			return err
 		}
 	}
-	// The supervisor may still be exiting after reporting stopped. Wait for
-	// the exact former identity to disappear; never silently race a restart.
+	// Супервизор может ещё завершаться после сообщения об остановке. Дождитесь исчезновения
+	// точной прежней идентичности; не допускайте гонки с перезапуском.
 	deadline := time.Now().Add(5 * time.Second)
 	var current serverBridgeHostRuntime01910
 	for {
@@ -460,7 +460,7 @@ func worldBackupSources02810(root string, worlds []string) ([]string, error) {
 			return nil, err
 		}
 	}
-	// Refuse overlapping entries; otherwise the same file could be backed up twice.
+	// Запрещайте перекрывающиеся записи, иначе один файл можно будет сохранить дважды.
 	seen := map[string]bool{}
 	for _, s := range sources {
 		if seen[s] {
@@ -556,7 +556,7 @@ func worldBackupCopy02810(src, dst string, expectedSize int64, mode fs.FileMode)
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 func worldBackupWriteManifest02810(path string, m worldBackupManifest02810) error {
-	// Manifest is the commit marker; before it is written payload remains partial.
+	// Манифест служит маркером фиксации; до его записи содержимое считается неполным.
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err
@@ -577,8 +577,8 @@ func worldBackupWriteManifest02810(path string, m worldBackupManifest02810) erro
 	return c
 }
 func worldBackupSyncDir02810(dir string) error {
-	// Windows does not support syncing directory handles through os.File.Sync;
-	// individual payload files and manifest are flushed before rename.
+	// Windows не поддерживает синхронизацию дескрипторов каталогов через os.File.Sync; отдельные
+	// файлы данных и манифест сбрасываются на диск до переименования.
 	if runtime.GOOS == "windows" {
 		return nil
 	}
@@ -637,7 +637,7 @@ func worldBackupCreate02810(root, dir string, requested []string, policy string)
 		ent.SHA256 = digest
 		m.TotalBytes += ent.Size
 	}
-	// Prove the persisted payload is complete before publishing the manifest.
+	// До публикации манифеста докажите полноту сохранённого содержимого.
 	if err = worldBackupWriteManifest02810(filepath.Join(stage, "manifest.json"), m); err != nil {
 		return empty, err
 	}
@@ -851,7 +851,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 			return err
 		}
 	}
-	// Apply directory modes bottom-up after files have been populated.
+	// После заполнения файлов применяйте права каталогов снизу вверх.
 	for i := len(m.Entries) - 1; i >= 0; i-- {
 		e := m.Entries[i]
 		if e.Type == "dir" {
@@ -860,7 +860,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 			}
 		}
 	}
-	// Restored payload is independently checked before the atomic publication.
+	// Восстановленное содержимое независимо проверяется до атомарной публикации.
 	for _, e := range m.Entries {
 		if e.Type != "file" {
 			continue

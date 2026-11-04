@@ -132,7 +132,7 @@ def verify(cfg, baseline):
     current = live.running_version(cfg['baseUrl'])
     require(current == (ROOT/'VERSION').read_text().strip(),
             'migration target must be the running current Backend')
-    # Snapshot old sources again; old writers must be stopped through cutover.
+    # Снимайте снимок старых источников повторно; прежние записывающие процессы должны быть остановлены при переключении.
     require(source_snapshot(cfg) == baseline['source'], 'original source files changed during migration')
     now = live_snapshot(cfg)
     require(now == baseline['identity'], 'user UUID/roles, project, profile, channel or API state changed')

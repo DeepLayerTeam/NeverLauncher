@@ -100,8 +100,8 @@ class PortableMinimalTests(unittest.TestCase):
         self.assertFalse(list((self.root / "backups").iterdir()))
 
     def test_authenticated_traversal_member_is_still_refused(self):
-        # Even an authenticated archive is not allowed to write outside the
-        # isolated recovery root: no generic tar.extractall is used.
+        # Даже аутентифицированный архив не вправе писать вне изолированного корня
+        # восстановления: универсальный tar.extractall не используется.
         stream = io.BytesIO()
         with tarfile.open(fileobj=stream, mode="w") as archive:
             info = tarfile.TarInfo("snapshot/../../escaped")

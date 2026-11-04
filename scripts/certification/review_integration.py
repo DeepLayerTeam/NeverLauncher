@@ -106,7 +106,7 @@ def main():
     p.add_argument("--revision", required=True)
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()
-    # Never follow symlinks in the collected evidence tree.
+    # Не переходите по символьным ссылкам внутри собираемого дерева доказательств.
     if args.evidence.is_symlink():
         p.error("symlink evidence directory forbidden")
     paths = sorted(args.evidence.rglob("integration-03012.json"))

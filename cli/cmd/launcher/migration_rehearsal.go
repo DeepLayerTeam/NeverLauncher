@@ -18,9 +18,9 @@ import (
 	"time"
 )
 
-// The CLI runs probes IN THE OPERATOR'S ALREADY-ISOLATED staging environment.
-// This is intentionally not an arbitrary remote command-execution endpoint.
-// No server-provided command is executed, and no shell is involved.
+// CLI запускает проверки В УЖЕ ИЗОЛИРОВАННОМ тестовом окружении оператора. Это намеренно
+// не универсальный endpoint удалённого выполнения команд. Команды, предоставленные
+// сервером, не выполняются; оболочка не используется.
 type rehearsalPlayer03310 struct {
 	SourceID          string `json:"sourceId"`
 	UUID              string `json:"uuid"`
@@ -128,7 +128,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, program)
 	cmd.Dir = root
-	// Inherit no tokens, no cloud credentials, no production DB connection.
+	// Не наследуйте токены, облачные учётные данные и подключение к производственной БД.
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + root, "MIGRATION_RUN_ID=" + run, "MIGRATION_STAGE_ID=" + stage, "MIGRATION_CHECK=" + name}
 	var stdout, stderr limitedProbeBuffer03310
 	cmd.Stdout = &stdout
@@ -166,7 +166,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	return probe, nil
 }
 
-// Prevent external test processes from filling server/CLI RAM or leaking stderr.
+// Не допускайте переполнения памяти сервера и CLI внешними тестовыми процессами и утечки stderr.
 type limitedProbeBuffer03310 struct{ bytes.Buffer }
 
 func (b *limitedProbeBuffer03310) Write(p []byte) (int, error) {
@@ -239,8 +239,8 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	if e = verifyLive(); e != nil {
 		return report, e
 	}
-	// Read the final target snapshot AFTER probes so tests that modify the
-	// isolated world cannot pass by supplying a stale pre-launch snapshot.
+	// Считывайте итоговый снимок цели ПОСЛЕ проверок, чтобы тесты, меняющие изолированный игровой
+	// мир, не смогли пройти на основании устаревшего снимка до запуска.
 	b, e := rehearsalRead03310(real, "target-snapshot.json", 4<<20)
 	if e != nil {
 		return report, e
@@ -255,8 +255,8 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	if e != nil {
 		return report, e
 	}
-	// The backend recomputes all data comparisons, probes and prerequisites in
-	// the DB. Locally never claim a successful certification until it responds.
+	// Backend заново вычисляет все сравнения данных, проверки и предварительные условия в БД.
+	// Не объявляйте локально успешную сертификацию до его ответа.
 	report.Ready = false
 	report.CutoverAllowed = false
 	report.Blockers = []string{"pending server-side authoritative verification"}

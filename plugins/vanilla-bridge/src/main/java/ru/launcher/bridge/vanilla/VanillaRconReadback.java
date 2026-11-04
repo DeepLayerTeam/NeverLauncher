@@ -3,7 +3,7 @@ package ru.launcher.bridge.vanilla;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Parses only unambiguous English Mojang RCON list replies; other locales are inconclusive. */
+/** Разбирает только однозначные английские ответы Mojang RCON list; для других локалей результат неопределён. */
 final class VanillaRconReadback {
     private static final Pattern COUNT = Pattern.compile("(?i)^There are (\\d+) (whitelisted player(?:\\(s\\)|s)?|ban(?:\\(s\\)|s)?|banned players?)(?:\\s*:\\s*(.*))?\\s*$");
     private static final Pattern NONE = Pattern.compile("(?i)^There are no (?:whitelisted player(?:\\(s\\)|s)?|ban(?:\\(s\\)|s)?|banned players?)\\.?$");
@@ -34,7 +34,7 @@ final class VanillaRconReadback {
         if (expected == 0) return false;
         if (expected > 200000 || count.group(3) == null || count.group(3).isBlank()) return null;
         String[] users = count.group(3).split(",\\s*");
-        // Avoid false negatives if RCON reply was truncated or contains an unsupported format.
+        // Избегайте ложных отрицаний при усечённом ответе RCON или неподдерживаемом формате.
         if (users.length != expected) return null;
         for (String user : users) {
             if (!user.matches("[A-Za-z0-9_]{1,16}")) return null;

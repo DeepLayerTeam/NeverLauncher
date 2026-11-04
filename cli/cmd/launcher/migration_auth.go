@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// postMigrationAuth0335 streams an operator-selected original ZIP over TLS.
-// Never put account hashes into a command-line argument or JSON response.
+// postMigrationAuth0335 передаёт выбранный оператором оригинальный ZIP потоково через TLS. Никогда не
+// помещайте хеши учётных записей в аргументы командной строки или ответ JSON.
 func postMigrationAuth0335(endpoint, token, sourcePath, algorithm, runID, out string, commit bool) error {
 	if sourcePath == "" {
 		return errors.New("credentials require --source /path/to/original-gravit.zip")
@@ -65,7 +65,7 @@ func postMigrationAuth0335(endpoint, token, sourcePath, algorithm, runID, out st
 	if response.StatusCode != 200 {
 		return fmt.Errorf("credentials HTTP %d: %s", response.StatusCode, string(raw))
 	}
-	// Never place a sensitive migration report into a world-readable file.
+	// Никогда не сохраняйте конфиденциальный отчёт миграции в общедоступном файле.
 	var value any
 	if e = json.Unmarshal(raw, &value); e != nil {
 		return e

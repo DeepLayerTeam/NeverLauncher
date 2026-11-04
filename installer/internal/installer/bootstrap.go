@@ -40,8 +40,8 @@ func BootstrapOwner(base, email, name, passwordFile, tokenFile string) error {
 	return bootstrapWithToken(base, email, name, passwordFile, token)
 }
 
-// BootstrapOwnerFromEnv reads the generated installation environment without
-// ever sending the token as a command line argument.
+// BootstrapOwnerFromEnv читает созданное окружение установки и никогда не
+// отправляет токен аргументом командной строки.
 func BootstrapOwnerFromEnv(base, email, name, passwordFile, envFile string) error {
 	st, err := os.Lstat(envFile)
 	if err != nil {

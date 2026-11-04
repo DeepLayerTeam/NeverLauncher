@@ -1,7 +1,7 @@
-//! NeverGuard game-lifetime enforcement. A launch-time attestation is not a
-//! game-lifetime grant: the same authenticated Guard must remain alive for the
-//! entire child process, and the verified image and process policy must remain
-//! unchanged. Any missing or inconsistent sample terminates that game.
+//! Проверка NeverGuard на протяжении всей игры. Аттестация при запуске не выдаёт разрешения на
+//! всё время работы: тот же аутентифицированный Guard должен работать до завершения дочернего
+//! процесса, а проверенные образ и политика процесса не должны меняться. Отсутствующий или
+//! противоречивый образец приводит к завершению игры.
 use runtime::{GuardIntegrityEvidence, GuardProcessPolicyReport, GuardStatus, GuardSupervisor, ProcessStatus, ProcessSupervisor};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::{sleep, timeout};

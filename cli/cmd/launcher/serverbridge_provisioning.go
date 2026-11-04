@@ -111,7 +111,7 @@ func handleServerBridge0199(args []string) error {
 		}
 		return writeOrPrintJSON(flagValue(args, "--output", ""), detection)
 	case "install", "upgrade", "enroll", "rollback", "rollout":
-		// Read-only preview must never create an operator.lock or other state.
+		// Предварительный просмотр только для чтения не должен создавать operator.lock и другое состояние.
 		if flagBool(args, "--dry-run", false) {
 			switch args[0] {
 			case "install":

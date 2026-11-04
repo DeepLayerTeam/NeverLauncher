@@ -4,11 +4,11 @@ import java.lang.instrument.Instrumentation;
 import java.nio.charset.StandardCharsets;
 import ru.launcher.trusted.MinecraftHook;
 
-/** A real bytecode transformation and lifecycle callback executed by premain. */
+/** Настоящее преобразование байткода и обработчик жизненного цикла, выполненные premain. */
 public final class LegacyGameHook implements MinecraftHook {
     @Override public void onAgentReady(Instrumentation instrumentation) {
         if (!instrumentation.isRetransformClassesSupported()) {
-            // Startup-time instrumentation is sufficient: no retransform requested.
+            // Инструментирования при запуске достаточно: повторная трансформация не запрашивается.
         }
         System.setProperty("never.ported.agent.ready", "true");
     }
@@ -18,8 +18,8 @@ public final class LegacyGameHook implements MinecraftHook {
     }
     @Override public byte[] transformMinecraftClass(String name,ClassLoader loader,byte[] original) {
         if(!name.equals("net.minecraft.client.main.Main"))return null;
-        // This port deliberately alters a constant-pool string with the same length.
-        // No transformation is performed on any other Minecraft class.
+        // Этот порт намеренно изменяет строку пула констант на значение той же
+        // длины. Другие классы Minecraft не трансформируются.
         byte[] before="ORIGINAL".getBytes(StandardCharsets.UTF_8);
         byte[] after="MIGRATED".getBytes(StandardCharsets.UTF_8);
         byte[] result=original.clone();int found=0;

@@ -131,8 +131,8 @@ class FinalPlayerReleaseTests(unittest.TestCase):
         self.assertEqual([row["checksPassed"] for row in result["targets"]], [15] * 6)
         self.assertEqual(checks_for("0.39.8"), CHECKS)
         self.assertEqual(len(checks_for("0.40.0")), 15)
-        # Later releases require the additional independently verified security
-        # capabilities; do not assume the historical 0.40.0 total for 1.0.0.
+        # Последующим выпускам требуются дополнительные независимо проверенные возможности
+        # безопасности; нельзя переносить историческое количество 0.40.0 на 1.0.0.
         from security_capabilities_0431 import checks as security_checks
         self.assertEqual(len(checks_for("1.0.0")), 15 + len(security_checks("1.0.0")))
 

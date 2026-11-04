@@ -1,6 +1,6 @@
-//! Linux-specific live guard for the actual game JVM.  The manifest and Guard
-//! compatibility policy are verified by LiveGameGuard0506 before this monitor
-//! is constructed.  /proc is observational evidence, not a source of trust.
+//! Linux-мониторинг действующей игровой JVM. До создания этого монитора
+//! LiveGameGuard0506 проверяет манифест и политику совместимости Guard.
+//! /proc — источник наблюдений, а не доверия.
 #![cfg(target_os = "linux")]
 
 use crate::continuous_game_protection_0506::LiveGameGuard0506;

@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// OutsideBundle rejects both lexical containment and symlink aliases.
-// A verification/signing trust anchor must be supplied independently of
-// attacker-controlled bundle contents, even if the key path resolves elsewhere.
+// OutsideBundle отклоняет и лексическую вложенность, и алиасы символьных ссылок. Корень доверия
+// проверки или подписи нужно предоставлять независимо от содержимого пакета, контролируемого
+// злоумышленником, даже если путь ключа разрешается наружу.
 func OutsideBundle(bundle, key string) error {
 	bundleAbs, err := filepath.Abs(bundle)
 	if err != nil {
@@ -20,7 +20,7 @@ func OutsideBundle(bundle, key string) error {
 	if err != nil {
 		return err
 	}
-	// First reject a name *inside* the bundle, even when it links outside.
+	// Сначала отклоните имя ВНУТРИ пакета, даже если ссылка ведёт наружу.
 	if err = outside(bundleAbs, keyAbs); err != nil {
 		return err
 	}

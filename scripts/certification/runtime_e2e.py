@@ -147,7 +147,7 @@ def integration(runtime: Path, signer: Path, out: Path) -> dict:
                 if installed != data:
                     raise AssertionError(f"incorrect verified file {i}")
             original_requests = len(metrics["requests"])
-            # Explicitly modify a signed path and assert signature rejection before installation.
+            # Явно измените подписанный путь и проверьте отклонение подписи до установки.
             changed = json.loads(signed.read_text())
             changed["files"][0]["sha256"] = "00" * 32
             invalid = root / "tampered.json"
@@ -159,7 +159,7 @@ def integration(runtime: Path, signer: Path, out: Path) -> dict:
                 raise AssertionError("unsigned file installed")
             if len(server.metrics()["requests"]) != original_requests:
                 raise AssertionError("untrusted manifest caused HTTP requests")
-        # Server socket is now closed. Second profile cannot access any remote file.
+        # Сокет сервера уже закрыт. Второй профиль не может получить удалённый файл.
         sign(signer, unsigned, signed, manifest(server.url, files, profile="second"))
         second = sync(runtime, signed, root / "second", key, cache)
         for i, data in enumerate(files):

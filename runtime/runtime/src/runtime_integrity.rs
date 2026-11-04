@@ -1,6 +1,6 @@
-//! Build an executable, digest-pinned JVM integrity inventory from the already
-//! Ed25519-verified release Manifest plus the independently verified Guard policy.
-//! No client-written JSON or untrusted runtime discovery can authorize a file.
+//! Постройте исполняемую опись целостности JVM, закреплённую дайджестом, из уже проверенного
+//! Ed25519 манифеста выпуска и независимо проверенной политики Guard. JSON клиента и
+//! недоверенное обнаружение Runtime не разрешают никакие файлы.
 use crate::{Manifest, LaunchPlan, guard_compatibility_0502::GamePolicy0503};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use sha2::{Digest,Sha256};
@@ -37,8 +37,8 @@ fn insert_pin(pins:&mut BTreeMap<String,(String,&'static str)>,root:&Path,path:&
     if pins.len()>8192{return Err("Guard runtime inventory exceeds 8192 files".into())}
     Ok(())
 }
-/// Exact native-library identities for the Windows live Module Guard.
-/// Only signed manifest or separately Ed25519-authorized Guard artifacts count.
+/// Точные идентичности нативных библиотек для живого Windows Module Guard. Учитываются только
+/// подписанные манифестом или отдельно разрешённые Ed25519 артефакты Guard.
 pub fn signed_native_pins(manifest:&Manifest,root:&Path)->Result<Option<Vec<(std::path::PathBuf,String)>>,String>{
     let Some(policy)=crate::guard_compatibility_0502::verified_for_game(root,&manifest.project_id,
         &manifest.minecraft.version,&manifest.minecraft.loader)? else{return Ok(None)};
@@ -59,10 +59,10 @@ pub fn signed_native_pins(manifest:&Manifest,root:&Path)->Result<Option<Vec<(std
     Ok(Some(pins.into_iter().map(|(path,(hash,_))|(std::path::PathBuf::from(path),hash)).collect()))
 }
 
-/// Called only after verify_manifest_signature and Guard Ed25519 verification.
-/// Covers effective classpath/modulepath, selected native release files and
-/// every signed executable artifact (mods/agents/plugins/loader/native).
-/// The Java premain rehashes them and watches changes after JVM startup.
+/// Вызывается только после verify_manifest_signature и проверки Ed25519 Guard. Охватывает
+/// фактические classpath/modulepath, выбранные нативные файлы выпуска и каждый подписанный
+/// исполняемый артефакт (моды, агенты, плагины, загрузчик, нативный код). Java premain повторно
+/// хеширует их и отслеживает изменения после запуска JVM.
 pub fn from_verified_launch(manifest:&Manifest,plan:&LaunchPlan,root:&Path,guard:&GamePolicy0503)->Result<String,String>{
     let canonical=fs::canonicalize(root).map_err(|e|e.to_string())?;
     let root=canonical.as_path();

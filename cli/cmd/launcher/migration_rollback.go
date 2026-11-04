@@ -15,8 +15,8 @@ import (
 	"strings"
 )
 
-// The CLI reads a full current snapshot exported independently from the
-// fenced production deployment. It never fabricates unchanged player data.
+// CLI читает полный актуальный снимок, независимо экспортированный из ограждённого
+// производственного развёртывания. Он никогда не подделывает неизменённые данные игроков.
 func handleMigrationRollback03312(args []string) error {
 	if len(args) == 0 {
 		return errors.New("rollback requires rollback-plan|rollback-commit|rollback-status")
@@ -93,8 +93,8 @@ func handleMigrationRollback03312(args []string) error {
 	default:
 		return errors.New("unknown rollback command")
 	}
-	// Reuse the production HTTP client with timeouts and redirects disabled.
-	// Unlike MIG11, both additional fencing headers are required.
+	// Повторно используйте производственный HTTP-клиент с тайм-аутами и отключёнными перенаправлениями. В
+	// отличие от MIG11 здесь обязательны оба дополнительных заголовка ограждения.
 	raw, _ := json.Marshal(body)
 	req, e := http.NewRequest("POST", path, strings.NewReader(string(raw)))
 	if e != nil {
@@ -110,9 +110,9 @@ func handleMigrationRollback03312(args []string) error {
 	return rollbackSend03312(req, flagValue(args, "--output", ""))
 }
 
-// rollbackReadSnapshot0448 hashes the EXACT bytes sent to the server, avoiding
-// the TOCTOU introduced by hashing a separately re-read operator file. Never
-// use an arbitrary --evidence-sha256 to authorize a new rollback plan.
+// rollbackReadSnapshot0448 хеширует ТОЧНЫЕ байты, отправленные серверу, исключая гонку
+// TOCTOU при повторном чтении файла оператора. Никогда не используйте произвольный
+// --evidence-sha256 для разрешения нового плана отката.
 func rollbackReadSnapshot0448(path string) (any, string, error) {
 	f, err := os.Open(path)
 	if err != nil {

@@ -48,7 +48,7 @@ public enum BridgeAdapterCapability {
         return "adapter." + wireName;
     }
 
-    /** Map every remotely executable command to its explicitly advertised capability. */
+    /** Сопоставляйте каждую удалённо исполняемую команду с явно объявленным разрешением. */
     public static BridgeAdapterCapability forControl(String type) {
         if (type == null) return null;
         return switch (type) {

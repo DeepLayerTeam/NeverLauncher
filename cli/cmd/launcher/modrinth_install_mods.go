@@ -1,7 +1,7 @@
 package main
 
-// Install individual, exactly pinned Modrinth versions and their required
-// transitive dependencies. This is NOT an .mrpack importer (0.27.5).
+// Устанавливайте отдельные точно закреплённые версии Modrinth и их обязательные
+// транзитивные зависимости. Это НЕ импортёр .mrpack (0.27.5).
 import (
 	"bytes"
 	"context"

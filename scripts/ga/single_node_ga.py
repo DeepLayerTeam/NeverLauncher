@@ -31,8 +31,8 @@ SUITES = {
     "http-security-and-minecraft": 4,
     "measured-load-safety": 3,
 }
-# These must be observed against an actually installed and exercised instance.
-# A PostgreSQL backend with a SQLite *coordinator* is not a SQLite-only backend.
+# Это нужно наблюдать на реально установленном и проверенном экземпляре. Backend
+# PostgreSQL с координатором SQLite НЕ является Backend только на SQLite.
 CHECKS = (
     "signed_installer_and_release_bom",
     "fresh_install_and_owner_bootstrap",
@@ -195,7 +195,7 @@ def verify(evidence_dir: Path, pinned_public_key: Path, commit: str) -> dict:
             raise Blocked("invalid detached Ed25519 signature length")
         key.verify(signature, report_raw)
     except Exception as err:
-        # Do not expose claims from unverified attacker-controlled evidence.
+        # Не раскрывайте утверждения из непроверенных доказательств, контролируемых атакующим.
         raise Blocked("independent GA attestation signature invalid") from err
     rc_sha = hashlib.sha256(rc_raw).hexdigest()
     validate_rc(strict_json(rc_raw), commit)

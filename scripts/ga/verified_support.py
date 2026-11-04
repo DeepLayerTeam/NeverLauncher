@@ -18,8 +18,8 @@ from security_capabilities_0431 import checks as security_checks, expected_scope
 
 NAME = 'GA_VERIFIED_SUPPORT_0440.json'
 SCHEMA = 'launcher.ga.verified-support.0440.v1'
-# Known boundaries are properties of this product's security model, not an
-# unsupported assertion that every hardware-backed device has been certified.
+# Известные ограничения — свойства модели безопасности продукта, а не необоснованное
+# заявление о сертификации каждого аппаратно защищённого устройства.
 BOUNDS = (
     'Device Trust and HWID are policy inputs; an HWID value is not hardware attestation.',
     'Native extension sandbox is verified per actual OS/architecture and policy; macOS single-process helper does not provide Windows Job or Linux cgroup subtree guarantees.',

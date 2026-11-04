@@ -35,8 +35,8 @@ def verify(path: Path, required: list[str]) -> None:
         count += 1
         if action in {"fail", "skip", "pass"}:
             if isinstance(test, str) and test in wanted:
-                # A fail/skip is terminal even if a second, unrelated package uses
-                # the same name or a forged later 'pass' appears in the stream.
+                # Отказ или пропуск окончателен, даже если другой пакет с тем же именем или
+                # поддельный последующий 'pass' появляется в потоке.
                 previous = observed.get(test)
                 if previous in {"fail", "skip"}:
                     continue

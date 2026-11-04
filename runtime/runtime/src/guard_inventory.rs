@@ -1,5 +1,5 @@
-//! Active, local Guard inventory. This is diagnostic observation, not remote attestation
-//! of a Minecraft game, a certification receipt, or a permission to join a server.
+//! Актуальная локальная опись Guard. Это диагностическое наблюдение, а не удалённая аттестация
+//! Minecraft, квитанция сертификации или разрешение на вход на сервер.
 use crate::GuardSupervisor;
 use serde::Serialize;
 use std::{path::{Path, PathBuf}, time::{Duration, SystemTime, UNIX_EPOCH}};

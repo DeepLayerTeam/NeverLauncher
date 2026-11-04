@@ -221,7 +221,7 @@ func configureServerBridgeHost01910(args []string) error {
 			return fmt.Errorf("server jar: %w", err)
 		}
 	case "java-main-class", "java-module":
-		// Path and Java entry-point checks run below and again immediately before exec.
+		// Проверки пути и точки входа Java выполняются ниже и повторно непосредственно перед exec.
 	case "java-args-file":
 		if javaArgsFile == "" {
 			javaArgsFile = detectModernForgeArgsFile01910(root, detection.Platform)
@@ -562,9 +562,9 @@ func startServerBridgeHost01910(args []string) error {
 	}
 	pid := cmd.Process.Pid
 	_ = cmd.Process.Release()
-	// Do not acknowledge host.start until the JVM has actually been spawned
-	// and both OS process identities have been verified. A "starting" result
-	// is not evidence that a real Java process exists.
+	// Не подтверждайте host.start до реального создания JVM и проверки обеих
+	// идентичностей процесса ОС. Статус «запускается» не доказывает
+	// существование настоящего Java-процесса.
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		state, readErr := readServerBridgeHostRuntime01910(paths["runtime"])
@@ -614,9 +614,9 @@ func runServerBridgeHost01910(root string, console bool) error {
 		return err
 	}
 	defer func() { _ = releaseServerBridgeHostLock01910(paths["lock"], sessionID) }()
-	// Treat SIGTERM (systemd/container shutdown) and SIGINT as a supervised
-	// graceful stop. Without this the OS would kill the supervisor immediately,
-	// leaving the real JVM running as an orphan, with no terminal receipt.
+	// Обрабатывайте SIGTERM (остановка systemd/контейнера) и SIGINT как управляемое
+	// корректное завершение. Иначе ОС немедленно убьёт супервизор, оставив
+	// действующую JVM сиротой без окончательной квитанции.
 	stopSignals := make(chan os.Signal, 2)
 	signal.Notify(stopSignals, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(stopSignals)
@@ -649,9 +649,9 @@ func runServerBridgeHost01910(root string, console bool) error {
 	}
 	restartEvents := make([]time.Time, 0, config.MaxRestarts)
 	for {
-		// A crash-loop restart is a new Java execution. Re-check the current
-		// artifacts, symlinks and approved optional JVM arguments before each
-		// attempt; the preflight at supervisor startup is not enough.
+		// Перезапуск после сбоя — новое выполнение Java. Перед каждой попыткой заново
+		// проверяйте артефакты, символьные ссылки и одобренные необязательные аргументы JVM;
+		// проверки при первом старте супервизора недостаточно.
 		command, err = serverBridgeHostCommand01910(config)
 		if err != nil {
 			state.Status = "failed"
@@ -698,9 +698,9 @@ func runServerBridgeHost01910(root string, console bool) error {
 		combined := &hostCombinedWriter01910{w: combinedFile}
 		cmd.Stdout = &hostStreamWriter01910{raw: stdoutFile, combined: combined, label: "STDOUT", console: console, consoleWriter: os.Stdout}
 		cmd.Stderr = &hostStreamWriter01910{raw: stderrFile, combined: combined, label: "STDERR", console: console, consoleWriter: os.Stderr}
-		// Never spawn a JVM while a world snapshot is being materialized.
-		// The host gate uses atomic directory creation, shared with backup;
-		// a crash leaves a fail-closed barrier requiring operator review.
+		// Никогда не запускайте JVM во время создания снимка мира. Барьер хоста использует
+		// атомарное создание каталога совместно с резервным копированием; сбой оставляет
+		// закрытый барьер, требующий проверки оператором.
 		releaseStartGate, gateErr := worldBackupHostGateAcquire04110(root, "start")
 		if gateErr != nil {
 			_ = stdin.Close()
@@ -728,7 +728,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		state.ProcessPID = cmd.Process.Pid
 		state.ProcessIdentity = hostOwnProcessIdentity0282(cmd.Process.Pid)
 		if state.ProcessIdentity == "" {
-			// Fail closed: never expose an unmanaged JVM or claim it is alive.
+			// При неопределённости отказывайте: нельзя показывать неуправляемую JVM как живую.
 			_ = hostKillProcess01910(cmd.Process.Pid)
 			_ = cmd.Wait()
 			_ = stdin.Close()
@@ -757,8 +757,8 @@ func runServerBridgeHost01910(root string, console bool) error {
 
 		hostServiceReady02811(state)
 
-		// Only the supervisor drives stdin and OS signals. The CLI posts a scoped,
-		// session-bound request; it never signals a potentially reused PID.
+		// Только супервизор управляет stdin и сигналами ОС. CLI отправляет запрос с ограниченной областью действия и
+		// привязкой к сеансу; он не посылает сигналы потенциально повторно использованному PID.
 		waitCh := make(chan error, 1)
 		go func() { waitCh <- cmd.Wait() }()
 		started := time.Now()
@@ -965,8 +965,8 @@ func stopServerBridgeHost01910(args []string) error {
 		if state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID) {
 			return errors.New("unverified legacy game process; refusing to signal a reused PID")
 		}
-		// A supervisor may have just observed a crash and entered its bounded
-		// restart backoff. It is still responsible for shutting down cleanly.
+		// Супервизор мог только что обнаружить сбой и перейти к ограниченному ожиданию перед
+		// перезапуском. Он всё ещё обязан корректно завершить работу.
 		if !supervisorAlive {
 			return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "status": "already-stopped", "runtime": state})
 		}
@@ -1121,8 +1121,8 @@ func logsServerBridgeHost01910(args []string) error {
 		if readErr != nil && !errors.Is(readErr, io.EOF) {
 			return readErr
 		}
-		// Reopen after a log rotation or truncation instead of silently tailing
-		// the old renamed inode forever.
+		// После ротации или усечения журнала открывайте его заново, а не продолжайте
+		// бесконечно читать старый переименованный inode.
 		current, statErr := os.Stat(path)
 		opened, openErr := file.Stat()
 		position, _ := file.Seek(0, io.SeekCurrent)

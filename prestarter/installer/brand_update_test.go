@@ -19,8 +19,8 @@ import (
 	prestarter "github.com/DeepLayerTeam/Launcher/prestarter"
 )
 
-// The installer is exercised with the real disk lock, two-slot commit,
-// executed Prestarter and signed payloads. Only the game binary is a fixture.
+// Установщик проверяется с настоящей дисковой блокировкой, фиксацией двух слотов, выполнением
+// Prestarter и подписанными данными. Только игровой бинарный файл является фикстурой.
 func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("script-based Prestarter fixture")
@@ -45,8 +45,8 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	if err == nil {
 		t.Fatal("must not accept old fixture trust root")
 	}
-	// Obtain the fixture config without trusting the original signer; test
-	// changes are re-signed by our new, pinned test key.
+	// Получите конфигурацию фикстуры, не доверяя исходному подписанту; изменения
+	// теста подписываются новым закреплённым тестовым ключом.
 	var tmpCfg prestarter.Config
 	if err := json.Unmarshal(mustBase64(t, original.Payload), &tmpCfg); err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 		if err != nil || !bytes.Contains(desktop, []byte("Icon=")) {
 			t.Fatal("branded desktop shortcut missing signed icon")
 		}
-		// The signed image is present beside the verified installed bundle.
+		// Подписанный образ находится рядом с проверенным установленным пакетом.
 		base, err := filepath.Glob(filepath.Join(opts.Root, ".launcher-installer", "releases", "*", "brand-icon.png"))
 		if err != nil || len(base) != 1 {
 			t.Fatalf("missing branded installed icon: %v %v", base, err)

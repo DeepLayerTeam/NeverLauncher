@@ -26,9 +26,9 @@ func bomFixtures03214(t *testing.T) (source, dir string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Exercise the historical BOM format with a self-contained 0.32.14
-		// fixture, even when the checked-out production project has advanced.
-		// Never modify the actual repository source or relax BOM verification.
+		// Проверяйте исторический формат BOM на автономной фикстуре 0.32.14, даже если
+		// текущий проект ушёл вперёд. Никогда не меняйте настоящий исходный код
+		// репозитория и не ослабляйте проверку BOM.
 		expected := bomComponentVersion03214(component, "0.32.14")
 		if strings.HasSuffix(rel, "Cargo.toml") {
 			re := regexp.MustCompile(`(?m)^(version\s*=\s*)"[^"]+"`)
@@ -91,7 +91,7 @@ func TestReleaseBOM03214ExactCohort(t *testing.T) {
 	if err := writeReleaseBOM03214(dir, source, "0.32.14"); err != nil {
 		t.Fatal(err)
 	}
-	// These two files are created after generation as part of signing.
+	// Эти два файла создаются после генерации в ходе подписания.
 	if err := os.WriteFile(filepath.Join(dir, "SHA256SUMS.sig"), []byte("signed"), 0600); err != nil {
 		t.Fatal(err)
 	}

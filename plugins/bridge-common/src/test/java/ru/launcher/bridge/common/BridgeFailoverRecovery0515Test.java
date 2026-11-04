@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/** Offline actual durable journal and protocol failure regression; no fake ACKs. */
+/** Офлайновая регрессия настоящего долговечного журнала и сбоев протокола; без поддельных ACK. */
 public final class BridgeFailoverRecovery0515Test {
     private static int assertions;
     private static void check(boolean value, String message) {
@@ -33,7 +33,7 @@ public final class BridgeFailoverRecovery0515Test {
         check(blocked, "backend without event stream must not authorize ACK");
         check(events.ackSequence() == 0 && events.nextBatch(64).size() == 1,
             "a reduced-capability endpoint must leave the signed event on disk");
-        // Simulate JVM/plugin reload and backend reconnect without server ACK.
+        // Имитируйте перезагрузку JVM/плагина и повторное подключение Backend без серверного ACK.
         BridgeEventJournal recovered = new BridgeEventJournal(journal, "server", runtime, node);
         check(recovered.nextBatch(64).size() == 1, "lost HTTP reply must preserve event after restart");
         LauncherApiClient.requireEventStream0515(protocol(true));

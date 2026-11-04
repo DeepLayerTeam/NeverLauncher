@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Component catalog schema 3 extends the signed v2 snapshot, never the local
-// selection. Every dependency, conflict, constraint and exclusion is signed.
+// Схема каталога компонентов 3 расширяет подписанный снимок v2, а не локальный выбор.
+// Каждая зависимость, конфликт, ограничение и исключение подписаны.
 func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 	if c.SchemaVersion != ComponentCatalogSchema0243 && c.SchemaVersion != ComponentCatalogSchema0244 && c.SchemaVersion != ComponentCatalogSchema0245 {
 		return ComponentCatalogDigest0242(c)
@@ -20,7 +20,7 @@ func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 	var buf [4]byte
 	count := func(n int) { binary.BigEndian.PutUint32(buf[:], uint32(n)); _, _ = h.Write(buf[:]) }
 	write := func(s string) { count(len(s)); _, _ = h.Write([]byte(s)) }
-	// Domain-separated digest of the entire v2 topology is framed into v3.
+	// Дайджест всей топологии v2 с разделением доменов включается во фрейм v3.
 	write(ComponentCatalogDigest0242(c))
 	count(len(c.Components))
 	for _, component := range c.Components {
@@ -55,8 +55,8 @@ func NewComponentCatalog0243(c ComponentCatalog0241, revision uint64) ComponentC
 	return c
 }
 
-// ResolutionError0243 provides a stable machine-readable category and a
-// human-readable chain. It is returned before staging files or creating jobs.
+// ResolutionError0243 предоставляет устойчивую машиночитаемую категорию и понятную человеку
+// цепочку. Ошибка возвращается до подготовки файлов и создания заданий.
 type ResolutionError0243 struct {
 	Code      string
 	Component string
@@ -280,8 +280,8 @@ func matchRange0243(actual, expr string) (bool, error) {
 	return anyMatched, nil
 }
 
-// ValidateCatalogRules0243 checks the whole signed graph, not just currently
-// selected components. All declared presets must be satisfiable at publication.
+// ValidateCatalogRules0243 проверяет весь подписанный граф, не только выбранные компоненты. При
+// публикации каждый объявленный пресет должен иметь разрешимое состояние.
 func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	items := make(map[string]CatalogComponent0241, len(cat.Components))
 	for _, c := range cat.Components {
@@ -316,7 +316,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			}
 		}
 	}
-	// Global directed cycle detection, including optional branches not in presets.
+	// Глобальная проверка ориентированных циклов, включая необязательные ветви вне пресетов.
 	state := map[string]uint8{}
 	stack := []string{}
 	var visit func(string) error
@@ -364,9 +364,9 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	return nil
 }
 
-// resolveCatalogGraph0243 is deterministic: component order follows signed
-// catalog order, dependency traversal follows signed reference order, outputs
-// are returned in catalog order. It never mutates the signed manifest.
+// resolveCatalogGraph0243 детерминирован: порядок компонентов соответствует
+// подписанному каталогу, обход зависимостей — подписанным ссылкам, результаты выдаются
+// в порядке каталога. Подписанный манифест не изменяется.
 func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string, error) {
 	components := make(map[string]CatalogComponent0241, len(cat.Components))
 	for _, c := range cat.Components {
@@ -468,9 +468,9 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 	return result, nil
 }
 
-// PreviewCatalogGraph0248 uses the same signed-graph resolver as the installer
-// without claiming simulated OS/Java/permissions are real authorization.
-// This checks static preset conflicts, cycles and dependency version ranges.
+// PreviewCatalogGraph0248 использует тот же разрешитель подписанного графа, что и установщик,
+// но не выдаёт симуляцию ОС/Java/разрешений за настоящую авторизацию. Проверяет статические
+// конфликты пресетов, циклы и диапазоны версий зависимостей.
 func PreviewCatalogGraph0248(cat ComponentCatalog0241, preset string) ([]string, error) {
 	if err := ValidateCatalogTopology0242(cat); err != nil {
 		return nil, err

@@ -36,8 +36,8 @@ public final class LauncherVelocityBridge {
     private final ProxyServer proxy;
     private volatile ProxyBridgeRuntime runtime;
     private volatile ScheduledTask telemetryTask;
-    // Hold the reservation until a real connection is observed or until the
-    // original short-lived one-time ticket has expired.
+    // Удерживайте резервирование до наблюдения реального подключения или
+    // истечения исходного краткоживущего одноразового билета.
     private record PendingTransfer(String target, long expiresAt) {}
     private final ConcurrentHashMap<String, PendingTransfer> pendingTransfers = new ConcurrentHashMap<>();
 
@@ -132,9 +132,9 @@ public final class LauncherVelocityBridge {
         });
     }
 
-    // PreLogin runs before the encrypted Minecraft/online-authlib handshake
-    // has established the player's UUID. Never trust a username-only ticket
-    // as the final identity: compare the authenticated platform UUID here.
+    // PreLogin выполняется до того, как зашифрованное рукопожатие
+    // Minecraft/online-authlib установит UUID игрока. Не доверяйте билету только по
+    // имени: здесь сравнивайте аутентифицированный UUID платформы.
     @Subscribe
     public void onAuthenticatedLogin(LoginEvent event) {
         ProxyBridgeRuntime current = runtime;
@@ -155,8 +155,8 @@ public final class LauncherVelocityBridge {
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
                 return;
             }
-            // Respect a prior proxy plugin's explicit deny/redirect. The ticket
-            // must authorize the *actual* destination, not the original name.
+            // Уважайте явный запрет или перенаправление ранее сработавшего плагина proxy.
+            // Билет должен разрешать ФАКТИЧЕСКУЮ цель, а не прежнее имя.
             var destination = event.getResult().getServer().orElse(null);
             if (!event.getResult().isAllowed() || destination == null) {
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
@@ -175,8 +175,8 @@ public final class LauncherVelocityBridge {
                 }
             }
             try {
-                // The Backend reads live routing state and atomically creates the
-                // one-time handoff. No automatic retry after uncertain delivery.
+                // Backend читает текущее состояние маршрутизации и атомарно создаёт одноразовую передачу
+                // управления. После неопределённой доставки нет автоматического повтора.
                 JoinValidationResult result = current.createHandoff(username, target);
                 if (!result.allowed || runtime != current ||
                     proxy.getServer(target).orElse(null) != destination ||
@@ -191,7 +191,7 @@ public final class LauncherVelocityBridge {
                     proxy.getServer(target).orElse(null) == destination) {
                     event.setResult(ServerPreConnectEvent.ServerResult.allowed(destination));
                 }
-                // Do not emit proxy.switch here. Only ServerConnectedEvent proves it.
+                // Здесь не отправляйте proxy.switch. Его подтверждает только ServerConnectedEvent.
             } catch (RuntimeException failure) {
                 pendingTransfers.remove(key, reservation);
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());

@@ -48,15 +48,15 @@ public record BridgeControlCommand(
         return canonicalForSigner(v3SigningKeyFingerprint);
     }
 
-    /**
-     * Execution identity deliberately excludes lease attempt/timestamps, leaseToken,
-     * channelId and deliverySequence: lease renewals and retries of the same
-     * authenticated command must return the same exactly-once result. The
-     * signed canonical command still binds these delivery fields, whereas
-     * executionDigest binds server/command identity, runtime/identity epochs,
-     * command type and payload hash. Never accept a changed stable identity
-     * as the same executed command.
-     */
+    /**Идентичность исполнения намеренно исключает номер попытки аренды и
+     * время, leaseToken, channelId и deliverySequence: продление аренды и
+     * повтор того же аутентифицированного действия должны возвращать один
+     * результат exactly-once. Подписанная каноническая команда
+     * по-прежнему связывает поля доставки, а executionDigest —
+     * идентичности сервера и команды, эпохи Runtime/идентичности, тип
+     * команды и хеш данных. Изменившуюся устойчивую идентичность нельзя
+     * считать той же выполненной командой.
+     */ */
     public String executionDigest() {
         String stable = String.join("\n",
             "Launcher-ServerBridge-Control-Execution-v2",

@@ -4,7 +4,7 @@ public final class JoinValidationResult {
     public final boolean allowed;
     public final String reason;
     public final String raw;
-    /** UUID from the authoritative ticket, never the network-reported identity. */
+    /** UUID берётся из авторитетного билета, а не из сетевого сообщения об идентичности. */
     public final String authorizedUUID;
 
     public JoinValidationResult(boolean allowed, String reason, String raw) {

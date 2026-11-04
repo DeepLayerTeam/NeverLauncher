@@ -1,6 +1,6 @@
-//! Runtime's enforceable Minecraft authentication boundary.
-//! Credentials from each provider are never interchangeable. In particular,
-//! a project/Yggdrasil token is not a Mojang session-server token.
+//! Применяемая Runtime граница авторизации Minecraft. Учётные данные различных
+//! провайдеров невзаимозаменяемы. В частности, токен проекта/Yggdrasil не
+//! является токеном Mojang session-server.
 use crate::{MinecraftLaunchCredentials, LaunchPlan};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

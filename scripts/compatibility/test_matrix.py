@@ -237,7 +237,7 @@ class MatrixToolTests(unittest.TestCase):
                     if name in {"java-runtime.json", "platform-runtime.json", "compatibility-execution.log"}
                     else runtime
                 ) / name
-                # Bytes are materialized, not merely a claimed list of paths.
+                # Байты реально создаются, а не только заявляются списком путей.
                 contents = f"{target['id']}:{name}:proof".encode()
                 destination.write_bytes(contents)
                 fingerprints[name] = hashlib.sha256(contents).hexdigest()

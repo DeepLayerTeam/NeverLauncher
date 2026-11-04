@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-// This barrier is deliberately rooted in the server, not in a configurable
-// backup store. Host Supervisor and backup are separate CLI processes and
-// must contend for the same atomic filesystem directory before either can
-// start a new JVM or copy stopped-world bytes. A crashed owner leaves the
-// directory in place: failing closed is safer than guessing at stale ownership.
-// Filesystems without atomic directory creation are not supported.
+// Этот барьер намеренно размещён в корне сервера, а не в настраиваемом хранилище резервных
+// копий. Host Supervisor и резервное копирование — отдельные процессы CLI; они должны
+// конкурировать за один атомарно создаваемый каталог до запуска новой JVM или копирования
+// байтов остановленного мира. После сбоя владельца каталог остаётся: безопаснее отказать,
+// чем угадывать, устарело ли владение. Файловые системы без атомарного создания каталога не
+// поддерживаются.
 type worldHostGate04110 struct {
 	PID             int    `json:"pid"`
 	ProcessIdentity string `json:"processIdentity"`
@@ -60,8 +60,8 @@ func worldBackupHostGateAcquire04110(root, purpose string) (func(), error) {
 		err = worldBackupSyncDir02810(parent)
 	}
 	if err != nil {
-		// The process created the gate and owns it; release only on this
-		// synchronous failure. A crash in this window intentionally blocks.
+		// Процесс создал барьер и владеет им; освобождайте только при этой синхронной
+		// ошибке. Сбой в данном окне намеренно сохраняет блокировку.
 		_ = os.Remove(filepath.Join(path, "owner.json"))
 		_ = os.Remove(path)
 		return nil, err
@@ -77,10 +77,10 @@ func worldBackupHostGateAcquire04110(root, purpose string) (func(), error) {
 	}, nil
 }
 
-// Explicit stale-gate reconciliation. Never automatically clear an
-// unrecognised/half-written gate after a crash: no automatic JVM restart is
-// allowed on an uncertain world snapshot. A live supervisor or JVM vetoes
-// recovery even when the former gate owner is gone.
+// Явное согласование устаревшего барьера. Не удаляйте автоматически незнакомый или
+// частично записанный барьер после сбоя: при неопределённом снимке мира автоматический
+// перезапуск JVM запрещён. Живой супервизор или JVM блокирует восстановление даже
+// после исчезновения прежнего владельца.
 func worldBackupHostGateRecover04110(root string) error {
 	path := worldBackupHostGatePath04110(root)
 	fi, err := os.Lstat(path)

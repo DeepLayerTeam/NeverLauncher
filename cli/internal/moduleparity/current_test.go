@@ -93,8 +93,8 @@ func TestModuleParity03011RejectForgedParity(t *testing.T) {
 	}
 }
 
-// The previous shipping inventory stays inspectable without mutating its file
-// or claiming it was certified on the current version.
+// Прежняя поставляемая опись остаётся доступной для просмотра без изменения файла или
+// утверждения, что она сертифицирована на текущей версии.
 func TestModuleParity03012PreviousEvidenceStillAuditable(t *testing.T) {
 	root := currentFixture(t)
 	previous, err := InspectPrevious03011(root)

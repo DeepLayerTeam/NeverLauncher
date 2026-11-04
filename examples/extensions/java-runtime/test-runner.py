@@ -180,8 +180,8 @@ if __name__ == "__main__":
             assert Handler.state.get(("storage", "last-release")) == {
                 "version": "42.1.0"
             }
-        # An invalid event payload must be refused by the real Java schema
-        # validator and must not overwrite the broker's previously stored value.
+        # Некорректное содержимое события должно отклоняться настоящим Java-валидатором
+        # схемы и не перезаписывать прежнее значение брокера.
         invalid = json.loads(json.dumps(msg))
         invalid["event"]["payload"] = {"version": 42}
         request = urllib.request.Request(
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         assert Handler.hello == 2, (
             "both JVM processes must authenticate with Go-compatible host protocol"
         )
-        # Terminating a healthy backend must not delete its durable subscription.
+        # Остановка здорового Backend не должна удалять долговечную подписку.
         p.send_signal(signal.SIGTERM)
         p.communicate(timeout=5)
         assert Handler.removed == 0, (
@@ -243,8 +243,8 @@ if __name__ == "__main__":
         assert restored.poll() is None and Handler.subscribed and Handler.callback, (
             "backend failed to re-register durable subscription"
         )
-        # Broker state is owned by Go, not by either Java JVM: state is still readable
-        # after process replacement, and a new event updates it again.
+        # Состоянием брокера владеет Go, а не любая из JVM Java: данные остаются доступными
+        # после замены процесса, а новое событие снова их обновляет.
         with Handler.lock:
             assert Handler.state.get(("storage", "last-release")) == {
                 "version": "42.1.0"

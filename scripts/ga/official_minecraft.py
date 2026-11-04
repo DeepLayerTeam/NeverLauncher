@@ -378,8 +378,8 @@ def main() -> int:
     except (GateError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"0.27.0 official Minecraft GA blocked: {exc}", file=sys.stderr)
         return 2
-    # This is a receipt about signatures and operator attestations, NOT
-    # a claim that an unauthenticated JSON file proves the platform execution.
+    # Это квитанция о подписях и аттестациях оператора, а НЕ утверждение, что
+    # неаутентифицированный JSON доказывает исполнение на платформе.
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"

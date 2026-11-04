@@ -3,7 +3,7 @@ package ru.example.launcher;
 import java.util.*;
 import ru.launcher.sdk.core.*;
 
-/** Executable sample: backend receives typed events; CLI reads the SAME state through Go. */
+/** Исполняемый пример: Backend получает типизированные события, CLI читает ТО ЖЕ состояние через Go. */
 public final class RuntimeExample implements Extension {
     private static final JsonSchema SETTINGS=JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"enabled\":{\"type\":\"boolean\"}},\"required\":[\"enabled\"],\"additionalProperties\":false}");
     private static final JsonSchema RELEASE=JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"version\":{\"type\":\"string\",\"minLength\":1}},\"required\":[\"version\"],\"additionalProperties\":false}");

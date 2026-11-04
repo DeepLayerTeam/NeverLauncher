@@ -57,7 +57,7 @@ class InventoryTests(unittest.TestCase):
         actual = {'status': 'passed', 'targetId': target['id']}
         if target['scope'] == 'integration':
             actual['mode'] = 'compatibility'
-        # Synthetic NEGATIVE-TEST ONLY server artifact, never an acceptance run.
+        # Синтетический серверный артефакт ТОЛЬКО ДЛЯ ОТРИЦАТЕЛЬНОГО ТЕСТА, никогда для приёмочного прогона.
         witness = {'schema': 'neverlauncher.compatibility-join-witness/0.52.4',
                    'targetId': target['id'], 'serverPid': 54321,
                    'serverArtifactSha256': 'f' * 64,
@@ -297,8 +297,8 @@ class InventoryTests(unittest.TestCase):
         write_json(args.receipt, doc)
         with self.assertRaisesRegex(inv.Blocked, 'signature verification failed'):
             inv.command_verify(args)
-        # Restore genuine receipt, then alter just one raw log and recompute
-        # its own JSON SHA: signature must still be bound to the original bytes.
+        # Восстановите настоящую квитанцию, затем измените только один сырой журнал и пересчитайте его
+        # JSON SHA: подпись всё равно должна быть привязана к исходным байтам.
         args.receipt.unlink()
         self.assertEqual(inv.command_sign(args), 0)
         first = self.results / self.one()['id'] / 'compatibility-result'

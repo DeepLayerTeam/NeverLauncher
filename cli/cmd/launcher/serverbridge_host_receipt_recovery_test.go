@@ -11,8 +11,8 @@ import (
 	"testing"
 )
 
-// A dropped HTTPS response after a side effect is never safe to replay.
-// The CLI recovers the exact durable receipt through read-only host.status.
+// Повторять запрос после потери HTTPS-ответа при совершённом побочном эффекте небезопасно. CLI
+// восстанавливает точную сохранённую квитанцию через доступный только для чтения host.status.
 func TestRemoteReceiptRecovery0515(t *testing.T) {
 	const key = "recover-original-key-0515"
 	var mutations atomic.Int32
@@ -21,8 +21,8 @@ func TestRemoteReceiptRecovery0515(t *testing.T) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/host/commands":
 			mutations.Add(1)
-			// The operation committed on the host, but HTTP acknowledgement
-			// was lost. A retry would repeat a potentially dangerous action.
+			// Операция зафиксирована на хосте, но HTTP-подтверждение потеряно. Повтор мог
+			// бы исполнить потенциально опасное действие ещё раз.
 			h, ok := w.(http.Hijacker)
 			if !ok {
 				t.Error("server must allow connection drop")
@@ -72,8 +72,8 @@ func TestRemoteReceiptRecovery0515(t *testing.T) {
 	if mutations.Load() != 1 || receiptReads.Load() != 1 {
 		t.Fatalf("recovery must not invoke command again: mutations=%d receipts=%d", mutations.Load(), receiptReads.Load())
 	}
-	// TLS validation is exercised with an actual trusted server certificate.
-	// A missing CA must fail closed without a network call.
+	// Проверка TLS использует реальный доверенный сертификат сервера. При
+	// отсутствии CA нужно отказать без сетевого запроса.
 	if err := remoteCall0284([]string{"call", "--url", server.URL, "--token-file", token, "--action", "receipt", "--idempotency-key", key}); err == nil {
 		t.Fatal("receipt recovery must not disable CA verification")
 	}

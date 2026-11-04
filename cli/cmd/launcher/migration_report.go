@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// Report verification always starts from a fresh, server-calculated database
-// snapshot. It never accepts a caller-constructed certification payload.
+// Проверка отчёта всегда начинается со свежего снимка БД, рассчитанного сервером. Данные
+// сертификации, сформированные вызывающей стороной, не принимаются.
 func handleMigrationReport03313(args []string) error {
 	if len(args) == 0 {
 		return errors.New("report requires report|report-review|report-review-status")

@@ -891,7 +891,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 		remove = append(remove, rel)
 	}
 	sort.Strings(remove)
-	// The signed package identity and the file-state pointer change in one journalled transaction.
+	// Идентичность подписанного пакета и указатель состояния файлов меняются в одной журналируемой транзакции.
 	signedBytes, err := os.ReadFile(packagePath)
 	if err != nil {
 		return nil, err

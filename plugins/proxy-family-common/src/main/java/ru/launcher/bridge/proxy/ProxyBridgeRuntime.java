@@ -143,7 +143,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         return result;
     }
 
-    /** Called after Mojang/project auth has established the game's actual UUID. */
+    /** Вызывается после того, как авторизация Mojang/проекта установила фактический UUID игры. */
     public boolean confirmAuthenticatedPlayer(String username, String uuid) {
         if (stopping.get() || state == null || username == null || maintenanceMode.get() || drainMode.get()) {
             playerDisconnected(username);
@@ -158,7 +158,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         return accepted;
     }
 
-    /** Bind a delayed operator/revocation kick to the exact active authenticated login. */
+    /** Связывайте отложенное исключение оператора или отзыв с точным активным аутентифицированным входом. */
     public boolean matchesPlayerSession(String username, String uuid, String correlationId) {
         RuntimeState current = state;
         if (current == null || stopping.get() || username == null ||

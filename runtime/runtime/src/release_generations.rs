@@ -1,6 +1,6 @@
-//! Game release anti-rollback: persistent high watermark for SIGNED publish
-//! generations, deliberately separate from transaction pointer generations.
-//! Only a strictly newer Ed25519-authorized release may restore older content.
+//! Защита от отката игрового выпуска: постоянная максимальная отметка для ПОДПИСАННЫХ
+//! поколений публикации, отдельно от поколений указателей транзакций. Только более новый
+//! выпуск, разрешённый Ed25519, может восстановить старое содержимое.
 use crate::{Manifest, file_ownership, platform_fs};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -63,9 +63,9 @@ pub fn check(root: &Path, manifest: &Manifest) -> Result<(),String> {
     Ok(())
 }
 
-/// Called under the same exclusive release.lock held by commit/recovery.
-/// No high-watermark mutation is made until the *complete* new release is
-/// active and verified. Failed stage/commit does not consume a generation.
+/// Вызывается под той же эксклюзивной release.lock, что удерживают commit/recovery.
+/// Максимальная отметка не меняется, пока ВЕСЬ новый выпуск не активирован и не
+/// проверен. Неудачные stage/commit не расходуют поколение.
 pub fn accept(root: &Path, manifest: &Manifest) -> Result<(),String> {
     check(root,manifest)?;
     if manifest.game_release_generation == 0 {return Ok(());}

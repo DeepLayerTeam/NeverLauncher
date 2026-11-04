@@ -1,8 +1,8 @@
-//! Deterministic identity of the *resolved* v2 Java invocation.
+//! Детерминированная идентичность разрешённого вызова Java v2. Она
+//!намеренно отличается от фактического процесса ОС: для последнего
+//! нужны локально выбранный бинарный файл Java и учётные данные
+//! сеанса. Конфиденциальные данные в идентичность не сериализуются.
 //!
-//! This is deliberately distinct from the actual OS process: the latter needs
-//! a locally selected java binary and per-session authentication credentials.
-//! No sensitive material is ever serialized into the identity payload.
 use super::{LaunchPlan, Manifest, MinecraftLaunchCredentials};
 use serde::Serialize;
 use sha2::{Digest, Sha256};

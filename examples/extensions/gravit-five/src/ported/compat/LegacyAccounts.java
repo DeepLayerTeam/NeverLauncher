@@ -7,8 +7,8 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import ru.launcher.sdk.core.*;
 
-/** Explicit PBKDF2-SHA256 source-port adapter. Unsupported Gravit hashes fail closed.
- * Secrets are never copied into a new NeverLauncher session: the Go federation owns sessions. */
+/** Явный адаптер исходной системы PBKDF2-SHA256. Неподдерживаемые хеши Gravit вызывают отказ. Секреты
+ * не копируются в новый сеанс NeverLauncher: сеансами управляет федерация Go. */
 public final class LegacyAccounts implements IdentityProvider {
     private RuntimeDocuments config;
     @Override public void start(ProviderContext ctx) { config = ctx.runtime().config(); }

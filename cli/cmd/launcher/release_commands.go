@@ -1311,8 +1311,8 @@ func releaseArtifacts(ver string) []string {
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
 	}
-	// Real executable Java extension packages and their raw six-target E2E
-	// receipts are mandatory signed release artifacts since 0.43.0.
+	// С версии 0.43.0 реальные исполняемые пакеты Java-расширений и их необработанные E2E-квитанции по
+	// шести целевым платформам обязательны среди подписанных артефактов выпуска.
 	if compatibilityVersionAtLeast(ver, 0, 43, 0) {
 		artifacts = append(artifacts,
 			"launcher-example-java-host.nlext",
@@ -1331,8 +1331,8 @@ func releaseArtifacts(ver string) []string {
 	if operationsGARequired0460(ver) {
 		artifacts = append(artifacts, operationsGAFile0460, operationsGASig0460)
 	}
-	// Real checked six-platform package inventory is part of the signed
-	// mandatory artifact set, not a free-floating manifest-first declaration.
+	// Проверенная опись реальных пакетов для шести платформ входит в обязательный подписанный
+	// набор, а не является неподтверждённой декларацией манифеста.
 	if compatibilityVersionAtLeast(ver, 0, 46, 2) {
 		artifacts = append(artifacts, "DELIVERY_VERIFIED_0462.json")
 	}

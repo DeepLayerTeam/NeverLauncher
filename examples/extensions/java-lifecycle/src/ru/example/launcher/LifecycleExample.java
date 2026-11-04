@@ -3,7 +3,7 @@ package ru.example.launcher;
 import ru.launcher.sdk.core.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Real lifecycle example. The backend supervises this JVM as an ordinary Extensions process. */
+/** Настоящий пример жизненного цикла. Backend контролирует эту JVM как обычный процесс Extensions. */
 public final class LifecycleExample implements Extension {
     private final AtomicBoolean started=new AtomicBoolean();
     @Override public void start(ExtensionContext context) throws Exception {

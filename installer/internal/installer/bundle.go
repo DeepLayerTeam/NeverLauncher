@@ -1,5 +1,5 @@
-// Package installer verifies and installs offline signed Launcher bundles.
-// The trust root MUST be passed independently from the release bundle.
+// Пакет installer проверяет и устанавливает офлайновые подписанные пакеты Launcher.
+// Корень доверия НЕОБХОДИМО передавать независимо от выпуска.
 package installer
 
 import (
@@ -83,8 +83,8 @@ func decodeKey(filename string, size int) ([]byte, error) {
 	return decoded, nil
 }
 
-// Verify reads the complete archive BEFORE returning a verified set of files.
-// It rejects unknown entries, duplicates, nonregular files and zip bombs.
+// Verify читает весь архив ДО возврата проверенного набора файлов. Неизвестные и
+// повторяющиеся записи, необычные типы файлов и ZIP-бомбы отклоняются.
 func Verify(archive, trustKey string) (*Verified, error) {
 	pub, err := decodeKey(trustKey, ed25519.PublicKeySize)
 	if err != nil {
@@ -181,8 +181,8 @@ func syncDir(dir string) error {
 	return f.Sync()
 }
 
-// Install performs a no-overwrite atomic directory commit. It never runs the
-// installed binary nor follows bundle-controlled symlinks.
+// Install атомарно фиксирует каталог без перезаписи. Установленный бинарный файл не
+// запускается; символьные ссылки, контролируемые пакетом, не обходятся.
 func (v *Verified) Install(target string) error {
 	if !filepath.IsAbs(target) || filepath.Clean(target) != target || target == "/" {
 		return errors.New("target must be absolute, clean, and not root")
@@ -233,9 +233,9 @@ func (v *Verified) Install(target string) error {
 			return err
 		}
 	}
-	// Release artifacts contain no installer-generated secrets. Set public read/exec
-	// permissions so a dedicated systemd service user can execute root-installed
-	// binaries; credentials are provisioned separately with mode 0600.
+	// Артефакты выпуска не содержат секретов установщика. Разрешите чтение и исполнение, чтобы
+	// выделенный пользователь службы systemd мог запускать установленные root бинарные файлы;
+	// учётные данные создаются отдельно с правами 0600.
 	if err := filepath.Walk(temp, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -247,7 +247,7 @@ func (v *Verified) Install(target string) error {
 	}); err != nil {
 		return err
 	}
-	// Sync nested directories before atomic publication.
+	// Синхронизируйте вложенные каталоги до атомарной публикации.
 	dirs := map[string]bool{temp: true}
 	for _, f := range v.files {
 		for d := filepath.Dir(filepath.Join(temp, filepath.FromSlash(f.Entry.Path))); strings.HasPrefix(d, temp); d = filepath.Dir(d) {
@@ -267,7 +267,7 @@ func (v *Verified) Install(target string) error {
 			return err
 		}
 	}
-	// Linux renameat2 NOREPLACE ensures a race can't replace an existing install.
+	// Linux renameat2 NOREPLACE исключает замену существующей установки при гонке.
 	if err := noReplace(temp, target); err != nil {
 		return err
 	}

@@ -50,7 +50,7 @@ def probe(args):
     env={**os.environ,'NL_GA_ORIGIN':args.origin,'NL_GA_BEARER':token,
          'NL_GA_JSON_PATH':args.json_path,'NL_GA_TEXT_PATH':args.text_path,
          'NL_GA_BINARY_PATH':args.binary_path,'NL_GA_BINARY_SHA256':args.binary_sha256}
-    # Separate compiled clients, never a Python HTTP replacement.
+    # Отдельные скомпилированные клиенты, без подмены реализацией HTTP на Python.
     go=Path(args.go).resolve();node=Path(args.node).resolve();java=Path(args.java).resolve()
     need(all(p.is_file() and os.access(p,os.X_OK) for p in (go,node,java)),
          'Go, Node and Java must be installed real executables')
@@ -59,7 +59,7 @@ def probe(args):
     go_result=run([str(go),'run','./cmd/live-acceptance'],ROOT/'sdk/api/go',env,240)
     run([tsc,'-p','tsconfig.json'],ROOT/'sdk/api/typescript',env,120)
     ts_result=run([str(node),'test/live_acceptance.mjs'],ROOT/'sdk/api/typescript',env,120)
-    # build.sh compiles the production Java SDK and core without replacing it.
+    # build.sh компилирует производственный Java SDK и ядро без их замены.
     run_build=subprocess.run(['sh','build.sh'],cwd=ROOT/'sdk/java/http-client',env=env,
                              stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180)
     need(run_build.returncode==0,'actual Java HTTP SDK build failed')

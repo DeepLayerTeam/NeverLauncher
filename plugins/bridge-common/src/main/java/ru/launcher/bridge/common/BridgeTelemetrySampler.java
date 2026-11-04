@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class BridgeTelemetrySampler {
     private static final long PLATFORM_SAMPLE_MAX_AGE_MS = 90_000L;
-    // A clock-skewed or future-dated platform sample must never make the game healthy.
+    // Образец платформы с неверными часами или будущей датой никогда не должен делать игру «здоровой».
     private static final long PLATFORM_FUTURE_SKEW_MS = 5_000L;
 
     private final MemoryMXBean memory = ManagementFactory.getMemoryMXBean();

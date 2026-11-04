@@ -1,5 +1,5 @@
-//! 0.35.10 player diagnostics: explicit preview, no raw logs, one-time export.
-//! The untrusted WebView selects an output path or supplies the exported JSON.
+//! Диагностика игрока 0.35.10: явный предварительный просмотр, без сырых журналов, однократный экспорт.
+//! Недоверенный WebView выбирает путь вывода либо предоставляет экспортируемый JSON.
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fs::{self, OpenOptions}, io::Write, path::Path, sync::Mutex, time::{SystemTime, UNIX_EPOCH}};
 use tauri::State;

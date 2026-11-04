@@ -14,10 +14,10 @@ import (
 	"strings"
 )
 
-// A shared content-addressed store is explicitly configured by the operator.
-// The key is a verified upstream SHA-1, while every installed output is also
-// SHA-256 recorded in InstallPlan. Cache files are always copied, never linked
-// into mutable game directories.
+// Общее хранилище с адресацией по содержимому явно настраивает оператор. Ключом
+// служит проверенный SHA-1 источника, а каждое установленное содержимое также
+// фиксируется по SHA-256 в InstallPlan. Файлы кэша всегда копируются, а не
+// связываются с изменяемыми игровыми каталогами.
 type sharedArtifactsKey0277 struct{}
 type sharedArtifacts0277 struct{ root string }
 
@@ -72,8 +72,8 @@ func (c *sharedArtifacts0277) locate(sha string) (string, error) {
 	return secureClientDestination(c.root, "sha1/"+sha[:2]+"/"+sha)
 }
 
-// restore verifies the complete cache entry before copying it; an incorrect or
-// nonregular entry is an error, never silently accepted as a cache hit.
+// restore проверяет всю запись кэша до копирования; неверная запись или объект не
+// являющийся обычным файлом — ошибка, а не попадание в кэш.
 func (c *sharedArtifacts0277) restore(ctx context.Context, dst, sha string, expectedSize int64) (bool, string, int64, error) {
 	src, err := c.locate(sha)
 	if err != nil {
@@ -138,8 +138,8 @@ func (c *sharedArtifacts0277) restore(ctx context.Context, dst, sha string, expe
 	return true, digest, size, nil
 }
 
-// store uses a private temp file and an atomic create-if-absent hardlink inside
-// the cache itself. Concurrent builds cannot publish partially written bytes.
+// store использует закрытый временный файл и атомарную жёсткую ссылку «создать, если отсутствует» внутри
+// кэша. Конкурирующие сборки не могут опубликовать частично записанные байты.
 func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest string, expectedSize int64) error {
 	dst, err := c.locate(sha)
 	if err != nil {
@@ -196,7 +196,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 	if !errors.Is(err, os.ErrExist) {
 		return err
 	}
-	// Another worker won the race. Verify its artifact independently.
+	// Другой исполнитель выиграл гонку. Проверьте его артефакт независимо.
 	info, e := os.Lstat(dst)
 	if e != nil {
 		return e
@@ -254,9 +254,9 @@ func equalStringSets0277(a, b []string) bool {
 	return true
 }
 
-// Reject two different revisions of the same Java library on a given target.
-// Classifier natives are deliberately excluded: they are OS/arch artifacts,
-// not additional classpath revisions. This check runs before any downloads.
+// Отклоняйте две разные ревизии одной библиотеки Java на заданной цели. Нативные файлы по
+// classifier намеренно исключены: это артефакты ОС/архитектуры, а не дополнительные
+// версии classpath. Проверка выполняется до загрузок.
 func validateVanillaLibraryConflicts0277(libraries []MojangLibrary, targets []vanillaTarget) error {
 	for _, target := range targets {
 		selected := map[string]string{}

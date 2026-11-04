@@ -1,9 +1,9 @@
 package main
 
-// A second rehearsal after a signed client update cannot overwrite the
-// PostgreSQL MIG10 receipt: its evidence is intentionally immutable. Run the
-// existing real Minecraft/RCON/probe pipeline and save a separate local-only
-// witness instead. It does NOT certify cutover or mutate Backend state.
+// Повторная репетиция после подписанного обновления клиента не может перезаписывать квитанцию MIG10
+// в PostgreSQL: её доказательства намеренно неизменяемы. Выполните существующий конвейер настоящего
+// Minecraft/RCON и проверок, затем сохраните отдельное локальное свидетельство. Оно НЕ сертифицирует
+// переключение и не изменяет состояние Backend.
 
 import (
 	"context"

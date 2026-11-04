@@ -12,8 +12,8 @@ import (
 	"syscall"
 )
 
-// Replaced at compile time using -ldflags -X. An empty embedded trust key
-// deliberately prevents production bootstrap until a trust root is provisioned.
+// Заменяется при компиляции через -ldflags -X. Пустой встроенный ключ доверия намеренно
+// блокирует производственный bootstrap до настройки корня доверия.
 var embeddedRootPublicKey string
 var version = "0.47.7"
 

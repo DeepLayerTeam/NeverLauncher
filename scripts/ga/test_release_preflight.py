@@ -37,9 +37,9 @@ class GAReleasePreflightTests(unittest.TestCase):
             if current == "0.25.0":
                 self.assertIn("signed evidence", result.stderr)
             else:
-                # Modern signers reject the historical version *earlier*;
-                # this is stricter than the missing-evidence check and must
-                # likewise preserve existing output without deleting it.
+                # Новые подписанты раньше отклоняют историческую версию; это строже
+                # проверки отсутствующих доказательств и также обязано сохранять
+                # существующий вывод без удаления.
                 self.assertIn("VERSION=" + current, result.stderr)
             self.assertEqual(
                 sentinel.read_text(), "must not be deleted by failed verification"

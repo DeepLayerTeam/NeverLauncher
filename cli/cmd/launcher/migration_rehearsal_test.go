@@ -98,9 +98,9 @@ func TestRehearsalPathTraversal03310(t *testing.T) {
 	}
 }
 
-// Minimal protocol-level RCON test server; no fake passed=true can bypass the
-// native network and process checks. In production the live Java server serves
-// /list uuids using the same protocol.
+// Минимальный тестовый сервер RCON на уровне протокола; ложное passed=true не
+// позволяет обойти реальные проверки сети и процесса. В производстве действующий
+// Java-сервер обслуживает /list uuids по тому же протоколу.
 func setupRehearsalRCON0447(t *testing.T, stage, uuid string) (string, func()) {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")

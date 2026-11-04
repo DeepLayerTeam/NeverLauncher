@@ -145,7 +145,7 @@ def main():
         assert result.returncode==0,(result.stdout,result.stderr)
         assert Broker.docs['storage','ported-settings']['updates']==2
         print('PASS 5: CLI command/registry/config/state migration backed by host storage')
-        # Simulate documented Go checkpoint rollback of docs, then check status using fresh CLI.
+        # Имитируйте документированный откат контрольной точки Go, затем проверьте статус через свежий CLI.
         saved=copy.deepcopy(Broker.docs);Broker.docs['storage','ported-settings']={'updates':1}
         status=subprocess.run(['java','-jar',str(cli.resolve()),'ported-status'],env=run_env(server.server_port,'cli'),capture_output=True,text=True,timeout=14)
         assert status.returncode==0 and json.loads(status.stdout)['config']=={'updates':1},(status.stdout,status.stderr)

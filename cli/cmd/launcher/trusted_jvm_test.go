@@ -98,8 +98,8 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	if actual, err := os.ReadFile(game); err != nil || string(actual) != "game-started" {
 		t.Fatalf("Minecraft main never ran: %q %v", actual, err)
 	}
-	// The actual legacy launcher must append the signed agent without treating
-	// user-supplied JVM flags as permission to inject arbitrary agents.
+	// Настоящий устаревший лаунчер обязан добавлять подписанный агент, не считая
+	// пользовательские флаги JVM разрешением на инъекцию произвольных агентов.
 	if runtime.GOOS != "windows" {
 		capture := filepath.Join(t.TempDir(), "launch-args.txt")
 		launcher := filepath.Join(t.TempDir(), "java8")
@@ -120,7 +120,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		}
 	}
 
-	// Exception propagation still invokes the after-main hook, then the JVM fails.
+	// При распространении исключения всё равно вызывается обработчик after-main, затем JVM завершает работу с ошибкой.
 	failArgs := append([]string{}, commandArgs...)
 	failArgs[len(failArgs)-1] = "fail"
 	failureRun := exec.Command("java", failArgs...)

@@ -10,11 +10,11 @@ public record BridgeControlResult(String status, Map<String,String> result, Stri
         error = error == null ? "" : error.replace('\r',' ').replace('\n',' ').trim();
         if (error.length() > 1024) error = error.substring(0,1024);
     }
-    /** The platform handler returned normally; no postcondition was observed. */
+    /** Обработчик платформы вернулся штатно, но фактическое последующее состояние не наблюдалось. */
     public static BridgeControlResult ok(Map<String,String> result){ return new BridgeControlResult("executed",result,""); }
-    /** A delayed or queued action was accepted, but its effect is still unobserved. */
+    /** Отложенное действие поставлено в очередь или принято, но его эффект пока не наблюдался. */
     public static BridgeControlResult accepted(Map<String,String> result){ return new BridgeControlResult("accepted",result,""); }
-    /** Only call after reading the actual postcondition back from the platform. */
+    /** Вызывайте только после повторного чтения фактического последующего состояния с платформы. */
     public static BridgeControlResult verified(Map<String,String> observed){
         java.util.HashMap<String,String> evidence = new java.util.HashMap<>(observed);
         evidence.put("verification", "platform-state-read");

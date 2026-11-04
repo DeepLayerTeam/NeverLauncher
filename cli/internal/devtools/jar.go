@@ -1,5 +1,5 @@
-// Package devtools contains executable, offline Java bytecode tooling.
-// Its findings are heuristics, not malware certification.
+// Пакет devtools содержит исполняемые офлайновые инструменты для байткода Java. Их вывод
+// — эвристика, а не сертификация отсутствия вредоносного кода.
 package devtools
 
 import (
@@ -552,7 +552,7 @@ func StripDebugJar(input, output string) (TransformReport, error) {
 	return *r, nil
 }
 
-// Encode a deterministic JSON body from bytes without any network calls.
+// Формируйте детерминированное тело JSON из байтов без сетевых вызовов.
 func CleanClass(bytes []byte) ([]byte, error) {
 	out, _, _, _, e := parseClass(bytes, true, "test")
 	return out, e

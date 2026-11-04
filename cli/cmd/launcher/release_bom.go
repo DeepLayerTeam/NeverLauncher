@@ -13,9 +13,9 @@ import (
 	"strings"
 )
 
-// Release BOM v1 binds every shipped byte to the exact source component set.
-// Unlike an advisory manifest, a missing or modified artifact blocks signing,
-// verification, and consequently publication/install through release verify.
+// Release BOM v1 привязывает каждый выпускаемый байт к точному набору исходных компонентов. В отличие
+// от рекомендательного манифеста отсутствие или изменение артефакта блокирует подписание, проверку и,
+// следовательно, публикацию и установку через release verify.
 const releaseBOMFile03214 = "RELEASE_BOM.json"
 
 type bomComponent03214 struct {
@@ -41,8 +41,8 @@ func releaseBOMRequired03214(ver string) bool {
 	return ok && compareVersionTriple0158(v, [3]int{0, 32, 14}) >= 0
 }
 
-// Enumerate the actual build inputs of Backend/API, CLI, Desktop, Admin,
-// Guard probes, Runtime and every published ServerBridge plugin.
+// Перечислите фактические входные файлы сборки Backend/API, CLI, Desktop, Admin, проверок
+// Guard, Runtime и каждого публикуемого плагина ServerBridge.
 func bomSources03214() map[string]string {
 	m := map[string]string{
 		"backend-api":                "services/api/go.mod",
@@ -166,8 +166,8 @@ func bomSourceComponents03214(root, ver string) ([]bomComponent03214, error) {
 	return out, nil
 }
 
-// Only these files are created after the BOM; they are bound by SHA256SUMS
-// and the existing release signature, avoiding a circular digest dependency.
+// Только эти файлы создаются после BOM; они привязаны SHA256SUMS и существующей
+// подписью выпуска, что исключает циклическую зависимость дайджестов.
 func bomPostBuildFile03214(name string) bool {
 	switch name {
 	case "RELEASE_BOM.json", "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig", "RELEASE_TRUST_STATE.json":
@@ -286,9 +286,9 @@ func bomSHA03214(v string) bool {
 	return err == nil && strings.ToLower(v) == v
 }
 
-// Enforce BOM presence inside the Ed25519-signed SHA256SUMS boundary and
-// the release manifest required list. Otherwise a valid-looking BOM could
-// remain unsigned and be swapped independently of a signed bundle.
+// Проверяйте наличие BOM в границах подписанного Ed25519 SHA256SUMS и в списке
+// обязательных файлов манифеста выпуска. Иначе правдоподобный BOM останется неподписанным
+// и сможет быть подменён независимо от подписанного пакета.
 func verifyReleaseBOMBinding03214(dir, ver string) error {
 	if !releaseBOMRequired03214(ver) {
 		return nil

@@ -81,7 +81,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 	if !hasManifest || manifest.Format != "launcher.gravit-source-inventory.v1" {
 		return errors.New("missing/invalid export manifest")
 	}
-	// Stream every exported file and verify checksum, size, CRC and membership.
+	// Передавайте каждый экспортируемый файл потоком и проверяйте контрольную сумму, размер, CRC и присутствие в наборе.
 	expected := make(map[string]exportedSourceFile0333, len(manifest.Files))
 	for _, v := range manifest.Files {
 		if _, ok := expected[v.Path]; ok {
@@ -210,8 +210,8 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	if e = tmp.Close(); e != nil {
 		return e
 	}
-	// Link is atomic on same filesystem and fails if the destination exists.
-	// Never clobber an earlier recovery snapshot or follow a target symlink.
+	// Создание ссылки атомарно в пределах файловой системы и завершается ошибкой при существующей цели. Не
+	// затирайте предыдущие снимки восстановления и не переходите по символьным ссылкам назначения.
 	if e = os.Link(tmp.Name(), out); e != nil {
 		return fmt.Errorf("cannot safely publish export to %q (destination must not exist): %w", out, e)
 	}

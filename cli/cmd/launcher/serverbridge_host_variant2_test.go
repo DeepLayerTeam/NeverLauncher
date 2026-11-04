@@ -47,7 +47,7 @@ done`)
 	if state.Status != "running" {
 		t.Fatalf("not running: %+v", state)
 	}
-	// A delayed request issued by an obsolete session must not stop this JVM.
+	// Отложенный запрос устаревшего сеанса не должен остановить эту JVM.
 	forged := hostStopRequest0282{SessionID: "previous-session", ProcessPID: state.ProcessPID}
 	if err := atomicWriteJSON01910(paths["stop"], forged, 0600); err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 		t.Fatal(err)
 	}
 	paths := hostPaths01910(root)
-	// A PID reused by the OS must not be treated as the old JVM.
+	// PID, повторно использованный ОС, нельзя считать прежней JVM.
 	fake := serverBridgeHostRuntime01910{Status: "running", SessionID: "previous-session", ProcessPID: os.Getpid(), ProcessIdentity: "old-boot:0", SupervisorPID: 123}
 	if err := atomicWriteJSON01910(paths["runtime"], fake, 0600); err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 	if recovered.RecoveredFrom != "previous-session" || recovered.Status != "exited" {
 		t.Fatalf("stale runtime recovery failed: %+v", recovered)
 	}
-	// A still-live, identity-proven process must not be adopted by a new supervisor.
+	// Новый супервизор не должен принимать под управление всё ещё работающий процесс с подтверждённой идентичностью.
 	fake.ProcessIdentity = hostOwnIdentity0282()
 	if err := atomicWriteJSON01910(paths["runtime"], fake, 0600); err != nil {
 		t.Fatal(err)
@@ -150,7 +150,7 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 	if err := runServerBridgeHost01910(root, false); err == nil {
 		t.Fatal("live orphan was accepted")
 	}
-	// Stale unlocked requests cannot accidentally target another supervisor.
+	// Устаревшие незаблокированные запросы не должны случайно адресоваться другому супервизору.
 	if hostTakeStopRequest0282(paths["stop"], "new-session", os.Getpid()) {
 		t.Fatal("nonexistent stop request accepted")
 	}

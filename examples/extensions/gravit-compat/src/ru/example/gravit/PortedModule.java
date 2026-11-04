@@ -7,7 +7,7 @@ import pro.gravit.utils.command.Command;
 import pro.gravit.utils.command.CommandHandler;
 import ru.launcher.sdk.gravit.*;
 
-/** A functional Gravit-shaped port: events and CLI run against the real Go host. */
+/** Функциональный порт в формате Gravit: события и CLI работают с настоящим хостом Go. */
 public final class PortedModule extends LauncherModule implements AutoCloseable {
     private GravitInitContext context;
     public PortedModule(){super(new LauncherModuleInfoBuilder().setName("PortedAudit").setVersion(new Version(1,0,0,0,Version.Type.LTS)).createLauncherModuleInfo());}
@@ -21,7 +21,7 @@ public final class PortedModule extends LauncherModule implements AutoCloseable 
             @Override public void invoke(String... args)throws Exception {
                 if(args.length!=0)throw new IllegalArgumentException("status takes no arguments");
                 Object state=ctx.extension().runtime().storage().get("last-release",null).orElse(Map.of());
-                // Gravit's void invoke() is bridged to a structured Extensions CLI response.
+                // Вызов Gravit void invoke() преобразуется в структурированный ответ Extensions CLI.
                 CommandHandler.respond(Map.of("latestRelease",state));
             }
         });

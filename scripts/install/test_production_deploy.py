@@ -210,14 +210,14 @@ class DeploymentTests(unittest.TestCase):
             remove.assert_called_once()
 
     def test_compose_files_match_real_modes(self):
-        # Production CLI has no external Python dependencies.
+        # Производственный CLI не имеет внешних Python-зависимостей.
         standard = deploy.COMPOSE.read_text()
         ha = deploy.HA.read_text()
         self.assertIn("profiles: [network-ha]", standard)
         self.assertIn("launcher_coordinator:", standard)
         self.assertIn('LAUNCHER_SERVERBRIDGE_HA_REQUIRED: "false"', standard)
-        # Compose overlay uses YAML single-quoted booleans; test semantic
-        # opt-in without depending on the quotation style.
+        # В Compose overlay используются YAML-логические значения в одинарных кавычках;
+        # проверяйте семантику явного включения без зависимости от вида кавычек.
         self.assertRegex(ha, r"LAUNCHER_SERVERBRIDGE_HA_REQUIRED:\s*['\"]true['\"]")
         self.assertIn("LAUNCHER_STORAGE_DRIVER: s3", ha)
 
@@ -309,7 +309,7 @@ class DeploymentTests(unittest.TestCase):
                 self.assertTrue(state_root.exists())
                 self.assertFalse(unit.exists())
                 self.assertFalse(install_root.exists())
-                # Roll back a failed first activation without removing unrelated state.
+                # Откатывайте неудачную первую активацию без удаления постороннего состояния.
                 check.side_effect = RuntimeError("health failed")
                 with self.assertRaises(RuntimeError):
                     deploy.native_install(args)

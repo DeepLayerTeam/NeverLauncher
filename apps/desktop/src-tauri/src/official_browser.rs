@@ -1,6 +1,6 @@
-//! 0.26.3: OAuth authorization code and PKCE S256 for the SYSTEM browser.
-//! The only socket is on IPv4 loopback, not reachable from other hosts.
-//! No token, code, verifier or state is ever returned through Tauri IPC.
+//! 0.26.3: код авторизации OAuth и PKCE S256 в СИСТЕМНОМ браузере. Единственный
+//! сокет привязан к IPv4 loopback и недоступен другим хостам. Токен, код, verifier и
+//! state никогда не возвращаются через Tauri IPC.
 use std::{net::Ipv4Addr, time::Duration};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::RngCore;

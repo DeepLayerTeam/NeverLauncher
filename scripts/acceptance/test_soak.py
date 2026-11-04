@@ -27,7 +27,7 @@ class SoakTests(unittest.TestCase):
         fake=SimpleNamespace(commit='f'*40,run_id='123',attempt=1,min_seconds=30)
         with self.assertRaises(m.Blocked):m.check_identity(fake)
     def test_missing_java_fails_before_output(self):
-        # A nonexistent target must not launch or emit success.
+        # Несуществующая цель не должна запускаться или сообщать об успехе.
         a=SimpleNamespace(commit='f'*40,run_id='123',attempt=1,min_seconds=3600,
                           min_sessions=8,max_sessions=100,target_id='no-such-target',output=Path('/tmp/nl-no-such'))
         with self.assertRaises(m.Blocked):m.game(a)
@@ -73,7 +73,7 @@ class SoakTests(unittest.TestCase):
                 server.shutdown();server.server_close();thread.join(timeout=3)
 
     def test_copy_replay_mismatch_blocks_even_with_python_optimized(self):
-        # This must be a require(), not `assert` (which disappears under python -O).
+        # Здесь обязателен require(), а не assert, который исчезает при python -O.
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             source=root/'e2e/compatibility-result';source.mkdir(parents=True)

@@ -1,6 +1,6 @@
-//! Windows TPM2_Certify through PCP-backed CNG key handles and TBS.
-//! The AK must already be provisioned by an issuer that validates TPM provenance.
-//! No simulated/synthetic evidence or Windows-provider-name assurance is returned.
+//! Windows TPM2_Certify через дескрипторы ключей CNG с поддержкой PCP и интерфейс TBS. Ключ AK должен быть
+//! предварительно подготовлен удостоверяющим центром, проверяющим происхождение TPM. Синтетические доказательства
+//! и утверждения о доверии только по имени провайдера Windows не возвращаются.
 use crate::tpm_wire_0313::{certify_command,parse_certify_response,parse_public_response,read_public_command};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::Serialize;

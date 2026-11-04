@@ -121,7 +121,7 @@ func durableCopy(source, destination string, expected Artifact, executable bool)
 	return syncDir(parent)
 }
 func safeMkdir(dir string) error {
-	// Reject links for EVERY component below the already verified installation root.
+	// Отклоняйте ссылки на КАЖДЫЙ компонент ниже уже проверенного корня установки.
 	if e := os.MkdirAll(dir, 0700); e != nil {
 		return e
 	}
@@ -173,8 +173,8 @@ func (s *storage) artifact(ctx context.Context, art Artifact, offlineName string
 	if s.offline {
 		return "", fmt.Errorf("offline cache missing SHA-256 %s", art.SHA256)
 	}
-	// Partial files are deterministically keyed by digest, not URLs. Their
-	// accompanying validator is required before an HTTP Range is attempted.
+	// Частичные файлы детерминированно индексируются по дайджесту, не по URL. До
+	// запроса HTTP Range обязателен соответствующий валидатор.
 	part := cache + ".part"
 	meta := cache + ".etag"
 	var failure error
@@ -212,8 +212,8 @@ func (s *storage) artifact(ctx context.Context, art Artifact, offlineName string
 func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath string) error {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Minute)
 	defer cancel()
-	// Refuse attacker-controlled cache links even if the expected digest is
-	// known. Never truncate or append through a link in a writable cache.
+	// Запретите контролируемые злоумышленником ссылки кэша даже при известном ожидаемом хеше.
+	// Нельзя усекать файл или дописывать по ссылке в записываемом кэше.
 	for _, name := range []string{part, metaPath} {
 		if st, err := os.Lstat(name); err == nil {
 			if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
@@ -291,7 +291,7 @@ func (s *storage) fetch(parent context.Context, art Artifact, part, metaPath str
 	if e != nil {
 		return e
 	}
-	// max size is enforced during streaming, including chunked responses.
+	// Максимальный размер проверяется потоково, включая ответы с chunked-кодированием.
 	written, e := io.CopyBuffer(output, io.LimitReader(res.Body, art.Size-start+1), make([]byte, 65536))
 	if syncErr := output.Sync(); e == nil {
 		e = syncErr
@@ -361,8 +361,8 @@ func atomicSmallWrite(path string, data []byte) error {
 	if e = f.Close(); e != nil {
 		return e
 	}
-	// Windows cannot replace an open path with rename. The caller serializes
-	// metadata updates under the installation process lock.
+	// Windows не может заменить открытый путь переименованием. Вызывающая сторона
+	// сериализует обновление метаданных под блокировкой процесса установки.
 	if e = atomicReplace(tmp, path); e != nil {
 		return e
 	}

@@ -193,10 +193,10 @@ if __name__ == "__main__":
             "running": True,
         }, cli.stdout
         assert Handler.hellos == 2 and Handler.readies == 1 and Handler.manifests == 2
-        # CLI sessions have transient callback ports; use the live backend URL.
+        # Сеансы CLI имеют временные порты обратного вызова; используйте действующий URL Backend.
         Handler.callback = backend_callback
-        # Host callback rejects unauthorized transport, unsupported protocol,
-        # undeclared RPC methods and oversized requests on the live JVM.
+        # Обработчик хоста на живой JVM отклоняет неавторизованный транспорт, неподдерживаемый
+        # протокол, необъявленные методы RPC и слишком большие запросы.
         status, _, _ = rpc("health", token="revoked")
         assert status == 401
         status, _, _ = rpc("health", version="2.0")
@@ -205,8 +205,8 @@ if __name__ == "__main__":
         assert status == 422
         status, _, _ = rpc("health", {"padding": "x" * (70 << 10)})
         assert status == 413
-        # Actual JVM startup must fail closed: invalid host token or a protocol
-        # incompatible with this host must never produce an additional ready.
+        # Настоящий запуск JVM должен завершаться отказом: неверный токен хоста или
+        # несовместимый протокол не могут породить дополнительное ready.
         for case, changes in (
             ("revoked-host-token", {"LAUNCHER_EXTENSION_HOST_TOKEN": "revoked"}),
             ("unsupported-protocol", {"LAUNCHER_EXTENSION_HOST_PROTOCOL": "2.0"}),

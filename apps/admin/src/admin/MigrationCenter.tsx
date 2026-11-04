@@ -863,7 +863,7 @@ export function MigrationCenter0331({
     event.preventDefault();
     if (!runId || !source || busy) return;
     if (source.size < 1 || source.size > 512 * 1024 * 1024) {
-      setError("ZIP must be 1..512 MiB");
+      setError("Размер ZIP должен быть от 1 до 512 МиБ");
       return;
     }
     setBusy(true);
@@ -894,7 +894,7 @@ export function MigrationCenter0331({
   async function inventorySource() {
     if (!runId || !source || busy) return;
     if (source.size < 1 || source.size > 512 * 1024 * 1024) {
-      setError("ZIP must be 1..512 MiB");
+      setError("Размер ZIP должен быть от 1 до 512 МиБ");
       return;
     }
     setBusy(true);
@@ -1176,7 +1176,7 @@ export function MigrationCenter0331({
   async function exportSource() {
     if (!runId || !source || busy || !inventory) return;
     if (source.size < 1 || source.size > 512 * 1024 * 1024) {
-      setError("ZIP must be 1..512 MiB");
+      setError("Размер ZIP должен быть от 1 до 512 МиБ");
       return;
     }
     setBusy(true);

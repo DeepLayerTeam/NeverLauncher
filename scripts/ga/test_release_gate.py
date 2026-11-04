@@ -158,7 +158,7 @@ class ReleaseGateTests(unittest.TestCase):
             root = Path(tmp)
             pub = self.setup_fixtures(root)
             path = root / "linux-arm64" / "cleanMachine.bin"
-            # Verify checks fail closed even before attestation's SHA-256 is updated.
+            # Проверки Verify отказывают ещё до обновления SHA-256 аттестации.
             path.write_text(
                 json.dumps(
                     {

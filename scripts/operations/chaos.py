@@ -51,8 +51,8 @@ def check_scope(project: str, confirm: str, env_file: Path, ready_url: str, s3_u
             or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/")):
         raise dr.DrillError("S3 test endpoint must be explicit IPv4 loopback HTTP port")
     dr.validate_ready_url(ready_url)
-    # The public HTTPS endpoint can be nonloopback. Refuse production DNS as a
-    # source of evidence: local lab ingress must be explicitly loopback-bound.
+    # Публичная HTTPS-точка может быть не loopback. Не принимайте производственный DNS как
+    # доказательство: локальный вход лаборатории должен явно привязываться к loopback.
     rp = urlsplit(ready_url)
     if rp.hostname not in ("127.0.0.1", "localhost", "::1"):
         raise dr.DrillError("chaos public readiness endpoint must be loopback")
@@ -88,8 +88,8 @@ def configure_compose() -> None:
 
 
 def check_lab_endpoint(project: str, env_file: Path, endpoint: str) -> None:
-    # Avoid an operator's unrelated localhost S3/production tunnel: verify that
-    # the port really belongs to this lab's Compose s3 container.
+    # Избегайте постороннего локального туннеля S3 или production оператора: проверяйте, что
+    # порт действительно принадлежит s3-контейнеру Compose этого стенда.
     s3_id = container_id(project, env_file, "s3")
     raw = dr.run(["docker", "port", s3_id, "9000/tcp"], timeout=20).stdout.decode().strip()
     actual = {line.strip() for line in raw.splitlines()}
@@ -109,8 +109,8 @@ def check_services(project: str, env_file: Path) -> None:
 
 
 def pg_sql(project: str, env_file: Path, statement: str) -> str:
-    # SQL is constant except for canary values generated internally; values
-    # are restricted to lowercase hex, not operator-provided SQL or a shell.
+    # SQL постоянен кроме canary-значений, генерируемых внутри; значения
+    # ограничены строчным hex, не SQL и shell от оператора.
     result = dr.compose(project, env_file, "exec", "-T", "postgres", "sh", "-ec",
         'export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -X -A -t -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"',
         stdin=io.BytesIO(statement.encode("ascii")), timeout=35)
@@ -207,15 +207,15 @@ def lab_network(project: str, ident: str) -> str:
 def dependency_fault(project: str, env_file: Path, service: str, url: str, endpoint: str,
                      bucket: str, key: str, digest: str, token: str, pg_digest: str,
                      limit: float) -> dict:
-    # Use actual service outage, no mocked endpoints. A successful /ready during
-    # a dependency fault means fail-closed readiness is broken.
+    # Используйте настоящий отказ службы, а не имитации endpoints. Успешный /ready при сбое
+    # зависимости означает нарушение защитной политики готовности.
     start = monotonic()
     event_started = stamp()
     fault_detected = None
     try:
         dr.compose(project, env_file, "stop", "-t", "3", service, timeout=45)
         if service == "s3":
-            # Health alone is insufficient evidence of S3 outage.
+            # Одной проверки health недостаточно для доказательства отказа S3.
             fault_detected = poll(lambda: s3_verify(endpoint, bucket, key, digest) == digest,
                                   False, limit, "S3 object read failure")
         else:
@@ -296,7 +296,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
                                              key, digest, token, digest, limit))
         outcomes.append(api_failover(project, env_file, ready_url, limit))
         outcomes.append(network_fault(project, env_file, ready_url, limit))
-        # Read back acknowledged data after ALL failures, not just each one.
+        # Повторно считывайте подтверждённые данные после ВСЕХ сбоев, а не только после каждого по отдельности.
         pg_verify(project, env_file, token, digest)
         s3_verify(s3_url, bucket, key, digest)
         result = {"schema": 1, "release": (dr.ROOT / "VERSION").read_text().strip(),

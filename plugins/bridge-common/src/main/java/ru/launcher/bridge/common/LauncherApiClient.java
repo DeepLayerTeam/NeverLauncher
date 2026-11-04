@@ -321,7 +321,7 @@ public final class LauncherApiClient {
         return ",\"runtime\":" + runtimeIdentity.toJson();
     }
 
-    /** Used by revocation kicks: only the connection with the original proof may be disconnected. */
+    /** Используется при исключении из-за отзыва: разрывать можно только соединение с исходным доказательством. */
     public boolean matchesPlayerSession(String username, String correlationId) {
         return playerSessions.matches(username, correlationId);
     }
@@ -528,7 +528,7 @@ public final class LauncherApiClient {
         // Переводите старую отметку исполнения в формат постоянной квитанции,
         // используя только первоначальную подтверждённую доставку. Не выполняйте её повторно.
         controlJournal.bindLegacyReceipt(command);
-        // This receipt is already on disk; a lost ACK is retried on subsequent polls.
+        // Квитанция уже на диске; потерянный ACK повторяется при последующих опросах.
         sendControlAck(new BridgeControlJournal.Receipt(command.commandId(), command.runtimeId(),
             command.deliverySequence(), command.channelId(), command.leaseToken(), result));
     }
@@ -554,8 +554,8 @@ public final class LauncherApiClient {
     public void closeEventStreamCleanly() {
         closeControlChannel();
         if (!eventClosed.compareAndSet(false, true)) return;
-        // If a plugin callback ignores interruption, keep ownership until JVM
-        // exit rather than letting a reloaded agent issue a concurrent command.
+        // Если обработчик плагина игнорирует прерывание, сохраняйте владение до выхода JVM, не
+        // позволяя перезапущенному агенту параллельно выполнить команду.
         if (controlWorkerStopped) {
             try { if (controlJournal != null) controlJournal.close(); }
             catch (IOException e) { throw new IllegalStateException("cannot release ServerBridge control journal", e); }
@@ -596,9 +596,9 @@ public final class LauncherApiClient {
         }
     }
 
-    // Do not manufacture successful delivery ACKs when a failover endpoint
-    // advertises a reduced feature set. The signed journal must retain events
-    // until a compatible backend actually commits and acknowledges them.
+    // Не создавайте ложные успешные ACK доставки, когда запасной endpoint объявляет
+    // сокращённый набор возможностей. Подписанный журнал сохраняет события, пока совместимый
+    // Backend действительно не зафиксирует и не подтвердит их.
     static void requireEventStream0515(BridgeProtocolNegotiation protocol) throws IOException {
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION ||
             !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
@@ -651,11 +651,11 @@ public final class LauncherApiClient {
         return base + ",\"features\":" + jsonArray(protocol.features());
     }
 
-    /**
-     * One-time join/handoff operations MUST NOT be attempted on another replica
-     * after an uncertain network failure or 502/503/504. PostgreSQL may have
-     * committed the external effect even when the first HTTP reply is lost.
-     */
+    /**Одноразовые операции входа и передачи управления НЕЛЬЗЯ
+     * повторять на другой реплике после неопределённого сбоя
+     * сети или HTTP 502/503/504. PostgreSQL мог уже
+     * зафиксировать внешний эффект даже при потере первого
+     */HTTP-ответа. */
     private HttpResponse<String> sendSignedWithoutReplay0287(String method, String relative, String body)
         throws IOException, InterruptedException, GeneralSecurityException {
         BridgeBackendPool.Endpoint endpoint = backendPool.candidates(relative).get(0);

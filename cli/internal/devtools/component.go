@@ -122,8 +122,8 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		cmd.Dir = work
 	}
 	prepareComponentGroup(cmd)
-	// Never inherit operator tokens, cloud credentials, or arbitrary Java tool flags,
-	// including when the child process happens to be the bubblewrap launcher.
+	// Никогда не наследуйте токены оператора, облачные учётные данные и произвольные флаги
+	// Java, даже если дочерний процесс — запускатель bubblewrap.
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + work, "TMPDIR=" + work, "LANG=C", "LAUNCHER_DEVTOOLS_TEST_MODE=1", "LAUNCHER_AUTH_TEST_ONLY=1"}
 	if runtime.GOOS == "windows" {
 		cmd.Env = append(cmd.Env, "SystemRoot="+os.Getenv("SystemRoot"))

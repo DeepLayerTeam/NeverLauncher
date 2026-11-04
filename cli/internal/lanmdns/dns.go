@@ -1,5 +1,5 @@
-// Package lanmdns implements DNS-SD discovery for Launcher backends without
-// introducing a network trust anchor. All results are untrusted until TLS-pinned.
+// Пакет lanmdns реализует обнаружение DNS-SD для Backend Launcher без добавления сетевого корня
+// доверия. Все результаты недоверенные до закреплённой проверки TLS.
 package lanmdns
 
 import (

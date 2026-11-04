@@ -14,8 +14,8 @@ import (
 	"testing"
 )
 
-// This uses a real TLS server and forcibly closes the TCP connection after
-// partial delivery. The second request must resume the exact signed bytes.
+// Тест использует настоящий TLS-сервер и принудительно закрывает TCP после частичной доставки.
+// Второй запрос должен продолжить получение точно тех же подписанных байтов.
 func TestTLSDownloadInterruptedResumeExactSHA0527(t *testing.T) {
 	content := []byte("signed-updater-payload-with-enough-bytes-to-resume")
 	hash := sha256.Sum256(content)

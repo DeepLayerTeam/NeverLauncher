@@ -17,9 +17,9 @@ import (
 	"time"
 )
 
-// Mirrors the exact serializable format used by the production Gravit plan
-// calculator. Recomputing the digest catches report edits, not only stale
-// hashes. No third-party cryptographic trust is inferred from an unkeyed hash.
+// Повторяет точный сериализуемый формат производственного калькулятора планов Gravit. Повторное
+// вычисление дайджеста выявляет изменение отчёта, а не только устаревшие хеши. Хеш без ключа не
+// означает криптографического доверия к третьей стороне.
 type gravDest0492 struct {
 	ProfilePath   string `json:"profilePath"`
 	ProfileID     string `json:"profileId"`
@@ -103,8 +103,8 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	if err != nil {
 		return err
 	}
-	// Encode canonical, validated mapping to avoid header injection or sensitive
-	// arbitrary raw file data being forwarded by accident.
+	// Кодируйте каноническое проверенное сопоставление, чтобы исключить внедрение заголовков и
+	// случайную пересылку произвольных сырых конфиденциальных данных.
 	var rows []struct {
 		ProfilePath   string `json:"profilePath"`
 		ProfileID     string `json:"profileId"`
@@ -182,8 +182,8 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	}
 
 	if report != "" {
-		// This is a replay against the current target and complete source ZIP;
-		// a local checksum alone cannot prove target freshness.
+		// Это повтор проверки относительно текущей цели и полного исходного ZIP; одной локальной
+		// контрольной суммы недостаточно, чтобы доказать актуальность цели.
 		file, err := os.Open(report)
 		if err != nil {
 			return err
@@ -205,7 +205,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 			return errors.New("STALE dry-run: source, profile mapping, target or dependencies changed")
 		}
 	}
-	// Write the full per-profile report, not only the summary, to private storage.
+	// Сохраняйте полный отчёт по каждому профилю, а не только сводку, в закрытом хранилище.
 	var decoded any
 	if err = json.Unmarshal(body, &decoded); err != nil {
 		return err

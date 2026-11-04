@@ -42,7 +42,7 @@ CATALOGS = {
     'device-trust': ('device-trust/targets.json', 7),
     'guard': ('guard-ci/targets.json', 3),
 }
-# A concrete runner is assigned to every mandatory non-Minecraft target.
+# Для каждой обязательной цели вне Minecraft назначен конкретный исполнитель.
 RUNNERS = {
     'minecraft': 'e2e/scripts/run-compatibility-case.sh',
     'serverbridge': 'serverbridge/live_matrix_04113.py',
@@ -75,7 +75,7 @@ def safe_file(path: Path, limit: int):
     st = path.stat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,
             'empty, hardlinked or oversized evidence: ' + str(path))
-    # Reject symlinked ancestor directories too (including extracted archives).
+    # Отклоняйте также символьные ссылки на родительские каталоги, включая распакованные архивы.
     require(not any(parent.is_symlink() for parent in path.parents),
             'symlink in evidence path: ' + str(path))
     return path
@@ -129,7 +129,7 @@ def catalogs():
                 group + ': required targets dropped below verified baseline')
         require((ROOT / RUNNERS[group]).is_file(), group + ': real runner missing')
         loaded[group] = {'rows': targets, 'sha256': digest(path), 'runner': RUNNERS[group]}
-    # Reuse the existing deep semantic validator (loader/Java/support-policy).
+    # Повторно используйте существующую глубокую семантическую проверку загрузчика, Java и политики поддержки.
     compatibility.load_targets(ROOT / CATALOGS['minecraft'][0])
     return loaded
 
@@ -259,7 +259,7 @@ def verify_compatibility(target, record, commit, run_id, attempt):
     require(b'\x00' not in log and len(log) >= 32 and
             b'[compat]' in log and b'actual' in log.lower(),
             target['id'] + ': no meaningful actual-client execution log')
-    # Logs may contain account details; never publish authentication bearer tokens.
+    # Журналы могут содержать сведения учётных записей; никогда не публикуйте bearer-токены авторизации.
     require(not re.search(rb'(?i)(authorization:\s*bearer\s+\S+|refresh[_ -]?token\s*[=:]\s*\S+)', log),
             target['id'] + ': unredacted credentials in execution log')
     require(digest(path.parent / 'compatibility-execution.log') == hashes['compatibility-execution.log'],

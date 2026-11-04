@@ -89,7 +89,7 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 			"verification_key_fingerprint": singleNodeSHA0330(pub), "checks": len(checks),
 		})
 	}
-	// Bind approval to the exact installed Linux binary/package bytes.
+	// Связывайте одобрение с точными байтами установленного бинарного файла или пакета Linux.
 	for _, file := range []string{"launcher-api-linux-x64", "launcher-cli-linux-x64", "launcher-linux-x64-0.33.0.tar.gz"} {
 		payload := []byte("tested release bytes:" + file)
 		if err := os.WriteFile(filepath.Join(dir, file), payload, 0o600); err != nil {

@@ -1,9 +1,9 @@
 package main
 
-// The source systemd writer is controlled on its OWN host, never by the Never
-// backend. Two explicit operations permit a fresh snapshot to be exported
-// AFTER the writer is stopped. This is verifiable operator evidence, not remote
-// hardware attestation and not a claim about unlisted writers or proxies.
+// Служба записи исходной системы systemd управляется только на ЕЁ СОБСТВЕННОМ хосте, не через
+// Never Backend. Две явные операции допускают экспорт нового снимка только ПОСЛЕ остановки
+// записи. Это проверяемое свидетельство оператора, а не удалённая аппаратная аттестация и не
+// утверждение обо всех неучтённых службах записи или прокси.
 import (
 	"context"
 	"crypto/sha256"
@@ -56,8 +56,8 @@ func checkSourceFenced0448(ctx context.Context, unit string, run fenceRunner0448
 	if err != nil {
 		return "", "", err
 	}
-	// masked-runtime and masked are the only acceptable states: an inactive but
-	// unmasked service can be restarted by systemd or another administrator.
+	// Допустимы только состояния masked-runtime и masked: неактивную, но незамаскированную
+	// службу могут перезапустить systemd или другой администратор.
 	mask, err := run(ctx, "show", "--property=UnitFileState", "--value", unit)
 	if err != nil {
 		return "", "", err
@@ -71,7 +71,7 @@ func writeExclusiveFence0448(path string, data []byte) error {
 	if path == "" || !filepath.IsAbs(path) {
 		return errors.New("absolute output path required")
 	}
-	// O_EXCL prevents a retry from overwriting a durable witness.
+	// O_EXCL не позволяет повторной попытке перезаписать уже сохранённое свидетельство.
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
@@ -142,15 +142,15 @@ func stopSourceWriter0448(ctx context.Context, state sourceFenceState0448, outpu
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	// Runtime mask makes a failed verification fail closed; no unmask is
-	// attempted automatically, even if subsequent snapshot export fails.
+	// Маскирование Runtime обеспечивает отказ при неудачной проверке; автоматического снятия
+	// маски нет, даже если последующий экспорт снимка завершился ошибкой.
 	if _, err := run(ctx, "mask", "--runtime", "--now", state.Unit); err != nil {
 		return err
 	}
 	if _, _, err := checkSourceFenced0448(ctx, state.Unit, run); err != nil {
 		return err
 	}
-	// A second independent probe detects immediate restart/race conditions.
+	// Вторая независимая проверка обнаруживает немедленный перезапуск и состояния гонки.
 	if _, _, err := checkSourceFenced0448(ctx, state.Unit, run); err != nil {
 		return err
 	}
@@ -179,8 +179,8 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 	if err != nil {
 		return sourceFenceEvidence0448{}, err
 	}
-	// Import the *typed* rehearsal snapshot so encoding/json hashes fields in
-	// the same order as the API's gravitrehearsal.SnapshotDigest.
+	// Импортируйте типизированный снимок репетиции, чтобы encoding/json хешировал поля в
+	// том же порядке, что и gravitrehearsal.SnapshotDigest в API.
 	var snapshot struct {
 		WorldSHA256          string `json:"worldSha256"`
 		Loader               string `json:"loader"`
@@ -218,7 +218,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, err
 	}
 	filehash := sha256.Sum256(raw)
-	// Recheck after reading: a restart while hashing invalidates the witness.
+	// Повторно проверяйте состояние после чтения: перезапуск во время хеширования делает свидетельство недействительным.
 	if _, _, err = checkSourceFenced0448(ctx, state.Unit, run); err != nil {
 		return sourceFenceEvidence0448{}, err
 	}

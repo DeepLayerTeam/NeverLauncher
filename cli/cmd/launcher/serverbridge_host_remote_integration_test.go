@@ -64,7 +64,7 @@ func TestRemoteControlSystemdReadyAndDrain0498(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("remote did not drain")
 	}
-	// A readiness send must fail if the configured systemd socket is broken.
+	// Отправка готовности должна завершаться ошибкой при неисправном настроенном сокете systemd.
 	t.Setenv("NOTIFY_SOCKET", filepath.Join(t.TempDir(), "unavailable.sock"))
 	if err := remoteServiceReady0498(); err == nil {
 		t.Fatal("missing notify listener acknowledged")

@@ -113,7 +113,7 @@ def inspect_process(pid, jar, expected_sha):
     require(cmdfile.is_file(), 'sidecar JVM process is not running')
     args = cmdfile.read_bytes().split(b'\x00')
     require(args and Path(os.fsdecode(args[0])).name.startswith('java'), 'sidecar process is not Java')
-    # Check the JAR pathname passed to the JVM, not just an incidental substring.
+    # Проверяйте путь JAR, переданный JVM, а не случайное совпадение подстроки.
     found = [os.fsdecode(args[i+1]) for i,a in enumerate(args[:-1]) if a == b'-jar']
     require(len(found) == 1 and Path(found[0]).resolve() == jar.resolve(), 'different executable sidecar JAR active')
     require(file_hash(jar) == expected_sha, 'running sidecar file differs from verified release JAR')

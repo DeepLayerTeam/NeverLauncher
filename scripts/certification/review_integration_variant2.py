@@ -110,7 +110,7 @@ def review(paths: list[Path], revision: str) -> dict:
                         f"invalid/failed subprocess evidence: {case['case']}"
                     )
         found[platform] = len(results)
-        # Approval signs the exact evidence bytes, not only successful case counts.
+        # Утверждение подписывает точные байты доказательств, а не только число успешных тестов.
         digests[platform] = hashlib.sha256(path.read_bytes()).hexdigest()
     if set(found) != set(REQUIRED):
         raise ValueError(
@@ -138,7 +138,7 @@ def main():
     p.add_argument("--revision", required=True)
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()
-    # Never follow symlinks in the collected evidence tree.
+    # Не переходите по символьным ссылкам внутри собираемого дерева доказательств.
     if args.evidence.is_symlink():
         p.error("symlink evidence directory forbidden")
     paths = sorted(args.evidence.rglob("integration-0310.json"))

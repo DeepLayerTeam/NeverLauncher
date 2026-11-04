@@ -1,5 +1,5 @@
-//! Root-signed delegated game trust.  Unlike TUF this is a single-role policy;
-//! it does not claim timestamp/snapshot roles or TUF interoperability.
+//! Делегированное доверие к игре, подписанное корнем. В отличие от TUF это политика одной
+//! роли, не заявляющая ролей timestamp/snapshot или совместимости с TUF.
 use crate::{file_ownership, platform_fs, Manifest};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
@@ -35,7 +35,7 @@ fn parse_utc(timestamp: &str) -> Result<i64,String> {
     let leap=y%4==0&&(y%100!=0||y%400==0);
     let days=[31,if leap {29}else{28},31,30,31,30,31,31,30,31,30,31];
     if d<1 || d>days[(m-1) as usize] {return Err("invalid trust timestamp day".into())}
-    // Days from civil date (proleptic Gregorian), relative to Unix epoch.
+    // Количество дней от гражданской даты по пролептическому григорианскому календарю относительно эпохи Unix.
     let yy=y-i64::from(m<=2);let era=yy.div_euclid(400);let yoe=yy-era*400;
     let mp=m+if m>2 {-3}else{9};let doy=(153*mp+2)/5+d-1;
     let doe=yoe*365+yoe/4-yoe/100+doy;
@@ -49,8 +49,8 @@ fn verify_signature(key_hex:&str,payload:&[u8],sig_hex:&str)->Result<(),String>{
     key.verify(payload,&Signature::from_bytes(&signature)).map_err(|_|"root-signed trust policy signature invalid".to_string())
 }
 fn read_policy(root_key:&str)->Result<(Policy,String),String>{
-    // Path selection may not select the trust root; it only selects bytes
-    // verified against the caller's separately pinned root key.
+    // Выбор пути не выбирает корень доверия: он выбирает только байты, проверенные
+    // отдельным закреплённым корневым ключом вызывающей стороны.
     let path=std::env::var("LAUNCHER_GAME_TRUST_POLICY_FILE").map_err(|_|"delegated game trust policy path required".to_string())?;
     let path=Path::new(&path);
     let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
@@ -150,8 +150,8 @@ pub fn check_launch(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),Stri
     Ok(())
 }
 pub fn accept(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),String>{
-    // Recovery of a previously verified installed release must not move the
-    // trust watermark backwards; a newer policy can still authorize it to run.
+    // Восстановление ранее проверенного установленного выпуска не должно откатывать максимальную
+    // отметку доверия; более новая политика всё ещё может разрешить его запуск.
     check_launch(root,manifest,root_key)?;
     if manifest.trust_epoch==0 {return Ok(())}
     if floor(root)?.as_ref().is_some_and(|r|r.epoch>manifest.trust_epoch){return Ok(())}

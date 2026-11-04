@@ -142,7 +142,7 @@ def run(cfg, output):
     require(project in json.dumps(live_project, sort_keys=True), 'real project missing from Backend')
     host = LiveHTTP(cfg['hostUrl'])
     checks = []
-    # 1) Actual extension identity provider backed by the installed broker.
+    # 1) Настоящий провайдер идентичности расширения на установленном брокере.
     health = callback(host, token, 'auth.health')
     require(health['result'].get('available') is True, 'Java identity provider not available')
     good = callback(host, token, 'auth.password', {'identifier':cfg['testIdentifier'], 'secret':password})
@@ -153,7 +153,7 @@ def run(cfg, output):
     resolved = callback(host, token, 'auth.resolve', {'subject':uuid})
     require(resolved['result'].get('identity', {}).get('subject') == uuid, 'identity resolve changed UUID')
     checks.append('java-auth-identity-live')
-    # 2) Real broker-backed optional library and constrained packaging.
+    # 2) Реальная дополнительная библиотека с доступом через брокер и ограниченная упаковка.
     library = Path(cfg['libraryFile'])
     library_hash = sha_file(str(library), max_size=256<<20)
     require(library_hash == cfg.get('librarySha256') and 0 < library.stat().st_size <= (512<<10),
@@ -178,7 +178,7 @@ def run(cfg, output):
                      'path':cfg['libraryPath']})
     require(denied['result'].get('errorCode') == 'content_denied', 'cross-project read accepted')
     checks.append('java-content-and-library-live')
-    # 3) Actual sync JVM hook, success and negative veto (staging-only).
+    # 3) Настоящий синхронный перехват JVM: успех и отрицательный запрет только при подготовке.
     event_base = {'protocolVersion':'1.0',
         'subscription':{'eventType':'profile.before-save','mode':'sync'},
         'event':{'id':'acceptance-'+secrets.token_hex(12), 'type':'profile.before-save',
@@ -190,9 +190,9 @@ def run(cfg, output):
     event_bad['event']['id'] = 'acceptance-'+secrets.token_hex(12)
     event_bad['event']['payload']['profile']['loader'] = 'untrusted'
     host.request('/v1/hooks', event_bad, token, expected=422)
-    # Exercise Go Backend itself, not only the extension callback endpoint:
-    # persist an allowed profile update and require an invalid loader to be
-    # vetoed without changing the saved profile or its revision.
+    # Проверяйте сам Go Backend, а не только endpoint обработчика расширений:
+    # сохраните разрешённое обновление профиля и потребуйте запрета неверного
+    # загрузчика без изменения профиля или ревизии.
     profile_route = '/api/v1/projects/' + quote(project, safe='') + '/profiles'
     admin_route = '/api/v1/admin/projects/' + quote(project, safe='') + '/profiles/' + quote(cfg['profileId'], safe='')
     def actual_profile():
@@ -216,15 +216,15 @@ def run(cfg, output):
     require(actual_profile() == approved,
             'rejected Java hook changed the persisted Go profile')
     checks.append('java-before-save-go-backend-commit-and-veto')
-    # 4) Registry/commands/config/state migration in the running Host.
+    # 4) Реестр, команды, конфигурация и миграция состояния в работающем Host.
     migrated = callback(host, token, 'state.migrate', {'fromVersion':'0.49.4','toVersion':'0.49.5'})
     require(migrated['result'].get('applied') is True, 'Java storage state migration not applied')
     checks.append('java-persistent-state-migrate-live')
-    # 5) Real Minecraft JVM join from the existing, independently replayed raw result.
+    # 5) Реальное подключение JVM Minecraft из существующего независимо повторённого сырого результата.
     game = observed_join(cfg)
     checks.append('java-agent-game-compatibility-live-join')
-    # The actual hook activation must be separately pinned and externally observed.
-    # Without this binding a vanilla join does NOT demonstrate agent execution.
+    # Фактическая активация перехвата должна отдельно закрепляться и наблюдаться извне.
+    # Иначе обычный вход в vanilla НЕ доказывает исполнение агента.
     require(type(cfg.get('agentArtifact')) is str and
             sha_file(cfg['agentArtifact']) == cfg.get('agentSha256') and
             cfg.get('agentSha256') == agent_digest_from_game(cfg),

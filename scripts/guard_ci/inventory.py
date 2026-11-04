@@ -25,7 +25,7 @@ REQUIRED = {
     "guard.release-package", "sensor.windows.in-process", "sensor.jvm-awareness",
     "sensor.continuous", "minecraft.real-join", "minecraft.authorized-javaagent",
 }
-# The claimed release target set is NOT restricted to a developer's machine.
+# Заявленный набор целей выпуска НЕ ограничен машиной разработчика.
 TARGETS = (
     ("linux", "x86_64"), ("linux", "aarch64"),
     ("windows", "x86_64"), ("windows", "aarch64"),
@@ -56,7 +56,7 @@ def validate_report(raw: object) -> dict:
         by_id[item["id"]] = item
     if missing := REQUIRED - by_id.keys():
         raise ValueError(f"missing Guard check(s): {sorted(missing)}")
-    # This is a pre-game diagnostic: all in-process sensors remain unexercised.
+    # Это диагностика до игры: внутрипроцессные датчики ещё не задействованы.
     for sensor in ("sensor.windows.in-process", "sensor.jvm-awareness", "sensor.continuous"):
         required_status = "BLOCKED" if raw["os"] == "windows" else "UNSUPPORTED"
         if by_id[sensor]["status"] != required_status:
@@ -65,8 +65,8 @@ def validate_report(raw: object) -> dict:
         key = f"loader.runtime.{loader}"
         if key not in by_id or by_id[key]["status"] != "BLOCKED":
             raise ValueError(f"local inventory cannot certify {key}")
-    # The inventory never launches the game. This release cannot certify a real join,
-    # loader runtime or authorized Java agent through this tool.
+    # Опись никогда не запускает игру. Этот инструмент не может сертифицировать
+    # настоящий вход, работу загрузчика или разрешённого Java-агента.
     for item_id in ("minecraft.real-join", "minecraft.authorized-javaagent"):
         if by_id[item_id]["status"] != "BLOCKED":
             raise ValueError(f"local inventory cannot certify {item_id}")
@@ -88,8 +88,8 @@ def run_local(args: argparse.Namespace) -> int:
         if not args.game_root or not args.minecraft_version:
             raise ValueError("--game-root and --minecraft-version must be supplied together")
         command.extend(("--game-root", args.game_root, "--minecraft-version", args.minecraft_version))
-    # Guard Linux IPC insists on an owned 0700 runtime directory. Keep it isolated
-    # to this invocation and clean it up after the Guard process shuts down.
+    # Linux IPC Guard требует принадлежащий процессу каталог Runtime с правами 0700. Изолируйте
+    # его для этого вызова и очищайте после остановки процесса Guard.
     with tempfile.TemporaryDirectory(prefix="launcher-inventory-0501-") as private:
         os.chmod(private, 0o700)
         env = os.environ.copy()
@@ -106,7 +106,7 @@ def run_local(args: argparse.Namespace) -> int:
         raise ValueError("native Guard target does not match executing machine")
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    # Non-destructive and atomic; report includes no tokens or private keys.
+    # Операция без разрушений и атомарна; отчёт не содержит токенов и закрытых ключей.
     scratch = output.with_name(output.name + f".{os.getpid()}.tmp")
     try:
         with scratch.open("x", encoding="utf-8") as handle:

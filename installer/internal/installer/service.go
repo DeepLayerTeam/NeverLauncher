@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// WriteSystemdUnit generates a service unit that cannot run as root. It never
-// executes systemctl; operators retain control over enable/start/reload.
+// WriteSystemdUnit генерирует unit службы, который нельзя выполнять от root. systemctl не
+// вызывается; оператор сам управляет включением, запуском и перезагрузкой.
 func WriteSystemdUnit(output, binary, envFile string) error {
 	for _, p := range []string{output, binary, envFile} {
 		if !filepath.IsAbs(p) || filepath.Clean(p) != p || strings.ContainsAny(p, "\r\n\t %\\\"'") {

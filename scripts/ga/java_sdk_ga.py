@@ -148,7 +148,7 @@ def publish(output: Path, *, build: bool = True) -> dict[str, Path]:
                 base / f"{basename}-sources.jar",
                 from_directory(module / "src/main/java", ".java"),
             )
-            # Produce offline Javadoc from actual public API, not stub HTML.
+            # Генерируйте офлайновый Javadoc из настоящего публичного API, не из HTML-заглушек.
             docs = staging / "docs" / name
             sources = sorted(str(p) for p in (module / "src/main/java").rglob("*.java"))
             command = [
@@ -190,8 +190,8 @@ def publish(output: Path, *, build: bool = True) -> dict[str, Path]:
                 / version
                 / f"{basename}.jar"
             )
-        # Compile + run a client importing both published artifacts, without
-        # using source tree classes. This is the distribution ABI smoke test.
+        # Скомпилируйте и запустите клиента, импортирующего оба опубликованных артефакта без
+        # классов из исходного дерева. Это дымовая проверка ABI дистрибутива.
         smoke = staging / "Consumer.java"
         smoke.write_text("""import ru.launcher.sdk.core.SemVer;
 import pro.gravit.utils.Version;
@@ -220,7 +220,7 @@ public final class Consumer {
         cp = os.pathsep.join(jars)
         run("javac", "--release", "17", "-cp", cp, "-d", str(staging), str(smoke))
         run("java", "-cp", os.pathsep.join([str(staging), *jars]), "Consumer")
-        # Validate all emitted digests by reading the staged repository.
+        # Проверьте каждый выданный дайджест чтением промежуточного репозитория.
         for sidecar in (staging / "maven").rglob("*.sha256"):
             payload = sidecar.with_suffix("")
             if (
@@ -230,7 +230,7 @@ public final class Consumer {
                 raise RuntimeError(
                     f"published Maven artifact digest mismatch: {payload}"
                 )
-        # Save the validated repository, not temporary docs/consumer classes.
+        # Сохраняйте проверенный репозиторий, а не временные документы и классы потребителя.
         (staging / "maven").rename(output / "maven")
     return artifacts
 

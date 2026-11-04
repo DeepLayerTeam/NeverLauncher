@@ -59,7 +59,7 @@ func TestOfficialMinecraftGAReceipt0270(t *testing.T) {
 	if err := verifyOfficialGAReceipt0270(root, "0.27.0", commit); err == nil {
 		t.Fatal("symlinked GA receipt accepted")
 	}
-	// Existing versions must remain upgrade-compatible: their release rules are unchanged.
+	// Совместимость обновлений существующих версий должна сохраняться: их правила выпуска не меняются.
 	if err := verifyOfficialGAReceipt0270(root, "0.26.12", commit); err != nil {
 		t.Fatal(err)
 	}

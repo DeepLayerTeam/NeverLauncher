@@ -63,7 +63,7 @@ func TestSignedBundleInstallAndTamper(t *testing.T) {
 	if err := v.Install(dest); err == nil {
 		t.Fatal("existing installation overwritten")
 	}
-	// Alter a payload, preserve the original signed manifest. Must fail SHA-256 check.
+	// Измените байты, сохранив первоначальный подписанный манифест. Проверка SHA-256 должна завершиться ошибкой.
 	z, err := zip.OpenReader(bundle)
 	if err != nil {
 		t.Fatal(err)

@@ -52,9 +52,9 @@ func operationsGARead0460(dir, name string, max int64) ([]byte, error) {
 	return os.ReadFile(p)
 }
 
-// This checks the bytes in the final release directory and a pinned external
-// operator key. Neither unsigned receipts nor the bundled release key can
-// authorize operations GA. Called by both signing and consumer verification.
+// Проверяются байты финального каталога выпуска и внешний закреплённый ключ оператора.
+// Неподписанные квитанции и ключ из самого пакета не вправе разрешать операции GA.
+// Вызывается и при подписании, и при проверке потребителем.
 func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey) error {
 	if !operationsGARequired0460(version) {
 		return nil
@@ -118,8 +118,8 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	if a.Operator == "" || a.SourceMachine == a.RestoreMachine || !hex64.MatchString(a.SourceMachine) || !hex64.MatchString(a.RestoreMachine) || !hex64.MatchString(a.OpenApiV1Sha256) {
 		return errors.New("independent operator, hosts or frozen API fingerprint invalid")
 	}
-	// The approved v1 API bytes must be the SAME source bytes pinned by the
-	// release BOM, not an arbitrary separate API digest in the approval.
+	// Байты утверждённого API v1 должны совпадать с исходными байтами, закреплёнными в BOM выпуска;
+	// произвольного отдельного дайджеста API в утверждении недостаточно.
 	bomRaw, err := operationsGARead0460(dir, releaseBOMFile03214, 16*1024*1024)
 	if err != nil {
 		return fmt.Errorf("frozen API BOM: %w", err)

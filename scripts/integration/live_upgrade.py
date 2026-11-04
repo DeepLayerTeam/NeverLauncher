@@ -97,14 +97,14 @@ def owner_login(base, credentials: Path):
 
 def snapshot_api(base, token, project, profile, channel):
     p = '/api/v1/projects/' + quote(project, safe='')
-    # These are real Backend HTTP operations, not fixture reads. No status-only
-    # assertion can replace the actual domain object comparison.
+    # Это реальные HTTP-операции Backend, не чтение фикстур. Одна проверка статуса
+    # не заменяет сравнение настоящих доменных объектов.
     paths = [p, p + '/profiles', p + '/channels', p + '/versions',
              p + '/profiles/' + quote(profile, safe='') + '/revisions']
     rows = {}
     for path in paths:
         rows[path] = endpoint(base, path, token=token)
-    # Check that the expected project, profile and channel really exist.
+    # Проверяйте фактическое наличие ожидаемых проекта, профиля и канала.
     require(project in json.dumps(rows[p], sort_keys=True), 'project not returned from live Backend')
     require(profile in json.dumps(rows[p+'/profiles'], sort_keys=True), 'expected profile missing')
     require(channel in json.dumps(rows[p+'/channels'], sort_keys=True), 'expected channel missing')
@@ -157,8 +157,8 @@ def capture(a):
 
 
 def postgres_live_probe(path: Path, project: str, owner: str):
-    # Query the actual DB referred to by the systemd Backend EnvironmentFile.
-    # Never accept arbitrary JSON saying that PostgreSQL was checked.
+    # Запрашивайте настоящую БД, указанную в EnvironmentFile службы Backend systemd. Не
+    # принимайте произвольный JSON с утверждением, что PostgreSQL проверен.
     conf = parse_env(path)
     require(conf.get('LAUNCHER_REPOSITORY_DRIVER') == 'postgres' and conf.get('LAUNCHER_SQL_DRIVER') == 'pgx', 'deployed Backend is not configured for PostgreSQL')
     dsn = conf.get('LAUNCHER_DATABASE_DSN', '')
@@ -168,7 +168,7 @@ def postgres_live_probe(path: Path, project: str, owner: str):
     params = parse_qs(url.query, strict_parsing=True)
     require(set(params) <= {'sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'connect_timeout'} and all(len(v)==1 for v in params.values()), 'unsupported PostgreSQL connection parameter')
     env = os.environ.copy()
-    # Do not leak the deployed PostgreSQL password through argv, logs or reports.
+    # Не допускайте утечки развёрнутого пароля PostgreSQL через argv, журналы или отчёты.
     for key in ('PGHOST','PGPORT','PGUSER','PGDATABASE','PGPASSWORD','PGSSLMODE','PGSSLROOTCERT','PGSSLCERT','PGSSLKEY','PGCONNECT_TIMEOUT','PGSERVICE','PGSERVICEFILE','PGOPTIONS'):
         env.pop(key, None)
     env.update(PGHOST=url.hostname, PGPORT=str(url.port or 5432), PGUSER=unquote(url.username or ''),
@@ -201,8 +201,8 @@ def verify(a):
     require(state.get('completed') == list(STAGES) and state.get('cutoverSupported') is True and state.get('writeBoundaryCrossed') is True and not state.get('rolledBack'), 'operator did not complete a permitted PostgreSQL cutover')
     receipt = (state.get('receipts') or {}).get('verify') or {}
     require(receipt.get('verified') is True and receipt.get('readyForBackendCutover') is True and receipt.get('ownerId') == owner['id'], 'PostgreSQL Repository owner/cutover receipt not verified')
-    # The backend itself must have switched; a stale SQLite backend with the
-    # same objects is not a successful migration.
+    # Backend сам должен переключиться; устаревший SQLite Backend с теми
+    # же объектами не означает успешную миграцию.
     postgres_live_probe(a.backend_env, a.project, owner['id'])
     source_sha, n, size = storage_fingerprint(a.storage)
     require(baseline['storage'] == {'sha256': source_sha, 'objects': n, 'bytes': size}, 'original local storage changed after upgrade')
@@ -250,7 +250,7 @@ def main(argv=None):
     p.add_argument('--backend-env', type=Path)
     a = p.parse_args(argv)
     try:
-        # Exact baseline and actual post-cutover operator files are mandatory.
+        # Обязательны точные исходный эталон и фактические файлы оператора после переключения.
         if a.action == 'capture':
             capture(a)
         else:

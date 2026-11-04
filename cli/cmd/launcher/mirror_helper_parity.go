@@ -1,8 +1,8 @@
 package main
 
-// MirrorHelper-equivalent commands are executable operations on the same
-// checksum-verified Client Factory tree. They never edit a published tree
-// in-place; all modifications go through a checked sibling staging directory.
+// Команды, эквивалентные MirrorHelper, исполняются на том же дереве Client Factory с
+// проверенными контрольными суммами. Опубликованное дерево никогда не изменяется на месте: все
+// правки выполняются в проверенном соседнем промежуточном каталоге.
 import (
 	"archive/zip"
 	"bytes"
@@ -217,7 +217,7 @@ func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorA
 			return nil, err
 		}
 		if _, statErr := os.Lstat(dst); statErr == nil {
-			// Repeated install of identical immutable content is a no-op.
+			// Повторная установка идентичного неизменяемого содержимого ничего не делает.
 			if _, err := mirrorCheckedHash0274(dst, a.SHA256); err != nil {
 				return nil, fmt.Errorf("existing artifact conflicts with requested bytes: %s: %w", a.Path, err)
 			}
@@ -255,9 +255,9 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		return plan, err
 	}
 	if len(plan.AdapterPins) > 0 {
-		// Legacy 0.27.10 fixtures/workspaces remain editable without silently
-		// assigning a new adapter version. Any versioned plan with an obsolete
-		// fingerprint must be rebuilt explicitly before it can be changed.
+		// Устаревшие фикстуры и рабочие пространства 0.27.10 можно редактировать без неявного
+		// присвоения новой версии адаптера. Любой версионированный план с устаревшим отпечатком
+		// необходимо явно пересобрать перед изменением.
 		if err = requireCurrentFactoryAdapters02711(plan); err != nil {
 			return plan, fmt.Errorf("cannot modify client using obsolete adapter: %w", err)
 		}
@@ -292,8 +292,8 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		return plan, e
 	}
 	for _, change := range changes {
-		// Hardlink topology is not part of the content digest. Re-deduplicating
-		// after a portable staging copy must not invent a new source identity.
+		// Топология жёстких ссылок не входит в дайджест содержимого. Повторная дедупликация после переносимого
+		// копирования промежуточных файлов не должна создавать новую идентичность источника.
 		alreadyRecorded := false
 		if change.Kind == "dedup-libraries" {
 			for _, old := range ledger.Actions {
@@ -356,8 +356,8 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 			Path: change.Path, Kind: change.Kind, URL: source, SHA256: change.After, Size: size,
 		})
 	}
-	// Provenance of any authlib byte changes must be pinned as an internal
-	// InstallPlan source, not just left in an unverified sidecar.
+	// Происхождение любого изменённого байта authlib должно фиксироваться как внутренний источник
+	// InstallPlan, а не оставаться только в непроверенном сопутствующем файле.
 	if full := filepath.Join(stage, filepath.FromSlash(authlibProvenancePath0279)); true {
 		if st, statErr := os.Lstat(full); statErr == nil {
 			if !st.Mode().IsRegular() {
@@ -431,10 +431,10 @@ func mirrorReadMods0274(manifest string) ([]mirrorArtifact0274, error) {
 	return entries, nil
 }
 
-// Register an exact LWJGL library in the active version profile. Classifier
-// natives require OS-specific rules and are deliberately download-only until
-// the target-aware native resolver in 0.27.7; never place them on every OS's
-// classpath implicitly.
+// Зарегистрируйте точную библиотеку LWJGL в активном профиле версии. Нативные
+// библиотеки по classifier требуют правил конкретной ОС и до целевого
+// разрешителя 0.27.7 намеренно доступны только для загрузки; не добавляйте их
+// неявно в classpath каждой ОС.
 func mirrorRegisterLibrary0405(stage string, plan factoryPlan0271, coordinate, rel, source string) (mirrorAction0274, error) {
 	if len(strings.Split(coordinate, ":")) != 3 {
 		return mirrorAction0274{}, errors.New("native/classifier LWJGL jars cannot be registered without OS target rules")
@@ -554,9 +554,9 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	if len(patches) == 0 {
 		return nil, errors.New("patch contains no authlib classes")
 	}
-	// Reject signed archives before opening a writable output. A modified
-	// class invalidates embedded signature metadata; silently publishing it
-	// would create a broken runtime JAR.
+	// Отклоняйте подписанные архивы до открытия записываемого вывода. Изменённый
+	// класс делает встроенные данные подписи недействительными; молчаливая
+	// публикация породила бы неработающий Runtime JAR.
 	for _, f := range base.File {
 		if f.FileInfo().IsDir() {
 			continue
@@ -659,7 +659,7 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	if err = replaceFileAtomicPortable(tmp.Name(), dst); err != nil {
 		return nil, err
 	}
-	// Pin the actual overlay bytes in the build, not just its digest.
+	// Фиксируйте в сборке реальные байты оверлея, а не один его дайджест.
 	patchRel := ".launcher/compat/patches/" + strings.ToLower(patchSHA) + ".jar"
 	patchDst, err := secureClientDestination(stage, patchRel)
 	if err != nil {
@@ -688,9 +688,9 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	}, nil
 }
 
-// Deduplicate only byte-identical library JARs. Linking happens in sibling
-// staging and never removes classpath entries or changes content. A portable
-// copy is NOT reported as deduplication: inability to hardlink is an error.
+// Дедуплицируйте только побайтово идентичные библиотечные JAR. Связывание выполняется в соседнем
+// промежуточном каталоге и не удаляет classpath или содержимое. Переносимое копирование НЕ считается
+// дедупликацией: невозможность создать жёсткую ссылку — ошибка.
 func mirrorDedupeLibraries0274(stage string) ([]mirrorAction0274, error) {
 	libs := filepath.Join(stage, "libraries")
 	if st, err := os.Stat(libs); err != nil {
@@ -823,8 +823,8 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 	return ws, nil
 }
 
-// Called with the installer cache lock held. Download to a verified sibling
-// first, so a failed repair cannot replace the previous file with untrusted bytes.
+// Вызывается при удержании блокировки кэша установщика. Сначала загрузите файл в проверенный соседний путь,
+// чтобы неудачное восстановление не заменило старый файл недоверенными байтами.
 func mirrorEnsureInstaller0427(ctx context.Context, dest string, artifact mirrorArtifact0274) error {
 	if _, err := mirrorCheckedHash0274(dest, artifact.SHA256); err == nil {
 		return nil
@@ -850,8 +850,8 @@ func mirrorEnsureInstaller0427(ctx context.Context, dest string, artifact mirror
 	if _, err := mirrorCopyVerified0274(ctx, name, artifact); err != nil {
 		return err
 	}
-	// Never unlink the old cache entry first: a failed rename must not destroy
-	// even the last (albeit corrupt) operator-visible artifact.
+	// Никогда не удаляйте старую запись кэша заранее: неудачное переименование не должно
+	// уничтожить даже последний видимый оператору артефакт, пусть и повреждённый.
 	return os.Rename(name, dest)
 }
 
@@ -981,8 +981,8 @@ func handleRuntimeMirror0274(args []string) error {
 		if dir == "" {
 			return errors.New("--client-dir required")
 		}
-		// Refuse implicit upgrades to an existing client. New workspaces are built
-		// into an independent destination, then every artifact is verified.
+		// Запрещайте неявные обновления существующего клиента. Новые рабочие пространства
+		// собираются в отдельном каталоге, затем проверяется каждый артефакт.
 		if _, err := os.Lstat(dir); err == nil {
 			return errors.New("workspace target exists: use new --client-dir to avoid changing existing releases")
 		} else if !errors.Is(err, os.ErrNotExist) {
@@ -1028,9 +1028,9 @@ func handleRuntimeMirror0274(args []string) error {
 			JavaExecutable:        flagValue(flags, "--java", ""),
 			ProcessorSandbox:      flagValue(flags, "--processor-sandbox", "process"),
 		}
-		// A workspace can build from an exact, verified .mrpack/CurseForge
-		// archive. Verify the pack's loader before downloading anything: a
-		// workspace may never silently substitute its game or loader version.
+		// Рабочее пространство может собираться из точного проверенного архива
+		// .mrpack/CurseForge. До любых загрузок проверьте загрузчик пакета: рабочее
+		// пространство не вправе молча подменять версию игры или загрузчика.
 		if ws.Modpack != "" {
 			spec, reader, e := parseModpack0275(ws.Modpack, strings.EqualFold(flagValue(flags, "--include-optional", "false"), "true"))
 			if e != nil {
@@ -1051,8 +1051,8 @@ func handleRuntimeMirror0274(args []string) error {
 		if err != nil {
 			return err
 		}
-		// Apply local mods and registered Maven libraries together. The
-		// transaction fails closed on any missing or mismatched artifact.
+		// Применяйте локальные моды и зарегистрированные библиотеки Maven совместно. Транзакция
+		// прекращается с отказом при отсутствии или несоответствии любого артефакта.
 		if len(ws.Mods) > 0 || len(ws.Libraries) > 0 {
 			_, err = mirrorTransactional0274(context.Background(), options.ClientDir, func(root string) ([]mirrorAction0274, error) {
 				changes := []mirrorAction0274{}
@@ -1138,8 +1138,8 @@ func handleRuntimeMirror0274(args []string) error {
 		}
 		return writeOrPrintJSON(output, p)
 	case "repair-installer", "repairinstaller":
-		// Explicit operator recovery of an untrusted cache file. The ordinary
-		// download command intentionally fails closed on tampered cached bytes.
+		// Явное восстановление оператором недоверенного файла кэша. Обычная команда загрузки
+		// намеренно отказывает при обнаружении изменений кэшированных байтов.
 		file := flagValue(flags, "--cache-file", "")
 		sha := strings.ToLower(flagValue(flags, "--sha256", ""))
 		uri := flagValue(flags, "--url", "")

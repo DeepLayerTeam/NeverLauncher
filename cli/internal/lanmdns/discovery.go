@@ -50,8 +50,8 @@ func ValidateURL(raw string) (*url.URL, error) {
 	return u, nil
 }
 
-// ValidatePublishAddress rejects remote, loopback-only, and spoofed advertise
-// targets. LAN discovery advertises local interface IPv4 addresses only.
+// ValidatePublishAddress отклоняет удалённые, только loopback и поддельные цели объявления.
+// Обнаружение в LAN публикует только IPv4 адреса локальных интерфейсов.
 func ValidatePublishAddress(raw string) (*url.URL, error) {
 	u, err := ValidateURL(raw)
 	if err != nil {
@@ -138,8 +138,8 @@ func announceMessage(name string, port int, fingerprint string, ips []net.IP, tt
 	return b.Bytes(), nil
 }
 
-// Publish advertises an already running HTTPS backend. It does not listen on
-// behalf of the backend, issue certificates, or change client trust settings.
+// Publish объявляет уже работающий HTTPS Backend. Она не прослушивает сеть за Backend,
+// не выдаёт сертификаты и не меняет настройки доверия клиентов.
 func Publish(ctx context.Context, name string, port int, fingerprint string, listenIP net.IP) error {
 	local, err := ipForInterface()
 	if err != nil {
@@ -170,8 +170,8 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	}
 	defer conn.Close()
 	_ = conn.SetReadBuffer(65536)
-	// Bind outgoing multicast to the same interface as the published HTTPS endpoint.
-	// Otherwise multi-homed hosts can advertise on an unrelated network.
+	// Привязывайте исходящий multicast к тому же интерфейсу, что и опубликованный HTTPS
+	// endpoint. Иначе многосетевой хост может объявить сервис в чужой сети.
 	sender, err := net.DialUDP("udp4", &net.UDPAddr{IP: addr}, &net.UDPAddr{IP: net.ParseIP("224.0.0.251"), Port: 5353})
 	if err != nil {
 		return err
@@ -194,9 +194,9 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 		_ = conn.SetReadDeadline(time.Now().Add(350 * time.Millisecond))
 		n, peerAddr, err := conn.ReadFromUDP(buf)
 		if err == nil {
-			// An mDNS peer using our instance label but a different TLS
-			// endpoint is a collision. Fail instead of silently advertising
-			// two different services under the same name.
+			// Узел mDNS с нашей меткой экземпляра и другим TLS endpoint —
+			// конфликт. Отказывайте вместо незаметной публикации разных
+			// служб с одним именем.
 			peerCache.observe(buf[:n], time.Now())
 			collides := conflictingAdvertisement0498(buf[:n], name, port, fingerprint, addr)
 			for _, ep := range peerCache.endpoints(time.Now()) {
@@ -228,7 +228,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 			_ = send(goodbye)
 			return nil
 		case <-ticker.C:
-			// Do not keep publishing an address removed from the host.
+			// Не продолжайте публиковать адрес, удалённый с хоста.
 			current, err := ipForInterface()
 			if err != nil {
 				return fmt.Errorf("mDNS interface refresh: %w", err)
@@ -253,7 +253,7 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	}
 }
 
-// ParseAdvertisement parses a DNS-SD reply, not an assertion of trust.
+// ParseAdvertisement разбирает ответ DNS-SD, а не доказательство доверия.
 func ParseAdvertisement(p []byte) ([]Endpoint, error) {
 	if len(p) < 12 || (binary.BigEndian.Uint16(p[2:4])&0x800f) != 0x8000 {
 		return nil, errors.New("mDNS advertisement must be a successful DNS response")
@@ -333,8 +333,8 @@ func ParseAdvertisement(p []byte) ([]Endpoint, error) {
 	return out, nil
 }
 
-// conflictingAdvertisement0498 checks complete PTR/SRV/TXT/A announcements.
-// A DNS packet does not establish trust; TLS still needs an external pin.
+// conflictingAdvertisement0498 проверяет полные объявления PTR/SRV/TXT/A. DNS-пакет не
+// устанавливает доверие; TLS по-прежнему требует внешнего закрепления.
 func conflictingAdvertisement0498(packet []byte, name string, port int, fingerprint string, localIP net.IP) bool {
 	items, err := ParseAdvertisement(packet)
 	if err != nil {
@@ -349,8 +349,8 @@ func conflictingAdvertisement0498(packet []byte, name string, port int, fingerpr
 	return false
 }
 
-// goodbyeInstances0498 extracts service PTRs explicitly withdrawn with TTL 0.
-// Ignore unrelated multicast packets and malformed PTR payloads.
+// goodbyeInstances0498 извлекает PTR-записи служб, явно отозванные с TTL 0.
+// Игнорируйте несвязанные multicast-пакеты и повреждённые PTR.
 func goodbyeInstances0498(packet []byte) map[string]bool {
 	result := make(map[string]bool)
 	if len(packet) < 12 || binary.BigEndian.Uint16(packet[2:4])&0x800f != 0x8000 {
@@ -416,8 +416,8 @@ func Discover(ctx context.Context, duration time.Duration) ([]Endpoint, error) {
 	return cache.endpoints(time.Now()), nil
 }
 
-// VerifyTLS requires a separately provisioned pin. A TXT fingerprint is *not*
-// sufficient proof because DNS-SD advertisements have no authentication.
+// VerifyTLS требует отдельного заранее подготовленного закрепления. Отпечатка TXT
+// НЕДОСТАТОЧНО: объявления DNS-SD не аутентифицированы.
 func VerifyTLS(ctx context.Context, rawURL, pin string) error {
 	u, err := ValidateURL(rawURL)
 	if err != nil {
@@ -428,8 +428,8 @@ func VerifyTLS(ctx context.Context, rawURL, pin string) error {
 	}
 	expected, _ := hex.DecodeString(strings.ToLower(pin))
 	dialer := net.Dialer{Timeout: 5 * time.Second}
-	// This path deliberately replaces public-CA validation with an externally
-	// pinned *leaf certificate*, not an unverified TXT advertisement.
+	// Здесь проверка общедоступного CA намеренно заменяется внешним закреплением
+	// конечного сертификата, а не непроверенным объявлением TXT.
 	cfg := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: u.Hostname(),
 		InsecureSkipVerify: true, VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 			if len(rawCerts) == 0 {

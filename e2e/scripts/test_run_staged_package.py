@@ -83,7 +83,7 @@ class StagedRunnerTests(unittest.TestCase):
         self.assertIs(result["timed_out"], True)
         self.assertIsInstance(observer.root_pid, int)
         self.assertEqual(json.loads(output.read_text()), result)
-        # The observation itself cannot certify startup or menu readiness.
+        # Само наблюдение не может сертифицировать запуск или готовность главного меню.
         from staged_readiness_0343 import StartupObserver
 
         with patch.dict(__import__("os").environ, {"DISPLAY": ""}):

@@ -185,8 +185,8 @@ func readPolicyState02312(path string) (trustPolicyState, error) {
 	return st, nil
 }
 
-// Called under the existing Prestarter process lock. The watermark and the
-// current policy are outside the replaceable launcher/component directories.
+// Вызывается под существующей блокировкой процесса Prestarter. Состояние версии безопасности и
+// текущая политика расположены вне заменяемых каталогов лаунчера и компонентов.
 func AcceptTrustPolicy(path, rootHex string, raw []byte, now time.Time) (TrustPolicy, error) {
 	p, digest, e := VerifyTrustPolicy(raw, rootHex, now)
 	if e != nil {
@@ -206,7 +206,7 @@ func AcceptTrustPolicy(path, rootHex string, raw []byte, now time.Time) (TrustPo
 		return p, e
 	}
 	if previous.Epoch < p.Epoch {
-		// Keep a durable revocation floor even if subsequent component installation fails.
+		// Сохраняйте долговечный минимум требований отзыва, даже если последующая установка компонентов не удалась.
 		if e = writeTrustAtomic02312(statePath, trustPolicyState{p.Epoch, digest, hex.EncodeToString(fp[:])}); e != nil {
 			return p, e
 		}
@@ -252,9 +252,9 @@ func writeTrustAtomic02312(path string, value any) error {
 	return nil
 }
 
-// SignedEnvelopeDelegated signs a real bootstrap payload using only a signer
-// delegated by a root-signed policy. This is used by the production signer,
-// not as a trust-on-first-use mechanism in Prestarter.
+// SignedEnvelopeDelegated подписывает реальные данные bootstrap только подписантом, которому
+// предоставила полномочия политика, подписанная корнем. Производственный подписант использует это,
+// а Prestarter не применяет метод доверия при первом использовании.
 func SignedEnvelopeDelegated(payload []byte, private ed25519.PrivateKey, policyRaw []byte, rootHex, keyID string) ([]byte, error) {
 	if len(private) != ed25519.PrivateKeySize {
 		return nil, errors.New("invalid delegated private key")

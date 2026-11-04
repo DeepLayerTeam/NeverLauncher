@@ -39,7 +39,7 @@ func TestFenceSourceAndFreshSnapshot0448(t *testing.T) {
 		t.Fatalf("stop evidence permissions: %v %v", st, err)
 	}
 	snapshotPath := filepath.Join(dir, "snapshot.json")
-	// Same canonical field order as the API SnapshotDigest.
+	// Тот же канонический порядок полей, что и в API SnapshotDigest.
 	snapshot := `{"worldSha256":"` + strings.Repeat("a", 64) + `","loader":"fabric","optionalPresetSha256":"` + strings.Repeat("b", 64) + `","players":[]}`
 	if err := os.WriteFile(snapshotPath, []byte(snapshot), 0600); err != nil {
 		t.Fatal(err)

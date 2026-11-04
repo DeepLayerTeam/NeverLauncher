@@ -11,9 +11,9 @@ import (
 	"testing"
 )
 
-// Build a full, verified client via a single workspace operation: download a
-// pinned Modrinth pack, install a local mod and Maven JAR, register classpath,
-// apply authentication mode and publish the resulting client.
+// Создаёт полный проверенный клиент за одну операцию: скачивает закреплённый пакет
+// Modrinth, устанавливает локальный мод и Maven JAR, регистрирует classpath,
+// применяет режим авторизации и публикует клиент.
 func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 	modBytes := []byte("mirror-workspace-modrinth-mod")
 	modHash512 := sha512.Sum512(modBytes)
@@ -114,7 +114,7 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 		t.Fatal("existing verified client must not be silently overwritten")
 	}
 
-	// A wrong hash must not leave a partially published target.
+	// Неверный хеш не должен оставлять частично опубликованную цель.
 	ws.Mods[0].SHA256 = strings.Repeat("0", 64)
 	writeWS()
 	broken := filepath.Join(folder, "nested", "broken-client")
@@ -124,7 +124,7 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 	if _, err := os.Lstat(broken); !os.IsNotExist(err) {
 		t.Fatalf("failed transaction created target: %v", err)
 	}
-	// The pack's pinned loader cannot be silently replaced by workspace metadata.
+	// Закреплённый загрузчик модпака нельзя незаметно заменять метаданными рабочего пространства.
 	ws.Mods[0].SHA256 = mirrorSHA0274(extraBytes)
 	ws.Minecraft = "some-other-minecraft"
 	writeWS()
@@ -185,8 +185,8 @@ func TestMirrorWorkspace0405AuthlibPatchDeliveredAndVerified(t *testing.T) {
 	}
 }
 
-// A Maven dependency registered by a workspace is loaded by a real Java VM
-// from the installed client tree, not merely written to an InstallPlan.
+// Зависимость Maven, зарегистрированная рабочим пространством, загружается настоящей JVM из
+// дерева установленного клиента, а не просто записывается в InstallPlan.
 func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 	for _, program := range []string{"javac", "jar", "java"} {
 		if _, err := exec.LookPath(program); err != nil {
@@ -243,8 +243,8 @@ func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 	}
 }
 
-// A CurseForge pack containing only redistributable ZIP overrides requires
-// no CurseForge credential: no API lookup is necessary for those actual bytes.
+// Пакету CurseForge, содержащему только распространяемые переопределения ZIP, не нужны
+// учётные данные CurseForge: API-поиск этих байтов не требуется.
 func TestMirrorWorkspace0405CurseOverridesWithoutAPIKey(t *testing.T) {
 	s := fixtureModpackServer0275(t, nil)
 	defer s.Close()

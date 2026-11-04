@@ -49,7 +49,7 @@ func (i *installation) createShortcut(r record, cfg prestarter.Config) error {
 	if runtime.GOOS == "windows" {
 		return writeWindowsShortcut(path, filepath.Join(base, binaryName()), filepath.Join(base, "bootstrap.signed.json"), i.root, iconPath)
 	} else {
-		// Double-quotes, newlines and backslashes cannot be injected by the signed display name.
+		// Подписанное отображаемое имя не может внедрить кавычки, переводы строк или обратные слэши.
 		name = strings.NewReplacer("\n", " ", "\r", " ", "\\", " ", "\"", " ").Replace(name)
 		iconLine := ""
 		if iconPath != "" {
@@ -74,7 +74,7 @@ func (i *installation) removeShortcut() error {
 	if e != nil {
 		return e
 	}
-	// Never remove a user-owned shortcut that no longer points to our root.
+	// Никогда не удаляйте пользовательский ярлык, который больше не указывает на наш корень.
 	if !strings.Contains(string(b), i.base) && !strings.Contains(string(b), filepath.ToSlash(i.base)) {
 		return nil
 	}

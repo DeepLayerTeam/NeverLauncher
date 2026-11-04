@@ -109,8 +109,8 @@ printf '{"status":"passed","minecraftVersion":"%s","mainClass":"net.minecraft.cl
 	if _, err = certRun02712(context.Background(), client, runtimePath, javaPath, strings.Repeat("0", 64), key, file, 20); err == nil {
 		t.Fatal("unapproved runtime executable accepted")
 	}
-	// Even a valid owner signing key cannot turn a synthetic LWJGL marker and
-	// timeout into menu/renderer readiness. No certificate is written.
+	// Даже действительный ключ подписи владельца не превращает синтетический маркер LWJGL и тайм-аут в
+	// доказательство готовности меню или визуализатора. Сертификат не создаётся.
 	if _, err := certRun02712(context.Background(), client, runtimePath, javaPath, runtimeSHA, key, file, 20); err == nil {
 		t.Fatal("synthetic startup probe was certified")
 	}

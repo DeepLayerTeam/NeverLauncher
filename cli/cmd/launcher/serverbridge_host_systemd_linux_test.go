@@ -126,7 +126,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	// os.UserHomeDir caches HOME? Unix Go consults HOME on each call.
+	// Кэширует ли os.UserHomeDir значение HOME? На Unix Go обращается к HOME при каждом вызове.
 	prev := hostSystemctl02811
 	t.Cleanup(func() { hostSystemctl02811 = prev })
 	var calls []string
@@ -161,7 +161,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 	if strings.Join(calls[2:], "|") != "--user disable --now launcher-host-world.service|--user daemon-reload" {
 		t.Fatal("uninstall sequence", calls)
 	}
-	// Failed enable must not leave a partially installed service.
+	// Неудачное включение службы не должно оставлять частично установленный сервис.
 	hostSystemctl02811 = func(args ...string) error {
 		if len(args) > 1 && args[1] == "enable" {
 			return fmt.Errorf("simulated failure")

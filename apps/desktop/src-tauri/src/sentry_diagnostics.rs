@@ -1,4 +1,4 @@
-//! Explicitly consented diagnostics. Never transmits tokens, URLs, usernames or raw JS errors.
+//! Диагностика только с явного согласия. Токены, URL, имена пользователей и необработанные ошибки JS не передаются.
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -72,7 +72,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	if e != nil {
 		return e
 	}
-	// Preserve blocking reports on 422 instead of silently treating them as success.
+	// Сохраняйте блокирующие отчёты при HTTP 422, не принимая их ошибочно за успешный результат.
 	var data any
 	if e = json.Unmarshal(raw, &data); e != nil {
 		return fmt.Errorf("HTTP %d: invalid JSON: %w", response.StatusCode, e)
@@ -109,8 +109,8 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	return nil
 }
 
-// apply-optionals is an explicit post-build operator decision. It modifies
-// only an unsigned v3 draft, before the normal privileged sign operation.
+// apply-optionals — явное решение оператора после сборки. Изменяется только
+// неподписанный черновик v3 до обычной привилегированной операции подписи.
 func migrationApplyOptionalsCLI0337(endpoint, token, id, out string) error {
 	u, e := url.Parse(endpoint)
 	if e != nil {

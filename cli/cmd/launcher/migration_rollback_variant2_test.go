@@ -39,7 +39,7 @@ func TestRollbackBoundSnapshot0448(t *testing.T) {
 	if err := os.Symlink(path, filepath.Join(dir, "alias")); err != nil {
 		t.Fatal(err)
 	}
-	// Existing code requires a regular resolved target, not absolute paths for snapshots.
+	// Существующий код требует обычный файл по разрешённому пути, но не требует абсолютных путей для снимков.
 	if _, _, err := rollbackReadSnapshot0448(filepath.Join(dir, "alias")); err != nil {
 		t.Fatal(err)
 	}

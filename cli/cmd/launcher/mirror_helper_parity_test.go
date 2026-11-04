@@ -125,7 +125,7 @@ func TestMirrorHelper0274ModsTransactionAndRecovery(t *testing.T) {
 	if after.ReproducibilitySHA256 != oldDigest {
 		t.Fatal("failed transaction changed plan")
 	}
-	// Source path traversal must be rejected before installing.
+	// Отклоняйте обход исходного пути до установки.
 	artifact[0].Path = "mods/../../bad.jar"
 	artifact[0].SHA256 = mirrorSHA0274(jar)
 	content, _ = json.Marshal(artifact)
@@ -297,8 +297,8 @@ func TestMirrorHelper0274WorkspaceAppliesActualVanillaWithMods(t *testing.T) {
 	}
 }
 
-// This is the real Forge installer + processor pipeline, using an offline
-// installer file and real worker subprocess instead of a hand-written plan.
+// Это реальный конвейер установщика и процессоров Forge с офлайновым файлом установщика и
+// настоящим дочерним рабочим процессом вместо вручную составленного плана.
 func TestMirrorHelper0274LaunchVerifiedLocalForgeInstaller(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fixture processor Java executable is a POSIX script")

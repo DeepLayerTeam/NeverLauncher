@@ -21,7 +21,7 @@ class Object:
     etag: str = '"fixture-v1"'
     delay: float = 0.0
     behavior: str = "ok"  # ok, truncate-once, bad-range, changed-once, 416-once,
-                              # 429-once, 429-date-once, 503-once, poison
+                              # 429 один раз, 429 по дате один раз, 503 один раз, подмена содержимого.
     hits: int = 0
     active: int = 0
     max_active: int = 0

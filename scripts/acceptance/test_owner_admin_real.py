@@ -19,7 +19,7 @@ SPEC.loader.exec_module(mod)
 
 class OwnerAdminReal0523Tests(unittest.TestCase):
     def test_totp_ietf_vectors(self):
-        # RFC 6238 SHA-1 at 59 seconds is 94287082 with eight digits.
+        # По RFC 6238 для SHA-1 на 59-й секунде восьмизначный код равен 94287082.
         self.assertEqual(mod.totp_now('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', at=59), '287082')
         self.assertNotEqual(mod.totp_now('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', at=59),
                             mod.totp_now('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', at=89))

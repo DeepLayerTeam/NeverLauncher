@@ -23,8 +23,8 @@ class GateFailure(ValueError):
 
 
 def declared_jobs(workflow: str) -> set[str]:
-    # GitHub Actions job IDs are top-level entries immediately below `jobs:`.
-    # Parse without a third-party YAML dependency on the production gate runner.
+    # ID заданий GitHub Actions располагаются непосредственно под `jobs:`. В производственном
+    # проверяющем runner выполняйте разбор без сторонней зависимости YAML.
     text = Path(workflow).read_text(encoding="utf-8")
     in_jobs = False
     seen_jobs = False
@@ -74,9 +74,9 @@ def verify(
     if not isinstance(needs, dict):
         raise GateFailure("GitHub needs context is missing or not an object")
     all_jobs = declared_jobs(workflow)
-    # A publication job runs *after* the aggregate gate and must not be counted
-    # as a prerequisite. Do not allow arbitrary exclusions: only the single
-    # publication job in the production workflow is a legitimate successor.
+    # Задание публикации запускается ПОСЛЕ общего барьера и не считается предварительным
+    # условием. Не разрешайте произвольные исключения: только одно задание публикации в
+    # производственном workflow является допустимым преемником.
     downstream = set()
     if gate == 'required-production-ci' and version_at_least_0370(version):
         downstream = {'publish-release'}

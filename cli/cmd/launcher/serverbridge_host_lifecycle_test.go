@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// This child is a real OS supervisor process (not a simulated mock). It
-// launches the actual OpenJDK executable through the production Host runner.
+// Этот дочерний процесс — реальный системный супервизор, а не имитация. Он запускает
+// настоящий исполняемый OpenJDK через производственный механизм Host.
 func TestHostSupervisorProcessHelper0414(t *testing.T) {
 	root := os.Getenv("LAUNCHER_0414_HOST_HELPER")
 	if root == "" {
@@ -43,7 +43,7 @@ func hostRealJavaFixture0414(t *testing.T, mode string, restarts int) string {
 	}
 	root := t.TempDir()
 	source := filepath.Join(root, "JvmLifecycleFixture.java")
-	// Exit codes and state files are written by the actual Java process.
+	// Коды завершения и файлы состояния записывает настоящий процесс Java.
 	code := `import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -107,7 +107,7 @@ func hostLaunchSupervisor0414(t *testing.T, root string) (*exec.Cmd, <-chan erro
 	finished := make(chan error, 1)
 	go func() { finished <- cmd.Wait() }()
 	t.Cleanup(func() {
-		// Protect the test environment from leaking an actual Java process.
+		// Не допускайте утечки работающего Java-процесса из тестового окружения.
 		state, err := readServerBridgeHostRuntime01910(hostPaths01910(root)["runtime"])
 		if err == nil && state.SupervisorPID == cmd.Process.Pid && hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
 			_ = stopServerBridgeHost01910([]string{"--server-root", root})
@@ -220,8 +220,8 @@ func TestHostLifecycle0414RealJVMCrashLoopIsBounded(t *testing.T) {
 	}
 }
 
-// Exercises the actual compiled production CLI: start forks its own binary,
-// stop waits for that JVM, and restart verifies a distinct OS process.
+// Проверяет реальный скомпилированный производственный CLI: start создаёт собственный дочерний
+// процесс, stop ждёт завершения JVM, а restart подтверждает другой процесс ОС.
 func TestHostLifecycle0414ActualCLIAndRemoteEffects(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds real CLI")
@@ -243,7 +243,7 @@ func TestHostLifecycle0414ActualCLIAndRemoteEffects(t *testing.T) {
 		t.Fatal(err)
 	}
 	first := hostWaitRealJava0414(t, root, 0, 0)
-	// The CLI is not the supervisor: the detached background JVM is still live.
+	// CLI не является супервизором: отсоединённая фоновая JVM всё ещё работает.
 	if !hostIdentityMatches0282(first.ProcessPID, first.ProcessIdentity) {
 		t.Fatal("CLI start returned without a live JVM")
 	}

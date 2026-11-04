@@ -56,7 +56,7 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
             )
             server.objects["/manifest"] = Object(signed.read_bytes())
             for round_id in range(repetitions):
-                # Alternate ordering to reduce temperature/OS scheduler bias.
+                # Чередуйте порядок, чтобы снизить влияние температуры и планировщика ОС.
                 for label, binary in (
                     (("baseline", baseline), ("candidate", candidate))
                     if round_id % 2 == 0
@@ -144,8 +144,8 @@ def main():
     result = bench(
         *[getattr(args, v).resolve() for v in ("baseline", "candidate", "signer")]
     )
-    # Only benchmark a committed source tree; bind published numbers to the
-    # exact tested revision and to the compiled candidate binary.
+    # Измеряйте производительность только зафиксированного дерева исходников; опубликованные значения должны
+    # соответствовать точной проверенной ревизии и скомпилированному бинарному файлу.
     repository = Path(__file__).resolve().parents[2]
     rev = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=repository, capture_output=True, text=True

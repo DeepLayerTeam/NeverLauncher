@@ -303,9 +303,9 @@ impl ProcessSupervisor {
             sensor_session: windows_sensor_session,
         });
 
-        // Independent Rust-side verification runs for the entire lifetime of
-        // every supervised JVM. It also detects Guard policy revocation while
-        // the in-process Java watcher is stopped or disabled.
+        // Независимая проверка на стороне Rust действует на протяжении всего времени работы
+        // каждой управляемой JVM. Она также обнаруживает отзыв политики Guard, пока
+        // встроенный Java-наблюдатель остановлен или отключён.
         let watcher = self.clone();
         let watched_id = id.clone();
         tokio::spawn(async move {
@@ -375,8 +375,8 @@ impl ProcessSupervisor {
                 {
                     let mut map = processes.lock().await;
                     if let Some(process) = map.get_mut(&id) {
-                        // A child that exits with code zero after a forced Guard
-                        // termination is still a security denial, not success.
+                        // Дочерний процесс, завершившийся с кодом ноль после принудительной остановки Guard,
+                        // всё равно считается отказом безопасности, а не успехом.
                         if let Some(reason) = process.guard_violation.as_ref() {
                             success = false;
                             message = format!("NeverGuard trust revoked during gameplay: {reason}");
@@ -423,9 +423,9 @@ impl ProcessSupervisor {
         items
     }
 
-    /// Stop an active game when its original Guard loses integrity/trust.
-    /// Persist the denial before signalling the child so the exit observer
-    /// cannot accidentally record a clean/successful game exit.
+    /// Останавливайте работающую игру, когда её исходный Guard теряет целостность или
+    /// доверие. Сохраните отказ до сигнала дочернему процессу, чтобы наблюдатель
+    /// завершения случайно не записал штатный успешный выход.
     pub async fn stop_for_guard_violation_0438(
         &self, id: &str, reason: &str,
     ) -> Result<ProcessStatus, String> {

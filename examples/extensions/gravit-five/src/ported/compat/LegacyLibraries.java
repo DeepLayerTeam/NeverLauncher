@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.zip.*;
 import ru.launcher.sdk.core.*;
 
-/** Pre-sign loader/library packer. Reads only SHA-pinned storage through the real Go broker. */
+/** Упаковщик библиотек и загрузчиков до подписания. Читает только хранилище с закреплённым SHA через настоящий брокер Go. */
 public final class LegacyLibraries implements ContentProvider {
     private RuntimeServices runtime;
     @Override public void start(ProviderContext ctx) { runtime = ctx.runtime(); }
@@ -29,7 +29,7 @@ public final class LegacyLibraries implements ContentProvider {
         out.put("x-ported-gravit", true);
         return out;
     }
-    /** Input must be an unsigned ZIP. This never modifies a published/signed package. */
+    /** Вход должен быть неподписанным ZIP. Опубликованный или подписанный пакет здесь никогда не меняется. */
     public byte[] preparePackage(String id,String name,byte[] source) throws Exception {
         if (!name.endsWith(".zip") || source.length>256*1024) throw new IllegalArgumentException("unsigned .zip required");
         if(source.length<4 || source[0]!='P' || source[1]!='K' || source[2]!=3 || source[3]!=4)

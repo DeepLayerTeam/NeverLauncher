@@ -40,7 +40,7 @@ def passphrase(path):
     core.require(st.st_size <= 4096, "passphrase file too large")
     with p.open("rb") as handle:
         secret = handle.read(4097)
-    # Strip exactly one conventional terminal newline; no CLI/env secret exposure.
+    # Удалите ровно один обычный завершающий перевод строки; секреты CLI и окружения не раскрываются.
     if secret.endswith(b"\r\n"):
         secret = secret[:-2]
     elif secret.endswith(b"\n"):
@@ -112,7 +112,7 @@ def export(bundle, output, secret_file):
                     info = archive.gettarinfo(str(path), arcname=name)
                     core.require(info.isdir() or info.isfile(), "non-file in snapshot")
                     core.check_path(path, directory=info.isdir())
-                    # Avoid leaking owner names and timestamps if archives are decrypted.
+                    # Не допускайте утечки имён владельцев и временных меток при расшифровке архивов.
                     info.uid = info.gid = 0
                     info.uname = info.gname = ""
                     info.mtime = 0
@@ -125,7 +125,7 @@ def export(bundle, output, secret_file):
             stream.write(encryptor.tag)
             stream.flush()
             os.fsync(stream.fileno())
-        # link is atomic and NOREPLACE, including when an attacker races the name.
+        # Создание ссылки атомарно и с NOREPLACE, включая гонку злоумышленника за имя.
         os.link(staging, output, follow_symlinks=False)
         core.fsync_dir(output.parent)
         return output
@@ -242,8 +242,8 @@ def backup_portable(root, output, secret_file):
                  "portable output exists")
     core.require(not output.is_relative_to(root) or output.parent == root / "backups",
                  "portable output inside live root must be in backups/")
-    # Snapshot stays private; a power outage may leave this scratch copy in backups/.
-    # It is never accepted as complete unless the independent bundle verify passes.
+    # Снимок остаётся закрытым; отключение питания может оставить временную копию в
+    # backups/. Она не считается полной до независимой проверки пакета.
     destination = root / "backups" / (".minimal-portable-source-" + secrets.token_hex(12))
     try:
         core.backup(root, destination)

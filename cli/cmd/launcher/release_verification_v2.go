@@ -272,8 +272,8 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 			}
 		}
 		if k.Status == "verify-only" {
-			// A verify-only key cannot authorize new artifacts through
-			// backdating SignedAt. The overlap expires in real wall-clock time.
+			// Ключ только для проверки не может разрешать новые артефакты подменой даты SignedAt
+			// задним числом. Период перекрытия истекает по реальным часам.
 			retired, err := time.Parse(time.RFC3339Nano, k.RetiredAt)
 			if err != nil || signedAt.After(retired.Add(5*time.Minute)) {
 				return nil, fmt.Errorf("release signature after retirement: %s", id)

@@ -41,10 +41,10 @@ try {
 } catch {
   $lines.Add('Windows Application Event Log unavailable on this runner.')
 }
-# Event Log access is restricted on some GitHub-hosted runners. Windows Error
-# Reporting also stores a small UTF-16 text report alongside private dumps.
-# Read ONLY four whitelisted signature values. Never publish report paths,
-# arbitrary WER text, memory dumps, loaded-module lists or command lines.
+# На некоторых GitHub runner доступ к Event Log ограничен. Windows Error Reporting хранит также
+# небольшой UTF-16 отчёт рядом с закрытыми дампами. Читайте ТОЛЬКО четыре разрешённых значения
+# сигнатуры. Никогда не публикуйте пути отчётов, произвольный текст WER, дампы памяти, списки
+# загруженных модулей и командные строки.
 try {
   $folders = @()
   foreach ($base in @(

@@ -49,8 +49,8 @@ def validate_os(target: str, archive: Path, *, signer: str) -> str:
     osname, _ = target.split('-')
     members = read_archive(archive)
     if osname == 'linux':
-        # No platform code-signing facility. Pinned Ed25519 release signature is
-        # checked by the production CLI, separately from this OS step.
+        # На платформе нет механизма подписи кода ОС. Закреплённая подпись выпуска Ed25519
+        # отдельно проверяется производственным CLI, не на этом этапе ОС.
         if not re.fullmatch(r'[A-Za-z0-9 ._:@-]{3,128}', signer):
             raise ValueError('pinned publisher identity required')
         return 'production-cli-release-trust'
@@ -61,7 +61,7 @@ def validate_os(target: str, archive: Path, *, signer: str) -> str:
             if name not in members:
                 raise ValueError('missing native Windows executable ' + name)
         with tempfile.TemporaryDirectory(prefix='nl-guard-win-sign-') as temp:
-            # Native APIs read the actual extracted PE, not ZIP metadata.
+            # Нативные API читают реально извлечённый PE-файл, а не метаданные ZIP.
             for name in EXPECTED['windows']:
                 exe = Path(temp) / name
                 exe.write_bytes(members[name])
@@ -78,7 +78,7 @@ def validate_os(target: str, archive: Path, *, signer: str) -> str:
         if shutil.which(command) is None:
             raise ValueError('missing native macOS signature validation tool: ' + command)
     with tempfile.TemporaryDirectory(prefix='nl-guard-mac-sign-') as temp:
-        # `read_archive` rejected symlinks and path traversal before extraction.
+        # read_archive отклоняет символьные ссылки и обход путей до извлечения.
         run(['ditto', '-xk', str(archive), temp])
         app = Path(temp) / 'Launcher.app'
         if not app.is_dir():
@@ -103,8 +103,8 @@ def verify(target: str, bundle: Path, commit: str, signer: str, operator: str, e
     release = verify_bundle(bundle, release_manifest=True)
     if release['version'] != VERSION:
         raise ValueError('final package is not version 0.51.0')
-    # Cryptographic release distribution verification uses external trusted
-    # roots and *compiled release CLI* before native OS signature checks.
+    # Криптографическая проверка распространяемого выпуска использует внешние доверенные корни
+    # и СКОМПИЛИРОВАННЫЙ CLI выпуска до нативной проверки подписи ОС.
     run_verify(cli, bundle, public_key, trust_policy, operator_key)
     row = release['targets'][target]
     verifier = validate_os(target, bundle / row['file'], signer=signer)

@@ -3,7 +3,7 @@ package ru.launcher.bridge.common;
 import java.time.Instant;
 import java.util.List;
 
-/** Runnable without JUnit/Minecraft to protect the production join decoder. */
+/** Исполняется без JUnit/Minecraft для защиты производственного декодера входа. */
 public final class BridgeAuthResponse0287Test {
     private static final String UUID = "123e4567-e89b-42d3-a456-426614174000";
     private static final String CORRELATION = "a".repeat(64);

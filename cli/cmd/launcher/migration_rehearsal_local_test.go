@@ -66,7 +66,7 @@ func TestRehearseLocal04910LiveJoinAndFailClosed(t *testing.T) {
 	if err := handleMigrationRehearsalLocal04910([]string{"--run", run, "--stage", root, "--inventory-sha256", inventory}); err == nil {
 		t.Fatal("report cannot go to stdout")
 	}
-	// A successful native session must not override failed independent checks.
+	// Успешная нативная сессия не должна отменять отрицательные результаты независимых проверок.
 	put("probes/join", []byte("#!/bin/sh\nexit 1\n"), 0700)
 	args[len(args)-1] = filepath.Join(root, "failed.json")
 	if err := handleMigrationRehearsalLocal04910(args); err == nil {

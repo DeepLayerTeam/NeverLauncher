@@ -14,8 +14,8 @@ import (
 	prestarter "github.com/DeepLayerTeam/Launcher/prestarter"
 )
 
-// materializeBrandIcon writes only decoded artwork from the verified owner-
-// signed bootstrap. Windows Explorer expects ICO, while Linux accepts PNG.
+// materializeBrandIcon записывает только декодированные изображения из проверенного bootstrap,
+// подписанного владельцем. Windows Explorer ожидает ICO, Linux принимает PNG.
 func materializeBrandIcon(dir string, brand *prestarter.Branding) (string, error) {
 	if brand == nil || brand.IconPNG == "" {
 		return "", nil
@@ -59,7 +59,7 @@ func materializeBrandIcon(dir string, brand *prestarter.Branding) (string, error
 	}
 	pngBytes := encoded.Bytes()
 	var ico bytes.Buffer
-	// One PNG-backed 32-bit image, Windows Vista and later.
+	// Одно 32-битное изображение на основе PNG; Windows Vista и новее.
 	if err := binary.Write(&ico, binary.LittleEndian, []uint16{0, 1, 1}); err != nil {
 		return "", err
 	}

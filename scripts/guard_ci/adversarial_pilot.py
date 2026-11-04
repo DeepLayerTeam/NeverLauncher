@@ -162,8 +162,8 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
             if previous and previous['outcome'] == 'allowed' and item['outcome'] == 'allowed':
                 delta = item['timestampMs'] - previous['timestampMs']
                 if 0 <= delta <= 30_000:
-                    # Conservative lower bound: only gaps covered by two
-                    # independent successful checks on an active SQL session.
+                    # Консервативная нижняя граница: учитываются только промежутки, покрытые двумя
+                    # независимыми успешными проверками активной SQL-сессии.
                     observed_ms += delta
             if item['outcome'] == 'revoked':
                 revoked_events.append(item)
@@ -202,8 +202,8 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
     counts = {v: sum(1 for e in revoked_events if reviews.get(e['mac']) == v) for v in ('false_positive', 'true_positive', 'inconclusive')}
     missing = len(revoked_events) - sum(counts.values())
     hours = round(observed_ms / 3_600_000, 6)
-    # The pilot gate requires independent confirmation of player-hours and an
-    # external operator's actual review, not self-reported journal timestamps.
+    # Барьер пилотной эксплуатации требует независимого подтверждения человеко-часов игроков и фактической
+    # проверки внешним оператором, а не времени в журнале по собственным утверждениям.
     return {
         'schema': 'neverlauncher.guard-shadow-analysis/v1', 'version': VERSION,
         'status': 'BLOCKED' if hours < 10_000 or missing or counts['inconclusive'] or counts['false_positive'] else 'EVIDENCE_REVIEW_REQUIRED',
@@ -282,8 +282,8 @@ def verify_game(work: Path, server_log: Path, username: str) -> dict:
         require(target.is_file() and not target.is_symlink() and target.resolve().parent == root and target.stat().st_size > 0, f'missing real E2E evidence: {name}')
         hashed[name] = file_hash(target)
     require(server_log.is_file() and not server_log.is_symlink() and re.fullmatch(r'[A-Za-z0-9_]{3,16}', username) is not None, 'server log and valid Minecraft player identity required')
-    # Match both the authenticated server permission and the actual Minecraft
-    # join message in the same captured server log, not a fake client main.
+    # Сопоставляйте аутентифицированное разрешение сервера и фактическое сообщение о входе Minecraft
+    # в одном захваченном серверном журнале, а не с поддельным main клиента.
     with server_log.open('r', encoding='utf-8', errors='replace') as log:
         seen_allow, seen_join = False, False
         for line in log:
@@ -322,8 +322,8 @@ def run_jvm_suites(output: Path, only: set[str] | None = None) -> dict:
             output_bytes = exc.stdout or b''
             exit_code = 124
         text = output_bytes.decode('utf-8', errors='replace')
-        # The log may contain library paths but not user credentials; keep
-        # raw evidence locally with strict mode; release reports only hashes.
+        # Журнал может содержать пути библиотек, но не учётные данные; сырые доказательства храните
+        # локально с жёсткими правами, а в выпускных отчётах оставляйте только хеши.
         log = output / (name + '.log')
         fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, 'wb') as handle:

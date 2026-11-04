@@ -141,7 +141,7 @@ class SecurityGATests(unittest.TestCase):
             self.assertEqual(row["checksPassed"], 21)
 
     def test_0438_cannot_reuse_old_join_only_guard_certification(self):
-        # The old six-platform signed receipt is not live-game evidence.
+        # Прежняя подписанная квитанция для шести платформ не является доказательством живой игры.
         self.approval["version"] = "0.43.8"
         self.sign()
         with self.assertRaisesRegex(ValueError, "missing mandatory security capability evidence"):
@@ -274,8 +274,8 @@ class SecurityGATests(unittest.TestCase):
             self.check()
 
 
-# Version-aware NeverGuard lifetime gate regression: historical 0.43.1 evidence
-# remains readable, but cannot certify running-game behavior for 0.43.8.
+# Регрессия NeverGuard с проверкой жизненного цикла по версии: исторические доказательства
+# 0.43.1 читаемы, но не сертифицируют поведение работающей игры в 0.43.8.
 class SecurityGameLifetime0438Tests(unittest.TestCase):
     def test_0438_requires_new_live_game_capability(self):
         from security_capabilities_0431 import checks

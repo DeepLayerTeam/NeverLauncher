@@ -77,7 +77,7 @@ func TestBridgeRuntimeVerifyAuthenticatedHTTP02812(t *testing.T) {
 	defer server.Close()
 	root, local, req := fixtureBridge02812(t, server.URL)
 	body = map[string]any{"data": map[string]any{"items": []any{map[string]any{"id": req.ID, "kind": req.Kind, "projectId": req.ProjectID, "keyFingerprint": req.KeyFingerprint, "pluginVersion": local.Version, "pluginSha256": local.ArtifactSHA256, "protocolVersion": 3, "runtimeId": strings.Repeat("f", 64), "lastHeartbeatAt": time.Now().UTC().Format(time.RFC3339Nano)}}}}
-	// Encoding/json uses float64 in decoded maps; HTTP path must accept it.
+	// После декодирования карты encoding/json содержат float64; путь HTTP должен это принимать.
 	if err := verifyServerBridge02812([]string{"verify", "--server-root", root, "--token", "secret"}); err != nil {
 		t.Fatal(err)
 	}

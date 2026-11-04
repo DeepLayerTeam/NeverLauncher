@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// Lost ACK / host-action timeout: the original uncertain receipt survives an
-// agent restart and blocks DIFFERENT idempotency keys, not only the old one.
+// Потерянный ACK или тайм-аут действия хоста: исходная квитанция с неопределённым результатом сохраняется после
+// перезапуска агента и блокирует ДРУГИЕ ключи идемпотентности, не только первоначальный.
 func TestRemoteFaultUnknownBlocksNewAction04112(t *testing.T) {
 	a, id, root := remoteFixture0284(t)
 	token := remoteTokenFixture0284(t, id, "host.start", "host.stop", "host.status")
@@ -103,8 +103,8 @@ func TestRemoteFaultKernelSplitBrain04112(t *testing.T) {
 	}
 	_, id, root := remoteFixture0284(t)
 	dir := remoteDir0284(root)
-	// Simulate a crashed agent with a stale JSON identity and two contenders
-	// attempting to recover it at the same time on different listen ports.
+	// Имитируйте сбой агента с устаревшей JSON-идентичностью и двумя конкурентами,
+	// одновременно восстанавливающими её на разных портах прослушивания.
 	stale, err := json.Marshal(remoteLease0284{PID: 99999999, Identity: "dead-session", NodeID: id.NodeID})
 	if err != nil {
 		t.Fatal(err)
@@ -144,8 +144,8 @@ func TestRemoteFaultKernelSplitBrain04112(t *testing.T) {
 	release()
 }
 
-// Concurrent operators with different idempotency keys must not bypass a
-// persisted uncertain operation just because their actions differ.
+// Конкурирующие операторы с разными ключами идемпотентности не должны обходить сохранённую
+// неопределённую операцию лишь потому, что их действия различаются.
 func TestRemoteFaultConcurrentUnknownDifferentKeys04112(t *testing.T) {
 	a, id, _ := remoteFixture0284(t)
 	token := remoteTokenFixture0284(t, id, "host.start", "host.stop", "host.restart")

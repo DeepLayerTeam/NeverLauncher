@@ -134,7 +134,7 @@ func atomicWrite(path string, data []byte) error {
 	if err := os.Rename(f.Name(), path); err != nil {
 		return err
 	}
-	// On POSIX persist the rename itself, not only the temporary file.
+	// На POSIX сохраняйте на диск само переименование, а не только временный файл.
 	return syncParent(path)
 }
 func verifyBundleConfig02312(dir string, raw []byte, rootKey string) (prestarter.Config, string, error) {
@@ -237,8 +237,8 @@ func newInstall(opts Options) (*installation, error) {
 	return &installation{root: root, base: filepath.Join(root, ".launcher-installer"), key: opts.TrustedKey}, nil
 }
 
-// verifiedSlot never trusts the active marker by itself: the retained signed
-// configuration, executable and offline objects must all still match.
+// verifiedSlot не доверяет одному лишь маркеру active: сохранённые подписанная конфигурация,
+// исполняемый файл и офлайновые объекты должны по-прежнему совпадать.
 func (i *installation) verifiedSlot(slot string) (*record, error) {
 	if slot != "active-0.json" && slot != "active-1.json" {
 		return nil, errors.New("invalid installer activation slot")
@@ -355,8 +355,8 @@ func (i *installation) store(bundle string, cfg prestarter.Config, id string, of
 	}
 	installedRaw, installedErr := regular(filepath.Join(release, "bootstrap.signed.json"), 1024*1024)
 	if verifyFile(filepath.Join(release, binaryName()), art) != nil || installedErr != nil || digest(installedRaw) != rec.ConfigHash || verifyInstalledPolicy02312(release, installedRaw, i.key) != nil {
-		// A matching signed bundle can repair a damaged release without
-		// ever executing the damaged binary. Never delete the old directory.
+		// Совпадающий подписанный пакет может исправить повреждённый выпуск без исполнения
+		// повреждённого бинарного файла. Никогда не удаляйте старый каталог.
 		quarantine := release + ".broken-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 		if e = os.Rename(release, quarantine); e != nil {
 			return rec, e
@@ -504,16 +504,16 @@ func install(ctx context.Context, opts Options, updateOnly bool) error {
 	if rec.Generation == 0 {
 		return errors.New("generation overflow")
 	}
-	// Provision first, commit second. The signed Prestarter may fail while
-	// installing Managed Java or restoring the game. If the pointer were
-	// advanced before that work, a power loss could leave an apparently
-	// active but unusable release. Keep the previous verified pointer intact.
+	// Сначала подготовка, затем фиксация. Подписанный Prestarter может отказать при установке
+	// Managed Java или восстановлении игры. Преждевременная смена указателя при отключении
+	// питания оставила бы якобы активный, но неработоспособный выпуск. Сохраняйте прежний
+	// проверенный указатель до завершения работы.
 	if e = i.provision(ctx, rec, opts.NoStart); e != nil {
 		return e
 	}
-	// A desktop shortcut is part of a usable installation. Do not commit the
-	// new trusted active slot if the OS shortcut/icon could not be created.
-	// The previous signed release remains authoritative on any failure.
+	// Ярлык Desktop входит в пригодную к использованию установку. Не фиксируйте новый
+	// доверенный активный слот, если ОС не смогла создать ярлык или иконку. При любой
+	// ошибке авторитетным остаётся прежний подписанный выпуск.
 	restoreShortcut := func() {
 		if prev == nil {
 			return
@@ -544,18 +544,18 @@ func install(ctx context.Context, opts Options, updateOnly bool) error {
 	return nil
 }
 
-// Update requires an existing verified installation and keeps its identity
-// pinned. The new bundle must be authorized by the same embedded trust root;
-// an unrelated project, profile or channel cannot silently take over the app.
-// Install commits a new active slot only after Prestarter has completed.
+// Для обновления нужна существующая проверенная установка с закреплённой идентичностью.
+// Новый пакет должен быть авторизован тем же встроенным корнем доверия; посторонние проект,
+// профиль или канал не могут незаметно захватить приложение. Install фиксирует новый
+// активный слот только после завершения Prestarter.
 func Update(ctx context.Context, opts Options) error {
 	return install(ctx, opts, true)
 }
 
-// Rollback provisions the previous independently verified signed generation
-// before atomically activating it as a NEW generation. A failing, interrupted,
-// tampered or missing prior release cannot advance the active pointer. Game
-// saves, account state and user files are not deleted or rewound.
+// Rollback сначала подготавливает прежнее независимо проверенное подписанное поколение, затем
+// атомарно активирует его как НОВОЕ поколение. Сбой, прерывание, изменение или отсутствие
+// прошлого выпуска не меняют активный указатель. Сохранения игры, данные учётных записей и
+// файлы пользователя не удаляются и не откатываются.
 func Rollback(ctx context.Context, opts Options) error {
 	i, err := newInstall(opts)
 	if err != nil {
@@ -627,8 +627,8 @@ func Rollback(ctx context.Context, opts Options) error {
 	return nil
 }
 
-// VerifyInstalled checks both redundant active pointers and the retained
-// signed release bytes. It never trusts an unverified marker or install log.
+// VerifyInstalled проверяет оба резервных указателя active и сохранённые байты подписанного
+// выпуска. Непроверенный маркер или журнал установки не принимаются на веру.
 func VerifyInstalled(opts Options) error {
 	i, err := newInstall(opts)
 	if err != nil {
@@ -655,8 +655,8 @@ func Repair(ctx context.Context, opts Options) error {
 		defer lock.Close()
 		return i.provision(ctx, *rec, opts.NoStart)
 	}
-	// No runnable release exists: release the lock before calling Install.
-	// First try the explicit signed bundle, then a retained offline source.
+	// Нет пригодного к запуску выпуска: освободите блокировку до вызова Install. Сначала попробуйте
+	// явно выбранный подписанный пакет, затем сохранённый офлайновый источник.
 	lock.Close()
 	if _, _, e = VerifyBundle(opts.Bundle, opts.TrustedKey, opts.Offline); e == nil {
 		return Install(ctx, opts)
@@ -697,6 +697,6 @@ func Uninstall(opts Options) error {
 	}); e != nil {
 		return e
 	}
-	// Deliberately preserve root/launcher, root/profiles, Managed Java and saves.
+	// Намеренно сохраняйте root/launcher, root/profiles, Managed Java и сохранения.
 	return os.RemoveAll(i.base)
 }

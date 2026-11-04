@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// CLI uses the exact HTTP operations lifecycle used by Admin and third-party SDKs.
-// The backend remains the sole authority for permissions, MFA and step-up.
+// CLI использует тот же жизненный цикл HTTP-операций, что Admin и сторонние SDK. Backend остаётся
+// единственным источником решений о разрешениях, MFA и дополнительном подтверждении.
 func handleDurableOperation0217(args []string) error {
 	if len(args) == 0 {
 		return errors.New("operation subcommands: registry, validate, execute, status, attempts, cancel, retry")

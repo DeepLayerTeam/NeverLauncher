@@ -2,6 +2,6 @@
 
 package installer
 
-// Windows does not expose a portable Go directory fsync; file Sync is
-// performed before atomic Rename. NTFS journals directory metadata.
+// Windows не предоставляет переносимый fsync каталогов для Go; перед атомарным Rename
+// вызывается Sync файла. NTFS журналирует метаданные каталогов.
 func syncParent(path string) error { return nil }

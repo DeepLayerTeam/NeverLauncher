@@ -67,7 +67,7 @@ def minecraft(root, version=EXPECTED_VERSION, *, matching=False, mc=None):
 
 def owner(path, version, commit):
     from importlib.util import spec_from_file_location, module_from_spec
-    # Reuse the original independently implemented validation from the real browser E2E.
+    # Повторно используйте исходную независимо реализованную проверку из настоящего браузерного E2E.
     source = ROOT / 'e2e/scripts/owner-cycle-0390-browser.py'
     spec = spec_from_file_location('owner_cycle_0390', source)
     module = module_from_spec(spec)

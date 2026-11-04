@@ -1,5 +1,5 @@
-//! TPM 2.0 command framing for Windows TBS: never fabricate evidence from CNG metadata.
-//! All multibyte TPM integers are big-endian. Checked parsing rejects malformed firmware output.
+//! Формирование команд TPM 2.0 для Windows TBS: запрещено создавать вымышленные доказательства по метаданным CNG.
+//! Все многобайтовые целые TPM записаны в порядке big-endian. Проверяемый разбор отклоняет некорректный вывод прошивки.
 
 fn be16(b: &[u8]) -> Result<usize, String> {
     if b.len() < 2 { return Err("truncated TPM2B".into()); }

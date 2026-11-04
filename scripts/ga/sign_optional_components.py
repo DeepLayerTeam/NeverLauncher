@@ -26,7 +26,7 @@ REQUIRED_OBJECTS = {"installer", "osSignature", "cleanMachine", "certification",
 def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: str, commit: str) -> None:
     if folder.is_symlink() or key_path.is_symlink():
         raise ValueError("symlinked signing input is prohibited")
-    # Ensure the trust root was approved separately from this signing run.
+    # Убедитесь, что корень доверия одобрен отдельно от этого запуска подписания.
     if not re.fullmatch(r"[a-fA-F0-9]{64}", trusted_key_hex):
         raise ValueError("a pinned trusted 32-byte Ed25519 public key is mandatory")
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
@@ -62,8 +62,8 @@ def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: 
         content = load_attested_file(folder, value.get('file'), value.get('sha256'), binary=name=='installer')
         if name != 'installer':
             check_report(content, commit=commit, version='0.25.0', subject=name, target=folder.name)
-    # The full verifier performs cross-object digest, installer/OS-signature,
-    # platform and mandatory-check comparisons before this receipt is accepted.
+    # Полный верификатор проверяет межобъектные дайджесты, установщик и подпись ОС,
+    # платформы и обязательные проверки до принятия квитанции.
     sig_path = folder / 'attestation.sig'
     if sig_path.exists() or sig_path.is_symlink():
         raise ValueError("refusing to overwrite a previously signed attestation")

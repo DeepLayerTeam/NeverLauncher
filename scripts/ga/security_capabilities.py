@@ -20,9 +20,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 from release_policy import parsed
 
-# These are trusted minimum requirements compiled into the verifier. An
-# untrusted release/evidence directory cannot remove or rename them.
-# Sandbox is assessed on the backend extension host, not the Desktop process.
+# Это доверенные минимальные требования, встроенные в верификатор. Недоверенный каталог
+# выпуска или доказательств не вправе их убирать или переименовывать. Песочница оценивается
+# на Backend-хосте расширений, а не в процессе Desktop.
 SCENARIOS = {
     "securityDeviceTrust": ("deviceEnrollmentAllowed", "staleDeviceEpochDenied"),
     "securityHwidPolicy": ("knownDeviceLoginAllowed", "unapprovedHardwareChangeDenied"),
@@ -31,16 +31,16 @@ SCENARIOS = {
     "securityAccountRecovery": ("newDeviceRecoveryAllowed", "oldRecoveryKeyDenied"),
     "securityNativeSandbox": ("authorizedExtensionBrokerAllowed", "unauthorizedExtensionAccessDenied"),
 }
-# 0.43.8 adds live-game continuity; an initial Guard join ticket alone
-# cannot certify that a running game is terminated after Guard loss.
+# В 0.43.8 добавлена непрерывная проверка игры; одного стартового билета Guard недостаточно
+# для сертификации завершения игры при потере Guard во время работы.
 GAMEPLAY_SCENARIOS_0438 = {
     "securityGuardLifetime": (
         "healthyGuardAllowsOngoingGameplay", "lostGuardStopsOngoingGameplay"
     ),
 }
-# A successful sandbox start is not evidence that revocation terminates a
-# running extension or prevents an already in-flight broker result from being
-# delivered. Both observations must originate from native execution.
+# Успешный запуск песочницы не доказывает, что отзыв завершает выполняющееся
+# расширение или предотвращает доставку уже выполняемого ответа брокера. Оба
+# наблюдения должны происходить из нативного исполнения.
 EXTENSION_LIFETIME_SCENARIOS_04312 = {
     "securityNativeRevocation": (
         "authorizedNativeExtensionContinuesRunning", "revokedNativeExtensionTerminated"
@@ -78,8 +78,8 @@ def blocked(message: str) -> None:
 
 
 def ci_identity(run_id=None, run_attempt=None) -> tuple[str, int]:
-    # No 'local certification' mode or caller-supplied bypass; the authorized
-    # GitHub execution is bound to every operator-approved report.
+    # Нет режима «локальной сертификации» или обхода, предоставленного вызывающей стороной;
+    # авторизованный запуск GitHub привязывается к каждому отчёту, одобренному оператором.
     rid = run_id if run_id is not None else os.environ.get("GITHUB_RUN_ID", "")
     attempt = run_attempt if run_attempt is not None else os.environ.get("GITHUB_RUN_ATTEMPT", "")
     if isinstance(attempt, int):
@@ -179,7 +179,7 @@ def verify_trace(
         blocked(target + ": invalid log hash for " + check)
     observation_time = timestamp(trace["observedAtUtc"])
     current_time = now or datetime.now(timezone.utc)
-    # Independent operator approval must be issued AFTER observed execution.
+    # Независимое одобрение оператора должно выдаваться ПОСЛЕ наблюдавшегося исполнения.
     if not observation_time <= issued_at <= current_time <= expires_at or current_time - observation_time > timedelta(hours=24):
         blocked(target + ": stale, future or out-of-approval observation: " + check)
     positive, negative = scenarios[check]

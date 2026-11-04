@@ -84,8 +84,8 @@ PLAYER_OBSERVATIONS_0400 = {
 
 
 def checks_for(version: str) -> tuple[str, ...]:
-    # Exact-byte, platform-specific player acceptance is a new stable-release
-    # requirement; historical signed formats remain verifiable unchanged.
+    # Приёмка игрока по точным байтам и платформам — новое требование стабильного выпуска;
+    # исторические подписанные форматы остаются проверяемыми без изменений.
     from release_policy import parsed
 
     number, _ = parsed(version)
@@ -96,9 +96,9 @@ def checks_for(version: str) -> tuple[str, ...]:
 def verify_player_trace(
     trace: dict, check: str, item: dict, target: str, evidence: Path
 ) -> None:
-    # An operator approval over a build executable alone cannot prove that
-    # the actual shipped installer completed the player cycle. Require the
-    # same real installed package and one correlated execution for every part.
+    # Одобрение оператора только для собранного исполняемого файла не доказывает прохождение
+    # игроком цикла в поставленном установщике. Для каждого этапа требуйте один и тот же
+    # реально установленный пакет и связанную запись исполнения.
     require(
         set(trace)
         == {
@@ -126,9 +126,9 @@ def verify_player_trace(
         and SHA.fullmatch(trace["evidenceSha256"]) is not None,
         target + ": player test does not bind a real final-package run: " + check,
     )
-    # The signed trace must reference independently stored live operator output,
-    # not merely assert success. Hash the raw evidence and process log bytes;
-    # no in-memory/generated release manifests are accepted as execution logs.
+    # Подписанная трассировка должна ссылаться на независимо сохранённый живой вывод оператора, а не
+    # просто заявлять успех. Хешируйте сырые доказательства и журналы процессов; манифесты выпуска,
+    # созданные в памяти, не считаются журналами исполнения.
     folder = evidence / "targets" / target / "player-0400"
     require(
         folder.is_dir() and not folder.is_symlink(),
@@ -274,7 +274,7 @@ def approval_data(
         "stable GA policy and exact 40-character Git SHA required",
     )
     key_raw = read_file(public_key, 4096).strip()
-    # Explicit raw Ed25519 key hex, never a private key or GitHub CI self-signer.
+    # Явный открытый ключ Ed25519 в шестнадцатеричном формате, никогда не приватный ключ и не самоподписант GitHub CI.
     require(
         re.fullmatch(rb"[0-9a-fA-F]{64}", key_raw) is not None,
         "trusted independently pinned operator key must contain 32 public bytes (hex)",
@@ -334,8 +334,8 @@ def verify(
 ):
     cfg = policy(version)
     data, raw, key_raw = approval_data(evidence, public_key, version, commit, now=now)
-    # Full GA requires all signed live security evidence on the current run,
-    # not merely a signature over declarations or previously approved targets.
+    # Полная GA требует всех подписанных живых доказательств безопасности текущего запуска,
+    # а не одной подписи деклараций или ранее одобренных целей.
     verify_security(evidence, data, now=now, run_id=run_id, run_attempt=run_attempt)
     targets = data["targets"]
     require(
@@ -345,15 +345,15 @@ def verify(
         == set(TARGETS),
         "all six release targets must have independent approval; partial GA bundle prohibited",
     )
-    # Don't silently ship a seventh platform or a wrong architecture alias.
+    # Не отправляйте незаметно седьмую платформу или неверный псевдоним архитектуры.
     require(
         bundle.is_dir() and not bundle.is_symlink(),
         "real release staging directory required",
     )
-    # A release with an unlisted platform package is not an approved subset.
+    # Выпуск с неуказанным платформенным пакетом не является одобренным подмножеством.
     permitted = {name for target in TARGETS for name in paths(version, target)}
-    # Backward-compatible composite packages also shipped by build-release.sh;
-    # their corresponding x64/ARM64 payloads still require exact-byte approval.
+    # Совместимые составные пакеты также поставляет build-release.sh; соответствующие
+    # файлы x64/ARM64 по-прежнему требуют одобрения точных байтов.
     permitted.update(
         {
             f"launcher-desktop-{version}-windows-amd64.zip",
@@ -370,8 +370,8 @@ def verify(
             or name.startswith(f"launcher-desktop-{version}-windows-")
             or name.startswith(f"launcher-desktop-{version}-macos-")
         ):
-            # Other shared/legacy platform outputs remain subject to the existing
-            # release CLI; only matching architecture packages may enter GA.
+            # Прочие общие и устаревшие платформенные результаты остаются под контролем прежнего CLI
+            # выпуска; в GA допускаются только пакеты соответствующей архитектуры.
             if name not in permitted and (
                 name.endswith(".zip")
                 or name.endswith(".tar.gz")
@@ -425,8 +425,8 @@ def verify(
                 sha(trace_path) == meta["sha256"], target + ": changed trace " + check
             )
             if check in security_checks(version):
-                # Already checked in signed-approval preflight, including raw
-                # execution events and run-scoped final package identity.
+                # Уже проверено на предварительном этапе подписанного одобрения, включая сырые события
+                # исполнения и идентичность финального пакета в рамках запуска.
                 pass
             elif check in PLAYER_CHECKS_0400 and check in checks_for(version):
                 verify_player_trace(trace, check, item, target, evidence)

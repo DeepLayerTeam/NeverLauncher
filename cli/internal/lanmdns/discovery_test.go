@@ -95,8 +95,8 @@ func TestDiscoveryCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err := Discover(ctx, 500*time.Millisecond)
-	// Some CI networks prohibit multicast entirely; both cancellation and OS
-	// multicast rejection must be returned, not silently reported as success.
+	// Некоторые сети CI полностью запрещают multicast; отмену и отказ multicast со
+	// стороны ОС следует возвращать, а не ошибочно сообщать об успехе.
 	if err == nil {
 		t.Fatal("cancelled discovery returned success")
 	}

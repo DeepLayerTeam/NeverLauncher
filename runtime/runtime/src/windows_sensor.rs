@@ -158,14 +158,14 @@ mod imp {
         for arg in command.as_std().get_args() {
             let argument = arg.to_string_lossy();
             if let Some(label) = forbidden_instrumentation_token(&argument) {
-                // Do not disable the instrumentation boundary to support a
-                // trusted Java plugin. Verify the exact pinned JAR and live
-                // signed Guard epoch before permitting this one startup flag.
+                // Не отключайте границу инструментирования ради доверенного Java-плагина.
+                // Перед разрешением этого одного флага запуска проверьте точный закреплённый
+                // JAR и действующую подписанную эпоху Guard.
                 if label == "-javaagent" {
-                    // Minecraft's working directory may differ from the
-                    // signed installation root. The release launch caller
-                    // passes the verified root explicitly, not an environment
-                    // variable controlled by the JVM or a mod.
+                    // Рабочий каталог Minecraft может отличаться от корня
+                    // подписанной установки. Вызывающая сторона запуска передаёт
+                    // проверенный корень явно, не через контролируемую JVM или модом
+                    // переменную окружения.
                     let root = verified_root.or_else(|| command.as_std().get_current_dir())
                         .ok_or("Guard compatibility Java agent requires an explicit game root")?;
                     if crate::guard_compatibility_0502::authorize_agent(root, &argument)? {
@@ -237,8 +237,8 @@ mod imp {
     pub fn prepare_sensor_command(command: &mut Command) -> Result<WindowsSensorBootstrap, String> {
         prepare_sensor_command_for_path(command, resolve_sensor_path()?, None, None)
     }
-    /// Native Minecraft launcher: authorize a pinned JVM agent against the
-    /// signed client root, even when gameDirectory points elsewhere.
+    /// Нативный запускатель Minecraft: разрешайте закреплённого JVM-агента относительно
+    /// подписанного корня клиента, даже если gameDirectory указывает в другое место.
     pub fn prepare_sensor_command_for_game(command: &mut Command, root: &Path, manifest: &crate::Manifest) -> Result<WindowsSensorBootstrap, String> {
         prepare_sensor_command_for_path(command, resolve_sensor_path()?, Some(root), Some(manifest))
     }

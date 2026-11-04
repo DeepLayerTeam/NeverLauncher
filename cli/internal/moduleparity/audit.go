@@ -1,6 +1,6 @@
-// Package moduleparity provides an executable, fail-closed inventory of Gravit
-// module equivalents. It deliberately separates source inspection, executed
-// regression tests, and full functional parity certification.
+// Пакет moduleparity предоставляет исполняемую опись эквивалентов модулей Gravit с отказом при
+// неопределённости. Она отдельно учитывает изучение исходников, выполнение регрессионных
+// тестов и сертификацию полной функциональной совместимости.
 package moduleparity
 
 import (
@@ -99,9 +99,9 @@ func readJSON(file string, out any) error {
 	return nil
 }
 
-// SafeRepoFile refuses symlinks (including symlink parent directories), paths
-// outside the checkout and non-regular files. Audits must never read arbitrary
-// filesystem paths from a modified evidence registry.
+// SafeRepoFile отклоняет символьные ссылки, в том числе родительские, пути вне
+// рабочего дерева и необычные типы файлов. Аудит не должен читать произвольные
+// пути из изменённого реестра свидетельств.
 func SafeRepoFile(root, relative string) (string, error) {
 	if relative == "" || strings.Contains(relative, "\\") || strings.Contains(relative, "\x00") || filepath.IsAbs(relative) || filepath.Clean(relative) != relative || relative == "." || relative == ".." || strings.HasPrefix(relative, "../") {
 		return "", fmt.Errorf("invalid evidence path %q", relative)
@@ -221,8 +221,8 @@ func validateJavaContract(root string) error {
 	return nil
 }
 
-// notBeforeModuleAudit0302 keeps the immutable 0.30.1 snapshot useful in
-// subsequent releases, while rejecting an older checkout masquerading as new.
+// notBeforeModuleAudit0302 сохраняет полезность неизменяемого снимка 0.30.1 в
+// следующих выпусках и отклоняет старое дерево, выдаваемое за новое.
 func notBeforeModuleAudit0302(version string) bool {
 	core := strings.SplitN(strings.SplitN(version, "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -254,8 +254,8 @@ func notBeforeModuleAudit0302(version string) bool {
 	return numbers[2] >= 1
 }
 
-// Inspect validates current source/test existence and protocol contract without
-// invoking builds. A PASS here means evidence integrity, never Gravit parity.
+// Inspect проверяет существование текущих исходников и тестов, а также контракт протокола, без сборки.
+// PASS здесь означает целостность доказательств, а не совместимость с Gravit.
 func Inspect(root string) (Report, error) {
 	var out Report
 	root, err := filepath.Abs(root)
@@ -271,8 +271,8 @@ func Inspect(root string) (Report, error) {
 		return out, err
 	}
 	version := strings.TrimSpace(string(versionBytes))
-	// The M01-M19 inventory is a pinned 0.30.1 baseline. Later releases retain
-	// its audit without rewriting historical evidence or claiming fresh parity.
+	// Опись M01–M19 — закреплённая база 0.30.1. Новые версии сохраняют её аудит без
+	// перезаписи исторических свидетельств и заявлений о новой совместимости.
 	if m.SchemaVersion != "1.0" || m.ProductVersion != "0.30.1" || m.AuditBaseline != "0.30.0" || !notBeforeModuleAudit0302(version) {
 		return out, fmt.Errorf("registry/version mismatch: registry=%s repo=%s", m.ProductVersion, version)
 	}
@@ -345,8 +345,8 @@ func Inspect(root string) (Report, error) {
 	return out, nil
 }
 
-// The historical source contains additional fields and is intentionally decoded
-// permissively; the entire frozen snapshot must remain unchanged by this audit.
+// Исторический источник содержит дополнительные поля и намеренно декодируется с допусками;
+// весь замороженный снимок должен оставаться неизменным при аудите.
 func readHistorical(path string, out any) error {
 	b, e := os.ReadFile(path)
 	if e != nil {
@@ -404,9 +404,9 @@ func updateTest(report *Report, id, status string, pass, skip int, detail string
 	}
 }
 
-// RunTests executes the *actual test names* inside the recorded Go files.
-// Passing another test in the same package never counts as an owned test.
-// No package or module is marked certified by running these tests.
+// RunTests запускает ФАКТИЧЕСКИЕ имена тестов из зарегистрированных Go-файлов.
+// Прохождение другого теста того же пакета не считается собственным тестом. Эти
+// тесты не сертифицируют пакет или модуль.
 func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, opts Options) error {
 	if opts.Timeout <= 0 {
 		opts.Timeout = 3 * time.Minute

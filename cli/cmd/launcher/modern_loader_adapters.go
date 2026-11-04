@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// Modern adapter resolution is an upstream compatibility check, not a guess
-// based on a Maven directory or the order of rows returned by the metadata API.
-// The chosen entry is persisted in the existing immutable resolution lock.
+// Разрешение современных адаптеров — проверка совместимости с первоисточником, а не
+// предположение по каталогу Maven или порядку строк API метаданных. Выбранная запись
+// сохраняется в существующей неизменяемой блокировке разрешения.
 var modernLoaderVersion0272 = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+){1,3}(?:[-+][A-Za-z0-9._-]+)?$`)
 var forgeLikeVersion0272 = regexp.MustCompile(`^[0-9][A-Za-z0-9.+_-]*$`)
 
@@ -25,9 +25,9 @@ func validateModernLoaderEntry0272(loader string, e loaderMetaEntry) error {
 	if !modernLoaderVersion0272.MatchString(ver) || isMutableLoaderSelector(ver) {
 		return fmt.Errorf("%s: invalid loader version %q", loader, ver)
 	}
-	// A Maven coordinate from the authoritative API must correspond exactly
-	// to the loader version; otherwise a valid-looking profile may install a
-	// different binary than the one shown to the administrator.
+	// Координата Maven из авторитетного API должна точно соответствовать
+	// версии загрузчика, иначе правдоподобный профиль установит не тот
+	// бинарный файл, который видел администратор.
 	if e.Loader.Maven == "" {
 		return fmt.Errorf("%s %s: no loader Maven identity", loader, ver)
 	}
@@ -53,9 +53,9 @@ func validateModernLoaderEntry0272(loader string, e loaderMetaEntry) error {
 	return nil
 }
 
-// Compare numeric version components before prerelease tags, so 0.17.0 is
-// greater than 0.16.10, and 0.17.0 is greater than 0.17.0-rc1.
-// Build metadata is a deterministic tiebreaker for historical Fabric builds.
+// Сравнивайте числовые части версии до тегов предварительного выпуска: 0.17.0
+// больше 0.16.10 и 0.17.0-rc1. Метаданные сборки служат детерминированным
+// дополнительным критерием для исторических Fabric-сборок.
 func compareModernVersions0272(a, b string) int {
 	split := func(v string) ([]int, string, string) {
 		base, build, _ := strings.Cut(v, "+")
@@ -160,8 +160,8 @@ func selectModernMetaEntry0272(loader, minecraft, selector string, entries []loa
 	if len(entries) == 0 {
 		return loaderMetaEntry{}, fmt.Errorf("%s has no loader versions for Minecraft %s", loader, minecraft)
 	}
-	// Duplicate versions with conflicting artifact coordinates are ambiguous,
-	// even when the first row would otherwise win a latest selection.
+	// Дублирующиеся версии с конфликтующими координатами артефактов неоднозначны, даже
+	// если первая строка иначе победила бы при выборе latest.
 	seen := map[string]loaderMetaEntry{}
 	best := -1
 	explicit := -1
@@ -175,8 +175,8 @@ func selectModernMetaEntry0272(loader, minecraft, selector string, entries []loa
 		}
 		seen[e.Loader.Version] = e
 		if err := validateModernLoaderEntry0272(loader, e); err != nil {
-			// Reject exact invalid requested entries; invalid unrelated historical
-			// entries may be ignored rather than breaking the entire catalog.
+			// Отклоняйте явно запрошенные некорректные записи; не связанные с запросом
+			// устаревшие записи можно игнорировать, не нарушая весь каталог.
 			if e.Loader.Version == selector {
 				return loaderMetaEntry{}, err
 			}

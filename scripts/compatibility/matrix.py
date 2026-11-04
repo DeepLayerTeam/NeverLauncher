@@ -1470,10 +1470,10 @@ def verify_result(
     return errors
 
 
-# The runner uploads e2e/compatibility-result and e2e/runtime as siblings.
-# An aggregate may see an extracted artifact root or the original CI tree.
-# Never follow evidence-supplied paths: the allowlist is the exact set of
-# basenames declared by the runner and mandated by the target definition.
+# Runner загружает e2e/compatibility-result и e2e/runtime как соседние каталоги.
+# Агрегатор может видеть распакованный корень артефактов или исходное дерево CI. Никогда
+# не следуйте путям из доказательств: разрешён только точный набор базовых имён,
+# объявленных runner и обязательных в определении цели.
 EVIDENCE_HASH = re.compile(r"^[0-9a-f]{64}$")
 EVIDENCE_MAX_BYTES = 128 * 1024 * 1024
 

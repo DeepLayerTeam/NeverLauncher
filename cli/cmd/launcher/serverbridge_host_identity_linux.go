@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Linux kernel start ticks plus boot ID prevent PID-reuse and reboot confusion.
+// Временные тики старта процесса в ядре Linux вместе с boot ID исключают путаницу при повторном использовании PID и перезагрузке.
 func hostProcessIdentity0282(pid int) (string, error) {
 	if pid <= 0 {
 		return "", fmt.Errorf("invalid pid")

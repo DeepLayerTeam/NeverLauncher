@@ -205,8 +205,8 @@ def main(argv=None):
         )
         p.add_argument("--env-file", type=Path, required=True)
         p.add_argument("--binary", type=Path, required=True)
-    # Coherent offline maintenance. Use the same installer entrypoint, but run
-    # the isolated backup engine rather than loading API secrets into an env.
+    # Согласованное офлайновое обслуживание. Используйте ту же точку входа установщика, но запускайте
+    # изолированный механизм копирования вместо загрузки секретов API в окружение.
     b = sub.add_parser("backup", help="offline consistent SQLite + files snapshot")
     b.add_argument("--root", type=Path, required=True)
     b.add_argument("--destination", type=Path)
@@ -217,8 +217,8 @@ def main(argv=None):
     r = sub.add_parser("restore", help="restore to a new, empty installation root")
     r.add_argument("--bundle", type=Path, required=True)
     r.add_argument("--target-root", type=Path, required=True)
-    # Portable, authenticated off-host snapshots are handled by the dedicated
-    # streaming AES-GCM implementation; secrets are never passed in argv.
+    # Переносимые аутентифицированные снимки вне хоста обрабатываются выделенной
+    # потоковой реализацией AES-GCM; секреты не передаются через argv.
     for name in ("backup-portable", "export-portable", "verify-portable", "restore-portable"):
         portable = sub.add_parser(name, help="encrypted off-host backup transfer")
         portable.add_argument("--passphrase-file", type=Path, required=True)
@@ -282,7 +282,7 @@ def main(argv=None):
         if not key.startswith("LAUNCHER_")
     }
     environment.update(read_env(args.env_file))
-    # No inherited external Redis/PostgreSQL settings may change the selected topology.
+    # Унаследованные внешние настройки Redis/PostgreSQL не должны менять выбранную топологию.
     environment.pop("LAUNCHER_REDIS_URL", None)
     environment.pop("LAUNCHER_REDIS_ADDR", None)
     command = (

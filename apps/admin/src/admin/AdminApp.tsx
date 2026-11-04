@@ -672,7 +672,7 @@ export function AdminApp() {
         method: "POST",
         body: JSON.stringify({
           transactionToken: begin.transactionToken,
-          friendlyName: "Admin browser passkey",
+          friendlyName: "Ключ доступа администратора в браузере",
           credential,
         }),
       },

@@ -66,9 +66,9 @@ def main() -> None:
     evidence = {}
     with tempfile.TemporaryDirectory(prefix='never-deep-java-0490-') as td:
         work = Path(td)
-        # The harnesses verify actual java -jar execution including callbacks,
-        # heartbeat, CLI, bundle loading and lifecycle. Their generated JARs
-        # are written only to ignored example/build directories.
+        # Стенды проверяют реальное исполнение java -jar с обратными вызовами,
+        # heartbeat, CLI, загрузкой пакета и жизненным циклом. Созданные JAR
+        # записываются только в игнорируемые каталоги example/build.
         ui = FIXTURES / 'java-ui'
         jar = ui / 'build/package/backend/workspace.jar'
         jar.parent.mkdir(parents=True, exist_ok=True)

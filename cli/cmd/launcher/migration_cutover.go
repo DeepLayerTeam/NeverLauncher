@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-// The actual publication pointer changes on the backend. CLI never modifies
-// the source Gravit database or mistakes an operator receipt for source proof.
+// Фактический указатель публикации изменяется в Backend. CLI никогда не изменяет исходную БД
+// Gravit и не подменяет доказательство исходной системы квитанцией оператора.
 func handleMigrationCutover03311(args []string) error {
 	if len(args) == 0 {
 		return errors.New("cutover requires cutover-list|cutover-stage|cutover-activate|cutover-cancel")
@@ -66,8 +66,8 @@ func handleMigrationCutover03311(args []string) error {
 		if flagValue(args, "--source-fenced", "") != "true" {
 			return errors.New("activate requires explicit --source-fenced true after stopping the external Gravit writer")
 		}
-		// Read the actual on-source verification receipt. Passing a free-form
-		// 64-character hash no longer passes the CLI preflight.
+		// Читает подлинную квитанцию проверки на исходной системе. Произвольный
+		// 64-символьный хеш больше не проходит предварительную проверку CLI.
 		receiptPath := flagValue(args, "--fence-receipt", "")
 		var receipt sourceFenceEvidence0448
 		if receiptPath == "" {

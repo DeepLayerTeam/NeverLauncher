@@ -1,5 +1,5 @@
-//! 0.26.5: provider exchange happens inside the Tauri trusted process.
-//! No Microsoft, Xbox, XSTS or Minecraft bearer ever crosses renderer IPC.
+//! 0.26.5: обмен с провайдером происходит внутри доверенного процесса Tauri. Токены доступа
+//! Microsoft, Xbox, XSTS и Minecraft никогда не передаются через IPC визуализатора.
 use std::{time::{Duration, SystemTime, UNIX_EPOCH}};
 use reqwest::{Client, Method, Url};
 use serde::{Deserialize, de::DeserializeOwned};

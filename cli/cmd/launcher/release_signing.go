@@ -83,8 +83,8 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return errors.New("release and independent GA keys must be different")
 		}
 	}
-	// Enforce independent exact-byte GA inside `launcher release sign` as
-	// well as the production workflow: direct CLI calls cannot skip this gate.
+	// Обязательная независимая проверка GA точных байтов должна выполняться внутри `launcher release sign`, а
+	// также в производственном процессе: прямой вызов CLI не позволяет её обойти.
 	if gaTargetsRequired0361(bundleVersion) {
 		manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
 		if err != nil {

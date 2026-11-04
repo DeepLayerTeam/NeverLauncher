@@ -38,9 +38,9 @@ type rehearsalReceiptData0365 struct {
 	Targets       []rehearsalTarget0365 `json:"targets"`
 }
 
-// The independent Ed25519 GA gate is also verified by the release signer.
-// Check that its package-inspection receipt is complete, current and included
-// in the checksums that are about to be release-signed.
+// Независимую проверку GA Ed25519 также выполняет подписант выпуска.
+// Убедитесь, что квитанция проверки пакетов полна, актуальна и включена в
+// контрольные суммы, которые сейчас будут подписаны.
 func verifyRehearsal0365(dir, version, commit string) error {
 	if !rehearsalRequired0365(version) {
 		return nil

@@ -1,4 +1,4 @@
-//! Regression: schema-v2 optional ownership does not excuse a selected file.
+//! Регрессия: необязательное владение в схеме v2 не освобождает от проверки выбранного файла.
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 

@@ -119,7 +119,7 @@ export function DesktopExtensions0209({
   ): Promise<Response> {
     const base = backendUrl.trim().replace(/\/$/, "");
     if (!base || !token)
-      throw new Error("Desktop session is required for extension runtime");
+      throw new Error("Для выполнения расширения требуется сеанс Desktop");
     const headers = new Headers(init?.headers || {});
     headers.set("Authorization", `Bearer ${token}`);
     if (init?.body) headers.set("Content-Type", "application/json");
@@ -138,12 +138,12 @@ export function DesktopExtensions0209({
         payload?.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL ||
         payload?.data?.extensionApiVersion !== EXTENSION_API_VERSION
       )
-        throw new Error("Desktop extension catalog protocol/API mismatch");
+        throw new Error("Несоответствие протокола или API каталога расширений Desktop");
       if (
         !Array.isArray(payload?.data?.items) ||
         payload.data.items.length > 128
       )
-        throw new Error("Invalid Desktop extension catalog");
+        throw new Error("Некорректный каталог расширений Desktop");
       if (generation !== catalogGeneration.current) return;
       const next = (payload.data.items as unknown[]).filter(
         (x): x is DesktopExtensionCatalogItem =>
@@ -273,7 +273,7 @@ export function DesktopExtensions0209({
             protocol: DESKTOP_EXTENSION_PROTOCOL,
             type: "rpc.response",
             id: message.id,
-            error: "RPC concurrency or duplicate ID rejected",
+            error: "Отклонено из-за превышения параллельных RPC-запросов или повторяющегося ID",
           } satisfies RPCResponse,
           "*",
         );
@@ -337,14 +337,14 @@ export function DesktopExtensions0209({
               message.method,
             )
           )
-            throw new Error("Desktop bridge authorization denied or stale");
+            throw new Error("Доступ к Desktop Bridge отклонён или устарел");
           if (loadedIdentity.current !== identity)
-            throw new Error("Extension view changed");
+            throw new Error("Представление расширения изменилось");
           if (message.method === "tauri.platform")
             result = await invoke("desktop_extension_platform_info");
           else {
             if (!gameDirectory.trim())
-              throw new Error("Game directory not configured");
+              throw new Error("Каталог игры не настроен");
             result = await invoke("open_game_directory", {
               root: gameDirectory,
             });
@@ -372,7 +372,7 @@ export function DesktopExtensions0209({
             rpc?.protocol !== DESKTOP_EXTENSION_PROTOCOL ||
             rpc?.id !== message.id
           )
-            throw new Error("Desktop RPC response mismatch");
+            throw new Error("Ответ Desktop RPC не соответствует запросу");
           if (rpc.error) throw new Error(String(rpc.error));
           result = rpc.result;
         }
@@ -483,7 +483,7 @@ export function DesktopExtensions0209({
               </strong>
               <span>
                 {current?.bridgeAllowed
-                  ? "Tauri bridge granted"
+                  ? "Доступ к Tauri Bridge разрешён"
                   : "sandbox only"}
               </span>
               {actions.map((action) => (

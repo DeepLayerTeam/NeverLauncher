@@ -89,8 +89,8 @@ def inspect_device(root, commit, run_id):
         require(not path.is_symlink(), 'symlink Device Trust result')
         failures = device.verify_result(target, doc, result_path=path, commit=commit, run_id=run_id)
         require(not failures, target['id'] + ': '+ '; '.join(failures))
-        # The matrix checks hashes; this additionally rejects hardlinked and
-        # ancestor-symlink files which can be swapped by another process.
+        # Матрица проверяет хеши; здесь также отклоняются жёсткие ссылки и символьные
+        # ссылки в предках, которые другой процесс мог бы подменить.
         for name in doc['evidence']['files']:
             secure_file(path.parent / name, 2<<30)
         result[target['id']] = sha(path)
@@ -108,8 +108,8 @@ def inspect_guard_ci(root, commit, run_id, repository):
         require(not path.is_symlink(), 'symlink Guard result')
         failures = guard.verify_result(target, data, commit=commit, run_id=run_id, repository=repository)
         require(not failures, target['id'] + ': ' + '; '.join(failures))
-        # An arbitrary JSON "passed" with invented package hashes is NOT
-        # native evidence. Rehash every original compiled package/binary.
+        # Произвольный JSON со статусом «passed» и придуманными хешами пакетов НЕ является нативным
+        # доказательством. Повторно хешируйте каждый исходный скомпилированный пакет и бинарный файл.
         for item in data['artifacts'].values():
             actual = secure_file(path.parent / item['name'], 2<<30)
             require(actual.stat().st_size == item['size'] and sha(actual) == item['sha256'],
@@ -148,8 +148,8 @@ def inspect_jvm(root):
 
 def inspect_serverbridge(runtime):
     live = module('serverbridge/live_matrix_04113.py', 'serverbridge_live_0529')
-    # Re-check the Docker-derived process identity, Bridge JAR, native log,
-    # network allow-then-deny and actual Paper client join for all 10 targets.
+    # Для всех 10 целей повторно проверьте идентичность процесса Docker, Bridge JAR, нативный журнал,
+    # сетевые разрешение и запрет, а также реальное подключение Paper-клиента.
     targets = read_json(ROOT / 'serverbridge/targets.json')['targets']
     require(len(targets) == 14 and len({t['id'] for t in targets}) == 14, '14 adapter set changed')
     base = read_json(runtime / 'result.json')
@@ -185,7 +185,7 @@ def run_live(cfg):
                   'guardShadowKeyFile','guardIncidentReviews','frameBaseline','frameGuard','gameRuntime',
                   'gameServerLog','serverbridgeRuntime')}
     require(all(p.is_absolute() for p in all_paths.values()), 'absolute external evidence paths required')
-    # The private per-server MAC key is never exported in this acceptance report.
+    # Закрытый MAC-ключ отдельного сервера никогда не экспортируется в этот приёмочный отчёт.
     pilot = module('scripts/guard_ci/adversarial_pilot_05012.py', 'shadow_0529')
     shadow = pilot.analyze_shadow(all_paths['guardShadowDir'], all_paths['guardShadowKeyFile'],
                                   all_paths['guardIncidentReviews'])
@@ -200,14 +200,14 @@ def run_live(cfg):
     native = inspect_guard_ci(all_paths['guardResults'], commit, run_id, repo)
     devices = inspect_device(all_paths['deviceResults'], commit, run_id)
     jvm = inspect_jvm(all_paths['guardJvmResults'])
-    # Invoke the existing production release JAR verifier, not a test stub.
+    # Вызывайте существующий производственный верификатор JAR, а не тестовую заглушку.
     release = run_command([sys.executable, str(ROOT / 'serverbridge/certify_release.py'),
                            '--artifacts', str(ROOT / 'artifacts/plugins')], timeout=180)
     bridge = inspect_serverbridge(all_paths['serverbridgeRuntime'])
     vanilla = module('scripts/acceptance/vanilla_sidecar_live_0529.py', 'vanilla_0529')
     vanilla_result = vanilla.verify(cfg['vanilla'])
-    # The 3 build compatibility targets must be present in the real production
-    # release JAR cohort, not upgraded to runtime status by a build test.
+    # Три сборочные цели совместимости должны реально присутствовать в наборе производственных
+    # JAR выпуска, а не получать статус Runtime лишь по сборочному тесту.
     return {'schema': 'neverlauncher.guard-device-bridge-live/0.52.9', 'version': VERSION,
             'sourceCommit': commit, 'runId':run_id, 'repository':repo,
             'status':'LIVE_CHECKS_PASSED_REVIEW_REQUIRED', 'independentGA':False,

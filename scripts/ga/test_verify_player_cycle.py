@@ -44,8 +44,8 @@ class PlayerCycle0398Test(unittest.TestCase):
             self.save(f'player-0398-response-{case}.json',{'data':{'allowed':False,
                   'reason':reason,'serverId':request['serverId'],'username':request['username']}})
             (self.root/f'player-0398-http-{case}.txt').write_text('403\n','ascii')
-        # Mock only the already independently tested 0.36.4 verifier. The real CLI
-        # never uses this mock and refuses missing/invalid actual JVM evidence.
+        # Имитируйте только уже независимо проверенный верификатор 0.36.4. Реальный CLI не использует
+        # имитацию и отклоняет отсутствующие или недействительные свидетельства JVM.
         patcher = patch('verify_player_cycle_0398.verify_game_cycle',
                     return_value={'artifactsVerified':23,'realJoinsAfterUpdateAndRollback':True})
         patcher.start()

@@ -148,8 +148,8 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 	if again.Generation != 1 {
 		t.Fatal("same release unexpectedly updated pointer")
 	}
-	// Corrupt a signed component. Repair must restore from verified cache
-	// without deleting the unrelated game/user-owned data.
+	// Повредите подписанный компонент. Восстановление обязано вернуть его из проверенного
+	// кэша, не удаляя посторонние игровые и пользовательские данные.
 	userFile := filepath.Join(opts.Root, "profiles", "hello", "vanilla", "saves", "my-world.dat")
 	if e = os.MkdirAll(filepath.Dir(userFile), 0700); e != nil {
 		t.Fatal(e)
@@ -176,7 +176,7 @@ func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T)
 	}
 	root := t.TempDir()
 	parts := baseParts()
-	// Signed runtime verifies the profile, but cannot install Managed Java.
+	// Подписанный Runtime проверяет профиль, но не может установить Managed Java.
 	parts["runtime"] = []byte("#!/bin/sh\ncase \"$1\" in verify) echo '{}';; java) exit 17;; *) exit 19;; esac\n")
 	opts, _ := makeOfflineFixture(t, root, parts)
 	if err := Run(context.Background(), opts); err == nil {
@@ -187,9 +187,9 @@ func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T)
 			t.Fatalf("failed initial release left active slot %s: %v", name, err)
 		}
 	}
-	// Repair signed source, and re-run. The cache and manifest can be reused.
+	// Восстановите подписанный источник и запустите повторно. Кэш и манифест можно использовать ещё раз.
 	parts["runtime"] = baseParts()["runtime"]
-	// The test changes only the signed bootstrap payload and offline object.
+	// Тест меняет только подписанные данные bootstrap и офлайновый объект.
 	repaired, key := generateConfig(t, identityConfig(parts))
 	if err := os.WriteFile(opts.ConfigPath, repaired, 0600); err != nil {
 		t.Fatal(err)
@@ -251,7 +251,7 @@ func TestFailedNewReleaseKeepsOldActive(t *testing.T) {
 	signed, key := generateConfig(t, cfg)
 	os.WriteFile(opts.ConfigPath, signed, 0600)
 	opts.TrustedKey = key
-	// No new signed matching desktop binary available -> must not switch.
+	// Нет нового подписанного совпадающего бинарного файла Desktop — переключение запрещено.
 	if e := Run(context.Background(), opts); e == nil {
 		t.Fatal("missing component accepted")
 	}
@@ -401,8 +401,8 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 	parts := baseParts()
 	parts["desktop"] = []byte("#!/bin/sh\nprintf '%s' \"$LAUNCHER_CONFIG_DIR\" > \"$LAUNCHER_CONFIG_DIR/desktop-started\"\n")
 	opts, cfg := makeOfflineFixture(t, root, parts)
-	// Desktop's unattended first-run contract requires the owner-signed backend.
-	// The historic offline fixture intentionally leaves it blank for CLI cases.
+	// Контракт автоматического первого запуска Desktop требует подписанный владельцем Backend. Старая
+	// офлайновая фикстура намеренно оставляет его пустым для сценариев CLI.
 	cfg.BackendURL = "https://launcher.example.org"
 	signed, trusted := generateConfig(t, cfg)
 	if err := os.WriteFile(opts.ConfigPath, signed, 0600); err != nil {
@@ -455,8 +455,8 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 	var first activeRecord
 	raw, _ := os.ReadFile(filepath.Join(opts.Root, "launcher", "active-1.json"))
 	json.Unmarshal(raw, &first)
-	// The new game manifest still passes our fake Runtime 'verify', but specifies
-	// an unsupported Java policy. This forces a failure AFTER component commit.
+	// Новый игровой манифест по-прежнему проходит поддельную проверку Runtime «verify», но указывает
+	// неподдерживаемую политику Java. Это вызывает сбой ПОСЛЕ фиксации компонента.
 	parts["profile-manifest.json"] = []byte(`{"projectId":"hello","profileId":"vanilla","channel":"stable","runtime":{"java":{"majorVersion":999,"distribution":"temurin"},"launch":{"offlineMode":true}}}`)
 	cfg.Manifest = fakeArtifact(parts["profile-manifest.json"], cfg.Manifest.URL)
 	payload, _ = json.Marshal(cfg)
@@ -466,8 +466,8 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 	if err := Run(context.Background(), opts); err == nil {
 		t.Fatal("invalid Java policy accepted")
 	}
-	// Prior signed runtime and pointer must be restored with monotonically
-	// increasing commit generation; the failed one remains available for diagnosis.
+	// Предыдущие подписанный Runtime и указатель должны восстановиться с монотонным увеличением
+	// поколения фиксации; неудачное поколение остаётся доступным для диагностики.
 	records := []activeRecord{}
 	for _, slot := range []string{"active-0.json", "active-1.json"} {
 		raw, err := os.ReadFile(filepath.Join(opts.Root, "launcher", slot))

@@ -1,10 +1,10 @@
 package main
 
-// Migration content staging is deliberately sequential: each successful import
-// changes the target project snapshot, so a subsequent dry-run must be computed
-// against the actual new state. The batch dry-run is a preflight, not a write
-// authorization; every profile still goes through the durable plan CAS and
-// encrypted build-workspace import on the production API.
+// Промежуточная загрузка содержимого миграции намеренно последовательна: каждый успешный
+// импорт меняет снимок целевого проекта, поэтому следующая пробная операция должна учитывать
+// новое фактическое состояние. Пакетная пробная проверка не разрешает запись: каждый профиль
+// проходит долговечную CAS-проверку плана и импорт в зашифрованное рабочее пространство
+// сборки через производственный API.
 
 import (
 	"crypto/sha256"
@@ -68,8 +68,8 @@ type migrationImported0493 struct {
 	FileCount   int    `json:"fileCount"`
 }
 
-// Only the Backend host is permitted to receive the API bearer. No request
-// is redirected, and no third-party URL from the Gravit ZIP is ever followed.
+// Только хост Backend вправе получать API bearer-токен. Запросы не
+// перенаправляются; сторонние URL из ZIP Gravit никогда не открываются.
 func migrationURL0493(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil {

@@ -48,7 +48,7 @@ func TestWorldBackupGateFailsClosedAndRecoversOffline04110(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(gate, "owner.json"), raw, 0600); err != nil {
 		t.Fatal(err)
 	}
-	// An orphaned JVM still blocks unlocking a previous crashed backup.
+	// Осиротевшая JVM по-прежнему блокирует снятие барьера после сбоя резервного копирования.
 	paths := hostPaths01910(root)
 	runtime := serverBridgeHostRuntime01910{SchemaVersion: "1.0", Status: "running", ProcessPID: os.Getpid(), ProcessIdentity: hostOwnIdentity0282()}
 	if err := atomicWriteJSON01910(paths["runtime"], runtime, 0600); err != nil {

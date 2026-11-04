@@ -1,5 +1,5 @@
-//! Opt-in Rich Presence through Discord's documented local RPC transport.
-//! This is desktop IPC, not Discord's removed Game SDK networking facility.
+//! Добровольно включаемый Rich Presence через документированный локальный RPC Discord. Это IPC
+//! приложения, а не упразднённый сетевой механизм Game SDK Discord.
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::time::Duration;

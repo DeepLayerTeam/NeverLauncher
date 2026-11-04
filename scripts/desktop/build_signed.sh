@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the native Desktop using the public signing root of the owner's bundle.
+# Собирайте нативный Desktop с открытым корневым ключом подписи пакета владельца.
 set -euo pipefail
 if [[ $# -ne 1 ]]; then echo "Usage: $0 <32-byte-ed25519-public-root-hex-file>" >&2; exit 2; fi
 ROOT_FILE="$1"
@@ -10,7 +10,7 @@ ROOT=$(printf '%s' "$ROOT" | tr 'A-F' 'a-f')
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../../apps/desktop"
 export LAUNCHER_BOOTSTRAP_ROOT_KEY="$ROOT"
-# The root is embedded in Rust via option_env! at compile time, not passed to
-# JavaScript or runtime environment. Requires the existing Tauri v2 toolchain.
+# Корневой ключ встраивается в Rust через option_env! при компиляции, не передаётся JavaScript
+# или через окружение запуска. Требуется существующий toolchain Tauri v2.
 npm ci --ignore-scripts
 npm run tauri:build

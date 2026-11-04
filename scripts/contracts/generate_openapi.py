@@ -3199,8 +3199,8 @@ spec = {
         },
     },
 }
-# MIG01/MIG02 have explicitly typed, reviewed operations. Generate the shared
-# API normally and overlay only this small, versioned contract extension.
+# MIG01/MIG02 имеют явно типизированные проверенные операции. Генерируйте общий API обычным образом
+# и накладывайте лишь это небольшое версионированное расширение контракта.
 migration_extension = json.loads(
     (ROOT / "schemas/openapi-migration-center.json").read_text(encoding="utf-8")
 )

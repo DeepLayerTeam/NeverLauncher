@@ -1,5 +1,5 @@
-// Package discordrpc sends Rich Presence over Discord's local IPC protocol.
-// It does not implement the discontinued Game SDK peer/lobby API.
+// Пакет discordrpc отправляет Rich Presence через локальный IPC Discord.
+// Прекращённый API peer/lobby Game SDK не реализуется.
 package discordrpc
 
 import (
@@ -23,7 +23,7 @@ import (
 
 const maxFrame = 1 << 20
 
-// ErrDisconnected denotes a dropped desktop IPC session, not an RPC rejection.
+// ErrDisconnected означает разрыв локального IPC Desktop, а не отклонение RPC.
 var ErrDisconnected = errors.New("Discord desktop IPC disconnected")
 
 var snowflake = regexp.MustCompile(`^[0-9]{17,20}$`)

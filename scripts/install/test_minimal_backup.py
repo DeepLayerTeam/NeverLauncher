@@ -60,7 +60,7 @@ class MinimalBackupTests(unittest.TestCase):
         self.assertEqual(
             len([i for i in manifest["files"] if i["kind"] == "sqlite"]), 2
         )
-        # Backup is immutable and includes committed data and extension/blob files.
+        # Резервная копия неизменяема и содержит зафиксированные данные, файлы расширений и blob-объекты.
         self.assertFalse((bundle / "payload" / "db/http.sqlite-wal").exists())
         dest = self.base / "restored"
         backup.restore(bundle, dest)

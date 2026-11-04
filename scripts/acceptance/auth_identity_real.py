@@ -225,8 +225,8 @@ def oidc_link_route(oidc, mode):
 def prepare(api, raw, output):
     local, _, _, oidc, _ = check_input(raw)
     user, tokens = auth_login(api, local, local['providerId'])
-    # Two *different* browser authorizations are needed: one explicit link,
-    # and a separate login, proving the resulting identity maps to the same UUID.
+    # Нужны ДВЕ разные авторизации в браузере: одна явная привязка и отдельный вход,
+    # доказывающие сопоставление итоговой идентичности с тем же UUID.
     link = api.request('POST', oidc_link_route(oidc, 'begin'), data={}, token=tokens['accessToken'])['data']
     login = api.request('POST', '/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/begin', data={})['data']
     for item in (link, login):
@@ -270,8 +270,8 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
         'providerId': local['providerId'], 'identifier': local['identifier'],
         'password': 'invalid-' + secrets.token_hex(12)}, codes=(401, 403))
     record(report, 'AUTH-INVALID-PASSWORD')
-    # SQL provider identity is proven with its *real* configured password backend;
-    # no email matching, auto-provision assumptions, or fake providers allowed.
+    # Идентичность SQL-провайдера подтверждается его НАСТОЯЩИМ настроенным механизмом паролей; запрещены
+    # сопоставление по email, предположения об автоматическом создании и поддельные провайдеры.
     api.request('POST', '/api/v1/auth/providers/' + quote(sql['providerId']) + '/link/password',
                 token=local_tokens['accessToken'], data={'identifier':sql['identifier'], 'password':sql['password']})
     sql_user, sql_tokens = auth_login(api, sql, sql['providerId'])
@@ -294,8 +294,8 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     expect_denied(api,'POST','/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/complete',
                   data={'state':login['state'],'transaction':login['transaction'],'code':login['code']})
     record(report,'AUTH-OIDC-CANONICAL-ID-AND-REPLAY')
-    # Official profile + join + hasJoined must be checked against actual
-    # api.minecraftservices.com AND sessionserver.mojang.com (no local mock).
+    # Официальные profile + join + hasJoined должны проверяться по реальным
+    # api.minecraftservices.com И sessionserver.mojang.com, не через локальную имитацию.
     proof_data = official_probe(official,'official')
     require(proof_data.get('providerJoin') == 'passed' and proof_data.get('providerHasJoined') == 'passed',
             'real Microsoft/Minecraft online-mode join failed')
@@ -317,7 +317,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     expect_denied(api,'DELETE','/api/v1/minecraft/official/link/'+game_uuid,
                   token=secondary_tokens['accessToken'],codes=(404,))
     record(report,'AUTH-CROSS-ACCOUNT-LINK-AND-UNLINK-DENIED')
-    # Verify authenticated roles are server authoritative, not provider claims.
+    # Проверяйте, что аутентифицированные роли определяет сервер, а не утверждения провайдера.
     if user['roleId'] in ('owner', 'admin'):
         roles = api.request('GET','/api/v1/auth/roles',token=local_tokens['accessToken'])
         require(isinstance(roles.get('data',{}).get('items'), list) and roles['data']['items'],
@@ -327,7 +327,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     if secondary_user.get('roleId') == 'player':
         expect_denied(api,'GET','/api/v1/auth/roles',token=secondary_tokens['accessToken'],codes=(403,))
     record(report,'AUTH-ROLE-ENFORCEMENT', {'primaryRole':user['roleId'], 'secondaryRole':secondary_user['roleId']})
-    # Cleanup is a real privileged operation, not a state reset in test code.
+    # Очистка — настоящая привилегированная операция, а не сброс состояния тестовым кодом.
     api.request('DELETE','/api/v1/minecraft/official/link/'+game_uuid,token=local_tokens['accessToken'])
     removed = api.request('GET','/api/v1/minecraft/official/link',token=local_tokens['accessToken'])
     require(game_uuid not in json.dumps(removed).lower(), 'official link persisted after owner unlink')
@@ -371,7 +371,7 @@ def main(argv=None):
             print('REAL AUTH E2E OBSERVATIONS PASSED; independent native/release GA remains BLOCKED')
         return 0
     except (Blocked, ProviderUnavailable, ProviderRejected, ProviderMisconfigured, KeyError, TypeError, ValueError) as error:
-        # Do not print upstream exception bodies, bearer tokens or identities.
+        # Не печатайте тела исключений источника, bearer-токены и идентичности.
         if isinstance(error, Blocked):
             message = str(error)
         else:

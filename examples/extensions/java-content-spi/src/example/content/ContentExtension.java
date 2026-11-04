@@ -5,8 +5,8 @@ import java.time.Duration;
 import java.util.*;
 import ru.launcher.sdk.core.*;
 
-/** Executable sample: chooses an extension-local provider, retrieves a pinned
- * storage object through Go capability checks, and performs a pre-sign transform. */
+/** Исполняемый пример: выбирает локального провайдера расширения, получает закреплённый объект
+ * хранилища через проверки полномочий Go и выполняет преобразование до подписи. */
 public final class ContentExtension implements Extension {
     @Override public void start(ExtensionContext ctx) throws Exception {
         ctx.providers().register(new ProviderDescriptor<>(ContentServices.CONTRACT,"sample",SemVer.parse("1.0.0"),"^1.0.0","^1.0.0",SampleProvider::new));

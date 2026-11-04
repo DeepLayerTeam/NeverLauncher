@@ -120,8 +120,8 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 	return nil
 }
 
-// Check the real signed ServerBridge runtime state for a migrated wrapper.
-// A durable enrollment receipt alone never establishes game readiness.
+// Проверяйте реальное подписанное состояние Runtime ServerBridge для перенесённой оболочки. Одной
+// сохранённой квитанции регистрации недостаточно для подтверждения готовности игры.
 func migrationBridgeStatus0446(endpoint, token, wrapper, out string) error {
 	if wrapper == "" {
 		return errors.New("--wrapper required")

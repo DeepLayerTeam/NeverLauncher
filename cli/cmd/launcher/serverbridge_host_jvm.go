@@ -12,9 +12,9 @@ import (
 	"strings"
 )
 
-// JVM launch profiles are deliberately restricted to Java entry points. This
-// is not a generic process runner; every artifact is resolved against the
-// configured server root, including symlinks, on configure AND launch.
+// Профили запуска JVM намеренно ограничены точками входа Java. Это не универсальный
+// запускатель процессов: каждый артефакт, включая символьные ссылки, разрешается относительно
+// настроенного корня сервера и при конфигурации, и при запуске.
 var (
 	hostJavaClass0283   = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$`)
 	hostJavaModule0283  = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`)
@@ -125,7 +125,7 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 	if err := hostValidateJvmArguments0283(config.JVMArgs, config.ServerArgs); err != nil {
 		return err
 	}
-	// Check stored canonical paths again: symlinks can change since configure.
+	// Проверяйте сохранённые канонические пути повторно: символьные ссылки могли измениться после настройки.
 	normalized := config
 	if err := hostNormalizeJavaProfile0283(&normalized); err != nil {
 		return err
@@ -182,7 +182,7 @@ func hostValidateJvmArguments0283(jvm, server []string) error {
 		if len(arg) > 256 || !hostJvmHeap0283.MatchString(arg) && !hostJvmNumber0283.MatchString(arg) && !hostJvmBoolean0283.MatchString(arg) && !hostJvmProperty0283.MatchString(arg) {
 			return fmt.Errorf("JVM argument %q is not approved; agents, arbitrary -D and JVM argument files require a separately reviewed launch configuration", arg)
 		}
-		// Heap flags must specify an amount; reject implausibly large integer overflows.
+		// Флаги кучи должны задавать размер; отклоняйте неправдоподобно большие целые значения, вызывающие переполнение.
 		if hostJvmHeap0283.MatchString(arg) {
 			digits := strings.TrimRight(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(arg, "-Xms"), "-Xmx"), "-Xss"), "kKmMgG")
 			n, err := strconv.ParseUint(digits, 10, 48)
@@ -229,9 +229,9 @@ func hostJavaProfileCommand0283(config serverBridgeHostConfig01910) ([]string, e
 	return nil, fmt.Errorf("not a JVM profile mode: %s", config.LaunchMode)
 }
 
-// Minecraft Forge uses a separately installed, operator-approved vendor args
-// file. The optional user_jvm_args.txt is NOT trusted as a second launcher:
-// every non-comment token must be among the approved, single-token JVM flags.
+// Minecraft Forge использует отдельный установленный и одобренный оператором файл аргументов
+// поставщика. Необязательному user_jvm_args.txt нельзя доверять как второму запускателю: каждый
+// токен, кроме комментариев, должен быть одобренным однотокенным флагом JVM.
 func hostReadUserJVMArgs0283(path string) ([]string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -253,7 +253,7 @@ func hostReadUserJVMArgs0283(path string) ([]string, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		// No shell or Java argfile tokenization ambiguities are allowed.
+		// Не допускаются неоднозначности токенизации оболочки или Java argfile.
 		if strings.ContainsAny(line, "\"'\\") {
 			return nil, errors.New("quoted or escaped user JVM arguments are not approved")
 		}

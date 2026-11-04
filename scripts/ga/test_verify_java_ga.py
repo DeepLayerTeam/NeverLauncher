@@ -38,14 +38,14 @@ class ReleaseApprovalTests(unittest.TestCase):
             summary=review(sorted(evidence.rglob('integration-0310.json')),SHA)
             receipt.write_text(json.dumps(summary,indent=2)+'\n')
             run('openssl','pkeyutl','-sign','-rawin','-inkey',str(priv),'-in',str(receipt),'-out',str(sig))
-            # Historical 0.31.0 operator approval must be verified against an
-            # isolated 0.31.0 VERSION, not against the current product checkout.
-            # Never modify the real VERSION or relax production verify().
+            # Историческое одобрение оператора 0.31.0 проверяйте по изолированному VERSION
+            # 0.31.0, не по текущему проекту. Никогда не меняйте настоящий VERSION и не
+            # ослабляйте производственный verify().
             historical=base/'historical-root';historical.mkdir()
             (historical/'VERSION').write_text('0.31.0\n')
             with patch('verify_java_ga_0310.ROOT',historical):
                 self.assertTrue(verify(evidence,SHA,pub,sig)['crossPlatformIntegrationGatesPassed'])
-                # A different commit, changed case result or signature cannot authorize GA.
+                # Другой коммит, изменённый результат сценария или подпись не могут разрешать GA.
                 with self.assertRaises(ValueError):verify(evidence,'e'*40,pub,sig)
                 p=evidence/'linux'/'integration-0310.json';original=p.read_text()
                 parsed=json.loads(original);parsed['results'][0]['steps'][0]['outputSha256']='0'*64

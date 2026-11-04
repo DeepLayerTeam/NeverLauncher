@@ -103,7 +103,7 @@ def valid_https(url):
             'release input must be HTTPS, no credentials, port or fragment')
     require(not p.hostname.lower() in ('localhost', 'localhost.localdomain')
             and not p.hostname.endswith('.localhost'), 'no local release URLs')
-    # No literal IPv4/IPv6 private, loopback or link-local hosts.
+    # Запрещены буквальные IPv4/IPv6 адреса частных сетей, loopback и link-local.
     import ipaddress
     try:
         ip = ipaddress.ip_address(p.hostname)
@@ -193,7 +193,7 @@ def host_target():
     require((osname, arch) in TARGETS and sys.maxsize > 2**32,
             'native 64-bit operating system/architecture runner required')
     if osname == 'windows':
-        # A 32-bit/emulated Python process must not masquerade as native ARM64.
+        # 32-битный или эмулируемый Python-процесс не должен выдавать себя за нативный ARM64.
         require(os.environ.get('PROCESSOR_ARCHITECTURE', '').lower() in ('amd64', 'arm64') and
                 os.environ.get('PROCESSOR_ARCHITECTURE', '').lower() in (
                     ('amd64',) if arch == 'x64' else ('arm64',)), 'emulated Windows runner forbidden')
@@ -201,8 +201,8 @@ def host_target():
 
 
 def execute(argv, timeout, log):
-    # Only fixed locally constructed command arrays; user-supplied URLs/file names
-    # are never interpolated into shell commands. No stdout is sent to CI logs.
+    # Только фиксированные локально созданные массивы аргументов команд; предоставленные пользователем URL и
+    # имена файлов никогда не подставляются в shell. stdout не отправляется в журналы CI.
     raw = log.with_suffix('.unredacted')
     start = time.monotonic()
     try:
@@ -212,9 +212,9 @@ def execute(argv, timeout, log):
                                     stdout=f, stderr=subprocess.STDOUT, timeout=timeout,
                                     check=False)
         require(raw.stat().st_size <= MAX_LOG, 'subprocess log too large')
-        # Only redacted logs are ever retained or exported. URLs can contain
-        # expiring auth query parameters; remove whole URLs rather than just
-        # the most common query-string credential names.
+        # Сохраняются или экспортируются только обезличенные журналы. URL могут
+        # содержать временные параметры авторизации; удаляйте URL полностью, а не
+        # только известные имена секретов в query.
         output = raw.read_text(encoding='utf-8', errors='replace')
         output = re.sub(r'https?://[^\s\x00-\x1f]+', '[URL REDACTED]', output)
         output = re.sub(r'(?im)^.*?\b(?:authorization|cookie|set-cookie)\s*[:=][^\r\n]*$',
@@ -223,7 +223,7 @@ def execute(argv, timeout, log):
                         '[CREDENTIAL REDACTED]', output)
         output = re.sub(r'(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]+',
                         '[JWT REDACTED]', output)
-        # Only a bounded, redacted and nonempty execution log is published.
+        # Публикуйте только ограниченный по объёму непустой журнал исполнения с удалёнными секретами.
         log.write_text('command=' + log.stem + '\nexit=' + str(result.returncode) +
                        '\nduration-ms=' + str(int(1000 * (time.monotonic() - start))) + '\n' + output,
                        encoding='utf-8')
@@ -245,8 +245,8 @@ def native_verify(asset, package, work, a):
         thumb = (a.windows_thumbprint or '').upper().replace(' ', '')
         require(re.fullmatch('[A-F0-9]{40}', thumb) is not None,
                 'independently pinned Authenticode certificate thumbprint required')
-        # -File passes literal positional parameters. -Command would parse
-        # trailing paths as PowerShell source and can break or inject quoting.
+        # -File передаёт буквальные позиционные параметры. -Command разбирал бы завершающие пути как
+        # PowerShell-код и мог бы нарушить кавычки либо допустить инъекцию.
         script = work / 'verify-native-authenticode.ps1'
         script.write_text(r'''param([Parameter(Mandatory=$true)][string]$File,
       [Parameter(Mandatory=$true)][string]$Expected)
@@ -272,7 +272,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         require(re.fullmatch('[0-9A-F]{40}', fingerprint) is not None, 'pinned Linux GPG fingerprint required')
         sig = work / (asset['filename'] + '.asc')
         require(sig.is_file(), 'missing detached Linux package signature')
-        # gpgv is invoked with only the independently provisioned keyring.
+        # gpgv запускается только с независимо подготовленным хранилищем ключей.
         cmd('native-signature', ['gpgv', '--keyring', str(keyring), '--status-fd', '1', str(sig), str(package)])
         status = (work / 'native-signature.log').read_text(errors='replace')
         require(re.search(r'^\[GNUPG:\] VALIDSIG ' + re.escape(fingerprint) + r'\b', status, re.M),
@@ -283,7 +283,7 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
                 re.search(r'^Version: ' + re.escape(a.version) + r'$', meta, re.M) and
                 re.search(r'^Architecture: ' + ('amd64' if arch == 'x64' else 'arm64') + r'$', meta, re.M),
                 'Linux .deb package metadata mismatches pinned project/version/architecture')
-        # Execute OS package manager on disposable runner, not extracted fake bits.
+        # Выполняйте системный пакетный менеджер на одноразовом runner, а не на извлечённых поддельных данных.
         require(a.disposable_runner and os.environ.get('GITHUB_ACTIONS') == 'true',
                 'system package install allowed ONLY on ephemeral GitHub native runner')
         cmd('system-install', ['sudo', 'dpkg', '-i', str(package)], 180)
@@ -314,16 +314,16 @@ Write-Output 'verified Authenticode chain and independently pinned signer'
         details = (work / 'app-signature-details.log').read_text(errors='replace')
         require('TeamIdentifier=' + team in details, 'installed app signed by wrong Apple team')
 
-    # Windows .exe itself is the installer. Linux/macOS use the actual OS-
-    # installed executable, never a new source build or a test stub.
+    # Windows .exe сам является установщиком. Linux/macOS используют настоящий исполняемый файл,
+    # установленный средствами ОС, а не новую сборку исходников или тестовую заглушку.
     root = work / 'installation'
     root.mkdir(mode=0o700)
     target_bundle = ['/usr/lib/launcher/bundle'] if osname == 'linux' else []
     cmd('provision', [str(installer), 'install', '--root', str(root), '--no-start', *(
         ['--bundle', target_bundle[0]] if target_bundle else [])], 1200)
     cmd('verify-installed', [str(installer), 'verify-installed', '--root', str(root)])
-    # Do not count an empty marker as installation. This path is written only
-    # after Prestarter has completed successfully.
+    # Не считайте пустой маркер подтверждением установки. Этот путь
+    # записывается лишь после успешного завершения Prestarter.
     active = root / '.launcher-installer'
     require(active.is_dir() and any(active.glob('active-*.json')), 'no committed installation found')
     cmd('uninstall', [str(installer), 'uninstall', '--root', str(root)])
@@ -339,7 +339,7 @@ def run(a):
     require(a.output.is_absolute() and not a.output.exists() and not a.output.is_symlink(),
             'output directory must be new and absolute')
     require(a.output.parent.is_dir() and not a.output.parent.is_symlink(), 'unsafe output parent')
-    # Force scratch under disposable runner's own directory.
+    # Размещайте временные данные исключительно под собственным каталогом одноразового runner.
     runner_temp = Path(os.environ['RUNNER_TEMP']).resolve()
     require(a.output.resolve().is_relative_to(runner_temp), 'acceptance output must stay in RUNNER_TEMP')
     a.output.mkdir(mode=0o700)
@@ -365,8 +365,8 @@ def run(a):
                   'nativeSigned': True, 'actuallyProvisioned': True,
                   'independentGA': False}
         (a.output / 'receipt.json').write_text(json.dumps(report, sort_keys=True, indent=2) + '\n')
-        # Keep only redacted, hash-bound command logs and the receipt.
-        # Never upload downloaded packages, source URLs or signed config.
+        # Сохраняйте только обезличенные журналы команд, привязанные хешами, и квитанцию. Никогда не
+        # загружайте в отчёты скачанные пакеты, исходные URL и подписанную конфигурацию.
         for p in a.output.iterdir():
             if p.name != 'receipt.json' and not p.name.endswith('.log'):
                 if p.is_dir() and not p.is_symlink():
@@ -375,9 +375,9 @@ def run(a):
                     p.unlink()
         return report
     except BaseException as exc:
-        # Preserve only bounded, redacted diagnostic logs for blocked runs.
-        # Never retain a partial PASS, release package, signed source URL or
-        # the unredacted process output in CI acceptance artifacts.
+        # Для заблокированных запусков сохраняйте только ограниченные обезличенные диагностические
+        # журналы. Не оставляйте частичный PASS, пакет выпуска, подписанный исходный URL или
+        # необработанный вывод процесса в приёмочных артефактах CI.
         for p in a.output.iterdir():
             if p.is_dir() and not p.is_symlink():
                 shutil.rmtree(p)

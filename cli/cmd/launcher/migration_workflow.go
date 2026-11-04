@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// Command execution is synchronous. A failed CLI process may be restarted;
-// the database checkpoint and lease, not the CLI process, own progress.
+// Выполнение команды синхронное. Неудачный процесс CLI можно перезапустить; прогрессом
+// управляют контрольная точка и аренда в БД, а не процесс CLI.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
 		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|dry-run-all|verify-dry-run-all|import-content-all|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|rollback-plan|rollback-commit|rollback-status|report|report-review|report-review-status|generate-keys")
@@ -200,8 +200,8 @@ func handleMigrationWorkflow0331(args []string) error {
 	return writeOrPrintJSON(out, result)
 }
 
-// postGravitAssessment0332 streams operator-selected bytes over a bounded HTTPS
-// request. The backend never receives a host filesystem path or raw secrets in JSON.
+// postGravitAssessment0332 потоково передаёт выбранные оператором байты через HTTPS с ограниченным
+// размером запроса. Backend никогда не получает путь хоста или сырые секреты в JSON.
 func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out string) error {
 	if sourcePath == "" {
 		return errors.New("assess requires --source /path/to/gravit-installation.zip")

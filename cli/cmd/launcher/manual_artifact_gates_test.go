@@ -233,7 +233,7 @@ func TestManualGates0276RealCLICommands(t *testing.T) {
 		t.Fatal(e)
 	}
 	rightsReport := filepath.Join(root, "rights.json")
-	// Non-zero exit on missing rights while still persisting a machine-readable report.
+	// При отсутствии прав завершайте процесс с ненулевым кодом, но сохраняйте машиночитаемый отчёт.
 	e = handleRuntimeFactory0271([]string{"verify-publication", "--client-dir", clientDir, "--output", rightsReport})
 	if e == nil {
 		t.Fatal("CLI gate returned success without rights")

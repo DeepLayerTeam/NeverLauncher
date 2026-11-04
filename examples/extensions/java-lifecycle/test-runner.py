@@ -105,8 +105,8 @@ if __name__ == "__main__":
             "Java extension failed to negotiate and heartbeat"
         )
         if os.name == "nt":
-            # Windows TerminateProcess cannot execute a JVM shutdown hook.
-            # Exercise the same lifecycle.stop() through a failed host heartbeat.
+            # Windows TerminateProcess не выполняет обработчик завершения JVM. Проверьте
+            # тот же lifecycle.stop() при неудачном heartbeat хоста.
             Handler.allow_heartbeat = False
             out, err = proc.communicate(timeout=12)
             assert proc.returncode != 0, "lost host heartbeat should fail closed"

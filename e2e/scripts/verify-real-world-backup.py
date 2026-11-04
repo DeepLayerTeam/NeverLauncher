@@ -87,8 +87,8 @@ def main():
     paper = execute([*compose, "ps", "-q", "paper"]).strip()
     if not paper:
         raise RuntimeError("real Paper container unavailable")
-    # A Docker SIGTERM is NOT a proven Minecraft save. Issue real authenticated
-    # Minecraft console commands over the unexposed internal E2E RCON channel.
+    # Docker SIGTERM НЕ доказывает сохранение Minecraft. Отправляйте настоящие аутентифицированные
+    # консольные команды Minecraft по недоступному снаружи внутреннему каналу E2E RCON.
     flush = execute(
         [*compose, "exec", "-T", "paper", "rcon-cli", "save-all", "flush"], timeout=45
     )
@@ -114,8 +114,8 @@ def main():
         store = Path(temp) / "world-backups"
         restored = Path(temp) / "restored"
         root.mkdir(mode=0o700)
-        # Docker cp from the *actual* stopped E2E Paper container; this is not
-        # a fake Java process or an invented inventory fixture.
+        # Docker cp из НАСТОЯЩЕГО остановленного E2E-контейнера Paper, а не из
+        # фиктивного процесса Java или придуманной описи.
         execute([*compose, "cp", "paper:/data/.", str(root)], timeout=180)
         source = check_files(root)
         base = [str(args.cli), "server-bridge", "host", "world-backup"]
@@ -146,7 +146,7 @@ def main():
             raise RuntimeError(
                 "restored real world/playerdata/plugin data differs from source"
             )
-        # Overwriting a completed restore must fail, not silently succeed.
+        # Перезапись завершённого восстановления должна вызывать ошибку, а не молча проходить.
         second = subprocess.run(
             [
                 *base,
@@ -165,11 +165,11 @@ def main():
         )
         if second.returncode == 0:
             raise RuntimeError("restore unexpectedly overwrote an existing destination")
-        # Exercise real recovery, not merely restart the original unmodified
-        # Paper data. In this disposable Docker E2E environment corrupt a
-        # persisted player inventory in the *stopped* source container, then
-        # copy the independently verified recovered snapshot back into /data.
-        # NEVER use these destructive steps against a production container.
+        # Проверяйте реальное восстановление, а не простой перезапуск неизменённых данных
+        # Paper. В одноразовом окружении Docker E2E повредите сохранённый инвентарь игрока в
+        # ОСТАНОВЛЕННОМ исходном контейнере, затем верните в /data независимо проверенный
+        # восстановленный снимок. НИКОГДА не применяйте эти разрушительные действия к
+        # производственному контейнеру.
         player_file = next(k for k in source if "/playerdata/" in k)
         poisoned = Path(temp) / "damaged-player.dat"
         poisoned.write_bytes(b"NL-TEST-CORRUPTED-PLAYER-DATA")
@@ -191,8 +191,8 @@ def main():
                 raise RuntimeError(
                     "failed to corrupt stopped-container player data before restore"
                 )
-        # The isolated CLI restore is published atomically. The test then
-        # reinstates the restored snapshot on the disposable Minecraft volume.
+        # Изолированное восстановление CLI публикуется атомарно. Тест затем
+        # восстанавливает снимок на одноразовом томе Minecraft.
         execute([*compose, "cp", f"{restored}/.", "paper:/data/"], timeout=180)
         with tempfile.TemporaryDirectory(prefix="nl-paper-applied-") as applied_dir:
             applied = Path(applied_dir)
@@ -201,11 +201,11 @@ def main():
                 raise RuntimeError(
                     "Paper container data differs from restored snapshot"
                 )
-        # A repeated CLI restore is already rejected above, and no automatic
-        # JVM restart happens as part of backup or isolated restore.
-        # Return the *same* real Paper server to service and require a fresh
-        # Docker health transition; a successful offline restore alone does not
-        # demonstrate that the running network can recover after maintenance.
+        # Повторное восстановление CLI уже отклонено выше; резервное копирование и
+        # изолированное восстановление не запускают JVM автоматически. Верните в работу ТОТ
+        # ЖЕ настоящий сервер Paper и потребуйте нового перехода статуса Docker health.
+        # Успешное офлайновое восстановление само по себе не доказывает, что живая сеть
+        # оправится после обслуживания.
         execute([*compose, "up", "-d", "paper"], timeout=180)
         restarted = execute([*compose, "ps", "-q", "paper"]).strip()
         if not restarted:

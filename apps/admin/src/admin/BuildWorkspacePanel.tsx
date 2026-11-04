@@ -354,7 +354,7 @@ export function BuildWorkspacePanel({
   }
   async function verifyPackage(ws: BuildWorkspace) {
     if (!ws.packageId)
-      throw new Error("Backend did not return an immutable package ID");
+      throw new Error("Backend не вернул неизменяемый идентификатор пакета");
     const pkg = await api<{
       packageId: string;
       projectId: string;

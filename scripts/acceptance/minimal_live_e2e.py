@@ -194,7 +194,7 @@ class RealAPI:
             return
         proc = self.proc
         if proc.poll() is None:
-            # The installer execs the API; SIGKILL tests crash recovery of real WAL.
+            # Установщик запускает API через exec; SIGKILL проверяет восстановление настоящего WAL после сбоя.
             os.killpg(proc.pid, signal.SIGKILL if crash else signal.SIGTERM)
         try:
             proc.wait(timeout=30)
@@ -469,7 +469,7 @@ def run_acceptance(
                 "install status not persisted",
             )
             verify_project(port, project, tokens["accessToken"])
-            # A draft must never be silently served as a published stable manifest.
+            # Черновик никогда не должен незаметно выдаваться как опубликованный стабильный манифест.
             expect(
                 port,
                 "GET",
@@ -525,7 +525,7 @@ def run_acceptance(
                 "refresh did not rotate",
             )
             tokens.update(new)
-            # Current access token should work following restart.
+            # Текущий токен доступа должен работать после перезапуска.
             verify_project(port, project, tokens["accessToken"])
 
         step(report, "session_refresh_after_restart", durable_refresh)
@@ -630,9 +630,9 @@ def run_acceptance(
              lambda: verify_admin_0523(port, email, password, *admin_record))
         step(report, "restored_api_shutdown", rest.stop)
 
-        # 0.45.2: the portable, authenticated snapshot must boot the *actual*
-        # Go backend on a second independent installation root, keeping durable
-        # identity and the consumed bootstrap token. No simulated HTTP servers.
+        # 0.45.2: переносимый аутентифицированный снимок должен запускать НАСТОЯЩИЙ Go Backend во
+        # втором независимом корне установки с сохранением долговечной идентичности и
+        # использованного bootstrap-токена. Никаких имитаций HTTP-серверов.
         portable_path = work / "offhost-backup.nmb"
         portable_secret = work / "transfer-passphrase"
         fd = os.open(portable_secret, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
@@ -812,7 +812,7 @@ def main(argv=None):
         KeyError,
         sqlite3.DatabaseError,
     ) as exc:
-        # Do not include responses, environment variables, tokens or request bodies in reports.
+        # Не включайте ответы, переменные окружения, токены и тела запросов в отчёты.
         report["failureType"] = type(exc).__name__
         report["failure"] = str(exc)[:300]
         print("BLOCKED: " + str(exc)[:300], file=sys.stderr)

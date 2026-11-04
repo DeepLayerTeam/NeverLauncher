@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// CurrentMatrixPath is the executable, post-0.30.10 evidence inventory.
-// The historical MatrixPath is kept unchanged for baseline regression tests.
+// CurrentMatrixPath — исполняемая опись доказательств после 0.30.10. Исторический
+// MatrixPath остаётся неизменным для регрессионной проверки базы.
 const CurrentMatrixPath = "compatibility/gravit/module-parity-0310.json"
 const PreviousMatrixPath03012 = "compatibility/gravit/module-parity-03012.json"
 const PreviousMatrixPath03011 = "compatibility/gravit/module-parity-03011.json"
@@ -20,12 +20,12 @@ func LoadCurrentMatrix(root string) (Matrix, error) {
 	return m, err
 }
 
-// InspectCurrent checks the current inventory without ever inferring parity.
+// InspectCurrent проверяет текущую опись, никогда не делая вывод о полной совместимости.
 func InspectCurrent(root string) (Report, error) {
 	return inspectEvidenceMatrix03012(root, CurrentMatrixPath, "0.31.0", "0.30.12", true)
 }
 
-// Keep the exact previous release auditable without pretending the current tree is 0.30.12.
+// Сохраняйте возможность аудита точного предыдущего выпуска, не выдавая текущее дерево за 0.30.12.
 func InspectPrevious03012(root string) (Report, error) {
 	return inspectEvidenceMatrix03012(root, PreviousMatrixPath03012, "0.30.12", "0.30.11", false)
 }
@@ -35,7 +35,7 @@ func LoadPreviousMatrix03012(root string) (Matrix, error) {
 	return m, err
 }
 
-// Historical 0.30.11 evidence remains directly auditable after upgrading.
+// Исторические доказательства 0.30.11 остаются напрямую проверяемыми после обновления.
 func InspectPrevious03011(root string) (Report, error) {
 	return inspectEvidenceMatrix03012(root, PreviousMatrixPath03011, "0.30.11", "0.30.10", false)
 }
@@ -107,9 +107,9 @@ func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaselin
 	return report, nil
 }
 
-// latestAuditVersionAllowed keeps the immutable 0.42.11 source-port baseline
-// auditable in newer releases. It does not imply that partial modules became
-// fully compatible merely because the product version was incremented.
+// latestAuditVersionAllowed позволяет проверять неизменяемую базу переноса
+// исходников 0.42.11 в новых выпусках. Увеличение версии продукта само по себе не
+// делает частичные модули полностью совместимыми.
 func latestAuditVersionAllowed(version string) bool {
 	parts := strings.Split(strings.TrimSpace(version), ".")
 	if len(parts) != 3 {
@@ -124,8 +124,8 @@ func latestAuditVersionAllowed(version string) bool {
 	return major > 0 || (major == 0 && (minor > 42 || minor == 42 && patch >= 11))
 }
 
-// LatestMatrixPath04211 inventories the same 19 modules using CURRENT source paths.
-// Local source/tests are evidence of implementations, not upstream parity certification.
+// LatestMatrixPath04211 проверяет те же 19 модулей по ТЕКУЩИМ путям исходников. Наличие локального кода и
+// тестов доказывает реализацию, но не сертифицирует совместимость с первоисточником.
 const LatestMatrixPath04211 = "compatibility/gravit/module-parity-04211.json"
 
 func LoadLatestMatrix04211(root string) (Matrix, error) {
@@ -135,10 +135,10 @@ func LoadLatestMatrix04211(root string) (Matrix, error) {
 }
 
 func InspectLatest04211(root string) (Report, error) {
-	// The 0.30.1 historical checker refers to directories removed in modern
-	// releases. This current audit validates live files without executing the
-	// stale historical path; it still compares identities to the pinned 0.31.0
-	// upstream inventory and never promotes partial modules to verified.
+	// Исторический верификатор 0.30.1 ссылается на удалённые в новых выпусках
+	// каталоги. Текущий аудит проверяет живые файлы без выполнения устаревшего пути,
+	// но сравнивает идентичности с закреплённой описью источника 0.31.0 и не
+	// объявляет частичные модули проверенными.
 	var current, baseline Matrix
 	if err := readJSON(filepath.Join(root, LatestMatrixPath04211), &current); err != nil {
 		return Report{}, err

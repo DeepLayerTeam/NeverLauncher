@@ -97,8 +97,8 @@ func TestInstallerRollbackPreviousSignedRelease0527(t *testing.T) {
 	if err := VerifyInstalled(opts); err != nil {
 		t.Fatal(err)
 	}
-	// The just-deactivated generation is retained, allowing an explicit
-	// operator roll-forward through the same verified mechanism.
+	// Только что деактивированное поколение сохраняется, позволяя оператору явно
+	// снова перейти вперёд через тот же проверенный механизм.
 	if err := Rollback(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}

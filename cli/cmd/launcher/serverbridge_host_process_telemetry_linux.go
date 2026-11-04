@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// hostProcessTelemetry0419 reads kernel process/host counters only after the
-// existing PID+start-identity check. Reverify identity after reading to prevent
-// a recycled PID from masquerading as the managed JVM.
+// hostProcessTelemetry0419 читает счётчики ядра и хоста только после существующей проверки
+// PID и идентичности старта. После чтения повторно проверяйте идентичность, чтобы повторно
+// используемый PID не выдавался за управляемую JVM.
 func hostProcessTelemetry0419(pid int, identity string) map[string]any {
 	if pid <= 0 || identity == "" || !hostIdentityMatches0282(pid, identity) {
 		return nil

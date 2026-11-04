@@ -24,7 +24,7 @@ public final class BridgePlayerSessionRegistry {
         return value == null ? "" : value;
     }
 
-    /** Reject a delayed disconnect when the same Minecraft name has joined with a new ticket. */
+    /** Отклоняйте запоздалое отключение, если игрок с тем же именем Minecraft уже вошёл по новому билету. */
     public boolean matches(String username, String expectedCorrelation) {
         String player = normalizePlayer(username);
         String correlation = normalizeCorrelation(expectedCorrelation);

@@ -1,4 +1,4 @@
-// Package prestarter implements the Java-free, signed first-run installer.
+// Пакет prestarter реализует подписанный установщик первого запуска без Java.
 package prestarter
 
 import (
@@ -20,8 +20,8 @@ import (
 
 const maxConfigBytes = 1024 * 1024
 
-// Signature covers the *exact* payload bytes. Unknown fields are rejected;
-// there is no JSON canonicalization ambiguity between signer and verifier.
+// Подпись охватывает ТОЧНЫЕ байты данных. Неизвестные поля отклоняются; между
+// подписантом и проверяющим нет неоднозначности канонизации JSON.
 type Envelope struct {
 	KeyID         string `json:"keyId,omitempty"`
 	TrustEpoch    uint64 `json:"trustEpoch,omitempty"`
@@ -45,8 +45,8 @@ type Target struct {
 	Components []Component `json:"components"`
 }
 
-// Branding and InstallerTargets are part of the *signed* payload. Never use a
-// mutable bundle header to choose display identity or installer executables.
+// Branding и InstallerTargets входят в ПОДПИСАННЫЕ данные. Не используйте изменяемый заголовок
+// пакета для выбора отображаемой идентичности и исполняемых установщиков.
 type Branding struct {
 	DisplayName     string          `json:"displayName"`
 	Publisher       string          `json:"publisher"`

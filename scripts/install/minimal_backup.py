@@ -96,7 +96,7 @@ def private_directory(path):
 def safe_absolute(path):
     p = Path(os.path.abspath(path))
     require(p.is_absolute() and p != Path("/"), "absolute non-root path required")
-    # Check all existing segments, including destination parents.
+    # Проверяйте все существующие сегменты пути, включая родительские каталоги назначения.
     for parent in reversed((p, *p.parents)):
         if parent.is_symlink():
             raise BackupError(f"symlinked path component: {parent}")
@@ -178,7 +178,7 @@ def offline_locks(root):
 
 def sqlite_integrity(path):
     check_path(path)
-    # Query-only immutable file; the snapshot has no WAL and must be self-contained.
+    # Неизменяемый файл только для запросов; у снимка нет WAL, он должен быть самодостаточным.
     with closing(
         sqlite3.connect(
             "file:" + quote(str(path)) + "?mode=ro&immutable=1", uri=True, timeout=10
@@ -196,7 +196,7 @@ def sqlite_integrity(path):
 
 def copy_sqlite(source, target):
     check_path(source)
-    # Backup API captures committed WAL frames. Never copy a raw live WAL trio.
+    # Backup API захватывает зафиксированные кадры WAL. Никогда не копируйте сырое живое трио WAL.
     with closing(
         sqlite3.connect("file:" + quote(str(source)) + "?mode=ro", uri=True, timeout=15)
     ) as src:
@@ -440,8 +440,8 @@ def backup(root, destination=None):
                 records.append(
                     file_record(target, relative, "sqlite" if is_sqlite else "file")
                 )
-            # The backup is a single offline commit point because all application
-            # locks remain held across BOTH SQLite copies and all blob copies.
+            # Резервная копия фиксирует одно офлайновое состояние, поскольку все блокировки приложения
+            # удерживаются при ОБОИХ копированиях SQLite и всех blob-объектов.
             dump_json_atomic(
                 stage / "manifest.json",
                 {
@@ -488,7 +488,7 @@ def restore(bundle, target_root):
             relative = item["path"]
             target = stage / relative
             file_copy(source / "payload" / relative, target)
-            # Keep files private even if original was not; never expose credentials.
+            # Сохраняйте файлы закрытыми, даже если оригинал не был таким; не раскрывайте учётные данные.
             os.chmod(target, item["mode"] & 0o700)
             if item["kind"] == "sqlite":
                 sqlite_integrity(target)
@@ -537,7 +537,7 @@ def restore(bundle, target_root):
             reverse=True,
         ):
             fsync_dir(stage if d == "." else stage / d)
-        # Atomic presentation: no partially restored installation is visible.
+        # Атомарная публикация: частично восстановленная установка не видна.
         require(
             not root.exists() and not root.is_symlink(),
             "restore destination appeared during copy",

@@ -20,8 +20,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Each case runs real code, including negative/adversarial tests inside its test
-# suite. Commands are immutable, not sourced from an extension or user manifest.
+# Каждый сценарий выполняет настоящий код, включая отрицательные и атакующие тесты своего набора.
+# Команды неизменяемы и не берутся из расширения или манифеста пользователя.
 CASES = {
     "java-publication": (
         (sys.executable, "scripts/ga/java_sdk_ga_0310.py", "--output", "{maven}"),
@@ -159,8 +159,8 @@ def run_cases(
         "passed": False,
         "fullyCertified": False,
     }
-    # A private staging directory must be supplied by the invoker. Never place
-    # executable helper binaries or report data inside the source tree.
+    # Вызывающая сторона должна указать закрытый промежуточный каталог. Не помещайте
+    # исполняемые вспомогательные программы и отчёты в дерево исходников.
     replacements = {
         "{cli}": cli,
         "{root}": str(ROOT),
@@ -175,8 +175,8 @@ def run_cases(
             command = [replacements.get(arg, arg) for arg in cmd]
             cwd = case_directory(name) if command[0] == "go" else ROOT
             try:
-                # This fixture is mandatory for the actual Go supervisor -> JVM
-                # subprocess test. Without it Go's t.Skip would fake a pass.
+                # Эта фикстура обязательна для реального теста Go-супервизор → дочерняя
+                # JVM. Без неё Go t.Skip создаст ложный успех.
                 env = os.environ.copy()
                 if name == "java-supervisor-go":
                     env["LAUNCHER_TEST_JAVA_HOST_JAR"] = str(
@@ -185,8 +185,8 @@ def run_cases(
                             / "examples/extensions/java-host/build/package/backend/java-host.jar"
                         ).resolve()
                     )
-                # Kill the process group on POSIX on timeout; subprocess.run
-                # alone kills the shell but may leave Java/Go grandchildren.
+                # По тайм-ауту убивайте всю группу процессов POSIX; один subprocess.run
+                # завершит shell, но может оставить дочерние Java/Go.
                 if os.name == "posix":
                     proc = subprocess.Popen(
                         command,
@@ -227,8 +227,8 @@ def run_cases(
                     -1,
                     "failed",
                 )
-            # A successful go test process with skipped fixture-dependent tests
-            # is not evidence that the JVM or platform security actually ran.
+            # Успешный go test с пропущенными тестами, зависящими от фикстур, не
+            # доказывает выполнение JVM или безопасности платформы.
             if command[0] == "go" and "test" in command:
                 if b"--- SKIP:" in out or b"[no tests to run]" in out:
                     outcome = "skipped"
@@ -248,7 +248,7 @@ def run_cases(
         ):
             entry["status"] = "passed"
         entry["elapsedSeconds"] = round(time.monotonic() - started, 3)
-        # Write after every case, even on failure (failure evidence survives CI abort).
+        # Записывайте после каждого сценария даже при ошибке: доказательства сбоя сохранятся после прерывания CI.
         report["passed"] = len(report["results"]) == len(names) and all(
             x["status"] == "passed" for x in report["results"]
         )

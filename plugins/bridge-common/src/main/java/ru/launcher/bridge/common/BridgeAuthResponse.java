@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Fail-closed interpretation of Backend join and handoff results. A substring
- * such as {"error":{"allowed":true}} must never authorize a Minecraft login.
- * No third-party JSON dependency is required by the platform-neutral bridge.
- */
+/**Интерпретация ответов Backend о входе и передаче управления с
+ * отказом при неоднозначности. Подстрока вроде
+ * {"error":{"allowed":true}} никогда не разрешает вход в
+ * Minecraft. Нейтральному к платформе Bridge не нужны сторонние
+ */зависимости JSON. */
 public final class BridgeAuthResponse0287 {
     private BridgeAuthResponse0287() {}
 
@@ -69,10 +69,10 @@ public final class BridgeAuthResponse0287 {
         }
     }
 
-    /** Evaluate the authenticated Backend route-list response, never JSON substrings.
-     * A route is valid for the current source, target and live runtime only.
-     * The Backend remains authoritative when the one-time handoff is created.
-     */
+    /** Проверяйте аутентифицированный ответ Backend со списком маршрутов, а
+     * не подстроки JSON. Маршрут должен подходить текущим источнику, цели и
+     * живому Runtime. При создании одноразовой передачи решение принимает
+     */только Backend. */
     public static Decision route(int httpStatus, String body, String sourceNodeId, String requestedTarget,
                                  Instant now) {
         if (httpStatus < 200 || httpStatus >= 300) return Decision.deny("routing_table_unavailable");
@@ -110,8 +110,8 @@ public final class BridgeAuthResponse0287 {
                     return Decision.deny("target_capacity_unavailable");
                 Instant observed = Instant.parse(text(item, "observedAt"));
                 Instant heartbeat = Instant.parse(text(item, "lastHeartbeatAt"));
-                // At most 5 seconds of clock skew. No stale targets accepted even if
-                // an upstream replica returns a cached route after topology changes.
+                // Допустимый сдвиг часов — не более 5 секунд. Устаревшие цели запрещены, даже если реплика
+                // источника вернула кэшированный маршрут после смены топологии.
                 if (observed.isAfter(now.plusSeconds(5)) || heartbeat.isAfter(now.plusSeconds(5)) ||
                     observed.isBefore(now.minusSeconds(freshness)) ||
                     heartbeat.isBefore(now.minusSeconds(freshness)))
@@ -162,7 +162,7 @@ public final class BridgeAuthResponse0287 {
         return (Map<String, Object>) value;
     }
 
-    /** Bounded parser: rejects duplicate keys, malformed escapes, excess nesting. */
+    /** Ограниченный парсер: отклоняет дубли ключей, повреждённые escape-последовательности и чрезмерную вложенность. */
     private static final class Json {
         private final String input;
         private int index;

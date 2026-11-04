@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 /** Общий адаптер Bungee API для артефактов BungeeCord и Waterfall. */
 public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listener {
     private final BungeeFamilyPlatform expectedPlatform;
-    // Single in-flight handoff per authenticated player, not per destination.
+    // Не более одной текущей передачи управления на аутентифицированного игрока, а не на каждую цель.
     private final ConcurrentHashMap<String, Object> inFlightHandoffs = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> preparedHandoffs = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> connectedTargets = new ConcurrentHashMap<>();
@@ -143,9 +143,9 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         }
         event.registerIntent(this);
         String username = event.getConnection().getName();
-        // UUID at PreLogin is not yet a verified online/project identity.
-        // The signed Backend ticket is checked here; its UUID is compared
-        // after game authentication in onAuthenticatedLogin below.
+        // В PreLogin UUID ещё не является проверенной идентичностью online/project.
+        // Подписанный билет Backend проверяется здесь; его UUID сравнивается после
+        // игровой авторизации в onAuthenticatedLogin ниже.
         String uuid = "";
         String ip = remoteIP(event.getConnection().getSocketAddress());
         current.validateJoinAsync(username, uuid, ip, getProxy().getConfig().isOnlineMode()).whenComplete((result, error) -> {
@@ -209,13 +209,13 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         final String key = playerKey + "\u0000" + target.toLowerCase(Locale.ROOT);
         final Long preparedUntil = preparedHandoffs.remove(key);
         if (preparedUntil != null) {
-            // Never manufacture a second one-time handoff for a timed-out internal
-            // connect; Backend may already have committed or consumed the first.
+            // Никогда не создавайте вторую одноразовую передачу при тайм-ауте внутреннего
+            // подключения: Backend уже мог зафиксировать или потребить первую.
             if (preparedUntil < System.currentTimeMillis()) event.setCancelled(true);
             return;
         }
-        // Cancel the original event before asynchronous authorization. Bungee's
-        // synchronous event cannot be resumed by an HTTP callback.
+        // Отмените исходное событие до асинхронной авторизации. Синхронное событие
+        // Bungee невозможно продолжить из HTTP-обработчика.
         event.setCancelled(true);
         final Object token = new Object();
         if (inFlightHandoffs.putIfAbsent(playerKey, token) != null) return;
@@ -224,7 +224,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         current.createHandoffAsync(username, target).whenComplete((result, error) -> {
             final JoinValidationResult decision = error == null && result != null
                 ? result : new JoinValidationResult(false, "backend_unavailable", "{}");
-            // API calls and player state are consulted only on the proxy scheduler.
+            // Вызовы API и состояние игрока обрабатываются только в планировщике proxy.
             try {
                 getProxy().getScheduler().schedule(this, () -> {
                     if (inFlightHandoffs.get(playerKey) != token) return;
@@ -240,8 +240,8 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                             " target=" + target + " reason=" + decision.reason);
                         return;
                     }
-                    // A backend route can disappear between ticket creation and
-                    // connect. Never silently try another server with this ticket.
+                    // Маршрут Backend может исчезнуть между созданием билета и подключением. Не
+                    // пробуйте незаметно другой сервер с тем же билетом.
                     if (getProxy().getServerInfo(target) != serverInfo) {
                         inFlightHandoffs.remove(playerKey, token);
                         player.sendMessage(TextComponent.fromLegacyText("Launcher target topology changed"));
@@ -269,8 +269,8 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         });
     }
 
-    /** Connected is emitted only when the proxy has actually established
-     * a backend connection. The HTTP handoff being accepted is not success. */
+    /** Connected отправляется только после настоящего подключения прокси к Backend.
+     * Принятие HTTP-передачи управления ещё не означает успех. */
     @EventHandler
     public final void onServerConnected(ServerConnectedEvent event) {
         ProxyBridgeRuntime current = runtime;

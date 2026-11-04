@@ -230,7 +230,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
             'private shadow journal verification key must remain outside evidence')
     require(not trusted_key.resolve().is_relative_to(root.resolve()),
             'independent reviewer trust anchor must remain outside evidence')
-    # Verify independent signature *before* interpreting attacker-controlled evidence.
+    # Проверяйте независимую подпись ДО трактовки доказательств, контролируемых злоумышленником.
     independent = approval(root, approve_file, approve_sig, trusted_key, commit, publisher, now=now)
     require(re.fullmatch(r'[A-Za-z0-9._:-]{1,128}', native_package_id) is not None
             and re.fullmatch(r'[1-9][0-9]*', ci_run) is not None,
@@ -257,9 +257,9 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
             and pilot['unreviewedRevocations'] == 0
             and pilot['reviewed']['false_positive'] == 0 and pilot['reviewed']['inconclusive'] == 0,
             '10,000 legitimate shadow player-hours and reviewed zero-false-positive incidents required')
-    # These server observations still cannot assert that every hour represents a
-    # legitimate human session. A distinct independent reviewer has to confirm
-    # legitimacy with sources *outside* this low-privilege journal.
+    # Эти серверные наблюдения не доказывают, что каждый час принадлежит настоящему
+    # человеку. Другой независимый проверяющий подтверждает подлинность по источникам
+    # ВНЕ этого низкопривилегированного журнала.
     certified = doc(root / 'shadow-certification.json')
     require(certified.get('schema') == 'neverlauncher.guard.shadow-certified/0510'
             and certified.get('status') == 'independently-reviewed'

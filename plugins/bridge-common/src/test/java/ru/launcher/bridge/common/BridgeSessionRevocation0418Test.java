@@ -1,6 +1,6 @@
 package ru.launcher.bridge.common;
 
-/** Executable session-fencing regression checks; no Minecraft or JUnit dependency. */
+/** Исполняемая регрессионная проверка ограждения сеансов без зависимости Minecraft/JUnit. */
 public final class BridgeSessionRevocation0418Test {
     private static int checks;
     private static final String OLD = "a".repeat(64);

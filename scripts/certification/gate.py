@@ -80,7 +80,7 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
             unmet.append(
                 f"{target}: native signed components certification missing/failed"
             )
-        # Linux/macOS and Windows guard modes are not interchangeable.
+        # Режимы Guard для Linux/macOS и Windows невзаимозаменяемы.
         required = (
             "rustUnitTests",
             "goModelTests",

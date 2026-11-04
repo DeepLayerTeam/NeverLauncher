@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-// Run on a real multicast-capable LAN with LAUNCHER_LAN_E2E=1.
-// It publishes a real TLS endpoint over UDP multicast, discovers its DNS-SD
-// advertisement and validates the *independently captured* leaf certificate.
+// Выполняйте в реальной LAN с поддержкой multicast и LAUNCHER_LAN_E2E=1. Публикуется
+// настоящий TLS endpoint через UDP multicast, находится его объявление DNS-SD и
+// проверяется НЕЗАВИСИМО полученный конечный сертификат.
 func TestLiveLANPublishDiscoverAndPinnedTLS0429(t *testing.T) {
 	if os.Getenv("LAUNCHER_LAN_E2E") != "1" {
 		t.Skip("requires actual LAN multicast: LAUNCHER_LAN_E2E=1")

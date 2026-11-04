@@ -39,7 +39,7 @@ def evidence_files(version: str) -> tuple[str, ...]:
 
 
 def safe_member(path: Path) -> bytes:
-    # Don't accept symlinks in any parent of evidence, not only the leaf.
+    # Отклоняйте символьные ссылки в любых родительских каталогах доказательств, а не только конечную ссылку.
     if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
         raise ValueError("unsafe symlink in GA evidence: " + str(path))
     if not path.is_file() or not 0 < path.stat().st_size <= MAX_MEMBER:
@@ -51,7 +51,7 @@ def safe_member(path: Path) -> bytes:
 
 
 def package(bundle: Path, evidence: Path, key: Path, version: str, commit: str, output: Path, *, now=None) -> None:
-    # Check real packaged binaries and independent signature *before* archiving.
+    # Проверяйте реальные упакованные бинарные файлы и независимую подпись ДО архивирования.
     verify(bundle, evidence, key, version, commit, now=now)
     members = evidence_files(version)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -69,8 +69,8 @@ def package(bundle: Path, evidence: Path, key: Path, version: str, commit: str, 
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o100600 << 16
                 archive.writestr(info, raw, compress_type=ZIP_DEFLATED, compresslevel=9)
-        # Fail if the source changed between verification and packaging: the
-        # caller will subsequently sign only bytes from this sealed archive.
+        # Завершайте с отказом, если исходник изменился между проверкой и упаковкой: вызывающая
+        # сторона затем подпишет только байты запечатанного архива.
         with tempfile.TemporaryDirectory(prefix="ga04315-recheck-") as folder:
             root = Path(folder)
             (root / "approval.json").write_bytes((evidence / "approval.json").read_bytes())
@@ -100,7 +100,7 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
             total += entry.file_size
             if total > MAX_TOTAL:
                 raise ValueError("decompressed GA execution evidence exceeds size limit")
-            # Names originate from evidence_files(), never from arbitrary paths.
+            # Имена берутся из evidence_files(), а не из произвольных путей.
             target = destination / entry.filename
             target.parent.mkdir(parents=True, exist_ok=True)
             with archive.open(entry) as stream, target.open("xb") as out:

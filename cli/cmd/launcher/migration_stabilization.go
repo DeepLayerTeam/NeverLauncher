@@ -239,8 +239,8 @@ func migrateComponentUpdateState01510(root string) (componentStateMigrationRepor
 	selected := old
 	report.Source = legacy
 	if hasCurrent {
-		// Local compatibility migrations must not erase the security floor
-		// merely because a legacy metadata file has a higher SemVer label.
+		// Локальные миграции совместимости не должны отменять минимальные требования безопасности
+		// только из-за более высокого SemVer в устаревших метаданных.
 		if current.SecurityGeneration > old.SecurityGeneration {
 			selected = current
 		} else if old.SecurityGeneration > current.SecurityGeneration {

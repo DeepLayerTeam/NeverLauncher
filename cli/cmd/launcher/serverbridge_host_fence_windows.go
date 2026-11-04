@@ -14,8 +14,8 @@ import (
 var remoteKernel32Lock04112 = syscall.NewLazyDLL("kernel32.dll").NewProc("LockFileEx")
 var remoteKernel32Unlock04112 = syscall.NewLazyDLL("kernel32.dll").NewProc("UnlockFileEx")
 
-// A stable, held-open Windows file handle is the cross-process fence.
-// LOCKFILE_FAIL_IMMEDIATELY refuses a competing process instead of waiting.
+// Стабильный открытый дескриптор файла Windows служит межпроцессным барьером.
+// LOCKFILE_FAIL_IMMEDIATELY отклоняет конкурента без ожидания.
 func remoteKernelFence04112(dir string) (func(), error) {
 	if err := remoteSecureDir0284(dir); err != nil {
 		return nil, err

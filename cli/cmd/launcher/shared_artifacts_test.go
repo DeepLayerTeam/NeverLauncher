@@ -132,7 +132,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 			t.Fatalf("uncached shared artifact %s", f.Path)
 		}
 	}
-	// Materialized bytes are independent; changing a client must not mutate the CAS.
+	// Созданные файлы независимы: изменение клиента не должно менять CAS.
 	mutated := filepath.Join(base, "two", "libraries", "example", "shared", "1.0", "shared-1.0.jar")
 	if err := os.WriteFile(mutated, []byte("tampered client"), 0644); err != nil {
 		t.Fatal(err)
@@ -145,7 +145,7 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 		t.Fatal("client files share mutable inode")
 	}
 	_ = install("three")
-	// A forged cache entry must not be silently downloaded around or accepted.
+	// Поддельную запись кэша нельзя незаметно обойти повторной загрузкой или принять.
 	cachePath := filepath.Join(cache, "sha1", sha1hex(lib)[:2], sha1hex(lib))
 	if err := os.WriteFile(cachePath, []byte("wrong bytes"), 0600); err != nil {
 		t.Fatal(err)
@@ -236,7 +236,7 @@ func TestVanillaLibraries0277ConflictPerTarget(t *testing.T) {
 	if err := validateVanillaLibraryConflicts0277(libs, []vanillaTarget{{OS: "linux", Arch: "x86_64"}}); err != nil {
 		t.Fatal(err)
 	}
-	// Native classifiers are separate artifacts; they are not a classpath conflict.
+	// Нативные classifier — отдельные артефакты, а не конфликт classpath.
 	libs = append(libs[:1], MojangLibrary{Name: "com.example:engine:2.0:natives-linux-arm64"})
 	if err := validateVanillaLibraryConflicts0277(libs, []vanillaTarget{{OS: "linux", Arch: "x86_64"}, {OS: "linux", Arch: "aarch64"}}); err != nil {
 		t.Fatal(err)

@@ -89,7 +89,7 @@ def real_clean_install(
         raise RuntimeError("JAVA_HOME must be unset for clean machine bootstrap test")
     if not signed_manifest.is_file() or signed_manifest.is_symlink():
         raise RuntimeError("real signed Minecraft profile required")
-    # Package installation is intentionally real, not unpacking package files.
+    # Установка пакета намеренно реальная, а не простая распаковка файлов.
     osname = platform.system()
     if osname == "Linux":
         if os.geteuid() != 0:
@@ -115,9 +115,9 @@ def real_clean_install(
         )
     elif osname == "Windows":
         checked([installer, "install", "--root", root, "--no-start"], timeout=1200)
-        # The native Rust CLI can launch Minecraft on Windows but bypasses the
-        # Desktop -> Guard authenticated supervisor boundary. Certification
-        # MUST instead use a separate real Desktop/Guard GUI E2E on Windows.
+        # Нативный Rust CLI может запускать Minecraft в Windows, но обходит
+        # аутентифицированную границу Desktop → Guard. Сертификация ОБЯЗАНА использовать
+        # отдельный реальный GUI E2E Desktop/Guard в Windows.
         raise RuntimeError(
             "Windows game-launch certification requires external Desktop/Guard GUI E2E; direct Runtime launch is not a valid security test"
         )
@@ -185,7 +185,7 @@ def real_clean_install(
     if not log_path.is_file() or not log_path.is_relative_to(game_root):
         raise RuntimeError("Minecraft has no installed runtime log")
     log = log_path.read_text(encoding="utf-8", errors="replace")
-    # A Java -version process or a dummy executable cannot pass this check.
+    # Процесс Java -version или фиктивный исполняемый файл не пройдёт эту проверку.
     if not any(
         marker in log
         for marker in ("LWJGL version", "OpenGL", "Setting user:", "Minecraft")

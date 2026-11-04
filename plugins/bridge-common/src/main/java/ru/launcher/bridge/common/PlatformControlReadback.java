@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 
-/** Reads Minecraft server state after a command, never inferring success from dispatcher return values. */
+/** Считывает состояние Minecraft-сервера после команды, а не выводит успешность из возвращённого значения обработчика. */
 public final class PlatformControlReadback {
     private PlatformControlReadback() {}
 
@@ -43,7 +43,7 @@ public final class PlatformControlReadback {
         return call(server, "getPlayerManager", "getPlayerList");
     }
 
-    /** A null result is deliberately inconclusive (unknown API or ambiguous collection). */
+    /** Значение null намеренно означает неопределённость: неизвестный API или неоднозначная коллекция. */
     private static Boolean namedEntry(Object configList, String username) {
         if (configList == null || username == null) return null;
         Object names = call(configList, "getNames", "getUserList");
@@ -79,7 +79,7 @@ public final class PlatformControlReadback {
                 if (value instanceof Optional<?> optional) value = optional.orElse(null);
                 if (value != null) return value;
             } catch (NoSuchMethodException ignored) {
-                // Loader API differs; don't claim a verified result.
+                // API загрузчиков различаются; не заявляйте подтверждённый результат.
             } catch (IllegalAccessException | InvocationTargetException | SecurityException e) {
                 return null;
             }

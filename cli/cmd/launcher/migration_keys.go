@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 )
 
-// Generates independent Never JWT and manifest keys on the operator host.
-// Only a new O_EXCL 0600 file is written; NEVER prints secrets to terminal,
-// logs, CLI arguments or API responses. Nothing is deployed automatically.
+// Создаёт независимые ключи JWT Never и манифеста на хосте оператора. Записывается только новый
+// файл O_EXCL с правами 0600; секреты НИКОГДА не выводятся в терминал, журнал, аргументы CLI или
+// ответы API. Автоматическое развёртывание не выполняется.
 func generateNeverMigrationKeys0336(path string) (err error) {
 	if path == "" {
 		return errors.New("generate-keys requires --output /secure/private/key-material.json")
@@ -44,8 +44,8 @@ func generateNeverMigrationKeys0336(path string) (err error) {
 	if err != nil {
 		return err
 	}
-	// Path must exist and be a private directory; do not create directories or
-	// follow a final symlink. O_EXCL prevents replacing an existing key file.
+	// Путь должен существовать и указывать на закрытый каталог; не создавайте каталоги и не следуйте
+	// конечной символьной ссылке. O_EXCL запрещает замену существующего файла ключа.
 	dir, err := os.Stat(filepath.Dir(path))
 	if err != nil {
 		return err

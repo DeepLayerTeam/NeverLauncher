@@ -2,7 +2,7 @@ package ru.launcher.bridge.common;
 
 import java.util.Map;
 
-/** Runnable Java 21 regression for the production control receipt contract. */
+/** Исполняемая регрессия Java 21 для производственного контракта квитанций управления. */
 public final class BridgeControlResult0411Test {
     private static void status(String expected, BridgeControlResult actual) {
         if (!expected.equals(actual.status())) throw new AssertionError(expected + " != " + actual.status());

@@ -13,8 +13,8 @@ import (
 	"unicode"
 )
 
-// Branding0355 is deliberately data-only. Scripts, HTML, CSS and remote image
-// locations are not part of the owner-signed bootstrap surface.
+// Branding0355 намеренно содержит только данные. Скрипты, HTML, CSS и удалённые адреса
+// изображений не входят в поверхность bootstrap, подписанную владельцем.
 type BrandNews0355 struct {
 	Title string `json:"title"`
 	URL   string `json:"url"`

@@ -5,7 +5,7 @@ import ru.launcher.sdk.core.Extension;
 import ru.launcher.sdk.core.ExtensionContext;
 import ru.launcher.sdk.core.JsonSchema;
 
-/** One JVM implements both sandboxed UI surfaces and the existing CLI target. */
+/** Одна JVM обслуживает обе изолированные поверхности UI и существующую цель CLI. */
 public final class WorkspaceExtension implements Extension {
     private static final JsonSchema SETTINGS=JsonSchema.parse("""
         {"type":"object","properties":{"theme":{"type":"string","enum":["light","dark"]}},

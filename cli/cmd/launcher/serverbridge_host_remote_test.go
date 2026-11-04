@@ -124,7 +124,7 @@ func TestRemoteControlIdempotencyAndUnknown0284(t *testing.T) {
 	if missing := call("start", ""); missing.Code != 400 {
 		t.Fatalf("missing idem %d", missing.Code)
 	}
-	// Restarted agent loads receipts from disk. No second execution is allowed.
+	// Перезапущенный агент загружает квитанции с диска. Второе исполнение запрещено.
 	b, err := remoteNewAgent0284(root, id, []string{"127.0.0.0/8"})
 	if err != nil {
 		t.Fatal(err)
@@ -134,7 +134,7 @@ func TestRemoteControlIdempotencyAndUnknown0284(t *testing.T) {
 	if replay.Code != 200 || count.Load() != 1 {
 		t.Fatalf("restart replay %d %d", replay.Code, count.Load())
 	}
-	// Crash while the external effect was running: indeterminate, NEVER retry.
+	// Сбой во время внешнего побочного эффекта: результат неопределён, НИКОГДА не повторяйте.
 	uncertainKey := "indeterminate-id-00001"
 	path := remoteReceiptFile0284(remoteDir0284(root), uncertainKey)
 	h := remoteReceipt0284{SchemaVersion: "1.0", KeyHash: strings.TrimSuffix(filepath.Base(path), ".json"), Digest: remoteDigestFixture0284("start", "service-ci", id.NodeID), Subject: "service-ci", Action: "start", State: "indeterminate", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}

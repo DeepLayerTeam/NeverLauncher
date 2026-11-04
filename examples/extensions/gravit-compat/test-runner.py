@@ -229,8 +229,8 @@ if __name__ == "__main__":
         assert cli.returncode == 0, (cli.returncode, cli.stderr, cli.stdout)
         assert json.loads(cli.stdout.strip()) == {"latestRelease": expected}, cli.stdout
         assert Handler.hello == 2 and Handler.ready == 1
-        # Negative-path JVM startup: no ready notification is sent for a class with
-        # unresolved Gravit dependencies or an unmapped event subscription.
+        # Отрицательный запуск JVM: класс с неразрешёнными зависимостями Gravit или
+        # несопоставленной подпиской на событие не отправляет уведомление ready.
         with tempfile.TemporaryDirectory() as folder:
             for class_name in ("UnportedModule", "UnsupportedEventModule"):
                 broken = Path(folder) / (class_name + ".jar")

@@ -5,7 +5,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.*;
 
-/** Real localhost TCP/RCON wire exchange; does not pretend to run a Minecraft server. */
+/** Настоящий локальный обмен по TCP/RCON; не выдаёт себя за работающий Minecraft-сервер. */
 public final class VanillaRconWire0416Test {
     private record Packet(int id, int type, String body) {}
     private static int readInt(InputStream in) throws IOException {
@@ -30,7 +30,7 @@ public final class VanillaRconWire0416Test {
         ByteArrayOutputStream buffer=new ByteArrayOutputStream();
         writeInt(buffer,value.length+10);writeInt(buffer,id);writeInt(buffer,type);buffer.write(value);buffer.write(0);buffer.write(0);
         byte[] bytes=buffer.toByteArray();
-        // Split packets to ensure the Java side handles real TCP fragmentation.
+        // Дробите пакеты, чтобы Java-сторона действительно обрабатывала фрагментацию TCP.
         out.write(bytes,0,3);out.flush();out.write(bytes,3,bytes.length-3);out.flush();
     }
     public static void main(String[] args)throws Exception{

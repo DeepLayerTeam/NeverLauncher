@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Post-Vite deterministic integrity index of real, hashed distribution assets.
-// No inline secrets, absolute filesystem paths or development source maps ship.
+// После Vite создаётся детерминированный индекс целостности настоящих дистрибутивных ресурсов с хешами. В
+// выпуск не попадают встроенные секреты, абсолютные пути и development source maps.
 import { readdir, lstat, readFile, writeFile, rename } from "node:fs/promises";
 import { resolve, relative, join } from "node:path";
 import { createHash } from "node:crypto";

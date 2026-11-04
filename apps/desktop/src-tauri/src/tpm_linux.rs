@@ -1,10 +1,10 @@
-//! Linux TPM2 Certify evidence for the *existing* hardware-enclave device key.
-//!
-//! hardware-enclave 0.2.10 stores the Linux child as a TPM-wrapped TPMT_PUBLIC
-//! and raw TPM2B_PRIVATE.buffer, under a deterministic owner-hierarchy ECC SRK.
-//! tpm2-tools 5.x is used to reconstruct/load that exact child, without exporting
-//! a private key or allocating a second device identity. All evidence is independently
-//! verified by the Launcher backend. No software-key fallback is allowed.
+//! Доказательство Linux TPM2 Certify для УЖЕ СУЩЕСТВУЮЩЕГО ключа устройства в
+//!аппаратном анклаве. hardware-enclave 0.2.10 хранит дочерний ключ Linux как
+//! TPM-обёрнутый TPMT_PUBLIC и необработанный TPM2B_PRIVATE.buffer под
+//! детерминированным ECC SRK иерархии владельца. tpm2-tools 5.x восстанавливает и
+//! загружает тот же ключ без экспорта приватного ключа и создания второй идентичности
+//! устройства. Все доказательства независимо проверяются Backend Launcher. Программная
+//! замена ключа запрещена.
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use rand::{rngs::OsRng, RngCore};
 use serde::Serialize;

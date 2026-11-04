@@ -1,8 +1,8 @@
-//! MIG09. Adoption of *content* from a player's old Gravit installation.
-//! A Gravit folder is untrusted input: no code, config, credentials or trust is executed or copied.
-//! Only bytes independently pinned by a Launcher Ed25519 signed manifest may enter
-//! Runtime's ordinary, OS-locked, SHA-256 content cache. The existing download/install
-//! path then consumes those objects and performs its own integrity checks.
+//! MIG09: перенос СОДЕРЖИМОГО из старой установки Gravit игрока. Каталог Gravit — недоверенный
+//! ввод: код, конфигурация, учётные данные и доверие из него не копируются и не выполняются.
+//! Только байты, независимо закреплённые в манифесте Launcher с подписью Ed25519, могут попасть в
+//! обычный кэш Runtime SHA-256 с блокировками ОС. Затем обычный механизм установки использует эти
+//! объекты и снова проверяет целостность.
 use crate::{content_cache::CacheStore, file_ownership, manifest_file_applies, resolved_download_0246,
     verify_manifest_signature, Manifest, ManifestFile};
 use serde::{Deserialize, Serialize};

@@ -8,9 +8,9 @@ import (
 	"sync"
 )
 
-// Session keeps a local Discord presence usable across desktop IPC restarts.
-// SET_ACTIVITY is a replace/clear operation; repeating it after a lost reply
-// has no additional side effects. Explicit RPC rejection is never retried.
+// Session хранит локальное присутствие Discord, восстанавливаемое после перезапуска IPC Desktop.
+// SET_ACTIVITY заменяет или очищает состояние; повтор после потерянного ответа не вызывает новых
+// побочных эффектов. Явное отклонение RPC никогда не повторяется.
 type Session struct {
 	mu     sync.Mutex
 	appID  string

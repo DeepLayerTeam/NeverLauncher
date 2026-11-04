@@ -106,7 +106,7 @@ class UploadRecoveryTests(unittest.TestCase):
                 raise BrokenPipeError(32, "Broken pipe")
         conn.request.side_effect = transmit
         conn.getresponse.return_value = self.Response(201, b'{"file":"ok"}')
-        # Reconnect to a fresh HTTPConnection on every transport failure.
+        # При каждом сбое транспорта переподключайтесь к новому HTTPConnection.
         with patch.object(client, "_connect", return_value=conn), patch.object(module.time, "sleep") as sleep:
             status, response = client._request("POST", "/api/v1/admin/projects/p/versions/v/files", b"same-body", {"Content-Length": "9"})
         self.assertEqual((status, response), (201, b'{"file":"ok"}'))

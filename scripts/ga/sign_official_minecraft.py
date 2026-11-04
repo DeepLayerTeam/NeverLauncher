@@ -66,8 +66,8 @@ def sign_attestation(
     ).is_symlink():
         raise GateError("signature already exists; do not overwrite operator approvals")
     signature = private.sign(DOMAIN + raw).hex().encode("ascii") + b"\n"
-    # Create-only and user-only permissions. A crash leaves no successful release
-    # receipt: caller must inspect/remove an incomplete signature explicitly.
+    # Разрешены только создание и права пользователя. Сбой не оставляет успешной квитанции выпуска:
+    # вызывающая сторона обязана явно изучить или удалить незавершённую подпись.
     fd = os.open(
         folder / "attestation.sig", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
     )

@@ -1,8 +1,8 @@
 package main
 
-// Modpack Import Engine: validates untrusted ZIP manifests, resolves exact file
-// identities, downloads and hashes into a private staging cache, executes the
-// existing Client Factory and commits a fully verified client atomically.
+// Механизм импорта модпаков: проверяет недоверенные манифесты ZIP, находит точные идентичности
+// файлов, скачивает и хеширует файлы в закрытом промежуточном кэше, запускает существующий Client
+// Factory и атомарно фиксирует полностью проверенный клиент.
 import (
 	"archive/zip"
 	"bytes"
@@ -406,7 +406,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 		}
 		layers = []string{dir + "/"}
 	}
-	// Modrinth client-overrides intentionally supersedes common overrides.
+	// Переопределения Modrinth client-overrides намеренно имеют приоритет над общими overrides.
 	for _, prefix := range layers {
 		for _, name := range sortedZipNames0275(files) {
 			if !strings.HasPrefix(name, prefix) {
@@ -455,13 +455,13 @@ func sortedZipNames0275(m map[string]*zip.File) []string {
 	return keys
 }
 
-// Download to an isolated regular file and validate every upstream checksum
-// before making the bytes available to the Client Factory executor.
+// Загружайте в изолированный обычный файл и проверяйте все контрольные суммы источника,
+// прежде чем предоставлять байты исполнителю Client Factory.
 func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir string, f modpackFile0275, manual string) (string, string, int64, error) {
 	paths := append([]string{}, f.URLs...)
 	if manual != "" && f.ManualName != "" {
-		// Exact path first (multiple mods can share a basename), then the
-		// historical flat --manual-dir fallback. No symlink components.
+		// Сначала точный путь (несколько модов могут иметь одинаковое имя файла), затем прежний запасной
+		// вариант плоского каталога --manual-dir. Компоненты символьных ссылок запрещены.
 		candidates := []string{f.Path}
 		if f.ManualName != f.Path {
 			candidates = append(candidates, f.ManualName)
@@ -620,8 +620,8 @@ func curseFileMetadata0275(ctx context.Context, client *http.Client, api, key st
 		}
 		f.URLs = []string{*d.DownloadURL}
 	} else {
-		// The CurseForge file API may withhold downloadUrl; the documented
-		// download-url endpoint can still provide a permitted official URL.
+		// API файлов CurseForge может не выдавать downloadUrl; документированный endpoint
+		// download-url всё же может предоставить разрешённый официальный URL.
 		request, e := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/download-url", nil)
 		if e != nil {
 			return e
@@ -810,8 +810,8 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	if _, err = executeFactoryBuild0271(ctx, options); err != nil {
 		return report, fmt.Errorf("client install: %w", err)
 	}
-	// The evidence itself is part of the immutable source receipt. Only IDs and
-	// hashes are retained, never private API keys or local cache paths.
+	// Сами доказательства входят в неизменяемую исходную квитанцию. Сохраняются только ID
+	// и хеши, но не закрытые API-ключи или локальные пути кэша.
 	report.Imported = imported
 	report.Status = "complete"
 	evidence, err := json.MarshalIndent(report, "", "  ")

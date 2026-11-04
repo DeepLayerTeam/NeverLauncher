@@ -110,8 +110,8 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
         require(duration >= 0.5 * summary['seconds'], 'insufficient time spent in actual sessions')
         return {'targetId': target_id,'sessions':len(sessions),'seconds':summary['seconds'],
                 'receiptSha256': inventory.digest(root/'soak.json')}
-    # Replay raw measurements instead of accepting an independently signed
-    # but purely self-reported p95/status. 20 bytes per actual TLS request.
+    # Повторно воспроизводите сырые измерения вместо принятия независимо подписанного, но
+    # основанного только на заявлении p95/status. По 20 байт на реальный TLS-запрос.
     ledger = inventory.safe_file(root/'requests.bin', 210*1024*1024)
     require(inventory.digest(ledger) == summary.get('requestsSha256'),
             'changed or missing HTTPS request ledger')

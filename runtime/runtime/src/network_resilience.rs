@@ -1,5 +1,5 @@
-//! Cancellable bounded HTTP retries for the signed-file downloader.
-//! No unchecked bytes are ever installed: http_resume validates the final digest.
+//! Ограниченные повторные HTTP-запросы с поддержкой отмены для загрузчика подписанных файлов.
+//! Непроверенные байты никогда не устанавливаются: http_resume проверяет итоговый дайджест.
 use reqwest::{header::RETRY_AFTER, Response, StatusCode};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::watch;

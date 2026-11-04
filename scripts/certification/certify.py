@@ -105,7 +105,7 @@ def source_identity():
             ).returncode
             == 0
         )
-        # Untracked files mean the SHA cannot identify the tested source either.
+        # Неподконтрольные Git файлы также означают, что SHA не идентифицирует проверенные исходники.
         untracked = subprocess.run(
             ["git", "ls-files", "--others", "--exclude-standard"],
             cwd=ROOT,
@@ -199,7 +199,7 @@ def rust_suite():
     )
     if listed["status"] != "passed":
         return listed
-    # -q hides names; test list output is stored in compact outputTail only, so query it explicitly.
+    # -q скрывает имена; список тестов находится только в сокращённом outputTail, поэтому запрашивайте его явно.
     listing = subprocess.run(
         ["cargo", "test", "--manifest-path", str(manifest), "--lib", "--", "--list"],
         cwd=ROOT,
@@ -339,8 +339,8 @@ def main():
             )
         )
 
-    # Platform/hardware obligations are distinct from unit tests. Evidence must
-    # point to an independently executed verified report for this SAME commit.
+    # Обязательства по платформам и оборудованию отличаются от модульных тестов. Доказательства должны
+    # ссылаться на независимо выполненный проверенный отчёт для ЭТОГО ЖЕ коммита.
     attachments = {
         "real-java-clean-machine": "LAUNCHER_CERT_JAVA_EVIDENCE",
         "signed-installer-clean-machine": "LAUNCHER_CERT_BOOTSTRAP_EVIDENCE",

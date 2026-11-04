@@ -1,6 +1,6 @@
-//! macOS user-mode JVM monitoring. Deliberately does not use task_for_pid,
-//! kernel extensions, or claim to enumerate SIP/AMFI-protected memory maps.
-//! Files used by Minecraft are also watched by LiveGameGuard and the Java agent.
+//! Мониторинг JVM на macOS в пользовательском режиме. Намеренно не использует task_for_pid и
+//! расширения ядра, не заявляет перечисление защищённых SIP/AMFI отображений памяти. За
+//! файлами Minecraft также следят LiveGameGuard и Java-агент.
 #![cfg(target_os = "macos")]
 
 use crate::macos_policy::verify_macos_code_signature;

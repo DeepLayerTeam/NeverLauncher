@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// The systemd notification socket may be a Linux abstract Unix socket (@name).
-// No external sd_notify binary, subprocess, or libsystemd dependency is needed.
+// Сокет уведомлений systemd может быть абстрактным Unix-сокетом Linux (@name). Внешняя
+// утилита sd_notify, подпроцесс и зависимость libsystemd не нужны.
 func hostNotify02811(message string) error {
 	socket := os.Getenv("NOTIFY_SOCKET")
 	if socket == "" {
@@ -62,9 +62,9 @@ func hostServiceStopping02811() {
 }
 func hostServiceStatus02811(status string) { _ = hostNotify02811("STATUS=" + status) }
 
-// A systemd SIGTERM is translated to the same session-bound stop request as
-// `nl server-bridge host stop`; the child must receive Minecraft's console
-// "stop" before OS termination. KillMode=mixed gives the supervisor time to do it.
+// SIGTERM от systemd преобразуется в тот же запрос остановки с привязкой к сеансу, что и `nl
+// server-bridge host stop`; дочерний процесс должен получить консольную команду Minecraft «stop» до
+// завершения средствами ОС. KillMode=mixed даёт супервизору время.
 func hostServiceRun02811(paths map[string]string, session string) func() {
 	signals := make(chan os.Signal, 2)
 	done := make(chan struct{})
@@ -76,9 +76,9 @@ func hostServiceRun02811(paths map[string]string, session string) func() {
 				return
 			case <-signals:
 				hostServiceStopping02811()
-				// A signal can arrive before the JVM has reached running state.
-				// Wait for the session's own verified child rather than sending
-				// a signal to a PID obtained from stale runtime.json.
+				// Сигнал может поступить до перехода JVM в рабочее состояние. Дождитесь
+				// проверенного дочернего процесса собственного сеанса вместо сигнала
+				// PID из устаревшего runtime.json.
 				ticker := time.NewTicker(25 * time.Millisecond)
 				deadline := time.NewTimer(20 * time.Second)
 				pending := true
@@ -125,7 +125,7 @@ func hostServiceRun02811(paths map[string]string, session string) func() {
 					if err != nil || st.SessionID != session || st.SupervisorPID != os.Getpid() || !hostIdentityMatches0282(st.SupervisorPID, st.SupervisorIdentity) {
 						continue
 					}
-					// Do not claim health if a recorded child was replaced or died.
+					// Не сообщайте о здоровье, если зарегистрированный дочерний процесс умер или заменился.
 					if st.Status == "running" && hostIdentityMatches0282(st.ProcessPID, st.ProcessIdentity) {
 						_ = hostNotify02811("WATCHDOG=1")
 					}

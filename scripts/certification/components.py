@@ -45,7 +45,7 @@ def current_target() -> tuple[str, str]:
 
 
 def profile_digest(spec: dict[str, Any]) -> str:
-    # Exact Manifest v3 canonical profile snapshot digest (same as Go and Rust).
+    # Точный дайджест канонического снимка профиля Manifest v3, совпадающий с Go и Rust.
     values = (
         spec["projectId"],
         spec["id"],
@@ -73,14 +73,14 @@ def build_fixture(
     spec = doc["profileSnapshot"]["spec"]
     spec["projectId"] = "certification"
     doc["profileSnapshot"]["digest"] = profile_digest(spec)
-    # Never fabricate target success: actual Rust conditions must evaluate this
-    # runtime's detected OS / architecture. All other signed v5 fields stay.
+    # Никогда не подделывайте успех целевой платформы: настоящие условия Rust должны оценить обнаруженные
+    # на этом Runtime ОС и архитектуру. Остальные подписанные поля v5 сохраняются.
     cond = doc["componentCatalog"]["components"][1]["conditions"]
-    # Preserve the fixture's catalog digest: setting conditions would invalidate
-    # it. Compatible targets are covered by live signed fixture as authored.
+    # Сохраните дайджест каталога фикстуры: изменение условий сделает его недействительным.
+    # Совместимые цели охвачены уже подготовленной живой подписанной фикстурой.
     if target != ("linux", "x86_64") and target != ("windows", "x86_64"):
-        # Other OS/arch still execute required-only preset; explicit optimized
-        # selection must fail cleanly before HTTP rather than bypass conditions.
+        # Другие ОС и архитектуры всё ещё выполняют пресет только с обязательными компонентами; явный выбор
+        # оптимизированного пресета должен корректно отклоняться до HTTP, а не обходить условия.
         pass
     for i, item in enumerate(doc["files"]):
         data = payload(i, size=2048 + i * 517)
@@ -102,7 +102,7 @@ def invoke(
     runtime: Path, argv: list[str], *, cache: Path, success: bool = True
 ) -> dict:
     env = os.environ.copy()
-    # Isolate a real shared verified cache so offline reuse is meaningful.
+    # Изолируйте настоящий общий проверенный кэш, чтобы повторное офлайновое использование имело смысл.
     if sys.platform == "win32":
         env["LOCALAPPDATA"] = str(cache)
     elif sys.platform == "darwin":
@@ -187,7 +187,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 raise AssertionError(
                     "optional component downloaded despite minimal preset"
                 )
-            # A player-created file is NOT silently enrolled into signed ownership.
+            # Файл, созданный игроком, НЕЛЬЗЯ незаметно включать в подписанное владение.
             player = installation / "mods/user-created.txt"
             player.write_text("player's file; not in signed manifest", encoding="utf-8")
             minimal_requests = len(server.metrics()["requests"])
@@ -216,7 +216,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     raise AssertionError("unchanged component was fetched again")
                 if len(delta) < 2:
                     raise AssertionError("truncated HTTP body was not retried/resumed")
-                # Tampering a signed action or signed snapshot must fail BEFORE any fetch.
+                # Изменение подписанного действия или снимка должно отклоняться ДО любой загрузки.
                 modified = copy.deepcopy(json.loads(signed.read_text()))
                 modified["componentCatalog"]["components"][1]["actions"][2]["args"][
                     0
@@ -242,10 +242,10 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 )
                 if len(server.metrics()["requests"]) != request_count:
                     raise AssertionError("invalid signature triggered network traffic")
-                # Existing unrelated file must survive preset transitions.
+                # Существующий посторонний файл должен пережить переключение пресетов.
                 install("minimal")
                 assert_bytes(installation, doc, core)
-                # A real durable rollback must restore the prior signed plan.
+                # Настоящий долговечный откат обязан восстановить прежний подписанный план.
                 rollback = invoke(
                     runtime,
                     [
@@ -278,7 +278,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     != "player's file; not in signed manifest"
                 ):
                     raise AssertionError("player file was mutated during preset switch")
-                # A player file at a newly managed path blocks BEFORE download.
+                # Пользовательский файл на новом управляемом пути блокирует операцию ДО загрузки.
                 conflict = installation / "mods/sodium.jar"
                 conflict.write_bytes(b"player-selected replacement")
                 count = len(server.metrics()["requests"])
@@ -297,7 +297,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     )
                 conflict.unlink()
             else:
-                # Authored OS/arch conditions must block incompatible preset.
+                # Авторские условия ОС/архитектуры должны блокировать несовместимый пресет.
                 count = len(server.metrics()["requests"])
                 invoke(
                     runtime,
@@ -309,8 +309,8 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     raise AssertionError(
                         "incompatible component initiated file transfer"
                     )
-            # An untrusted selection can reference only signed component IDs;
-            # it cannot disable a required node or inject an unsigned component.
+            # Недоверенный выбор может ссылаться лишь на подписанные ID компонентов; он не может
+            # отключать обязательный узел или добавлять неподписанный компонент.
             for denied in (
                 "@custom:v1:minimal:-core",
                 "@custom:v1:minimal:+unsigned.jar",
@@ -326,7 +326,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     raise AssertionError(
                         "invalid selection was evaluated after network access"
                     )
-            # All platforms exercise signature pinning with an entirely wrong key.
+            # Все платформы проверяют закрепление подписи с полностью неправильным ключом.
             count = len(server.metrics()["requests"])
             invoke(
                 runtime,
@@ -336,7 +336,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
             )
             if len(server.metrics()["requests"]) != count:
                 raise AssertionError("incorrect public key reached network")
-            # Verification itself is not a successful test unless files were inspected.
+            # Сама проверка не считается успешным тестом, пока файлы действительно не просмотрены.
             if minimal_requests < 1:
                 raise AssertionError("no real HTTP payload was transferred")
             metrics = server.metrics()

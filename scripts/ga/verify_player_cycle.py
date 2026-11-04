@@ -128,8 +128,8 @@ def verify(root: Path, version: str, source: str, run_id: str = '', run_attempt:
             denied.get('reason') in ('launcher_session_or_handoff_missing_or_expired',
                                      'launcher_session_missing_or_expired'),
             'real ticket was consumed by a negative test, replay succeeded or player UUID changed')
-    # Genuine JVM game join and rollback are independently checked by 0.36.4
-    # using counters, logs, signed manifests, binary hashes and source identity.
+    # Настоящие подключение JVM к игре и откат независимо проверяются 0.36.4 по счётчикам, журналам,
+    # подписанным манифестам, хешам бинарных файлов и идентичности исходников.
     require(type(base['artifactsVerified']) is int and base['artifactsVerified'] >= 20 and
             base['realJoinsAfterUpdateAndRollback'] is True, 'game cycle not verified')
     return {'status': 'verified', 'scope': 'real-local-Minecraft-player-negative-and-positive-0398',

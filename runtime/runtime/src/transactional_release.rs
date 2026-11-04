@@ -1603,15 +1603,15 @@ pub fn installed_component_state_0247(manifest:&Manifest,root:&Path,key:&str)->R
     validate_release(&active,key)?;
     if active.manifest.signature.as_ref().map(|v|(&v.public_key,&v.signature))!=
        manifest.signature.as_ref().map(|v|(&v.public_key,&v.signature)) {
-        // Different release: paths still belong to the VERIFIED old release.
+        // Другой выпуск: пути по-прежнему принадлежат ПРОВЕРЕННОМУ старому выпуску.
         return Ok((active.preset,active.installed));
     }
     Ok((active.preset,active.installed))
 }
 
-/// Validate a proposed managed file path without acquiring ownership.
-/// Installed-file collisions are handled by transactional staging, but UI must
-/// not offer a misleading "zero download" preview over player-owned bytes.
+/// Проверяйте предложенный путь управляемого файла, не принимая владение им. Коллизии установленных
+/// файлов обрабатываются транзакционной подготовкой, но UI не должен показывать вводящий в
+/// заблуждение «нулевой объём загрузки» поверх пользовательских файлов.
 pub fn check_unowned_path_0247(root:&Path,relative:&str)->Result<(),String>{
     let destination=safe_join(root,relative)?;
     file_ownership::ensure_no_symlinks(root,&destination)?;
@@ -1619,9 +1619,9 @@ pub fn check_unowned_path_0247(root:&Path,relative:&str)->Result<(),String>{
     Ok(())
 }
 
-// 0.35.9: User files have never been part of signed managed ownership. Before a
-// new release claims their paths, an explicit player action may move them to a
-// durable, discoverable archive. Nothing in this flow weakens commit preflight.
+// 0.35.9: пользовательские файлы никогда не входили в подписанное управляемое владение. До
+// закрепления их путей новым выпуском игрок может явным действием переместить их в долговечный
+// обнаруживаемый архив. Это не ослабляет проверки перед фиксацией.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerConflict0359 {
@@ -1670,9 +1670,9 @@ pub fn preview_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pres
     Ok(PlayerConflictResult0359{files:find_player_conflicts_0359(&root,manifest,key,preset)?,archive_directory:None})
 }
 
-// A caller must confirm the exact previewed path+hash set. The durable index
-// is written before the first rename, so interrupted saves remain discoverable.
-// Renames stay on the same filesystem and never overwrite existing archives.
+// Вызывающая сторона обязана подтвердить точный предварительно показанный набор путей и хешей. Надёжный индекс
+// записывается до первого переименования, чтобы прерванное сохранение оставалось обнаружимым. Переименования
+// выполняются в пределах одной файловой системы и никогда не перезаписывают архивы.
 pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,preset:Option<&str>,expected:&[PlayerConflict0359])->Result<PlayerConflictResult0359,String>{
     let _guard=lock(root)?;
     let root=root.canonicalize().map_err(|e|e.to_string())?;
@@ -1684,7 +1684,7 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
     if files.is_empty(){return Ok(PlayerConflictResult0359{files,archive_directory:None})}
     let archive=base(&root).join("player-conflicts").join(format!("{:032x}",rand::random::<u128>()));
     safe_dir(&root,&archive)?;
-    // Persist a complete immutable list before moving any user bytes.
+    // Сохраните полный неизменяемый список перед переносом любых пользовательских байтов.
     let index=serde_json::to_vec_pretty(&serde_json::json!({
         "schemaVersion":"1.0","projectId":&manifest.project_id,"profileId":&manifest.profile_id,
         "channel":&manifest.channel,"release":&manifest.version,"files":&files
@@ -1717,8 +1717,8 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
     Ok(PlayerConflictResult0359{files,archive_directory:Some(archive.to_string_lossy().into_owned())})
 }
 
-/// An outer Option differentiates "no matching active release" from the
-/// default choice of an installed release (the inner None).
+/// Внешний Option отличает отсутствие совпадающего активного выпуска от
+/// стандартного выбора установленного выпуска (внутренний None).
 pub fn matching_installed_preset_0247(manifest:&Manifest,root:&Path,key:&str)->Result<Option<Option<String>>,String>{
     verify_manifest_signature(manifest,key)?;
     let Some(active)=pointer(root)?.active else {return Ok(None)};
@@ -1728,9 +1728,9 @@ pub fn matching_installed_preset_0247(manifest:&Manifest,root:&Path,key:&str)->R
     Ok(if same{Some(active.preset)}else{None})
 }
 
-/// Return only a verified, intact active release. Used by migration/export and
-/// rollback UI synchronization. Never treat a persisted Desktop preference as
-/// the installed selection or trust a release pointer without its signature.
+/// Возвращайте только проверенный целый активный выпуск. Используется миграцией, экспортом и
+/// синхронизацией UI отката. Сохранённые предпочтения Desktop не определяют установленный
+/// выбор, а указатель выпуска без подписи недостоверен.
 pub fn verified_active_selection_02410(root:&Path,key:&str)->Result<Option<(Manifest,Option<String>)>,String>{
     let _guard=lock(root)?;
     let root=root.canonicalize().map_err(|e|e.to_string())?;

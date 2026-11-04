@@ -142,8 +142,8 @@ class CompleteExecutionEvidenceTests(unittest.TestCase):
             self.replay()
 
     def test_publish_ga_rechecks_full_archive_and_rejects_unsigned_receipt(self):
-        # Make the signed fixture live in this CI attempt so the real publish
-        # validator (which intentionally has no injected clock) can replay it.
+        # Создавайте подписанную фикстуру в текущем CI-запуске, чтобы настоящий валидатор
+        # публикации, намеренно без внедрённых часов, смог её воспроизвести.
         current = datetime.now(timezone.utc)
         signed = self.base.approval
         signed["issuedAtUtc"] = timevalue(current - timedelta(minutes=5))

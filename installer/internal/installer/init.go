@@ -39,9 +39,9 @@ func validatePublicURL(raw string) error {
 	return errors.New("public URL must use HTTPS (HTTP allowed on loopback only)")
 }
 
-// Init creates a PostgreSQL production configuration in one exclusive 0600
-// operation. It deliberately does not claim to install PostgreSQL or satisfy
-// release-specific Guard/Bridge signing policies.
+// Init создаёт производственную конфигурацию PostgreSQL одной эксклюзивной
+// операцией записи 0600. Установка PostgreSQL и соответствие специфическим
+// политикам подписания Guard/Bridge здесь не утверждаются.
 func Init(dest, publicURL, dsn, storageDir string) error {
 	if !filepath.IsAbs(dest) || filepath.Clean(dest) != dest || !filepath.IsAbs(storageDir) || !validEnvField(dsn) {
 		return errors.New("require absolute output/storage paths and shell-safe PostgreSQL DSN")

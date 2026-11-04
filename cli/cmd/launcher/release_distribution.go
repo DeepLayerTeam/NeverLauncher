@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// The six final installer files, not intermediates. This gate complements
-// the independently signed native execution and OS-signature GA verification.
+// Шесть окончательных файлов установщиков, а не промежуточные результаты. Эта проверка дополняет
+// независимое подписанное подтверждение нативного исполнения и GA-проверку подписи ОС.
 type distributionTarget04511 struct{ target, packageFile string }
 
 func distributionRequired04511(ver string) bool {
@@ -41,9 +41,9 @@ func distributionHash04511(dir, name string) (string, error) {
 	return digest, err
 }
 
-// Bind the hashes of the actually staged and platform-signed installers into
-// the existing dependency SPDX document. Adding only file names/declared
-// target support is not sufficient to attest the produced bytes.
+// Привязывайте хеши фактически подготовленных и подписанных платформой установщиков к
+// существующему SPDX-документу зависимостей. Одних имён файлов или заявленных целей
+// недостаточно для аттестации полученных байтов.
 func bindDistributionSBOM04511(document map[string]any, dir, ver string) error {
 	if !distributionRequired04511(ver) {
 		return nil
@@ -73,8 +73,8 @@ func bindDistributionSBOM04511(document map[string]any, dir, ver string) error {
 	return nil
 }
 
-// Called from BOTH the direct signing API and the release verifier. A valid
-// Ed25519 signature on an inconsistent BOM/SPDX/provenance is not publishable.
+// Вызывается и прямым API подписания, и верификатором выпуска. Даже действительная подпись Ed25519
+// не делает противоречивые BOM/SPDX/provenance пригодными к публикации.
 func verifyDistributionSupplyChain04511(dir, ver string) error {
 	if !distributionRequired04511(ver) {
 		return nil
@@ -144,8 +144,8 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 	if len(found) != 6 {
 		return errors.New("SPDX must describe exactly six final platform packages")
 	}
-	// A six-row package inventory is not a dependency SBOM. Preserve the
-	// existing application roots and dependency graph in the signed document.
+	// Таблица из шести пакетов не является SBOM зависимостей. Сохраняйте исходные корни
+	// приложений и граф зависимостей в подписанном документе.
 	for _, root := range []string{"SPDXRef-Package-CLI", "SPDXRef-Package-BackendAPI", "SPDXRef-Package-Admin", "SPDXRef-Package-Desktop", "SPDXRef-Package-Runtime", "SPDXRef-Package-Bridges"} {
 		if !ids[root] {
 			return fmt.Errorf("dependency SBOM missing existing application root: %s", root)
@@ -221,9 +221,9 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 	if !subjects["SBOM.spdx.json"] {
 		return errors.New("provenance does not bind SPDX")
 	}
-	// Source material digests must agree with the independently pinned BOM
-	// inputs; these are actual resolved SLSA dependencies, not an assertion
-	// copied from the version field.
+	// Хеши исходных материалов должны совпадать с независимо закреплёнными
+	// входами BOM; это реальные разрешённые зависимости SLSA, а не
+	// утверждение, скопированное из поля версии.
 	var bom struct {
 		Components []struct {
 			SourceFile   string `json:"sourceFile"`

@@ -10,7 +10,7 @@ func TestSignedBranding0355RejectsActiveContent(t *testing.T) {
 	if err := good.Validate0355(); err != nil {
 		t.Fatal(err)
 	}
-	// Real PNG with valid IHDR, IDAT, IEND and CRC; truncated headers are rejected.
+	// Настоящий PNG с корректными IHDR, IDAT, IEND и CRC; усечённые заголовки отклоняются.
 	png, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGPgEpH7DwABpAE8k4sOtwAAAABJRU5ErkJggg==")
 	if err != nil {
 		t.Fatal(err)

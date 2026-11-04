@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// This test launches an actual Unix IPC endpoint, then simulates Discord
-// restarting after accepting SET_ACTIVITY but before acknowledging it.
+// Тест запускает реальный Unix IPC endpoint, затем имитирует перезапуск Discord
+// после принятия SET_ACTIVITY, но до подтверждения.
 func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Unix socket test; Windows uses named pipes")
@@ -51,8 +51,8 @@ func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 				return
 			}
 			if attempt == 0 {
-				// First client was disconnected mid-flight. The second must
-				// restore the activity instead of reporting permanent failure.
+				// Первый клиент потерял связь во время операции. Второй обязан восстановить
+				// активность, а не сообщать о постоянной ошибке.
 				connection.Close()
 				continue
 			}

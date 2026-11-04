@@ -86,15 +86,15 @@ def session_archive(target, destination: Path, args):
     verified = inventory.verify_compatibility(target, (result_dir / 'compatibility-result.json', result),
                                                args.commit, args.run_id, args.attempt)
     ev = result['evidence']['files']
-    # Preserve original raw results and hashed log witnesses rather than only a PASS JSON.
+    # Сохраняйте первоначальные сырые результаты и свидетельства журналов с хешами, а не один JSON PASS.
     copy_selected(result_dir, destination / 'compatibility-result',
                   ['compatibility-result.json'] + [x for x in ev if x in
                     ('java-runtime.json','platform-runtime.json','compatibility-execution.log')])
     runtime_src = ROOT / 'e2e/runtime'
     runtime_names = [x for x in ev if x not in
                      ('java-runtime.json','platform-runtime.json','compatibility-execution.log')]
-    # Compatibility includes files not in the signed list only if explicitly needed
-    # by the deep verifier. Preserve them as well, then re-verify the copied tree.
+    # Совместимость охватывает файлы вне подписанного списка, только если они явно нужны глубокому
+    # верификатору. Сохраняйте их и повторно проверяйте скопированное дерево.
     for name in ('result.json', f"{target['loader']}-install.json",
                  f"{target['loader']}-certification.json", 'materialized-client-verify.json',
                  'live-join.json', 'live-server-ready.json','live-server-witness.json',
@@ -161,7 +161,7 @@ def game(args):
             require(i < args.max_sessions, 'session limit reached before minimum duration')
             sample = out / f'session-{i+1:03d}'
             sample.mkdir(mode=0o700)
-            # Do not reuse stale outputs from a previous game/runner attempt.
+            # Не используйте устаревшие результаты прежней попытки игры или runner.
             for folder in ('e2e/compatibility-result', 'e2e/runtime'):
                 old = ROOT / folder
                 require(not old.is_symlink(), 'unsafe reused runtime directory')

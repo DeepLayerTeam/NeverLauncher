@@ -4,7 +4,7 @@ package devtools
 
 import "os/exec"
 
-// Windows direct-child termination is provided by CommandContext. It is not a job-object sandbox.
+// В Windows CommandContext завершает непосредственный дочерний процесс. Это не песочница на основе job object.
 func prepareComponentGroup(cmd *exec.Cmd) {}
 func killComponentTree(cmd *exec.Cmd) {
 	if cmd.Process != nil {

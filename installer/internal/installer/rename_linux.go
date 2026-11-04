@@ -5,7 +5,7 @@ package installer
 import "syscall"
 import "unsafe"
 
-// renameat2 syscall: RENAME_NOREPLACE prevents races with concurrent installers.
+// Системный вызов renameat2: RENAME_NOREPLACE предотвращает гонки между конкурентными установщиками.
 func noReplace(from, to string) error {
 	a, err := syscall.BytePtrFromString(from)
 	if err != nil {

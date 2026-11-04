@@ -228,8 +228,8 @@ def confirm_local_files(manifest, root, paths, should_exist):
 
 
 def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server, report):
-    # This invokes the shipped native Runtime, a real local matching Minecraft
-    # server and a JVM. No simulated client process or fabricated pass receipt.
+    # Вызывает поставляемый нативный Runtime, настоящий локальный совместимый Minecraft-сервер и JVM.
+    # Никакого имитированного клиентского процесса или вымышленной успешной квитанции.
     from staged_matching_0344 import JOIN, player_online, parse_gametime, CRASH
     username = 'NL_Cert_Client'
     server.prepare().start(timeout=200)
@@ -241,7 +241,7 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
                    '--preset', preset, '--java', str(java), '--username', username,
                    '--matching-server-port', str(server.port), '--max-runtime-seconds', '120']
         with tempfile.TemporaryDirectory(prefix='nl-client-0526-') as temp:
-            # Capture the process output in a private file, not acceptance JSON.
+            # Сохраняйте вывод процесса в закрытый файл, а не в приёмочный JSON.
             with open(Path(temp) / 'client-result.json', 'xb') as output:
                 proc = subprocess.Popen(command, stdout=output, stderr=subprocess.DEVNULL)
                 launched = True
@@ -271,7 +271,7 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
             response = parse_json((Path(temp) / 'client-result.json').read_bytes())
             need(isinstance(response, dict) and response.get('success') is True,
                  'native Runtime did not confirm successful real client launch')
-        # Request a real world save/stop, then verify successful JVM exit.
+        # Запросите настоящее сохранение мира и остановку, затем проверьте успешное завершение JVM.
         try:
             server.rcon.query('save-all flush')
         except (OSError, ValueError, RuntimeError):
@@ -348,7 +348,7 @@ def execute(args, report):
          integrity.get('result', {}).get('signatureVerified') is True,
          'package integrity check did not verify signed files and signature')
     report['checks'].append('real_signature_stage_and_integrity')
-    # Existing readiness policy is authoritative: no fake/implicit validation.
+    # Существующая политика готовности авторитетна: никакой поддельной или неявной проверки.
     api.json('POST', package_route + '/publish', token=operator_token, expected=(200, 201, 202))
     current = {}
     for _ in range(40):
@@ -378,7 +378,7 @@ def execute(args, report):
         texture = upload_texture(api, token, kind, local.read_bytes())
         report['textures'].append(texture)
         report['checks'].append('real_' + kind + '_upload_and_binary_readback')
-    # Use an independent HTTPS manifest response, never a local operator draft.
+    # Используйте независимый HTTPS-ответ с манифестом, а не локальный черновик оператора.
     with tempfile.TemporaryDirectory(prefix='nl-0526-acceptance-') as temp:
         folder = Path(temp)
         mf = folder / 'published.json'
@@ -399,7 +399,7 @@ def execute(args, report):
                  'download erased or modified user-owned game configuration')
             confirm_local_files(manifest, root, paths, select)
             report['checks'].append(('selected' if select else 'unselected') + '_mods_native_sync_and_verify')
-        # A selected JAR has to be really recoverable, not merely listed in JSON.
+        # Выбранный JAR должен быть реально восстанавливаемым, а не только указанным в JSON.
         root = folder / 'selected'
         jar = root.joinpath(*paths[0].split('/'))
         jar.unlink()
@@ -413,8 +413,8 @@ def execute(args, report):
         assert_native_ready(recovered)
         confirm_local_files(manifest, root, paths, True)
         report['checks'].append('selected_mod_deleted_then_recovered_from_signed_release')
-        # Prove a REAL client/player join with this exact published manifest and
-        # the modded/vanilla matching server; no success inferred from exit alone.
+        # Докажите НАСТОЯЩИЙ вход клиента и игрока по этому опубликованному манифесту на совпадающий
+        # сервер vanilla или с модами; одного успешного завершения недостаточно.
         sys.path.insert(0, str(ROOT / 'e2e' / 'scripts'))
         from staged_matching_0344 import MatchingServer
         game = manifest.get('minecraft', {})

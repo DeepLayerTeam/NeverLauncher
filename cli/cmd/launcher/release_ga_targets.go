@@ -1,8 +1,8 @@
 package main
 
-// Independent, exact-byte GA admission at the final release-signing boundary.
-// This is deliberately enforced by the CLI itself, not only a shell workflow.
-// Historical 0.36.0 retains its legacy approval domain and packaging workflow.
+// Независимый точный по байтам допуск GA на финальной границе подписания выпуска. Он
+// намеренно проверяется самим CLI, а не только shell-процессом. Для исторической 0.36.0
+// остаются прежний домен утверждения и процедура упаковки.
 
 import (
 	"crypto/ed25519"
@@ -79,8 +79,8 @@ func gaTargetsRequired0361(v string) bool {
 	return ok && compareVersionTriple0158(triple, [3]int{0, 36, 1}) >= 0
 }
 
-// Reject duplicated JSON names (not just unknown fields); ambiguity must never
-// be resolved differently by the independent operator and signer.
+// Отклоняйте повторяющиеся имена полей JSON, а не только неизвестные поля: независимый
+// оператор и подписант не должны по-разному трактовать неоднозначность.
 func gaUniqueJSON0361(raw []byte) error {
 	d := json.NewDecoder(strings.NewReader(string(raw)))
 	var parse func() error
@@ -339,7 +339,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	if len(seen) != 6 {
 		return errors.New("GA incomplete six-target coverage")
 	}
-	// Refuse silently shipped seventh platform archives not covered by approval.
+	// Не допускайте незаметной поставки седьмого платформенного архива вне выданного разрешения.
 	items, err := os.ReadDir(dir)
 	if err != nil {
 		return err

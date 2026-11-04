@@ -1,10 +1,10 @@
 package componentmodel
 
-// This package contains the same catalog/digest/resolution implementation as
-// the API's internal model. It is kept in the CLI's separate Go module so nl
-// works offline. Keep the four versioned source files synchronized with API.
-// The manifest types below preserve signed file metadata required to validate
-// component ownership; release signature validation belongs to the CLI.
+// Этот пакет содержит ту же реализацию каталога, дайджеста и разрешения, что
+// внутренняя модель API. Она размещена в отдельном Go-модуле CLI для офлайновой работы
+// nl. Держите четыре версионированных исходных файла синхронно с API. Типы манифеста
+// ниже сохраняют подписанные метаданные файлов для проверки владения компонентами;
+// подпись выпуска проверяется CLI.
 import (
 	"fmt"
 	"path"
@@ -53,8 +53,8 @@ func validFilePolicyPath0224(s string, pattern bool) bool {
 	return !strings.ContainsAny(s, "*?[]")
 }
 
-// ValidateSignedFiles0249 complements catalog ownership checks for all the
-// non-component files that the resolver also includes in its plan.
+// ValidateSignedFiles0249 дополняет проверку владения каталогом для остальных файлов, не
+// относящихся к компонентам, но включённых разрешителем в план.
 func ValidateSignedFiles0249(files []ManifestFile) error {
 	seen := map[string]bool{}
 	for _, f := range files {

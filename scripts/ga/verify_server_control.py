@@ -89,7 +89,7 @@ def verify(root: Path, version: str, commit: str):
     if commit:
         if not COMMIT.fullmatch(commit) or proof.get("sourceCommit") != commit:
             raise ValueError("Paper world restore proof belongs to a different commit")
-    # Validate independent outputs, not just an asserted boolean in result.json.
+    # Проверяйте независимые результаты, а не один заявленный boolean в result.json.
     join = strict_json(root / "join-paper-real-client-fresh.json")
     if (
         join.get("data", {}).get("oneTime") is not True

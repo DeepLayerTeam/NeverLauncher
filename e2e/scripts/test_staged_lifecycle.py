@@ -110,8 +110,8 @@ class V09Tests(unittest.TestCase):
         cli = os.environ.get("NL349_CLI")
         if not cli or not Path(cli).is_file():
             self.skipTest("build real CLI and set NL349_CLI")
-        # Large real bytes make prepared/committing journal phases observable
-        # without adding ANY test-only sleep or failure hook to the updater.
+        # Большие реальные массивы байтов позволяют наблюдать фазы журнала prepared/committing, не
+        # добавляя НИКАКИХ тестовых задержек или перехватов сбоя в обновлятор.
         for folder, tag in ((self.old, b"A"), (self.new, b"B")):
             data = tag * (24 << 20)
             f = folder / "mods" / "test.jar"
@@ -164,7 +164,7 @@ class V09Tests(unittest.TestCase):
             call("install", self.old, "initial")["status"], "applied-and-verified"
         )
         verify_exact(live, self.prev)
-        # Signed input was deliberately changed; real updater must refuse it and preserve old tree.
+        # Подписанный вход намеренно изменён; настоящий обновлятор должен его отклонить и сохранить старое дерево.
         src = self.new / "mods" / "test.jar"
         orig = src.read_bytes()
         src.write_bytes(b"broken-source")
@@ -179,8 +179,8 @@ class V09Tests(unittest.TestCase):
         f = live / "mods" / "test.jar"
         f.write_bytes(b"broken-live")
         call("verify", self.new, "corrupt-verify", False)
-        # The preferred cache has precedence over the correct signed input;
-        # a poisoned cache must be rejected rather than trusted as a repair.
+        # Предпочтительный кэш имеет приоритет перед корректным подписанным входом; отравленный кэш
+        # нужно отклонить, а не доверять ему как источнику восстановления.
         prefix = upgraded["apply"]["storagePrefix"]
         cached = cache / prefix / "mods" / "test.jar"
         cached.parent.mkdir(parents=True, exist_ok=True)
