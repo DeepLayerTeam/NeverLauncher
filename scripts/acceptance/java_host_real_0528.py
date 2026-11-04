@@ -137,7 +137,7 @@ def run(cfg, output):
             'exact Git commit required')
     backend = LiveHTTP(cfg['backendUrl'])
     status = backend.request('/api/v1/status', token=owner)
-    require(status.get('version') == '0.52.8', 'wrong running production Backend version')
+    require(status.get('version') == (Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'wrong running production Backend version')
     live_project = backend.request('/api/v1/projects/' + quote(project, safe=''), token=owner)
     require(project in json.dumps(live_project, sort_keys=True), 'real project missing from Backend')
     host = LiveHTTP(cfg['hostUrl'])
@@ -230,7 +230,7 @@ def run(cfg, output):
             cfg.get('agentSha256') == agent_digest_from_game(cfg),
             'installed trusted agent not bound to verified game launch evidence')
     checks.append('java-agent-exact-game-bytes')
-    report = {'schema': SCHEMA, 'version':'0.52.8', 'sourceCommit':cfg['sourceCommit'],
+    report = {'schema': SCHEMA, 'version': (Path(__file__).resolve().parents[2]/'VERSION').read_text().strip(), 'sourceCommit':cfg['sourceCommit'],
               'projectId':project, 'extensionJarSha256':sha_file(cfg['extensionJar']),
               'gameEvidenceSha256':sha_file(cfg['gameCompatibilityResult']),
               'checks':checks, 'checkCount':len(checks),

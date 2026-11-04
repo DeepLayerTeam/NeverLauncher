@@ -77,7 +77,7 @@ def local():
     checks['legacy-and-java-negative-regression'] = command(
         [sys.executable,'-m','unittest','discover','-s','scripts/acceptance',
          '-p','test_java_sdk_migration_0528.py'], timeout=75)
-    return {'format':SCHEMA, 'productVersion':'0.52.8', 'status':'LOCAL_REGRESSIONS_NOT_GA',
+    return {'format':SCHEMA, 'productVersion':(ROOT/'VERSION').read_text().strip(), 'status':'LOCAL_REGRESSIONS_NOT_GA',
             'checks':checks, 'gaCertified':False}
 
 
@@ -141,7 +141,7 @@ def live_run(cfg):
                 result.get('sourceVersion')==source_version, 'legacy live check blocked')
         private_save(output,result)
         legacy_results[source_version]=sha_file(str(output))
-    return {'format':SCHEMA,'productVersion':'0.52.8','sourceCommit':sha,
+    return {'format':SCHEMA,'productVersion':(ROOT/'VERSION').read_text().strip(),'sourceCommit':sha,
             'status':'LIVE_CHECKS_PASSED_REVIEW_REQUIRED','gaCertified':False,
             'java':{'evidenceSha256':sha_file(str(java_out)), 'checks':len(java_result['checks'])},
             'gravit':{'evidenceSha256':sha_file(str(grav_dir/'acceptance-0500.json')),
@@ -157,7 +157,7 @@ def main(argv=None):
     args=ap.parse_args(argv)
     os.umask(0o077)
     try:
-        require((ROOT/'VERSION').read_text().strip()=='0.52.8', 'wrong checkout version')
+        require(tuple(map(int, (ROOT/'VERSION').read_text().strip().split('.')[:3])) >= (0,52,8), 'checkout version is too old')
         result=local() if args.mode=='local' else live_run(private_json(args.config))
         private_save(args.report,result)
         print('0.52.8', result['status'], len(result.get('checks',{})))

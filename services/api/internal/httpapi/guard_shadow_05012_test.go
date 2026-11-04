@@ -27,7 +27,7 @@ func shadowKeyFixture05012(t *testing.T) (string, string) {
 
 func TestGuardShadow05012RealAppendAndIntegrity(t *testing.T) {
 	dir, keyFile := shadowKeyFixture05012(t)
-	journal, err := newGuardShadowJournal05012(dir, keyFile)
+	journal, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +76,9 @@ func TestGuardShadow05012RealAppendAndIntegrity(t *testing.T) {
 		if !hmac.Equal(tag.Sum(nil), mustDecodeHex05012(t, signature)) {
 			t.Fatalf("invalid event MAC %d", i)
 		}
+		if record["version"] != "0.52.9" {
+			t.Fatalf("wrong running API version in journal: %v", record["version"])
+		}
 		if record["prevMac"] != prev || int(record["sequence"].(float64)) != i+1 {
 			t.Fatal("broken event chain")
 		}
@@ -97,13 +100,13 @@ func TestGuardShadow05012RejectsWeakKeyPermissionsAndBadResults(t *testing.T) {
 	if err := os.Chmod(keyFile, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newGuardShadowJournal05012(dir, keyFile); err == nil {
+	if _, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9"); err == nil {
 		t.Fatal("accepted public server key")
 	}
 	if err := os.Chmod(keyFile, 0600); err != nil {
 		t.Fatal(err)
 	}
-	j, err := newGuardShadowJournal05012(dir, keyFile)
+	j, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,5 +119,50 @@ func TestGuardShadow05012RejectsWeakKeyPermissionsAndBadResults(t *testing.T) {
 	}
 	if j.seq != 1 {
 		t.Fatal("did not write redacted observation")
+	}
+}
+
+// An observation written by the running API, not a historic release constant,
+// must remain independently verifiable after each version upgrade.
+func TestGuardShadow05012RejectsInvalidVersion(t *testing.T) {
+	dir, keyFile := shadowKeyFixture05012(t)
+	for _, version := range []string{"", "0.50.12\nforged", "../../etc/passwd", "0.52"} {
+		if _, err := newGuardShadowJournal05012(dir, keyFile, version); err == nil {
+			t.Fatalf("accepted unsafe running version %q", version)
+		}
+	}
+}
+
+// Cross-language wire fixture emitted by the PRODUCTION journal implementation.
+// It is never accepted as a real shadow pilot or player-hour certificate.
+func TestGuardShadow0529WireFixture(t *testing.T) {
+	output := os.Getenv("NL0529_SHADOW_TEST_OUTPUT")
+	if output == "" {
+		return
+	}
+	if err := os.MkdirAll(output, 0700); err != nil {
+		t.Fatal(err)
+	}
+	keyFile := filepath.Join(output, "key.hex")
+	if err := os.WriteFile(keyFile, []byte(strings.Repeat("bd", 32)+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(output, "journals")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	journal, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []struct{ kind, reason string }{
+		{"allowed", "none"}, {"allowed", "none"}, {"revoked", "guard_binding_missing"},
+	} {
+		if err := journal.observe("node-private", "session-private", event.kind, event.reason, time.Millisecond); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := journal.close(); err != nil {
+		t.Fatal(err)
 	}
 }

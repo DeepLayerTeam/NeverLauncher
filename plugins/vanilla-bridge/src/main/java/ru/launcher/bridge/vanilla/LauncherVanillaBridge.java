@@ -75,6 +75,11 @@ public final class LauncherVanillaBridge implements AutoCloseable {
     void start() throws Exception {
         // Проверяйте учётные данные до публикации готовности.
         rcon("list");
+        // Do not advertise server.ready or operator availability until the
+        // authenticated, signed heartbeat was actually accepted by Backend.
+        // Previously this sidecar logged "ready" during a Backend outage.
+        if (!api.heartbeat("vanilla", BridgeDefaults.VERSION))
+            throw new IllegalStateException("authenticated Vanilla ServerBridge heartbeat was not accepted");
         api.setRoutingModes(false, false);
         api.startControlChannel(this::executeControl);
         api.publishEvent("server.startup", Map.of("platform", "vanilla", "adapter", "sidecar"));
@@ -110,9 +115,19 @@ public final class LauncherVanillaBridge implements AutoCloseable {
     }
 
     private BridgeControlResult setRouteMode(boolean maintenanceMode, boolean enabled) {
+        // A local boolean is not a remotely acknowledged maintenance/drain state.
+        // Restore the previous advertisement if the signed Backend heartbeat
+        // fails, and never claim a verified operator control on transport loss.
+        boolean beforeMaintenance = maintenance.get();
+        boolean beforeDraining = draining.get();
         if (maintenanceMode) maintenance.set(enabled); else draining.set(enabled);
         api.setRoutingModes(maintenance.get(), draining.get());
-        api.heartbeat("vanilla", BridgeDefaults.VERSION);
+        if (!api.heartbeat("vanilla", BridgeDefaults.VERSION)) {
+            maintenance.set(beforeMaintenance);
+            draining.set(beforeDraining);
+            api.setRoutingModes(beforeMaintenance, beforeDraining);
+            return BridgeControlResult.indeterminate("routing_mode_backend_not_acknowledged");
+        }
         boolean observed = maintenanceMode ? maintenance.get() : draining.get();
         return observed == enabled
             ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(observed), "mode", maintenanceMode ? "maintenance" : "drain"))

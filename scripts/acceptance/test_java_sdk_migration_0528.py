@@ -73,7 +73,7 @@ class Acceptance0528(unittest.TestCase):
         original={'schema':legacy.SCHEMA,'phase':'original','sourceVersion':'0.36.0',
                   'source':{'files':{'core_db':'b'*64},'storage':{'sha256':'c'*64,'count':1,'size':4}},
                   'identity':{'owner':{'id':'owner-1'},'project':'p'}}
-        with patch.object(legacy.live,'running_version',return_value='0.52.8'), \
+        with patch.object(legacy.live,'running_version',return_value=(legacy.ROOT/'VERSION').read_text().strip()), \
              patch.object(legacy,'source_snapshot',return_value=original['source']), \
              patch.object(legacy,'live_snapshot',return_value=original['identity']):
             self.assertEqual(legacy.verify(cfg,original)['status'],'LIVE_CHECKS_PASSED_REVIEW_REQUIRED')
@@ -82,11 +82,11 @@ class Acceptance0528(unittest.TestCase):
             nested=old_worlds/'nested';nested.mkdir()
             nested_cfg=dict(cfg, targetStorageRoot=str(nested))
             with self.assertRaises(legacy.Blocked):legacy.verify(nested_cfg,original)
-        with patch.object(legacy.live,'running_version',return_value='0.52.8'), \
+        with patch.object(legacy.live,'running_version',return_value=(legacy.ROOT/'VERSION').read_text().strip()), \
              patch.object(legacy,'source_snapshot',return_value=original['source']), \
              patch.object(legacy,'live_snapshot',return_value={'owner':{'id':'attacker'}}):
             with self.assertRaises(legacy.Blocked):legacy.verify(cfg,original)
-        with patch.object(legacy.live,'running_version',return_value='0.52.8'), \
+        with patch.object(legacy.live,'running_version',return_value=(legacy.ROOT/'VERSION').read_text().strip()), \
              patch.object(legacy,'source_snapshot',return_value={'files':{},'storage':{}}):
             with self.assertRaises(legacy.Blocked):legacy.verify(cfg,original)
         with patch.object(legacy.live,'running_version',return_value='0.46.0'):

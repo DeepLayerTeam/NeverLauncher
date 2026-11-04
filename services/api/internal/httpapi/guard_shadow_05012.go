@@ -22,17 +22,22 @@ import (
 )
 
 var guardShadowReason05012 = regexp.MustCompile(`^[a-z][a-z0-9_:-]{0,95}$`)
+var guardShadowVersion05012 = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$`)
 
 type guardShadowJournal05012 struct {
-	mu   sync.Mutex
-	f    *os.File
-	key  []byte
-	boot string
-	prev string
-	seq  uint64
+	mu      sync.Mutex
+	f       *os.File
+	key     []byte
+	boot    string
+	version string
+	prev    string
+	seq     uint64
 }
 
-func newGuardShadowJournal05012(directory, keyFile string) (*guardShadowJournal05012, error) {
+func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShadowJournal05012, error) {
+	if len(version) > 48 || !guardShadowVersion05012.MatchString(version) {
+		return nil, errors.New("Guard shadow requires a valid running product version")
+	}
 	if !filepath.IsAbs(directory) || !filepath.IsAbs(keyFile) {
 		return nil, errors.New("Guard shadow directory/key must be absolute")
 	}
@@ -61,7 +66,7 @@ func newGuardShadowJournal05012(directory, keyFile string) (*guardShadowJournal0
 	if err != nil {
 		return nil, err
 	}
-	return &guardShadowJournal05012{f: f, key: key, boot: id}, nil
+	return &guardShadowJournal05012{f: f, key: key, boot: id, version: version}, nil
 }
 
 func (j *guardShadowJournal05012) close() error {
@@ -103,7 +108,7 @@ func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason s
 	// The session pseudonym is stable only for this secret, not globally.
 	record := map[string]any{
 		"schema":      "neverlauncher.guard-shadow/v1",
-		"version":     "0.50.12",
+		"version":     j.version,
 		"bootId":      j.boot,
 		"sequence":    j.seq + 1,
 		"prevMac":     j.prev,
@@ -146,7 +151,7 @@ var guardShadowGlobal05012 struct {
 	err     error
 }
 
-func recordGuardShadow05012(nodeID, correlation, outcome, reason string, elapsed time.Duration) error {
+func recordGuardShadow05012(version, nodeID, correlation, outcome, reason string, elapsed time.Duration) error {
 	directory := strings.TrimSpace(os.Getenv("LAUNCHER_GUARD_SHADOW_DIR"))
 	keyFile := strings.TrimSpace(os.Getenv("LAUNCHER_GUARD_SHADOW_KEY_FILE"))
 	if directory == "" && keyFile == "" {
@@ -156,10 +161,13 @@ func recordGuardShadow05012(nodeID, correlation, outcome, reason string, elapsed
 		return errors.New("Guard shadow requires both directory and key file")
 	}
 	guardShadowGlobal05012.once.Do(func() {
-		guardShadowGlobal05012.journal, guardShadowGlobal05012.err = newGuardShadowJournal05012(directory, keyFile)
+		guardShadowGlobal05012.journal, guardShadowGlobal05012.err = newGuardShadowJournal05012(directory, keyFile, version)
 	})
 	if guardShadowGlobal05012.err != nil {
 		return guardShadowGlobal05012.err
+	}
+	if guardShadowGlobal05012.journal.version != version {
+		return errors.New("Guard shadow active journal version mismatch")
 	}
 	return guardShadowGlobal05012.journal.observe(nodeID, correlation, outcome, reason, elapsed)
 }

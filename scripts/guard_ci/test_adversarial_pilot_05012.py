@@ -86,6 +86,25 @@ class PilotEvidenceTests05012(unittest.TestCase):
         with self.assertRaisesRegex(mod.EvidenceError, 'unknown event'):
             mod.analyze_shadow(self.logdir, self.keyfile, review)
 
+    def test_review_field_collision_and_link_are_rejected(self):
+        event = self.append(1, outcome='revoked', reason='guard_build_revoked')
+        review = self.root / 'review.jsonl'
+        review.write_text('{"eventMac":"' + event['mac'] + '","verdict":"true_positive",'
+                          '"verdict":"false_positive","reviewerId":"operator"}\n')
+        with self.assertRaisesRegex(mod.EvidenceError, 'duplicate incident review'):
+            mod.analyze_shadow(self.logdir, self.keyfile, review)
+        review.write_text(json.dumps(dict(eventMac=event['mac'], verdict='true_positive', reviewerId='operator'))+'\n')
+        link = self.root / 'link.jsonl'; link.symlink_to(review)
+        with self.assertRaisesRegex(mod.EvidenceError, 'nonlinked'):
+            mod.analyze_shadow(self.logdir, self.keyfile, link)
+
+    def test_review_missing_newline_is_not_accepted(self):
+        event = self.append(1, outcome='revoked', reason='guard_build_revoked')
+        review = self.root / 'review.jsonl'
+        review.write_text(json.dumps(dict(eventMac=event['mac'], verdict='true_positive', reviewerId='operator')))
+        with self.assertRaisesRegex(mod.EvidenceError, 'truncated'):
+            mod.analyze_shadow(self.logdir, self.keyfile, review)
+
     def test_real_review_record_keeps_incident_blocked(self):
         event = self.append(1, outcome='revoked', reason='guard_runtime_policy_revoked')
         review = self.root / 'review.jsonl'

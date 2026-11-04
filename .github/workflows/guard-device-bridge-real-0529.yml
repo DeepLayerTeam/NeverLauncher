@@ -1,0 +1,106 @@
+name: NeverLauncher 0.52.9 Guard Device Trust and ServerBridge real acceptance
+on:
+  push:
+    paths:
+      - 'services/api/internal/httpapi/guard_shadow_05012*'
+      - 'services/api/internal/httpapi/server_bound_guard_0507.go'
+      - 'plugins/vanilla-bridge/**'
+      - 'scripts/acceptance/*0529.py'
+      - 'scripts/guard_ci/adversarial_pilot_05012.py'
+      - 'serverbridge/**'
+      - 'device-trust/**'
+      - 'guard-ci/**'
+      - '.github/workflows/guard-device-bridge-real-0529.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      physical_live_acceptance:
+        description: 'Run independent live private physical host acceptance (requires provisioned self-hosted runner)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  actual-regressions:
+    name: Go journal HMAC interop / JVM agent / 14 Java adapter profiles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Real Go journal interoperability and hostile evidence tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang_0529.py' -v
+          python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real_0529.py' -v
+          python3 scripts/guard_ci/test_adversarial_pilot_05012.py
+      - name: Production ServerBridge Java adapter-policy JVM tests
+        run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
+      - name: Authorized loader and hostile JVM transformations in real child JVMs
+        run: |
+          set -euo pipefail
+          python3 scripts/acceptance/guard_device_bridge_real_0529.py local \
+            --only-suite loader-transformations --output "$RUNNER_TEMP/guard-0529-local.json"
+          python3 - "$RUNNER_TEMP/guard-0529-local.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d['independentGA'] is False
+          assert d['status']=='LOCAL_PARTIAL_JVM_REGRESSIONS_NOT_GA'
+          assert len(d['guardJvm']['suites'])==1
+          assert d['guardJvm']['suites'][0]['status']=='PASS'
+          PY
+      - name: Current canonical version metadata and declared target scope
+        run: |
+          set -euo pipefail
+          python3 scripts/version/manage.py check
+          python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
+          python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
+          python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
+  physical-live-review:
+    if: github.event_name == 'workflow_dispatch' && inputs.physical_live_acceptance == true
+    name: Actual native hosts / game joins / Guard shadow review (never automatic GA)
+    runs-on: [self-hosted, linux, x64, neverlauncher-e2e-0529]
+    timeout-minutes: 240
+    needs: actual-regressions
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require protected private config and isolated Minecraft staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f /etc/neverlauncher/acceptance/guard-device-bridge-0529.json
+          test "$(stat -c %a /etc/neverlauncher/acceptance/guard-device-bridge-0529.json)" = 600
+          test -d artifacts/plugins
+          test "$(cat VERSION)" = 0.52.9
+      - name: Check real signed sessions, full 14-adapter cohort, Vanilla RCON and false positives
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/neverlauncher-live-0529"
+          python3 scripts/acceptance/guard_device_bridge_real_0529.py live \
+            --config /etc/neverlauncher/acceptance/guard-device-bridge-0529.json \
+            --output "$RUNNER_TEMP/neverlauncher-live-0529/report.json"
+          python3 - "$RUNNER_TEMP/neverlauncher-live-0529/report.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d['status']=='LIVE_CHECKS_PASSED_REVIEW_REQUIRED'
+          assert d['independentGA'] is False
+          assert d['deviceTrust']['nativeSecureStorageHardwareCertification'] is False
+          PY
+      - name: Keep private evidence exclusively on acceptance host
+        if: always()
+        run: echo 'Raw private Guard, RCON and device evidence must never be uploaded as public CI artifacts.'

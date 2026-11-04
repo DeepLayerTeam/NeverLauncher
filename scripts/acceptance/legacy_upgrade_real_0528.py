@@ -130,8 +130,8 @@ def verify(cfg, baseline):
             and baseline.get('sourceVersion') == cfg.get('sourceVersion') in ORIGINAL,
             'capture must originate from approved historical version')
     current = live.running_version(cfg['baseUrl'])
-    require(current == (ROOT/'VERSION').read_text().strip() == '0.52.8',
-            'migration target must be the running 0.52.8 Backend')
+    require(current == (ROOT/'VERSION').read_text().strip(),
+            'migration target must be the running current Backend')
     # Snapshot old sources again; old writers must be stopped through cutover.
     require(source_snapshot(cfg) == baseline['source'], 'original source files changed during migration')
     now = live_snapshot(cfg)

@@ -170,14 +170,31 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
             previous = item
     reviews: dict[str, str] = {}
     if reviews_path is not None:
-        with reviews_path.open('r', encoding='utf-8') as f:
+        require(reviews_path.is_absolute() and reviews_path.is_file() and not reviews_path.is_symlink()
+                and reviews_path.stat().st_nlink == 1 and
+                0 < reviews_path.stat().st_size <= 8 * 1024 * 1024 and
+                not any(p.is_symlink() for p in reviews_path.parents),
+                'review journal must be a bounded, nonlinked original file')
+        def no_duplicate_json_fields(pairs):
+            obj = {}
+            for key, value in pairs:
+                require(key not in obj, 'duplicate incident review JSON field')
+                obj[key] = value
+            return obj
+        with reviews_path.open('rb') as f:
             for index, line in enumerate(f, 1):
-                row = json.loads(line)
+                require(line.endswith(b'\n') and len(line) <= 2048,
+                        f'review {index}: truncated/oversized incident record')
+                try:
+                    row = json.loads(line, object_pairs_hook=no_duplicate_json_fields)
+                except (UnicodeError, json.JSONDecodeError) as exc:
+                    raise EvidenceError(f'review {index}: invalid incident JSON') from exc
                 require(isinstance(row, dict) and set(row) == {'eventMac', 'verdict', 'reviewerId'}, f'review {index}: invalid fields')
                 evidence = row['eventMac']
                 require(isinstance(evidence, str) and bool(HEX.fullmatch(evidence)) and evidence in unique_macs, f'review {index}: unknown event')
                 require(row['verdict'] in ('false_positive', 'true_positive', 'inconclusive'), f'review {index}: invalid verdict')
-                require(isinstance(row['reviewerId'], str) and 2 <= len(row['reviewerId']) <= 64, f'review {index}: invalid reviewer')
+                require(isinstance(row['reviewerId'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{1,63}', row['reviewerId']) is not None,
+                        f'review {index}: invalid reviewer')
                 require(evidence not in reviews, f'review {index}: duplicate review')
                 reviews[evidence] = row['verdict']
     invalid_reviews = [v for v in reviews if v not in {e['mac'] for e in revoked_events}]
