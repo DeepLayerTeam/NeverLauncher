@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Admin Dashboard Example</title>
+    <title>Пример панели администратора</title>
     <style>
       body {
         font: 14px system-ui;
@@ -19,8 +19,8 @@
     </style>
   </head>
   <body>
-    <h2>Admin Dashboard Example</h2>
-    <pre id="out">Waiting for Launcher host…</pre>
+    <h2>Пример панели администратора</h2>
+    <pre id="out">Ожидание хоста Launcher…</pre>
     <script>
       const P = "extensions.admin-rpc.v1";
       let seq = 0;
@@ -47,7 +47,7 @@
         return new Promise((resolve, reject) => {
           pending.set(id, { resolve, reject });
           setTimeout(() => {
-            if (pending.delete(id)) reject(new Error("RPC timeout"));
+            if (pending.delete(id)) reject(new Error("Истекло время ожидания RPC"));
           }, 10000);
         });
       }

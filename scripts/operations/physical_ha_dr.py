@@ -77,7 +77,7 @@ def read_json(p):
     return json.loads(private_bytes(Path(p), 4 << 20), object_pairs_hook=unique)
 
 def save(path, doc):
-    # The recovery journal is always created before BMC or firewall mutation.
+    # Журнал восстановления всегда создаётся до изменения состояния BMC или брандмауэра.
     path = Path(path)
     require(path.is_absolute() and path.parent.is_dir() and
             not path.parent.is_symlink() and path.parent.stat().st_uid == os.geteuid() and
@@ -200,7 +200,7 @@ def survivor(args, nodes, victim):
     return {'edgeSamples': observations, 'survivors': result}
 
 def peer_connectivity(args, nodes, victim):
-    # Check actual application TCP from the surviving hosts, not management SSH.
+    # Проверяйте реальное TCP-подключение приложения с выживших узлов, а не административный SSH.
     require(1 <= args.victim_port <= 65535, 'invalid victim application TCP port')
     ip = ipaddress.ip_address(args.victim_ip)
     require(ip.version == 4 and ip.is_private, 'victim service address must be private IPv4')
@@ -216,9 +216,9 @@ def peer_connectivity(args, nodes, victim):
 
 
 def firewall(args, action):
-    # The approved dedicated router has a *preinstalled* nft forward-chain
-    # policy referencing a dynamic timeout set. No arbitrary network rules or
-    # remote shell fragments are accepted. Expiry heals even if observer dies.
+    # Утверждённый выделенный маршрутизатор имеет заранее установленную политику nft в цепочке forward со
+    # ссылкой на динамический набор с тайм-аутом. Произвольные правила сети и фрагменты удалённых shell-команд
+    # запрещены. По истечении срока доступ восстанавливается даже при отказе наблюдателя.
     ip = ipaddress.ip_address(args.victim_ip)
     require(ip.version == 4 and ip.is_private and not ip.is_loopback and
             not ip.is_multicast and not ip.is_unspecified, 'invalid private victim IPv4')
@@ -258,8 +258,8 @@ def firewall(args, action):
     raw = ssh(args.router, fixed + ['-j', 'list', 'set', 'inet', 'launcher_partition_05210', 'victims4'])
     data = json.loads(raw)
     require(isinstance(data, dict) and isinstance(data.get('nftables'), list), 'router nftables status absent')
-    # This is a membership observation; external client probing proves whether
-    # the traffic actually passes through this router.
+    # Это наблюдение членства; внешнее тестирование клиента подтверждает, проходит ли трафик действительно
+    # через данный маршрутизатор.
     def element_address(entry):
         if isinstance(entry, str):
             return entry
@@ -276,8 +276,8 @@ def firewall(args, action):
     return present
 
 def alert_delivery(args, started):
-    # Alertmanager state alone is insufficient. A distinct HTTPS downstream
-    # receiver must acknowledge a matching firing event after the disruption.
+    # Одного состояния Alertmanager недостаточно. Отдельный нижестоящий HTTPS-получатель должен подтвердить
+    # соответствующее активное событие после нарушения.
     require(bool(args.alertmanager_url and args.delivery_url), 'alert manager and downstream delivery URL required')
     base = urlsplit(args.alertmanager_url)
     target = urlsplit(args.delivery_url)
@@ -408,7 +408,7 @@ def live_fault(args):
                'physicalRecoveryObserved': restored, 'evidence': observations,
                'startedAt': fault_started.isoformat(), 'endedAt': now()}
     if passed:
-        # A successful, independently re-observed recovery closes the journal.
+        # Успешное восстановление, независимо подтверждённое повторно, закрывает журнал.
         Path(args.state).unlink()
     return output(args, receipt)
 
@@ -458,12 +458,12 @@ def heal(args):
     return 0
 
 def game_restore(args):
-    # Runs on a fresh Linux recovery *game host*, after external source fencing.
-    # Safe-world restore is the same production byte-verified restore used by DR.
+    # Выполняется на новом Linux-хосте восстановления игры после внешней аппаратной блокировки источника.
+    # Безопасное восстановление мира использует ту же промышленную побайтовую проверку, что и DR.
     require(args.allow_disruption == 'I-ACCEPT-PHYSICAL-OUTAGE' and args.source_fenced,
             'world recovery requires explicit fencing and operator approval')
-    # The old world authority must be hardware-fenced, not just claimed by a
-    # command-line Boolean. Read original physical power directly from its BMC.
+    # Старый сервер мира должен быть физически отключён, а не только объявлен отключённым аргументом CLI.
+    # Считайте исходное состояние питания непосредственно через его BMC.
     require(bmc_status(args).get('PowerState') == 'Off',
             'original Minecraft world writer is not physically fenced')
     source, dest = Path(args.world_backup), Path(args.world_destination)
@@ -474,9 +474,9 @@ def game_restore(args):
     manifest = dr.safe_world_backup(source)
     dr.restore_world_backup(source, dest)
     dr.safe_world_restored(dest, manifest)
-    # This stage must run on an actual recovered game host, not just a hash
-    # comparison on the observer. The JVM start/stop scripts are operator-owned,
-    # absolute, non-symlink executables. The command arrays never use a shell.
+    # Этот этап запускается на реально восстановленном игровом хосте, а не сводится к сравнению хешей на
+    # наблюдателе. Скрипты запуска и остановки JVM принадлежат оператору, имеют абсолютные пути и не являются
+    # символическими ссылками. Массивы команд не вызывают shell.
     for name in ('game_start', 'game_stop'):
         path = Path(getattr(args, name))
         require(path.is_absolute() and path.is_file() and not path.is_symlink() and
@@ -511,8 +511,8 @@ def game_restore(args):
                 time.sleep(2)
                 after = vanilla.rcon('127.0.0.1', config['rconPort'], password, 'time query gametime')
                 require(before != after, 'recovered world is not ticking')
-                # An exact in-game state marker must have existed in the
-                # original backed-up world; its content is operator-provided.
+                # Точный внутриигровой маркер состояния должен уже находиться в резервной копии исходного мира; его
+                # содержимое задаёт оператор.
                 require(re.fullmatch(r'-?[0-9]{1,7} -?[0-9]{1,7} -?[0-9]{1,7}', args.marker_xyz or ''),
                         'world marker coordinates required')
                 require(re.fullmatch(r'minecraft:[a-z0-9_]{1,60}', args.marker_block or ''),
@@ -552,9 +552,9 @@ def dependency_drill(args):
     require(before['healthy'], 'dependency baseline not healthy')
     require(args.state and Path(args.state).is_absolute() and not Path(args.state).exists(),
             'durable recovery journal required for dependency disruption')
-    # A transient timer on the dependency host restores the service even when
-    # the acceptance controller is SIGKILLed or loses its management network.
-    # `systemctl start` is idempotent; the timer is intentionally not cancelled.
+    # Временный таймер на хосте зависимости восстановит службу, даже если контроллер приёмки завершится через
+    # SIGKILL или потеряет административную сеть. systemctl start идемпотентен; таймер намеренно не
+    # отменяется.
     unit = 'nl-ha-recover-' + secrets.token_hex(8)
     start = datetime.now(timezone.utc)
     save(args.state, {'schema': SCHEMA, 'mode': 'dependency', 'phase': 'recovery-required',
@@ -563,8 +563,8 @@ def dependency_drill(args):
     ssh(args.target, ['sudo', '-n', 'systemd-run', '--unit=' + unit,
                       '--on-active=' + str(args.timeout + 90) + 's',
                       '--collect', '/usr/bin/systemctl', 'start', args.service])
-    # The shipping executor stops a *real* dependency service, observes a
-    # changed writable primary (or remaining S3) and restores its systemd unit.
+    # Рабочий исполнитель останавливает РЕАЛЬНУЮ службу зависимости, наблюдает смену доступного для записи
+    # основного узла (или оставшегося S3) и восстанавливает её модуль systemd.
     result = dependency.drill(Path(args.ha_socket), args.edge_url, nodes, args.service,
                               args.backend_server, args.target, args.timeout, cfg, creds)
     after = dependency.perform_verification(Path(args.ha_socket), args.edge_url, nodes,
@@ -644,7 +644,7 @@ def main(argv=None):
         return live_fault(args)
     except (Blocked, multi.DeploymentError, chaos.ChaosError, dr.DrillError,
             vanilla.Blocked, OSError, ValueError, KeyError, TypeError) as exc:
-        # No BMC credentials, RCON secrets or subprocess output in errors.
+        # В ошибках не должно быть учётных данных BMC, секретов RCON и вывода подпроцессов.
         print(json.dumps({'status': 'BLOCKED', 'mode': args.mode,
                           'reason': type(exc).__name__}), file=sys.stderr)
         return 3

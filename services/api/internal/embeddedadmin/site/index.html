@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Launcher · Embedded Admin</title>
+    <title>Launcher · Встроенная панель администратора</title>
     <link href="/admin/app.css" rel="stylesheet" />
   </head>
   <body>
     <main>
       <header>
         <h1>Launcher</h1>
-        <p>Embedded Admin · первичная настройка и контроль проекта</p>
+        <p>Встроенная панель администратора · первичная настройка и контроль проекта</p>
       </header>
       <aside id="status" role="status" aria-live="polite">
         Проверка состояния…
@@ -30,7 +30,7 @@
               required
               minlength="32" /></label
           ><label
-            >Email<input
+            >Электронная почта<input
               name="email"
               type="email"
               autocomplete="email"
@@ -51,7 +51,7 @@
         <h2>Вход администратора</h2>
         <form id="login-form">
           <label
-            >Email<input
+            >Электронная почта<input
               name="email"
               type="email"
               autocomplete="username"
@@ -89,7 +89,7 @@
           ><label>Версия<input name="version" value="0.1.0" required /></label
           ><button type="submit">Создать проект</button>
         </form>
-        <h2>Migration Center · 0.33.13</h2>
+        <h2>Центр миграции · 0.33.13</h2>
         <p>
           Проверка и сохранение целевой конфигурации Never. Это ещё не импорт
           Gravit и не разрешение на cutover.
@@ -108,10 +108,10 @@
               minlength="8"
               maxlength="128"
               placeholder="change-request-2026-001" /></label
-          ><button type="submit">Создать migration run</button>
+          ><button type="submit">Создать задачу миграции</button>
         </form>
         <form id="migration-select">
-          <label>Migration run ID<input id="migration-run-id" required /></label
+          <label>Идентификатор задачи миграции<input id="migration-run-id" required /></label
           ><button type="submit">Показать</button>
         </form>
         <div>
@@ -122,7 +122,7 @@
         </div>
         <form id="migration-assess">
           <label
-            >Gravit project ZIP (up to 64 MiB for compatibility)<input
+            >ZIP проекта Gravit (до 64 МиБ для проверки совместимости)<input
               name="source"
               type="file"
               accept=".zip,application/zip"
@@ -178,7 +178,7 @@
           </button>
         </form>
         <fieldset>
-          <legend>Security &amp; Trust Reset (MIG06)</legend>
+          <legend>Сброс параметров безопасности и доверия (MIG06)</legend>
           <button id="migration-preview-security" type="button">
             Проверить security reset</button
           ><button id="migration-verify-security" type="button">
@@ -188,7 +188,7 @@
             >Подтвердить точный ID запуска<input
               id="migration-security-run"
               autocomplete="off"
-              placeholder="Migration run ID"
+              placeholder="Идентификатор задачи миграции"
           /></label>
           <label
             ><input id="migration-security-keys" type="checkbox" /> Новые
@@ -200,7 +200,7 @@
           </button>
         </fieldset>
         <fieldset id="migration-content">
-          <legend>Content &amp; Profile Migration (MIG07)</legend>
+          <legend>Миграция содержимого и профилей (MIG07)</legend>
           <p>
             Сопоставляет реальный ClientProfile и проверенные файлы ZIP с новым
             Build Workspace. Не импортирует ключи, auth или неизвестные модули.
@@ -258,7 +258,7 @@
           </button>
         </fieldset>
         <fieldset id="migration-modules">
-          <legend>Module &amp; ServerWrapper Migration (MIG08)</legend>
+          <legend>Миграция модулей и ServerWrapper (MIG08)</legend>
           <p>
             Проверка JAR без исполнения, проверка исходного ZIP по MIG03, отчёт
             по неизвестным модулям. Перенос старых ServerWrapper токенов
@@ -316,7 +316,7 @@
           </button>
         </fieldset>
         <fieldset>
-          <legend>Isolated Migration Rehearsal (MIG10)</legend>
+          <legend>Изолированная репетиция миграции (MIG10)</legend>
           <p>
             Запуск только из CLI в отдельном тестовом окружении; Backend
             выполняет независимую проверку UUID и сохранённых MIG03–MIG08. Не
@@ -327,7 +327,7 @@
           </button>
         </fieldset>
         <fieldset>
-          <legend>Staged Cutover (MIG11)</legend>
+          <legend>Поэтапное переключение (MIG11)</legend>
           <p>
             Рабочее переключение `channel_heads`. Staging блокирует публикацию
             указанного профиля/канала в PostgreSQL. Остановка Gravit/world/SQL
@@ -373,21 +373,21 @@
             полученного snapshot текущего Gravit.
           </p>
           <label
-            >Cutover receipt revision<input
+            >Ревизия квитанции переключения<input
               id="migration-cutover-revision"
               type="number"
               min="1"
               value="1"
           /></label>
           <label
-            >Source fence reference<input id="migration-cutover-fence-ref"
+            >Ссылка на блокировку источника<input id="migration-cutover-fence-ref"
           /></label>
           <label
-            >Source fence evidence SHA-256<input
+            >SHA-256 подтверждения блокировки источника<input
               id="migration-cutover-fence-sha"
           /></label>
           <label
-            >Fresh source snapshot SHA-256<input
+            >SHA-256 нового снимка источника<input
               id="migration-cutover-source-sha"
           /></label>
           <label
@@ -402,7 +402,7 @@
           </button>
         </fieldset>
         <fieldset>
-          <legend>Operational Rollback (MIG12)</legend>
+          <legend>Эксплуатационный откат (MIG12)</legend>
           <p>
             Безопасный rollback возвращает только канал Never при совпадении
             мира, инвентаря, экономики, прав и UUID с MIG10. Snapshot
@@ -410,7 +410,7 @@
             Изменённые данные блокируют автоматический откат.
           </p>
           <label
-            >Fresh snapshot JSON<textarea
+            >JSON нового снимка<textarea
               id="migration-rollback-snapshot"
               rows="7"
             ></textarea>
@@ -450,14 +450,14 @@
             Проверить rollback (MFA)
           </button>
           <button id="migration-rollback-commit" type="button">
-            Commit rollback (MFA)
+            Подтвердить откат (MFA)
           </button>
           <button id="migration-rollback-status" type="button">
             Проверить сохранённый план
           </button>
         </fieldset>
         <fieldset>
-          <legend>Reports &amp; Certification RC (MIG13)</legend>
+          <legend>Отчёты и сертификация RC (MIG13)</legend>
           <p>
             Отчёт из PostgreSQL MIG03–MIG12 с SHA-256, картой UUID и
             перечислением blockers. Reviewing не является GA или доказательством

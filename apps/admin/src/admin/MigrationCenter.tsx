@@ -1205,13 +1205,13 @@ export function MigrationCenter0331({
         response.headers.get("X-Migration-Manifest-SHA256") !==
         inventory.manifestSha256
       )
-        throw new Error("Export manifest mismatch");
+        throw new Error("Манифест экспорта не совпадает");
       if (
         !(response.headers.get("Content-Type") || "").startsWith(
           "application/zip",
         )
       )
-        throw new Error("Unexpected export response");
+        throw new Error("Неожиданный ответ при экспорте");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       try {
@@ -1538,7 +1538,7 @@ export function MigrationCenter0331({
                 {identities.ready ? "да" : "нет"}. Это не разрешение на cutover.
               </p>
               <details>
-                <summary>UUID mapping ({identities.rows.length})</summary>
+                <summary>Сопоставление UUID ({identities.rows.length})</summary>
                 <pre>{JSON.stringify(identities.rows, null, 2)}</pre>
               </details>
             </>

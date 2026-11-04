@@ -130,9 +130,9 @@ export function AuthProviderWizard02910({
   const draft = () => {
     const config = JSON.parse(rawConfig) as Record<string, unknown>;
     if (!config || Array.isArray(config) || config.id !== id)
-      throw new Error("Provider ID must match the configuration.");
+      throw new Error("Идентификатор провайдера должен совпадать с конфигурацией.");
     if (reason.trim().length < 3)
-      throw new Error("Reason must contain at least 3 characters.");
+      throw new Error("Причина должна содержать не менее трёх символов.");
     return { id, kind, config, reason: reason.trim() };
   };
   const perform = async (operation: () => Promise<void>) => {
@@ -270,7 +270,7 @@ export function AuthProviderWizard02910({
                 token,
                 { method: "POST", body: JSON.stringify(draft()) },
               );
-              if (!report.healthy) throw new Error("Provider is not healthy.");
+              if (!report.healthy) throw new Error("Проверка состояния провайдера завершилась неудачно.");
               setTest(report);
               setTestedConfig(rawConfig);
               setStep("test");

@@ -824,7 +824,7 @@ async fn prepare_profile_directory(base_dir: String, project_id: String, profile
 async fn check_java(java_path: Option<String>, required_major_version: Option<u32>) -> Result<JavaInfoResult, String> { runtime::check_java(java_path, required_major_version).await }
 #[tauri::command]
 async fn ensure_managed_java(required_major_version: u32, distribution: String) -> Result<ManagedJavaResult, String> {
-    // Explicit administrative/CLI-style operation remains available.
+    // Явная административная операция в стиле CLI остаётся доступной.
     runtime::ensure_managed_java(required_major_version, &distribution, None).await
 }
 #[tauri::command]
@@ -844,9 +844,9 @@ async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<S
     if let Some(p) = preferences { runtime::apply_launch_preferences(&manifest, &root, &mut plan, &p, None)?; }
     Ok(plan)
 }
-// 0.35.8: An offline session is a replay of an owner-provisioned installation,
-// an entitlement, a login, or an arbitrary renderer-provided public key.
-// Native verification is repeated on every cache read and every launch.
+// 0.35.8: автономный сеанс — повторное воспроизведение установки, подготовленной владельцем, права
+// доступа, входа или произвольного открытого ключа, предоставленного визуализатором. Нативная проверка
+// повторяется при каждом чтении кеша и каждом запуске.
 fn check_offline_owner_binding_0358(
     cfg: &DesktopConfig,
     owner: &signed_first_run_0352::Provisioning0352,
@@ -897,8 +897,8 @@ async fn verify_offline_files_0358(manifest: &Manifest, root: &str, key: &str, p
     Ok(())
 }
 
-// This command performs actual native integrity verification; the renderer is
-// only allowed to display the result. No network call or token is generated.
+// Команда выполняет настоящую нативную проверку целостности; визуализатору разрешено лишь показать
+// результат. Сетевые вызовы и токены не создаются.
 #[tauri::command]
 async fn prepare_offline_launch_0358(root: String, pinned_public_key: String,
     project_id: String, profile_id: String, channel: String) -> Result<Manifest, String> {
@@ -910,7 +910,7 @@ async fn prepare_offline_launch_0358(root: String, pinned_public_key: String,
 }
 
 fn matching_offline_release_0358(requested: &Manifest, cached: &Manifest) -> Result<(), String> {
-    // Signature verification takes place independently for both inputs.
+    // Подпись проверяется независимо для обоих входных данных.
     if requested.project_id != cached.project_id || requested.profile_id != cached.profile_id ||
         requested.channel != cached.channel || requested.version != cached.version ||
         requested.signature.as_ref().map(|v|(&v.signature,&v.public_key)) !=
@@ -920,8 +920,8 @@ fn matching_offline_release_0358(requested: &Manifest, cached: &Manifest) -> Res
     Ok(())
 }
 
-// Cached manifests are trusted solely because they are on disk.
-// All offline reads verify the pinned Ed25519 signature again.
+// Кешированные манифесты не становятся доверенными только из-за нахождения на диске. Любое автономное
+// чтение повторно проверяет подпись Ed25519 по закреплённому ключу.
 fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
     let root = PathBuf::from(root).canonicalize().map_err(|e| format!("client root unavailable: {e}"))?;
     let dir = root.join(".launcher");
@@ -935,19 +935,19 @@ fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
 async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_key: String) -> Result<(), String> {
     runtime::verify_manifest_signature(&manifest, &pinned_public_key)?;
     let (cfg, owner) = verified_offline_owner_0358().await?;
-    // Only an installed, verified profile that explicitly permits offline
-    // may become the cached replay release.
+    // Кешированным выпуском для повторного запуска может стать только установленный и проверенный профиль,
+    // явно разрешающий автономный режим.
     if !manifest.runtime.launch.offline_mode { return Err("offline cache disabled by signed profile policy".into()); }
-    // The owner identity is checked before touching any on-disk cache.
+    // Идентичность владельца проверяется до обращения к дисковому кешу.
     if owner.project_id != manifest.project_id || owner.profile_id != manifest.profile_id ||
         owner.channel != manifest.channel || !owner.pinned_public_key.eq_ignore_ascii_case(&pinned_public_key) ||
         !cfg.pinned_public_key.eq_ignore_ascii_case(&pinned_public_key) {
         return Err("offline cache denied: owner bundle scope or pinned key mismatch".into());
     }
-    // Do not create arbitrary directories for renderer-supplied cache targets.
+    // Не создавайте произвольные каталоги по целевым путям кеша, переданным визуализатором.
     check_offline_owner_binding_0358(&cfg, &owner, &manifest, &root, &pinned_public_key, true)?;
-    // Never overwrite the previous usable cache with an uninstalled update.
-    // Only the active, fully verified release may replace it.
+    // Не перезаписывайте прежний пригодный кеш неустановленным обновлением. Заменять его может только активный
+    // полностью проверенный выпуск.
     verify_offline_files_0358(&manifest, &root, &pinned_public_key, &cfg.component_preset).await?;
     let path = desktop_manifest_cache_path_0229(&root)?;
     let dir = path.parent().ok_or("missing cache directory")?;
@@ -962,9 +962,9 @@ async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_
     file.write_all(&value).await.map_err(|e| e.to_string())?;
     file.sync_all().await.map_err(|e| e.to_string())?;
     drop(file);
-    // Windows rename does not overwrite an existing file. Keep a recoverable
-    // previous signed cache until the new one is installed. Readers fail closed
-    // during the replacement gap; neither variant can bypass signature checks.
+    // В Windows rename не перезаписывает существующий файл. Сохраняйте восстанавливаемую предыдущую
+    // подписанную копию до установки новой. Во время промежутка замены чтение завершается отказом; ни одна
+    // копия не обходит проверку подписи.
     #[cfg(windows)]
     if fs::metadata(&path).await.is_ok() {
         let backup = tmp.with_extension("previous");
@@ -994,8 +994,8 @@ async fn load_cached_desktop_manifest(root: String, pinned_public_key: String, p
     Ok(manifest)
 }
 
-// Server grants are fetched by native Rust using the OS-vault session.
-// JavaScript does not supply an entitlement list, bearer or backend address.
+// Нативный Rust получает серверные разрешения из сеанса в хранилище секретов ОС. JavaScript не передаёт
+// список прав, Bearer или адрес Backend.
 async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
     ->Result<runtime::component_catalog_0241::VerifiedComponentScope0392,String> {
     use runtime::component_catalog_0241::VerifiedComponentScope0392;
@@ -1053,9 +1053,9 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
          channel:manifest.channel.clone(),catalog_digest:cat.digest.clone(),valid_until:granted.valid_until,permissions:rights})
 }
 
-// Do not resolve installed gated components before requesting their rights.
-// The initial disk read verifies only the signed manifest; full installed
-// ownership, hashes and plan are verified again inside the permission scope.
+// Не разрешайте установленные компоненты с ограниченным доступом до запроса прав. Первое чтение с диска
+// проверяет только подписанный манифест; владение установленными файлами, хеши и план проверяются повторно
+// в области действия разрешения.
 async fn installed_component_scope_0392(root:&str,pinned:&str)
     ->Result<Option<runtime::component_catalog_0241::VerifiedComponentScope0392>,String>{
     let root=PathBuf::from(root);let key=pinned.to_owned();
@@ -1109,8 +1109,8 @@ async fn save_installed_component_choice_0247_inner_0392(
 }
 
 
-// Evidence is measured from the installed active release, from the
-// renderer-provided list of mods, manifest or chosen plan SHA-256.
+// Доказательства измеряются по установленному активному выпуску, по списку модов, манифесту или SHA-256
+// выбранного плана, переданным визуализатором.
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
 struct NativePlanChallenge02412 {
@@ -1147,7 +1147,7 @@ async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)-
         if manifest.schema_version!="3.0"||manifest.project_id!=project_id||manifest.profile_id!=profile_id||manifest.channel!=channel {
             return Err("installed signed release does not match requested server scope".into());
         }
-        // verified_active_selection checks SHA-256 of every installed managed file.
+        // verified_active_selection проверяет SHA-256 каждого установленного управляемого файла.
         let plan=runtime::resolved_download_0246::resolve(&manifest,preset.as_deref())?;
         let catalog_digest=manifest.component_catalog.as_ref().ok_or("v3 catalog required")?.digest.clone();
         let release_signature=manifest.signature.as_ref().ok_or("unsigned installed release")?.signature.to_ascii_lowercase();
@@ -1270,16 +1270,16 @@ struct ReleaseRequirements0359 {
     requires_confirmation: bool,
 }
 
-// Compare two verified, installed/target signed releases. UI memory and
-// localStorage are accepted as a source of installed requirements.
+// Сравнивайте два проверенных подписанных выпуска: установленный и целевой. Память UI и localStorage
+// принимаются как источник установленных требований.
 #[tauri::command]
 async fn preview_release_requirements_0359(
     manifest: Manifest,root:String,pinned_public_key:String,component_preset:Option<String>,
 ) -> Result<ReleaseRequirements0359,String> {
     runtime::verify_manifest_signature(&manifest,&pinned_public_key)?;
-    // Release-to-release migration may need two DIFFERENT catalog grants. Read
-    // the verified installed plan under its own grant, then resolve the new
-    // signed target under the fresh target grant. Never reuse prior privileges.
+    // Для миграции между выпусками могут потребоваться два РАЗНЫХ разрешения на каталог. Читайте проверенный
+    // установленный план по его разрешению, а новый подписанный план разрешайте по свежему целевому
+    // разрешению. Не используйте прежние привилегии повторно.
     let old_scope=installed_component_scope_0392(&root,&pinned_public_key).await?;
     let active=if let Some(scope)=old_scope {
         let existing_root=root.clone();let existing_key=pinned_public_key.clone();
@@ -1343,9 +1343,8 @@ async fn preview_release_requirements_0359(
             blockers.push("Изменился тип каталога компонентов: выберите новый preset вручную".into());
             proposed_preset=None;
         }
-        // A player may explicitly select a different signed plan after seeing
-        // the migration preview. Validate it instead of silently approving the
-        // automatically proposed plan. The UI approval is bound to this choice.
+        // Игрок вправе явно выбрать другой подписанный план после предварительного просмотра миграции. Проверяйте
+        // этот выбор, а не молча одобряйте предложенный автоматически. Подтверждение UI привязано именно к нему.
         if let Some(ref requested)=component_preset {
             if manifest.component_catalog.is_some() {
                 runtime::component_catalog_0241::preview_components_0244(&manifest,Some(requested))?;
@@ -1421,8 +1420,8 @@ async fn preview_component_changes_0247_inner_0392(
     let plan=runtime::resolved_download_0246::resolve(&manifest,component_preset.as_deref())?;
     let (installed_preset, installed)=runtime::transactional_release::installed_component_state_0247(&manifest,&root,&pinned_public_key)?;
     let old:HashSet<_>=installed.into_iter().collect();
-    // Show collisions as blockers with an explicit verified preserve workflow,
-    // not as a misleading generic failed diff.
+    // Показывайте конфликты как блокировки с явной проверенной процедурой сохранения, а не как вводящую в
+    // заблуждение общую ошибку сравнения.
     let conflicts=runtime::transactional_release::preview_player_conflicts_0359(
         &manifest,&root,&pinned_public_key,component_preset.as_deref())?;
     let wanted:HashSet<_>=plan.files.iter().map(|f|f.path.clone()).collect();
@@ -1460,10 +1459,9 @@ async fn launch_minecraft_inner_0392(
     } = request;
     validate_launch_realm_0269(auth_mode, minecraft_credentials.as_ref(), official_identity.is_some(), preferences.as_ref())?;
     if preferences.as_ref().is_some_and(|p|p.offline) {
-        // Check owner policy and the exact cached signed release before
-        // interacting with Guard. The supervisor performs the final
-        // SHA-256 validation under its release lease immediately before spawn;
-        // do not hash the same multi-GiB client a redundant third time.
+        // До взаимодействия с Guard проверяйте политику владельца и точный кешированный подписанный выпуск.
+        // Супервизор выполняет окончательную проверку SHA-256 под арендой выпуска прямо перед запуском; не
+        // хешируйте многогигабайтный клиент третий раз без необходимости.
         let cached = load_cached_desktop_manifest(root.clone(), pinned_public_key.clone(),
             manifest.project_id.clone(), manifest.profile_id.clone(), manifest.channel.clone()).await?;
         runtime::verify_manifest_signature(&manifest, &pinned_public_key)?;
@@ -1559,8 +1557,8 @@ async fn launch_minecraft_inner_0392(
     let _ = &guard;
 
     runtime::transactional_release::ensure_active_preset(&manifest, &PathBuf::from(&root), &pinned_public_key, component_preset.as_deref()).await?;
-    // Never accept MSA tokens from JS. Only the native manager can acquire official
-    // game credentials, and they are passed straight into Runtime.
+    // Никогда не принимайте MSA-токены из JS. Только нативный менеджер получает официальные игровые учётные
+    // данные и передаёт их непосредственно в Runtime.
     if minecraft_credentials.as_ref().is_some_and(|v| v.user_type == "msa") {
         return Err("Official Minecraft launch tokens cannot be supplied by renderer".into());
     }
@@ -1572,15 +1570,15 @@ async fn launch_minecraft_inner_0392(
     }
     let minecraft_credentials = if let Some(context) = official_identity {
         let credentials=official_manager.launch_credentials(&context.backend_url, &context.token, &context.session_id).await?;
-        // The account used to start the game must be the one selected for
-        // ServerBridge authorization, even across an asynchronous vault switch.
+        // Для запуска игры должна использоваться та же учётная запись, что выбрана для авторизации ServerBridge,
+        // даже при асинхронном переключении хранилища.
         if credentials.uuid.replace('-', "").to_ascii_lowercase()!=context.expected_uuid.replace('-', "").to_ascii_lowercase() {
             return Err("Official launch UUID differs from authorized ServerBridge identity".into());
         }
         Some(credentials)
     } else { minecraft_credentials };
-    // Bind the game lifetime to the exact authenticated Guard present at launch.
-    // The supervisor will not accept a restarted Guard as an ongoing session.
+    // Привязывайте время жизни игры к конкретному аутентифицированному Guard на момент запуска. Супервизор не
+    // примет перезапущенный Guard как продолжающийся сеанс.
     let guard_identity = game_guard_watchdog_0438::baseline_guard_0438(&guard).await?;
     let launched = if let Some(credentials) = minecraft_credentials {
         if let Some(p) = preferences {
@@ -1726,9 +1724,9 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() {
         return Err("unsafe native updater helper".into());
     }
-    // Self-update must not overwrite the executable image of the running updater.
-    // Execute a private staged copy instead of the adjacent live CLI binary.
-    // A subsequent update cleans stale copies after their processes have exited.
+    // Самообновление не должно перезаписывать исполняемый образ работающего обновлятора. Запускайте отдельную
+    // подготовленную копию, а не соседний действующий бинарник CLI. Следующее обновление очищает старые копии
+    // после выхода их процессов.
     let helper_stage_root = if cfg!(target_os = "windows") {
         std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
             .ok_or("LOCALAPPDATA unavailable for updater staging")?
@@ -1752,7 +1750,7 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
         let entry = entry.map_err(|e| e.to_string())?;
         let ty = entry.file_type().map_err(|e| e.to_string())?;
         if ty.is_dir() {
-            // Failed cleanup must not stop the current update (Windows file locks).
+            // Неудачная очистка не должна останавливать текущее обновление (блокировки файлов Windows).
             let _ = std::fs::remove_dir_all(entry.path());
         }
     }
@@ -1911,8 +1909,8 @@ async fn validate_desktop_settings(game_directory: String, java_path: Option<Str
     Ok(SettingsCheckResult { valid: memory_valid, status: if memory_valid { "ready" } else { "invalid" }.into(), messages, normalized_game_directory: game_dir.to_string_lossy().to_string() })
 }
 
-// Untrusted URLs navigate the privileged Tauri WebView. Only an explicit
-// player click may open a well-formed HTTPS link in the *system* browser.
+// Недоверенные URL ведут привилегированный Tauri WebView. Только явный щелчок игрока может открыть
+// корректную HTTPS-ссылку в СИСТЕМНОМ браузере.
 fn validate_external_https_0356(raw: &str) -> Result<reqwest::Url, String> {
     if raw.len() > 2048 || raw.bytes().any(|b| b.is_ascii_control() || b == b'\\') || !raw.starts_with("https://") {
         return Err("Only HTTPS external links are permitted".into());
@@ -1939,8 +1937,8 @@ async fn open_external_https_0356(url: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn open_game_directory(root: String) -> Result<String, String> {
-    // Extensions may request only the active player's configured game root.
-    // Never turn their relative/arbitrary path into an OS explorer invocation.
+    // Расширения могут запрашивать лишь настроенный игровой корень активного игрока. Не передавайте их
+    // относительный или произвольный путь как вызов файлового проводника ОС.
     let configured = load_desktop_config().await?;
     let allowed = PathBuf::from(configured.game_directory.trim());
     if !allowed.is_absolute() || !PathBuf::from(root.trim()).is_absolute() {
@@ -1955,9 +1953,9 @@ async fn open_game_directory(root: String) -> Result<String, String> {
     Ok(safe.to_string_lossy().to_string())
 }
 
-// Startup is fail-closed: do not initialize Guard or the launcher UI with a
-// partially switched component set. Recovery runs in a separate executable
-// image, after this Desktop process has exited (Windows sharing violations).
+// Запуск выполняется с отказом при ошибке: нельзя инициализировать Guard или интерфейс Launcher с частично
+// переключённым набором компонентов. Восстановление запускается отдельным исполняемым файлом после выхода
+// Desktop (ограничения совместного доступа Windows).
 fn recover_components_before_desktop02310() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let exe = std::fs::canonicalize(exe).map_err(|e| e.to_string())?;
@@ -1995,8 +1993,8 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
     std::process::exit(0);
 }
 
-// MIG09: execute Gravit software or trust any Gravit session / key.
-// The existing pinned Never Ed25519 manifest is the sole authority for reusable bytes.
+// MIG09: не исполняйте ПО Gravit и не доверяйте его сеансам или ключам. Единственный источник доверия к
+// повторно используемым байтам — существующий закреплённый манифест Never с Ed25519.
 #[tauri::command]
 fn player_migration_discover_0339() -> Vec<String> {
     runtime::player_migration_0339::discover()
@@ -2022,9 +2020,9 @@ async fn player_migration_adopt_0339(
     ).await
 }
 
-/// Performance instrumentation is disabled unless the parent process opts in.
-/// Called only after React has rendered across two animation frames. It
-/// returns environment data to the renderer or exposes arbitrary filesystem IO.
+/// Инструментирование производительности отключено без согласия родительского процесса. Вызывается только
+/// после рендеринга React на двух кадрах анимации. Возвращает визуализатору данные окружения либо открывает
+/// произвольный файловый ввод-вывод.
 #[tauri::command]
 fn benchmark_ui_ready_03511() -> Result<(), String> {
     use std::io::Write;

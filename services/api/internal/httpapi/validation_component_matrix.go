@@ -10,13 +10,12 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Custom selections use comma-separated signed component IDs (never paths).
+// Пользовательский выбор задаётся разделёнными запятыми ID подписанных компонентов, никогда путями.
 var validationPreset0348 = regexp.MustCompile(`^[a-zA-Z0-9_.:/@+,\-]{1,160}$`)
 
-// RequiredMatrixSelections0348 derives the MANDATORY selection list from the
-// *signed release snapshot*, not from runner reports. The bounded additional
-// cases are deterministic pairwise compatible selections; this is intentionally
-// NOT a claim that all 2^N combinations have been exercised.
+// RequiredMatrixSelections0348 получает ОБЯЗАТЕЛЬНЫЙ набор вариантов из снимка ПОДПИСАННОГО выпуска, а не
+// из отчётов обработчиков. Дополнительные ограниченные случаи — детерминированные совместимые попарные
+// выборы. Это намеренно НЕ означает проверку всех 2^N комбинаций.
 func RequiredMatrixSelections0348(cat *model.ComponentCatalog0241) ([]string, int, error) {
 	if cat == nil {
 		return []string{"default"}, 0, nil
@@ -32,8 +31,8 @@ func RequiredMatrixSelections0348(cat *model.ComponentCatalog0241) ([]string, in
 	if len(presets) == 0 {
 		presets = []string{"default"}
 	}
-	// Pick the smallest signed base to avoid re-testing combinations that are
-	// already present in the normal published preset set.
+	// Выбирайте минимальную подписанную базу, чтобы не проверять повторно комбинации из стандартного
+	// опубликованного набора пресетов.
 	base := ""
 	min := int(^uint(0) >> 1)
 	for _, p := range cat.Presets {
@@ -50,15 +49,15 @@ func RequiredMatrixSelections0348(cat *model.ComponentCatalog0241) ([]string, in
 		available = append(available, c.ID)
 	}
 	sort.Strings(available)
-	// A fixed, documented upper bound protects the attestation infrastructure.
-	// Uncovered candidates are reported independently and never described as
-	// validated. No subset enumeration / exponential runtime is performed.
+	// Фиксированный документированный верхний предел защищает инфраструктуру аттестации. Непокрытые кандидаты
+	// указываются отдельно и никогда не объявляются проверенными. Перебор подмножеств и экспоненциальное время
+	// работы не применяются.
 	const maxAdditionalPairs = 12
 	conditional := make([]string, 0)
 	pairs := make([]string, 0, maxAdditionalPairs)
 	unchecked := 0
-	// Each condition-bearing optional component that no published preset
-	// enables gets its own positive selection probe, independent of pairs.
+	// Каждый необязательный компонент с условиями, который не включён ни одним опубликованным пресетом,
+	// получает отдельную положительную проверку независимо от пар.
 	for _, c := range cat.Components {
 		if c.Conditions == nil || c.Required || c.Limited || (c.Visible != nil && !*c.Visible) {
 			continue
@@ -80,9 +79,9 @@ func RequiredMatrixSelections0348(cat *model.ComponentCatalog0241) ([]string, in
 			conditional = append(conditional, choice)
 		}
 	}
-	// Every reachable condition-bearing component is mandatory. Unlike
-	// optional pairwise coverage it may not be silently truncated. The
-	// configured-target limit is 128, leaving room for pairwise probes.
+	// Каждый достижимый компонент с условиями обязателен к проверке. В отличие от попарного необязательного
+	// покрытия, его нельзя незаметно усечь. Лимит настроенных целей — 128, чтобы осталось место для попарных
+	// проверок.
 	if len(conditional)+len(presets) > 116 {
 		return nil, 0, fmt.Errorf("component matrix exceeds runnable target capacity: %d mandatory preset/conditional selections", len(conditional)+len(presets))
 	}
@@ -92,8 +91,8 @@ func RequiredMatrixSelections0348(cat *model.ComponentCatalog0241) ([]string, in
 	for i := 0; i < len(available); i++ {
 		for j := i + 1; j < len(available); j++ {
 			if examined >= maxCandidatePairs {
-				// All remaining possible pairs are UNEXAMINED, not passed.
-				// Avoid O(N^2) resolver work on a 4096-component catalog.
+				// Все прочие возможные пары считаются НЕПРОВЕРЕННЫМИ, а не пройденными. Не выполняйте O(N^2) операций
+				// резолвера для каталога из 4096 компонентов.
 				unchecked += totalPairs - examined
 				selections := append(append(presets, conditional...), pairs...)
 				return selections, unchecked, nil
@@ -137,8 +136,8 @@ func contains0348(items []string, value string) bool {
 	return false
 }
 func compatiblePair0348(cat *model.ComponentCatalog0241, base string, ids []string) bool {
-	// Use the production dependency/conflict resolver on a temporary in-memory
-	// selection (the actual catalog and signed digest are never modified).
+	// Используйте промышленный резолвер зависимостей и конфликтов для временного выбора в памяти; сам каталог
+	// и подписанный дайджест не изменяются.
 	copyCat := *cat
 	copyCat.Presets = append(append([]model.CatalogPreset0242(nil), cat.Presets...), model.CatalogPreset0242{ID: "matrix_case_0348", Name: "matrix case", Components: append([]string(nil), ids...)})
 	if base != "" {
@@ -163,9 +162,9 @@ func compatiblePair0348(cat *model.ComponentCatalog0241, base string, ids []stri
 	if err != nil {
 		return false
 	}
-	// A pair can be graph-compatible yet impossible to run on any machine
-	// (Windows-only + Linux-only, disjoint Java ranges, etc.). Never add such
-	// an impossible target to the mandatory matrix.
+	// Пара может быть совместима по графу, но невозможна на любом компьютере (только Windows вместе с только
+	// Linux, несовместимые диапазоны Java и т. п.). Не добавляйте такую недостижимую цель в обязательную
+	// матрицу.
 	byID := map[string]model.CatalogComponent0241{}
 	for _, c := range cat.Components {
 		byID[c.ID] = c
@@ -212,8 +211,8 @@ func coReachable0348(a, b *model.ComponentConditions0244) bool {
 	return low <= high
 }
 
-// This is enforced at grant issuance, evidence acceptance and coverage reads.
-// Missing presets cannot be hidden by supplying a one-element operator matrix.
+// Проверка применяется при выдаче разрешения, приёмке доказательств и чтении покрытия. Отсутствующие
+// пресеты нельзя скрыть матрицей оператора из одного элемента.
 func validateComponentMatrix0348(manifest model.Manifest, targets []validationTarget0346) error {
 	required, _, err := RequiredMatrixSelections0348(manifest.ComponentCatalog)
 	if err != nil {
@@ -232,13 +231,13 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 		return nil
 	}
 	cat := manifest.ComponentCatalog
-	// Old manifest/catalog layouts cannot represent a native selected-file
-	// runtime plan. Treat them as unverified instead of certifying fake presets.
+	// Старые схемы манифеста/каталога не представляют нативный план выбранных файлов Runtime. Считайте их
+	// непроверенными, а не сертифицируйте фиктивные пресеты.
 	if manifest.SchemaVersion != "3.0" || cat.SchemaVersion == model.ComponentCatalogSchema0241 {
 		return fmt.Errorf("runtime component matrix requires executable manifest schema 3.0 and catalog schema >= 2.0")
 	}
-	// A configured target must use a catalog-derived selection. Prevent a
-	// forged operator policy from silently replacing a named published preset.
+	// Настроенная цель обязана использовать выбор, полученный из каталога. Не допускайте, чтобы поддельная
+	// политика оператора незаметно подменяла именованный опубликованный пресет.
 	known := map[string]bool{}
 	for _, v := range required {
 		known[v] = true
@@ -277,9 +276,8 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 			return fmt.Errorf("unknown or unplanned runtime preset %q", t.Preset)
 		}
 		javaMajor, _ := strconv.Atoi(strings.SplitN(t.JavaVersion, ".", 2)[0])
-		// For a named preset, validate the real graph and its reachable
-		// environment conditions. Custom combinations are validated by the
-		// pinned native runtime resolver during execution.
+		// Для именованного пресета проверяйте настоящий граф и достижимые условия окружения. Пользовательские
+		// комбинации во время выполнения проверяет закреплённый нативный резолвер Runtime.
 		if strings.HasPrefix(t.Preset, "@custom:v1:") {
 			continue
 		}

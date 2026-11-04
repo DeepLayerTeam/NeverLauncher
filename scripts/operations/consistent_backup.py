@@ -37,8 +37,8 @@ NAME = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
 PG_STANZA = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}\Z")
 BACKUP_LABEL = re.compile(r"[0-9]{8}-[0-9]{6}F(?:_[0-9]{8}-[0-9]{6}[DI])?\Z")
 RUN_ID = re.compile(r"[0-9a-f]{32}\Z")
-# All potentially stateful local containers; don't omit per-host extension
-# installs, local backups or factory/config caches from a recovery image.
+# Все потенциально хранящие состояние локальные контейнеры должны попасть в образ восстановления: не
+# пропускайте установки расширений на узлах, локальные копии и кеши фабрики/конфигурации.
 VOLUMES = ("api_storage", "api_backups", "api_factory", "api_coordinator",
            "api_extensions", "worker_storage", "worker_backups", "worker_factory",
            "worker_coordinator", "worker_extensions")
@@ -137,7 +137,7 @@ def freeze(directory: Path, project: str, run_id: str):
     require(bool(RUN_ID.fullmatch(run_id)), "invalid run identifier")
     require(directory.is_dir() and not directory.is_symlink(), "invalid host deployment directory")
     require(not (directory / STATE_FILE).exists(), "host is already frozen; use explicit recovery")
-    # Validate real rendered configuration, runtime IDs, external dependencies.
+    # Проверяйте реально сформированную конфигурацию, идентификаторы Runtime и внешние зависимости.
     config = multi.resolved_compose(directory, project)
     states = local_services(directory, project)
     require(states.get("api") == "running" and states.get("worker") == "running", "API and worker must both be running before freeze")
@@ -157,7 +157,7 @@ def freeze(directory: Path, project: str, run_id: str):
             "machineIdentity": config["machineIdentity"],
             "sharedEndpoints": config["sharedEndpoints"]}
     except BaseException:
-        # Recovery journal deliberately stays on the host after a failed stop.
+        # При неудачной остановке журнал восстановления намеренно остаётся на хосте.
         raise
 
 
@@ -325,7 +325,7 @@ def read_private_json(path):
 
 
 def world_spec(path):
-    # No arbitrary command strings: each remote job invokes the real launcher CLI.
+    # Произвольные строки команд запрещены: каждое удалённое задание вызывает реальный CLI Launcher.
     spec = read_private_json(path)
     require(isinstance(spec, list) and len(spec) > 0, "at least one game world is required")
     seen = set()
@@ -457,7 +457,7 @@ def validate_backup(folder, *, stanza=None):
     require(document.get("postgres", {}).get("backup", {}).get("label") and
             len(document.get("nodes", [])) >= 2 and len(document.get("worlds", [])) >= 1,
             "backup lacks PostgreSQL, nodes or worlds")
-    # Verify actual bytes and file structures, not only SHA-256 of an archive.
+    # Проверяйте реальные байты и структуру файлов, а не только SHA-256 архива.
     for filename in expected:
         if filename.endswith(".tar.gz"):
             dr.safe_tar(folder / filename)
@@ -515,8 +515,8 @@ def orchestrate(args):
     success = False
     try:
         for label, host in nodes.items():
-            # Append first: SSH may be lost AFTER the remote node was stopped.
-            # A later thaw must still attempt recovery on that node.
+            # Сначала добавьте запись в журнал: SSH может потеряться ПОСЛЕ остановки удалённого узла. Позднее
+            # размораживание всё равно должно попытаться восстановить этот узел.
             frozen.append((label, host))
             report = remote_json(host, args.remote_script, "local-freeze", directory=args.directory,
                                  project=args.project, run_id=args.run_id, timeout=240)
@@ -532,12 +532,12 @@ def orchestrate(args):
         require(frozen_reports[0]["sharedEndpoints"].get("bucket") == args.s3_bucket,
                 "requested S3 bucket differs from the active deployment")
         frozen_at = datetime.now(timezone.utc)
-        # Freeze game writers BEFORE taking the PostgreSQL checkpoint. A world
-        # written after the database checkpoint would not form a coherent cohort.
+        # ОСТАНОВИТЕ запись игровых миров ДО контрольной точки PostgreSQL. Мир, изменённый после точки БД, не
+        # образует согласованную группу данных.
         world_receipts = []
         for row in worlds:
-            # Register potential hold before SSH: remote may commit then lose
-            # its response. Always attempt explicit release in finally.
+            # Регистрируйте возможную задержку до SSH: удалённый узел может зафиксировать действие и потерять ответ. В
+            # блоке finally всегда пытайтесь явно освободить ресурсы.
             world_holds.append(row)
             data = remote_json(row["target"], args.remote_script, "local-world-create",
                                directory=args.directory, project=args.project, run_id=args.run_id,
@@ -562,9 +562,9 @@ def orchestrate(args):
                                    "bytes": manifest["totalBytes"]})
         first = pg_query(Path(args.pg_dsn_file))
         physical = backup_physical(args.stanza)
-        # Query AFTER pgBackRest, which writes its own WAL backup markers.
+        # Проверяйте ПОСЛЕ pgBackRest, который записывает собственные метки копии WAL.
         pg_boundary = pg_query(Path(args.pg_dsn_file))
-        # Actual logical dump gives standalone identity/schema consistency evidence.
+        # Реальный логический дамп даёт независимое доказательство согласованности идентичностей и схемы.
         with (stage / "identity-and-metadata.dump").open("xb") as fd:
             env = nn.dsn_environment(Path(args.pg_dsn_file))
             proc = subprocess.run(["pg_dump", "--format=custom", "--no-owner", "--no-acl"],
@@ -572,7 +572,7 @@ def orchestrate(args):
             require(proc.returncode == 0, "PostgreSQL logical identity dump failed")
         execute(["pg_restore", "--list", str(stage / "identity-and-metadata.dump")], timeout=120)
         s3_before = s3_version_inventory(args.s3_bucket, args.s3_endpoint)
-        # Every per-host local state volume is retrieved while writers are stopped.
+        # Всё локальное устойчивое состояние каждого узла считывается, пока запись остановлена.
         for label, host in nodes.items():
             report = remote_json(host, args.remote_script, "local-check", directory=args.directory,
                                  project=args.project, run_id=args.run_id)
@@ -585,7 +585,7 @@ def orchestrate(args):
                                    "--volume", volume, "--tar-image", args.tar_image),
                                loc / (volume + ".tar.gz"))
                 dr.tar_digests(loc / (volume + ".tar.gz"))
-        # Versions before and after the copy detect independent object writes.
+        # Версии до и после копирования позволяют обнаружить независимую запись объектов.
         s3_dir = stage / "s3"
         dr.s3_download(args.s3_bucket, s3_dir, args.s3_endpoint)
         s3_files = tree_files(s3_dir)
@@ -598,15 +598,15 @@ def orchestrate(args):
                     "S3 readback or version inventory disagrees")
         (stage / "s3-versions.json").write_text(json.dumps(s3_before, separators=(",", ":")))
         os.chmod(stage / "s3-versions.json", 0o600)
-        # Must remain frozen and no external PG writes across S3/world collection.
+        # На протяжении сбора S3 и миров запись должна быть заморожена, а внешние записи PostgreSQL исключены.
         for _,host in nodes.items():
             row = remote_json(host, args.remote_script, "local-check", directory=args.directory,
                               project=args.project, run_id=args.run_id)
             require(row.get("status") == "frozen", "API/worker restarted during cohort")
         final_lsn = pg_query(Path(args.pg_dsn_file))
         require(final_lsn == pg_boundary, "PostgreSQL WAL advanced during S3/world snapshot")
-        # Forces a new archive check after the snapshot; pgBackRest verify then
-        # checks actual stored backup/WAL content rather than receipt-only data.
+        # После снимка обязательно повторно проверяйте архив; затем pgBackRest verify проверяет фактические байты
+        # резервной копии и WAL, а не одну квитанцию.
         pgbackrest(args.stanza, "check")
         data = {"schema": SCHEMA, "version": "0.51.8", "runId": args.run_id,
                 "startUtc": start.isoformat(), "frozenUtc": frozen_at.isoformat(),
@@ -634,7 +634,7 @@ def orchestrate(args):
         (stage / "manifest.json").write_text(json.dumps(data, sort_keys=True, indent=2) + "\n")
         os.chmod(stage / "manifest.json", 0o600)
         validate_backup(stage, stanza=args.stanza)
-        # Publish on the same filesystem only after full verification.
+        # Публикуйте на той же файловой системе только после полной проверки.
         require(not dest.exists(), "backup destination appeared during execution")
         os.rename(stage, dest)
         sync_dir(dest.parent)
@@ -643,8 +643,8 @@ def orchestrate(args):
                 "pgBackup": physical["label"], "cohortLsn": final_lsn,
                 "nodes": len(nodes), "worlds": len(world_receipts)}
     finally:
-        # Keep worlds fenced through PostgreSQL/S3 snapshot. Release them only
-        # after all reads and WAL verification, before resuming API/worker.
+        # Держите миры заблокированными во время снимка PostgreSQL/S3. Освобождайте их только после всех чтений и
+        # проверки WAL, прежде чем возобновить API/обработчики.
         for row in reversed(world_holds):
             try:
                 result = remote_json(row["target"], args.remote_script, "local-world-release",
@@ -655,9 +655,9 @@ def orchestrate(args):
                         result.get("holdId") == args.run_id, "world launch gate was not released")
             except (BackupError, ValueError):
                 resume_errors.append(row["name"] + "(world-gate)")
-        # Resume even if anything fails, but do NOT claim success if restart fails.
-        # Never resume app control-plane if a world gate could not be released:
-        # it would expose an unsafe partially recovered game host.
+        # Возобновляйте службы даже при ошибке, но НЕ заявляйте об успехе, если перезапуск не удался. Никогда не
+        # возобновляйте плоскость управления, если блокировку мира нельзя снять: это откроет доступ к опасно
+        # частично восстановленному игровому хосту.
         if not resume_errors:
             for label,host in reversed(frozen):
                 try:
@@ -673,8 +673,8 @@ def orchestrate(args):
 
 
 def restore_pg_fresh(args):
-    # Only the physical PostgreSQL data is restored, on a FRESH EMPTY PGDATA.
-    # No ingestion of stale Redis leases; no automatic world/S3 cross-time restore.
+    # Восстанавливаются только физические данные PostgreSQL в НОВЫЙ ПУСТОЙ PGDATA. Устаревшие аренды Redis не
+    # импортируются; миры и S3 автоматически не откатываются к несогласованным моментам времени.
     data = read_private_json(Path(args.backup) / "manifest.json")
     require(data.get("schema") == SCHEMA, "wrong backup manifest")
     label = data.get("postgres", {}).get("backup", {}).get("label", "")
@@ -691,8 +691,8 @@ def restore_pg_fresh(args):
             "restore stanza mismatch")
     validate_backup(Path(args.backup), stanza=args.stanza)
     if args.action == "cohort-pg-restore-fresh":
-        # Restore the EXACT LSN sealed with the S3/world snapshot; never
-        # silently advance PG beyond the matching application cohort.
+        # Восстанавливайте ТОЧНЫЙ LSN, закреплённый вместе со снимком S3/миров; нельзя незаметно продвигать
+        # PostgreSQL дальше согласованной группы.
         lsn = data["postgres"].get("cohortLsn", "")
         require(bool(re.fullmatch(r"[0-9A-F]+/[0-9A-F]+", lsn)), "invalid cohort LSN")
         recovery = ("--type=lsn", "--target=" + lsn)
@@ -704,9 +704,9 @@ def restore_pg_fresh(args):
         require(date.tzinfo is not None, "PITR time must include time zone")
         recovery = ("--type=time", "--target=" + date.isoformat(sep=" "))
         target_desc = date.astimezone(timezone.utc).isoformat()
-    # pgBackRest restores data files and recovery config; it DOES NOT replay
-    # WAL until PostgreSQL is started on the isolated target host.
-    # Never write tablespaces back to the source cluster's original paths.
+    # pgBackRest восстанавливает файлы данных и конфигурацию восстановления, но НЕ воспроизводит WAL до
+    # запуска PostgreSQL на изолированном целевом узле. Не возвращайте табличные пространства на исходные пути
+    # прежнего кластера.
     tablespaces = target.with_name(target.name + "-tablespaces")
     require(not tablespaces.exists() and not tablespaces.is_symlink(),
             "fresh PostgreSQL tablespace destination already exists")
@@ -766,7 +766,7 @@ def main(argv=None):
         return 0
     except (BackupError, dr.DrillError, multi.DeploymentError, nn.CompatibilityError,
             OSError, ValueError, KeyError, TypeError) as exc:
-        # Do not leak arguments or environment: they may contain credentials.
+        # Не раскрывайте аргументы или окружение: они могут содержать учётные данные.
         print(json.dumps({"status": "failed", "reason": type(exc).__name__}), file=sys.stderr)
         return 1
 

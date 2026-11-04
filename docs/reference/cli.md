@@ -18,13 +18,13 @@ go build -o nl ./cmd/launcher
 | `hashes` | `nl hashes check ...` | Контроль SHA-256 |
 | `update` | `nl update plan ...` | Планирование и транзакционная замена |
 | `diagnostics` | `nl diagnostics collect ...` | Логи, анонимизация, отчёты |
-| `runtime` | `nl runtime vanilla-install ...` | Vanilla/loader materializers |
+| `runtime` | `nl runtime vanilla-install ...` | Установщики Vanilla и загрузчиков |
 | `server-bridge` | `nl server-bridge status ...` | Регистрация, host и состояние узлов |
 | `extension` | `nl extension status ...` | Управление Extensions |
 | `install` | `nl install readiness ...` | Первоначальная установка |
 | `db` | `nl db status ...` | Миграции и repository |
 | `backup` | `nl backup status ...` | Создание/проверка/восстановление |
 | `operations` | `nl operations readiness ...` | Эксплуатационные проверки |
-| `release` | `nl release doctor ...` | Release readiness |
+| `release` | `nl release doctor ...` | Готовность выпуска |
 
 Backend-команды используют `--backend <url>`, а закрытые запросы могут требовать `--token` или `LAUNCHER_TOKEN`. Не записывайте токены в shell history, CI log и публичные отчёты. Полный help находится в `cli/cmd/launcher/main.go`.

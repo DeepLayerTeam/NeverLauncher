@@ -1,9 +1,9 @@
 <!doctype html>
-<html>
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Desktop Tool Example</title>
+    <title>Пример инструмента рабочего стола</title>
     <style>
       body {
         font: 14px system-ui;
@@ -19,8 +19,8 @@
     </style>
   </head>
   <body>
-    <h2>Desktop Tool Example</h2>
-    <button id="platform">Platform</button>
+    <h2>Пример инструмента рабочего стола</h2>
+    <button id="platform">Платформа</button>
     <script>
       document.getElementById("platform").onclick = () =>
         rpc("tauri.platform", {})
@@ -36,7 +36,7 @@
             (e) => (document.getElementById("out").textContent = String(e)),
           );
     </script>
-    <pre id="out">Waiting for Launcher host…</pre>
+    <pre id="out">Ожидание хоста Launcher…</pre>
     <script>
       const P = "extensions.desktop-rpc.v1";
       let seq = 0;
@@ -63,7 +63,7 @@
         return new Promise((resolve, reject) => {
           pending.set(id, { resolve, reject });
           setTimeout(() => {
-            if (pending.delete(id)) reject(new Error("RPC timeout"));
+            if (pending.delete(id)) reject(new Error("Истекло время ожидания RPC"));
           }, 10000);
         });
       }

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Java workspace</title></head>
-<body><main><h2>Java workspace</h2><p>Actions execute inside the running Java Extension Host.</p>
-<button id="refresh" type="button">Execute Java action</button>
-<button id="load" type="button">Load settings</button>
-<select id="theme"><option value="dark">Dark</option><option value="light">Light</option></select>
-<button id="save" type="button">Save settings</button>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Рабочая область Java</title></head>
+<body><main><h2>Рабочая область Java</h2><p>Действия выполняются внутри запущенного хоста Java-расширений.</p>
+<button id="refresh" type="button">Выполнить действие Java</button>
+<button id="load" type="button">Загрузить настройки</button>
+<select id="theme"><option value="dark">Тёмная</option><option value="light">Светлая</option></select>
+<button id="save" type="button">Сохранить настройки</button>
 <pre id="result" role="status"></pre></main>
 <script>
 (() => {
@@ -19,7 +19,7 @@
     if(event.source!==window.parent) return;
     const message=event.data;
     if(!message||message.protocol!==protocol) return;
-    if(message.type==="host.context") { context=message.context;show("Connected to " + context.extensionId);return; }
+    if(message.type==="host.context") { context=message.context;show("Подключено к " + context.extensionId);return; }
     if(message.type==="host.action"&&message.actionId==="refresh") { void action();return; }
     if(message.type==="rpc.response"&&pending.has(message.id)) {
       const p=pending.get(message.id);pending.delete(message.id);
@@ -27,8 +27,8 @@
     }
   });
   function call(method,params={}) {
-    if(!context) return Promise.reject(new Error("Extension context unavailable"));
-    if(pending.size>=8)return Promise.reject(new Error("Too many outstanding UI requests"));
+    if(!context) return Promise.reject(new Error("Контекст расширения недоступен"));
+    if(pending.size>=8)return Promise.reject(new Error("Слишком много незавершённых запросов интерфейса"));
     const id="ui-"+(++next);
     return new Promise((resolve,reject)=>{
       pending.set(id,{resolve,reject});

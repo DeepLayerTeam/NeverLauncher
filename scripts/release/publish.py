@@ -182,8 +182,8 @@ def verify_security_archive(
                 "security archive contains missing, extra, symlink or oversized evidence",
             )
             for member in members:
-                # Filenames come exclusively from the fixed verifier list;
-                # there are no arbitrary file paths or archive.extract().
+                # Имена файлов берутся только из фиксированного списка проверяющего; произвольные пути и archive.extract()
+                # не используются.
                 path = extracted / member.filename
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(member, "r") as stream:
@@ -282,10 +282,10 @@ def verify_ga(
             )
     if security_checks(version):
         verify_security_archive(bundle, approval, run_id, attempt)
-    # 0.43.15+: reconstruct the *complete* evidence tree from the bytes inside
-    # the SHA256SUMS-protected final release and independently rerun the original
-    # GA acceptance against the actual binaries/installers. Neither the unsigned
-    # receipt nor the original build runner's working directory is trusted.
+    # Начиная с 0.43.15: восстановите ПОЛНОЕ дерево доказательств из байтов финального выпуска, защищённого
+    # SHA256SUMS, и независимо повторите первоначальную GA-приёмку на реальных исполняемых файлах и
+    # установщиках. Ни неподписанной квитанции, ни рабочему каталогу исходного сборочного узла доверять
+    # нельзя.
     if parsed(version)[0] >= (0, 43, 15):
         with tempfile.TemporaryDirectory(prefix="nl-full-ga-publish-") as folder:
             evidence = Path(folder)
@@ -346,17 +346,17 @@ def validate(
     )
     files = file_set(bundle)
     if parsed(version)[0] >= (0, 46, 2):
-        # Independent binary-format and inner-package hash verification is
-        # required before any network write, not just the outer ZIP checksum.
+        # До любых сетевых записей проверяйте не только контрольную сумму внешнего ZIP, но и формат бинарных
+        # файлов и хеши вложенных пакетов.
         from delivery_verify_0462 import verify_bundle
         try:
             verify_bundle(bundle, True)
         except (OSError, ValueError, KeyError, TypeError) as exc:
             raise Blocked('0.46.2+ delivery binary inspection failed') from exc
     if parsed(version)[0] >= (0, 46, 0):
-        # Publication cannot be authorized by a stale pre-0.46 CLI. Verify
-        # independent operational acceptance against trusted keys in this
-        # publisher process, BEFORE any GitHub write or draft creation.
+        # Устаревший CLI до версии 0.46 не может разрешать публикацию. До ЛЮБОЙ записи на GitHub или создания
+        # черновика проверяйте независимую эксплуатационную приёмку по доверенным ключам в текущем процессе
+        # публикации.
         operator_key = os.environ.get('LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE', '')
         require(bool(operator_key), '0.46.0 GA BLOCKED: independent operator public key missing')
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'operations'))
@@ -366,9 +366,8 @@ def validate(
         except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
             raise Blocked('0.46.0 GA BLOCKED: independent operations evidence validation failed') from exc
     if version == '0.53.0':
-        # Explicit admission before even attempting GitHub publication.
-        # Protected release environment supplies read-only original approved
-        # package files and a separate pinned independent-verifier key.
+        # Явно подтвердите допуск ещё до попытки публикации на GitHub. Защищённая среда выпуска предоставляет
+        # одобренные исходные пакеты только для чтения и отдельный закреплённый ключ независимого проверяющего.
         from publication_ga_0530 import verify as verify_0530
         base = os.environ.get('NL_GA0530_INBOX','')
         key = os.environ.get('NL_GA0530_VERIFIER_KEY','')
@@ -409,7 +408,8 @@ def validate(
         "must verify with published release CLI",
     )
     cli.chmod(0o755)
-    # Use isolated trust state: validating a candidate must not advance production trust.
+    # Используйте изолированное состояние доверия: проверка кандидата не должна продвигать доверие
+    # промышленного окружения.
     with tempfile.TemporaryDirectory(prefix="nl-0370-trust-") as tmp:
         state = Path(tmp) / "release-trust-state.json"
         if trust_state.is_file():
@@ -453,7 +453,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
     version = verified["version"]
     tag = "v" + version
     commit = verified["commit"]
-    # Fail closed on any preexisting public release, draft, or tag: never overwrite.
+    # При существующем публичном выпуске, черновике или теге завершайте операцию отказом без перезаписи.
     existing = subprocess.run(
         ["gh", "release", "view", tag, "--repo", repo, "--json", "tagName"],
         capture_output=True,
@@ -479,8 +479,8 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         "tag already exists or tag lookup failed",
     )
     files = verified["files"]
-    # Seal the exact verified bytes before any network write. A post-validation
-    # mutation of the original build tree must never be uploaded as GA.
+    # Опечатайте точные проверенные байты до любых сетевых операций. Изменённое после проверки дерево сборки
+    # не должно попасть в GA.
     snapshot_context = tempfile.TemporaryDirectory(prefix="nl-publish-sealed-")
     snapshot = Path(snapshot_context.name)
     try:
@@ -511,7 +511,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
     ]
     try:
         run(args)
-        # Upload only the sealed, rehashed snapshot; do not promote a partial release.
+        # Загружайте лишь опечатанный снимок с повторно проверенными хешами; неполный выпуск нельзя продвигать.
         for name in sorted(files):
             require(sha(snapshot / name) == files[name], "sealed asset changed: " + name)
             run(["gh", "release", "upload", tag, str(snapshot / name), "--repo", repo])
@@ -537,7 +537,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
                     verify_bundle(remote, True)
                 except (OSError, ValueError, KeyError, TypeError) as exc:
                     raise Blocked('0.46.2+ remote draft binary inspection failed') from exc
-        # Gate publication on a second complete server-side release inspection.
+        # Допуск к публикации требует второй полной проверки выпуска на серверной стороне.
         metadata = json.loads(
             github(
                 repo,
@@ -568,7 +568,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
             "GitHub did not publish verified release",
         )
     except Exception:
-        # Intentionally leave the draft for investigation, never publish partial files.
+        # Намеренно сохраняйте черновик для расследования; не публикуйте неполные файлы.
         raise
     finally:
         snapshot_context.cleanup()
@@ -607,8 +607,8 @@ def main() -> int:
         "trust-state",
     ):
         p.add_argument("--" + name, required=True)
-    # Required for 0.48.0: independent LIVE migration acceptance signed by a
-    # different, pinned operator identity. No signed data = no publication.
+    # Для 0.48.0 обязательна независимая приёмка РЕАЛЬНОЙ миграции, подписанная другой закреплённой
+    # идентичностью оператора. Нет подписанных данных — нет публикации.
     p.add_argument("--ga0480-evidence-dir", default="")
     p.add_argument("--ga0480-approval", default="")
     p.add_argument("--ga0480-signature", default="")
@@ -633,10 +633,9 @@ def main() -> int:
             cli=Path(a.cli),
             trust_state=Path(a.trust_state),
         )
-        # Minor 0.48.x source patches do not inherit production certification
-        # for previous executable bytes. Keep publication blocked until a new
-        # exact-byte independent GA admission exists; changing VERSION is not
-        # a substitute for migration, game, legacy and signing evidence.
+        # Небольшие исправления исходников 0.48.x не наследуют промышленную сертификацию прежних исполняемых
+        # байтов. Блокируйте публикацию до новой независимой GA-приёмки точных байтов; изменение VERSION не
+        # заменяет доказательства миграции, игры, совместимости старых клиентов и подписания.
         if re.fullmatch(r"0\.48\.(?:[1-9][0-9]*)", a.version):
             raise Blocked("0.48.x patch release requires fresh, commit-bound independent migration, legacy, game and signed-delivery GA admission; existing 0.48.0 evidence cannot certify new executable bytes")
         if a.version == "0.48.0":
@@ -652,8 +651,8 @@ def main() -> int:
             require(sha(actual_bundle / 'RELEASE_MANIFEST.json') ==
                     sha(certified_bundle / 'RELEASE_MANIFEST.json'),
                     '0.48.0 actual publish bundle not identical to independently approved final release')
-            # Compare every platform delivery package, not only a self-reported
-            # version. Exact-byte matching is mandatory before first network write.
+            # Сравнивайте каждый платформенный пакет поставки, а не только объявленную версию. Побайтовое совпадение
+            # обязательно до первой записи в сеть.
             from delivery_verify_0462 import verify_bundle
             current = verify_bundle(actual_bundle, True)['targets']
             certified = verify_bundle(certified_bundle, True)['targets']

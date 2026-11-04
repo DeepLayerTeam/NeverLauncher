@@ -772,7 +772,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
       message(
         op === "activate"
           ? "Never channel switched; monitor and preserve MIG12 rollback ledger"
-          : `Cutover ${op}: persisted`,
+          : `Переключение ${op}: сохранено`,
       );
     } catch (err) {
       message(err.message, true);
@@ -894,7 +894,7 @@ for (const operation of ["plan", "commit", "status"]) {
         message(
           result?.ready
             ? `Rollback ${result.state}; исходный writer НЕ перезапущен`
-            : `Rollback blocked: ${(result?.blockers || []).join("; ")}`,
+            : `Откат заблокирован: ${(result?.blockers || []).join("; ")}`,
         );
       } catch (err) {
         message(err.message, true);
@@ -960,7 +960,7 @@ for (const action of ["report", "status", "review"]) {
       message(
         data.status === "blocked"
           ? "Certification blocked; examine actual evidence"
-          : `RC ${data.status}; GA certificate NOT issued`,
+          : `RC ${data.status}; сертификат GA НЕ выпущен`,
       );
     } catch (err) {
       message(err.message, true);

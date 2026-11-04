@@ -133,7 +133,8 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1401, hashtext($1))`, n.ID); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	// Registration is intentionally create-only; identity rotation requires separate step-up.
+	// Регистрация намеренно разрешает только создание; ротация идентичности требует отдельного усиленного
+	// подтверждения.
 	// Регистрация намеренно допускает только создание. Консультативная блокировка по ID узла
 	// закрывает гонку GET перед INSERT между параллельными запросами администраторов; изменение
 	// существующей идентичности допускается только через RotateServerBridgeNodeIdentity, маршрут
@@ -746,8 +747,8 @@ func (r *SQLRepository) ConsumeServerBridgeJoinTicket(ctx context.Context, id st
 		return model.ServerBridgeJoinTicket{}, err
 	}
 	defer tx.Rollback()
-	// Serialize new direct-join admission with operator policy writes. Unlike
-	// ordinary reads, FOR SHARE conflicts with the writer's FOR UPDATE.
+	// Сериализуйте допуск новых прямых подключений с записью политики оператора. В отличие от обычного чтения,
+	// FOR SHARE конфликтует с FOR UPDATE записывающей транзакции.
 	var admissionNode string
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, redemption.NodeID).Scan(&admissionNode); err != nil {
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("%w: node admission unavailable: %v", ErrConflict, err)
@@ -1025,8 +1026,8 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	if targetStatus != "active" || !isBackendBridgeKind0148(targetKind) || targetEpoch < 1 || len(targetFingerprint) != 64 {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("target node is not an active backend")
 	}
-	// Legacy v2 handoffs cannot prove current routing capacity. Once an operator
-	// ceiling exists, only runtime-bound v3 handoffs may proceed.
+	// Передачи управления устаревшего v2 не подтверждают текущую пропускную способность маршрутизации. После
+	// установки ограничения оператором разрешены только передачи v3, привязанные к Runtime.
 	if targetOperatorCapacity.Valid && !routingV3 {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: operator capacity requires runtime-bound routing", ErrConflict)
 	}
@@ -1177,8 +1178,8 @@ func (r *SQLRepository) ConsumeServerBridgeHandoff(ctx context.Context, id strin
 		return model.ServerBridgeHandoff{}, err
 	}
 	defer tx.Rollback()
-	// A lowering of admission capacity invalidates handoffs in the same
-	// node-locked transaction. Acquire the node lock FIRST to avoid a cycle.
+	// Уменьшение предельного допуска аннулирует передачи в той же транзакции с блокировкой узла. СНАЧАЛА
+	// захватывайте блокировку узла, чтобы избежать цикла.
 	var admissionNode string
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, redemption.NodeID).Scan(&admissionNode); err != nil {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: node admission unavailable: %v", ErrConflict, err)
@@ -1458,10 +1459,10 @@ func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.Ser
 
 const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,delivery_sequence,lease_owner,lease_token,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
 
-// serverBridgeControlDBTime0515 reads the authoritative PostgreSQL clock inside
-// the transaction that assigns or reconciles a ServerBridge delivery. Host
-// clocks may be arbitrarily skewed during multi-host failover; never use the
-// caller's wall clock to decide who owns an externally side-effecting command.
+// serverBridgeControlDBTime0515 получает авторитетное время PostgreSQL внутри транзакции назначения или
+// согласования доставки ServerBridge. Во время переключения между хостами часы могут существенно
+// расходиться; нельзя определять владельца команды с внешним побочным эффектом по локальным часам
+// вызывающей стороны.
 func serverBridgeControlDBTime0515(ctx context.Context, tx *sql.Tx) (time.Time, error) {
 	var now time.Time
 	err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&now)
@@ -1487,8 +1488,8 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 		return model.ServerBridgeControlCommand{}, false, err
 	}
 	defer tx.Rollback()
-	// Expiry is checked against PostgreSQL after the transaction has started.
-	// A fast API clock must not reject an otherwise valid operator request.
+	// Истечение срока проверяется по времени PostgreSQL после начала транзакции. Спешащие часы API не должны
+	// отклонять корректный запрос оператора.
 	now, err = serverBridgeControlDBTime0515(ctx, tx)
 	if err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
@@ -1532,10 +1533,10 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 	return created, false, err
 }
 
-// reconcileControlLeases0285 is executed under the same PostgreSQL transaction
-// as dispatch. A delivered command that lost its lease or its original runtime
-// cannot safely be redelivered, even when its application ACKed.
-// The identity/token/sequence stay on the row for forensic reconciliation.
+// reconcileControlLeases0285 выполняется в той же транзакции PostgreSQL, что и отправка. Доставленную
+// команду, потерявшую аренду или исходный Runtime, нельзя безопасно доставлять повторно, даже если
+// приложение подтвердило её ACK. Идентичность, токен и последовательность остаются в строке для
+// расследования.
 func (r *SQLRepository) reconcileControlLeases0285(ctx context.Context, tx *sql.Tx, serverID string, now time.Time) error {
 	_, err := tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
 SET status='indeterminate', updated_at=$2, completed_at=$2,
@@ -1592,15 +1593,15 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
 	}
-	// Lease expiry, pending eligibility and runtime reconciliation share one
-	// authoritative clock even when API replicas have divergent NTP time.
+	// Истечение аренды, допустимость ожидающих команд и согласование Runtime используют единые авторитетные
+	// часы, даже если время NTP у реплик API различается.
 	now, err = serverBridgeControlDBTime0515(ctx, tx)
 	if err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	// A delivered command MAY have performed its side effect before ACK loss.
-	// Expired delivery becomes indeterminate, never pending/redeliverable.
-	// PostgreSQL remains authoritative across API replicas.
+	// Доставленная команда МОГЛА выполнить побочный эффект до потери ACK. По истечении аренды её результат
+	// становится неопределённым; возврат в ожидание или повторная доставка запрещены. PostgreSQL остаётся
+	// источником истины для всех реплик API.
 	if err = r.reconcileControlLeases0285(ctx, tx, serverID, now); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
@@ -1634,7 +1635,9 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, id))
 }
 
-// CompleteServerBridgeControlCommand — idempotent fenced commit: a completed command can be acknowledged again only with the same lease identity, status and result; a conflicting replay fails.
+// CompleteServerBridgeControlCommand — идемпотентное завершение с ограничением аренды: повторный ACK
+// завершённой команды допускается только с той же идентичностью аренды, статусом и результатом;
+// конфликтующий повтор отклоняется.
 // Завершить команду может только канал с токеном, получивший её. Токен сохраняется после
 // завершения, чтобы повтор на другой реплике Backend получил тот же сохранённый результат.
 func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, leaseOwner, leaseToken string, deliverySequence int64, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
@@ -1645,9 +1648,9 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if !allowed[status] || len(strings.TrimSpace(leaseOwner)) < 16 || len(strings.TrimSpace(leaseToken)) < 16 || deliverySequence < 1 {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control result", ErrConflict)
 	}
-	// Normalize before both the original commit and all idempotent replays.
-	// Otherwise a failure longer than 1024 bytes is persisted truncated but
-	// a byte-identical retry is rejected as a conflicting acknowledgement.
+	// Нормализуйте результат до первого сохранения и до каждого идемпотентного повтора. Иначе ошибка длиннее
+	// 1024 байт сохраняется усечённой, а побайтово идентичный повтор ошибочно отклоняется как конфликтующее
+	// подтверждение.
 	failure = normalizeServerBridgeControlFailure(failure)
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
@@ -1658,7 +1661,7 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		return model.ServerBridgeControlCommand{}, err
 	}
 	defer tx.Rollback()
-	// Completion and repeated ACKs use DB time for their persisted evidence.
+	// Завершение и повторные ACK используют время БД при сохранении доказательств.
 	now, err = serverBridgeControlDBTime0515(ctx, tx)
 	if err != nil {
 		return model.ServerBridgeControlCommand{}, err
@@ -1673,9 +1676,9 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) || current.DeliverySequence != deliverySequence || current.LeaseOwner != leaseOwner || current.LeaseToken != leaseToken {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement lease mismatch", ErrConflict)
 	}
-	// The agent has durably finished, but its ACK may arrive after expiry of
-	// the original lease or after read-time reconciliation. Preserve the
-	// original lease identity (checked above); grant a new execution.
+	// Агент уже надёжно завершил работу, но его ACK может прийти после истечения исходной аренды или
+	// согласования при чтении. Сохраните исходную идентичность аренды (проверенную выше); не выдавайте новое
+	// исполнение.
 	if recoverableServerBridgeLease0412(current) {
 		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
 			return model.ServerBridgeControlCommand{}, err
@@ -1694,8 +1697,8 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		}
 		return current, nil
 	}
-	// An expired lease is NOT transferable. A receipt still matching its
-	// original channel/token/sequence may commit the observed outcome.
+	// Истёкшая аренда НЕ передаётся другому исполнителю. Квитанция, всё ещё совпадающая с исходным каналом,
+	// токеном и последовательностью, может зафиксировать наблюдавшийся результат.
 	if current.Status != "leased" {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command lease is not active", ErrConflict)
 	}
@@ -1723,8 +1726,8 @@ func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
 	return true
 }
 
-// Atomic, idempotent status repair performed before command read. It does not
-// release the old lease token to a new executor or rewrite terminal results.
+// Атомарное идемпотентное исправление статуса выполняется до чтения команды. Оно не передаёт старый токен
+// аренды новому исполнителю и не переписывает конечные результаты.
 func (r *SQLRepository) reconcileControlRead0285(ctx context.Context, serverID, commandID string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET
 status=CASE WHEN status='leased' THEN 'indeterminate' ELSE 'expired' END,
@@ -1739,8 +1742,8 @@ func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serve
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	// Reconcile at read time as well: a server may poll again after a
-	// crash, and operators still need the actual indeterminate outcome.
+	// Согласовывайте и при чтении: сервер может снова опросить состояние после сбоя, а оператору необходимо
+	// видеть фактический неопределённый исход.
 	if err := r.reconcileControlRead0285(ctx, serverID, commandID); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
@@ -1763,7 +1766,7 @@ func (r *SQLRepository) ListServerBridgeRecentControlCommands(ctx context.Contex
 	if limit > 200 {
 		limit = 200
 	}
-	// Make uncertainty visible even after the game reconnects.
+	// Показывайте неопределённость даже после повторного подключения игры.
 	if err := r.reconcileControlRead0285(ctx, "", ""); err != nil {
 		return nil, err
 	}

@@ -26,12 +26,12 @@ const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
 // настоящее переполнение по-прежнему приводит к отказу в drain_transitions().
 const MEMORY_TRANSITION_RING_CAPACITY: usize = 32768;
 const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;
-// Allow in-flight successful IAT callbacks to publish their evidence before
-// refusing an otherwise unknown executable page; never trust a timer alone.
+// Дайте уже выполняющимся успешным обратным вызовам IAT опубликовать доказательства, прежде чем отклонять
+// неизвестную исполняемую страницу; одного таймера недостаточно для доверия.
 const PROVENANCE_RECHECKS: usize = 16;
-// Windows may report ERROR_PARTIAL_COPY while a loader mapping is settling.
-// Retry only while VirtualQuery proves that the same executable MEM_IMAGE
-// segment remains mapped. Hash validation and fail-closed still apply.
+// Windows может вернуть ERROR_PARTIAL_COPY, пока отображение загрузчика стабилизируется. Повтор допустим
+// лишь пока VirtualQuery подтверждает, что тот же исполняемый сегмент MEM_IMAGE остаётся отображённым.
+// Проверка хеша и принцип отказа при ошибке сохраняются.
 const IMAGE_READ_RECHECKS: usize = 4;
 const ERROR_PARTIAL_COPY: i32 = 299;
 
@@ -195,12 +195,11 @@ impl Drop for PinnedModule {
 }
 
 pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
-    // Hook Engine is already active when this function runs. Do not reset the
-    // producer/consumer indices here: a concurrent JIT allocation can publish a
-    // successful transition between the first hook installation and this scan.
-    // Zeroing the indices discards that evidence and produces a false fail-closed
-    // violation for newly executable pages. The ring is initialized statically
-    // once per Sensor process; all producer events remain ordered and auditable.
+    // К моменту вызова функции Hook Engine уже работает. Не сбрасывайте здесь индексы производителя и
+    // потребителя: параллельное выделение JIT-памяти может сообщить об успешном переходе между установкой
+    // первого перехвата и этим сканированием. Обнуление индексов уничтожит доказательство и вызовет ложное
+    // нарушение для новых исполняемых страниц. Кольцевой буфер статически инициализируется один раз на процесс
+    // Sensor; порядок и возможность аудита всех событий сохраняются.
     let mut state = MemoryIntegrityState::new();
     let regions = enumerate_executable_regions()?;
     for region in &regions {
@@ -224,9 +223,9 @@ pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
     // разрывов и предотвращает квадратичное сканирование горячего пути.
     coalesce_ranges(&mut state.allowed_dynamic);
     coalesce_ranges(&mut state.allowed_mapped);
-    // Account for executable transitions completed while VirtualQuery walked
-    // the initial address space, including events queued before this method.
-    // A real overflow remains fatal in drain_transitions().
+    // Учитывайте переходы в исполняемое состояние, завершившиеся во время обхода исходного адресного
+    // пространства через VirtualQuery, включая события, поставленные в очередь до этого метода. Настоящее
+    // переполнение остаётся фатальным в drain_transitions().
     drain_transitions(&mut state)?;
     state.active = true;
     state.healthy = true;
@@ -288,14 +287,12 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
             }
             MEM_PRIVATE => {
                 if !range_allowed(region, &state.allowed_dynamic) {
-                    // VirtualQuery can observe a newly executable page after the
-                    // OS call returned but before its IAT wrapper published the
-                    // transition. Recheck the lock-free queue a bounded number
-                    // of times; do not whitelist any region without evidence.
+                    // VirtualQuery может увидеть новую исполняемую страницу после возврата системного вызова, но до публикации
+                    // перехода обёрткой IAT. Повторно проверьте неблокирующую очередь ограниченное число раз; без
+                    // доказательства нельзя добавлять ни одну область в список разрешённых.
                     for _ in 0..PROVENANCE_RECHECKS {
-                        // A runnable producer may still be waiting for its time slice.
-                        // Bound the race with a short wait, without ever trusting
-                        // elapsed time as a substitute for observed provenance.
+                        // Готовый к выполнению производитель может ещё ожидать своего процессорного кванта. Ограничьте состязание
+                        // коротким ожиданием, никогда не подменяя наблюдаемое происхождение одним лишь прошедшим временем.
                         std::thread::sleep(std::time::Duration::from_millis(1));
                         drain_transitions(state)?;
                         if range_allowed(region, &state.allowed_dynamic) {
@@ -470,8 +467,8 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
             }
             let error = std::io::Error::last_os_error();
             last_error = error.to_string();
-            // Retry only a known transient Windows error, after confirming
-            // the exact original mapping is still executable and unchanged.
+            // Повторяйте только известную временную ошибку Windows, подтвердив, что исходное отображение остаётся
+            // исполняемым и неизменным.
             if error.raw_os_error() != Some(ERROR_PARTIAL_COPY)
                 || attempt + 1 == IMAGE_READ_RECHECKS
             {
@@ -596,9 +593,9 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
                     updated_dynamic = true;
                 }
             } else {
-                // Previously executable pages can be returned to read/write
-                // memory and later reallocated. Revoke precisely those pages:
-                // a new executable mapping requires another observed success.
+                // Ранее исполняемые страницы могут вернуться в память для чтения и записи, а затем быть выделены повторно.
+                // Отзывайте доверие именно для этих страниц: новое исполняемое отображение требует нового наблюдаемого
+                // успешного перехода.
                 revoke_range(&mut state.allowed_dynamic, range);
                 updated_dynamic = true;
             }
@@ -611,8 +608,8 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
     Ok(())
 }
 
-// Remove only pages affected by a successful non-executable allocation/protection
-// change. Other pages in a larger trusted allocation keep their provenance.
+// Удаляйте только страницы, затронутые успешным выделением или изменением защиты в неисполняемое
+// состояние. Остальные страницы в более крупной доверенной области сохраняют происхождение.
 fn revoke_range(ranges: &mut Vec<AddressRange>, revoked: AddressRange) {
     let mut replacement = Vec::with_capacity(ranges.len().saturating_add(1));
     for current in ranges.drain(..) {

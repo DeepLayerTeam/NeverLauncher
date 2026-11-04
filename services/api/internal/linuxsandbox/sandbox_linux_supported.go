@@ -1,10 +1,9 @@
 //go:build linux && (amd64 || arm64)
 
-// Package linuxsandbox executes untrusted extensions on linux/amd64 and
-// linux/arm64 in a kernel-confined
-// user/mount/pid/ipc/uts/network namespace with cgroup v2 containment.
-// It intentionally refuses to implement shared grants before the scoped
-// broker is available. A process group is never treated as a sandbox.
+// Пакет linuxsandbox запускает недоверенные расширения в linux/amd64 и linux/arm64 внутри пространств имён
+// user/mount/pid/ipc/uts/network с ограничениями ядра и cgroup v2. Он намеренно не поддерживает общие
+// разрешения до готовности брокера с ограниченными полномочиями. Группа процессов никогда не считается
+// песочницей.
 package linuxsandbox
 
 import (
@@ -77,7 +76,7 @@ func (h *Handle) Close() {
 		h.timer.Stop()
 	}
 	h.mu.Unlock()
-	// cgroup.kill terminates processes even if they left their process group.
+	// cgroup.kill завершает процессы, даже если они покинули исходную группу процессов.
 	if h.cgroup != "" {
 		_ = os.WriteFile(filepath.Join(h.cgroup, "cgroup.kill"), []byte("1"), 0o600)
 	}
@@ -103,8 +102,8 @@ func (h *Handle) Close() {
 	}
 }
 
-// Available is only a preflight, not proof of enforcement. Ready() below
-// verifies that namespace setup, mounts, no_new_privs and seccomp succeeded.
+// Available — только предварительная проверка, не доказательство изоляции. Ready() ниже подтверждает
+// настройку пространств имён, монтирования, no_new_privs и seccomp.
 func Available() error {
 	if os.Geteuid() == 0 {
 		return errors.New("sandbox-requires-unprivileged-service-identity")
@@ -160,8 +159,8 @@ func delegatedCgroup() (string, error) {
 			return "", fmt.Errorf("sandbox-cgroup-controller-%s-unavailable", v)
 		}
 	}
-	// Creating a child is the only reliable way to validate delegation. Do not
-	// claim isolation from a visible read-only cgroup filesystem.
+	// Создание дочернего процесса — единственный надёжный способ проверить делегирование. Наличие читаемой
+	// файловой системы cgroup без права записи не доказывает изоляцию.
 	return path, nil
 }
 func validate(o Options) error {
@@ -169,9 +168,9 @@ func validate(o Options) error {
 	if p.MaxMemoryBytes <= 0 || p.MaxProcesses <= 0 || p.MaxCPUPercent <= 0 || p.MaxCPUPercent > 100 || p.TimeoutSeconds <= 0 {
 		return errors.New("sandbox-requires-finite-memory-pids-cpu-time")
 	}
-	// Scoped grants are carried only to the host capability broker via the
-	// authenticated socketpair. This namespace still has no host network or
-	// shared host mounts: access cannot bypass policy checks in the broker.
+	// Разрешения с ограниченной областью передаются исключительно брокеру возможностей хоста через
+	// аутентифицированную пару сокетов. В этом пространстве имён нет сети хоста и общих монтирований, поэтому
+	// проверки политики брокера обойти нельзя.
 	for _, grant := range p.FilesystemRead {
 		if grant != "package" && !validSharedGrant03110(grant) {
 			return errors.New("sandbox-invalid-read-grant")
@@ -233,8 +232,8 @@ func makeCgroup(p Policy) (string, *os.File, error) {
 			return fail(fmt.Errorf("sandbox-cgroup-%s: %w", key, e))
 		}
 	}
-	// cgroup.kill is mandatory, not optional cleanup. Without it an extension
-	// that creates a new process group could survive Close() or expiration.
+	// cgroup.kill обязателен, это не необязательная очистка. Без него расширение, создавшее другую группу
+	// процессов, может пережить Close() или истечение срока.
 	if err := requireCgroupKill03120(dir); err != nil {
 		return fail(err)
 	}
@@ -252,9 +251,8 @@ func requireCgroupKill03120(path string) error {
 	if !fi.Mode().IsRegular() {
 		return errors.New("sandbox-cgroup-kill-not-regular")
 	}
-	// The newly created cgroup is empty at this point. Writing 1 proves that
-	// delegation actually permits killing all descendants later, rather than
-	// trusting only the presence of a cgroup.kill pseudo-file.
+	// На этом этапе новая cgroup пуста. Запись 1 доказывает, что делегирование действительно позволяет позже
+	// завершать всех потомков, а не просто наличие псевдофайла cgroup.kill.
 	if err := os.WriteFile(filepath.Join(path, "cgroup.kill"), []byte("1"), 0); err != nil {
 		return fmt.Errorf("sandbox-cgroup-kill-not-writable: %w", err)
 	}
@@ -325,9 +323,8 @@ func Prepare(o Options) (*Handle, error) {
 		UseCgroupFD:                true, CgroupFD: int(cfd.Fd()), Pdeathsig: syscall.SIGKILL, Setpgid: true,
 	}
 	h.Cmd = cmd
-	// The supervisor owns the HTTP protocol, the guest owns only a single
-	// socketpair endpoint; no host network namespace or host unix socket path
-	// is mounted inside the sandbox.
+	// Супервизор владеет HTTP-протоколом, гостевой процесс — лишь одной стороной пары сокетов; пространство
+	// сети хоста и путь Unix-сокета хоста внутрь песочницы не монтируются.
 	conn, e := net.FileConn(hostFile)
 	if e != nil {
 		err = e
@@ -337,8 +334,8 @@ func Prepare(o Options) (*Handle, error) {
 	handlerServer := &http.Server{Handler: o.HostHandler, ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
 	h.hostServer = handlerServer
 	go func() { _ = handlerServer.Serve(&oneConnListener{conn: conn, done: make(chan struct{})}) }()
-	// cmd.Start is performed by the caller after it installs stdout/stderr.
-	// Write all configuration before Start; no credentials are exposed in argv.
+	// cmd.Start вызывается после установки stdout/stderr вызывающей стороной. Полностью запишите конфигурацию
+	// до Start; учётные данные не должны передаваться через argv.
 	if len(data) > 65536 {
 		err = errors.New("sandbox-configuration-too-large")
 		return nil, err
@@ -360,12 +357,12 @@ func Prepare(o Options) (*Handle, error) {
 		err = e
 		return nil, err
 	}
-	// file descriptors are retained until Started closes the unused ends
+	// Файловые дескрипторы сохраняются, пока Started не закроет неиспользуемые концы.
 	return h, nil
 }
 func (h *Handle) Started() error {
-	// close inherited endpoints in parent; kernel keeps them in child.
-	// h.sources ordering: cfd, hostFile, guestFile, sealedConfig, readyReader, readyWriter
+	// Закройте унаследованные концы в родителе; ядро удерживает их у потомка. Порядок h.sources: cfd,
+	// hostFile, guestFile, sealedConfig, readyReader, readyWriter.
 	for _, i := range []int{2, 3, 5} {
 		_ = h.sources[i].Close()
 	}
@@ -524,8 +521,8 @@ func childMain() error {
 		return e
 	}
 	_ = ln.Close()
-	// The isolated proxy is trusted program code with no secrets, restricted
-	// capability state and no host network access beyond this socketpair.
+	// Изолированный прокси — доверенная программа без секретов, с ограниченным состоянием разрешений и без
+	// сетевого доступа к хосту за пределами этой пары сокетов.
 	readyRead, readyWrite, e := os.Pipe()
 	if e != nil {
 		return e
@@ -566,8 +563,8 @@ func childMain() error {
 		return errors.New("sandbox-ipc-proxy-setup-timeout")
 	}
 
-	// exec on this LOCKED thread guarantees the extension inherits NNP,
-	// zero permitted/effective capabilities and the installed seccomp filter.
+	// exec на этом ЗАКРЕПЛЁННОМ потоке гарантирует наследование расширением NNP, нулевых
+	// разрешённых/действующих capabilities и установленного фильтра seccomp.
 	runtime.LockOSThread()
 	if e := lockdown(); e != nil {
 		return e
@@ -626,8 +623,8 @@ func newIPCProxy(conn net.Conn) http.Handler {
 	})
 }
 
-// memfd avoids writing the host capability token to persistent storage and
-// avoids blocking a pipe before the child has started reading from it.
+// memfd не допускает записи токена возможностей хоста на постоянный носитель и блокировки канала до начала
+// чтения дочерним процессом.
 func sealedConfigFD() (*os.File, error) {
 	name := []byte("nl-extension-config-0319\x00")
 	fd, _, e := syscall.RawSyscall(sandboxMemfdCreateSyscall, uintptr(unsafe.Pointer(&name[0])), uintptr(1|2), 0) // MFD_CLOEXEC|MFD_ALLOW_SEALING

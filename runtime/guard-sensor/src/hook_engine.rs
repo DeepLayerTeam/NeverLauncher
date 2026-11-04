@@ -31,7 +31,7 @@ const HOOK_VIRTUAL_PROTECT: u32 = 6;
 const HOOK_VIRTUAL_ALLOC_FROM_APP: u32 = 7;
 const HOOK_VIRTUAL_PROTECT_FROM_APP: u32 = 8;
 const HOOK_VIRTUAL_ALLOC_2: u32 = 9;
-// Direct ntdll imports bypass the Kernel32/KernelBase IAT slots.
+// Прямой импорт ntdll обходит слоты IAT в Kernel32/KernelBase.
 const HOOK_NT_ALLOCATE_VIRTUAL_MEMORY: u32 = 10;
 const HOOK_NT_PROTECT_VIRTUAL_MEMORY: u32 = 11;
 const HOOK_GET_PROC_ADDRESS: u32 = 12;
@@ -273,9 +273,9 @@ fn hook_specs() -> [HookSpec; 14] {
             canonical: &ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY,
             optional: true,
         },
-        // HotSpot/native libraries may dynamically resolve memory APIs rather
-        // than import their addresses through IAT. Wrap only genuine exports
-        // whose returned address equals our independently resolved target.
+        // HotSpot и нативные библиотеки могут динамически разрешать API памяти вместо импорта адресов через IAT.
+        // Оборачивайте только настоящие экспорты, возвращённые адреса которых совпадают с независимо найденными
+        // целями.
         HookSpec {
             id: HOOK_VIRTUAL_ALLOC_EX,
             name: "VirtualAllocEx",
@@ -432,22 +432,20 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
     Ok(())
 }
 
-// A module can start using its imports immediately after LoadLibrary returns.
-// Reconciling IAT only at the two-second heartbeat misses memory transitions
-// made by newly loaded JVM/LWJGL modules. This runs only after the native loader
-// has returned (never from DllMain / LdrDllNotification).
+// Модуль может начать использовать импорты сразу после возврата LoadLibrary. Если согласовывать IAT лишь
+// раз в две секунды по heartbeat, переходы памяти в новых модулях JVM/LWJGL будут пропущены. Этот код
+// вызывается только после возврата нативного загрузчика, никогда из DllMain или LdrDllNotification.
 fn reconcile_after_library_load(module: *mut c_void) {
     if module.is_null() {
         return;
     }
-    // LWJGL may allocate executable code immediately after it loads. Verify
-    // and pin its exact native image before normal IAT reconciliation; the
-    // JVM-Aware heartbeat fails closed if this registration is rejected.
+    // LWJGL может выделять исполняемый код сразу после загрузки. До обычного согласования IAT проверьте и
+    // закрепите точный нативный образ; JVM-Aware heartbeat должен отказать, если регистрация отклонена.
     if let Err(err) = crate::jvm_awareness::register_loaded_native_dispatcher(module) {
         eprintln!("Guard JVM-Aware native registration rejected: {err}");
     }
-    // Hook reconciliation itself may require OS loader operations. Never wait
-    // recursively for ENGINE_STATE from inside a LoadLibrary callback.
+    // Само согласование перехватов может требовать операций загрузчика ОС. Никогда не ждите ENGINE_STATE
+    // рекурсивно из обратного вызова LoadLibrary.
     let Ok(mut state) = ENGINE_STATE.try_lock() else {
         return; // regular heartbeat remains mandatory and will reconcile
     };
@@ -455,8 +453,8 @@ fn reconcile_after_library_load(module: *mut c_void) {
         return;
     }
     if let Err(err) = reconcile_locked(&mut state).and_then(|_| verify_locked(&mut state)) {
-        // Do not let a failed patch silently grant executable-memory origin.
-        // The worker's mandatory Hook Engine heartbeat fails closed.
+        // Ошибка установки перехвата не должна незаметно разрешать происхождение исполняемой памяти. Обязательный
+        // heartbeat Hook Engine в обработчике приводит к отказу.
         state.healthy = false;
         eprintln!("Guard Hook Engine post-load reconciliation failed: {err}");
     }
@@ -597,7 +595,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
                 let function_name = read_ascii(base, size, name_offset + 2, MAX_IMPORT_NAME)?;
                 if let Some(spec) = specs.iter().find(|spec| {
                     spec.name == function_name
-                        // Never pair Nt* hooks with forwarded Kernel32 imports.
+                        // Не сочетайте перехваты Nt* с переадресованными импортами Kernel32.
                         && (import_dll.eq_ignore_ascii_case("ntdll.dll") == spec.name.starts_with("Nt"))
                         && !spec.canonical.load(Ordering::Acquire).is_null()
                 }) {
@@ -635,8 +633,8 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
 }
 
 fn read_hook_slot(slot: usize) -> usize {
-    // PE IAT pointer slots are naturally pointer-aligned. Atomic reads pair
-    // with the release stores in patch_pointer on concurrent JVM threads.
+    // Слоты указателей IAT в PE естественно выровнены по размеру указателя. Атомарное чтение согласуется с
+    // release-записью в patch_pointer на параллельных потоках JVM.
     unsafe { AtomicUsize::from_ptr(slot as *mut usize).load(Ordering::Acquire) }
 }
 
@@ -769,8 +767,8 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
     Ok(String::from_utf16_lossy(&buffer[..length]))
 }
 
-// Do not patch the IAT of externally signed recording/overlay/AV modules.
-// Parent Module Guard still authenticates loaded DLLs independently.
+// Не изменяйте IAT внешне подписанных модулей записи, оверлеев и антивирусов. Родительский Module Guard
+// независимо аутентифицирует загруженные DLL.
 fn scope_contains(path:&str, root:&str) -> bool {
     path == root || path.strip_prefix(root).is_some_and(|tail|tail.starts_with('\\'))
 }
@@ -783,10 +781,9 @@ fn should_skip_module(module: &ProcessModule) -> bool {
     if path == system_root || path.strip_prefix(&system_root).is_some_and(|suffix| suffix.starts_with('\\')) {
         return true;
     }
-    // External overlays, capture utilities and AV/GPU vendor DLLs are validated
-    // by the parent Module Guard. Never rewrite their IAT: the hooks can conflict
-    // with vendor instrumentation even when the DLL is authenticode-signed.
-    // Only Java's own modules and game-root native code are instrumented.
+    // Внешние оверлеи, средства захвата и DLL антивирусов/драйверов GPU проверяются родительским Module Guard.
+    // Не переписывайте их IAT: перехваты могут конфликтовать с инструментированием производителя даже при
+    // подписи Authenticode. Инструментируются только собственные модули Java и нативный код в корне игры.
     let game_root=env::current_dir().ok().map(|p|normalize_path(&p.to_string_lossy()));
     let jvm=wide_null("jvm.dll");
     let jvm=unsafe {GetModuleHandleW(jvm.as_ptr())};
@@ -882,7 +879,7 @@ unsafe extern "system" fn hook_load_library_a(name: *const c_char) -> *mut c_voi
     let function: unsafe extern "system" fn(*const c_char) -> *mut c_void = unsafe { std::mem::transmute(target) };
     let module = unsafe { function(name) };
     if !module.is_null() {
-        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        // Сохраняйте семантику последней ошибки Win32 для вызовов LoadLibrary.
         let last_error = unsafe { GetLastError() };
         reconcile_after_library_load(module);
         unsafe { SetLastError(last_error); }
@@ -899,7 +896,7 @@ unsafe extern "system" fn hook_load_library_w(name: *const u16) -> *mut c_void {
     let function: unsafe extern "system" fn(*const u16) -> *mut c_void = unsafe { std::mem::transmute(target) };
     let module = unsafe { function(name) };
     if !module.is_null() {
-        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        // Сохраняйте семантику последней ошибки Win32 для вызовов LoadLibrary.
         let last_error = unsafe { GetLastError() };
         reconcile_after_library_load(module);
         unsafe { SetLastError(last_error); }
@@ -921,7 +918,7 @@ unsafe extern "system" fn hook_load_library_ex_a(
         unsafe { std::mem::transmute(target) };
     let module = unsafe { function(name, file, flags) };
     if !module.is_null() {
-        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        // Сохраняйте семантику последней ошибки Win32 для вызовов LoadLibrary.
         let last_error = unsafe { GetLastError() };
         reconcile_after_library_load(module);
         unsafe { SetLastError(last_error); }
@@ -943,7 +940,7 @@ unsafe extern "system" fn hook_load_library_ex_w(
         unsafe { std::mem::transmute(target) };
     let module = unsafe { function(name, file, flags) };
     if !module.is_null() {
-        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        // Сохраняйте семантику последней ошибки Win32 для вызовов LoadLibrary.
         let last_error = unsafe { GetLastError() };
         reconcile_after_library_load(module);
         unsafe { SetLastError(last_error); }
@@ -951,9 +948,9 @@ unsafe extern "system" fn hook_load_library_ex_w(
     module
 }
 
-// Track dynamically resolved entry points as well as static IAT imports.
-// Never redirect unknown exports or ordinal lookups, and never manufacture
-// executable-memory evidence simply because an export was resolved.
+// Отслеживайте динамически разрешённые точки входа наряду со статическими импортами IAT. Не
+// перенаправляйте неизвестные экспорты или поиски по ординалу и не создавайте фиктивных доказательств
+// исполняемой памяти только из факта разрешения экспорта.
 unsafe extern "system" fn hook_get_proc_address(
     module: *mut c_void,
     name: *const c_char,
@@ -1066,10 +1063,10 @@ unsafe extern "system" fn hook_virtual_protect_from_app(
     result
 }
 
-// NT memory APIs accept both the pseudo-handle (-1) and a real opened or
-// duplicated handle to the same process. Pointer equality with -1 silently
-// drops legitimate self-process JIT transitions; validate the process ID
-// instead. Invalid/foreign process handles can never grant local provenance.
+// API памяти NT принимают как псевдодескриптор (-1), так и настоящий открытый или дублированный дескриптор
+// этого процесса. Сравнение указателя только с -1 пропускает допустимые переходы JIT в своём процессе;
+// проверяйте идентификатор процесса. Недопустимые и чужие дескрипторы не могут подтверждать локальное
+// происхождение.
 fn is_current_process_handle(process: *mut c_void) -> bool {
     if process.is_null() {
         return false;
@@ -1078,9 +1075,9 @@ fn is_current_process_handle(process: *mut c_void) -> bool {
     pid != 0 && pid == unsafe { GetCurrentProcessId() }
 }
 
-// Ex functions can operate on a real handle for this process. Observing only
-// self-process successes prevents a remote allocation from authorizing a local
-// executable page, while catching JVM/native callers using the Ex variants.
+// Функции Ex могут работать с реальным дескриптором этого процесса. Отслеживание только успешных операций
+// над собственным процессом не позволяет удалённому выделению разрешить локальную исполняемую страницу, но
+// учитывает вызовы JVM и нативного кода через варианты Ex.
 unsafe extern "system" fn hook_virtual_alloc_ex(
     process: *mut c_void,
     address: *mut c_void,
@@ -1141,8 +1138,8 @@ unsafe extern "system" fn hook_virtual_alloc_2(
     let result = unsafe {
         function(process, address, size, allocation_type, protect, extended_parameters, parameter_count)
     };
-    // VirtualAlloc2 accepts NULL or any valid handle to the current process.
-    // Validate real handles instead of comparing only to the pseudo-handle.
+    // VirtualAlloc2 принимает NULL или любой допустимый дескриптор текущего процесса. Проверяйте реальные
+    // дескрипторы, а не только псевдодескриптор.
     if !result.is_null() && (process.is_null() || is_current_process_handle(process)) {
         crate::memory_integrity::record_virtual_alloc(result, size, protect);
         let provenance = crate::jvm_awareness::capture_transition_provenance();
@@ -1151,11 +1148,10 @@ unsafe extern "system" fn hook_virtual_alloc_2(
     result
 }
 
-// The NT routines are invoked only through verified ntdll imports in a
-// non-system module. Never replace executable-memory authorization with
-// the mere presence of an ntdll page: a successful, observed transition is
-// still required, and the existing fail-closed coverage checks remain intact.
-// NTSTATUS success is nonnegative; negative statuses never confer provenance.
+// Функции NT вызываются только через проверенные импорты ntdll несистемного модуля. Наличие страницы ntdll
+// само по себе не заменяет разрешения исполняемой памяти: по-прежнему требуется успешный наблюдаемый
+// переход, а существующие проверки с отказом при ошибке остаются. Успешный NTSTATUS неотрицателен;
+// отрицательные статусы не подтверждают происхождение.
 unsafe extern "system" fn hook_nt_allocate_virtual_memory(
     process: *mut c_void,
     base_address: *mut *mut c_void,
@@ -1227,7 +1223,7 @@ mod self_process_handle_tests {
     fn pseudo_and_real_self_process_handles_are_recognized() {
         let pseudo = unsafe { GetCurrentProcess() };
         assert!(is_current_process_handle(pseudo));
-        // PROCESS_QUERY_LIMITED_INFORMATION is sufficient for GetProcessId.
+        // Для GetProcessId достаточно PROCESS_QUERY_LIMITED_INFORMATION.
         let opened = unsafe { OpenProcess(0x1000, 0, GetCurrentProcessId()) };
         assert!(!opened.is_null(), "OpenProcess(self) must succeed");
         assert!(is_current_process_handle(opened));

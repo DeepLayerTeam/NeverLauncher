@@ -59,8 +59,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
     private final AtomicBoolean drainMode = new AtomicBoolean(false);
-    // An ACK of player.kick must be correlated with a real quit event, not the
-    // return from kickPlayer(). The map is scoped to this running plugin instance.
+    // ACK для player.kick должен связываться с реальным событием выхода игрока, а не с возвратом kickPlayer().
+    // Карта принадлежит конкретному запущенному экземпляру плагина.
     private final ConcurrentHashMap<UUID, CompletableFuture<BridgeControlResult>> pendingKicks = new ConcurrentHashMap<>();
     private volatile RuntimeState runtime;
     private volatile boolean lastHeartbeatOK;
@@ -123,8 +123,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     @Override
     public final void onDisable() {
         stopping.set(true);
-        // Never leave an outstanding command waiting on an event which can no
-        // longer be emitted by this plugin. Do not turn shutdown into success.
+        // Не оставляйте команду в ожидании события, которое плагин уже не может выдать. Остановка не должна
+        // превращаться в успешное завершение.
         pendingKicks.forEach((uuid, pending) -> pending.complete(BridgeControlResult.indeterminate("plugin_disabled_before_kick_confirmation")));
         pendingKicks.clear();
         RuntimeState state = runtime;
@@ -186,8 +186,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         org.bukkit.entity.Player player = event.getPlayer();
         CompletableFuture<BridgeControlResult> pending = pendingKicks.remove(player.getUniqueId());
         if (pending != null) {
-            // A PlayerQuitEvent is an actual observed disconnect, unlike a
-            // scheduler/dispatcher ACK. It can occur on a Folia entity thread.
+            // PlayerQuitEvent означает реально наблюдаемое отключение, в отличие от ACK планировщика или диспетчера. В
+            // Folia событие может выполняться на потоке сущности.
             pending.complete(new BridgeControlResult("succeeded", Map.of(
                 "verification", "player-quit-event", "username", player.getName(),
                 "uuid", player.getUniqueId().toString(), "online", "false"), ""));
@@ -248,8 +248,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     RuntimeState next = loadRuntime();
                     runtime = next;
                     if (previous != null) previous.api.closeEventStreamCleanly();
-                    // Preserve live admission state during /nlbridge reload;
-                    // new API client must not report a false routing mode.
+                    // При /nlbridge reload сохраняйте фактическое состояние допуска; новый клиент API не должен сообщать
+                    // ложный режим маршрутизации.
                     next.api.setRoutingModes(maintenanceMode.get(), drainMode.get());
                     next.api.startControlChannel(this::executeControl);
                     next.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id(), "reason", "reload"));
@@ -531,7 +531,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             if (executor == null || executor.isShutdown() || stopping.get())
                 return BridgeControlResult.failed("shutdown_scheduler_unavailable");
             try {
-                // Delayed enqueue must not block the heartbeat / event I/O worker.
+                // Отложенная постановка в очередь не должна блокировать heartbeat и обработчик ввода-вывода событий.
                 executor.schedule(() -> {
                     try { scheduleBukkitTask(Bukkit::shutdown); }
                     catch (RuntimeException e) { getLogger().severe("Minecraft shutdown scheduling failed: " + safeError(e)); }
@@ -574,7 +574,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 boolean add = type.endsWith(".add");
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "whitelist " + (add ? "add " : "remove ") + username);
                 if (!ok) return BridgeControlResult.failed("platform_command_rejected");
-                // dispatchCommand(true) only means accepted by the command dispatcher.
+                // dispatchCommand(true) означает лишь приём команды диспетчером.
                 boolean observed = Bukkit.getOfflinePlayer(username).isWhitelisted();
                 return observed == add
                     ? BridgeControlResult.verified(Map.of("username", username, "whitelisted", Boolean.toString(observed)))
@@ -595,8 +595,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 String reason = type.endsWith(".add") ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), root + username + (reason.isBlank() ? "" : " " + reason));
                 if (!ok) return BridgeControlResult.failed("platform_command_rejected");
-                // The command dispatcher can be overridden by other plugins.
-                // A true return alone never proves a ban was changed.
+                // Другие плагины могут переопределять диспетчер команд. Одного результата true недостаточно для
+                // доказательства изменения блокировки.
                 boolean observed = Bukkit.getOfflinePlayer(username).isBanned();
                 boolean expected = type.endsWith(".add");
                 return observed == expected
@@ -624,8 +624,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         String reason = safeLine(command.payload().getOrDefault("reason", "Disconnected by server operator"), 512);
         String correlation = command.payload().getOrDefault("sessionCorrelationId", "");
         CompletableFuture<BridgeControlResult> confirmation = new CompletableFuture<>();
-        // All platform access is dispatched to the corresponding server scheduler.
-        // The remote control worker waits, never a Bukkit or Folia game thread.
+        // Весь доступ к платформе передаётся соответствующему планировщику сервера. Ожидает удалённый обработчик
+        // управления, но никогда игровой поток Bukkit или Folia.
         scheduleBukkitTask(() -> {
             if (confirmation.isDone() || stopping.get()) return;
             try {
@@ -645,8 +645,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     confirmation.complete(BridgeControlResult.failed("player_kick_already_in_progress"));
                     return;
                 }
-                // Remove this waiter on timeout / failure without removing a
-                // newer waiter that may have been installed for the same player.
+                // При тайм-ауте или ошибке удаляйте только данного ожидающего, не удаляя новый обработчик, который уже мог
+                // быть зарегистрирован для того же игрока.
                 confirmation.whenComplete((result, error) -> pendingKicks.remove(id, confirmation));
                 Runnable kick = () -> {
                     if (confirmation.isDone() || stopping.get()) return;
@@ -659,8 +659,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     }
                     try { player.kickPlayer(reason); }
                     catch (Throwable error) {
-                        // The player may already have quit; do not overwrite
-                        // a confirmed PlayerQuitEvent result with an exception.
+                        // Игрок мог уже выйти; не заменяйте подтверждённый результат PlayerQuitEvent исключением.
                         confirmation.complete(BridgeControlResult.indeterminate("player_kick_invocation_failed"));
                         getLogger().warning("Launcher player kick invocation: " + safeError(error));
                     }
@@ -698,8 +697,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 java.util.concurrent.atomic.AtomicInteger failed = new java.util.concurrent.atomic.AtomicInteger();
                 Runnable finish = () -> {
                     if (remaining.decrementAndGet() == 0) {
-                        // A partial broadcast has unknown visible effects. It
-                        // must not be represented as a successful full delivery.
+                        // Частичная рассылка имеет неизвестные видимые эффекты. Нельзя представлять её как успешную полную
+                        // доставку.
                         future.complete(failed.get() == 0
                             ? BridgeControlResult.ok(Map.of("recipients", Integer.toString(delivered.get())))
                             : BridgeControlResult.indeterminate("broadcast_partial_delivery"));
@@ -708,8 +707,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 for (org.bukkit.entity.Player player : players) {
                     java.util.concurrent.atomic.AtomicBoolean settled = new java.util.concurrent.atomic.AtomicBoolean();
                     Runnable rejected = () -> {
-                        // A Folia scheduler may report false AND race with
-                        // a retired callback; count each recipient once.
+                        // Планировщик Folia может вернуть false и одновременно состязаться с уже завершённым обратным вызовом;
+                        // учитывайте каждого получателя один раз.
                         if (settled.compareAndSet(false, true)) {
                             failed.incrementAndGet();
                             finish.run();

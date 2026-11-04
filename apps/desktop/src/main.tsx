@@ -2124,7 +2124,7 @@ function App() {
         challenge.bindingEpoch !==
           accessTokenBindingEpoch(authSession.accessToken)
       ) {
-        throw new Error("TPM server challenge/session/epoch/format mismatch");
+        throw new Error("Несовпадение запроса TPM, сеанса, эпохи или формата на сервере");
       }
       setTpmStatus0313("TPM2_Certify: issuing native TPM command");
       const evidence = await callTauri<{
@@ -2174,7 +2174,7 @@ function App() {
         result.bindingEpoch !== challenge.bindingEpoch ||
         result.measuredBoot !== "not-verified"
       ) {
-        throw new Error("Unexpected server verification semantics");
+        throw new Error("Неожиданный результат проверки сервера");
       }
       setTpmStatus0313(
         `tpm-ak-certified · CA=${result.rootId} · expires=${result.expiresAt} · Guard/PCR not verified`,
@@ -2242,7 +2242,7 @@ function App() {
           accessTokenBindingEpoch(authSession.accessToken) ||
         challenge.policyId !== measuredBootPolicyId0315.trim()
       ) {
-        throw new Error("TPM Quote challenge/session/epoch/policy mismatch");
+        throw new Error("Несовпадение TPM Quote: запрос, сеанс, эпоха или политика");
       }
       setMeasuredBootStatus0315(
         `TPM Quote: ${challenge.pcrSelection} · policy ${challenge.policyId}`,
@@ -2286,7 +2286,7 @@ function App() {
         result.policyHash !== challenge.policyHash ||
         result.guardRuntime !== "not-verified"
       )
-        throw new Error("Unexpected measured-boot verification semantics");
+        throw new Error("Неожиданный результат проверки измеряемой загрузки");
       setMeasuredBootStatus0315(
         `PCR policy verified: ${result.policyId}; expires ${result.expiresAt}; Guard runtime not verified`,
       );
@@ -2949,7 +2949,7 @@ function App() {
     profileId = selectedProfile || settings.profileId,
   ) {
     if (!projectId || !profileId)
-      throw new Error("Select a project and profile first");
+      throw new Error("Сначала выберите проект и профиль");
     const payload = await fetchBackendJson(
       `/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/servers`,
     );
@@ -3020,7 +3020,7 @@ function App() {
   function currentLaunchPreferences() {
     if (!manifest) throw new Error("Manifest не загружен");
     if (!["2.0", "3.0"].includes(manifest.schemaVersion))
-      throw new Error("Desktop launch settings require Manifest v2/v3");
+      throw new Error("Для настроек запуска Desktop требуется манифест v2/v3");
     const effective = offlineLaunchSettings0358(
       settings,
       minecraftIdentity === "offline",
@@ -4276,7 +4276,7 @@ function App() {
         settings.serverId
       ) {
         if (!officialGuardTicket0397)
-          throw new Error("Official join requires trusted launch attestation");
+          throw new Error("Для официального подключения требуется доверенная аттестация запуска");
         await createOfficialServerJoin0397(officialGuardTicket0397);
       }
       const result = await callTauri<ProcessStatus>("launch_minecraft", {
@@ -4334,7 +4334,7 @@ function App() {
         ) {
           if (!officialGuardTicket0397)
             throw new Error(
-              "Official join requires trusted launch attestation",
+              "Для официального подключения требуется доверенная аттестация запуска",
             );
           await createOfficialServerJoin0397(
             officialGuardTicket0397,

@@ -1,6 +1,6 @@
-// Package texturegravit migrates real Gravit TextureProvider records into
-// normalized Launcher texture storage. It imports auth tokens,
-// private URLs, remote identities, or unverified PNG bytes.
+// Пакет texturegravit переносит реальные записи Gravit TextureProvider в нормализованное хранилище текстур
+// Launcher. Токены авторизации, закрытые URL, удалённые идентичности и непроверенные байты PNG
+// импортируются.
 package texturegravit
 
 import (
@@ -26,8 +26,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
-// SourceRow matches GravitLauncher/TextureProvider's PostgreSQL textures table.
-// ObjectKey is a trusted offline export extension; file_url is fetched.
+// SourceRow соответствует таблице textures официальной PostgreSQL-схемы GravitLauncher/TextureProvider.
+// ObjectKey — доверенное расширение автономного экспорта; file_url загружается.
 type SourceRow struct {
 	ID          string          `json:"id"`
 	UserUUID    string          `json:"user_uuid"`
@@ -144,9 +144,8 @@ func LoadJSON(data []byte) ([]SourceRow, error) {
 	return rows, nil
 }
 
-// ReadPostgres reads the official upstream TextureProvider schema, with no
-// arbitrary SQL/identifiers supplied by the caller. Database credentials stay
-// in the operator process and appear in reports.
+// ReadPostgres читает официальную схему TextureProvider без произвольных SQL-запросов и идентификаторов от
+// вызывающего кода. Учётные данные БД остаются в процессе оператора и появляются в отчётах.
 func ReadPostgres(ctx context.Context, db *sql.DB) ([]SourceRow, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id::text,user_uuid::text,texture_type,file_hash,file_url,COALESCE(metadata,'{}'::jsonb) FROM textures ORDER BY user_uuid,texture_type,id`)
 	if err != nil {
@@ -179,8 +178,8 @@ func ValidateObjectKey(key string) error {
 	return nil
 }
 
-// RenderKey only substitutes the importer-controlled, strictly validated
-// source hash and kind. No URL/hostname from file_url is used as an S3 key.
+// RenderKey подставляет только строго проверенные хеш источника и тип, контролируемые импортёром. URL и
+// имя хоста из file_url не используются как ключ S3.
 func RenderKey(template, kind, hash string) (string, error) {
 	if kind != "skin" && kind != "cape" || !shaHex.MatchString(hash) {
 		return "", errors.New("invalid texture kind/hash")
@@ -214,11 +213,10 @@ func VerifySourceHash(hash string, b []byte) error {
 	return nil
 }
 
-// PlanSHA256 binds a reviewed dry-run to the exact rows, identity mapping and
-// import options. It is a source/configuration digest, not a claim that
-// TextureProvider PNGs were verified: Run(dry-run=true) does that separately.
-// The input file_url is intentionally excluded because remote URLs are never
-// fetched. Canonical JSON encoding sorts mapping keys deterministically.
+// PlanSHA256 привязывает утверждённый пробный запуск к точным строкам, сопоставлению идентичностей и
+// параметрам импорта. Это дайджест источника и конфигурации, а не доказательство проверки PNG
+// TextureProvider: её отдельно выполняет Run(dry-run=true). Входной file_url намеренно исключён, поскольку
+// удалённые URL не загружаются. Канонический JSON сортирует ключи сопоставлений детерминированно.
 func (r *Runner) PlanSHA256(rows []SourceRow) (string, error) {
 	type safeRow struct {
 		ID        string          `json:"id"`
@@ -260,15 +258,15 @@ func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 		return out, err
 	}
 	out.PlanSHA256 = fingerprint
-	// This must precede all database/storage writes. Different legacy identities
-	// may not silently claim the same Never profile through explicit or implicit
-	// mappings. Nor may two source records race to become the same selection.
+	// Проверка должна предшествовать любым записям в БД или хранилище. Разные старые идентичности не должны
+	// незаметно присваивать один профиль Never через явное или неявное сопоставление. Две исходные записи
+	// также не должны одновременно стать одним выбором.
 	if err := validateIdentityTargets(rows, r.Mapping); err != nil {
 		out.FatalError = err.Error()
 		out.FinishedAt = time.Now().UTC()
 		return out, err
 	}
-	// Duplicate rows would otherwise accidentally update the same assignment.
+	// Иначе дублирующиеся строки случайно обновят одно и то же назначение.
 	seen := map[string]bool{}
 	for _, row := range rows {
 		if err := ctx.Err(); err != nil {
@@ -284,10 +282,9 @@ func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 	return out, nil
 }
 
-// validateIdentityTargets enforces a one-to-one source/target identity relation
-// for this batch, and at most one skin and cape per target. The upstream schema
-// can contain historic duplicate rows; arbitrarily picking the last one would
-// overwrite another player's selection, particularly with --replace enabled.
+// validateIdentityTargets обеспечивает однозначное соответствие исходных и целевых идентичностей в пакете
+// и не более одного скина и плаща на цель. Исходная схема может содержать старые дубликаты; произвольный
+// выбор последней строки перезапишет назначение другого игрока, особенно с --replace.
 func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error {
 	reverse := make(map[string]string)
 	selections := make(map[string]string)
@@ -419,8 +416,8 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	if err := ValidateObjectKey(key); err != nil {
 		return fail("quarantined", err)
 	}
-	// file_url is deliberately ignored; a compromised row cannot initiate an
-	// internal HTTP request. Source readers are local-root or preconfigured S3.
+	// file_url намеренно игнорируется; скомпрометированная строка не должна запускать внутренний HTTP-запрос.
+	// Источники читаются из локального корня либо заранее настроенного S3.
 	body, err := r.Source.Open(ctx, key)
 	if err != nil {
 		return fail("quarantined", fmt.Errorf("missing/corrupt source object: %w", err))
@@ -473,8 +470,8 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	return rec
 }
 
-// LocalSource follows untrusted URLs. Files must resolve beneath the
-// configured operator-owned root; symlinks pointing outside are rejected.
+// LocalSource следует недоверенным URL. Файлы должны разрешаться внутри настроенного корневого каталога
+// оператора; выходящие за его пределы символические ссылки отклоняются.
 type LocalSource struct{ Root string }
 
 func (s LocalSource) Open(ctx context.Context, key string) (io.ReadCloser, error) {

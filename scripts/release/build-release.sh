@@ -43,8 +43,8 @@ PUBLIC_RELEASE_BASE_URL="${LAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/
 export LAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
 # Версия 0.47.0 может выйти из стадии неподписанной подготовки, только если второй независимый
-# builder has produced all six exact packages and BOTH builders have signed
-# actual-file captures with distinct pinned Ed25519 attestation identities.
+# Сборщик выпустил все шесть точных пакетов, а ОБА независимых сборщика подписали снимки реальных файлов
+# отдельными закреплёнными идентичностями аттестации Ed25519.
 release_from_0470() {
   [[ "$(printf '%s\n' '0.47.0' "${VERSION}" | sort -V | head -n1)" == '0.47.0' ]]
 }
@@ -92,9 +92,9 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
     --commit "${SOURCE_COMMIT}" --output "${COMPONENTS_GA_RECEIPT}"
 fi
 
-# 0.27.0 GA requires an independent, signed LIVE Microsoft/Xbox/Minecraft
-# attestation for each shipping OS/architecture. Unit tests and CI builds
-# cannot satisfy this gate. Keep operator keys outside the source tree.
+# GA 0.27.0 требует независимую подписанную РЕАЛЬНУЮ аттестацию Microsoft/Xbox/Minecraft для каждой
+# выпускаемой ОС и архитектуры. Модульные тесты и сборки CI не удовлетворяют этому требованию. Храните
+# ключи оператора вне дерева исходников.
 OFFICIAL_GA_RECEIPT=""
 if [[ "${VERSION}" == "0.27.0" ]]; then
   OFFICIAL_GA_DIR="${LAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR:-}"
@@ -119,8 +119,8 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
     --commit "${SOURCE_COMMIT}" --output "${OFFICIAL_GA_RECEIPT}"
 fi
 
-# 0.31.0 Java SDK & Module Parity GA: no unsigned/incomplete evidence may
-# authorize production signing. Validate before deleting any release outputs.
+# 0.31.0 Java SDK и соответствие модулей GA: неподписанные или неполные доказательства не разрешают
+# промышленное подписание. Проверяйте их до удаления результатов предыдущего выпуска.
 if [[ "${VERSION}" == "0.31.0" ]]; then
   for name in LAUNCHER_JAVA_GA_EVIDENCE_DIR LAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE LAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE; do
     [[ -n "${!name:-}" ]] || { echo "0.31.0 GA BLOCKED: missing ${name}" >&2; exit 2; }
@@ -174,10 +174,9 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
     --version "${VERSION}"
 fi
 
-# Launcher 0.33.0 must not be shipped as GA based on an RC test receipt,
-# a PostgreSQL+SQLite coordinator, or a self-attestation. Verify an independent
-# operator-signed, actual SQLite-only HTTP deployment report BEFORE touching
-# an existing output bundle.
+# Launcher 0.33.0 нельзя распространять как GA на основе квитанции RC-тестов, сочетания PostgreSQL и
+# координатора SQLite или самоподписанной аттестации. ДО изменения существующего выпуска проверьте
+# независимый отчёт оператора о реальном HTTP-развёртывании только на SQLite.
 SINGLE_NODE_GA_DIR=""
 SINGLE_NODE_GA_VERIFIED_DIR=""
 if [[ "${VERSION}" == "0.33.0" ]]; then
@@ -758,9 +757,9 @@ cp "${ROOT_DIR}/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json" "${OUT_DIR}/BRI
 cp "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json" "${OUT_DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 cp "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE3_CERTIFICATION.json" "${OUT_DIR}/SERVERBRIDGE3_CERTIFICATION.json"
 
-# GA network acceptance consumes the exact JARs copied into OUT_DIR, not build
-# intermediates. This gate stays required for every release from 0.42.0
-# onward; changing VERSION must never silently skip the 14-target live proof.
+# Для сетевой GA-приёмки используются точные JAR из OUT_DIR, а не промежуточные продукты сборки. Эта
+# проверка обязательна для каждого выпуска начиная с 0.42.0; изменение VERSION не должно пропускать
+# реальные испытания 14 целей.
 if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" ]]; then
   log "${VERSION}: verify exact final ServerBridge payload and full live network cycle"
   python3 "${ROOT_DIR}/scripts/ga/accept_network_release_0420.py" \
@@ -770,9 +769,9 @@ if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" 
     --out "${OUT_DIR}/SERVER_NETWORK_ACCEPTANCE_0420.json"
 fi
 
-# 0.43.0+: build *executable* Java extension packages from SDK sources and
-# certify their exact signed bytes against all six same-run JVM acceptance
-# reports. Never issue a signed release solely on declared module parity.
+# Начиная с 0.43.0 собирайте ИСПОЛНЯЕМЫЕ пакеты Java-расширений из SDK и сертифицируйте точные подписанные
+# байты по шести отчётам приёмки JVM того же запуска. Нельзя подписывать выпуск только на основании
+# заявленного соответствия модулей.
 if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' ]]; then
   log "${VERSION}: build, sign and verify runnable Java Host and Gravit source-port .nlext"
   EXT_EVIDENCE="${LAUNCHER_EXTENSION_ACCEPTANCE_EVIDENCE_DIR:-}"
@@ -863,18 +862,17 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
     --output "${OUT_DIR}/${GA_RECEIPT}"
   cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.json" "${OUT_DIR}/${GA_APPROVAL}"
   cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.sig" "${OUT_DIR}/${GA_SIGNATURE}"
-  # 0.43.1+: ship the independently signed per-capability raw observations,
-  # not only an aggregate 'security: PASS'. Publication rechecks this archive.
+  # Начиная с 0.43.1 поставляйте независимо подписанные исходные наблюдения для каждой возможности, а не
+  # только сводку security: PASS. Публикация повторно проверяет архив.
   if [[ "$(printf '%s\n' '0.43.1' "${VERSION}" | sort -V | head -n1)" == '0.43.1' ]]; then
     python3 "${ROOT_DIR}/scripts/ga/package_security_0431.py" \
       --evidence "${GA_TARGET_EVIDENCE_DIR}" --trusted-key "${GA_TARGET_TRUSTED_KEY}" \
       --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
       --output "${OUT_DIR}/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
   fi
-  # 0.44.0+: supported security capabilities are DERIVED from the exact
-  # independently signed final-package verification, never from manifests.
-  # This artifact is in the SHA256SUMS/Ed25519 release boundary and is
-  # recomputed during publication; missing evidence cannot list support.
+  # Начиная с 0.44.0 поддерживаемые функции безопасности ВЫВОДЯТСЯ из точной независимо подписанной проверки
+  # финального пакета, а не манифестов. Артефакт входит в границу подписи SHA256SUMS/Ed25519 и
+  # пересчитывается при публикации; без доказательств нельзя заявлять поддержку.
   if [[ "$(printf '%s\n' '0.44.0' "${VERSION}" | sort -V | head -n1)" == '0.44.0' ]]; then
     python3 "${ROOT_DIR}/scripts/ga/verified_support_0440.py" \
       --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
@@ -893,9 +891,9 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   fi
 fi
 
-# 0.36.5+: inspect six actual signed/native packages and their inner payload
-# against independently approved exact bytes BEFORE calculating SHA256SUMS.
-# This receipt is included in the signed release boundary, never added later.
+# Начиная с 0.36.5 проверяйте шесть фактических подписанных/нативных пакетов и их содержимое по независимо
+# утверждённым точным байтам ДО вычисления SHA256SUMS. Квитанция включается в границу подписи выпуска, а
+# не добавляется позже.
 if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
   log "Репетиция конечной упаковки и проверка подписанных точных байтов"
   python3 "${ROOT_DIR}/scripts/release/rehearsal_0365.py" certify \
@@ -921,10 +919,9 @@ fi
 if [[ -n "${SOURCE_COMMIT}" ]]; then
   release_build_args+=(--source-commit "${SOURCE_COMMIT}")
 fi
-# 0.46.0+ independent live operations acceptance must be signed with an
-# operator key outside the release-signing trust domain and cover the final
-# six installer bytes. The Go build/sign/verify paths independently enforce
-# this requirement (direct CLI calls cannot bypass the shell workflow).
+# Начиная с 0.46.0 независимая реальная эксплуатационная приёмка должна быть подписана ключом оператора
+# вне области доверия релизного подписанта и охватывать шесть окончательных установщиков. Пути Go
+# build/sign/verify независимо обеспечивают это требование; прямой вызов CLI не обходит shell-процесс.
 if [[ "$(printf '%s\n' '0.46.0' "${VERSION}" | sort -V | head -n1)" == '0.46.0' ]]; then
   OPS_EVIDENCE="${LAUNCHER_OPERATIONS_GA_EVIDENCE_DIR:-}"
   OPS_TRUST="${LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE:-}"
@@ -939,8 +936,8 @@ if [[ "$(printf '%s\n' '0.46.0' "${VERSION}" | sort -V | head -n1)" == '0.46.0' 
     cp -- "${OPS_EVIDENCE}/${name}" "${OUT_DIR}/${name}"
   done
 fi
-# 0.46.2: inspect the complete *actual* six target packages and persist
-# the checked exact-byte inventory BEFORE the signed release manifest is built.
+# 0.46.2: проверяйте полные шесть ФАКТИЧЕСКИХ целевых пакетов и сохраняйте подтверждённый побайтовый
+# реестр ДО построения подписанного манифеста выпуска.
 if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --out "${OUT_DIR}/DELIVERY_VERIFIED_0462.json" || exit 2
@@ -955,7 +952,7 @@ if release_from_0470; then
 fi
 "${RELEASE_CLI}" "${release_build_args[@]}"
 if release_from_0462; then
-  # Check that the release manifest explicitly enumerates the exact six bytes.
+  # Проверяйте, что манифест выпуска явно перечисляет точные байты всех шести пакетов.
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
 fi
@@ -990,16 +987,16 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
   log "Authenticated all six real-platform signed Optional Components GA attestations"
 fi
 
-# 0.45.11+: verify actual signed installer bytes against the SPDX package
-# checksums, SLSA subjects, release BOM and independently verified GA receipt
-# BEFORE minting the externally trusted release signature.
+# Начиная с 0.45.11 проверяйте реальные байты подписанного установщика по контрольным суммам SPDX,
+# субъектам SLSA, BOM выпуска и независимо проверенной GA-квитанции ДО создания внешне доверенной релизной
+# подписи.
 if [[ "$(printf '%s\n' '0.45.11' "${VERSION}" | sort -V | head -n1)" == '0.45.11' ]]; then
   log "Fail-closed signed distribution: six exact packages + SPDX/SLSA/GA"
   "${RELEASE_CLI}" release distribution-verify "${OUT_DIR}"
 fi
 
 if release_from_0462; then
-  # Verify actual, not declared, final installer bytes before authorizing signature.
+  # До разрешения подписи проверяйте фактические, а не объявленные байты конечного установщика.
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
 fi
@@ -1013,11 +1010,10 @@ if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
 fi
-# Only after release sign+verify has authenticated the final manifest can
-# an independent native operator bind *actual signed bytes* to both builders'
-# reproducible unsigned bytes. The approval has a THIRD trusted Ed25519 key.
-# Link evidence stays separately operator-authenticated (never silently
-# inserted into an already Ed25519-signed release manifest).
+# Только после проверки финального манифеста командами release sign и verify независимый нативный оператор
+# может связать РЕАЛЬНЫЕ подписанные байты с воспроизводимыми неподписанными байтами обоих сборщиков.
+# Разрешение имеет ТРЕТИЙ доверенный ключ Ed25519. Доказательство связывания аутентифицируется оператором
+# отдельно и не вставляется в уже подписанный Ed25519-манифест.
 if release_from_0470; then
   python3 "${ROOT_DIR}/scripts/release/reproducible_0470.py" link \
     --comparison "${OUT_DIR}/REPRODUCIBILITY_COMPARISON_0470.json" \

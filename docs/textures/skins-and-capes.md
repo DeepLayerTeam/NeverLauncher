@@ -21,8 +21,8 @@ Backend содержит операции хранения и выдачи Minec
 
 ## версия 0.25.2
 
-The secure PNG upload and image-serving pipeline is implemented; see [0.25.2 processing](secure-png-processing.md). Desktop preview and Admin UI are separate forthcoming milestones.
+Безопасная загрузка PNG и выдача изображений уже реализованы; см. [обработку в 0.25.2](secure-png-processing.md). Предварительный просмотр в Desktop и интерфейс Admin относятся к отдельным следующим этапам.
 
 ## версия 0.25.5
 
-The authenticated texture library, saved-asset selection, CAS reset/deletion and private preview endpoints are implemented. See [0.25.5 Texture Service API](texture-service.md). Official Minecraft texture operations and full Desktop/Admin UI remain separate 0.26 milestones.
+Библиотека текстур с аутентификацией, выбор сохранённых ресурсов, сброс/удаление с CAS и приватные маршруты предварительного просмотра реализованы. См. [Texture Service API 0.25.5](texture-service.md). Операции с официальными текстурами Minecraft и полноценный интерфейс Desktop/Admin остаются отдельными этапами.

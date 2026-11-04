@@ -53,8 +53,8 @@ def file_matches(path, art):
 
 
 def verify_config(path, key, policy_path=None):
-    # Verify the exact signed payload. A delegated signer is admitted only by
-    # root-signed trust policy, never by arbitrary bundle-provided public keys.
+    # Проверяйте точное подписанное содержимое. Делегированный подписант допускается только по политике
+    # доверия, подписанной корнем, а не по произвольным открытым ключам из пакета.
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     import datetime
 
@@ -193,8 +193,8 @@ def collect_bundle(args, stage):
     suffix = ".exe" if args.platform == "windows" else ""
     shutil.copy2(args.prestarter, stage / ("neverprestarter" + suffix))
     if args.offline_source:
-        # Preserve only regular source files: symlinks, device nodes, nested
-        # junctions and other escapes are rejected rather than followed.
+        # Сохраняйте лишь обычные исходные файлы: символические ссылки, устройства, вложенные junction и другие
+        # попытки выхода за пределы каталога отклоняются без перехода по ним.
         for p in args.offline_source.rglob("*"):
             if p.is_symlink() or not (p.is_dir() or p.is_file()):
                 raise ValueError(f"unsafe offline source entry: {p}")
@@ -221,9 +221,9 @@ def collect_bundle(args, stage):
             file_matches(stage / "objects" / art["sha256"], art)
         file_matches(stage / "objects" / cfg["manifest"]["sha256"], cfg["manifest"])
         file_matches(stage / "managed-jre" / "manifest.json", cfg["javaManifest"])
-    # The same production Go verifier used by Prestarter must approve the
-    # signed config before we package it. The Python envelope verification is
-    # necessary but not a replacement for validation of the runtime contract.
+    # Перед упаковкой подписанную конфигурацию должен одобрить тот же промышленный Go-проверяющий, что
+    # использует Prestarter. Проверка контейнера подписи на Python необходима, но не заменяет проверки
+    # контракта Runtime.
     if not shutil.which("go"):
         raise RuntimeError("Go toolchain required for trusted bootstrap verification")
     validator = ["go", "run", "./cmd/verify-branding", "--config", str(stage / "bootstrap.signed.json"), "--root-key-file", str(args.root_key_file.resolve())]
@@ -284,8 +284,8 @@ def apply_windows_brand_icon(executable, branding):
 def package_windows(args, stage, key, out, version):
     if not shutil.which("go"):
         raise RuntimeError("Go toolchain required")
-    # Use a fresh isolated Go module copy; source tree is never modified to
-    # embed a customer's identity or their possibly large offline resources.
+    # Используйте новую изолированную копию Go-модуля; дерево исходников не меняется ради идентичности
+    # заказчика или его потенциально крупных автономных ресурсов.
     with tempfile.TemporaryDirectory() as tmp:
         module = pathlib.Path(tmp) / "prestarter"
         shutil.copytree(
@@ -339,8 +339,8 @@ def package_windows(args, stage, key, out, version):
             result,
         )
         checked("signtool", "verify", "/pa", "/v", result)
-    # On the native runner, re-open the *final signed executable*: its
-    # embedded bundle must still pass the pinned Prestarter verifier.
+    # На нативном узле сборки повторно откройте КОНЕЧНЫЙ подписанный исполняемый файл: встроенный пакет должен
+    # по-прежнему проходить закреплённый проверяющий Prestarter.
     if sys.platform == "win32":
         checked(result, "verify")
     return result
@@ -380,8 +380,8 @@ def package_linux(args, stage, key, out, version):
         cfg = verify_config(stage / "bootstrap.signed.json", key)
         branding = cfg.get("branding") or {}
         name = branding.get("displayName", "Launcher")
-        # Desktop Entry has its own escaping rules. A signed display name is
-        # data, not arbitrary .desktop syntax.
+        # Для Desktop Entry действуют собственные правила экранирования. Подписанное отображаемое имя — данные, а
+        # не произвольный синтаксис .desktop.
         safe = name.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
         icon_entry = ""
         if branding.get("iconPng"):
@@ -402,8 +402,8 @@ def package_linux(args, stage, key, out, version):
         result = out / f"launcher-{version}-{args.project}-linux-{ARCH[args.arch]}.deb"
         checked("dpkg-deb", "--build", "--root-owner-group", pkg, result)
         checked("dpkg-deb", "--info", result)
-        # Verify the exact built .deb's embedded installer and bundled trust
-        # bytes, not only the staging directory that preceded packaging.
+        # Проверяйте встроенный установщик и доверенные байты конечного .deb, а не только каталог подготовки до
+        # упаковки.
         with tempfile.TemporaryDirectory() as checkdir:
             checked("dpkg-deb", "--extract", result, checkdir)
             unpacked = pathlib.Path(checkdir) / "usr" / "lib" / "launcher" / "bundle"
@@ -471,8 +471,8 @@ def package_macos(args, stage, key, out, version):
         }
         branding = verify_config(stage / "bootstrap.signed.json", key).get("branding") or {}
         if branding.get("iconPng"):
-            # iconutil emits the actual Finder/Dock icon; there is no fallback
-            # to an unsigned icon downloaded after installation.
+            # iconutil создаёт фактическую иконку Finder/Dock; загрузка неподписанной иконки после установки как
+            # запасной вариант не допускается.
             if not shutil.which("sips") or not shutil.which("iconutil"):
                 raise RuntimeError("macOS icon creation requires sips and iconutil")
             source = pathlib.Path(tmp) / "brand-icon.png"
@@ -493,9 +493,9 @@ def package_macos(args, stage, key, out, version):
                 "Developer ID Application and Installer identities required"
             )
         if signid:
-            # The pinned Prestarter SHA-256 is computed BEFORE bundle signing.
-            # It MUST already be Developer-ID-signed; signing it now would
-            # change the bytes and invalidate the signed bootstrap manifest.
+            # Закреплённый SHA-256 Prestarter вычисляется ДО подписания пакета. Prestarter уже ОБЯЗАН иметь подпись
+            # Developer ID; подпись на этом этапе изменила бы байты и нарушила подписанный манифест начальной
+            # загрузки.
             checked(
                 "codesign",
                 "--verify",
@@ -531,9 +531,8 @@ def package_macos(args, stage, key, out, version):
         checked(*cmd)
         if not args.unsigned_test:
             checked("pkgutil", "--check-signature", result)
-            # A signed pkg alone is not accepted as a Gatekeeper-ready final
-            # installer: notarize the exact published package and staple the
-            # Apple ticket before calculating its final release SHA-256.
+            # Одной подписи pkg недостаточно для окончательного установщика, готового к Gatekeeper: нотариально
+            # заверьте точный публикуемый пакет и прикрепите билет Apple до вычисления окончательного SHA-256 выпуска.
             profile = os.environ.get("LAUNCHER_MACOS_NOTARY_PROFILE", "")
             if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", profile):
                 raise RuntimeError("protected Apple notarytool keychain profile required")
@@ -549,8 +548,8 @@ def package_macos(args, stage, key, out, version):
             checked("xcrun", "stapler", "validate", result)
             checked("spctl", "--assess", "--type", "install", "--verbose=4", result)
             checked("pkgutil", "--check-signature", result)
-        # Invoke the real signed-bootstrap verification in the newly built
-        # application before accepting the .pkg as a deliverable.
+        # Перед приёмкой .pkg выполните реальную проверку подписанной начальной загрузки в только что собранном
+        # приложении.
         checked(binary, "verify", "--bundle", resources)
     return result
 

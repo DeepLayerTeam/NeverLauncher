@@ -173,17 +173,16 @@ mod imp {
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
     const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
-    // Initialization packets have their own short, fail-closed deadline.
-    // During Minecraft/Forge texture loading, the Sensor's single worker may
-    // spend >15s hashing new executable code before its next signed event.
-    // Use a bounded runtime read deadline, not an unbounded retry, and still
-    // fail closed for any missing, malformed, stale or unauthenticated event.
+    // У пакетов инициализации свой короткий предельный срок с отказом при его нарушении. При загрузке текстур
+    // Minecraft/Forge единственный обработчик Sensor может более 15 секунд вычислять хеш нового исполняемого
+    // кода до следующего подписанного события. Используйте ограниченный срок ожидания чтения Runtime вместо
+    // бесконечных повторов и отклоняйте отсутствующие, некорректные, устаревшие и неподтверждённые события.
     const MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(15);
     const MODULE_RUNTIME_EVENT_TIMEOUT: Duration = Duration::from_secs(45);
     const RECONCILE_GRACE: Duration = Duration::from_millis(350);
-    // LdrRegisterDllNotification and ToolHelp snapshots do not share a lock.
-    // An unload is only accepted once its authenticated notification arrives;
-    // a missing module that remains unacknowledged past this bound is tampering.
+    // LdrRegisterDllNotification и снимки ToolHelp не используют общую блокировку. Выгрузка принимается лишь
+    // после получения её аутентифицированного уведомления; отсутствие модуля без подтверждения выгрузки после
+    // этого предела считается вмешательством.
     const UNLOAD_EVENT_GRACE: Duration = Duration::from_secs(4);
     const STILL_ACTIVE_EXIT_CODE: u32 = 259;
 
@@ -276,9 +275,9 @@ mod imp {
                 signed_game_natives: HashMap::new() })
         }
 
-        /// Invoked exclusively for a game with a verified signed Guard policy.
-        /// The OS/JRE and verified Sensor retain their existing separate trust
-        /// handling; unsigned native DLLs anywhere in the game root do not.
+        /// Вызывается исключительно для игры с проверенной подписанной политикой Guard. Для ОС/JRE и проверенного
+        /// Sensor сохраняются отдельные существующие правила доверия; неподписанные нативные DLL в корне игры таких
+        /// исключений не имеют.
         pub fn set_game_native_pins(&mut self, root: &Path, pins: Vec<(PathBuf,String)>) -> Result<(),String> {
             let canonical=canonical_or_absolute(root)?;
             self.guarded_game_root=Some(normalize_path(&canonical));
@@ -324,9 +323,8 @@ mod imp {
                 if path_within(&normalized,root) {
                     let from_managed_jre=self.managed_java_root.as_ref().map(|home|path_within(&normalized,home)).unwrap_or(false);
                     let from_guard_sensor=normalized==self.pinned_sensor.0 && sha256==self.pinned_sensor.1;
-                    // Java runtime images belong to independently verified
-                    // Managed Java; the exact authenticated Sensor DLL is pinned.
-                    // Every other game-root native image must have a signed hash.
+                    // Образы Java Runtime относятся к независимо проверенной Managed Java, а точная DLL аутентифицированного
+                    // Sensor закреплена. Для любого другого нативного образа в корне игры требуется подписанный хеш.
                     if !from_managed_jre && !from_guard_sensor && self.signed_game_natives.get(&normalized)!=Some(&sha256) {
                         return Err(format!("Guard Windows loaded native DLL is not signed for this build: {}",canonical.display()));
                     }
@@ -764,8 +762,8 @@ mod imp {
                     } else {
                         match policy.validate_loaded_module(&event.path) {
                             Ok((normalized, sha256)) => {
-                                // Reusing a base before the authenticated unload arrives
-                                // cannot silently clear a pending mismatch.
+                                // Повторное использование базового адреса до аутентифицированного уведомления о выгрузке не может
+                                // незаметно снять ожидание проверки несоответствия.
                                 if pending_unload_notifications.contains_key(&event.base_address) {
                                     fail_closed(&state, pid, "Module Guard module base reused before authenticated unload", 0);
                                     return;
@@ -1488,9 +1486,9 @@ mod imp {
         for (base, normalized) in authenticated_new {
             expected.insert(base, normalized);
         }
-        // During the bounded unload-notification window, the expected set
-        // includes missing bases. They remain mandatory until an authenticated
-        // unload arrives; never infer an unload from ToolHelp alone.
+        // В пределах ограниченного окна ожидания уведомления о выгрузке ожидаемый набор содержит и отсутствующие
+        // базовые адреса. Они остаются обязательными до аутентифицированного уведомления; не делайте вывод о
+        // выгрузке только по ToolHelp.
         if expected.len().saturating_sub(pending_unloads.len()) != observed_map.len() {
             return Err(format!(
                 "Module Guard external snapshot count mismatch: expected {} active, observed {}",
@@ -1506,10 +1504,9 @@ mod imp {
     }
 
     fn module_snapshot(pid: u32) -> Result<Vec<LoadedModule>, String> {
-        // Microsoft documents ERROR_BAD_LENGTH (24) as transient when modules
-        // load/unload while Toolhelp is taking a module snapshot. Retry only
-        // that case, with a strict finite bound; any other or persistent error
-        // continues to fail closed instead of trusting an incomplete module set.
+        // Microsoft считает ERROR_BAD_LENGTH (24) временной ошибкой, если модули загружаются или выгружаются во
+        // время получения снимка ToolHelp. Повторяйте только этот случай и строго ограниченное число раз; любая
+        // другая или постоянная ошибка должна вызывать отказ, а не доверие неполному списку модулей.
         const MAX_BAD_LENGTH_ATTEMPTS: usize = 12;
         let snapshot = {
             let mut handle = INVALID_HANDLE_VALUE;

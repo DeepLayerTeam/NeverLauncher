@@ -125,7 +125,7 @@ def download_exact(base, rel_url, bearer, target, size, expected):
 
 
 def run_checked(cmd, result_file, env):
-    # No shell execution and no backend token forwarded to the client/JVM.
+    # Запрещены выполнение через shell и передача токена Backend клиенту/JVM.
     with open(result_file.with_suffix(".log"), "wb") as log:
         proc = subprocess.run(
             cmd,
@@ -145,9 +145,8 @@ def run_checked(cmd, result_file, env):
 
 
 def run_runtime_observed(cmd, result_file, env, deadline, observer):
-    # Runtime owns the real Java/Guard lifecycle. Never pipe its JSON
-    # stdout while polling: the large bounded log tail can fill a pipe and
-    # deadlock the runtime before it exits.
+    # Реальным жизненным циклом Java/Guard управляет Runtime. Не читайте JSON stdout по каналу во время
+    # опроса: большой ограниченный хвост лога может заполнить канал и заблокировать Runtime до завершения.
     from process_group_03410 import group_flags, kill_tree
 
     stdout_path = result_file.with_suffix(".stdout")
@@ -170,7 +169,7 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
                 time.sleep(0.5)
             proc.wait(timeout=10)
         except BaseException:
-            # Never leave an orphan Minecraft/Guard process after a bad run.
+            # После неудачного запуска не оставляйте бесхозные процессы Minecraft/Guard.
             kill_tree(proc)
             proc.wait(timeout=10)
             raise
@@ -247,7 +246,7 @@ def execute(args):
         )["data"]
     grant = grant_data["token"]
     run_id = grant_data["runId"]
-    # Not printed or written to report/logs: a grant can fetch staged bytes.
+    # Не печатайте и не записывайте в отчёты/логи: разрешение может позволить получить подготовленные байты.
     base_path = "/api/v1/staged-runs/" + urllib.parse.quote(args.package_id)
     report = {
         "schemaVersion": SCHEMA,
@@ -300,8 +299,8 @@ def execute(args):
         signed = snapshot["signedManifest"]
         if args.expected_version and pkg.get("version") != args.expected_version:
             raise ValueError("staged package differs from exact source build version")
-        # Release workers must assert version explicitly; historical manual
-        # probes can still use this script for older staged packages.
+        # Обработчики выпуска обязаны явно проверять версию; прежние ручные диагностические пробы всё ещё могут
+        # использовать этот скрипт для старых подготовленных пакетов.
         import re
         version_match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:[-+][A-Za-z0-9.-]+)?", pkg.get("version", ""))
         if not version_match:
@@ -395,10 +394,9 @@ def execute(args):
             raise ValueError(
                 "installed package was not byte-identical to staged manifest"
             )
-        # Independently materialized CLI bytes become the source for native
-        # Runtime's durable release transaction. This never refetches
-        # files from manifest URLs, and only selected verified bytes enter
-        # the actual Minecraft launch directory.
+        # Независимо материализованные байты CLI становятся источником для долговременной транзакции выпуска
+        # нативного Runtime. Файлы не загружаются повторно по URL манифеста; в фактическую директорию запуска
+        # Minecraft попадают только выбранные проверенные байты.
         catalog = signed.get("componentCatalog")
         selection = args.preset or ""
         if catalog and not selection:
@@ -445,9 +443,9 @@ def execute(args):
             "detail": "CLI install/verify and Runtime offline transactional adoption passed",
             "evidenceSha256": sha_file(verify_path),
         }
-        # V08: A runtime matrix case is an actual installed selection, not an
-        # extra label on a default-preset launch. Runtime's own resolver
-        # commits and verifies the selected plan before any Java process runs.
+        # V08: случай матрицы Runtime — реально установленный выбор, а не дополнительная метка запуска с пресетом
+        # по умолчанию. Собственный резолвер Runtime фиксирует и проверяет выбранный план до запуска любого
+        # процесса Java.
         component_digest = ""
         if catalog:
             verify_component = [
@@ -468,9 +466,9 @@ def execute(args):
             (work / "component-sync.json").write_bytes(
                 (work / "native-adoption.json").read_bytes()
             )
-            # CLI is the normal signed catalog resolver for named presets.
-            # Custom +/- choices use Runtime's signed native resolver;
-            # the Go CLI currently does not support the @custom wire syntax.
+            # CLI — штатный резолвер подписанного каталога для именованных пресетов. Пользовательские варианты +/-
+            # обрабатывает подписанный нативный резолвер Runtime; Go CLI пока не поддерживает протокольный синтаксис
+            # @custom.
             if not selection.startswith("@custom:v1:"):
                 pinned_file = work / "manifest-public-key.hex"
                 pinned_file.write_text(args.pinned_public_key, encoding="ascii")
@@ -519,9 +517,8 @@ def execute(args):
                     raise RuntimeError(
                         "component resolver did not verify signed catalog"
                     )
-                # Cross-check Go's production resolver against the native
-                # installer on actual signed bytes (platform-specific files
-                # may be deliberately excluded by native verification).
+                # Сверяйте промышленный резолвер Go с нативным установщиком на фактических подписанных байтах; файлы
+                # отдельных платформ могут быть намеренно исключены нативной проверкой.
                 planned = {f["path"] for f in resolved["plan"]["files"]}
                 native_paths = {f["path"] for f in checked.get("files", [])}
                 if not native_paths <= planned:
@@ -534,8 +531,8 @@ def execute(args):
                 or any(f["status"] != "ok" for f in checked["files"])
             ):
                 raise RuntimeError("native resolver did not verify every selected file")
-            # The selected plan digest is reproducible from the immutable
-            # manifest and the actually verified paths for this target.
+            # Дайджест выбранного плана воспроизводится из неизменяемого манифеста и реально проверенных путей этой
+            # целевой платформы.
             by_path = {f["path"]: f["sha256"] for f in signed["files"]}
             chosen_files = sorted(
                 (f["path"], by_path[f["path"]]) for f in checked["files"]
@@ -573,8 +570,8 @@ def execute(args):
                 "detail": "Production CLI installed and verified every staged file by SHA-256",
                 "evidenceSha256": sha_file(verify_path),
             }
-            # Headless proves package delivery and materialization ONLY. Never
-            # represent a headless environment as a failed Minecraft client.
+            # Headless подтверждает ТОЛЬКО поставку и материализацию пакета. Не представляйте отсутствие графического
+            # окружения как несовместимость клиента Minecraft.
             for name in (
                 "startup",
                 "loader-readiness",
@@ -592,9 +589,9 @@ def execute(args):
                 "blocked: headless runner completed manifest/files and materialization only"
             )
         stage_name = "startup"
-        # Run the exact installed release with Runtime's ordinary signed
-        # manifest/launch path. A special Client Factory certification probe
-        # would reject additional staged mods and is NOT the normal game path.
+        # Запускайте точно установленный выпуск обычным механизмом подписанного манифеста/запуска Runtime.
+        # Специальная сертификационная проверка Client Factory отклонила бы дополнительные подготовленные моды и
+        # НЕ является штатным игровым путём.
         if (
             len(args.pinned_public_key) != 64
             or signed.get("signature", {}).get("publicKey", "").lower()
@@ -664,8 +661,8 @@ def execute(args):
             selected_java,
         )
         if observer.blocked:
-            # A missing X11/OpenGL renderer is infrastructure incapability,
-            # not proof that the staged Minecraft release is incompatible.
+            # Отсутствие X11/OpenGL — ограничение инфраструктуры, а не доказательство несовместимости подготовленного
+            # выпуска Minecraft.
             readiness_file = work / "startup-readiness.json"
             readiness_file.write_text(
                 json.dumps(observer.evidence(), indent=2), encoding="utf-8"
@@ -725,7 +722,7 @@ def execute(args):
         java_version = java_version_result.stdout.decode(
             "utf-8", errors="replace"
         ).splitlines()[0]
-        # Execution identity is checked by the independent attestor, not signed by the worker.
+        # Идентичность выполнения проверяется независимым аттестатором, а не подписывается самим обработчиком.
         runtime_identity = {
             "javaSha256": sha_file(selected_java),
             "javaVersionRaw": java_version,
@@ -775,10 +772,9 @@ def execute(args):
             json.dumps(runtime_identity, indent=2), encoding="utf-8"
         )
 
-        # A second ordinary Runtime launch auto-enters the real matching
-        # server; the first launch above independently proves the main menu.
-        # A server distribution is pinned as a whole, not substituted with an
-        # unrelated Vanilla server when the signed client uses a mod loader.
+        # Второй штатный запуск Runtime автоматически подключается к настоящему подходящему серверу; первый
+        # отдельно доказывает загрузку главного меню. Дистрибутив сервера закрепляется целиком и не подменяется
+        # посторонним Vanilla-сервером, если подписанный клиент использует загрузчик модов.
         mc = signed.get("minecraft", {})
         minecraft = mc.get("version", "")
         loader_version = mc.get("loaderVersion", "")
@@ -788,8 +784,8 @@ def execute(args):
             or loader not in ("vanilla", "fabric", "quilt", "forge", "neoforge")
         ):
             raise ValueError("unknown signed Minecraft version or loader")
-        # Provider identity is validated using real signed-account credentials,
-        # never offline identity or a mock. Transport failure is INCONCLUSIVE.
+        # Идентичность провайдера проверяется реальными учётными данными подписанного аккаунта, а не автономной
+        # идентичностью или имитацией. Ошибка транспорта означает НЕОПРЕДЕЛЁННЫЙ результат.
         stage_name = "authentication"
         if not args.auth_mode or not args.credentials_file:
             report["stages"][stage_name] = {
@@ -969,10 +965,10 @@ def execute(args):
             launch_error = str(exc)
         game_proof = work / "gameplay-smoke.json"
         gameplay_evidence = game.evidence()
-        # 0.43.14: an observed successful game is necessary but not sufficient.
-        # Exercise actual release binaries against altered signed metadata and
-        # corrupted installed bytes, then restore the disposable client.
-        # Never synthesize a PASS if the negative paths are not executable.
+        # 0.43.14: наблюдаемая успешная игра необходима, но недостаточна. Проверьте реальные исполняемые файлы
+        # выпуска с изменёнными подписанными метаданными и повреждёнными установленными байтами, затем
+        # восстановите одноразовый клиент. Не формируйте PASS искусственно, если негативные сценарии нельзя
+        # выполнить.
         if not launch_error and game.status == "passed":
             from staged_negative_04314 import execute as adversarial_probes
             negative = adversarial_probes(
@@ -1094,7 +1090,7 @@ def execute(args):
     finally:
         if server is not None:
             server.close()
-        # Worker-generated signatures are not trusted for stable publication.
+        # Подписи, созданные самим обработчиком, не считаются доверенными для стабильной публикации.
         report["finishedAt"] = iso()
         report_path = work / "staged-execution.json"
         report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")

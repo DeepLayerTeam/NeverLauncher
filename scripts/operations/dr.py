@@ -42,8 +42,8 @@ VOLUMES = (
     "launcher_redis",
 )
 STANDARD_VOLUMES = VOLUMES[:-1]
-# Redis AOF is deliberately never promoted to the new cluster: it contains
-# transient leases and presence that MUST NOT survive a disaster restore.
+# Redis AOF намеренно не переносится в новый кластер: он содержит временные аренды и сведения о
+# присутствии, которые НЕ ДОЛЖНЫ переживать восстановление после аварии.
 WORLD_NAME = re.compile(r"^[a-z][a-z0-9-]{0,47}$")
 WORLD_BACKUP_ID = re.compile(r"^[0-9a-f]{32}$")
 
@@ -72,7 +72,7 @@ def sha256_file(path: Path) -> str:
 def run(
     args: list[str], *, stdin=None, stdout=None, timeout=600, env=None
 ) -> subprocess.CompletedProcess:
-    # Do not print commands: Compose env and pg_dump invocations may contain secrets.
+    # Не печатайте команды: окружение Compose и вызовы pg_dump могут содержать секреты.
     result = subprocess.run(
         args,
         stdin=stdin,
@@ -83,7 +83,7 @@ def run(
         check=False,
     )
     if result.returncode:
-        # Keep diagnostic bounded; never echo credentials/DSNs from tool output.
+        # Ограничивайте объём диагностики; никогда не выводите учётные данные и DSN из результатов инструментов.
         raise DrillError(f"{args[0]} command failed (exit {result.returncode})")
     return result
 
@@ -146,9 +146,9 @@ def assert_quiescent(project: str, env_file: Path) -> str:
                  if "network-ha" in COMPOSE_PROFILES else ("api", "admin", "nginx")):
         if states.get(name) in ("running", "restarting", "paused"):
             raise DrillError(f"writes not fenced: service {name} is active")
-    # Standard PostgreSQL is private to this Compose project. Fail if an
-    # unexpected client stays connected; external writers must also be fenced
-    # at the deployment boundary for the ENTIRE maintenance window.
+    # Штатная PostgreSQL изолирована внутри этого проекта Compose. При неожиданном активном клиенте завершайте
+    # операцию с отказом; внешние процессы записи должны быть также заблокированы на границе развёртывания в
+    # течение ВСЕГО окна обслуживания.
     query = (
         "SELECT (SELECT count(*) FROM pg_stat_activity "
         "WHERE datname=current_database() "
@@ -263,7 +263,8 @@ def safe_tar(path: Path) -> tuple[int, int]:
     seen: set[str] = set()
     with tarfile.open(path, "r:gz") as archive:
         for entry in archive:
-            # A DR archive may never plant symlinks, devices, hardlinks, or escape paths.
+            # Аварийный архив не должен добавлять символические и жёсткие ссылки, устройства или пути за пределами
+            # разрешённого каталога.
             name = PurePosixPath(entry.name)
             if (
                 entry.name.startswith("/")
@@ -285,7 +286,7 @@ def safe_tar(path: Path) -> tuple[int, int]:
 
 
 def stream_to_file(cmd: list[str], destination: Path, timeout: int = 1800) -> None:
-    # Large archives/dumps stream directly to disk; no full in-memory buffering.
+    # Крупные архивы и дампы потоково записываются на диск; полная буферизация в памяти запрещена.
     with destination.open("xb") as out:
         run(cmd, stdout=out, timeout=timeout)
     if not destination.is_file() or destination.stat().st_size == 0:
@@ -338,7 +339,7 @@ def tar_digests(path: Path) -> dict[str, dict]:
 
 def docker_tar_restore(volume: str, archive: Path) -> None:
     safe_tar(archive)
-    # Only ever extract into a new, empty, isolated volume.
+    # Распаковывайте исключительно в новый пустой изолированный том.
     cmd = [
         "docker",
         "run",
@@ -390,7 +391,7 @@ def compose_pg_dump(project: str, env_file: Path, dst: Path) -> None:
 
 
 def compose_pg_restore(project: str, env_file: Path, dump: Path) -> None:
-    # --single-transaction makes failed database restores atomic within PG.
+    # --single-transaction обеспечивает атомарность неудачного восстановления БД в PostgreSQL.
     with dump.open("rb") as source:
         compose(
             project,
@@ -407,7 +408,7 @@ def compose_pg_restore(project: str, env_file: Path, dump: Path) -> None:
 
 
 def pg_validate(dump: Path) -> None:
-    # Validate archive structure using the matching PostgreSQL client in Alpine.
+    # Проверяйте структуру архива соответствующим клиентом PostgreSQL внутри Alpine.
     with dump.open("rb") as f:
         run(
             [
@@ -491,7 +492,7 @@ def s3_upload_fresh(
         "s3://" + bucket,
         "--only-show-errors",
     )
-    # The restore is not called verified until every uploaded byte is read back.
+    # Восстановление считается проверенным лишь после повторного чтения каждого загруженного байта.
     with tempfile.TemporaryDirectory(prefix="launcher-s3-verify-") as temp:
         second = Path(temp) / "objects"
         s3_download(bucket, second, endpoint)
@@ -685,7 +686,7 @@ def restore_world_backup(source: Path, destination: Path) -> None:
 
 
 def safe_world_restored(folder: Path, manifest: dict) -> None:
-    # Actual restored bytes, not merely the transport archive digest.
+    # Проверяйте фактически восстановленные байты, а не только дайджест транспортного архива.
     for item in manifest["entries"]:
         path = folder / item["path"]
         if item["type"] == "file" and (not path.is_file() or path.is_symlink()
@@ -803,8 +804,8 @@ def snapshot(
     stopped = []
     published = False
     try:
-        # Preserve initially stopped services; a backup must not silently start
-        # a service that its operator deliberately left disabled.
+        # Сохраняйте исходно остановленные службы: резервное копирование не должно незаметно запускать службу,
+        # намеренно выключенную оператором.
         states = compose_states(project, env_file)
         if states.get("postgres") != "running":
             raise DrillError("PostgreSQL is not running")
@@ -842,9 +843,8 @@ def snapshot(
                 if p.is_file()
             }
             if "network-ha" in COMPOSE_PROFILES:
-                # Re-read every remote byte, not merely S3 LIST metadata: a
-                # concurrent object writer must not silently produce a split
-                # PostgreSQL/blob recovery image.
+                # Повторно считывайте каждый удалённый байт, а не только метаданные S3 LIST: параллельный писатель
+                # объектов не должен создавать несогласованный образ восстановления PostgreSQL и объектов.
                 with tempfile.TemporaryDirectory(dir=stage, prefix=".s3-recheck-") as checkdir:
                     second_root = Path(checkdir) / "objects"
                     s3_download(s3_bucket, second_root, s3_endpoint)
@@ -856,8 +856,8 @@ def snapshot(
                     }
                     if second_files != s3_files:
                         raise DrillError("S3 objects changed during Network-HA backup")
-        # Recheck after copying blobs to detect any foreign PostgreSQL clients
-        # observed during the maintenance window, rather than only before dump.
+        # После копирования объектов повторно проверяйте наличие посторонних клиентов PostgreSQL в течение окна
+        # обслуживания, а не только до дампа.
         pg_lsn_after = assert_quiescent(project, env_file)
         if pg_lsn_before != pg_lsn_after:
             raise DrillError("PostgreSQL WAL advanced during cold snapshot; retry after fencing ALL writers")
@@ -900,9 +900,9 @@ def snapshot(
         published = True
         return result
     finally:
-        # A database upgrade can explicitly hold all writers stopped across
-        # backup, migration and schema verification. On snapshot failure always
-        # resume the original services; a successful upgrade owns their restart.
+        # При обновлении БД допускается явно держать все записи остановленными на протяжении копирования, миграции
+        # и проверки схемы. При неудачном снимке обязательно возобновляйте исходные службы; успешное обновление
+        # само управляет их запуском.
         try:
             if resume_after or not published:
                 for svc in reversed(stopped):
@@ -1054,8 +1054,8 @@ def restore_fresh(
         validate_world_destinations(manifest["worlds"], world_destinations or {}, folder)
     elif manifest.get("schema") == 3:
         raise DrillError("network-ha snapshot requires --network-ha")
-    # The same project NAME is normal on a replacement host. Never infer that
-    # same-name means same existing volumes; only verified empty targets qualify.
+    # На новом хосте может использоваться то же ИМЯ проекта. Совпадение имён не означает наличия прежних
+    # томов; подходят только проверенные пустые цели.
     if not env_file.is_file() or env_file.is_symlink():
         raise DrillError("Compose environment file missing or symlinked")
     if not ready_url:
@@ -1075,13 +1075,13 @@ def restore_fresh(
             raise DrillError(
                 "target already has state: fresh project required; refusing to overwrite"
             )
-    # Verify PostgreSQL dump before mutation; refuse pre-existing target containers
-    # even if their volumes were manually renamed or removed.
+    # Проверяйте дамп PostgreSQL до любых изменений; отклоняйте существующие целевые контейнеры, даже если их
+    # тома были вручную переименованы или удалены.
     pg_validate(folder / "database.dump")
     if compose_states(project, env_file):
         raise DrillError("target already has Compose containers; use a fresh host/project")
     started = time.monotonic()
-    # A failed restore does not boot the API with partial data.
+    # Не запускайте API с частично восстановленными данными.
     compose(project, env_file, "create")
     for item in manifest["volumes"]:
         name = volume_name(project, item)
@@ -1112,10 +1112,10 @@ def restore_fresh(
     try:
         compose_pg_restore(project, env_file, folder / "database.dump")
     except Exception:
-        # Leave API stopped; manual inspection mandatory.
+        # Оставьте API остановленным; требуется ручная проверка.
         raise
     if "network-ha" in COMPOSE_PROFILES:
-        # No API/worker/game process can run before the recovered DB is fenced.
+        # До блокировки восстановленной БД нельзя запускать API, обработчики или игровые процессы.
         fence_restored_serverbridge(project, env_file)
         for receipt in manifest["worlds"]:
             name = receipt["name"]
@@ -1159,8 +1159,8 @@ def restore_fresh(
             expected_storage="local" if manifest["storage"] == "local-volume" else "s3",
         )
     except Exception:
-        # Do not leave an unverified installation reachable from the outside.
-        # The partial target is left for forensic recovery, never auto-reused.
+        # Не открывайте снаружи доступ к непроверенной установке. Частично восстановленная цель сохраняется для
+        # расследования и никогда не используется автоматически повторно.
         for svc in (("nginx", "admin", "api", "api-b", "worker-a", "worker-b")
                     if "network-ha" in COMPOSE_PROFILES else ("nginx", "admin", "api")):
             try:
@@ -1210,7 +1210,7 @@ def chaos(
         down_start = time.monotonic()
         try:
             compose(project, env_file, "stop", "-t", "5", svc)
-            # Loss of DB must fail closed; Redis is mandatory in network-ha.
+            # При потере БД выполняйте отказ с закрытием доступа; для network-ha Redis обязателен.
             down_sec = await_readiness(url, expected=False, limit=35)
         finally:
             compose(project, env_file, "up", "-d", svc)

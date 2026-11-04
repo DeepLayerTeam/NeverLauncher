@@ -185,7 +185,7 @@ def run_cmd(args, *, env=None):
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise CutoverError(f"subprocess failed: {args[0]}: {type(exc).__name__}") from exc
     if p.returncode:
-        # stderr may contain command flags, paths and secrets. No unsafe echo.
+        # stderr может содержать аргументы команд, пути и секреты. Нельзя выводить его без фильтрации.
         raise CutoverError(f"{Path(args[0]).name} {args[1] if len(args)>1 else ''} failed (exit {p.returncode}); see private operator service logs")
     if len(p.stdout) > MAX_OUTPUT:
         raise CutoverError("unreasonable CLI response size")
@@ -300,8 +300,8 @@ def sqlite_backup(source_name: str, dest: Path):
     if dest.exists():
         raise CutoverError("refusing to overwrite independent SQLite backup")
     uri = source.resolve().as_uri() + "?mode=ro"
-    # SQLite online backup API captures a single transactionally consistent
-    # database, including committed WAL pages. Never copy just its .db file.
+    # Онлайн-API резервного копирования SQLite создаёт единый транзакционно согласованный снимок БД, включая
+    # зафиксированные страницы WAL. Не копируйте только файл .db.
     with closing(sqlite3.connect(uri, uri=True, timeout=20)) as src:
         if src.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
             raise CutoverError("source SQLite integrity check failed")
@@ -322,7 +322,7 @@ def sqlite_backup(source_name: str, dest: Path):
 class Operator:
     def __init__(self, args):
         self.a = args
-        # Do not resolve away a symlink before refuse_symlink checks it.
+        # Не разрешайте символическую ссылку до того, как её проверит refuse_symlink.
         self.work = Path(os.path.abspath(args.work_dir))
         self.state_path = self.work / "state.json"
         self.journal_path = self.work / "stages.jsonl"
@@ -354,7 +354,7 @@ class Operator:
             write_secure(self.state_path, json.dumps(self.state, sort_keys=True).encode())
 
     def log(self, stage, status, **fields):
-        # Never log DSN, env file contents, encryption keys or user credentials.
+        # Никогда не записывайте в журнал DSN, содержимое env-файлов, ключи шифрования и учётные данные.
         value = json.dumps(record(stage, status, **fields), separators=(",", ":")) + "\n"
         with self.journal_path.open("ab") as stream:
             os.chmod(self.journal_path, 0o600)
@@ -382,9 +382,9 @@ class Operator:
             raise
         self.state["completed"].append(name)
         if name == "import":
-            # Only clear ambiguity after the completed stage is durably
-            # journaled. A kill immediately after PostgreSQL COMMIT is unsafe
-            # to retry without inspecting the existing receipt.
+            # Снимайте неопределённость лишь после надёжной записи завершённого этапа в журнал. При уничтожении
+            # процесса сразу после COMMIT в PostgreSQL нельзя безопасно повторять операцию без проверки существующей
+            # квитанции.
             self.state["importOutcomeUnknown"] = False
         self.state["blocked"] = False
         self.state.pop("failedStage", None)
@@ -394,7 +394,7 @@ class Operator:
         self.log(name, "completed")
 
     def service(self, cmd, unit):
-        # Unit names never flow through a shell; no remote systemd support.
+        # Имена служб не передаются через оболочку; удалённое управление systemd не поддерживается.
         if not re.fullmatch(r"[A-Za-z0-9_.@:-]+\.service", unit):
             raise CutoverError("invalid systemd service unit")
         p = subprocess.run(["systemctl", cmd, unit], capture_output=True, timeout=90, check=False)
@@ -419,8 +419,8 @@ class Operator:
             raise CutoverError("--http-db must exactly match current SQLite Backend DSN")
         for source in (self.a.core_db, self.a.http_db):
             private_file(Path(source))
-        # Independent preflight + frozen copies of Core, one frozen HTTP and
-        # one optional Coordinator copy; include WAL and guard headroom.
+        # Независимая предварительная проверка и замороженные копии Core, одной HTTP-БД и при необходимости
+        # Coordinator; учитывайте WAL и запас свободного места.
         required = 2 * sqlite_size_on_disk(Path(self.a.core_db)) + sqlite_size_on_disk(Path(self.a.http_db))
         if self.a.coordinator_db:
             required += sqlite_size_on_disk(Path(self.a.coordinator_db))
@@ -434,9 +434,9 @@ class Operator:
             sources.append(self.a.coordinator_db)
         if len({Path(v).resolve() for v in sources}) != len(sources):
             raise CutoverError("SQLite Core, HTTP and Coordinator must be separate databases")
-        # THIS IS A HARD INCOMPATIBILITY in 0.47.4. It must not be bypassed
-        # even when an HTTP snapshot appears empty: private auth, coordinator,
-        # signing, install and runtime metadata have no canonical PG mapping.
+        # ЭТО НЕПРЕОДОЛИМАЯ НЕСОВМЕСТИМОСТЬ в 0.47.4. Обход запрещён даже при пустом HTTP-снимке: закрытые данные
+        # авторизации, координатора, подписи, установки и Runtime не имеют канонического сопоставления в
+        # PostgreSQL.
         self.state["cutoverSupported"] = False
         self.save()
         return {"corePresent": True, "httpMigrationSupported": False}
@@ -467,13 +467,13 @@ class Operator:
     def frozen_backup(self):
         self.inactive()
         if self.backup.exists() or self.http_backup.exists() or self.coordinator_backup.exists():
-            # An interrupted physical backup must never be reused as complete.
-            # Preserve evidence; require manual resolution rather than overwrite.
+            # Прерванное физическое резервное копирование нельзя считать завершённым и использовать повторно.
+            # Сохраните доказательства и разрешите проблему вручную вместо перезаписи.
             raise CutoverError("incomplete frozen backup files exist; inspect before retry")
         if sha256_file(Path(self.a.source_env)) != self.state.get("sourceEnvSHA256"):
             raise CutoverError("service configuration changed since preflight")
-        # HTTP and Coordinator are not silently dropped. Back up and verify
-        # their complete SQLite state even though there is no live PG mapping.
+        # HTTP и Coordinator не удаляются незаметно. Сохраните и проверьте полное состояние SQLite, даже если для
+        # него нет переноса в действующую PostgreSQL.
         sqlite_backup(self.a.http_db, self.http_backup)
         verify_http_snapshot(self.http_backup)
         if self.a.coordinator_db:
@@ -489,8 +489,8 @@ class Operator:
         self.inactive()
         if sha256_file(Path(self.a.source_env)) != self.state.get("sourceEnvSHA256"):
             raise CutoverError("source configuration changed while frozen")
-        # IMPORTANT: if a process died after commit but before this stage was
-        # journaled, the commit outcome is unknown. Never blindly retry.
+        # ВАЖНО: если процесс завершился после COMMIT, но до записи этапа в журнал, результат фиксации неизвестен.
+        # Нельзя слепо повторять операцию.
         self.state["importOutcomeUnknown"] = True
         self.save()
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-live", "--backup", str(self.backup), "--ack-live-import", "--timeout", "45m", *self.mfa_args()], env=self.env)
@@ -549,9 +549,9 @@ class Operator:
         verdict = self.state.get("receipts", {}).get("verify", {})
         if not verdict.get("readyForBackendCutover") or not self.state.get("cutoverSupported"):
             raise CutoverError("unsafe cutover blocked: HTTP/Coordinator state not migrated; Core receipt is not approval")
-        # The recovery barrier MUST reach durable storage before env rewrite.
-        # A crash between config replacement and flag persistence otherwise
-        # permits an unsafe SQLite rollback after PG may have accepted writes.
+        # Барьер восстановления ОБЯЗАТЕЛЬНО должен попасть в долговременное хранилище до перезаписи env. Иначе
+        # сбой между заменой конфигурации и фиксацией флага позволит небезопасный откат на SQLite после возможного
+        # начала записей в PostgreSQL.
         self.state["writeBoundaryCrossed"] = True
         self.save()
         self.log("cutover", "write_boundary_armed")
@@ -638,8 +638,8 @@ class Operator:
         project = request(project_path, token=login["token"])
         if not isinstance(project, dict) or project.get("id") != self.a.project:
             raise CutoverError("imported project cannot be read through Backend API")
-        # Protected Admin export requires real project permission, proving
-        # the session and role mapping instead of a public GET alone.
+        # Защищённый экспорт Admin требует реального разрешения проекта и подтверждает сопоставление сеанса и
+        # роли, а не только доступность общедоступного GET.
         request("/api/v1/admin/projects/" + quote(self.a.project, safe="") + "/export", token=login["token"])
         return {"backendHealthy": True, "ownerAuthenticated": True,
                 "ownerId": user["id"], "projectReadAndAuthorized": True}
@@ -664,8 +664,8 @@ class Operator:
                     self.stage(stage, function)
                 return self.state
         except Exception:
-            # If any PostgreSQL writer could have started, STOP all declared
-            # units but never claim that stopping makes stale-DB rollback safe.
+            # Если хоть один процесс записи PostgreSQL мог запуститься, ОСТАНОВИТЕ все объявленные службы, но не
+            # утверждайте, что остановка делает откат на устаревшую БД безопасным.
             if self.state.get("writeBoundaryCrossed"):
                 for unit in self.a.units:
                     try:
@@ -673,8 +673,8 @@ class Operator:
                     except Exception:
                         pass
                 self.log("post_cutover_fault", "writes_unknown_rollback_blocked")
-            # The lock above has been released before restarting SQLite.
-            # PostgreSQL is still isolated until the write boundary is crossed.
+            # Перед перезапуском SQLite блокировка выше уже освобождена. PostgreSQL остаётся изолированной до
+            # пересечения границы записи.
             if ("backup" in self.state.get("completed", []) and
                     not self.state.get("writeBoundaryCrossed") and
                     not self.state.get("rolledBack")):
@@ -691,22 +691,20 @@ class Operator:
             if self.state.get("writeBoundaryCrossed"):
                 raise CutoverError("writes may have reached PostgreSQL; automatic rollback forbidden")
             if self.state.get("importOutcomeUnknown"):
-                # SQLRepository import may be committed, but the old source
-                # remains authoritative until cutover. Never delete PG data or
-                # retry import as part of SQLite recovery.
+                # Импорт SQLRepository мог быть зафиксирован, но до переключения источником истины остаётся старая БД. При
+                # восстановлении SQLite не удаляйте данные PostgreSQL и не повторяйте импорт.
                 self.log("rollback", "isolated_postgres_commit_unknown")
-            # An abrupt termination after systemctl stop but before the phase
-            # receipt is still safely recoverable if all units are inactive.
+            # После внезапного завершения между systemctl stop и квитанцией этапа безопасное восстановление возможно
+            # лишь при неактивности всех служб.
             if "backup" not in self.state["completed"]:
                 raise CutoverError("no verified preflight backup to restore")
             self.inactive()
             private_file(self.original_env)
-            # We have never modified the source databases. Validate the frozen
-            # independent backup before restoring the original service config.
+            # Исходные БД ещё не изменялись. Проверьте независимую замороженную копию до восстановления прежней
+            # конфигурации служб.
             if "frozen_backup" in self.state["completed"]:
-                # A completed backup receipt must always pass independent
-                # verification. On an interrupted backup stage, incomplete
-                # files are forensic evidence, NOT an input to source recovery.
+                # Квитанция завершённой копии всегда должна проходить независимую проверку. При прерывании этапа
+                # незавершённые файлы — доказательства для расследования, а НЕ источник восстановления.
                 validate_sqlite_backup(self.http_backup)
                 if self.a.coordinator_db:
                     validate_sqlite_backup(self.coordinator_backup)
@@ -715,8 +713,8 @@ class Operator:
                     raise CutoverError("source backup damaged; rollback blocked")
             elif any(path.exists() for path in (self.backup, self.http_backup, self.coordinator_backup)):
                 self.log("rollback", "partial_frozen_backups_ignored_source_only")
-            # Verify all old sources are still readable; never overwrite a
-            # source DB merely because the independently copied backup exists.
+            # Проверьте, что все исходные БД по-прежнему читаются; не перезаписывайте исходную БД только потому, что
+            # существует отдельная копия.
             for source in [self.a.core_db, self.a.http_db, *([self.a.coordinator_db] if self.a.coordinator_db else [])]:
                 private_file(Path(source))
                 validate_sqlite_backup(Path(source))

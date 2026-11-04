@@ -285,7 +285,8 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		return nil, err
 	}
 
-	// Stage verified bytes before touching the live tree: all files pass SHA-256 and size checks.
+	// Подготовьте проверенные байты до изменения рабочего дерева: все файлы должны пройти проверку SHA-256 и
+	// размера.
 	// Подготовьте проверенные байты в промежуточном каталоге до изменения активного дерева.
 	for _, spec := range files {
 		stagePath := filepath.Join(stageDir, filepath.FromSlash(spec.Path))
@@ -331,8 +332,8 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 			touched.HadOriginal = true
 			touched.OriginalMode = uint32(info.Mode().Perm())
 			backup := filepath.Join(backupDir, filepath.FromSlash(rel))
-			// Persist the original digest before any live switch. An incomplete
-			// rollback must never restore altered/corrupted backup bytes.
+			// Сохраните исходный дайджест до переключения. Незавершённый откат не должен восстанавливать изменённые
+			// или повреждённые байты копии.
 			originalSHA, originalSize, err := hashFile(dst)
 			if err != nil || originalSize != info.Size() {
 				return nil, fmt.Errorf("hash original %s: %v", rel, err)
@@ -367,11 +368,10 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	}
 	stageDir := filepath.Join(u.transactionDir(journal.ID), "stage")
 
-	// For versioned client packages, the active version pointer is switched
-	// only after every managed file was replaced, obsolete files removed,
-	// and package post-verification passed. A crash before activation leaves
-	// the previously committed client-state pointer readable; journal recovery
-	// rolls the partial tree back before the next launch/update.
+	// Для версионированных клиентских пакетов указатель активной версии переключается только после замены всех
+	// управляемых файлов, удаления устаревших и успешной итоговой проверки пакета. Сбой до активации оставляет
+	// доступным указатель прежнего зафиксированного состояния; журнал восстановления откатит частично
+	// изменённое дерево до следующего запуска или обновления.
 	var activation *updaterJournalFile0156
 	applyFile := func(file updaterJournalFile0156) error {
 		dst, err := u.safeLivePath(file.Path)
@@ -535,9 +535,8 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
-		// Journals created before 0.52.7 did not persist backup checksums.
-		// They remain recoverable, but all new transactions verify exact
-		// original bytes before touching the live target.
+		// Журналы до 0.52.7 не хранили контрольные суммы резервных копий. Они по-прежнему восстанавливаемы, но все
+		// новые транзакции сверяют точные исходные байты до изменения рабочей цели.
 		if touched.OriginalSHA256 != "" {
 			if err := verifyUpdaterFile0156(backup, touched.OriginalSize, touched.OriginalSHA256); err != nil {
 				return fmt.Errorf("rollback backup integrity %s: %w", touched.Path, err)
@@ -546,9 +545,9 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 			return fmt.Errorf("rollback source missing or not regular: %s", touched.Path)
 		}
 		tmp := dst + ".nl0156-rollback-" + journal.ID
-		// If the updater was killed while *restoring* a prior generation,
-		// its exclusive temporary file may still exist. Retry from verified
-		// backup bytes, never append or truncate through the stale path.
+		// Если обновлятор был остановлен во время ВОССТАНОВЛЕНИЯ прежнего поколения, его исключительный временный
+		// файл мог сохраниться. Повторяйте из проверенной копии, никогда не дописывая и не усекая файл по
+		// устаревшему пути.
 		if err := removeUpdaterSwapTemp0527(tmp); err != nil {
 			return err
 		}
@@ -593,9 +592,9 @@ func removeUpdaterSwapTemp0527(path string) error {
 	return nil
 }
 
-// cleanTransactionTemps0527 removes only updater-owned in-place swap files
-// for this random transaction ID. Every path is revalidated against symlink
-// traversal. A non-regular collision blocks recovery rather than following it.
+// cleanTransactionTemps0527 удаляет только файлы атомарной замены, принадлежащие обновлятору и случайному
+// ID текущей транзакции. Каждый путь заново проверяется против перехода по символическим ссылкам.
+// Столкновение с не-обычным файлом блокирует восстановление.
 func (u *transactionalUpdater0156) cleanTransactionTemps0527(journal *updaterJournal0156) error {
 	for _, touched := range journal.Touched {
 		dst, err := u.safeLivePath(touched.Path)
@@ -649,8 +648,8 @@ func (u *transactionalUpdater0156) recoverIncompleteLocked() ([]string, error) {
 		case "committed", "rolled-back":
 			continue
 		case "staging":
-			// Active files are untouched; free the interrupted download/staging
-			// payload immediately rather than retaining space until a later run.
+			// Активные файлы не тронуты; сразу освободите файлы прерванной загрузки и подготовки, не удерживая место
+			// до следующего запуска.
 			journal.Phase = "rolled-back"
 			journal.Error = "recovered incomplete staging transaction"
 			if err := u.writeJournal(journal); err != nil {
@@ -766,8 +765,8 @@ func (u *transactionalUpdater0156) writeJournal(journal *updaterJournal0156) err
 		return err
 	}
 	raw = append(raw, '\n')
-	// A unique O_EXCL temporary file prevents a stale/crash-left symlink or
-	// competing writer from redirecting this privileged durable journal write.
+	// Уникальный временный файл O_EXCL предотвращает перенаправление привилегированной устойчивой записи
+	// журнала старой символической ссылкой после сбоя или конкурирующим писателем.
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".journal-*")
 	if err != nil {
 		return err

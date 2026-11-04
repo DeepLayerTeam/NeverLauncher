@@ -798,10 +798,9 @@ fn sign_with_record(record: &mut SecureDeviceKeyRecord, payload: &str) -> Result
 
 pub fn stage_device_key_replacement(backend_url: &str, user_id: &str) -> Result<DeviceKeyInfo, String> {
     let user = normalize_user_id(user_id)?;
-    // If the server committed a replacement but the HTTP response was lost,
-    // deleting the staged key makes the newly bound account unrecoverable.
-    // Reuse the same staged identity until its server state is reconciled or
-    // the user explicitly discards it.
+    // Если сервер сохранил замену ключа, но ответ HTTP потерялся, удаление подготовленного ключа сделает вновь
+    // привязанную учётную запись невосстановимой. Используйте ту же подготовленную идентичность до
+    // согласования состояния с сервером либо её явного удаления пользователем.
     if let Some(mut previous) = load_staged_record(backend_url, &user)? {
         validate_record(&mut previous)?;
         return Ok(record_to_info(&previous));
@@ -812,7 +811,7 @@ pub fn stage_device_key_replacement(backend_url: &str, user_id: &str) -> Result<
         Err(_) => new_software_record(&user),
     };
     if let Err(err) = validate_record(&mut record).and_then(|_| save_staged_record(backend_url, &user, &record)) {
-        // Hardware key creation succeeded but metadata did not persist.
+        // Аппаратный ключ создан успешно, но метаданные не сохранились.
         if record.key_binding == "hardware" && !record.hardware_label.is_empty() {
             if let Ok((signer, _)) = hardware_signer(&record.hardware_label) {
                 let _ = signer.delete_key(&record.hardware_label);
@@ -1072,8 +1071,8 @@ mod tests {
 }
 
 
-/// Only the native verified-installed-release path may call this signer.
-/// The generic JS device signing API deliberately rejects this domain.
+/// Вызывать этот модуль подписи разрешено только из нативного пути с проверенным установленным выпуском.
+/// Универсальный JS API подписи устройства намеренно отклоняет этот домен.
 pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
     if payload.len() > 4096 || !payload.starts_with("Launcher-Verified-Component-Plan-v1\n")
         || payload.contains('\r') || payload.split('\n').count() != 16 {
@@ -1091,9 +1090,9 @@ pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device
         hardware_provider:record.hardware_provider.clone(),hardware_bound:true })
 }
 
-/// Windows only: generate TPM2_Certify from the *existing* registered PCP key.
-/// An administrator must enroll the separate AK and issue a trusted AK certificate.
-/// This creates a key or replaces the registered device identity.
+/// Только Windows: создайте TPM2_Certify для уже зарегистрированного ключа PCP. Администратор должен
+/// отдельно зарегистрировать AK и выпустить доверенный сертификат AK. Эта операция создаёт ключ или
+/// заменяет зарегистрированную идентичность устройства.
 pub fn windows_tpm_certify_0313(
     backend_url: &str, user_id: &str, device_id: &str,
     tpm_extra_data_sha256: &str, ak_key_name: &str,
@@ -1124,9 +1123,9 @@ pub fn windows_tpm_certify_0313(
     }
 }
 
-/// Linux TPM2 Certify against the exact previously registered hardware-enclave
-/// signing identity. The AK is enrolled out-of-band and persisted in the TPM.
-/// No software attestation, key replacement, or permission downgrade.
+/// Проверка Linux TPM2 Certify для той же идентичности подписи в аппаратном анклаве, которая была
+/// зарегистрирована ранее. AK регистрируется по независимому каналу и хранится в TPM. Программная
+/// аттестация, замена ключа и ослабление разрешений запрещены.
 pub fn linux_tpm_certify_0314(
     backend_url: &str, user_id: &str, device_id: &str,
     tpm_extra_data_sha256: &str, ak_handle: &str,
@@ -1146,8 +1145,8 @@ pub fn linux_tpm_certify_0314(
            !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm") {
             return Err("Registered Linux TPM P-256 signing identity required (not keyring/software/WSL)".into());
         }
-        // Also verifies that the actual hardware-enclave signer still owns
-        // exactly the public key registered to this device.
+        // Также проверяется, что фактический подписант аппаратного анклава по-прежнему владеет именно открытым
+        // ключом, зарегистрированным для устройства.
         let _=validate_hardware_record(&record)?;
         let sec1=URL_SAFE_NO_PAD.decode(&record.public_key).map_err(|_|"corrupt registered public key")?;
         let proof=crate::tpm_linux_0314::certify(&record.hardware_label,&sec1,
@@ -1157,8 +1156,8 @@ pub fn linux_tpm_certify_0314(
 }
 
 
-/// TPM Quote is signed by the enrolled AK and matched against the pinned AK
-/// certificate on the server. Never exposes a software fallback.
+/// TPM Quote подписан зарегистрированным AK и проверяется на сервере по закреплённому сертификату AK.
+/// Программный запасной вариант никогда не предлагается.
 pub fn measured_boot_quote_0315(
  backend_url:&str,user_id:&str,device_id:&str,extra:&str,selection:&str,ak_key:&str,
  certificate:&str,intermediates:Vec<String>,
@@ -1188,8 +1187,8 @@ pub fn measured_boot_quote_0315(
  }
 }
 
-// 0.31.6 — native macOS capability probe. This is LOCAL diagnostics,
-// accepted by the server as hardware provenance or an App Attest assertion.
+// 0.31.6 — нативная проверка возможностей macOS. Это ЛОКАЛЬНАЯ диагностика, а не доказательство
+// аппаратного происхождения или утверждение App Attest для сервера.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MacOSTrustStatus0316 {
@@ -1211,8 +1210,8 @@ fn app_attest_available_0316() -> bool {
         fn sel_registerName(name: *const c_char) -> *mut c_void;
         fn objc_msgSend();
     }
-    // Linking ensures the actual DeviceCheck framework is loaded. Merely
-    // observing OS version, CPU type or an entitlement is insufficient.
+    // Линковка обеспечивает загрузку настоящего фреймворка DeviceCheck. Одного наблюдения версии ОС, типа
+    // процессора или entitlement недостаточно.
     #[link(name = "DeviceCheck", kind = "framework")]
     extern "C" {}
     unsafe {
@@ -1244,8 +1243,8 @@ pub fn macos_trust_status_0316(backend_url: &str, user_id: &str) -> Result<MacOS
     }
     #[cfg(target_os = "macos")]
     {
-        // Validate the REAL key in Keychain/Enclave. The provider label itself
-        // is not used to grant remote assurance.
+        // Проверяйте РЕАЛЬНЫЙ ключ в Keychain/Enclave. Метка провайдера сама по себе не служит основанием для
+        // удалённого доверия.
         let (local_key, enclave) = match device_key_status(backend_url, user_id) {
             Ok(Some(key)) if key.key_binding == "hardware" && key.key_algorithm == "p256"
                 && key.hardware_provider.to_ascii_lowercase().contains("secureenclave") =>

@@ -4,16 +4,15 @@ import Darwin
 import CryptoKit
 import Dispatch
 
-// libproc enumerates immediate children; follow recursively to detect a native
-// extension creating any extra process, including one changing process groups.
+// libproc перечисляет непосредственных потомков; обходите их рекурсивно, чтобы обнаружить любой
+// дополнительный процесс нативного расширения, включая сменивший группу процессов.
 @_silgen_name("proc_listchildpids")
 private func listChildPIDs(_ ppid: pid_t, _ buffer: UnsafeMutableRawPointer?, _ bytes: Int32) -> Int32
 
-// This binary MUST be Developer-ID signed with only app-sandbox=true. Never
-// launch it without verifying its signature and entitlement set in the parent.
-// The extension is a native, self-contained Mach-O copied into this helper's
-// OWN App Sandbox container. No blanket security-scoped file grants or network
-// entitlements are provisioned.
+// Этот исполняемый файл ОБЯЗАТЕЛЬНО должен быть подписан Developer ID с единственным app-sandbox=true. Не
+// запускайте его без проверки подписи и набора entitlement родительским процессом. Расширение —
+// самостоятельный нативный Mach-O, копируемый в СОБСТВЕННЫЙ контейнер App Sandbox помощника. Общие
+// разрешения на файлы с ограниченным доступом и сетевые entitlement не предоставляются.
 
 @_silgen_name("sandbox_check")
 private func sandboxCheck(_ pid: pid_t, _ operation: UnsafePointer<CChar>, _ filterType: UInt32, _ path: UnsafePointer<CChar>) -> Int32
@@ -65,8 +64,8 @@ private func readHeader(_ fd: Int32) throws -> Request {
     throw SandboxError.invalid("header-exceeds-32k")
 }
 private func ensureSandbox() throws {
-    // Check a write that must be denied by App Sandbox even though the
-    // directory is generally accessible to the interactive user.
+    // Проверьте запись, которую App Sandbox должна отклонить, даже если каталог обычно доступен интерактивному
+    // пользователю.
     let denial = "/Users/Shared".withCString { sandboxCheck(getpid(), "file-write-data", 1, $0) }
     if denial == 0 { throw SandboxError.invalid("kernel-app-sandbox-not-enforced") }
 }
@@ -110,9 +109,9 @@ private func spawn(_ path: String, _ scratch: String, _ request: Request) throws
     if request.memoryBytes < 64 << 20 || request.cpuPercent < 1 || request.cpuPercent > 100 || request.timeoutSeconds < 1 || request.maxProcesses != 1 {
         throw SandboxError.invalid("invalid-limits")
     }
-    // Resource limits are inherited by descendants. Combined resource usage
-    // cannot be bounded atomically on macOS without a privileged supervisor;
-    // only a single-process policy is supported and child creation is fatal.
+    // Лимиты ресурсов наследуются потомками. На macOS совокупное потребление нельзя атомарно ограничить без
+    // привилегированного супервизора; поддерживается только один процесс, а создание потомка считается
+    // фатальным нарушением.
     try limit(RLIMIT_AS, UInt64(request.memoryBytes))
     let cpu = max(1, (request.timeoutSeconds * request.cpuPercent + 99) / 100)
     try limit(RLIMIT_CPU, UInt64(cpu))
@@ -128,13 +127,13 @@ private func spawn(_ path: String, _ scratch: String, _ request: Request) throws
     var vars: [UnsafeMutablePointer<CChar>?] = env.map { strdup($0) } + [nil]
     defer { for s in args { free(s) }; for s in vars { free(s) } }
     if chdir(scratch) != 0 { throw SandboxError.invalid("scratch-working-directory-required") }
-    // Never expose the configuration or ready handshake file descriptor to the
-    // untrusted child. FD4 is the sole intentionally inherited IPC endpoint.
+    // Никогда не раскрывайте недоверенному потомку дескриптор конфигурации или подтверждения готовности. FD4 —
+    // единственная намеренно наследуемая точка IPC.
     _ = fcntl(3, F_SETFD, FD_CLOEXEC)
     _ = fcntl(5, F_SETFD, FD_CLOEXEC)
     _ = fcntl(6, F_SETFD, FD_CLOEXEC)
-    // Go's ExtraFiles passes the broker socket as FD4. The kernel-enforced
-    // static App Sandbox is inherited across posix_spawn, including descendants.
+    // Go ExtraFiles передаёт сокет брокера как FD4. Статическая App Sandbox, применяемая ядром, наследуется
+    // через posix_spawn, включая потомков.
     if fcntl(4, F_SETFD, 0) != 0 { throw SandboxError.invalid("host-ipc-fd-unavailable") }
     var child: pid_t = 0
     let result = args.withUnsafeMutableBufferPointer { a in vars.withUnsafeMutableBufferPointer { v in
@@ -147,8 +146,8 @@ private func spawn(_ path: String, _ scratch: String, _ request: Request) throws
 private func children(of parent: pid_t) -> [pid_t]? {
     let capacity = 4096
     var pids = [pid_t](repeating: 0, count: capacity)
-    // libproc's proc_listchildpids returns the number of PIDs, NOT bytes
-    // (unlike proc_listpids). Treat a full buffer as an overflow and deny.
+    // libproc proc_listchildpids возвращает число PID, а НЕ байтов (в отличие от proc_listpids). Полный буфер
+    // считайте переполнением и отказывайте.
     let count = pids.withUnsafeMutableBytes { raw -> Int32 in
         listChildPIDs(parent, raw.baseAddress, Int32(raw.count))
     }
@@ -156,9 +155,8 @@ private func children(of parent: pid_t) -> [pid_t]? {
     return Array(pids.prefix(Int(count))).filter { $0 > 0 }
 }
 
-// FD6 is held open by the Go supervisor. Losing the parent is fatal, even if
-// its process group has already vanished. Readiness is never reported before
-// the child has proved it inherited the kernel's App Sandbox.
+// FD6 удерживается супервизором Go. Потеря родителя фатальна, даже если его группа процессов уже исчезла.
+// О готовности не сообщают до подтверждения наследования дочерним процессом политики App Sandbox ядра.
 private func parentAlive() -> Bool {
     var fd = pollfd(fd: 6, events: Int16(POLLHUP | POLLERR | POLLNVAL), revents: 0)
     let status = poll(&fd, 1, 0)
@@ -178,8 +176,8 @@ private func run() throws {
     let (path, scratch) = try stage(data)
     defer { _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: (path as NSString).deletingLastPathComponent)) }
     let pid = try spawn(path, scratch, header)
-    // The signature of this helper is not enough: verify that the *child*
-    // itself has inherited the deny-by-default App Sandbox policy.
+    // Подписи помощника недостаточно: проверьте, что сам ДОЧЕРНИЙ процесс унаследовал политику App Sandbox с
+    // запретом по умолчанию.
     let childDenied = "/Users/Shared".withCString { sandboxCheck(pid, "file-write-data", 1, $0) }
     guard childDenied != 0 && enforceChildBoundary(pid) else {
         _ = kill(pid, SIGKILL)
@@ -193,9 +191,8 @@ private func run() throws {
     var status: Int32 = 0
     var violated = false
     while true {
-        // WNOHANG permits continuous enforcement instead of waiting for a
-        // compromised extension indefinitely. Guard against a detached child:
-        // inspecting only the process group is not sufficient on macOS.
+        // WNOHANG позволяет непрерывно применять ограничения, а не бесконечно ожидать скомпрометированное
+        // расширение. Учитывайте отделившегося потомка: одной проверки группы процессов на macOS недостаточно.
         let waited = waitpid(pid, &status, WNOHANG)
         if waited == pid { break }
         if waited < 0 { if errno == EINTR { continue }; violated = true; break }
