@@ -1,25 +1,14 @@
 # NeverLauncher 0.47.3 — SQLite Core → SQLRepository (действующие данные)
 
-## поддерживаемые входные данные и границы безопасности
+## Поддерживаемые входные данные и границы безопасности
 
-The CLI consumes an immutable, independently verified SQLite **Core 327** backup
-created via `launcher-sqlite backup`, with its matching `.json` manifest. It first
-runs the existing `sqlitepg.Import` into the immutable staging namespace and
-then materializes compatible rows in the **real** SQLRepository tables in one
-SERIALIZABLE PostgreSQL transaction. It does not use a memory or HTTP fallback.
+CLI принимает неизменяемую, независимо проверенную резервную копию **SQLite Core 327**, созданную через `launcher-sqlite backup`, и соответствующий ей манифест `.json`. Сначала запускается существующий `sqlitepg.Import` в неизменяемую промежуточную область, затем совместимые строки материализуются в **настоящих** таблицах SQLRepository в одной транзакции PostgreSQL уровня SERIALIZABLE. Резервное хранение в памяти или через HTTP не используется.
 
-An empty PostgreSQL database with the **complete** embedded `dbmigrate.Apply`
-SQL catalog (including `0115_imported_file_mirrors_0473.sql`) is required.
-The CLI checks checksums for *all* applied migrations, validates all staging
-row digests and table receipts, checks row counts and relationships and writes
-its live import receipt in the same transaction. PostgreSQL migration scripts
-already applied to other installations must not be rewritten.
+Требуется пустая база PostgreSQL с **полным** встроенным каталогом SQL-миграций `dbmigrate.Apply`, включая `0115_imported_file_mirrors_0473.sql`. CLI сверяет контрольные суммы *всех* применённых миграций, дайджесты строк и квитанции таблиц промежуточной области, количество строк и связи и записывает квитанцию действующего импорта в той же транзакции. Уже применённые в других установках миграции PostgreSQL нельзя переписывать.
 
-Stop Core writers and prevent PostgreSQL Backend / setup wizard from accepting
-requests during transfer. Make and retain an independent off-host SQLite backup.
-Do **not** import into an already running/used PostgreSQL deployment.
+Остановите процессы записи Core и запретите Backend PostgreSQL и мастеру установки принимать запросы на время переноса. Создайте и сохраните независимую резервную копию SQLite на другом хосте. **Не импортируйте данные в уже работающее или используемое развёртывание PostgreSQL.**
 
-## команды
+## Команды
 
 ```bash
 # На одноразовой ПУСТОЙ базе PostgreSQL после применения всей схемы:
@@ -33,62 +22,38 @@ launcher-sqlite sqlite-to-postgres-live \
   --from-staging --ack-live-import --timeout 30m
 ```
 
-The previous `sqlite-to-postgres --ack-staging-only` remains supported and
-**does not write live tables**. `sqlite-to-postgres-live --from-staging` also
-accepts staging created with that earlier command, provided its receipt/schema
-is current and the target is still pristine.
+Прежняя команда `sqlite-to-postgres --ack-staging-only` по-прежнему поддерживается и **не записывает данные в действующие таблицы**. Команда `sqlite-to-postgres-live --from-staging` также принимает промежуточную область от предыдущей команды, если её квитанция и схема актуальны, а цель всё ещё не содержит данных.
 
-The live receipt is stored in `public.sqlite_live_receipts_0473`. A successful
-result contains `verified=true`, source SHA-256, per-table row counts, and
-`readyForBackendCutover=false`. The last flag is intentionally false: 0.47.3
-only moves representable Core project/profile/release, channel, user/role, audit
-and manifest file metadata. It does not transfer file bytes or separately
-managed HTTP/Coordinator/Redis/S3 state.
+Квитанция переноса хранится в `public.sqlite_live_receipts_0473`. Успешный результат содержит `verified=true`, SHA-256 источника, количество строк по таблицам и `readyForBackendCutover=false`. Последний флаг намеренно ложный: 0.47.3 переносит только представимые метаданные проектов, профилей, выпусков, каналов, пользователей/ролей, аудита и файлов манифестов Core. Байты файлов и отдельно управляемое состояние HTTP/Coordinator/Redis/S3 не переносятся.
 
-## сопоставление полей
+## Сопоставление полей
 
-| SQLite Core source | SQLRepository target |
+| Источник SQLite Core | Цель SQLRepository |
 | --- | --- |
 | `projects` | `projects` |
-| `profiles` | `profiles` (revision/digest and Minecraft launch settings retained) |
-| `profile_revisions` | `profile_revisions_0221` (JSON spec retained) |
+| `profiles` | `profiles` (ревизия, дайджест и параметры запуска Minecraft сохраняются) |
+| `profile_revisions` | `profile_revisions_0221` (JSON-спецификация сохраняется) |
 | `channels` | `release_channels` |
-| `releases` | `release_versions` (signed manifest JSON retained) |
-| `channel_heads` | `channel_heads` (exact head ID/revision/digest) |
-| `roles` | `roles` (exact source role permissions, seeded target replaced) |
-| `users` | `users` and canonical `auth_identities` (password hashes, local login identity and dates kept, epoch=1 only) |
-| `project_user_roles` | `project_user_roles`, plus `users.project_roles` projection |
-| `audit_events` | `audit_events` (including correlation/reason/job) |
-| `releases.manifest.files[]` | `files` (derived stable ID, all file metadata incl. mirrors) |
+| `releases` | `release_versions` (подписанный JSON-манифест сохраняется) |
+| `channel_heads` | `channel_heads` (точные ID главы канала, ревизия и дайджест) |
+| `roles` | `roles` (точные права ролей источника заменяют начальные целевые) |
+| `users` | `users` и канонические `auth_identities` (хеши паролей, локальная идентичность входа и даты сохраняются; только эпоха 1) |
+| `project_user_roles` | `project_user_roles` и представление `users.project_roles` |
+| `audit_events` | `audit_events` (включая корреляцию, причину и задание) |
+| `releases.manifest.files[]` | `files` (производный устойчивый ID, все метаданные файла, включая зеркала) |
 
-SQLite INTEGER nanosecond times become PostgreSQL `TIMESTAMPTZ`; optional zero
-values become NULL. SQLite 0/1 flags become booleans. JSON is validated and
-stored as PostgreSQL JSONB. The source's signed manifest fields are not re-signed
-or intentionally edited. Derived file IDs are SHA-256 of release ID and path;
-Core did not have separate file IDs.
+Время в наносекундах SQLite INTEGER преобразуется в PostgreSQL `TIMESTAMPTZ`; необязательные нулевые значения — в NULL. Флаги SQLite 0/1 становятся логическими значениями. JSON проходит проверку и хранится как PostgreSQL JSONB. Подписанные поля исходного манифеста не подписываются заново и намеренно не редактируются. Производные идентификаторы файлов — SHA-256 от ID выпуска и пути; в Core отдельных идентификаторов файлов не было.
 
-## сценарии обязательного отказа
+## Сценарии обязательного отказа
 
-- Unrecognized/future Core schema, invalid/incomplete `dbmigrate` state,
-  mutated staging data, extra/missing/unmappable source columns or rows;
-- Missing FK prerequisites, malformed JSON or unsigned published manifest;
-- Any nonempty source state in tables not explicitly mapped in 0.47.3,
-  including sessions, MFA, revoked tokens, active leases, jobs, bridge nodes,
-  extension packages, and their durable security/audit state;
-- Existing PostgreSQL user/project/application rows, altered setup defaults,
-  or a prior live import; source user `auth_epoch != 1`;
-- Broken file metadata or database constraints.
+- Неизвестная или будущая схема Core, недействительное или неполное состояние `dbmigrate`, изменённая промежуточная область, лишние/отсутствующие/несопоставимые столбцы или строки источника.
+- Отсутствующие обязательные внешние ключи, некорректный JSON или неподписанный опубликованный манифест.
+- Любые непустые исходные таблицы, не сопоставляемые явно в 0.47.3, включая сеансы, MFA, отозванные токены, действующие аренды, задания, узлы Bridge, пакеты расширений и их устойчивое состояние безопасности и аудита.
+- Существующие строки пользователей, проектов или приложения PostgreSQL, изменённые начальные настройки мастера или уже выполненный действующий импорт; у исходного пользователя `auth_epoch != 1`.
+- Повреждённые метаданные файлов или нарушения ограничений базы данных.
 
-A failed live phase **rolls back live table writes** while leaving immutable
-staging and original verified backup unchanged. If the connection drops during
-COMMIT, **check `sqlite_live_receipts_0473` and live data before retrying**;
-never assume an unknown commit result was rolled back.
+Если действующий этап завершается неудачей, **записи в действующие таблицы откатываются**, а неизменяемая промежуточная область и исходная проверенная копия сохраняются. При обрыве соединения во время COMMIT **сначала проверьте `sqlite_live_receipts_0473` и данные действующих таблиц**; не предполагайте, что транзакция с неизвестным результатом обязательно откатилась.
 
-## независимая приёмка
+## Независимая приёмка
 
-Run `go test ./internal/sqlitepg ./internal/repository ./cmd/launcher-sqlite`
-with Go 1.27.3 and a dedicated empty `LAUNCHER_PG_LIVE_TEST_DSN`. The PostgreSQL
-integration test applies real migration SQL, makes a Core backup, imports it,
-reads records via actual SQLRepository and verifies refusal to overwrite a
-populated database. A full project cutover still requires subsequent 0.47.4
-state/storage parity and 0.47.5 freeze/cutover plus real Minecraft launch checks.
+Запустите `go test ./internal/sqlitepg ./internal/repository ./cmd/launcher-sqlite` с Go 1.27.3 и выделенной пустой базой `LAUNCHER_PG_LIVE_TEST_DSN`. Интеграционный тест PostgreSQL применяет реальные SQL-миграции, создаёт копию Core, импортирует её, считывает записи через настоящую SQLRepository и проверяет отказ перезаписывать заполненную базу. Для полного переключения проекта дополнительно необходимы соответствие состояния/хранилища в 0.47.4, заморозка и переключение в 0.47.5, а также проверка настоящего запуска Minecraft.

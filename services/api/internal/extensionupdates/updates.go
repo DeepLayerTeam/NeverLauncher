@@ -31,8 +31,8 @@ type Host interface {
 	Get(extensionhost.Key) (extensionhost.Status, error)
 }
 
-// State is implemented by the running Host supervisor. A durable snapshot is
-// required before changing any installed version; there is no unsafe fallback.
+// Состоянием управляет работающий супервизор Host. До изменения установленной
+// версии обязателен устойчивый снимок состояния; небезопасного запасного пути нет.
 type State interface {
 	SnapshotRuntimeState04810(context.Context, extensionhost.Key, string) error
 	RestoreRuntimeState04810(context.Context, extensionhost.Key, string) error
@@ -67,9 +67,9 @@ func (m *Manager) state04810() (State, error) {
 	return nil, errors.New("durable extension state checkpoint support is required for upgrades")
 }
 
-// Only checkpointed extension IDs may be restored, and only after the new Host
-// has been stopped. Snapshot IDs are persisted in the existing JSON transaction
-// plan, so all supported repositories recover without a schema migration.
+// Восстанавливать разрешается только расширения с контрольной точкой и лишь
+// после остановки нового Host. ID снимков сохраняются в существующем JSON-плане
+// транзакции, поэтому все поддерживаемые репозитории восстанавливаются без миграции схемы.
 func (m *Manager) restoreState04810(tx model.ExtensionUpdateTransaction) []string {
 	if len(tx.Plan.StateSnapshots) == 0 {
 		return nil
@@ -126,8 +126,8 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 	return m.ApplyWithSandboxApprovals0318(ctx, plan, nil)
 }
 
-// Approval maps extension IDs to the exact digest displayed during owner review.
-// Automatic updates never provide approvals and cannot enlarge privileges.
+// Утверждение связывает ID расширений с точным дайджестом, показанным владельцу.
+// Автоматические обновления не предоставляют утверждений и не повышают привилегии.
 func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.ExtensionUpdatePlan, approvals map[string]string) (model.ExtensionUpdateTransaction, error) {
 	if m == nil || m.Repo == nil || m.Lifecycle == nil {
 		return model.ExtensionUpdateTransaction{}, errors.New("extension update manager is not configured")
@@ -242,8 +242,8 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 	}
 	// Остановите все выбранные активные хосты до изменения файлов, чтобы зависимые расширения не работали с наполовину обновлённым графом.
 	if m.Host != nil {
-		// The resolver orders dependencies first. Stop dependents first so
-		// no live Java module can call into a dependency being replaced.
+		// Резолвер располагает зависимости первыми. Останавливайте зависимые компоненты
+		// первыми, чтобы действующий модуль Java не обращался к заменяемой зависимости.
 		for i := len(plan.Items) - 1; i >= 0; i-- {
 			item := plan.Items[i]
 			cur := snapshots[item.ExtensionID]
@@ -254,9 +254,9 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			}
 		}
 	}
-	// The snapshots are created only after ALL old JVM hosts have stopped.
-	// Journal each completed snapshot before the first lifecycle mutation.
-	// Even a process crash after a file rename can then be recovered safely.
+	// Снимки создаются ТОЛЬКО после остановки ВСЕХ прежних JVM Host.
+	// Записывайте каждый завершённый снимок в журнал до первого изменения жизненного цикла.
+	// Тогда даже сбой процесса после переименования файла допускает безопасное восстановление.
 	for _, item := range plan.Items {
 		if item.Operation == "unchanged" {
 			continue
@@ -321,16 +321,16 @@ func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.
 			e = fmt.Errorf("unsupported update operation %q", item.Operation)
 		}
 		if e != nil {
-			// A lifecycle method can fail after changing its durable install.
-			// Include that partial mutation in compensation, rather than
-			// clearing the in-flight marker and abandoning the new version.
+			// Метод жизненного цикла может завершиться ошибкой после изменения устойчивой установки.
+			// Включайте это частичное изменение в компенсацию вместо очистки маркера
+			// незавершённой операции и отказа от новой версии.
 			current, checkErr := m.Repo.GetExtensionInstallState(context.Background(), item.ExtensionID, plan.Scope, plan.ScopeID)
 			if checkErr == nil && (current.CurrentVersion != before.CurrentVersion || current.CurrentState != before.CurrentState) {
 				applied = append(applied, appliedItem{Item: item, Before: before, InstalledNew: item.Operation == "install"})
 				tx.Applied = append(tx.Applied, item.ExtensionID)
 			} else if checkErr != nil && !errors.Is(checkErr, repository.ErrNotFound) {
-				// Leave the in-flight marker for startup recovery rather than
-				// claiming a successful rollback while repository is down.
+				// Сохраняйте маркер незавершённой операции для восстановления при запуске;
+				// не утверждайте успешный откат, когда репозиторий недоступен.
 				return tx, fmt.Errorf("ambiguous lifecycle mutation: %w; cause: %v", checkErr, e)
 			}
 			tx.InFlight = ""
@@ -396,9 +396,9 @@ func (m *Manager) waitHealthy(ctx context.Context, install model.ExtensionInstal
 	defer tick.Stop()
 	for {
 		st, e := m.Host.Get(hostKey02011(install))
-		// A healthy previous JVM must not satisfy the health gate of the
-		// upgraded package. The supervisor may still have a stale process
-		// status while a replacement is starting or a revoke is in flight.
+		// Здоровый предыдущий процесс JVM не удовлетворяет шлюзу здоровья обновлённого
+		// пакета. Супервизор может ещё содержать устаревший статус процесса,
+		// пока запускается замена или выполняется отзыв.
 		if e == nil && healthyInstallation0499(st, install) {
 			return nil
 		}
@@ -412,9 +412,9 @@ func (m *Manager) waitHealthy(ctx context.Context, install model.ExtensionInstal
 	}
 }
 
-// Only an authenticated, running JVM for the exact persisted generation may
-// satisfy an update gate. The instance ID is intentionally not pinned here:
-// a supervisor restart within the same generation is permitted.
+// Только аутентифицированная работающая JVM точного сохранённого поколения
+// удовлетворяет шлюзу обновления. ID экземпляра намеренно не закрепляется:
+// перезапуск супервизора внутри того же поколения допустим.
 func healthyInstallation0499(st extensionhost.Status, install model.ExtensionInstall) bool {
 	return st.Healthy && st.State == "running" && st.ExtensionID == install.ExtensionID &&
 		st.Scope == install.Scope && st.ScopeID == install.ScopeID &&
@@ -441,9 +441,9 @@ func (m *Manager) restartSnapshots02011(snapshots map[string]model.ExtensionInst
 	return failures
 }
 
-// Before the first package mutation, a failed stop/checkpoint still needs a
-// durable recovery path: earlier hosts might have been stopped. Never report
-// the transaction as simply failed if restarting one of them was unsuccessful.
+// До первого изменения пакета неудачная остановка или контрольная точка всё равно
+// требует устойчивого способа восстановления: прежние Host могли быть остановлены.
+// Не отмечайте транзакцию просто неудачной, если перезапуск одного из них не удался.
 func (m *Manager) abortBeforeMutation0499(tx model.ExtensionUpdateTransaction, snapshots map[string]model.ExtensionInstall, cause error) (model.ExtensionUpdateTransaction, error) {
 	failures := m.restartSnapshots02011(snapshots, tx.Plan.Items)
 	if len(failures) > 0 {
@@ -482,8 +482,8 @@ func planItem02011(plan model.ExtensionUpdatePlan, id string) (model.ExtensionUp
 // здоровой реплике. Постоянный маркер операции закрывает окно сбоя между
 // изменением файлов/жизненного цикла и записью журнала применения.
 func (m *Manager) recoverInterrupted02011(ctx context.Context, scope, scopeID string, healthTimeout time.Duration) error {
-	// Also retry previously failed compensation. Ignoring rollback_failed would
-	// permit a new update over an extension whose documents were NOT restored.
+	// Повторяйте также ранее неудачную компенсацию. Игнорирование rollback_failed
+	// позволило бы обновить расширение, чьи документы НЕ восстановлены.
 	for _, status := range []string{"running", "rollback_failed"} {
 		txs, err := m.Repo.ListExtensionUpdateTransactions(ctx, scope, scopeID, status)
 		if err != nil {
@@ -499,9 +499,9 @@ func (m *Manager) recoverInterrupted02011(ctx context.Context, scope, scopeID st
 }
 
 func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.ExtensionUpdateTransaction, healthTimeout time.Duration) error {
-	// Cancel all surviving new JVMs before checking in-flight installs or
-	// restoring checkpoints. If any process survives, leave the transaction
-	// unresolved and do not expose the old version to mixed state.
+	// Отмените все оставшиеся новые JVM до проверки незавершённых установок и
+	// восстановления контрольных точек. Если хотя бы один процесс остался,
+	// оставьте транзакцию нерешённой и не открывайте старую версию в смешанном состоянии.
 	if m.Host != nil {
 		for i := len(tx.Plan.Items) - 1; i >= 0; i-- {
 			item := tx.Plan.Items[i]
@@ -570,8 +570,8 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		if m.Host != nil {
 			stopErr := m.Host.Stop(context.Background(), extensionhost.Key{ExtensionID: id, Scope: tx.Scope, ScopeID: tx.ScopeID})
 			if stopErr != nil && !errors.Is(stopErr, extensionhost.ErrHostNotRunning) && !errors.Is(stopErr, repository.ErrNotFound) {
-				// A JVM that cannot be stopped can still mutate documents. Keep
-				// the transaction recoverable; do not restore its checkpoint.
+				// JVM, которую нельзя остановить, всё ещё способна изменять документы.
+				// Сохраните возможность восстановления транзакции; не восстанавливайте контрольную точку.
 				return fmt.Errorf("cannot stop %s before rollback: %w", id, stopErr)
 			}
 		}
@@ -613,8 +613,8 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		}
 	}
 
-	// The old package may be restored while the new JVM had already written
-	// config/storage documents. Never restart old code against migrated state.
+	// Старый пакет может восстановиться после того, как новая JVM уже изменила
+	// документы конфигурации/хранилища. Не запускайте старый код с перенесённым состоянием.
 	rbErrs = append(rbErrs, m.restoreState04810(tx)...)
 	if len(rbErrs) == 0 && m.Host != nil {
 		for _, item := range tx.Plan.Items {
@@ -671,8 +671,8 @@ func (m *Manager) fail(tx model.ExtensionUpdateTransaction, e error) (model.Exte
 	return tx, e
 }
 func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []appliedItem, snapshots map[string]model.ExtensionInstall, cause error) (model.ExtensionUpdateTransaction, error) {
-	// A timed-out JVM migration may ignore thread interruption. Never restore
-	// its files while the new process can still write to them.
+	// JVM после тайм-аута миграции может проигнорировать прерывание потока.
+	// Нельзя восстанавливать файлы, пока новый процесс ещё может их изменять.
 	if m.Host != nil {
 		var stopFailures []string
 		for i := len(tx.Plan.Items) - 1; i >= 0; i-- {
@@ -683,7 +683,7 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 			}
 		}
 		if len(stopFailures) > 0 {
-			// Keep the journal recoverable on the next lease acquisition.
+			// Сохраняйте журнал пригодным для восстановления при следующем получении аренды.
 			tx.Status = "running"
 			tx.Failure = cause.Error() + "; unable to stop JVM before state restore: " + strings.Join(stopFailures, "; ")
 			tx.FinishedAt = nil

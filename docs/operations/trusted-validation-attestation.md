@@ -1,94 +1,37 @@
-> **0.34.7 compatibility:** V07 requires ValidationEvidence v4 and the explicit `authenticationMode` target field. The v3 procedure below is historical; follow [live-authentication.md](live-authentication.md) for new trusted runs. Older evidence never satisfies the new required authentication stage.
+> **Совместимость с 0.34.7:** V07 требует ValidationEvidence v4 и явного поля `authenticationMode` для целевой системы. Ниже описана историческая процедура v3; для новых доверенных запусков используйте [live-authentication.md](live-authentication.md). Старые свидетельства не удовлетворяют обязательному новому этапу аутентификации.
 
 # 0.34.5 — настоящий подготовленный запуск с независимо подписанным ValidationEvidence
 
-## границы доверия
+## Границы доверия
 
-`tools/validation-attestor/attestor.py` is an independently deployed host-side
-mTLS service (or one-shot CLI), NOT a job in the normal GitHub runner. An
-operator-approved OCI image is built from `tools/validation-attestor/Containerfile`
-and published by the operator's trusted image pipeline. The service requires its
-immutable `repository@sha256:...` and the expected image digest must be set on
-Backend. The host holds the dedicated Ed25519 PKCS#8 key (file mode 0600).
-Release signing uses a DIFFERENT key and key store; Backend rejects an attestation key equal to the manifest-signing public key. There is NO attestation
-signing key or production database credential in the worker or CI.
+`tools/validation-attestor/attestor.py` — независимо развёрнутая служба хоста с mTLS (либо одноразовый CLI), **а не** задание обычного исполнителя GitHub. OCI-образ, утверждённый оператором, собирается из `tools/validation-attestor/Containerfile` и публикуется через доверенный конвейер образов оператора. Служба требует неизменяемую ссылку вида `repository@sha256:...`, ожидаемый дайджест образа также задаётся в Backend. На хосте хранится отдельный ключ Ed25519 PKCS#8 (права файла 0600). Подписание выпуска использует **другой** ключ и другое хранилище; Backend отвергает ключ аттестации, совпадающий с открытым ключом подписи манифеста. У обработчика и CI **нет** ключа подписи аттестации или учётных данных промышленной базы данных.
 
-## развёртывание
+## Развёртывание
 
-1. Provision a non-root account with rootless Podman and dedicated, **firewalled**
-   validator egress. Explicitly allow only staged Backend + required upstream
-   Minecraft endpoints; block production/private networks. The service creates
-   a **unique** container network for each run. Network namespaces by themselves
-   do not replace the host egress policy. Avoid privileged containers, Docker
-   socket mounts, host network, host PID namespace and shared worker volumes.
-2. Build, review and publish the trusted OCI image using the root-level
-   `tools/validation-attestor/Containerfile` (`podman build -f
-   tools/validation-attestor/Containerfile --build-arg SOURCE_SHA=<git-commit>
-   --build-arg BUILD_SHA=<trusted-build-input-sha256> -t registry.example.test/validation/runner:<version> .`).
-   Pull/push and approve its immutable `@sha256:` digest, source commit SHA and
-   build-input SHA-256. The host verifies BOTH immutable OCI build-provenance
-   labels against approved parameters before releasing a grant. Use separate images for other Java
-   toolchains. The included image has Java 21; it MUST NOT certify a target
-   requiring unavailable Java 8, 17 or 25.
-3. Generate an independent Ed25519 key, not a release/manifest signing key:
+1. Подготовьте непривилегированную учётную запись с rootless Podman и отдельными **правилами межсетевого экрана для исходящего трафика** валидатора. Явно разрешите только промежуточный Backend и обязательные внешние конечные адреса Minecraft; заблокируйте промышленную и частные сети. Служба создаёт **уникальную** сеть контейнера на каждый запуск. Пространства имён сети сами по себе не заменяют сетевую политику хоста. Не используйте привилегированные контейнеры, монтирование Docker socket, сеть или пространство PID хоста и общие тома с обработчиком.
+2. Соберите, проверьте и опубликуйте доверенный OCI-образ с корневым `tools/validation-attestor/Containerfile` (`podman build -f tools/validation-attestor/Containerfile --build-arg SOURCE_SHA=<git-commit> --build-arg BUILD_SHA=<trusted-build-input-sha256> -t registry.example.test/validation/runner:<version> .`). Загрузите, выгрузите и утвердите неизменяемый дайджест `@sha256:`, SHA коммита и SHA-256 входных данных сборки. Прежде чем выдавать разрешение, хост сверяет **обе** неизменяемые метки происхождения сборки OCI с утверждёнными параметрами. Для других версий Java используйте отдельные образы. Включённый образ содержит Java 21; он **не должен** сертифицировать цель, требующую отсутствующую Java 8, 17 или 25.
+3. Сгенерируйте независимый ключ Ed25519, не используемый для подписи выпуска или манифеста:
 
    `openssl genpkey -algorithm Ed25519 -out /secure/attestor-ed25519.pem`
 
    `chmod 0600 /secure/attestor-ed25519.pem`
 
-   Export the **raw 32-byte public key** as base64url without padding into
-   `LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY`. Set
-   `LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` to exactly 64 lowercase hex
-   characters from the approved image's `@sha256:` reference. Configuration
-   absent or mismatched is fail-closed.
-4. Store the scoped Backend `release:prepare` operator token in a 0600 file,
-   readable by only the host attestor. Use a separate operator identity, never
-   a production signing credential.
-5. Start the service with `python3 tools/validation-attestor/attestor.py
-   --backend https://staging.example.test --operator-token-file /secure/operator-token
-   --signing-key /secure/attestor-ed25519.pem
-   --image registry.example.test/launcher/runner@sha256:<digest>
-   --source-sha <git-commit> --build-sha <sha256> --manifest-key <64-hex-key>
-   --tls-cert /secure/server.pem --tls-key /secure/server-key.pem
-   --client-ca /secure/clients-ca.pem`. Client certificates are required for
-   `POST /v1/attest`, with only `{"packageId":"..."}` accepted. For a one-shot
-   validation, supply `--package-id <id>` and omit the mTLS arguments.
+   Передайте **сырые 32 байта открытого ключа** в `LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY` в формате base64url без заполнения. Установите `LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` ровно в 64 строчных шестнадцатеричных символа из утверждённой ссылки образа `@sha256:`. При отсутствии или несовпадении настроек применяется отказ по умолчанию.
+4. Сохраните токен оператора Backend с ограниченной областью `release:prepare` в файле с правами 0600, доступном только аттестатору хоста. Используйте отдельную идентичность оператора, не учётные данные промышленной подписи.
+5. Запустите службу командой `python3 tools/validation-attestor/attestor.py --backend https://staging.example.test --operator-token-file /secure/operator-token --signing-key /secure/attestor-ed25519.pem --image registry.example.test/launcher/runner@sha256:<digest> --source-sha <git-commit> --build-sha <sha256> --manifest-key <64-hex-key> --tls-cert /secure/server.pem --tls-key /secure/server-key.pem --client-ca /secure/clients-ca.pem`. Для `POST /v1/attest` обязателен клиентский сертификат; допускается только `{"packageId":"..."}`. При одноразовой проверке передайте `--package-id <id>` и опустите параметры mTLS.
 
-For a modded matching server use `--server-bundle-file`, `--server-sha`,
-`--server-entry`, `--bridge-path`, `--bridge-sha`, `--bridge-version`. These
-are host-controlled, not supplied by the caller. Failure to supply the real
-matching server, Java, GUI, account or bridge prevents attestation.
+Для соответствующего модифицированного сервера укажите `--server-bundle-file`, `--server-sha`, `--server-entry`, `--bridge-path`, `--bridge-sha`, `--bridge-version`. Эти значения контролирует хост, а не вызывающая сторона. Без настоящего соответствующего сервера, Java, GUI, аккаунта или моста аттестация невозможна.
 
 ## Выполнение
 
-The service issues a fresh Backend grant, then hands **only that grant** to
-its immutable OCI worker using a read-only mount. It runs Runtime using
-normal staged download, transactional install, GUI, loader and gameplay logic.
-Worker exit alone is not PASS: the host rehashes downloaded **and installed**
-files, recomputes runtime plan/Guard digests and verifies menu frames,
-matching server evidence, player positions, game ticks, client input, gameplay
-frames and stage hashes. Only after all seven required checks pass does the
-HOST sign `launcher.validation-evidence.v2` under a domain-separated
-Ed25519 signature and submit it with its scoped operator token.
+Служба запрашивает у Backend новое разрешение, затем передаёт **только его** в неизменяемый OCI-обработчик через монтирование только для чтения. Runtime выполняет обычную загрузку из промежуточной области, транзакционную установку и штатную логику GUI, загрузчика и игрового процесса. Одного успешного завершения обработчика недостаточно: хост повторно хеширует скачанные **и установленные** файлы, пересчитывает дайджесты плана Runtime и Guard и проверяет кадры меню, свидетельства соответствующего сервера, координаты игрока, игровые тики, пользовательский ввод, кадры игрового процесса и хеши этапов. Только после прохождения всех семи обязательных проверок **хост** подписывает `launcher.validation-evidence.v2` подписью Ed25519 с разделением доменов и отправляет свидетельство со своим токеном оператора ограниченной области.
 
-Backend verifies the pinned public key and OCI image digest, rejects arbitrary
-CI signatures, compares the signed evidence to its immutable staged manifest,
-artifact digest, current integrity proof and persisted same-run stage hashes,
-then commits it once in PostgreSQL. Repeated run IDs are rejected. The
-old staged report endpoint stays **untrusted**.
+Backend проверяет закреплённый открытый ключ и дайджест OCI-образа, отвергает произвольные подписи CI, сравнивает подписанное свидетельство с неизменяемым подготовленным манифестом, дайджестом артефакта, текущим доказательством целостности и сохранёнными хешами этапов того же запуска, затем однократно фиксирует результат в PostgreSQL. Повторное использование идентификатора запуска отклоняется. Старый адрес подготовленного отчёта остаётся **недоверенным**.
 
-**No success claim without real host provisioning**. V05 will add freshness,
-full policy/target applicability and revocation; V11 full stable gate remains
-blocked in 0.34.5. Existing CI executes tests but never signs certification.
+**Без реального развёртывания на хосте нельзя заявлять об успехе.** V05 добавит актуальность, полную применимость политики к цели и отзыв; обязательный шлюз стабильного выпуска V11 остаётся заблокирован в 0.34.5. Существующий CI запускает тесты, но никогда не подписывает свидетельство сертификации.
 
-## операции
+## Эксплуатация
 
-The host deletes its temporary download/game directories after every run and
-never mounts the signing key. Ensure rootless Podman's storage and network
-are segregated from other services; run only one validation per attestor
-instance. Rotate compromised keys by updating the pinned public key and
-reviewing already issued attestations. Log redaction and retention are extended
-in V12. Do not publish raw logs containing player/session credentials.
+Хост удаляет временные каталоги скачивания и игры после каждого запуска и никогда не монтирует ключ подписи. Убедитесь, что хранилище и сеть rootless Podman изолированы от других служб; на экземпляр аттестатора допускается только одна проверка одновременно. При компрометации ключей замените закреплённый открытый ключ и пересмотрите выданные аттестации. Удаление секретов из журналов и сроки хранения расширяются в V12. Не публикуйте необработанные журналы с учётными данными игрока или сеанса.
 
-
-**0.34.12 upgrade:** the attestor now additionally requires `--diagnostics-dir` pointing to an owner-only 0700 persistent directory; see `validation-reports-security.md`.
+**Изменение 0.34.12:** теперь аттестатор дополнительно требует `--diagnostics-dir`, указывающий на постоянный каталог, доступный только владельцу (0700); см. `validation-reports-security.md`.

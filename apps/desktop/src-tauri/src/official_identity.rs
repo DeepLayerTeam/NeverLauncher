@@ -1,6 +1,6 @@
-//! 0.26.2: Native boundary for the existing official Minecraft backend flow.
-//! The renderer receives Microsoft/Minecraft credentials or the opaque
-//! encrypted backend ticket (which itself contains refresh/game tokens).
+//! 0.26.2: нативная граница для существующего процесса официальной авторизации Minecraft в Backend.
+//! Интерфейс получает учётные данные Microsoft/Minecraft или непрозрачный
+//! зашифрованный билет Backend (сам билет содержит токены обновления и игры).
 use std::{collections::HashMap, net::IpAddr, sync::Mutex, time::{Duration, Instant}};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -42,7 +42,7 @@ pub struct DeviceChallenge { pub verification_uri: String, pub user_code: String
 #[serde(rename_all = "camelCase")]
 pub struct PollResult { pub pending: bool, #[serde(skip_serializing_if="Option::is_none")] pub profile: Option<OfficialProfile>, #[serde(skip_serializing_if="Option::is_none")] pub interval_seconds: Option<u64> }
 
-// Never serialize this struct back over IPC. Keyring payload is all-or-nothing.
+// Никогда не сериализуйте эту структуру обратно через IPC. Запись хранилища ключей атомарна.
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StoredAccount {
@@ -57,9 +57,9 @@ struct NativeAccount0265 {
     refresh_token: String,
     minecraft_token: String,
     minecraft_expires_at: u64,
-    // Recovery checkpoint: MS refresh rotation may succeed before Xbox/XSTS
-    // or Minecraft becomes available. Keep the redeemed access token ONLY in
-    // the OS vault so a restart redeems a rotated refresh token again.
+    // Контрольная точка восстановления: обновление refresh-токена Microsoft может завершиться раньше,
+    // чем станут доступны Xbox/XSTS или Minecraft. Храните выданный access-токен ТОЛЬКО
+    // в защищённом хранилище ОС, чтобы после перезапуска не использовать обновлённый refresh повторно.
     #[serde(default)] pending_microsoft_access: String,
     #[serde(default)] pending_microsoft_expires_at: u64,
 }
@@ -96,8 +96,8 @@ struct PendingFlow {
 impl Drop for PendingFlow { fn drop(&mut self) { self.ticket.zeroize(); } }
 
 fn retryable_backend_0396(error: &str) -> bool {
-    // Keep an already redeemed one-time Microsoft grant on recoverable transport
-    // failures. Auth revocation or identity mismatch must be retried.
+    // Сохраняйте уже использованное одноразовое разрешение Microsoft при устранимых сетевых сбоях.
+    // Отзыв авторизации или несовпадение идентичности требуют повторной авторизации.
     matches!(error,
         "Сервис официальной авторизации недоступен" |
         "Сервис Microsoft/Minecraft временно недоступен" |
@@ -106,13 +106,13 @@ fn retryable_backend_0396(error: &str) -> bool {
 }
 
 fn retry_delay(base: u64, failures: u32, server_hint: Option<u64>) -> u64 {
-    // Exponential backoff, preserving Microsoft's original/slow_down interval.
+    // Экспоненциальная задержка с сохранением исходного интервала Microsoft и slow_down.
     base.max(5).max(5u64.saturating_mul(1u64 << failures.min(5)))
         .max(server_hint.unwrap_or(0)).clamp(5, 3600)
 }
 
-// Closing a watch channel after SUCCESS must not be mistaken for user cancel.
-// Only an explicit true signal ends an in-flight login.
+// Закрытие канала наблюдения после УСПЕХА нельзя принимать за отмену пользователем.
+// Только явный сигнал true прекращает незавершённый вход.
 async fn await_device_cancel(rx: &mut watch::Receiver<bool>) {
     loop {
         if *rx.borrow() { return; }
@@ -153,8 +153,8 @@ fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
     Ok((url, hex::encode(digest.finalize())))
 }
 
-// Never session ID must come from the backend's authenticated claims, not
-// from a renderer field that can select an arbitrary credential namespace.
+// ID сеанса Never должен поступать из проверенных Backend данных аутентификации,
+// а не из поля интерфейса, позволяющего выбрать произвольное пространство учётных данных.
 fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result<(), String> {
     let actual = config.get("SessionId").and_then(Value::as_str).unwrap_or("");
     let user = config.get("UserId").and_then(Value::as_str).unwrap_or("");
@@ -164,10 +164,10 @@ fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result
     Ok(())
 }
 
-// Windows Generic Credentials limit the blob size (commonly 2560 bytes).
-// Write a new randomly named set of OS-keyring fragments first, then commit a
-// small pointer credential last: rotation is crash-safe without plaintext files.
-// All fragments are OS-protected, not browser/device localStorage.
+// Windows Generic Credentials ограничивает размер записи (обычно 2560 байт).
+// Сначала запишите новые фрагменты хранилища ОС со случайными именами, затем
+// маленький указатель на поколение: ротация устойчива к сбоям без файлов открытого текста.
+// Все фрагменты защищены ОС и не хранятся в localStorage браузера/устройства.
 const CHUNK_BYTES: usize = 1024;
 const MAX_CHUNKS: usize = 64;
 #[derive(Serialize, Deserialize)]
@@ -211,8 +211,8 @@ fn remove_fragments(id: &str, pointer: &VaultPointer) -> Result<(), String> {
 }
 fn read(id: &str) -> Result<Option<StoredAccount>, String> {
     let Some(pointer) = read_pointer(id)? else { return Ok(None) };
-    // Zeroize partial credential bytes even when a later fragment fails to
-    // decode or the platform keyring becomes unavailable mid-read.
+    // Обнуляйте частично считанные байты учётных данных даже если последующий фрагмент
+    // не декодируется или системное хранилище ключей станет недоступно во время чтения.
     let mut raw = Zeroizing::new(Vec::<u8>::new());
     for index in 0..pointer.count {
         let mut part = entry(&fragment_id(id, &pointer.generation, index))?
@@ -279,14 +279,14 @@ fn save(id: &str, record: &StoredAccount) -> Result<(), String> {
         let _ = remove_fragments(id, &pointer);
         return Err(err);
     }
-    // Committed generation is already readable. Clean the old generation only
-    // after the pointer switches. Failure to clean must not roll back the login.
+    // Зафиксированное поколение уже доступно для чтения. Удаляйте предыдущее только
+    // после переключения указателя; ошибка очистки не должна откатывать вход.
     if let Some(prior) = prior { let _ = remove_fragments(id, &prior); }
     Ok(())
 }
 fn delete(id: &str) -> Result<(), String> {
     let prior = read_pointer(id)?;
-    // Invalidate the account pointer first, including on partial cleanup.
+    // Сначала сделайте указатель аккаунта недействительным, в том числе при частичной очистке.
     match entry(id)?.delete_credential() {
         Ok(()) | Err(keyring::v1::Error::NoEntry) => {},
         Err(_) => return Err("Не удалось отвязать игровой аккаунт в OS vault".into()),
@@ -294,9 +294,9 @@ fn delete(id: &str) -> Result<(), String> {
     if let Some(pointer) = prior { remove_fragments(id, &pointer) } else { Ok(()) }
 }
 
-// 0.26.7: account directory is metadata only. Each account's Microsoft refresh
-// and Minecraft bearer remain in an independent, chunked OS credential record.
-// The original 0.26.2 slot is only read while migrating to this directory.
+// 0.26.7: каталог аккаунтов содержит только метаданные. Токен обновления Microsoft
+// и Bearer Minecraft каждого аккаунта хранятся в независимой фрагментированной записи ОС.
+// Исходная запись 0.26.2 считывается только при миграции в этот каталог.
 #[derive(Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 struct AccountDirectory0267 {
@@ -346,22 +346,22 @@ fn load_directory(id: &str) -> Result<AccountDirectory0267, String> {
 fn save_directory(id: &str, dir: &AccountDirectory0267) -> Result<(), String> {
     validate_directory(dir)?;
     let mut raw = serde_json::to_string(dir).map_err(|_| "Невозможно записать реестр аккаунтов".to_string())?;
-    // Windows Credential Manager stores a small directory (< 2560 bytes).
+    // Менеджер учётных данных Windows хранит небольшой каталог (менее 2560 байт).
     if raw.len() > 2000 {raw.zeroize();return Err("Превышен размер реестра аккаунтов".into());}
     let result = entry(&directory_slot(id))?.set_password(&raw)
         .map_err(|_| "Не удалось сохранить реестр аккаунтов в OS vault".to_string());
     raw.zeroize();
     result
 }
-// Must be called while holding vault_lock. A failure leaves the old slot intact.
+// Вызывать только при удержании vault_lock. При ошибке прежняя запись сохраняется.
 fn migrate_legacy(id: &str) -> Result<(), String> {
     let Some(legacy) = read(id)? else { return Ok(()); };
     let uuid = normalized_uuid(&legacy.profile.id)?;
     let mut dir = load_directory(id)?;
     let slot = account_slot(id, &uuid)?;
-    // Never overwrite a newer native account (schema 2) with an old backend
-    // ticket left behind by an interrupted 0.26.7 migration. And delete
-    // the only recoverable legacy ticket if the indexed slot is incomplete.
+    // Никогда не перезаписывайте новый нативный аккаунт (схема 2) старым билетом Backend,
+    // оставшимся после прерванной миграции 0.26.7. Удаляйте единственный пригодный
+    // для восстановления старый билет, если индексированная запись неполная.
     let existing = read(&slot)?;
     if let Some(ref current) = existing {
         if normalized_uuid(&current.profile.id)? != uuid {
@@ -379,7 +379,7 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
     } else if existing.is_none() {
         return Err("OS vault migration incomplete: active account slot missing".into());
     }
-    // Only retire the old credential AFTER verifying a readable replacement.
+    // Удаляйте прежние учётные данные ТОЛЬКО после проверки читаемой замены.
     let migrated = read(&slot)?.ok_or("OS vault migration incomplete")?;
     if normalized_uuid(&migrated.profile.id)? != uuid {
         return Err("OS vault migration identity mismatch".into());
@@ -399,8 +399,8 @@ fn add_account(id: &str, record: &StoredAccount) -> Result<(), String> {
     let mut dir = load_directory(id)?;
     if !dir.ids.contains(&uuid) && dir.ids.len() >= MAX_ACCOUNTS {return Err("Превышен лимит Minecraft-аккаунтов".into());}
     let slot = account_slot(id, &uuid)?;
-    // Save verified tokens first; if committing metadata fails, old active
-    // selection remains usable. The orphaned new slot contains no plaintext.
+    // Сначала сохраняйте проверенные токены. Если фиксация метаданных не удалась,
+    // прежний активный выбор остаётся пригодным. Новая бесхозная запись не содержит открытого текста.
     save(&slot, record)?;
     if !dir.ids.contains(&uuid) {dir.ids.push(uuid.clone());}
     dir.active = Some(uuid);
@@ -410,8 +410,8 @@ fn remove_account(id: &str, uuid: &str) -> Result<(), String> {
     let uuid = normalized_uuid(uuid)?;
     let mut dir = load_directory(id)?;
     if !dir.ids.contains(&uuid) { return Err("Minecraft-аккаунт не найден".into()); }
-    // Invalidate selection before deleting credentials. No removed account
-    // can be launched even if OS keyring cleanup subsequently fails.
+    // До удаления учётных данных сбросьте выбор аккаунта. Удалённый аккаунт
+    // не может запускаться, даже если последующая очистка хранилища ОС завершится ошибкой.
     dir.ids.retain(|value| value != &uuid);
     if dir.active.as_deref() == Some(&uuid) {dir.active = dir.ids.first().cloned();}
     save_directory(id, &dir)?;
@@ -462,11 +462,11 @@ impl IdentityManager {
             bytes.extend_from_slice(&chunk);
         }
         let payload: Value = serde_json::from_slice(&bytes).map_err(|_| "Official API вернул невалидный JSON".to_string())?;
-        // Discard any HTTP body containing secret tickets as soon as it is decoded.
+        // Немедленно удаляйте тело HTTP-ответа с секретными билетами после декодирования.
         bytes.zeroize();
         if !(200..300).contains(&status) {
-            // The Device Code waiter owns retries. Do not turn provider backoff
-            // or temporary HTTP failures into terminal sign-out errors.
+            // Ожиданием Device Code и повторами управляет один обработчик. Не превращайте
+            // задержку провайдера или временные ошибки HTTP в окончательные ошибки выхода из аккаунта.
             if route == "/device/poll" && (status == 408 || status == 429 || (500..600).contains(&status)) {
                 return Ok(Response { status, data: Value::Null, rotation: None, retry_after });
             }
@@ -481,9 +481,9 @@ impl IdentityManager {
         let data = payload.get("data").cloned().unwrap_or(payload);
         Ok(Response { status, data, rotation, retry_after })
     }
-    // The session ID supplied over Tauri IPC is untrusted. Backend authenticates
-    // the bearer, observes live session/device state and returns its real SID.
-    // This check must run BEFORE reading, mutating or launching from the vault.
+    // ID сеанса, полученный через Tauri IPC, не считается доверенным. Backend проверяет
+    // Bearer, живое состояние сеанса и устройства и возвращает настоящий SID.
+    // Эта проверка ОБЯЗАТЕЛЬНА до чтения, изменения или запуска из хранилища.
     async fn verified_scope(&self, backend: &str, access: &str, session: &str) -> Result<(Url, String), String> {
         let (base, id) = scope(backend, session)?;
         let response = self.request(&base, access, "/browser/config", Method::GET, None, None, None).await?;
@@ -501,8 +501,8 @@ impl IdentityManager {
         if let Some(flow) = previous { let _ = flow.cancel.send(true); }
         Ok(())
     }
-    // On every asynchronous boundary match the flow nonce. Cancellation or a
-    // replacement login must not resurrect an older Device Code or save its account.
+    // На каждой асинхронной границе сверяйте nonce процесса. Отмена или новый вход
+    // не должны восстанавливать прежний Device Code или сохранять его аккаунт.
     pub async fn begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge, String> {
         let (base, id) = self.verified_scope(backend,access, session).await?;
         self.pending_remove(&id)?;
@@ -566,8 +566,8 @@ impl IdentityManager {
         };
         let response = self.request(&base, access, "/device/poll", Method::POST, Some(ticket.as_str()), None, None).await;
         ticket.zeroize();
-        // Acquire the async lock before the std mutex: Tauri command futures must
-        // remain Send, and no flow mutex may be held across an await.
+        // Получайте асинхронную блокировку до стандартного мьютекса: будущие команды Tauri
+        // должны оставаться Send, а мьютекс процесса нельзя удерживать через await.
         let _vault = self.vault_lock.lock().await;
         let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
         if !flows.get(&id).is_some_and(|f| f.nonce == nonce) { return Err("Microsoft-авторизация отменена".into()); }
@@ -577,8 +577,8 @@ impl IdentityManager {
         let result = match response {
             Ok(result) => result,
             Err(err) => {
-                // Network and malformed upstream responses are recoverable; a
-                // revoked Never session, denial, and expired OAuth grant are not.
+                // Сетевые сбои и некорректные ответы провайдера допускают восстановление;
+                // отозванный сеанс Never, отказ и истёкшее разрешение OAuth — нет.
                 let transient = err.contains("недоступен") || err.contains("Ошибка чтения") || err.contains("невалидный JSON");
                 if !transient { flows.remove(&id); return Err(err); }
                 flow.failures = flow.failures.saturating_add(1);
@@ -594,8 +594,8 @@ impl IdentityManager {
             flow.ticket.zeroize();
             flow.ticket = continuation;
             flow.interval = interval; // Includes provider slow_down (+5 seconds).
-            // After a successful Microsoft grant the Backend may allow a short
-            // recovery window to finish Xbox/Minecraft without reusing the code.
+            // После успешного разрешения Microsoft Backend может выделить короткое окно
+            // восстановления для завершения Xbox/Minecraft без повторного использования кода.
             if let Some(expires_in) = result.data.get("expiresIn").and_then(Value::as_u64) {
                 if expires_in > 0 && expires_in <= 3600 {
                     flow.expires = Instant::now() + Duration::from_secs(expires_in);
@@ -614,15 +614,15 @@ impl IdentityManager {
         let profile = Self::profile(&result.data)?;
         let ticket = result.data.get("session").and_then(Value::as_str)
             .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Official API не выдал защищённую игровую сессию")?;
-        // Keep the nonce guard held across vault persistence. A cancellation
-        // cannot race a successful write and leave a cancelled account linked.
+        // Удерживайте проверку nonce во время сохранения в хранилище. Отмена не должна
+        // состязаться с успешной записью и оставлять привязанный отменённый аккаунт.
         migrate_legacy(&id)?;
         add_account(&id, &StoredAccount { schema: 1, ticket: ticket.to_owned(), profile: profile.clone(), native: None })?;
         flows.remove(&id);
         Ok(PollResult { pending: false, profile: Some(profile), interval_seconds: None })
     }
-    /// A single native waiter owns pacing, temporary retry backoff and expiry.
-    /// No browser timer can leak session tickets or generate tight poll loops.
+    /// Один нативный обработчик отвечает за интервалы опроса, задержку временных повторов
+    /// и срок действия. Таймер браузера не может раскрыть билеты или создать частый опрос.
     pub async fn wait_device(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile, String> {
         let (_, id) = self.verified_scope(backend,access, session).await?;
         let mut cancelled = {
@@ -654,8 +654,8 @@ impl IdentityManager {
             }
         }
     }
-    // Caller MUST hold vault_lock through network operation and credential rotation.
-    // Account selection must not switch mid-operation (wrong-account texture/launch).
+    // Вызывающая сторона ОБЯЗАНА удерживать vault_lock во время сетевой операции и ротации.
+    // Выбор аккаунта нельзя менять посреди операции (иначе текстура или запуск чужого аккаунта).
     async fn associated(&self, base: &Url, id: &str, access: &str, path: &str, method: Method, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<(Response, StoredAccount), String> {
         let (slot, mut record) = selected_record(id)?.ok_or("Официальный Minecraft-аккаунт не подключён")?;
         let result = self.request(base, access, path, method, Some(&record.ticket), body, skin).await?;
@@ -720,9 +720,9 @@ impl IdentityManager {
         if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Minecraft identity mismatch".into()); }
         Ok(profile)
     }
-    // Native-only official ServerBridge ticket creation. Renderer supplies scope
-    // and Guard evidence, the official Minecraft token. Revalidate the
-    // selected account while holding the same OS-vault selection lock.
+    // Создание официального билета ServerBridge только в нативном процессе. Интерфейс
+    // передаёт область действия и свидетельство Guard, а не официальный токен Minecraft.
+    // Повторно проверяйте выбранный аккаунт под той же блокировкой выбора хранилища ОС.
     pub async fn prepare_server_join_0397(&self, req: OfficialServerJoinRequest0397) -> Result<OfficialServerJoinResult0397,String> {
         let (base,id)=self.verified_scope(&req.backend_url,&req.token,&req.session_id).await?;
         let expected=normalized_uuid(&req.expected_uuid)?;
@@ -794,11 +794,11 @@ impl IdentityManager {
         Ok(cred)
     }
 
-    // Xbox/XSTS/Minecraft are acquired in this process and persist only in the native vault.
+    // Xbox/XSTS/Minecraft получаются в этом процессе и сохраняются только в нативном хранилище.
     async fn verified_native_grant(&self, client_id: &str, grant: &MicrosoftGrant) -> Result<(OfficialProfile, NativeAccount0265),ProviderError> {
         let minecraft = self.provider.exchange(&grant.access_token).await?;
-        // A playable Java profile is required even if mcstore is empty (Game Pass).
-        // Both requests use the same bearer, in Rust, without renderer IPC.
+        // Нужен игровой Java-профиль, даже если mcstore пуст (Game Pass).
+        // Оба запроса используют один Bearer внутри Rust, без IPC интерфейса.
         let profile = self.provider.verify_java(&minecraft.access_token, None).await?;
         let expires_at = now().saturating_add(minecraft.expires_in.saturating_sub(60));
         Ok((profile,NativeAccount0265 {client_id:client_id.into(),refresh_token:grant.refresh_token.clone(),
@@ -806,7 +806,7 @@ impl IdentityManager {
             pending_microsoft_access:String::new(),pending_microsoft_expires_at:0}))
     }
     async fn native_validate(&self, base: &Url, id: &str, access: &str, record: &mut StoredAccount, force_refresh: bool) -> Result<(), String> {
-        // Even with a native credential, the Never session must still be valid.
+        // Даже с нативными учётными данными сеанс Never должен оставаться действительным.
         let config = self.request(base,access,"/browser/config",Method::GET,None,None,None).await?;
         let native = record.native.as_ref().ok_or("Отсутствует native Minecraft identity")?;
         if config.data.get("enabled").and_then(Value::as_bool) == Some(false) { return Err("Официальная авторизация отключена администратором".into()); }
@@ -816,9 +816,9 @@ impl IdentityManager {
         if force_refresh || native.minecraft_expires_at <= now().saturating_add(120) ||
             !native.pending_microsoft_access.is_empty() {
             let client_id = native.client_id.clone();
-            // An OS-vault checkpoint survives shutdown after a one-time Microsoft
-            // refresh grant was rotated. Retry Xbox with this access token;
-            // fall back to the already consumed refresh token.
+            // Контрольная точка хранилища ОС переживает остановку после ротации одноразового
+            // разрешения обновления Microsoft. Повторите Xbox с этим access-токеном;
+            // при необходимости вернитесь к уже использованному refresh-токену.
             if !record.native.as_ref().is_some_and(|n|
                 !n.pending_microsoft_access.is_empty() && n.pending_microsoft_expires_at > now().saturating_add(30)) {
                 {
@@ -835,8 +835,8 @@ impl IdentityManager {
                     n.pending_microsoft_access = grant.access_token.clone();
                     n.pending_microsoft_expires_at = now().saturating_add(grant.expires_in.saturating_sub(60));
                 }
-                // Persist the rotated refresh AND pending Microsoft grant in
-                // the same crash-safe generation, before contacting Xbox.
+                // Сохраните обновлённый refresh-токен И ожидающее разрешение Microsoft
+                // в одном устойчивом к сбоям поколении до обращения в Xbox.
                 save(id,record)?;
             }
             let ms_token = Zeroizing::new(record.native.as_ref().unwrap().pending_microsoft_access.clone());
@@ -856,8 +856,8 @@ impl IdentityManager {
             record.profile = profile;
             save(id,record)?;
         }
-        // Revalidate entitlements and authenticated Java profile on every
-        // native status/launch/texture action; trust cached membership.
+        // Повторно проверяйте права и аутентифицированный Java-профиль при каждом
+        // нативном запросе статуса, запуска или текстур; доверяйте кэшированным правам.
         let profile = self.provider.verify_java(&record.native.as_ref().unwrap().minecraft_token,
             Some(&record.profile.id)).await.map_err(|e|e.message().to_string())?;
         record.profile = profile;
@@ -874,8 +874,8 @@ impl IdentityManager {
         self.pending_remove(&id)?;
         self.native_pending_remove(&id)?;
         self.cancel_browser(&id)?;
-        // Reserve the flow BEFORE an async provider request. Cancellation or a
-        // replacement is effective even during the initial network round trips.
+        // Зарезервируйте процесс ДО асинхронного запроса провайдера. Отмена или замена
+        // должны действовать даже во время первых сетевых обращений.
         let nonce=rand::random::<u64>();
         let (cancel,_) = watch::channel(false);
         self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.insert(id.clone(),NativePending0265 {
@@ -921,7 +921,7 @@ impl IdentityManager {
             if flow.in_flight {return Err("Microsoft polling или Device Code initialization уже выполняется".into());}
             if Instant::now()<flow.next { return Ok(PollResult{pending:true,profile:None,interval_seconds:Some(flow.next.saturating_duration_since(Instant::now()).as_secs().max(1))}); }
             flow.in_flight=true;
-            // Once redeemed, do not reuse a one-time Device Code after Xbox outage.
+            // После использования не повторяйте одноразовый Device Code при отказе Xbox.
             (flow.client_id.clone(),flow.device.clone(),flow.nonce,flow.grant.take())
         };
         let mut microsoft = prior_grant;
@@ -929,15 +929,15 @@ impl IdentityManager {
             Some(self.provider.device_poll(&client_id,device.as_str()).await)
         } else {None};
         if let Some(Ok(grant))=grant_result.as_ref() {
-            // Microsoft Device Code was redeemed successfully. Provider outages
-            // can outlive the original device-code deadline: allow bounded
-            // recovery with this grant without redeeming the device code again.
+            // Код устройства Microsoft успешно обменян. Сбой провайдера может длиться
+            // дольше срока исходного кода: допускайте ограниченное восстановление по этому
+            // разрешению без повторного обмена кода устройства.
             if let Ok(mut flows) = self.native_pending.lock() {
                 if let Some(flow) = flows.get_mut(&id).filter(|f| f.nonce == nonce) {
                     flow.expires = Instant::now() + Duration::from_secs(grant.expires_in.clamp(60, 1800));
                 }
             }
-            // Copy is kept only inside native memory until the flow is committed.
+            // Копия хранится только в нативной памяти до фиксации процесса.
             microsoft=Some(MicrosoftGrant {access_token:grant.access_token.clone(),refresh_token:grant.refresh_token.clone(),
                 expires_in:grant.expires_in,token_type:grant.token_type.clone()});
         }
@@ -953,8 +953,8 @@ impl IdentityManager {
             if Instant::now()>=flow.expires {flows.remove(&id);return Err("Microsoft Device Code истёк".into());}
         }
         if completed.as_ref().is_some_and(|v|v.is_ok()) {
-            // Revalidate Never session before saving native credentials. Do not
-            // keep a synchronous mutex locked across an HTTP await.
+            // Проверьте сеанс Never перед сохранением нативных учётных данных.
+            // Не удерживайте синхронный мьютекс во время HTTP await.
             drop(flows);
             let current = match self.request(&base,access,"/browser/config",Method::GET,None,None,None).await {
                 Ok(response) => response,
@@ -984,9 +984,9 @@ impl IdentityManager {
             let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
             if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
             let (profile,account)=completed.unwrap().unwrap();
-            // A failing OS credential write must not require redeeming the
-            // one-time Microsoft Device Code again. Keep the already redeemed
-            // grant while the vault is temporarily unavailable.
+            // Ошибка записи учётных данных в ОС не должна требовать повторного использования
+            // одноразового Device Code Microsoft. Сохраняйте уже выданное разрешение,
+            // пока хранилище временно недоступно.
             let stored = migrate_legacy(&id).and_then(|()|
                 add_account(&id,&StoredAccount {schema:2,ticket:String::new(),profile:profile.clone(),native:Some(account)}));
             if let Err(_vault_error) = stored {
@@ -1047,8 +1047,8 @@ impl IdentityManager {
         Ok(self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?
             .get(id).is_some_and(|flow| flow.state == state))
     }
-    // await the callback and complete provider exchange wholly within Rust.
-    // Renderer sees only the finished profile and code/state/verifier.
+    // Дождитесь callback и полностью завершите обмен с провайдером в Rust.
+    // Интерфейс получает только готовый профиль и код/состояние/verifier.
     pub async fn login_browser(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile,String> {
         let (base,id) = self.verified_scope(backend,access,session).await?;
         let state = official_browser_0263::random_secret(32);
@@ -1057,8 +1057,7 @@ impl IdentityManager {
         self.cancel_browser(&id)?;
         let (sender,receiver) = watch::channel(false);
         self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?.insert(id.clone(), BrowserFlow0263 {state: state.to_string(), cancel: sender});
-        // Cleanup always removes only this specific flow. A newer login must
-        // be removed by completion/cancellation of an older one.
+        // Очистка всегда удаляет только этот конкретный процесс. Новый вход должен удаляться при завершении или отмене более старого.
         let response = async {
             let client_info = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
             verify_session_binding_0396(&client_info.data, session)?;
@@ -1075,8 +1074,8 @@ impl IdentityManager {
             official_browser_0263::open_system_browser(&auth_url)?;
             let code = official_browser_0263::receive_callback(listener,&state,receiver).await?;
             if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
-            // 0.26.5: native MS authorization code exchange and native Xbox/XSTS/Minecraft chain.
-            // No Backend browser/exchange request, no Backend session ticket.
+            // 0.26.5: нативный обмен кода авторизации MS и цепочка Xbox/XSTS/Minecraft.
+            // Без запроса браузера/обмена через Backend и без билета сеанса Backend.
             let grant = self.provider.authorization_code(client_id,&redirect,code.as_str(),verifier.as_str())
                 .await.map_err(|e|e.message().to_string())?;
             let (profile, native) = self.verified_native_grant(client_id,&grant).await.map_err(|e|e.message().to_string())?;
@@ -1084,7 +1083,7 @@ impl IdentityManager {
             verify_session_binding_0396(&current.data, session)?;
             if current.data.get("enabled").and_then(Value::as_bool) == Some(false) || current.data.get("browserEnabled").and_then(Value::as_bool) == Some(false) || current.data.get("clientId").and_then(Value::as_str) != Some(client_id) { return Err("Авторизация отключена или Client ID изменён".into()); }
             let _vault = self.vault_lock.lock().await;
-            // Hold flow lock through persistence: a cancelled login must not commit.
+            // Удерживайте блокировку процесса до сохранения: отменённый вход нельзя фиксировать.
             let flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;
             if !flows.get(&id).is_some_and(|flow| flow.state == state.as_str()) {
                 return Err("Microsoft-авторизация отменена".into());
@@ -1149,7 +1148,7 @@ impl IdentityManager {
             self.native_validate(&base,&slot,access,&mut record,true).await?;
             Ok(record.profile.clone())
         } else {
-            // Backend owns rotation for legacy accounts. Never send its ticket to renderer.
+            // Ротацией старых аккаунтов управляет Backend. Никогда не передавайте билет в интерфейс.
             let result=self.request(&base,access,"/profile",Method::GET,Some(&record.ticket),None,None).await?;
             let fresh=Self::profile(&result.data)?;
             if normalized_uuid(&fresh.id)? != normalized_uuid(&record.profile.id)? {return Err("Minecraft UUID mismatch".into());}
@@ -1159,9 +1158,9 @@ impl IdentityManager {
             Ok(record.profile.clone())
         }
     }
-    // Link is a server-side, durable Never relationship, not merely a local
-    // vault association. Hold the selection lock across provider verification
-    // and Backend transaction to prevent linking a just-switched account.
+    // Привязка — устойчивое серверное отношение Never, а не просто локальная ассоциация
+    // хранилища. Удерживайте блокировку выбора во время проверки провайдера
+    // и транзакции Backend, чтобы не связать только что переключённый аккаунт.
     pub async fn links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
         let (base,_)=self.verified_scope(backend,access,session).await?;
         let response=self.request(&base,access,"/link",Method::GET,None,None,None).await?;
@@ -1180,7 +1179,7 @@ impl IdentityManager {
         self.native_validate(&base,&slot,access,&mut record,false).await?;
         if normalized_uuid(&record.profile.id)?!=requested {return Err("Minecraft UUID изменился при проверке".into());}
         let bearer=Zeroizing::new(record.native.as_ref().ok_or("Отсутствует официальный token")?.minecraft_token.clone());
-        // Native-only credential: renderer sees only the verified result.
+        // Учётные данные остаются только в нативном коде; интерфейс видит проверенный результат.
         let response=self.request(&base,access,"/link",Method::POST,None,Some(json!({
             "expectedUuid":requested,"minecraftAccessToken":bearer.as_str(),"confirm":true
         })),None).await?;

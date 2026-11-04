@@ -1,70 +1,30 @@
 # NeverLauncher 0.49.10 — реальная репетиция миграции трёх проектов Gravit и обновления клиентов
 
-This is an **operator-run executable** for three **independently sourced real**
-Gravit projects. It does not generate project fixtures, invent Minecraft observations,
-run a mock server, forge Backend migration reports, change production traffic or
-approve 0.50.0 GA. The downloaded game client, licensed account, server and RCON
-connection must already be working in three isolated staging environments.
+Это **исполняемая процедура оператора** для трёх **реальных проектов Gravit с независимыми источниками**. Она не генерирует тестовые проекты, не подменяет наблюдения Minecraft, не запускает имитационный сервер, не подделывает отчёты миграции Backend, не переключает промышленный трафик и не утверждает GA 0.50.0. Скачанный игровой клиент, лицензированный аккаунт, сервер и соединение RCON уже должны работать в трёх изолированных промежуточных средах.
 
-## что действительно выполняется
+## Что действительно выполняется
 
-For **each** of exactly `fileauth-single`, `sql-modded`, and `proxy-network`:
+Для **каждого** из ровно трёх проектов `fileauth-single`, `sql-modded` и `proxy-network`:
 
-1. Pin the bytes of the CLI executable, actual Gravit source ZIP, profile mapping,
-   previously obtained multi-profile dry-run, signed update package and delivery
-   manifest to operator-reviewed SHA-256 hashes. Reject reused project/run/source,
-   symlinked test probes, an unprotected output directory, or a missing stage.
-2. Replay `launcher migrate gravit verify-dry-run-all` against the live Backend,
-   proving the same source, mapping and unmodified target are still present.
-3. Execute `launcher migrate gravit import-content-all` against the production
-   implementation of staged encrypted workspaces (no fake import receipt).
-4. Execute `launcher migrate gravit rehearse`: actual foreground client launch,
-   RCON-confirmed UUID join, seven independent checks and Backend's PostgreSQL
-   verification of migrated UUIDs, modules, auth, trust and content. **Require
-   `ready=true`, no blockers and `cutoverAllowed=false` from the Backend.**
-5. Execute the real signed `launcher update components` on the isolated installed
-   Desktop/Guard/Runtime files with `--package`, SHA-256 pin and verified delivery
-   manifest. Never enable the development/unpinned bypass. Confirm `committed`,
-   the expected target version and the changed installed executable bytes.
-6. Execute `launcher migrate gravit rehearse-local` on the now-updated executable,
-   using the SAME real process + loopback RCON + seven-probe mechanism. Require
-   the new client executable SHA-256, the same player UUID and the same source
-   and target world/inventory/permission snapshots. This second report is
-   **local-only** and cannot overwrite the original immutable PostgreSQL
-   rehearsal receipt or claim cutover authorization.
-7. Write owner-only, non-overwriting per-project receipts. Only if **all three**
-   finish, write `cohort-04910.json` with the explicit status
-   `isolated-stage-pass-not-production-GA` and `productionGA: false`.
+1. Закрепите SHA-256 проверенных оператором точных байтов CLI, реального исходного ZIP Gravit, карты профилей, ранее полученного многопрофильного пробного запуска, подписанного пакета обновления и манифеста поставки. Отклоните повторно использованный проект/запуск/источник, символические ссылки в тестовых проверках, незащищённый каталог вывода и отсутствие промежуточного этапа.
+2. Повторите `launcher migrate gravit verify-dry-run-all` с работающим Backend и подтвердите неизменность исходника, карты и целевой системы.
+3. Выполните `launcher migrate gravit import-content-all` с промышленной реализацией подготовленных зашифрованных рабочих областей (не с поддельной квитанцией импорта).
+4. Выполните `launcher migrate gravit rehearse`: настоящий запуск клиента на переднем плане, подтверждённый RCON вход UUID, семь независимых проверок и проверку перенесённых UUID, модулей, авторизации, доверия и содержимого в PostgreSQL через Backend. **Обязательны `ready=true`, отсутствие блокирующих причин и `cutoverAllowed=false` от Backend.**
+5. Выполните настоящую подписанную `launcher update components` над изолированно установленными файлами Desktop/Guard/Runtime с `--package`, закреплённым SHA-256 и проверенным манифестом поставки. Никогда не включайте обход закрепления для разработки. Подтвердите `committed`, ожидаемую целевую версию и изменение установленных байтов исполняемого файла.
+6. Выполните `launcher migrate gravit rehearse-local` на обновлённом исполняемом файле, используя **тот же** механизм настоящего процесса, RCON через loopback и семи проверок. Обязательны новый SHA-256 исполняемого файла клиента, тот же UUID игрока и те же снимки исходного и целевого мира, инвентаря и прав. Второй отчёт — **только локальный**: он не может перезаписать исходную неизменяемую квитанцию репетиции PostgreSQL или утверждать разрешение на переключение.
+7. Запишите отдельные закрытые квитанции по проектам без перезаписи. Только если успешно завершены **все три**, сформируйте `cohort-04910.json` с явным статусом `isolated-stage-pass-not-production-GA` и `productionGA: false`.
 
-After a failed or interrupted import/update, stop and inspect the Backend
-workspace, package updater journal and persisted reports. An interrupted run
-is **not** automatically resumed or silently retried; it may require a new
-reviewed migration run and isolated stage. This tool never switches production.
+После неудачного или прерванного импорта/обновления остановитесь и исследуйте рабочую область Backend, журнал обновления пакета и сохранённые отчёты. Прерванный запуск **не возобновляется автоматически** и не повторяется скрытно: возможно, потребуется новая проверенная оператором миграция и новый изолированный этап. Инструмент никогда не переключает промышленную среду.
 
-## Setup
+## Подготовка
 
-Build `launcher-cli` from the pinned project sources and verify the published
-signed package bytes using the release process. For each project, prepare
-`migration-runs` in the PostgreSQL Backend, complete compatibility/Gravit
-source assessment, the MIG03–MIG08 identity/auth/security/module prerequisites,
-prepare and obtain a **real** `dry-run-all` report, prepare a genuine Minecraft
-server in a disposable environment, and install an old client package to update.
+Соберите `launcher-cli` из закреплённых исходников проекта и проверьте опубликованные байты подписанного пакета штатной процедурой выпуска. Для каждого проекта подготовьте `migration-runs` в PostgreSQL Backend, выполните оценку совместимости и источника Gravit, предварительные требования MIG03–MIG08 по идентичности/авторизации/безопасности/модулям, создайте и получите **настоящий** отчёт `dry-run-all`, подготовьте реальный сервер Minecraft в одноразовой среде и установите старый клиентский пакет для обновления.
 
-Each stage must contain the existing `.migration-stage.json`,
-`source-snapshot.json`, `target-snapshot.json`, `live-session.json`, the protected
-`rcon-password`, and the seven **executable** `probes/{launch,login,join,skins,loader,optional,admin}`.
-Consult `docs/migration/gravit-live-rehearsal.md` for the exact format,
-RCON and test-account requirements. Each probe must actually exercise its named
-behaviour; returning a constant success is not acceptable evidence.
+Каждый этап должен содержать существующие `.migration-stage.json`, `source-snapshot.json`, `target-snapshot.json`, `live-session.json`, защищённый `rcon-password` и семь **исполняемых** проверок `probes/{launch,login,join,skins,loader,optional,admin}`. Точный формат, требования к RCON и тестовым аккаунтам приведены в `docs/migration/gravit-live-rehearsal.md`. Каждая проверка должна действительно выполнять заявленное действие; постоянный успешный ответ не является приемлемым доказательством.
 
-**0.49.10 additional requirement:** the executable in `live-session.json`'s `clientPath` must be the real installed client binary, not a stable wrapper.
-Place `installRoot` **inside** the isolated `stage`, and set `installedComponent`
-to the relative path from `installRoot` to that executable. The stage-relative
-`clientPath` must resolve to the **same file**. This binds the pre/post Minecraft
-join observations to the executable that was updated and prevents unrelated
-binary updates from being counted as a successful client upgrade.
+**Дополнительное требование 0.49.10:** в `clientPath` файла `live-session.json` должен быть настоящий установленный исполняемый файл клиента, а не постоянная обёртка. Поместите `installRoot` **внутрь** изолированного `stage`, а `installedComponent` задайте относительным путём от `installRoot` до этого файла. Относительный к этапу `clientPath` должен указывать на **тот же файл**. Так наблюдения входа Minecraft до и после обновления связываются с действительно обновлённым файлом, а изменение посторонних двоичных файлов не засчитывается как успешное обновление клиента.
 
-Create a private config, for example `/srv/secure/cohort.json` with mode 0600:
+Создайте закрытый файл конфигурации, например `/srv/secure/cohort.json`, с правами 0600:
 
 ```json
 {
@@ -97,12 +57,7 @@ Create a private config, for example `/srv/secure/cohort.json` with mode 0600:
 }
 ```
 
-The example shows **one** entry for readability; supply **three**, each with a
-separate run ID, source archive/digest, project ID, stage and install root, using
-`fileauth-single`, `sql-modded`, `proxy-network`. `client/launcher` is illustrative:
-use the real installed component path from the validated signed package and set
-`live-session.json`'s `clientPath` accordingly. Keep update package bytes and
-manifest outside the install roots being upgraded.
+Для наглядности пример содержит **один** элемент: необходимо указать **три** с отдельными ID запуска, исходными архивами/дайджестами, ID проектов, этапами и корневыми каталогами установки — `fileauth-single`, `sql-modded`, `proxy-network`. Путь `client/launcher` приведён только для примера: используйте настоящий путь установленного компонента из проверенного подписанного пакета и соответственно установите `clientPath` в `live-session.json`. Байты пакета обновления и манифест храните вне обновляемых корневых каталогов установки.
 
 ```bash
 chmod 0600 /srv/secure/cohort.json
@@ -117,31 +72,13 @@ python3 tools/gravit-port/rehearse_cohort_04910.py \
 unset LAUNCHER_TOKEN
 ```
 
-Secrets are passed only through the environment. The Go rehearsal probe
-strips the token and production credentials from the seven subprocesses. No
-shell command from the uploaded ZIP is executed. All report paths are
-non-overwriting and private; do not publish them with bearer tokens or RCON
-passwords. Prefer short-lived MFA-elevated operator sessions and a dedicated
-isolated runner.
+Секреты передаются только через окружение. Go-проверка репетиции удаляет токен и промышленные учётные данные из окружения семи подпроцессов. Shell-команды из загруженного ZIP не исполняются. Все пути отчётов закрыты и не допускают перезаписи; не публикуйте отчёты с Bearer-токенами или паролями RCON. Предпочитайте короткоживущие сеансы оператора с подтверждённым MFA и выделенного изолированного исполнителя.
 
-## границы приёмки
+## Границы приёмки
 
-- An offline run of `--preflight-only` is **not** a migration, a signed update,
-  a Minecraft join or a GA approval.
-- Python regression tests exercise fail-closed validation and orchestrator
-  control flow with synthetic test inputs; Go tests exercise the **real CLI**
-  Minecraft/RCON protocol against a controlled local test listener. Neither
-  substitutes for three externally provisioned Gravit projects or a live
-  official Minecraft session.
-- The initial `rehearse` is Backend-authoritative. The post-update
-  `rehearse-local` is supplementary. It **never** sets `ready=true` or
-  `cutoverAllowed=true`, posts to the Backend or certifies a production release.
-- For independent **GA** certification, independently run all 36 project
-  checks with `tools/migration-ga verify-cohort-live` on exact uploaded evidence
-  and obtain an independent operator sign-off. See
-  `docs/migration/gravit-integration-acceptance.md`. Update/rollback of
-  worlds or network cutover require the separately fenced MIG11/MIG12 steps.
+- Автономный запуск `--preflight-only` — **не** миграция, не подписанное обновление, не вход в Minecraft и не разрешение GA.
+- Регрессионные тесты Python проверяют строгую валидацию и логику оркестратора на синтетических входных данных; тесты Go проверяют **настоящий CLI** и протокол Minecraft/RCON с управляемым локальным слушателем. Ни один из этих вариантов не заменяет три внешне подготовленных проекта Gravit или живой официальный сеанс Minecraft.
+- Первоначальный `rehearse` считается авторитетным для Backend. `rehearse-local` после обновления — дополнительная проверка. Она **никогда** не устанавливает `ready=true` или `cutoverAllowed=true`, не отправляет результат в Backend и не сертифицирует промышленный выпуск.
+- Для независимой сертификации **GA** выполните все 36 проверок проектов с `tools/migration-ga verify-cohort-live` на точных загруженных свидетельствах и получите независимое утверждение оператора. См. `docs/migration/gravit-integration-acceptance.md`. Обновление/откат миров или переключение сетевого трафика требуют отдельных ограниченных шагов MIG11/MIG12.
 
-The provided repository archive contains **no** three live Gravit installations,
-real Minecraft accounts, running servers or signed update package installations.
-Their acceptance remains BLOCKED until independently executed.
+Предоставленный архив репозитория **не содержит** трёх работающих установок Gravit, настоящих аккаунтов Minecraft, действующих серверов или установок подписанных пакетов обновлений. Их приёмка остаётся BLOCKED до независимого фактического выполнения.

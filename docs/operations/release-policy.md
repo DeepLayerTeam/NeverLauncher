@@ -1,51 +1,23 @@
 # Launcher 0.36.1 — независимо подписанная политика выпуска
 
-The release signer implements a **fail-closed exact-byte gate**. These are the
-operational inputs for real protected environments, not fixture certificates.
+Система подписи выпуска применяет **строгий отказ при отсутствии подтверждения точных байтов артефакта**. Ниже перечислены рабочие входные данные для защищённых сред, а не тестовые сертификаты.
 
 ## Выбор версии
 
-- 0.36.0: legacy `launcher.ga036.targets.v1` domain and
-  `GA_VERIFIED_TARGETS_0360.json`/`GA_TARGET_APPROVAL_0360.{json,sig}`.
-- Stable releases >=0.36.1: Ed25519 domain
-  `launcher.ga.targets.v2\0` (a *literal NUL byte*),
-  `launcher.ga.targets.v2` signed approval schema,
-  `launcher.ga.execution.v2` execution trace schema and
-  `launcher.ga.verified-targets.v2` receipt schema. Files:
-  `GA_VERIFIED_TARGETS.json`, `GA_TARGET_APPROVAL.json`, `GA_TARGET_APPROVAL.sig`.
-- Historical single-node SQLite GA 0.33.0 remains specific to 0.33.0. Its
-  certificate **does not** authorize a later release.
-- A prerelease version is not eligible for **stable GA**. All later stable
-  versions require fresh approval for their own commit and final bytes.
+- 0.36.0: прежний домен `launcher.ga036.targets.v1` и файлы `GA_VERIFIED_TARGETS_0360.json`/`GA_TARGET_APPROVAL_0360.{json,sig}`.
+- Стабильные выпуски начиная с 0.36.1: домен Ed25519 `launcher.ga.targets.v2\0` (**буквальный нулевой байт**), схема подписанного утверждения `launcher.ga.targets.v2`, схема трассировки исполнения `launcher.ga.execution.v2` и схема квитанции `launcher.ga.verified-targets.v2`. Файлы: `GA_VERIFIED_TARGETS.json`, `GA_TARGET_APPROVAL.json`, `GA_TARGET_APPROVAL.sig`.
+- Историческая сертификация GA на одном узле с SQLite 0.33.0 относится **только** к 0.33.0. Её сертификат **не разрешает** последующие выпуски.
+- Предварительные версии не могут получить статус **стабильного GA**. Каждый следующий стабильный выпуск требует нового утверждения для собственного коммита и окончательных байтов.
 
 ## Подписание оператором и неизменяемая идентичность
 
-The independent operator must run, for each of Windows/Linux/macOS x64 and
-ARM64, `nativeInstall`, `desktopLaunch`, `minecraftLaunch`, `serverJoin`,
-`releaseRollback`, `security`, `performance`, `operations`, `osSignature`.
-Each trace JSON must describe **actual execution** (`actualExecution:true`,
-`simulated:false`) for the exact source SHA/version and tested executable
-SHA-256. Store these 54 original reports under `targets/<target>/<check>.json`
-and put their individual SHA-256 hashes in a signed `approval.json`.
+Независимый оператор для каждой комбинации Windows/Linux/macOS и x64/ARM64 должен выполнить `nativeInstall`, `desktopLaunch`, `minecraftLaunch`, `serverJoin`, `releaseRollback`, `security`, `performance`, `operations`, `osSignature`. Каждая трассировка JSON должна описывать **реальное выполнение** (`actualExecution:true`, `simulated:false`) для точного SHA/версии исходников и SHA-256 проверенного исполняемого файла. Сохраните 54 оригинальных отчёта по адресам `targets/<target>/<check>.json` и внесите их индивидуальные SHA-256 в подписанный `approval.json`.
 
-The approval must contain exactly: `schemaVersion`, `version`, `commit`,
-`issuedAtUtc`, `expiresAtUtc`, `targets`. A target contains exactly `target`,
-`status` (`certified`), `binarySha256`, `packageSha256`, `checks`. Each check
-contains exactly `sha256`. All six target names are mandatory:
-`windows-x64`, `windows-arm64`, `linux-x64`, `linux-arm64`, `darwin-x64`,
-`darwin-arm64`. UTC timestamps must use second precision and expire within
-seven days of issuance.
+Документ утверждения должен содержать ровно поля `schemaVersion`, `version`, `commit`, `issuedAtUtc`, `expiresAtUtc`, `targets`. Запись цели содержит ровно `target`, `status` (`certified`), `binarySha256`, `packageSha256`, `checks`. Каждая проверка содержит ровно `sha256`. Обязательны все шесть целей: `windows-x64`, `windows-arm64`, `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`. Время UTC должно иметь точность до секунды; срок действия — не более семи дней с момента выпуска.
 
-Use a protected operator-private Ed25519 key, **different** from the release
-signing key and unavailable to regular CI. Sign the raw `approval.json` bytes
-prefixed with the policy domain (without JSON reserialization). Store the
-64-byte signature as lowercase hexadecimal in `approval.sig`. The public
-32-byte raw Ed25519 key is hex-encoded in the independently protected CI
-variable `NL_GA_OPERATOR_PUBLIC_KEY_HEX`; do not load it from the evidence
-archive, checked-in sources, or release package.
+Используйте закрытый ключ Ed25519 независимого оператора, **отличающийся** от ключа подписи выпуска и недоступный обычному CI. Подпишите исходные байты `approval.json` с префиксом домена политики, **не** сериализуя JSON повторно. Сохраните 64-байтную подпись строчными шестнадцатеричными символами в `approval.sig`. Исходный 32-байтный открытый ключ Ed25519 передайте в независимую защищённую переменную CI `NL_GA_OPERATOR_PUBLIC_KEY_HEX` в шестнадцатеричном виде; не загружайте его из архива свидетельств, исходников или релизного пакета.
 
-Example for an authorized operator in a protected environment (the private
-key is not stored in this repository):
+Пример для уполномоченного оператора в защищённой среде (закрытый ключ в репозитории не хранится):
 
 ```python
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -55,39 +27,18 @@ private = load_pem_private_key(Path('/secure/operator-private.pem').read_bytes()
 Path('approval.sig').write_text(private.sign(b'launcher.ga.targets.v2\x00' + approval).hex() + '\n')
 ```
 
-The signing snippet signs an existing independently collected evidence set;
-it does **not** generate reports or claim to have executed Minecraft.
+Пример подписывает существующий, независимо собранный набор свидетельств; он **не** создаёт отчёты и не заявляет о выполнении Minecraft.
 
 ## Защищённый процесс работы
 
-1. CI builds all required jobs for one `GITHUB_SHA`. Independent protected
-   execution produces and signs the 54 reports tied to the actual staged
-   executable and installer hashes; publication must wait for these results.
-2. Upload `approval.json`, `approval.sig`, `targets/` as a protected Actions
-   artifact named `launcher-ga-signed-<commit>`. Pass its **workflow run ID**
-   to `ga_operator_approval_run_id` when dispatching
-   `.github/workflows/production-release-candidate.yml`.
-3. Supply pinned `NL_GA_OPERATOR_PUBLIC_KEY_HEX`. The release runner verifies
-   the operator signature and exact version/commit before building; during
-   release staging it verifies **every file hash and execution report** again.
-4. The Go `release sign` command repeats the independent verification of the
-   54 execution records and six exact-byte executable/package pairs, validates
-   the staged approval and receipt, and rejects a release-signing key equal to
-   the independent operator key. A direct CLI invocation cannot bypass this.
-5. The approved artifacts enter `RELEASE_MANIFEST.json` and signed
-   `SHA256SUMS`, and `release verify`/`publish-check` continue to enforce the
-   other mandatory compatibility, device trust, guard and delivery gates.
+1. CI собирает все обязательные задания для одного `GITHUB_SHA`. Независимое защищённое исполнение создаёт и подписывает 54 отчёта, привязанных к настоящим SHA подготовленного исполняемого файла и установщика. Публикация должна дождаться этих результатов.
+2. Загрузите `approval.json`, `approval.sig`, `targets/` как защищённый артефакт Actions с именем `launcher-ga-signed-<commit>`. При запуске `.github/workflows/production-release-candidate.yml` передайте **идентификатор запуска workflow** в `ga_operator_approval_run_id`.
+3. Передайте закреплённый `NL_GA_OPERATOR_PUBLIC_KEY_HEX`. Исполнитель выпуска проверяет подпись оператора и точную версию/коммит до сборки; при подготовке выпуска он повторно проверяет **каждый хеш файла и отчёт исполнения**.
+4. Команда Go `release sign` повторяет независимую проверку 54 записей исполнения и шести пар исполняемого файла и пакета с точной побайтовой привязкой, проверяет подготовленное утверждение и квитанцию и отклоняет ключ подписи выпуска, равный ключу независимого оператора. Прямой запуск CLI не обходит эту проверку.
+5. Утверждённые артефакты входят в `RELEASE_MANIFEST.json` и подписанный `SHA256SUMS`; команды `release verify`/`publish-check` продолжают проверять остальные обязательные условия совместимости, доверия к устройству, Guard и поставки.
 
-For offline production use, set `LAUNCHER_GA_EVIDENCE_DIR` to the
-operator-signed evidence directory and
-`LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE` to the independently managed raw
-public-key hex file. Keep both outside the release output. The source commit
-must be a clean Git `HEAD` and match the signed approval exactly.
+Для автономного промышленного применения установите `LAUNCHER_GA_EVIDENCE_DIR` в каталог свидетельств с подписью оператора и `LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE` в независимо управляемый файл с шестнадцатеричным открытым ключом. Храните оба вне каталога выпуска. Коммит исходников должен быть чистым Git `HEAD` и строго совпадать с подписанным утверждением.
 
-The historical 0.36.0 inputs remain `LAUNCHER_GA036_EVIDENCE_DIR` and
-`LAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE`; the historical workflow dispatch
-uses `ga036_operator_approval_run_id`.
+Исторические переменные версии 0.36.0 сохраняются как `LAUNCHER_GA036_EVIDENCE_DIR` и `LAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE`; исторический workflow использует `ga036_operator_approval_run_id`.
 
-**No operator evidence or no actual execution means BLOCKED, not PASS.**
-Tests for signature handling use synthetic fixtures and do not provide a GA
-certificate. This change does not claim a live Minecraft cycle has been run.
+**Нет свидетельств оператора или реального исполнения — результат BLOCKED, не PASS.** Тесты подписи используют синтетические фикстуры и не предоставляют сертификат GA. Это изменение не утверждает, что реально выполнялся игровой цикл Minecraft.

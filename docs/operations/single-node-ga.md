@@ -2,89 +2,53 @@
 
 ## Состояние выпуска и поддерживаемые режимы развёртывания
 
-**Do not advertise or publish this version as independently certified GA until the
-real SQLite-only HTTP Backend has been completed and tested.** The previous
-0.32.16 source still uses PostgreSQL for the HTTP Repository and rejects
-SQLite-only HTTP. Existing SQLite Core/Coordinator operations and a passing
-CLI test suite do not establish a production single-node deployment.
+**Не объявляйте и не публикуйте эту версию как независимо сертифицированный GA, пока настоящий HTTP Backend только с SQLite не реализован и не испытан.** Предыдущие исходники 0.32.16 используют PostgreSQL для HTTP Repository и отклоняют режим HTTP только с SQLite. Существующая работа SQLite Core/Coordinator и успешные CLI-тесты не доказывают готовности промышленной установки на одном узле.
 
-| Mode | Runtime | Supported in provided baseline | Release gate |
+| Режим | Runtime | Поддержка в текущей базе | Условие выпуска |
 | --- | --- | --- | --- |
-| Standard, single API process | PostgreSQL + SQLite WAL coordinator + local blobs | Existing implementation (integration validation required) | Existing RC/security/deployment tests |
-| SQLite-only production Single-Node | SQLite WAL for **all** Backend Repository state, SQLite coordinator, local blobs, no PG/Redis | **Not implemented in HTTP Backend** | **0.33.0 GA blocked** |
-| Network/HA | PostgreSQL + Redis + shared S3, multiple independent workers | Infrastructure checks exist; multi-host failover unproven | Independent HA certification, not covered by single-node GA |
+| Стандартный, один процесс API | PostgreSQL + координатор SQLite WAL + локальные объекты | Реализовано (нужна интеграционная проверка) | Существующие тесты RC/безопасности/развёртывания |
+| Промышленный Single-Node только с SQLite | SQLite WAL для **всего** состояния Repository Backend, координатор SQLite, локальные объекты, без PG/Redis | **Не реализован в HTTP Backend** | **GA 0.33.0 заблокирован** |
+| Сеть/HA | PostgreSQL + Redis + общий S3, несколько независимых обработчиков | Есть инфраструктурные проверки; переключение между хостами не доказано | Независимая сертификация HA; не относится к GA одного узла |
 
-The 0.33.0 release toolchain **intentionally fails closed** when the required
-single-node evidence is absent. It does not turn the SQLite coordinator into
-an alternative HTTP Repository, perform unsupported SQLite→PostgreSQL cutover,
-or bless an untested HA topology.
+Средства выпуска 0.33.0 **намеренно запрещают продолжение**, если отсутствуют обязательные свидетельства одного узла. Они не превращают координатор SQLite в альтернативный HTTP Repository, не выполняют неподдерживаемое переключение SQLite→PostgreSQL и не утверждают непроверенную топологию HA.
 
 ## Предварительные условия для промышленной эксплуатации
 
-- Install on dedicated Linux host with a supported local ext4/XFS/Btrfs filesystem
-  (not NFS/SMB, container overlayfs, or multiple shared writers). Dedicated
-  service identity and restrictive private state directory (`0700`).
-- Pin the exact signed installer, API, Admin, Desktop, Guard, Runtime and plugin
-  versions using `RELEASE_BOM.json` and release trust policy; never use mixed `latest`.
-- Use HTTPS, valid Guard and ServerBridge trust allowlists, securely generated
-  signing/auth keys, and independently held offline backup copies. Never
-  commit secrets, identities or operator attestation signing keys to this repo.
-- Complete the actual SQLite-only HTTP repository implementation and deploy
-  it in an isolated acceptance environment. **Until then, run Standard with
-  PostgreSQL** as described in `docs/releases/0.32.13-production-deployment.md`.
+- Устанавливайте на выделенном Linux-хосте с поддерживаемой локальной файловой системой ext4/XFS/Btrfs (не NFS/SMB, container overlayfs или несколько совместно записывающих процессов). Используйте отдельную служебную идентичность и закрытый каталог состояния с правами `0700`.
+- Закрепите точные версии подписанных установщика, API, Admin, Desktop, Guard, Runtime и плагинов по `RELEASE_BOM.json` и политике доверия выпуска. Не смешивайте версии `latest`.
+- Используйте HTTPS, правильные списки разрешённого доверия Guard и ServerBridge, безопасно сгенерированные ключи подписи/авторизации и независимо хранимые автономные резервные копии. Не добавляйте в репозиторий секреты, идентичности и ключи подписания аттестаций оператора.
+- Реализуйте настоящий HTTP Repository только с SQLite и разверните его в изолированной приёмочной среде. **До этого используйте стандартный режим с PostgreSQL**, описанный в `docs/releases/0.32.13-production-deployment.md`.
 
 ## Реальная приёмка до подписания GA
 
-Run the 0.33.0 RC gate on a native filesystem with real PostgreSQL, Redis, S3
-and SQLite CI fixtures (not live customer data):
+Запустите шлюз RC 0.33.0 на нативной файловой системе с настоящими тестовыми PostgreSQL, Redis, S3 и SQLite (без промышленных данных заказчиков):
 
 ```sh
 python3 scripts/version/manage.py check
 python3 scripts/rc/production_rc.py --output /secure/evidence/SINGLE_NODE_GA_RC.json
 ```
 
-The RC gate verifies specific real Go tests with `-race`, requiring all tests
-PASS and a full 0.33.0 Git commit. Skips, missing names, unavailable dependencies,
-failed assertions and timeouts **block** certification. The reported throughput
-of a synthetic fixture is not a measured production capacity limit.
+Шлюз RC запускает конкретные настоящие тесты Go с `-race`; требуется успешность всех проверок и полный коммит Git 0.33.0. Пропуски, отсутствующие тесты, недоступные зависимости, ошибки утверждений и тайм-ауты **блокируют** сертификацию. Измеренная пропускная способность синтетического сценария не равна промышленному ограничению производительности.
 
-A separate qualified operator must run and independently sign a complete **live
-installed deployment report**. It must contain the literal observations:
-SQLite HTTP repository, SQLite coordinator, WAL, one Backend, verified native
-local filesystem, persistence across restart, and absence of PG/Redis dependencies.
-The report also needs passing observations of all 13 scenarios:
+Другой квалифицированный оператор должен выполнить и независимо подписать полный **отчёт о реально установленном развёртывании**. Он должен содержать буквальные наблюдения: HTTP Repository SQLite, координатор SQLite, WAL, один Backend, проверенная нативная локальная файловая система, сохранность при перезапуске и отсутствие зависимостей от PG/Redis. Кроме того, нужно успешное прохождение всех 13 сценариев:
 
-1. Signed installer and exact signed release BOM validation
-2. Fresh install and owner bootstrap
-3. Admin login, authorization/RBAC and permissions
-4. Stable player Minecraft UUID, login and successful server join
-5. Ticket one-time consumption and replay rejection after restart
-6. MFA and token revocation after restart
-7. Jobs, outbox idempotence, fencing of stale workers
-8. SQLite WAL crash, backup and restore integrity
-9. Verified pre-upgrade snapshot, upgrade and rollback
-10. Rejection of second Backend opening the same store
-11. Negative signature, permission and security tests
-12. Measured representative capacity and declared limits
-13. Executed operator runbook smoke
+1. Проверка подписанного установщика и точного подписанного перечня выпуска BOM.
+2. Чистая установка и первоначальная настройка владельца.
+3. Вход Admin, авторизация/RBAC и разрешения.
+4. Неизменяемый UUID игрока Minecraft, вход и успешное подключение к серверу.
+5. Одноразовое использование билета и отказ при повторе после перезапуска.
+6. Отзыв MFA и токенов после перезапуска.
+7. Задания, идемпотентность исходящей очереди и блокирование устаревших обработчиков.
+8. Сбой SQLite WAL, целостность резервного копирования и восстановления.
+9. Проверенный снимок перед обновлением, обновление и откат.
+10. Отказ второму Backend открыть то же хранилище.
+11. Отрицательные тесты подписи, разрешений и безопасности.
+12. Измеренная репрезентативная мощность и заявленные ограничения.
+13. Реально выполненная быстрая эксплуатационная проверка по инструкции.
 
-The signed report is an externally produced JSON document, never generated
-as a passing fixture by the release pipeline. Its format is checked by
-`scripts/ga/single_node_ga_0330.py`: `schema` equals
-`launcher-single-node-ga-attestation-v1`, `version` equals `0.33.0`,
-`source_commit` equals the exact full Git SHA, `rc_receipt_sha256` equals the
-real RC file digest, `operator` identifies the independent verifier,
-`environment` has the required observed values, `checks` maps **all 13**
-scenario IDs to `pass`, and `tested_artifacts` pins three SHA-256 digests:
-`launcher-api-linux-x64`, `launcher-cli-linux-x64`, and
-`launcher-linux-x64-0.33.0.tar.gz`. The release builder and verifier
-compare those hashes to the exact shipping artifact bytes, blocking
-substitution of an untested build. The operator signs the **exact raw JSON bytes** with
-a separately controlled Ed25519 key. The detached `.sig` contains the base64
-signature. The matching public key must be provisioned out of band and must
-be **different** from the release signing key.
+Подписанный отчёт — внешний JSON-документ, который конвейер выпуска никогда не генерирует из тестового шаблона с результатом PASS. Его формат проверяет `scripts/ga/single_node_ga_0330.py`: `schema` равен `launcher-single-node-ga-attestation-v1`, `version` — `0.33.0`, `source_commit` — точному полному Git SHA, `rc_receipt_sha256` — действительному дайджесту файла RC; `operator` идентифицирует независимого проверяющего, `environment` содержит требуемые наблюдения, `checks` связывает **все 13** ID сценариев с `pass`, а `tested_artifacts` закрепляет три SHA-256: `launcher-api-linux-x64`, `launcher-cli-linux-x64` и `launcher-linux-x64-0.33.0.tar.gz`. Сборщик и проверяющий сравнивают эти хеши с точными поставляемыми байтами и запрещают подмену непроверенной сборкой. Оператор подписывает **точные исходные байты JSON** отдельным ключом Ed25519. Файл `.sig` содержит подпись base64. Соответствующий открытый ключ передаётся по независимому каналу и должен **отличаться** от ключа подписи выпуска.
 
-Sample verification (will fail unless actual approved evidence exists):
+Пример проверки (завершится отказом без настоящих утверждённых свидетельств):
 
 ```sh
 python3 scripts/ga/single_node_ga_0330.py \
@@ -94,21 +58,13 @@ python3 scripts/ga/single_node_ga_0330.py \
   --output /secure/approved/SINGLE_NODE_GA_CERTIFICATION.json
 ```
 
-Required exact filenames in `/secure/evidence`:
-`SINGLE_NODE_GA_ATTESTATION.json`, `SINGLE_NODE_GA_ATTESTATION.sig`,
-`SINGLE_NODE_GA_RC.json`. A certificate derived from a fixture or self-signed
-by the release signing key does not constitute GA evidence.
+Обязательные точные имена файлов в `/secure/evidence`: `SINGLE_NODE_GA_ATTESTATION.json`, `SINGLE_NODE_GA_ATTESTATION.sig`, `SINGLE_NODE_GA_RC.json`. Сертификат, полученный из фикстуры или подписанный самим ключом выпуска, не является свидетельством GA.
 
 ## Сборка, проверка и публикация
 
-`production-release-candidate.yml` requires independent signed evidence from
-an approved same-commit workflow dispatch and compares the embedded RC receipt
-byte-for-byte against the RC job of the current workflow. Its protected
-`production-release` environment must approve release signing; no secret
-private key is embedded in Git, release artifacts or CI test fixtures.
+`production-release-candidate.yml` требует независимо подписанных свидетельств из утверждённого запуска workflow того же коммита и побайтово сравнивает встроенную квитанцию RC с заданием RC текущего workflow. Защищённая среда `production-release` должна разрешать подписание; секретный закрытый ключ не встраивается в Git, релизные артефакты или тестовые фикстуры CI.
 
-From a clean, committed checkout, set the existing release signing/trust
-variables and additionally:
+Из чистого рабочего дерева с зафиксированным коммитом установите существующие переменные подписи/доверия выпуска и дополнительно:
 
 ```sh
 export LAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR=/secure/evidence
@@ -116,14 +72,7 @@ export LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
 bash scripts/release/build-release.sh
 ```
 
-The release builder **verifies evidence before deleting old output** and copies
-all four GA files into the bundle (including its freshly derived verification
-receipt). BOM, `RELEASE_MANIFEST.json`, `SHA256SUMS` and Ed25519 release signing
-bind these exact files **and** require the independently tested Linux binary
-and distribution archive digests to equal the shipped files. The CLI `release build`, `release sign`, `release
-verify` and `release publish-check` independently check GA evidence and reject
-missing/altered reports. Consumers must supply an independently pinned GA
-public key in addition to the normal release root/trust policy:
+Сборщик выпуска **проверяет свидетельства до удаления старых результатов** и копирует в пакет все четыре файла GA, включая свежесформированную квитанцию проверки. BOM, `RELEASE_MANIFEST.json`, `SHA256SUMS` и подпись выпуска Ed25519 связывают эти точные файлы **и** требуют совпадения дайджестов независимо испытанных Linux-исполняемого файла и архива дистрибутива с поставкой. Команды CLI `release build`, `release sign`, `release verify`, `release publish-check` независимо сверяют GA и отклоняют отсутствующие/изменённые отчёты. Потребители обязаны передать независимо закреплённый открытый ключ GA наряду с обычными корнями доверия выпуска:
 
 ```sh
 export LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
@@ -135,53 +84,26 @@ launcher release publish-check /secure/release-0.33.0 \
   --trust-policy /secure/trust/release-trust.json
 ```
 
-If external evidence, commit, independent key, CI, BOM, release artifacts,
-or signed delivery approval are missing, **do not publish** and do not substitute
-stubs, downgraded modes, disabled tests or memory fallbacks.
+Если отсутствуют внешние свидетельства, коммит, независимый ключ, CI, BOM, артефакты выпуска или подписанное разрешение поставки — **не публикуйте** и не подставляйте заглушки, ослабленные режимы, отключённые тесты или резервное хранение в памяти.
 
 ## Стандартные процедуры эксплуатации (поддерживаемый Runtime)
 
-- **Before install:** provision TLS, PostgreSQL, the SQLite coordinator's
-  durable directory, signed release, S3/local blobs and approved policies.
-  Validate production `.env` permissions (`0600`) and server clock accuracy.
-- **Start:** `python3 scripts/install/production-deploy.py compose check --mode standard`
-  and then `... compose up --mode standard`; confirm health, readiness,
-  logs, auth, admin and a real player join. Do not expose plaintext proxy ports.
-- **Observe:** `launcher-api diagnose capacity`, `/metrics` through
-  authorized monitoring, queue/outbox age, disk headroom, HTTP p95/error rate,
-  PostgreSQL connections and SQLite coordinator WAL/storage growth. Published
-  capacity ceilings need target-host load measurements; synthetic RC tests do
-  not produce them.
-- **Backup:** perform independent encrypted, off-host, restorable PostgreSQL
-  and local blob backups; use `launcher-sqlite pre-upgrade` for the SQLite
-  coordinator/Core where applicable. Validate restore to an isolated host.
-  Never assume SQLite backup also backs up PostgreSQL or blobs.
-- **Upgrade:** pin the same BOM cohort, drain commands, record source/current
-  version, snapshot durable state, verify restore, upgrade only one revision
-  at a time and confirm authentication, revocation, Minecraft UUID and join
-  invariants. If any check fails, stop traffic and follow tested recovery.
-- **Crash/incident:** fail closed on signature, replay or fencing errors;
-  isolate the host, preserve DB, WAL and logs for forensics, restore only from
-  verified backup and re-check revocation and nonce reuse after restart.
-- **Uninstall:** `python3 scripts/install/production-deploy.py ...` preserves
-  data by default. Deleting durable state requires a separate, explicit
-  confirmation and independently verified off-host backups.
-- **Growth:** 0.33.0 cannot yet be used as proof of lossless SQLite→PostgreSQL
-  live cutover. Staging migration and row/hash checks are **not** activation.
-  Schedule a separately validated cutover and player UUID/revocation testing;
-  do not switch DSNs and assume continuity.
+- **Перед установкой:** подготовьте TLS, PostgreSQL, долговременный каталог координатора SQLite, подписанный выпуск, объекты S3/локального хранилища и утверждённые политики. Проверьте права промышленного `.env` (`0600`) и точность часов сервера.
+- **Запуск:** `python3 scripts/install/production-deploy.py compose check --mode standard`, затем `... compose up --mode standard`; проверьте здоровье, готовность, журналы, авторизацию, Admin и настоящее подключение игрока. Не открывайте незашифрованные порты прокси.
+- **Наблюдение:** `launcher-api diagnose capacity`, `/metrics` через авторизованное наблюдение, возраст элементов очереди/исходящей очереди, запас места, p95 и частоту ошибок HTTP, соединения PostgreSQL и рост WAL/хранилища координатора SQLite. Заявленные пределы мощности требуют измерений нагрузки на целевом хосте; синтетические RC-тесты этого не дают.
+- **Резервное копирование:** создавайте независимые шифрованные восстанавливаемые копии PostgreSQL и локальных объектов вне хоста; для координатора/Core SQLite при необходимости используйте `launcher-sqlite pre-upgrade`. Проверьте восстановление на изолированном хосте. Копия SQLite не охватывает автоматически PostgreSQL или объекты.
+- **Обновление:** закрепите общий набор BOM, остановите приём команд, зафиксируйте источник и текущую версию, снимите устойчивое состояние, проверьте восстановление, обновляйте по одной ревизии и подтвердите инварианты авторизации, отзыва, UUID Minecraft и подключения. При провале любой проверки остановите трафик и следуйте проверенной процедуре восстановления.
+- **Сбой/инцидент:** при ошибках подписи, повторного использования или блокирования действуйте по принципу отказа. Изолируйте хост, сохраните БД, WAL и журналы для расследования, восстанавливайте только проверенную копию и снова проверяйте отзыв и повторное использование nonce после перезапуска.
+- **Удаление:** `python3 scripts/install/production-deploy.py ...` по умолчанию сохраняет данные. Удаление устойчивого состояния требует отдельного явного подтверждения и независимо проверенных внешних копий.
+- **Рост:** 0.33.0 не доказывает безопасного переключения SQLite→PostgreSQL без потерь. Миграция в промежуточную область и сверка строк/хешей — **не** активация. Запланируйте отдельно проверенное переключение и испытания UUID/отзыва игроков; нельзя просто сменить DSN и предположить непрерывность.
 
 ## Подтверждения, воспроизводимость и ограничения выпуска
 
-Run the verifier regression tests without external accounts:
+Запустите регрессионные тесты проверяющего без внешних аккаунтов:
 
 ```sh
 python3 -m unittest discover -s scripts/ga -p test_single_node_ga_0330.py -v
 python3 -m unittest discover -s scripts/rc -p test_production_rc.py -v
 ```
 
-The fixture tests generate ephemeral signing keys and test failure handling;
-**their PASS result does not authorize GA**. Current source work does not
-include actual certified 0.33.0 installer artifacts, a signature from an
-independent operator, demonstrated HTTP SQLite Repository integration, or a
-multi-host failover certificate. Those cannot be inferred from a source ZIP.
+Тестовые фикстуры создают временные ключи подписи и проверяют обработку ошибок; **их PASS не разрешает GA**. Текущая версия исходников не включает реально сертифицированные установщики 0.33.0, подпись независимого оператора, доказанную интеграцию HTTP Repository SQLite или сертификат переключения между хостами. Эти свойства нельзя вывести из ZIP с исходниками.

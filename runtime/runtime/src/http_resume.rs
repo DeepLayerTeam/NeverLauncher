@@ -1,8 +1,7 @@
-//! Restart-safe HTTP file transfer for signed manifests.
-//!
-//! Partial bytes are never trusted by themselves: a strong HTTP validator gates
-//! Range reuse and the signed SHA-256 authenticates the complete staged file
-//! before it is switched into the client installation.
+//! Безопасная при перезапуске HTTP-передача файлов по подписанным манифестам.
+//! Частичные байты сами по себе никогда не считаются доверенными: сильный HTTP-валидатор
+//! контролирует повторное использование Range, а подписанный SHA-256 подтверждает весь
+//! подготовленный файл до переноса его в установку клиента.
 use crate::{file_ownership, network_resilience::{self, Directive},
     replace_verified_managed_file_0224, set_executable_if_needed, ManifestFile};
 use reqwest::{header::{CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_RANGE, ETAG, RANGE, IF_RANGE, ACCEPT_ENCODING}, StatusCode};
@@ -13,8 +12,8 @@ use tokio::{fs, io::{AsyncReadExt, AsyncWriteExt}, sync::{Mutex as AsyncMutex, w
 
 const PARTIAL_SCHEMA: u32 = 1;
 const META_MAX_SIZE: u64 = 8192;
-// A CDN may cap each 206 response below the requested end. Continue fetching
-// subsequent ranges without consuming the retry budget for healthy responses.
+// CDN может ограничивать каждый ответ 206 размером меньше запрошенного конца.
+// Продолжайте получать последующие диапазоны, не расходуя бюджет повторов на правильные ответы.
 const MAX_RANGE_SEGMENTS: usize = 256;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,7 +23,7 @@ struct PartialMetadata {
     url: String,
     expected_sha256: String,
     expected_size: u64,
-    /// Only strong entity tags can be sent in If-Range.
+    /// В If-Range допустимы только сильные теги сущности.
     etag: Option<String>,
 }
 
@@ -51,8 +50,8 @@ fn file_mutex(path: &Path) -> Arc<AsyncMutex<()>> {
 }
 
 fn partial_paths(root: &Path, target: &Path) -> Result<(PathBuf, PathBuf), String> {
-    // Keep internal state out of user-owned directories, where a user might
-    // legitimately have a file called *.part or *.json.
+    // Храните внутреннее состояние вне пользовательских каталогов, где пользователь
+    // вправе иметь собственные файлы с именами *.part или *.json.
     let relative = target.strip_prefix(root).map_err(|_| "target outside install root")?;
     let id = hex::encode(Sha256::digest(relative.to_string_lossy().as_bytes()));
     let directory = root.join(".launcher").join("downloads").join(&id[..2]);
@@ -60,8 +59,8 @@ fn partial_paths(root: &Path, target: &Path) -> Result<(PathBuf, PathBuf), Strin
 }
 
 fn strong_etag(etag: &str) -> bool {
-    // ETag is an opaque, quoted, strong validator (RFC 9110 section 8.8.3).
-    // Never use weak validators or strings containing CR/LF in HTTP headers.
+    // ETag — непрозрачный сильный валидатор в кавычках (RFC 9110, раздел 8.8.3).
+    // Не используйте слабые валидаторы или строки с CR/LF в заголовках HTTP.
     etag.len() >= 2 && etag.starts_with('"') && etag.ends_with('"') &&
         !etag.as_bytes()[1..etag.len()-1].iter().any(|b| *b < 0x21 || *b == b'"' || *b == 0x7f)
 }
@@ -88,7 +87,7 @@ fn content_length(response: &reqwest::Response) -> Result<Option<u64>, String> {
 }
 
 fn expected_range(response: &reqwest::Response, start: u64, total: u64) -> Result<u64, String> {
-    // Strict single-range parsing. No wildcard totals, multipart or unsatisfied ranges.
+    // Строгий разбор единственного диапазона. Без произвольного общего размера, multipart и неудовлетворимых диапазонов.
     let value = response.headers().get(CONTENT_RANGE)
         .ok_or("206 response without Content-Range")?
         .to_str().map_err(|_| "invalid Content-Range encoding")?;
@@ -147,8 +146,8 @@ async fn store_metadata(root: &Path, meta_path: &Path, data: &PartialMetadata) -
         file.write_all(&payload).await.map_err(|e| format!("write partial metadata: {e}"))?;
         file.sync_all().await.map_err(|e| format!("fsync partial metadata: {e}"))?;
         drop(file);
-        // A mirror switch must persist the new source identity before appending.
-        // Replace atomically on Windows too; never expose a missing validator.
+        // При смене зеркала сначала сохраните новую идентичность источника, затем дописывайте.
+        // И в Windows выполняйте атомарную замену; нельзя оставлять валидатор отсутствующим.
         crate::platform_fs::replace_file(root, &tmp, meta_path)
             .map_err(|e| format!("publish partial metadata: {e}"))
     }.await;
@@ -189,8 +188,8 @@ async fn request_with_control(client: &reqwest::Client, url: &str,
     let mut request = client.get(url).header(ACCEPT_ENCODING, "identity");
     if let Some((start, validator)) = range {
         request = request.header(RANGE, format!("bytes={start}-"));
-        // Validators are scoped to a single origin. Across signed mirrors,
-        // Range is only a bandwidth optimization: the full digest is authority.
+        // Валидаторы относятся только к одному источнику. Между подписанными зеркалами
+        // Range служит лишь оптимизацией трафика: решающим остаётся полный дайджест.
         if let Some(validator) = validator { request = request.header(IF_RANGE, validator); }
     }
     let response = tokio::select! {
@@ -210,9 +209,9 @@ async fn request_with_control(client: &reqwest::Client, url: &str,
     Ok(response)
 }
 
-/// Resume a verified-manifest file, optionally using a persistent partial from
-/// an interrupted prior invocation. `transferred` accounts for *wire* body bytes.
-/// Both Desktop downloads and Repair call this via download_scheduler::run.
+/// Продолжайте файл из проверенного манифеста, при необходимости используя
+/// сохранённый частичный файл от прерванного запуска. `transferred` учитывает байты *сети*.
+/// И Desktop-загрузки, и Repair вызывают это через download_scheduler::run.
 pub(crate) async fn download_verified(
     client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
     transferred: impl Fn(u64),
@@ -236,8 +235,8 @@ pub(crate) async fn download_verified_controlled(
         "server supplied too many bounded HTTP ranges; partial retained", None))
 }
 
-/// A single full response or a bounded range. Returns false only when the
-/// server supplied a verified-length prefix and another range is required.
+/// Один полный ответ или ограниченный диапазон. Возвращает false только если
+/// сервер выдал префикс с проверенной длиной и требуется следующий диапазон.
 async fn download_verified_segment(
     client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
     transferred: impl Fn(u64), mut control: watch::Receiver<Directive>,
@@ -258,9 +257,9 @@ async fn download_verified_segment(
     let exists_part = fs::try_exists(&part).await.map_err(|e| e.to_string())?;
     let exists_meta = fs::try_exists(&meta).await.map_err(|e| e.to_string())?;
     let previous = if exists_part && exists_meta { read_metadata(&meta).await } else { None };
-    // Reuse an existing prefix on the same origin only with its strong ETag.
-    // A different signed mirror may serve the remaining suffix without an
-    // origin-specific If-Range; final SHA-256 authenticates the combined file.
+    // Повторно используйте префикс того же источника лишь с сильным ETag.
+    // Другое подписанное зеркало может отдать суффикс без специфичного источнику
+    // If-Range; окончательный SHA-256 подтверждает объединённый файл.
     let mut resume = None;
     if let Some(state) = previous.filter(|m| m.matches(file)) {
         let len = fs::metadata(&part).await.map_err(|e| e.to_string())?.len();
@@ -303,9 +302,9 @@ async fn download_verified_segment(
                 match valid {
                     Ok(length) => {
                         if expected_etag.is_none() {
-                            // Persist new mirror identity atomically before writing
-                            // any mixed-origin bytes. A later retry must not send
-                            // the former origin's validator to this mirror.
+                            // Сохраните новую идентичность зеркала атомарно до записи байтов
+                            // смешанного происхождения. Следующий повтор не должен отправлять
+                            // валидатор прежнего источника этому зеркалу.
                             store_metadata(root, &meta, &PartialMetadata {
                                 schema_version: PARTIAL_SCHEMA, url: file.url.clone(),
                                 expected_sha256: file.sha256.clone(), expected_size: file.size,
@@ -317,8 +316,8 @@ async fn download_verified_segment(
                         allowed_body_len = length;
                     }
                     Err(_) => {
-                        // Malformed/mismatched 206 can never be appended. Discard
-                        // this response and fetch a clean 200 (not a second Range).
+                        // Повреждённый или не совпадающий ответ 206 нельзя дописывать. Отбросьте
+                        // его и получите чистый 200 (а не второй Range).
                         drop(response);
                         discard(&part, &meta).await?;
                         response = request_with_control(client, &file.url, None, &mut control).await
@@ -327,13 +326,13 @@ async fn download_verified_segment(
                 }
             }
             StatusCode::OK => {
-                // If-Range validator changed or server ignored Range. This is
-                // a complete representation; never concatenate with old bytes.
+                // Валидатор If-Range изменился или сервер проигнорировал Range. Это
+                // полное представление; никогда не соединяйте его со старыми байтами.
                 discard(&part, &meta).await?;
             }
             StatusCode::RANGE_NOT_SATISFIABLE => {
-                // A 416 can mean the remote object shrank or the Range was
-                // rejected. The local prefix has no authority over the server.
+                // 416 может означать уменьшение удалённого объекта или отклонение Range.
+                // Локальный префикс не является авторитетным относительно сервера.
                 drop(response);
                 discard(&part, &meta).await?;
                 response = request_with_control(client, &file.url, None, &mut control).await
@@ -348,8 +347,8 @@ async fn download_verified_segment(
         }
     } else {
         check_full_response(&response, file.size).map_err(|e| format!("{}: {e}", file.path))?;
-        // Note: a failed initial full response leaves any previous partial
-        // untouched only when it is still eligible for a subsequent safe resume.
+        // Примечание: неудачный первый полный ответ оставляет прежний частичный файл
+        // нетронутым только если он всё ещё допускает последующее безопасное продолжение.
         discard(&part, &meta).await?;
         let state = PartialMetadata { schema_version: PARTIAL_SCHEMA, url: file.url.clone(),
             expected_sha256: file.sha256.clone(), expected_size: file.size,
@@ -406,20 +405,20 @@ async fn download_verified_segment(
     output.sync_all().await.map_err(|e| format!("{}: fsync partial: {e}", file.path))?;
     drop(output);
     if body_len != allowed_body_len {
-        // A short, well-formed HTTP body is still a resumable interruption
-        // when the strong ETag remains pinned; never activate it.
+        // Короткое корректное HTTP-тело всё равно означает прерывание с возможностью
+        // продолжения, пока закреплён сильный ETag; никогда не активируйте такой файл.
         return Err(network_resilience::transient(format!("{}: truncated HTTP body ({body_len}/{allowed_body_len})", file.path), None));
     }
     if prefix_len + body_len != file.size {
-        // A valid but capped 206 response is not a failure. Its strong ETag
-        // remains pinned for the next Range within this same operation.
+        // Корректный ограниченный ответ 206 не является ошибкой. Его сильный ETag
+        // остаётся закреплённым для следующего Range в этой операции.
         return Ok(false);
     }
     if !hex::encode(digest.finalize()).eq_ignore_ascii_case(&file.sha256) {
         discard(&part, &meta).await?;
         if append {
-            // Prefix corruption or divergent mirror bytes must never activate.
-            // Retry this source from byte zero before giving up or falling back.
+            // Повреждение префикса или различающиеся байты зеркал нельзя активировать.
+            // Повторите с этого источника с нулевого байта до отказа или переключения.
             return Err(network_resilience::transient(
                 format!("{}: resumed SHA-256 mismatch; retrying full file", file.path), None));
         }
@@ -510,7 +509,7 @@ mod tests {
         let (part, metadata) = partial_paths(&root, &target).unwrap();
         assert_eq!(fs::read(&part).await.unwrap(), &data[..8]);
         assert_eq!(read_metadata(&metadata).await.unwrap().etag.as_deref(), Some("\"v1\""));
-        // New HTTP client and invocation model process restart semantics.
+        // Новый HTTP-клиент и модель вызовов учитывают семантику перезапуска процесса.
         download_verified(&client(), &root, &f, &target, |n| {
             transferred.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
         }).await.unwrap();
@@ -661,7 +660,7 @@ mod tests {
     #[tokio::test]
     async fn completed_partial_from_prior_process_installs_without_network() {
         let data = b"complete signed artifact";
-        // Deliberately unreachable URL: no request should be issued.
+        // Заведомо недоступный URL: никакой запрос не должен отправляться.
         let root = workspace().await;
         let f = file("http://127.0.0.1:1/unreachable".into(), data);
         let target = root.join(&f.path);
@@ -696,8 +695,8 @@ mod tests {
         let f = file(url, data);
         let target = root.join(&f.path);
         assert!(download_verified(&client(), &root, &f, &target, |_| {}).await.is_err());
-        // One invocation chains both valid bounded responses, without throwing
-        // away the first eight bytes or requiring an application-level retry.
+        // Один вызов объединяет оба правильных ограниченных ответа без потери
+        // первых восьми байтов и без повтора на уровне приложения.
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         server.await.unwrap();
@@ -763,7 +762,7 @@ mod tests {
         let state = read_metadata(&meta).await.unwrap();
         assert_eq!(state.url, mirror);
         assert_eq!(state.etag.as_deref(), Some("\"origin-b\""));
-        // Fresh invocation models a restarted Desktop after another outage.
+        // Новый вызов моделирует перезапуск Desktop после очередного сбоя.
         download_verified(&client(), &root, &fallback, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         first_server.await.unwrap();
