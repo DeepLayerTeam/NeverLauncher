@@ -1,6 +1,8 @@
 package ru.neverlauncher.api;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -18,6 +20,7 @@ import ru.launcher.sdk.core.Json;
 public final class NeverLauncherAPI {
     public static final String CONTRACT_VERSION = "1.0.0";
     private static final int MAX_RESPONSE = 8 * 1024 * 1024;
+    private static final long MAX_STREAM = 1L << 30;
     private static final Pattern PARAM = Pattern.compile("\\{([^{}]+)\\}");
     private final URI base;
     private final String token;
@@ -94,6 +97,76 @@ public final class NeverLauncherAPI {
         }
         return bytes;
     }
+    /** Streams large API responses into an operator-owned destination (max 1 GiB).
+     *
+     * The caller must discard the destination if an IOException is raised: on
+     * network interruption the destination may contain a partial payload.
+     * Redirects are never followed, including for caller-supplied request bodies.
+     * For large uploads supply HttpRequest.BodyPublishers.ofFile(...), not a byte[].
+     * A limit of zero selects the 1 GiB upper bound. This method never closes
+     * the caller's OutputStream.
+     */
+    public long requestStream(String method, String path, Map<String,String> query,
+                              HttpRequest.BodyPublisher requestBody, String contentType,
+                              OutputStream destination, long limit, String idempotencyKey)
+            throws IOException, InterruptedException {
+        Objects.requireNonNull(destination, "response destination");
+        if (limit == 0) limit = MAX_STREAM;
+        if (limit < 1 || limit > MAX_STREAM) throw new IllegalArgumentException("invalid stream limit");
+        if (!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains("..") || path.startsWith("//"))
+            throw new IllegalArgumentException("unsafe API route");
+        if (idempotencyKey != null && (idempotencyKey.contains("\r") || idempotencyKey.contains("\n")))
+            throw new IllegalArgumentException("invalid idempotency key");
+        var qs = query == null || query.isEmpty() ? "" : "?" + query.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+            .reduce((a, b) -> a + "&" + b).orElse("");
+        var builder = HttpRequest.newBuilder(base.resolve(path + qs))
+            .timeout(Duration.ofMinutes(5)).header("Accept", "*/*");
+        if (!token.isBlank()) builder.header("Authorization", "Bearer " + token);
+        if (contentType != null) builder.header("Content-Type", contentType);
+        if (idempotencyKey != null && !idempotencyKey.isEmpty()) builder.header("Idempotency-Key", idempotencyKey);
+        var publisher = requestBody == null ? HttpRequest.BodyPublishers.noBody() : requestBody;
+        var response = http.send(builder.method(method, publisher).build(), HttpResponse.BodyHandlers.ofInputStream());
+        try (InputStream stream = response.body()) {
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                // Bound error parsing separately from the successful stream limit.
+                byte[] raw = stream.readNBytes(MAX_RESPONSE + 1);
+                if (raw.length > MAX_RESPONSE) throw new IOException("API error response exceeds 8 MiB");
+                Object data = null;
+                try { if (raw.length > 0 && raw.length <= 1_048_576) data = Json.parse(new String(raw, StandardCharsets.UTF_8)); }
+                catch (RuntimeException ignored) { }
+                Map<String,Object> e = data instanceof Map ? Json.object(data) : Map.of();
+                throw new ApiException(response.statusCode(), String.valueOf(e.getOrDefault("code", "")),
+                    String.valueOf(e.getOrDefault("message", e.getOrDefault("error", "HTTP " + response.statusCode()))),
+                    response.headers().firstValue("X-Correlation-ID").orElse(""));
+            }
+            var declared = response.headers().firstValueAsLong("Content-Length");
+            if (declared.isPresent() && declared.getAsLong() > limit)
+                throw new IOException("API stream exceeds configured size limit");
+            byte[] buffer = new byte[64 * 1024];
+            long written = 0;
+            int n;
+            while ((n = stream.read(buffer)) != -1) {
+                if (n > limit - written) throw new IOException("API stream exceeds configured size limit");
+                destination.write(buffer, 0, n);
+                written += n;
+            }
+            return written;
+        }
+    }
+
+    /** Calls a generated OpenAPI operation using a streaming request and response. */
+    public long callStream(String operationId, Map<String,String> pathParameters, Map<String,String> query,
+                           HttpRequest.BodyPublisher requestBody, String contentType,
+                           OutputStream destination, long limit, String idempotencyKey)
+            throws IOException, InterruptedException {
+        var operation = Operations.ALL.get(operationId);
+        if (operation == null) throw new IllegalArgumentException("unknown OpenAPI operation: " + operationId);
+        return requestStream(operation.method(), resolvePath(operation.path(), pathParameters), query,
+                             requestBody, contentType, destination, limit, idempotencyKey);
+    }
+
     private static boolean allowedRoute(String path){
         return path.startsWith("/api/v1/") || path.equals("/health") || path.equals("/ready") || path.equals("/metrics") ||
                path.startsWith("/api/profiles/minecraft") || path.startsWith("/api/user/profile/") ||

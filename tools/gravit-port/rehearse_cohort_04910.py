@@ -46,22 +46,53 @@ def json_file(path: Path, limit: int = 1024 * 1024) -> dict:
     return value
 
 
-def regular_bytes(path: Path, limit: int) -> bytes:
+def _checked_open(path: Path, limit: int):
+    """Pin source files to an inode; a replaced or linked source must block cutover."""
     try:
-        info = path.lstat()
-        require(stat.S_ISREG(info.st_mode) and 0 < info.st_size <= limit,
-                "missing, symlinked or oversized file: " + str(path))
-        with path.open("rb") as stream:
-            return stream.read(limit + 1)
+        st = path.lstat()
+        require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,
+                "missing, linked, hardlinked or oversized file: " + str(path))
+        require(not any(parent.is_symlink() for parent in path.parents),
+                "symlinked parent in migration path: " + str(path))
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0))
+        stream = os.fdopen(fd, "rb")
+        opened = os.fstat(fd)
+        try:
+            require((opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns)
+                    == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns),
+                    "file changed before reading: " + str(path))
+        except BaseException:
+            stream.close()
+            raise
+        return stream, st
     except OSError as exc:
-        raise Blocked("cannot read file: " + str(path)) from exc
+        raise Blocked("cannot open checked migration file: " + str(path)) from exc
+
+
+def _checked_finish(path: Path, stream, st) -> None:
+    end = os.fstat(stream.fileno())
+    require((end.st_dev, end.st_ino, end.st_size, end.st_mtime_ns)
+            == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns),
+            "migration file changed during read: " + str(path))
+
+
+def regular_bytes(path: Path, limit: int) -> bytes:
+    stream, st = _checked_open(path, limit)
+    with stream:
+        data = stream.read(limit + 1)
+        require(len(data) == st.st_size and len(data) <= limit,
+                "migration file changed or exceeds limit: " + str(path))
+        _checked_finish(path, stream, st)
+    return data
 
 
 def sha(path: Path) -> str:
+    stream, st = _checked_open(path, 8 << 30)
     h = hashlib.sha256()
-    with path.open("rb") as stream:
+    with stream:
         for buf in iter(lambda: stream.read(1024 * 1024), b""):
             h.update(buf)
+        _checked_finish(path, stream, st)
     return h.hexdigest()
 
 
@@ -69,10 +100,14 @@ def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) 
     require(isinstance(name, str) and name.startswith("/") and isinstance(digest, str)
             and bool(HEX.fullmatch(digest)), "absolute file and expected SHA-256 required")
     path = Path(name)
-    info = path.lstat()
-    require(stat.S_ISREG(info.st_mode) and 0 < info.st_size <= limit,
-            "not a regular bounded file: " + name)
-    require(sha(path) == digest, "file SHA-256 differs from approved bytes: " + name)
+    # Hash an inode-pinned stream; fail if input changed or is linked.
+    stream, st = _checked_open(path, limit)
+    with stream:
+        h = hashlib.sha256()
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            h.update(chunk)
+        _checked_finish(path, stream, st)
+    require(h.hexdigest() == digest, "file SHA-256 differs from approved bytes: " + name)
     return path
 
 
