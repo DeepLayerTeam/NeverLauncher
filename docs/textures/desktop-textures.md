@@ -22,7 +22,7 @@ Owner-only gallery PNGs are fetched with the authenticated Bearer token; tempora
 
 ## Launch and test
 
-Backend must already be upgraded through 0.25.7 with working PostgreSQL migrations and configured local/S3 texture storage. Without a configured public texture base URL, Minecraft may not be able to see an assigned locally stored texture even if Desktop previews work. See `texture-service-0255.md`, `yggdrasil-authlib-injector-0256.md`, `official-minecraft-0257.md`.
+Backend must already be upgraded through 0.25.7 with working PostgreSQL migrations and configured local/S3 texture storage. Without a configured public texture base URL, Minecraft may not be able to see an assigned locally stored texture even if Desktop previews work. See `texture-service.md`, `yggdrasil-authlib-injector.md`, `official-minecraft.md`.
 
 ```bash
 cd apps/desktop

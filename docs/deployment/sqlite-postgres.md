@@ -53,6 +53,6 @@ The `launcher_sqlite_import_03211` schema includes immutable row mirrors and the
 The existing `sqlite-to-postgres --ack-staging-only` command documented above
 remains an **immutable quarantine** transfer. For the separate, explicit offline
 SQLite Core → **live PostgreSQL Repository** conversion, see
-[`sqlite-postgres-live-0473.md`](sqlite-postgres-live-0473.md). It requires a
+[`sqlite-postgres-live.md`](sqlite-postgres-live.md). It requires a
 pristine, fully migrated PostgreSQL schema, rejects unsupported active security
 and durable state, and is **not** an automatic Backend cutover.

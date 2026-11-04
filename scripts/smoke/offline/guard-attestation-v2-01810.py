@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import re
 
@@ -142,7 +143,7 @@ require(
 migration_api = read(
     "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql"
 )
-migration_cli = read("cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
+migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 if migration_api != migration_cli:
     raise SystemExit(
         "[Launcher] Attestation v2 0.18.10 gate: API/CLI migration 0032 differs"

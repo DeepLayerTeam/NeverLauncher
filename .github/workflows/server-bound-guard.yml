@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/httpapi/bridge_plugins.go'
       - 'services/api/internal/repository/guard_bound_sessions_0507*'
       - 'services/api/internal/dbmigrate/sql/0116_server_bound_guard_sessions_0507.sql'
-      - 'cli/internal/dbmigrate/sql/0116_server_bound_guard_sessions_0507.sql'
+      - 'cli/internal/dbmigrate/catalog.zip'
       - '.github/workflows/server-bound-guard-0507.yml'
   pull_request:
   workflow_dispatch:

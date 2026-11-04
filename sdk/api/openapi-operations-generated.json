@@ -200,6 +200,11 @@
     "path": "/api/v1/admin/extension-ga/reconcile"
   },
   {
+    "id": "post_admin_extension_hosts_by_extensionId_probe",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-hosts/{extensionId}/probe"
+  },
+  {
     "id": "post_admin_extension_hosts_by_extensionId_restart",
     "method": "POST",
     "path": "/api/v1/admin/extension-hosts/{extensionId}/restart"

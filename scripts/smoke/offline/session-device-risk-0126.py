@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import sys
 
@@ -8,10 +9,10 @@ errors: list[str] = []
 
 def need(rel: str, needles: list[str]) -> None:
     path = ROOT / rel
-    if not path.is_file():
+    if not resource_exists(ROOT, rel):
         errors.append(f"{rel}: файл отсутствует")
         return
-    text = path.read_text(encoding="utf-8")
+    text = resource_read_text(ROOT, rel)
     for needle in needles:
         if needle not in text:
             errors.append(f"{rel}: отсутствует {needle!r}")
@@ -136,11 +137,11 @@ need(
 api_migration = (
     ROOT / "services/api/internal/dbmigrate/sql/0015_session_device_risk_0126.sql"
 )
-cli_migration = ROOT / "cli/internal/dbmigrate/sql/0015_session_device_risk_0126.sql"
+cli_migration = "cli/internal/dbmigrate/sql/0015_session_device_risk_0126.sql"
 if (
     api_migration.is_file()
-    and cli_migration.is_file()
-    and api_migration.read_bytes() != cli_migration.read_bytes()
+    and resource_exists(ROOT, cli_migration)
+    and api_migration.read_bytes() != resource_read_bytes(ROOT, cli_migration)
 ):
     errors.append("0015 migration drift: API и CLI содержат разные SQL")
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import re
 
@@ -21,9 +22,7 @@ def require(text, needles, label):
 api_migration = read(
     "services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql"
 )
-cli_migration = read(
-    "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql"
-)
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
 if api_migration != cli_migration:
     raise SystemExit("0.14.7 API/CLI Forge/NeoForge migrations differ")
 require(

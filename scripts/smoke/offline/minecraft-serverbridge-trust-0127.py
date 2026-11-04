@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -6,11 +7,11 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def read(rel: str) -> str:
     path = ROOT / rel
-    if not path.is_file():
+    if not resource_exists(ROOT, rel):
         raise SystemExit(
             f"Minecraft/ServerBridge trust enforcement gate failed: missing {rel}"
         )
-    return path.read_text(encoding="utf-8")
+    return resource_read_text(ROOT, rel)
 
 
 def require(rel: str, needles: list[str]) -> None:

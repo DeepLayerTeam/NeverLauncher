@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import sys
 
@@ -8,10 +9,10 @@ errors: list[str] = []
 
 def need(rel: str, needles: list[str]) -> None:
     path = ROOT / rel
-    if not path.is_file():
+    if not resource_exists(ROOT, rel):
         errors.append(f'{rel}: файл отсутствует')
         return
-    text = path.read_text(encoding='utf-8')
+    text = resource_read_text(ROOT, rel)
     for needle in needles:
         if needle not in text:
             errors.append(f'{rel}: отсутствует {needle!r}')
@@ -91,8 +92,8 @@ need('services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_01
 ])
 
 api = ROOT / 'services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
-cli = ROOT / 'cli/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
-if not api.is_file() or not cli.is_file() or api.read_bytes() != cli.read_bytes():
+cli = 'cli/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
+if not api.is_file() or not resource_exists(ROOT, cli) or api.read_bytes() != resource_read_bytes(ROOT, cli):
     errors.append('migration 0014 differs between API and CLI catalogs')
 
 native = (ROOT / 'apps/desktop/src-tauri/src/device_keys.rs').read_text(encoding='utf-8')

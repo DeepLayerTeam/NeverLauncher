@@ -75,4 +75,4 @@ jobs:
           if /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json; then exit 1; fi
       - name: Backend catalogue matches CLI byte-for-byte
         run: |
-          diff -u cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          python3 scripts/build/embedded_cli_assets.py --check

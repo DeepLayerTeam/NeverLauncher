@@ -5,7 +5,7 @@ on:
     paths:
       - 'services/api/internal/officialminecraft/**'
       - 'services/api/cmd/official-provider-poc/**'
-      - 'docs/authentication/official-provider-poc-0261.md'
+      - 'docs/authentication/official-provider-poc.md'
       - '.github/workflows/official-provider-poc-0261.yml'
   push:
     paths:

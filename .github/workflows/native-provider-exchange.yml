@@ -6,7 +6,7 @@ on:
       - 'apps/desktop/src/**'
       - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
       - 'services/api/internal/httpapi/minecraft_official_browser_0263.go'
-      - 'docs/authentication/native-provider-exchange-0265.md'
+      - 'docs/authentication/native-provider-exchange.md'
       - '.github/workflows/native-provider-exchange-0265.yml'
   pull_request:
     paths:

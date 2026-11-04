@@ -7,7 +7,7 @@ on:
       - 'scripts/operations/multi_host_0512.py'
       - 'deploy/production/docker-compose.observability.yml'
       - 'deploy/production/monitoring/blackbox.yml'
-      - 'docs/operations/multi-host-chaos-observability-05110.md'
+      - 'docs/operations/multi-host-chaos-observability.md'
       - '.github/workflows/multi-host-chaos-observability-05110.yml'
   pull_request:
   workflow_dispatch:

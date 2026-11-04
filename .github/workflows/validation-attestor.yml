@@ -15,7 +15,7 @@ on:
       - 'services/api/internal/dbmigrate/sql/0106*'
       - 'services/api/internal/httpapi/*03412*'
       - 'services/api/internal/repository/*03412*'
-      - 'cli/internal/dbmigrate/sql/0104*'
+      - 'cli/internal/dbmigrate/catalog.zip'
       - '.github/workflows/validation-attestor-0345.yml'
   workflow_dispatch:
 permissions:

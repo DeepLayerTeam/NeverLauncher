@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 import base64
 import subprocess
 import sys
@@ -24,9 +25,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 api_migration = read(
     "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql"
 )
-cli_migration = read(
-    "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql"
-)
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
 if api_migration != cli_migration:
     raise SystemExit("0.14.2 API/CLI cryptographic node identity migrations differ")
 require(

@@ -5,7 +5,7 @@ on:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionsecurity/**'
-      - 'docs/extensions/java-serverbridge-0488.md'
+      - 'docs/extensions/java-serverbridge.md'
       - '.github/workflows/java-serverbridge-0488.yml'
   pull_request:
   workflow_dispatch:

@@ -70,7 +70,7 @@ cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 Manual/native acceptance requires an unlocked OS keyring, real Never session, real
 Microsoft/Xbox/Minecraft provider credentials, successful linking, refresh and launch.
 No mock can substitute for these checks. External application approval is still a
-release blocker, as documented in `official-provider-poc-0261.md`.
+release blocker, as documented in `official-provider-poc.md`.
 
 ### Deferred intentionally to later releases
 

@@ -6,7 +6,7 @@ on:
       - 'scripts/operations/test_independent_ha_ga_0520.py'
       - 'scripts/operations/rolling_update_0520.py'
       - 'scripts/operations/test_rolling_update_0520.py'
-      - 'docs/operations/independent-ha-ga-0520.md'
+      - 'docs/operations/independent-ha-ga.md'
       - '.github/workflows/independent-ha-ga-0520.yml'
   pull_request:
   workflow_dispatch:

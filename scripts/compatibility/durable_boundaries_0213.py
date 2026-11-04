@@ -10,6 +10,7 @@ and restart recovery. It intentionally rejects a tables-only implementation.
 from __future__ import annotations
 
 import argparse
+import zipfile
 import re
 from pathlib import Path
 
@@ -21,6 +22,9 @@ def fail(message: str) -> None:
 
 
 def text(path: str) -> str:
+    if path.startswith("cli/internal/dbmigrate/sql/"):
+        with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as archive:
+            return archive.read("sql/" + path.rsplit("/", 1)[-1]).decode("utf-8")
     p = ROOT / path
     if not p.is_file():
         fail(f"required source missing: {path}")

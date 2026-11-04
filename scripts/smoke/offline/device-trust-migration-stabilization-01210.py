@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 
 import json
 import subprocess
@@ -33,9 +34,7 @@ if version_tuple < (0, 12, 10):
 migration_api = read(
     "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
 )
-migration_cli = read(
-    "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
-)
+migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
 if migration_api != migration_cli:
     raise SystemExit("0.12.10 API/CLI migration 0018 differs")
 require(

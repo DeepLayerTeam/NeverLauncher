@@ -37,12 +37,12 @@
       "size": 5204
     },
     ".github/workflows/auth-migration-compat-02911.yml": {
-      "sha256": "d0ff17ec05674da1726072b541676f4c11c91f271f322f52fd6f97ce51600bea",
-      "size": 4502
+      "sha256": "74e793519dd6245835ef7e63eec866e841d471e340c5c145360279170742ac6e",
+      "size": 4408
     },
     ".github/workflows/auth-platform-protection-ga-0300.yml": {
-      "sha256": "dad8872c1cd2f2634fd1f7af3488a1c783a493cf89c6389b7da7831c022193ed",
-      "size": 7015
+      "sha256": "361e0e2e798870a63edc31394d298fa864a4fbe270d2cf38208df9ae15cc1fa6",
+      "size": 6925
     },
     ".github/workflows/auth-provider-wizard-02910.yml": {
       "sha256": "b73857f59bfb4086e59ffd594da40dedfa402ea3f2250db1b7f7566f13e6fe86",
@@ -89,8 +89,8 @@
       "size": 3455
     },
     ".github/workflows/ci.yml": {
-      "sha256": "ccb794c98efbe3fffe386ceae672658391fbeae159e725a2ee115aa04ab37604",
-      "size": 89409
+      "sha256": "ae19dee10c050427ea5560d50fbcb08b3ffe8fb465702f8cafa7841124058dd0",
+      "size": 89543
     },
     ".github/workflows/client-factory-0271.yml": {
       "sha256": "426f67a6a1ed351d0666d2f6dd0d43e9d6b20f92b0e492eac7752df55d4175e6",
@@ -109,16 +109,16 @@
       "size": 2310
     },
     ".github/workflows/consistent-backup-0518.yml": {
-      "sha256": "a7ca4d3ab9bd7878071a299985373f96ddcd0b1846ef78d8296eca94c85715ec",
-      "size": 1923
+      "sha256": "0bcac135281e051c7b3fab46ec41d94815af9159339e3d99ee9c8146ed6f6380",
+      "size": 1918
     },
     ".github/workflows/continuous-game-protection-0506.yml": {
       "sha256": "28573db0348b586b9d72b41dbf642b76437af75eaca55d15aab3d2fe975fc27c",
       "size": 2028
     },
     ".github/workflows/cross-host-recovery-0519.yml": {
-      "sha256": "8bc2227da1721d6d149d67481d92f075e189a48dd607390e3cde0f6a2ddd3ce6",
-      "size": 1364
+      "sha256": "31dafd94594df8b159879e6f4129526daf2c20c20d739203783982110de4e57a",
+      "size": 1359
     },
     ".github/workflows/database-upgrade-0457.yml": {
       "sha256": "d9c3d59c1f697cf27f9caab1f4ad378580b24f5086a76c25f0df6f481a6271f6",
@@ -249,8 +249,8 @@
       "size": 2628
     },
     ".github/workflows/gravit-cutover-03311.yml": {
-      "sha256": "764fa210352c6f0436d6fda8f725b8b11daa844fd754cc4c2025ca5f2c1a217a",
-      "size": 2399
+      "sha256": "fa667215314584976cdf66898453c8fc53e900ba2ddebf168456326eb9743170",
+      "size": 2394
     },
     ".github/workflows/gravit-identity-0334.yml": {
       "sha256": "5359b2df36270603abc8abd53509dcc175bacf71ed9a3a70e0fd355b849fc6b9",
@@ -269,12 +269,12 @@
       "size": 2558
     },
     ".github/workflows/gravit-operational-rollback-03312.yml": {
-      "sha256": "523ddf861753adfc08435af7abe8f6282cb9c21ca0619388abee05c81a3ff165",
-      "size": 2595
+      "sha256": "52b00757f0ed91efa634a3d38d5df8440405d4c4f7cec6cedf1220a261b2ebb1",
+      "size": 2590
     },
     ".github/workflows/gravit-rehearsal-03310.yml": {
-      "sha256": "2172d8c5f063a0b4f93c8c0d94e2832368643af4f115f60c8de4f7e1ebefc827",
-      "size": 2497
+      "sha256": "1e27af11102353797e8725f25d605f9f30b6819e570c1e3074f5e5570a97047c",
+      "size": 2486
     },
     ".github/workflows/gravit-security-migration-0336.yml": {
       "sha256": "1a81b63b3aba7dccbbacb55193bd3e2d57139c57f7f27a68c2ff15dbeb19dfd5",
@@ -341,8 +341,8 @@
       "size": 2825
     },
     ".github/workflows/independent-ha-ga-0520.yml": {
-      "sha256": "555038060fe5a20b7b10e3a0dd0f1ac5fcc642f652e8af118a129c4076a2403e",
-      "size": 1891
+      "sha256": "1c282afde7b6e2d80c6f792b79577182e29d691f9185767342860bd2a7d4d9b1",
+      "size": 1886
     },
     ".github/workflows/install-upgrade-repair-0527.yml": {
       "sha256": "b3b2e92ab1cdcbfe1d4491341825103e6dafc23df23ae34a81c036c906ce5ccb",
@@ -413,8 +413,8 @@
       "size": 1644
     },
     ".github/workflows/java-serverbridge-0488.yml": {
-      "sha256": "28a028dfeb5be604b5db4eb6e05dff99f2e3181fd6f351189240be1ae03f05e2",
-      "size": 1756
+      "sha256": "d82055bf8f20e48820f6d274d399d82907fdbff20c9d36627a6b480ed59d05a8",
+      "size": 1751
     },
     ".github/workflows/java-spi-registry-0483.yml": {
       "sha256": "94093f4524ba2b5442470327de1899462e7cb7f8c30f7390dfd125a8af0c1d2d",
@@ -525,8 +525,8 @@
       "size": 2277
     },
     ".github/workflows/multi-host-chaos-observability-05110.yml": {
-      "sha256": "f0d19913573a52127bd8a22fae3e1a50f5ce2c4d740348067202f53b48976d15",
-      "size": 2660
+      "sha256": "b837ed6ab027832087235a2c5e479c02d1359c7b8063c378e81a18305d681b7e",
+      "size": 2654
     },
     ".github/workflows/multi-host-deployment-0512.yml": {
       "sha256": "d798352871b6888189c08c2a2515c407cbb6c5baa634a6b21517abbf24343909",
@@ -541,8 +541,8 @@
       "size": 2778
     },
     ".github/workflows/native-final-package-regressions-0522.yml": {
-      "sha256": "4073c90e13085a58ca8de0ac952763baf1fb54e9e435901503b2f61af4c0c050",
-      "size": 2481
+      "sha256": "6639440e05e5cdb3ee57f37166c0b881d194b377804a86c4f8417718048eacd1",
+      "size": 2476
     },
     ".github/workflows/native-final-packages-0522.yml": {
       "sha256": "760dca63dc50d07a6692bcf7a2d35a19a5ff0bd6608fd66c5ad9468bfc1d5f74",
@@ -561,8 +561,8 @@
       "size": 1681
     },
     ".github/workflows/native-provider-exchange-0265.yml": {
-      "sha256": "23afd9100e78b21ce32bdb406dcc5a01e2e33e3f63f76b75cae4c5004d5be190",
-      "size": 2559
+      "sha256": "d7674a102942cb7e1a94dd40e1048f6184058f4522ffb5d781302ccfab3eb6a1",
+      "size": 2554
     },
     ".github/workflows/native-runtime-v10-03410.yml": {
       "sha256": "8b82a421089f9701ab2340ebcebcf37199127e7f2391adfce4f6b96a699666ef",
@@ -585,16 +585,16 @@
       "size": 1883
     },
     ".github/workflows/official-java-verification-0266.yml": {
-      "sha256": "bca87a7efa378643f555e9e2b3978b9d54add6692cb26f575b695c891ca041cd",
-      "size": 2057
+      "sha256": "0bb521fd70b202c0efddd9234dc01d8c2ae518e67a0f9e917b04294bada00f33",
+      "size": 2052
     },
     ".github/workflows/official-linking-0268.yml": {
       "sha256": "29447b74649e265e0614a9c54a5dd268bb0cf058de346fb4da666408797556bb",
       "size": 3094
     },
     ".github/workflows/official-provider-poc-0261.yml": {
-      "sha256": "f810e0531d4e3bc3477c2115b6009d1c8f6ca50329dd92a21dccae1938e40694",
-      "size": 1400
+      "sha256": "907995f5f3f90160fc8d48c790d7f50811b017f8e5500f718211ece0c198654a",
+      "size": 1395
     },
     ".github/workflows/operations-delivery-0460.yml": {
       "sha256": "95effba2235d1e9c556e629118b468f112f7217d7daeba88430277c936e91252",
@@ -617,8 +617,8 @@
       "size": 3798
     },
     ".github/workflows/physical-ha-dr-05210.yml": {
-      "sha256": "e95e9487b5fe51722f60313497002e052133794a5e9e524fa5162f35a4851719",
-      "size": 8048
+      "sha256": "536318914747011503acf015f0951febc7b57330521528ae3c765e78c08a57b4",
+      "size": 8042
     },
     ".github/workflows/player-migration-0339.yml": {
       "sha256": "7257795aba68d7fbd99665dc6be3b124b73c671001c7e5a8a0321b16ee7e6575",
@@ -677,8 +677,8 @@
       "size": 9576
     },
     ".github/workflows/rolling-update-0517.yml": {
-      "sha256": "24ded0ef41f83eb8f0a22d35743808c0d3e462454a0624dfe6b021befce7ae8a",
-      "size": 1868
+      "sha256": "075184bdf692ade058977526f0890526482ce40c8137030008852f8829b32637",
+      "size": 1863
     },
     ".github/workflows/runtime-acceptance-0350.yml": {
       "sha256": "1cd90d4d8c53653e2f99655768e71dd44af28af3e62c3cffc9c731f57d76acf4",
@@ -697,8 +697,8 @@
       "size": 1520
     },
     ".github/workflows/security-real-auth-e2e-02912.yml": {
-      "sha256": "080633fdf68eb5e391460ae09f0fbc06c01da6c47a7ced1f55c8836f2b19d5c5",
-      "size": 4128
+      "sha256": "aae036b6350f29b8e12f033841b72ea30de1b09ec3fe3cf9215341ea2275aa03",
+      "size": 4051
     },
     ".github/workflows/security-sandbox-0356.yml": {
       "sha256": "0f8a3c4389910e50e6886809f7723f397711c470e7eca58f689f1ad90a2e12b4",
@@ -709,8 +709,8 @@
       "size": 926
     },
     ".github/workflows/server-bound-guard-0507.yml": {
-      "sha256": "a654ff4052ba30a3f8879bc8b25bc4680f5748e799b8504482006c981e2a31a4",
-      "size": 2402
+      "sha256": "7a83904fdda8e6e5f35ef6155c733ee8ab05197462f84d4cf2630b184e03ccdb",
+      "size": 2368
     },
     ".github/workflows/serverbridge-adapter-capabilities-0286.yml": {
       "sha256": "729ff0af84da4f900089d43532ee4a1cd4ce84b8565ddd7436fd7b896cd6106a",
@@ -781,8 +781,8 @@
       "size": 2958
     },
     ".github/workflows/stable-runtime-gate-0341.yml": {
-      "sha256": "f20687170fda7c1460e0f72334b57751c389be3b1b14766e1942da012ac2a8b8",
-      "size": 2372
+      "sha256": "0e12a5a5aad589e385d72ae5564b9b4afc72deca9e6f2cb6cc317338c5d6a3f0",
+      "size": 2270
     },
     ".github/workflows/staged-package-runtime-0342.yml": {
       "sha256": "35de75c0b72dfe2298009a57aee48cf1c5f11c76f9f6be4701f79a79053058ec",
@@ -821,8 +821,8 @@
       "size": 2418
     },
     ".github/workflows/validation-attestor-0345.yml": {
-      "sha256": "32b3255f27b3059f4c37a78b9a5d86ddf6d386ee384caac58fadf09500467a05",
-      "size": 3033
+      "sha256": "98e5d7a4fce4e52bbc522229e990f0def6ce96a9f3c054f01041aee5a4496686",
+      "size": 3035
     },
     ".github/workflows/visual-client-factory-02710.yml": {
       "sha256": "d11f5dd9730f8c0a26d61fbb2fb4e0a16f0fa5d1611e42625572e964566bf952",
@@ -868,489 +868,17 @@
       "sha256": "6a3c02cfc799f28a909a677c23f938c7ff2d000dbe410123d6ea96bceddaa6cc",
       "size": 74180
     },
-    "cli/cmd/launcher/templates/production/docker-compose.yml": {
-      "sha256": "f38920e69c400e7b9a40790a94203e613bf3e679d45f90687a951437ca651938",
-      "size": 7676
-    },
-    "cli/cmd/launcher/templates/production/env.production.example": {
-      "sha256": "033a502d58dbad58b9d753628d86ab9b27821062a44a4e208eecd5a4695181f3",
-      "size": 7219
-    },
-    "cli/cmd/launcher/templates/production/nginx.conf": {
-      "sha256": "2620dac58b1c4b7ed6d5ad035a840f3e179142c7ede4d53037b0d5c4c38d1043",
-      "size": 2732
+    "cli/cmd/launcher/templates/production.zip": {
+      "sha256": "db2787ccfe7a6f8a4a9079f4ec88ad4acac586ece5d224f070dd2b0768923535",
+      "size": 6110
     },
     "cli/go.mod": {
       "sha256": "b424cc4ce08130d52788bda84a843b32801676069e7aadea6b8d571bc8f110b2",
       "size": 48
     },
-    "cli/internal/dbmigrate/sql/0001_production_baseline.sql": {
-      "sha256": "a8bcb0a8f5aeb74dbf268b3e3117f269698e27c344061da629e99fccc4c6f672",
-      "size": 23227
-    },
-    "cli/internal/dbmigrate/sql/0002_p0_security.sql": {
-      "sha256": "c77c5d8bccf67ab6acf75047e3c146e9281736a4ff72e520ec6b2fa8bbb3477b",
-      "size": 876
-    },
-    "cli/internal/dbmigrate/sql/0003_compatibility_file_metadata.sql": {
-      "sha256": "1c086f292643ee9c8ffca38838e91beca78510abf9389bfc24c97bfe3bc62506",
-      "size": 761
-    },
-    "cli/internal/dbmigrate/sql/0004_auth_core_0111.sql": {
-      "sha256": "75b4545af7ec534b4229bde900c1374ab7a406228e0a9da4e21c108f1151a0da",
-      "size": 4335
-    },
-    "cli/internal/dbmigrate/sql/0005_federation_core_0112.sql": {
-      "sha256": "e1adbb89c3a06829c135c8f99e40abe179f5d59cb75e774bea1bbf475f6d7748",
-      "size": 1270
-    },
-    "cli/internal/dbmigrate/sql/0006_microsoft_connector_0116.sql": {
-      "sha256": "81db7f4b4b8aff9725ef6e004db96d1c374907f1bf7f0b3569d9545fe2aa380b",
-      "size": 1051
-    },
-    "cli/internal/dbmigrate/sql/0007_passkeys_mfa2_0117.sql": {
-      "sha256": "bd9458a507d586724fb135eca40fa2139acd94028be63f11bfe17e4f93f1c555",
-      "size": 2672
-    },
-    "cli/internal/dbmigrate/sql/0008_session_management_2_0118.sql": {
-      "sha256": "3207a04d5e8ebca682ed8a9a34bd9a85af61ff8d30a26105cd566251e4462cc9",
-      "size": 1627
-    },
-    "cli/internal/dbmigrate/sql/0009_minecraft_auth_compat_2_0119.sql": {
-      "sha256": "2d329a0ac4a845d50cbc2fdc5b56c7f3709d5c7efaf41471c9126f4ff52deb1f",
-      "size": 2577
-    },
-    "cli/internal/dbmigrate/sql/0010_federation_stabilization_01110.sql": {
-      "sha256": "fbbe68aa0329676b62e228a078c3b6ce92f7dbec65ce9fb7d207d16bc6df54eb",
-      "size": 5932
-    },
-    "cli/internal/dbmigrate/sql/0011_auth_federation_release_0120.sql": {
-      "sha256": "21c351371c8c35394a5d0e2d70e2cbfeb1f0a4d2f8db9ab0caf31d00663212cc",
-      "size": 5354
-    },
-    "cli/internal/dbmigrate/sql/0012_device_trust_core_0121.sql": {
-      "sha256": "a6f69cc3c64a06e9fd1181597c4285f2a858d9da3aefa2be45e413c42e914ee6",
-      "size": 3937
-    },
-    "cli/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql": {
-      "sha256": "d751fb62531c4fb001778f8a6f329a930b5354e20e3984c787538bdaee106f5e",
-      "size": 1757
-    },
-    "cli/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql": {
-      "sha256": "c734b6f12381108b6605494b278e82c5e527e6d9adc21d9523dc85f6d8fe46b2",
-      "size": 2567
-    },
-    "cli/internal/dbmigrate/sql/0015_session_device_risk_0126.sql": {
-      "sha256": "271392e3e66f181e915164f5e30ba7b65c7636083f0b2c2063faab2883cd6152",
-      "size": 2389
-    },
-    "cli/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust_0127.sql": {
-      "sha256": "d0f7f9f2e2e188c56ea1a396f23f4e42c0a4359c19c668543452a95cbb64c600",
-      "size": 1543
-    },
-    "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql": {
-      "sha256": "442ba13b516a19da4d009a7ed6e1aa264ee54de9a657ac60c657b124677f8510",
-      "size": 839
-    },
-    "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql": {
-      "sha256": "7d71a3552c97a7b817795b18b09de34b086e88544d2fadc161d5cced2e8f3093",
-      "size": 12147
-    },
-    "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql": {
-      "sha256": "fb9087621acbba2a983e9008a58828da657a552c0302a720892fa23517102663",
-      "size": 1987
-    },
-    "cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql": {
-      "sha256": "fae5c120139010a087c20286162a3f37f45dd8a6eb174b11142af0b882a54632",
-      "size": 4004
-    },
-    "cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql": {
-      "sha256": "0ae8d72dc14eda742a8012479efe453f9d2ebae625c395760bf9d52ffc608417",
-      "size": 8305
-    },
-    "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql": {
-      "sha256": "a69b098efda3e8ec0eac165e8494b11631252f02631fcb80530d5601dec660f7",
-      "size": 4230
-    },
-    "cli/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql": {
-      "sha256": "b7f0249f624e8c1151195e3f7400d97347d66b20e149bbedbd7693a339f49f94",
-      "size": 4944
-    },
-    "cli/internal/dbmigrate/sql/0024_bukkit_family_0144.sql": {
-      "sha256": "71f27dc8aed0996f02cfbe7e7a89cfd65397f6de44ce2b61cdf80dd50904a925",
-      "size": 644
-    },
-    "cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql": {
-      "sha256": "4b2c2bf9388e1f4735c8fd17a2d4b8722634dcb63e062a13e4179d76aee78954",
-      "size": 640
-    },
-    "cli/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql": {
-      "sha256": "088615300f3e566dc46c61374fbaf2a5bdf812257074a86a52cc3247d1c35146",
-      "size": 432
-    },
-    "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql": {
-      "sha256": "a3852a5330f8bc5e51abac1c6e41a2a3c16011ad2b1f7101444c6d3e010614a4",
-      "size": 767
-    },
-    "cli/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql": {
-      "sha256": "d2d12c8f63afc566a547f806fb84ba936d7d741e3e6e4894923dec7de1fa92ad",
-      "size": 3425
-    },
-    "cli/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql": {
-      "sha256": "7b63fe2741c221acc905cc3b3b2a74cb8ad743776ef2dac1f55779d9ad3e0aba",
-      "size": 1521
-    },
-    "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql": {
-      "sha256": "144cfb54b618ac45158c31bc553a68d5b8bd569cace57a6c01878b607889947d",
-      "size": 3322
-    },
-    "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql": {
-      "sha256": "e800fd951ea7f52008d8831d09fb1df9a2c3b3054cff2a9aaad0e823a5f0580f",
-      "size": 1464
-    },
-    "cli/internal/dbmigrate/sql/0031_serverbridge_protocol_v3_0191.sql": {
-      "sha256": "647f0d33b82ecbbc06587d198ea83934a6c1fff1819e62fdc6b7da3d93b12029",
-      "size": 1621
-    },
-    "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql": {
-      "sha256": "15022f8b35b565ee1aeeb325b7b5f12c9345d205a6a1d81cdb08b565fe37a06c",
-      "size": 1072
-    },
-    "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql": {
-      "sha256": "20cc01d5005ce4a80742fe2f40e1e4570ad615e2741aa65695c466eb68f42086",
-      "size": 5422
-    },
-    "cli/internal/dbmigrate/sql/0034_serverbridge_telemetry_0193.sql": {
-      "sha256": "b969fd8cd388962f30400a634968497ff2b352b62da8cc93801a0568abfa3cae",
-      "size": 1146
-    },
-    "cli/internal/dbmigrate/sql/0035_serverbridge_event_stream_0194.sql": {
-      "sha256": "0a4fa9f4380a91933ca87ade06bd4f1d56fb3291fcb19b4d49f3e6966e465e59",
-      "size": 1624
-    },
-    "cli/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql": {
-      "sha256": "09e25f0380215aaba25a225d0b449bde14dd5f455d14768361b860e4ed5fe1db",
-      "size": 2283
-    },
-    "cli/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_0196.sql": {
-      "sha256": "e225700d8840c181c3177dde3121a6a56a65fd7de8e6be93d92616d0143e448d",
-      "size": 5582
-    },
-    "cli/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_0197.sql": {
-      "sha256": "c14c9457b228ea98cbd8c78c209c11c0bf77674461ec513407d46d6227eaa01c",
-      "size": 5758
-    },
-    "cli/internal/dbmigrate/sql/0039_universal_server_adapters_0198.sql": {
-      "sha256": "06ce1579f0e12c4b13b3738580f4a2b9831f66ca3c670e485bc8fc184c2c9189",
-      "size": 875
-    },
-    "cli/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane_01911.sql": {
-      "sha256": "51eb1fda23f54ec6134f25732b389e36b2d9b65f6ec63cbb86f787a7ec076071",
-      "size": 1884
-    },
-    "cli/internal/dbmigrate/sql/0041_serverbridge3_ga_0200.sql": {
-      "sha256": "49dbd0618e73819d6e6d4165223d4ebdcc599c76973f248435934aff10c5af63",
-      "size": 1229
-    },
-    "cli/internal/dbmigrate/sql/0042_extensions_core_0201.sql": {
-      "sha256": "0edf88a01691f28606c95d6a4431bb2934063f2ee6e0055f31e30f94d4fb09d6",
-      "size": 6563
-    },
-    "cli/internal/dbmigrate/sql/0043_extensions_registry_0203.sql": {
-      "sha256": "cf86d621e2707924b30bef7786f785114575c34dc8be6fd5eeaa7c3e682cf527",
-      "size": 9826
-    },
-    "cli/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql": {
-      "sha256": "50517044d9553f2cef39c0d67cf248da5cc37c9fa88314cfea943e5e4ca0a398",
-      "size": 8078
-    },
-    "cli/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql": {
-      "sha256": "7334acfba3196f3e5be32ba7e4a4f5cb56cd08e196e77668a11ea798c9035937",
-      "size": 4026
-    },
-    "cli/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql": {
-      "sha256": "8d039e61a71c677e1b0c1eea828e25a6de81a392581f93d90e362575e1d84393",
-      "size": 3023
-    },
-    "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql": {
-      "sha256": "428b89cc93309a3dc21d622bf094a5168bcd690fd070c5cd6e3a601e36732327",
-      "size": 4126
-    },
-    "cli/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql": {
-      "sha256": "0a84dc93bd43aad582d4d518653283f3aa64f1935260ce0d5d49f6e5653806c8",
-      "size": 3696
-    },
-    "cli/internal/dbmigrate/sql/0049_extensions_ga_0210.sql": {
-      "sha256": "4de86213c4224f140b47cb6a1b649e12a775870310123deaa0c38fe0567910c5",
-      "size": 2021
-    },
-    "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql": {
-      "sha256": "7a1e123da258f2013346790a4beea6148a14c35e15229fe63bd2748d9a151716",
-      "size": 7977
-    },
-    "cli/internal/dbmigrate/sql/0051_honest_validation_trust_0212.sql": {
-      "sha256": "81f78823c8987ac8212dc6b237f0af71197d84709260d445b54fe763b96ac484",
-      "size": 5050
-    },
-    "cli/internal/dbmigrate/sql/0052_durable_boundaries_0213.sql": {
-      "sha256": "5167ee33a5cfdb5a83e46f67007760e51dad0b03ed452c0171c8f94198f7377b",
-      "size": 6283
-    },
-    "cli/internal/dbmigrate/sql/0053_release_workspace_0218.sql": {
-      "sha256": "2bc8973845bd01eb4c327b55f3fe41e239901365767600ac8b20480843354d23",
-      "size": 814
-    },
-    "cli/internal/dbmigrate/sql/0054_serverbridge_operator_0219.sql": {
-      "sha256": "a8dfe6ede469f29940aa517a1d545a94d30be35475d4f7a39b50ad4440f69e42",
-      "size": 341
-    },
-    "cli/internal/dbmigrate/sql/0055_config_audit_02111.sql": {
-      "sha256": "8613040095f67bef306f6ab998aa2b93bc7d7fb5ad25ff3d295cc72a74ef3d73",
-      "size": 1358
-    },
-    "cli/internal/dbmigrate/sql/0056_profile_manifest_schema_evolution_0221.sql": {
-      "sha256": "8bb7c2ae90c104df4bd399f00e1a603a934f5326e2772788b9e849b437157530",
-      "size": 2508
-    },
-    "cli/internal/dbmigrate/sql/0057_schema_evolution_integrity_0222.sql": {
-      "sha256": "5f89eed0dbd011e31f0070eb60503b0fe7cf3a73a987df14c30128b165617fcc",
-      "size": 5556
-    },
-    "cli/internal/dbmigrate/sql/0058_file_ownership_0224.sql": {
-      "sha256": "501e2206dbcd9d30a00546dabffaf5bc74110217d50a9c08c674872e1d2da55d",
-      "size": 341
-    },
-    "cli/internal/dbmigrate/sql/0059_build_workspaces_0226.sql": {
-      "sha256": "99defcff8ce8205af267881c8321e0d5c45064f8276273ce2ed159967d446b88",
-      "size": 639
-    },
-    "cli/internal/dbmigrate/sql/0060_transactional_channel_heads_0228.sql": {
-      "sha256": "c4c05db1a03ba5e68e13ca41182d9775b5d01e6cbebde6de6a2a2aad2626c53b",
-      "size": 1256
-    },
-    "cli/internal/dbmigrate/sql/0061_signed_component_catalog_0241.sql": {
-      "sha256": "f22e9ffea71224ae9771c084c9aa9a0ccb489fc549ddc91fb06f00a3bc4a9ef4",
-      "size": 3195
-    },
-    "cli/internal/dbmigrate/sql/0062_component_topology_presets_0242.sql": {
-      "sha256": "5b20680c68795c621bb402acb62ee66605c02e1c63f7c2ceede25d1d73bbb609",
-      "size": 3118
-    },
-    "cli/internal/dbmigrate/sql/0063_dependency_conflict_resolver_0243.sql": {
-      "sha256": "5c7146311eaa36133cd397455ea49eeee988b9ab08e8acd6e193f9cb1e5382d1",
-      "size": 3207
-    },
-    "cli/internal/dbmigrate/sql/0064_conditional_components_0244.sql": {
-      "sha256": "87980721bef5398735e403434e74fdc6e9244e106bc5dc38b983d10799bc6eb0",
-      "size": 3205
-    },
-    "cli/internal/dbmigrate/sql/0065_signed_optional_actions_0245.sql": {
-      "sha256": "5ed4b59a440aaf908eea2855402aa884bc96b44e1e272ee074c215df7edcc104",
-      "size": 3213
-    },
-    "cli/internal/dbmigrate/sql/0066_serverbridge_verified_plan_02412.sql": {
-      "sha256": "10b8ae303ac3c4b25c08935c6a8dfd9a3716a49ae526bd91f65ab898afde765c",
-      "size": 580
-    },
-    "cli/internal/dbmigrate/sql/0067_texture_identity_0251.sql": {
-      "sha256": "7e0b3d135661f4e296a738ef7b83fc3a5859a53a58a8a3bfa95f66e3cd093514",
-      "size": 8297
-    },
-    "cli/internal/dbmigrate/sql/0068_texture_upload_0252.sql": {
-      "sha256": "3c842b3c1ce29620553af442b8953346e5a451f9a50f84a57667f23be0383fc6",
-      "size": 457
-    },
-    "cli/internal/dbmigrate/sql/0069_texture_storage_0253.sql": {
-      "sha256": "98ed727884ad93392237350a7626966c428335b33491bed0cc7c995d7e38a2aa",
-      "size": 1132
-    },
-    "cli/internal/dbmigrate/sql/0070_texture_fetch_0254.sql": {
-      "sha256": "e784ad9bc226449b8e4ea69c38a4a470499922de044a1505b95b5785d9fb813a",
-      "size": 812
-    },
-    "cli/internal/dbmigrate/sql/0071_texture_service_0255.sql": {
-      "sha256": "df33ac6cfd4db38aaadb474c942c13c2d008b605c505fc3ed1db5a5d594a6dca",
-      "size": 3065
-    },
-    "cli/internal/dbmigrate/sql/0072_texture_admin_0259.sql": {
-      "sha256": "ec940ca98564981e6bc95521b8d47cef6506d6315489e15544e79f9ab1094473",
-      "size": 3318
-    },
-    "cli/internal/dbmigrate/sql/0073_texture_gravit_import_02510.sql": {
-      "sha256": "54c70895e18650b88a8f7567fe0ab405df4ba670fa7ad804cbe8fd26d2619683",
-      "size": 1271
-    },
-    "cli/internal/dbmigrate/sql/0074_texture_lifecycle_recovery_02511.sql": {
-      "sha256": "cb132e55b01927b484bfe17433d19bd8689f0cdd3b88c18d5d9c1f4fd2bd4ab7",
-      "size": 820
-    },
-    "cli/internal/dbmigrate/sql/0075_official_identity_0268.sql": {
-      "sha256": "ceef13e6292707481dba620a2a40e545eb8cae60d1058eed7b88e5a09d45a956",
-      "size": 661
-    },
-    "cli/internal/dbmigrate/sql/0076_official_provider_management_02611.sql": {
-      "sha256": "9c03718c65255d5720ee9a30b746743166f9d0c84459b8c57bfd71b866a7e719",
-      "size": 964
-    },
-    "cli/internal/dbmigrate/sql/0077_control_domains_rbac_0281.sql": {
-      "sha256": "46e82af9d3ecbf42837737274f12c81b6a28d45f926cea760bc4d546e4902851",
-      "size": 917
-    },
-    "cli/internal/dbmigrate/sql/0078_control_ha_fencing_0285.sql": {
-      "sha256": "a8655c168a0fc967f8d34ff50dae7ccff6bf2028ad5a7a3293282f45b0274a18",
-      "size": 2721
-    },
-    "cli/internal/dbmigrate/sql/0079_serverbridge_network_admission_0288.sql": {
-      "sha256": "312cc6d33cb44ec14de0a9616a77edbb4f597907d7d4e82d88dda039626b4371",
-      "size": 1047
-    },
-    "cli/internal/dbmigrate/sql/0080_backend_restart_0289.sql": {
-      "sha256": "8739c3ed3676e1c4637189762cf7c12587306eb308a6f79356d651ff3bdd1c41",
-      "size": 1561
-    },
-    "cli/internal/dbmigrate/sql/0081_auth_canonical_issuer_0291.sql": {
-      "sha256": "6dd25425c58843953b39c9e7ce64157649eaad1af1b221845e5e7a32bd4f05d5",
-      "size": 3558
-    },
-    "cli/internal/dbmigrate/sql/0082_global_session_revocation_0297.sql": {
-      "sha256": "c3b0ad246062cbef1b9693d47e0b8beaf8fd7f069847f137615f82680112ef2b",
-      "size": 20924
-    },
-    "cli/internal/dbmigrate/sql/0083_protection_policy_0298.sql": {
-      "sha256": "8133e66ef44026feacc45a8a4bd63f0bdb95e3581db5c5e418210de09a386c63",
-      "size": 2028
-    },
-    "cli/internal/dbmigrate/sql/0084_hwid_risk_recovery_0299.sql": {
-      "sha256": "b89c3c85272437f2a1fcc0fae84b7509181b99c333858334a0b1cc3f93ad3c66",
-      "size": 1611
-    },
-    "cli/internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql": {
-      "sha256": "20079adf27ef0ffec34a1adca647287ddf0ea868e6437932befea6fce0c1c765",
-      "size": 1076
-    },
-    "cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql": {
-      "sha256": "1ce643939b5d359caaaafacf1d9ad48189b8740903b861c6fe62ace194c5a0ae",
-      "size": 1726
-    },
-    "cli/internal/dbmigrate/sql/0087_tpm_hardware_evidence_0312.sql": {
-      "sha256": "d36d66cec1f1801f5c8cda3051b1d5d24a4f16031047be45e9856ef675d392fa",
-      "size": 1422
-    },
-    "cli/internal/dbmigrate/sql/0088_measured_boot_pcr_0315.sql": {
-      "sha256": "05d522bd827cb2b3921dea093c32541c62a49ea46051849b6c0e7169a988b4b9",
-      "size": 1491
-    },
-    "cli/internal/dbmigrate/sql/0089_migration_workflow_0331.sql": {
-      "sha256": "48b912591980f34200b6b3311de18d398fe777fdfdb00fe1b5f960293fb815ed",
-      "size": 1433
-    },
-    "cli/internal/dbmigrate/sql/0090_gravit_compat_0332.sql": {
-      "sha256": "1a2e5061a6bea8cc88834e6f23ff3dff03e5ea617b7ccdbce3c726151390030d",
-      "size": 457
-    },
-    "cli/internal/dbmigrate/sql/0091_gravit_inventory_0333.sql": {
-      "sha256": "3f622834442f1d7112616f483919e2552fcb75b20b7216448975d7fed70a80b4",
-      "size": 552
-    },
-    "cli/internal/dbmigrate/sql/0092_gravit_identity_0334.sql": {
-      "sha256": "0cee708db38904596102053cae4d481ca8348668a4b0dbaee3436818a23aec9d",
-      "size": 1640
-    },
-    "cli/internal/dbmigrate/sql/0093_gravit_auth_0335.sql": {
-      "sha256": "2931c42441ccc75399e206cd4b7f7989ce895b34e4a5cd91ac765b1ff7dece6b",
-      "size": 680
-    },
-    "cli/internal/dbmigrate/sql/0094_gravit_security_0336.sql": {
-      "sha256": "645e321d808d82e5413ece1c7bdf5129d2aea7dfaac3ae5250538f51583aaafb",
-      "size": 1141
-    },
-    "cli/internal/dbmigrate/sql/0095_gravit_content_0337.sql": {
-      "sha256": "ba92a07a933d78907a521bdcdd60290f3291cda8a825759149bd943d925bbc79",
-      "size": 975
-    },
-    "cli/internal/dbmigrate/sql/0096_gravit_modules_0338.sql": {
-      "sha256": "469ef5f2db377a8c3914a030c605589fd6732e4b2f217613a51299fd62756a23",
-      "size": 923
-    },
-    "cli/internal/dbmigrate/sql/0097_gravit_rehearsal_03310.sql": {
-      "sha256": "77c1482a7022730c2eb65a831a851d7bfffd2556942a5f15b9db61c8cea7d331",
-      "size": 641
-    },
-    "cli/internal/dbmigrate/sql/0098_gravit_staged_cutover_03311.sql": {
-      "sha256": "3caf034843014d655816485794d24bce8b7ff1147265003f93de0c00e40bf394",
-      "size": 2792
-    },
-    "cli/internal/dbmigrate/sql/0099_gravit_operational_rollback_03312.sql": {
-      "sha256": "81d60c3a8125d3505edcc03b47c980bfbd6a97a179c4b2f4db6ff7febdce55d9",
-      "size": 3220
-    },
-    "cli/internal/dbmigrate/sql/0100_migration_reports_03313.sql": {
-      "sha256": "5842f8b074f76da5d388258c63a6294b026e482747ac4ca39ab27a9615b04c0b",
-      "size": 1166
-    },
-    "cli/internal/dbmigrate/sql/0101_stable_runtime_gate_0341.sql": {
-      "sha256": "f78196cbf508a0b3ef21e4843f3ad3809f2f30a11cce8f703e798ae689274361",
-      "size": 2341
-    },
-    "cli/internal/dbmigrate/sql/0102_staged_runtime_execution_0342.sql": {
-      "sha256": "93f97bbcaf3696967a8fc4784281e9b22919015ea37a7688b407381df81c1a6e",
-      "size": 803
-    },
-    "cli/internal/dbmigrate/sql/0103_trusted_validation_attestation_0345.sql": {
-      "sha256": "26851668358fe134280b94b6a29fda8adece2309ada9934663f6d38338b97708",
-      "size": 712
-    },
-    "cli/internal/dbmigrate/sql/0104_validation_freshness_0346.sql": {
-      "sha256": "d3652cb9ff262ed7d4d18c476703a420c8fedb266745d8b37e410cfc5ff9dbaf",
-      "size": 1235
-    },
-    "cli/internal/dbmigrate/sql/0105_production_runtime_gate_03411.sql": {
-      "sha256": "e52af01de9df50d873373e9777198d80e20531a7cc1f7515192e5e8af5acd708",
-      "size": 10073
-    },
-    "cli/internal/dbmigrate/sql/0106_validation_audit_03412.sql": {
-      "sha256": "e1d83a211e0a9480d551c4460e1beaeaf083f80516264f6937d57554e825461d",
-      "size": 2754
-    },
-    "cli/internal/dbmigrate/sql/0107_ga_stable_snapshot_0350.sql": {
-      "sha256": "54d1a2172d1117f0fa061a092c13cc61dd35456827645e26ff0023b4404e3908",
-      "size": 4403
-    },
-    "cli/internal/dbmigrate/sql/0108_profile_launch_configuration_0382.sql": {
-      "sha256": "c8657e10b97d0fe1ea964c16f1596294a65afd6c21ac3ab9612f3a60f4dced60",
-      "size": 1791
-    },
-    "cli/internal/dbmigrate/sql/0109_official_server_bridge_join_0397.sql": {
-      "sha256": "e87117110d1759bae4b2d07032c6858d6148a8752804109e5225721bf31a6ee3",
-      "size": 1661
-    },
-    "cli/internal/dbmigrate/sql/0110_bridge_confirmed_execution_0411.sql": {
-      "sha256": "ade433db50070bcbce4c144a31ddd1be850d86f5bfb819122af8c24c30f33482",
-      "size": 1545
-    },
-    "cli/internal/dbmigrate/sql/0111_server_bridge_host_operations_0413.sql": {
-      "sha256": "4c7b870eb6f22218ed75e023291e072583ee006172cf8167fa5ed96ec496dc16",
-      "size": 2508
-    },
-    "cli/internal/dbmigrate/sql/0112_host_control_fault_fencing_04112.sql": {
-      "sha256": "957a469b05b1dc373ba1018644ac23e517dedee904cda6fa2c40f4c0142d8452",
-      "size": 885
-    },
-    "cli/internal/dbmigrate/sql/0113_permanent_game_credentials_0434.sql": {
-      "sha256": "cf59a418ce2a301d25e3803ba48e21c6b3690cec9631243f149b339407c89684",
-      "size": 2297
-    },
-    "cli/internal/dbmigrate/sql/0114_gravit_migration_plan_0442.sql": {
-      "sha256": "0e90ece7a2efff834d072ba995a9dbc370ea9065a13e44966a3bf52e5468fb2a",
-      "size": 655
-    },
-    "cli/internal/dbmigrate/sql/0115_imported_file_mirrors_0473.sql": {
-      "sha256": "ababf4448da78cdeadb50072d10a1e22696f298f3695c1f9538de3aad216620c",
-      "size": 262
-    },
-    "cli/internal/dbmigrate/sql/0116_server_bound_guard_sessions_0507.sql": {
-      "sha256": "bc2bdb72c6276a360950ceea93bb124024594f24f48fc6ef67ae87acb6bce014",
-      "size": 5219
+    "cli/internal/dbmigrate/catalog.zip": {
+      "sha256": "d978f8386446a42f91ce5c2ad7548a8fc0b8feac32d08e0712fc9727d1737a2c",
+      "size": 127716
     },
     "deploy/production/docker-compose.yml": {
       "sha256": "f38920e69c400e7b9a40790a94203e613bf3e679d45f90687a951437ca651938",
@@ -1492,6 +1020,10 @@
       "sha256": "450cf672e288a2b2d3627362c0832c51995e8e84d5faff98812ffb26eb313023",
       "size": 13778
     },
+    "scripts/build/embedded_cli_assets.py": {
+      "sha256": "fc5b619654f2ab950edaa9e9fa47d0135ba7072cf4b892916451778ad61e7990",
+      "size": 3287
+    },
     "scripts/ci/required_jobs_0363.py": {
       "sha256": "4c8943d20d30df888bffc4bb05a529e62551ae26f20ee41f806ae17cbf7ab534",
       "size": 6619
@@ -1525,8 +1057,8 @@
       "size": 1546
     },
     "scripts/release/build-release.sh": {
-      "sha256": "50678213d3caa66a94e3127d007c8159d8b39af094d537574df377e4a79b4bb3",
-      "size": 53061
+      "sha256": "4847656c5cbfeed7edea630ab9cce0d0639ccc6ddb32ab50e657dc9d1f873c76",
+      "size": 53219
     },
     "scripts/release/build-windows-desktop.ps1": {
       "sha256": "4fa43982cd3fae7bcebd0c670e0e97257ed4ed3d489223e05e983f1b05106597",
@@ -1549,8 +1081,8 @@
       "size": 6918
     },
     "scripts/release/check-admin-ga-0220.py": {
-      "sha256": "9c65cf927cd7013c13f6d9186359b9710558bf6f13ce03a35935bf44ba7445a9",
-      "size": 3140
+      "sha256": "6a35e2f7fbfccecbffc58a53fde19d3326e1361a5cc16f6146a1fc3103482dc8",
+      "size": 3272
     },
     "scripts/release/check_go_repro_0470.py": {
       "sha256": "85bbb529f6a87c3062979167ec70a8036da96474e4a0dc4151763ac637045b7b",
@@ -1601,8 +1133,8 @@
       "size": 8096
     },
     "scripts/release/inputs_guard_0461.py": {
-      "sha256": "e44f9f268e1f89fdf0bbe7a6c83d366d36dab30fbda881414ddd749654015ff5",
-      "size": 6491
+      "sha256": "3adcc7fc2f17cbcc5ccd3dad5dd5b9c08d6fa8671fb9b55db90edf75b8918ac6",
+      "size": 6389
     },
     "scripts/release/linux-package.py": {
       "sha256": "ce3a8a4e22f62b6ccd889cb8707115c6ca06144e26a596969e31d5034e7ef2e4",
@@ -1733,8 +1265,8 @@
       "size": 2519
     },
     "scripts/release/test_inputs_guard_0461.py": {
-      "sha256": "ec6ce137fcf2cbd7721006ef8c2cc516d97b76e97e2881c1d426522dd7e238b3",
-      "size": 2061
+      "sha256": "87ad5e7822938543a199fe26e07b2bd8179055b917e5da36c91b0356e64afb39",
+      "size": 2018
     },
     "scripts/release/test_native_verify_0470.py": {
       "sha256": "6c7393e68845686c76d58f3d44099219f4027aaea89d70c539594c6cadb87149",
@@ -1809,20 +1341,20 @@
       "size": 7603
     },
     "scripts/smoke/offline/repository-policy.py": {
-      "sha256": "4b05f64c988d7101eed46a9deaead00d6d6c8c073a489bc655deb40c8e9b14f5",
-      "size": 269664
+      "sha256": "60e1776bc1cfd0c23a518b5c5a1095a0f12aea4a63e7f9c66f5b89b815cef579",
+      "size": 270066
     },
     "scripts/smoke/offline/serverbridge-forge-neoforge-0147.py": {
-      "sha256": "d852a6d712bcb766b0a091a1720f37e9ec2f779a3f642f67a18cc1b5ecf2297a",
-      "size": 10481
+      "sha256": "31358301e136e4e45533f6bbdf36fd4cc8d5bc260919e4e8ad22ea3223d134b1",
+      "size": 10602
     },
     "scripts/smoke/offline/session-device-risk-0126.py": {
-      "sha256": "8c95c79e599aa0e3ef8913094ac744b4763c0f5d35f54a7fb56f15323f5dad93",
-      "size": 4739
+      "sha256": "d4610944723b70cd809d24c0c5bee37fcc5a698bbe178a2c7e15ccfdc83dadbe",
+      "size": 4875
     },
     "scripts/version/manage.py": {
-      "sha256": "cc2421b39fd75b8a7497a6262ca54b07fafc2421e2cb97a20ad35a6fc1951433",
-      "size": 6969
+      "sha256": "328a1d5532162759c6700adf7a163e3b3997279a6e862cfc843bf5e26c3876e2",
+      "size": 7541
     },
     "sdk/admin/typescript/package.json": {
       "sha256": "65e5130808b6926456fe3f56b5ca655144acce978da2fc44a3e631515f47df75",

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def read(rel: str) -> str:
-    return (ROOT / rel).read_text(encoding="utf-8")
+    return resource_read_text(ROOT, rel)
 
 
 def require(ok: bool, message: str) -> None:

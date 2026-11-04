@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import json
 
@@ -6,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def read(rel):
-    return (ROOT / rel).read_text(encoding="utf-8")
+    return resource_read_text(ROOT, rel)
 
 
 def require(ok, msg):
@@ -27,7 +28,7 @@ required = [
     "cli/cmd/launcher/extension_updates_02011.go",
 ]
 for rel in required:
-    require((ROOT / rel).is_file(), f"missing production dependency/update file {rel}")
+    require(resource_exists(ROOT, rel), f"missing production dependency/update file {rel}")
 
 semver = read("services/api/internal/extensionresolver/semver_02011.go")
 for token in ("ParseVersion", "Matches", "^", "~", "||"):

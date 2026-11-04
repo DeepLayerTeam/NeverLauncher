@@ -8,7 +8,7 @@ on:
       - 'scripts/operations/multi_host_0512.py'
       - 'scripts/operations/ha_inventory_0511.py'
       - 'services/api/internal/dbmigrate/**'
-      - 'docs/deployment/rolling-update-0517.md'
+      - 'docs/deployment/rolling-update.md'
       - '.github/workflows/rolling-update-0517.yml'
   pull_request:
   workflow_dispatch:

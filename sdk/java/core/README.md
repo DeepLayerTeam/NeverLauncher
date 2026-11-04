@@ -128,7 +128,7 @@ matrix; a JVM HTTP fixture alone is not release certification.
 
 Java `runtime().events().close()` now closes only local callback handlers. Backend subscriptions remain durable, so an update or JVM restart does not erase the pending EventBus backlog. To intentionally delete a subscription, invoke `runtime().events().unsubscribe(eventType, mode)` while the host session is active. The EventBus is at-least-once and callers must deduplicate non-idempotent side effects.
 
-The authenticated callback server accepts event/hook envelopes up to 2 MiB to carry the existing 1 MiB EventBus payload limit; authenticated command/RPC requests retain their separate 64 KiB bound. Java `null` is a valid JSON command result. Full documentation and tests: `docs/extensions/eventbus-rpc-persistence-0423.md`.
+The authenticated callback server accepts event/hook envelopes up to 2 MiB to carry the existing 1 MiB EventBus payload limit; authenticated command/RPC requests retain their separate 64 KiB bound. Java `null` is a valid JSON command result. Full documentation and tests: `docs/extensions/eventbus-rpc-persistence.md`.
 
 ## 0.48.3 — Real Java SPI provider registry
 
@@ -146,20 +146,20 @@ Real compile/run integration: `sh sdk/java/core/build.sh test`,
 `python3 examples/extensions/java-spi/test-runner.py`. The fixture exercises the actual
 JVM Host, embedded pinned JAR library, authenticated config, live provider switching
 through existing command RPC, CLI, heartbeat, shutdown and refusal of unknown selections.
-See `docs/extensions/java-spi-0483.md`. This SPI is *per-extension-JVM*, not a cross-package
+See `docs/extensions/java-spi.md`. This SPI is *per-extension-JVM*, not a cross-package
 registry and not a Java sandbox.
 
 ## 0.48.4 — Backend Java Services
 
-`context.runtime().backend()` exposes typed, read-only project/profile/channel/release/job-status services via the authenticated Go Host Broker. Individual capabilities require live `project:read` or `release:read` grants and enforce project scope. Bounded list pagination uses `Page<T>` with optional `nextOffset`; see [Backend Java Services](../../../docs/extensions/java-backend-services-0484.md) for the operations, permissions and limitations.
+`context.runtime().backend()` exposes typed, read-only project/profile/channel/release/job-status services via the authenticated Go Host Broker. Individual capabilities require live `project:read` or `release:read` grants and enforce project scope. Bounded list pagination uses `Page<T>` with optional `nextOffset`; see [Backend Java Services](../../../docs/extensions/java-backend-services.md) for the operations, permissions and limitations.
 
 ## 0.48.5 — Authentication & Identity SPI
 
-`IdentityServices.CONTRACT` connects one selected `IdentityProvider` implementation to the existing authenticated callback RPC. Implementations verify external credentials, provide a stable immutable subject, introspect and revoke their **own** provider sessions. They never issue NeverLauncher tokens or Microsoft/Minecraft authentication evidence. Configuration, grants and activation: `docs/authentication/java-identity-spi-0485.md`. Run `sh sdk/java/core/build.sh test` to exercise the live JVM callback checks.
+`IdentityServices.CONTRACT` connects one selected `IdentityProvider` implementation to the existing authenticated callback RPC. Implementations verify external credentials, provide a stable immutable subject, introspect and revoke their **own** provider sessions. They never issue NeverLauncher tokens or Microsoft/Minecraft authentication evidence. Configuration, grants and activation: `docs/authentication/java-identity-spi.md`. Run `sh sdk/java/core/build.sh test` to exercise the live JVM callback checks.
 
 ## 0.48.6 — Content & Distribution SPI
 
-`context.runtime().content()` provides actual provider-driven source/texture/delivery resolution, metadata enrichment, bounded pre-sign byte transformations, and SHA-256 checked content reads using the current Go Host broker. Register a `ContentProvider` via `ContentServices.CONTRACT`; the selected provider is managed by `ExtensionLifecycle`. A transformed file is not a published release and must pass the existing signing and integrity pipeline. Build the executable sample: `sh examples/extensions/java-content-spi/build.sh`. For the production opt-in `contentExtensionId` multipart package transform, permissions, strict limits and the remaining public-distribution boundaries see `docs/extensions/java-content-spi-0486.md`.
+`context.runtime().content()` provides actual provider-driven source/texture/delivery resolution, metadata enrichment, bounded pre-sign byte transformations, and SHA-256 checked content reads using the current Go Host broker. Register a `ContentProvider` via `ContentServices.CONTRACT`; the selected provider is managed by `ExtensionLifecycle`. A transformed file is not a published release and must pass the existing signing and integrity pipeline. Build the executable sample: `sh examples/extensions/java-content-spi/build.sh`. For the production opt-in `contentExtensionId` multipart package transform, permissions, strict limits and the remaining public-distribution boundaries see `docs/extensions/java-content-spi.md`.
 
 ### 0.48.7 event-triggered jobs and policy hooks
 
@@ -169,7 +169,7 @@ pre-mutation vetoes, and `subscribeDetailed(...)` for event sequence, schema,
 aggregate, ordering and idempotency metadata. The Go EventBus owns lease, retry
 and dead-letter state. Permanent failures use `RuntimeEvents.PermanentFailure`;
 other callback failures request retry. **Do not assume exactly-once external
-effects**. See `docs/extensions/java-events-hooks-0487.md`.
+effects**. See `docs/extensions/java-events-hooks.md`.
 
 
 ### 0.48.8 ServerBridge Java Integration
@@ -181,7 +181,7 @@ typed durable server event callbacks. Commands remain subject to the existing
 signed adapter capabilities, runtime fencing, game-domain RBAC and PostgreSQL
 idempotency. `server.console` and `server.shutdown` are not exposed to Java.
 Actual Minecraft session admission is unchanged. Details and tests:
-`docs/extensions/java-serverbridge-0488.md` and
+`docs/extensions/java-serverbridge.md` and
 `sh sdk/java/core/build.sh test`.
 
 ### 0.48.9 Admin/Desktop UI and CLI integration

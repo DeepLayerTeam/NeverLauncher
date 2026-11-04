@@ -18,8 +18,8 @@ On a protected, isolated, real Linux runner with a working Backend/PostgreSQL, 3
 
 ```bash
 # First run the existing three-project rehearsal and migration-ga certify
-# procedures documented in gravit-cohort-rehearsal-04910.md and
-# gravit-migration-ga-0450.md. Retain original unredacted results privately.
+# procedures documented in gravit-cohort-rehearsal.md and
+# gravit-migration-ga.md. Retain original unredacted results privately.
 # Compile the real Go verifier using pinned toolchain:
 go -C tools/migration-ga build -o /srv/gravit-ga/migration-ga .
 

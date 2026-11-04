@@ -7,7 +7,7 @@ on:
       - 'scripts/operations/dr_03512.py'
       - 'scripts/operations/multi_host_0512.py'
       - 'scripts/operations/nn1_compat_0516.py'
-      - 'docs/deployment/consistent-backup-pitr-0518.md'
+      - 'docs/deployment/consistent-backup-pitr.md'
       - '.github/workflows/consistent-backup-0518.yml'
   pull_request:
   workflow_dispatch:

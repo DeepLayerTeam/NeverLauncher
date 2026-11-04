@@ -1,4 +1,4 @@
-> **0.34.7 compatibility:** V07 requires ValidationEvidence v4 and the explicit `authenticationMode` target field. The v3 procedure below is historical; follow [live-authentication-0347.md](live-authentication-0347.md) for new trusted runs. Older evidence never satisfies the new required authentication stage.
+> **0.34.7 compatibility:** V07 requires ValidationEvidence v4 and the explicit `authenticationMode` target field. The v3 procedure below is historical; follow [live-authentication.md](live-authentication.md) for new trusted runs. Older evidence never satisfies the new required authentication stage.
 
 # 0.34.5 — Real staged execution with independently signed ValidationEvidence
 
@@ -91,4 +91,4 @@ reviewing already issued attestations. Log redaction and retention are extended
 in V12. Do not publish raw logs containing player/session credentials.
 
 
-**0.34.12 upgrade:** the attestor now additionally requires `--diagnostics-dir` pointing to an owner-only 0700 persistent directory; see `validation-reports-security-03412.md`.
+**0.34.12 upgrade:** the attestor now additionally requires `--diagnostics-dir` pointing to an owner-only 0700 persistent directory; see `validation-reports-security.md`.

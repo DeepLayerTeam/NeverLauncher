@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import re
 
@@ -97,9 +98,7 @@ require(
 guard_purpose_migration_api = read(
     "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
 )
-guard_purpose_migration_cli = read(
-    "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
-)
+guard_purpose_migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
 if guard_purpose_migration_api != guard_purpose_migration_cli:
     raise SystemExit("0.16.1 API/CLI Guard challenge-purpose migration differs")
 require(

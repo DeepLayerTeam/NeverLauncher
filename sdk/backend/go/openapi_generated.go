@@ -47,6 +47,7 @@ var ExtensionsAPIOperations = map[string]APIOperation{
 	"get_desktop_extensions_catalog":                                                      {Method: "GET", Path: "/api/v1/desktop/extensions/catalog"},
 	"post_admin_extension_cli_by_extensionId_invoke":                                      {Method: "POST", Path: "/api/v1/admin/extension-cli/{extensionId}/invoke"},
 	"post_admin_extension_ga_reconcile":                                                   {Method: "POST", Path: "/api/v1/admin/extension-ga/reconcile"},
+	"post_admin_extension_hosts_by_extensionId_probe":                                     {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/probe"},
 	"post_admin_extension_hosts_by_extensionId_restart":                                   {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/restart"},
 	"post_admin_extension_hosts_by_extensionId_start":                                     {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/start"},
 	"post_admin_extension_hosts_by_extensionId_stop":                                      {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/stop"},

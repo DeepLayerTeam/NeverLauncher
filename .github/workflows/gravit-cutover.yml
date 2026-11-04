@@ -8,7 +8,7 @@ on:
       - 'services/api/internal/dbmigrate/sql/0098*'
       - 'cli/cmd/launcher/migration_cutover*'
       - 'cli/cmd/launcher/migration_fence*'
-      - 'docs/migration/gravit-cutover-rollback-0448.md'
+      - 'docs/migration/gravit-cutover-rollback.md'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-cutover-03311.yml'

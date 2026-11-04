@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[3]
@@ -72,7 +73,7 @@ require(
 )
 if read(
     "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"
-) != read("cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"):
+) != resource_read_text(root, "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"):
     raise SystemExit("API/CLI 0.19.2 ServerBridge runtime migrations differ")
 
 for path, platform in [

@@ -22,7 +22,7 @@ python3 scripts/install/minimal-install.py run \
   --binary /opt/launcher/bin/launcher-api
 ```
 
-На входящем reverse proxy отдельно настройте доверенный сертификат для того же origin и доступ к `https://launcher.example.org/ready`. Получите единственный bootstrap token из приватного `backend.env`, передайте его заголовком `X-Launcher-Bootstrap-Token` в существующую операцию `POST /api/v1/install/bootstrap-admin`; затем создайте первый проект через `POST /api/v1/install/first-project`. **Не печатайте токен в командной строке.** Проверьте вход, отказ повторного bootstrap, перезапуск API и сохранение проекта. [Подробности Minimal](../deployment/minimal-0375.md).
+На входящем reverse proxy отдельно настройте доверенный сертификат для того же origin и доступ к `https://launcher.example.org/ready`. Получите единственный bootstrap token из приватного `backend.env`, передайте его заголовком `X-Launcher-Bootstrap-Token` в существующую операцию `POST /api/v1/install/bootstrap-admin`; затем создайте первый проект через `POST /api/v1/install/first-project`. **Не печатайте токен в командной строке.** Проверьте вход, отказ повторного bootstrap, перезапуск API и сохранение проекта. [Подробности Minimal](../deployment/minimal.md).
 
 В действующем Minimal на хосте с приватным HTTPS URL:
 

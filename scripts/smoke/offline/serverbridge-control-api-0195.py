@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import re
 
@@ -23,7 +24,7 @@ required = [
     "cli/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql",
 ]
 for rel in required:
-    if not (ROOT / rel).is_file():
+    if not resource_exists(ROOT, rel):
         raise SystemExit(f"missing 0.19.5 Control API production file: {rel}")
 
 checks = {
@@ -151,7 +152,7 @@ control_sources = [
     / "plugins/neoforge-bridge/src/main/java/ru/launcher/bridge/neoforge/LauncherNeoForgeBridge.java",
 ]
 for path in control_sources:
-    text = path.read_text(encoding="utf-8")
+    text = resource_read_text(ROOT, rel)
     for forbidden in (
         "ProcessBuilder",
         "Runtime.getRuntime().exec",

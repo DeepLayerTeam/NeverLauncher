@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[3]
@@ -18,7 +19,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 api_migration = read("services/api/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
-cli_migration = read("cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
 if api_migration != cli_migration:
     raise SystemExit("0.14.5 API/CLI proxy-family migrations differ")
 require(

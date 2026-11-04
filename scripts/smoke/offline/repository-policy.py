@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import zipfile
 import json
 import re
 import subprocess
@@ -21,6 +22,9 @@ def fail(message: str) -> None:
 
 
 def read(rel: str) -> str:
+    if rel.startswith("cli/internal/dbmigrate/sql/"):
+        with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as archive:
+            return archive.read("sql/" + rel.rsplit("/", 1)[-1]).decode("utf-8")
     return (ROOT / rel).read_text(encoding="utf-8")
 
 
@@ -91,9 +95,10 @@ if '"productVersion"' in read("compatibility/targets.json"):
 # immutable migration chain. Иначе manual production install может считаться
 # успешным, оставив схему старее той, которую требует Backend.
 api_migrations = ROOT / "services/api/internal/dbmigrate/sql"
-cli_migrations = ROOT / "cli/internal/dbmigrate/sql"
 api_files = {p.name: p for p in api_migrations.glob("*.sql")}
-cli_files = {p.name: p for p in cli_migrations.glob("*.sql")}
+with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as cli_catalog:
+    cli_files = {info.filename.removeprefix("sql/"): cli_catalog.read(info)
+                 for info in cli_catalog.infolist()}
 if set(api_files) != set(cli_files):
     missing_cli = sorted(set(api_files) - set(cli_files))
     missing_api = sorted(set(cli_files) - set(api_files))
@@ -103,7 +108,7 @@ if set(api_files) != set(cli_files):
 else:
     for name in sorted(api_files):
         api_digest = hashlib.sha256(api_files[name].read_bytes()).digest()
-        cli_digest = hashlib.sha256(cli_files[name].read_bytes()).digest()
+        cli_digest = hashlib.sha256(cli_files[name]).digest()
         if api_digest != cli_digest:
             fail(f"migration checksum drift between Backend and CLI: {name}")
 if "0011_auth_federation_release_0120.sql" not in api_files:
@@ -856,13 +861,14 @@ for required in [
         )
 for name in ["docker-compose.yml", "nginx.conf", "env.production.example"]:
     canonical = ROOT / "deploy/production" / name
-    embedded = ROOT / "cli/cmd/launcher/templates/production" / name
-    if not embedded.is_file():
-        fail(f"first-run embedded template отсутствует: {name}")
-    elif canonical.read_bytes() != embedded.read_bytes():
-        fail(
-            f"first-run embedded template рассинхронизирован с canonical deploy/production: {name}"
-        )
+    with zipfile.ZipFile(ROOT / "cli/cmd/launcher/templates/production.zip") as bundle:
+        try:
+            embedded_bytes = bundle.read("production/" + name)
+        except KeyError:
+            fail(f"first-run embedded template отсутствует: {name}")
+            continue
+    if canonical.read_bytes() != embedded_bytes:
+        fail(f"first-run embedded template рассинхронизирован с canonical deploy/production: {name}")
 if '"beta-smoke"' in install_handlers:
     fail("install readiness содержит удалённый beta-smoke placeholder")
 

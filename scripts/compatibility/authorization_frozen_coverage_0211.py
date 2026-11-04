@@ -10,6 +10,7 @@ verify the pinned Gravit v5.7.12 -> v5.7.13 upstream delta directly against GitH
 from __future__ import annotations
 
 import argparse
+import zipfile
 import hashlib
 import json
 import os
@@ -141,9 +142,8 @@ def validate_authorization_invariants() -> None:
         ROOT
         / "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql"
     ).read_text(encoding="utf-8")
-    cli_migration = (
-        ROOT / "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql"
-    ).read_text(encoding="utf-8")
+    with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as archive:
+        cli_migration = archive.read("sql/0050_authorization_scopes_identity_0211.sql").decode("utf-8")
     minecraft = (
         ROOT / "services/api/internal/httpapi/minecraft_auth_119.go"
     ).read_text(encoding="utf-8")

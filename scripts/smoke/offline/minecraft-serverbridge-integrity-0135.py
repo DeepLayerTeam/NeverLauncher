@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import re
 
@@ -31,9 +32,7 @@ if version_tuple(version) < (0, 13, 5):
 api_mig = read(
     "services/api/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql"
 )
-cli_mig = read(
-    "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql"
-)
+cli_mig = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql")
 if api_mig != cli_mig:
     raise SystemExit("0.13.5 API/CLI migration 0019 differs")
 require(

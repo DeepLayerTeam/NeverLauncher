@@ -13,6 +13,8 @@ VERSION="${CANONICAL_VERSION}"
 release_from_0462() {
   [[ "$(printf '%s\n' '0.46.2' "${VERSION}" | sort -V | head -n1)" == '0.46.2' ]]
 }
+# Standalone CLI bundles must exactly match canonical SQL and deployment inputs.
+python3 "${ROOT_DIR}/scripts/build/embedded_cli_assets.py" --check || exit 2
 # Fail before modifying any release output when checked-in build inputs drift.
 # The same guard is executed after CI builds to detect lockfile mutation.
 if release_from_0462; then

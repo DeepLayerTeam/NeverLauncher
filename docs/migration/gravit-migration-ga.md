@@ -35,7 +35,7 @@ For each reference add to the 0.44.9 GA JSON plan:
 }
 ```
 
-These keys are *additional keys* to the full operator plan described in [0.44.9 integration acceptance](gravit-integration-acceptance-0449.md); this fragment is not a complete plan. They are required for 0.45.0. The native audit runs **again inside `certify`** for `uuid-world-plugin-data`: its calculated hashes and UUID list must match the operator probe's structured `never/gravit-state-audit/v1` evidence **and** the independently fetched MIG13 player identities. A probe that simply returns `passed: true` or a written SHA-256 without the actual files is refused. The GA verifier also rechecks retained state-audit evidence against the signed receipt.
+These keys are *additional keys* to the full operator plan described in [0.44.9 integration acceptance](gravit-integration-acceptance.md); this fragment is not a complete plan. They are required for 0.45.0. The native audit runs **again inside `certify`** for `uuid-world-plugin-data`: its calculated hashes and UUID list must match the operator probe's structured `never/gravit-state-audit/v1` evidence **and** the independently fetched MIG13 player identities. A probe that simply returns `passed: true` or a written SHA-256 without the actual files is refused. The GA verifier also rechecks retained state-audit evidence against the signed receipt.
 
 Generate the per-project worklist from the *current* verified backend report before any cutover:
 

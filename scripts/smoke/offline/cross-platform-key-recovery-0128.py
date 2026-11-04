@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import subprocess, sys
 
@@ -36,9 +37,7 @@ desktop = read("apps/desktop/src/main.tsx")
 migration_api = read(
     "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql"
 )
-migration_cli = read(
-    "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql"
-)
+migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql")
 tests = read("services/api/internal/httpapi/device_key_recovery_0128_test.go")
 
 require(

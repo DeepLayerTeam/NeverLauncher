@@ -13,8 +13,8 @@ class InputsGuardTests(unittest.TestCase):
         baseline=json.loads(guard.BASELINE.read_text())
         self.assertEqual(baseline['release'], (guard.ROOT/'VERSION').read_text().strip())
         self.assertIn('reproducibility/primary-payload.json',baseline['files'])
-        self.assertIn('cli/cmd/launcher/templates/production/docker-compose.yml',baseline['files'])
-        self.assertIn('cli/internal/dbmigrate/sql/0115_imported_file_mirrors_0473.sql',baseline['files'])
+        self.assertIn('cli/cmd/launcher/templates/production.zip',baseline['files'])
+        self.assertIn('cli/internal/dbmigrate/catalog.zip',baseline['files'])
         self.assertIn('services/api/internal/dbmigrate/sql/0115_imported_file_mirrors_0473.sql',baseline['files'])
         self.assertIn('scripts/release/independent_current_05211.py',baseline['files'])
     def test_version_change_fails_closed(self):

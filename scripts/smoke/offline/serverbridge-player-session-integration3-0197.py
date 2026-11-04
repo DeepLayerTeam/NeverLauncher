@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -14,7 +15,7 @@ required = [
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgePlayerSessionRegistry.java",
 ]
 for rel in required:
-    if not (ROOT / rel).is_file():
+    if not resource_exists(ROOT, rel):
         raise SystemExit(f"missing 0.19.7 production file: {rel}")
 proto = (
     ROOT / "services/api/internal/httpapi/server_bridge_protocol_0191.go"

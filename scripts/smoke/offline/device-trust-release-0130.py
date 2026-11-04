@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import json, subprocess, sys
 
@@ -24,15 +25,15 @@ except ValueError:
 if len(version_tuple) != 3 or version_tuple < (0, 13, 0):
     raise SystemExit(f"Device Trust Release gate requires >=0.13.0, got {version}")
 api_migs = sorted((ROOT / "services/api/internal/dbmigrate/sql").glob("*.sql"))
-cli_migs = sorted((ROOT / "cli/internal/dbmigrate/sql").glob("*.sql"))
-if [p.name for p in api_migs] != [p.name for p in cli_migs]:
+cli_migs = migration_catalog(ROOT)
+if [p.name for p in api_migs] != sorted(cli_migs):
     raise SystemExit("API/CLI migration catalogs differ")
 if not any(p.name == "0018_device_trust_stabilization_01210.sql" for p in api_migs):
     raise SystemExit(
         "0.13+ must retain sealed 0018 Device Trust stabilization migration"
     )
-for a, b in zip(api_migs, cli_migs):
-    if a.read_bytes() != b.read_bytes():
+for a in api_migs:
+    if a.read_bytes() != cli_migs[a.name]:
         raise SystemExit(f"migration differs: {a.name}")
 release = read("cli/cmd/launcher/device_trust_release.go")
 req(

@@ -119,7 +119,7 @@ jobs:
       - name: Database migrations and genuine Admin production compilation
         run: |
           (cd services/api && go test -count=1 ./internal/dbmigrate)
-          cmp services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          python3 scripts/build/embedded_cli_assets.py --check
           (cd cli && go test -count=1 ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/launcher)
           (cd apps/admin && npm ci --no-audit --no-fund && npm run build)
       - uses: actions/upload-artifact@v4

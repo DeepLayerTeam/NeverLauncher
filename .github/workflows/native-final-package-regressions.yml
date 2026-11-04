@@ -10,7 +10,7 @@ on:
       - '.github/workflows/native-installers.yml'
       - '.github/workflows/native-final-packages-0522.yml'
       - '.github/workflows/native-final-package-regressions-0522.yml'
-      - 'docs/operations/native-final-package-acceptance-0522.md'
+      - 'docs/operations/native-final-package-acceptance.md'
       - 'VERSION'
   pull_request:
   workflow_dispatch:

@@ -55,9 +55,9 @@ SOURCES = (
     'deploy/production/docker-compose.yml',
     'deploy/production/nginx.conf',
     'deploy/production/env.production.example',
-    'cli/cmd/launcher/templates/production/docker-compose.yml',
-    'cli/cmd/launcher/templates/production/nginx.conf',
-    'cli/cmd/launcher/templates/production/env.production.example',
+    'cli/cmd/launcher/templates/production.zip',
+    'cli/internal/dbmigrate/catalog.zip',
+    'scripts/build/embedded_cli_assets.py',
 )
 SUFFIXES = ('go.mod', 'go.sum', 'Cargo.toml', 'Cargo.lock', 'package.json',
             'package-lock.json', 'npm-shrinkwrap.json', 'gradle.lockfile',
@@ -82,7 +82,6 @@ def inputs() -> list[str]:
     for folder, pattern in (
         ('scripts/release', '*.py'),
         ('scripts/release', '*.sh'),
-        ('cli/internal/dbmigrate/sql', '*.sql'),
         ('services/api/internal/dbmigrate/sql', '*.sql'),
     ):
         for path in (ROOT/folder).glob(pattern):

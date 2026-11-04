@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import sys
 
@@ -73,7 +74,7 @@ if 'Assurance:         "hardware"' in server or 'Assurance:         "attested"' 
     errors.append('device trust handler: unattested hardware binding повышает assurance')
 
 migration_api = (ROOT / 'services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql').read_bytes()
-migration_cli = (ROOT / 'cli/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql').read_bytes()
+migration_cli = resource_read_bytes(ROOT, 'cli/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql')
 if migration_api != migration_cli:
     errors.append('migration 0013 differs between API and CLI catalogs')
 

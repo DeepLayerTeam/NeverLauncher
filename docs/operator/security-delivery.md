@@ -25,4 +25,4 @@ python3 scripts/sdk/generate-http-operations.py --check
 
 ## Миграция Gravit
 
-Перед миграцией выполняйте inventory, dry-run, фиксируйте поддерживаемые password verifiers, UUID, OptionalView и модули. Старые Gravit-сессии, незнакомые хеши и произвольные сторонние JAR нельзя автоматически объявлять совместимыми. Перед cutover нужен восстановимый snapshot, проверка real Minecraft join и явная точка возврата. [Runbook Gravit Migration GA](../migration/gravit-migration-ga-0450.md).
+Перед миграцией выполняйте inventory, dry-run, фиксируйте поддерживаемые password verifiers, UUID, OptionalView и модули. Старые Gravit-сессии, незнакомые хеши и произвольные сторонние JAR нельзя автоматически объявлять совместимыми. Перед cutover нужен восстановимый snapshot, проверка real Minecraft join и явная точка возврата. [Runbook Gravit Migration GA](../migration/gravit-migration-ga.md).

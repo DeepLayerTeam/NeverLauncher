@@ -53,7 +53,7 @@ server in a disposable environment, and install an old client package to update.
 Each stage must contain the existing `.migration-stage.json`,
 `source-snapshot.json`, `target-snapshot.json`, `live-session.json`, the protected
 `rcon-password`, and the seven **executable** `probes/{launch,login,join,skins,loader,optional,admin}`.
-Consult `docs/migration/gravit-live-rehearsal-0447.md` for the exact format,
+Consult `docs/migration/gravit-live-rehearsal.md` for the exact format,
 RCON and test-account requirements. Each probe must actually exercise its named
 behaviour; returning a constant success is not acceptable evidence.
 
@@ -139,7 +139,7 @@ isolated runner.
 - For independent **GA** certification, independently run all 36 project
   checks with `tools/migration-ga verify-cohort-live` on exact uploaded evidence
   and obtain an independent operator sign-off. See
-  `docs/migration/gravit-integration-acceptance-0449.md`. Update/rollback of
+  `docs/migration/gravit-integration-acceptance.md`. Update/rollback of
   worlds or network cutover require the separately fenced MIG11/MIG12 steps.
 
 The provided repository archive contains **no** three live Gravit installations,

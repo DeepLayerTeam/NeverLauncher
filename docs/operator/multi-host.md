@@ -167,7 +167,7 @@ was observed but a required condition failed.
 3. Cross-replica local legacy security/session snapshot and file-based plugin
    mutation remain unverified; avoid routes relying on unsynchronized in-memory
    or local state until there is a dedicated transactional consistency test.
-4. The original `cluster-up` path still requires all hosts pinned to **identical** images; do not use it to perform a rolling update. Version 0.51.7 provides the separate operational `rolling_update_0517.py` host-by-host controller (see `docs/deployment/rolling-update-0517.md`). Online schema changes are still prohibited during the 0.51.6/0.51.7 mixed-version window.
+4. The original `cluster-up` path still requires all hosts pinned to **identical** images; do not use it to perform a rolling update. Version 0.51.7 provides the separate operational `rolling_update_0517.py` host-by-host controller (see `docs/deployment/rolling-update.md`). Online schema changes are still prohibited during the 0.51.6/0.51.7 mixed-version window.
 5. The external load balancer and DNS remain managed outside this Compose.
    An LB deployed on node A alone would recreate a host SPOF.
 6. The existing final-byte, game/Guard and independent GA gates still apply.

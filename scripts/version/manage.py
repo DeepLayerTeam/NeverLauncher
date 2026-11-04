@@ -111,7 +111,6 @@ def desired_files(version: str) -> dict[Path, str]:
 
     for rel in (
         "deploy/production/env.production.example",
-        "cli/cmd/launcher/templates/production/env.production.example",
     ):
         path = ROOT / rel
         result[path] = replace_env_image_tag(
@@ -130,6 +129,18 @@ def sync(version: str, *, check_only: bool) -> list[str]:
         changed.append(rel)
         if not check_only:
             path.write_text(desired, encoding="utf-8")
+    # Rebuild/read-only-verify the two canonical binary resource bundles.
+    # Version bump changes env.production.example, so it also changes the CLI bundle.
+    bundle = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/build/embedded_cli_assets.py"),
+         "--check" if check_only else "--write"],
+        cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    )
+    if bundle.returncode:
+        if check_only:
+            changed.append("cli/cmd/launcher/templates/production.zip or CLI catalog.zip")
+        else:
+            raise VersionError("embedded resources generation failed: " + bundle.stdout)
     return changed
 
 

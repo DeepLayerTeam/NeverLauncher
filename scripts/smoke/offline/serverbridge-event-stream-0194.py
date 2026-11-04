@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -19,7 +20,7 @@ required_files = [
     "services/api/internal/repository/server_bridge_event_stream_0194_integration_test.go",
 ]
 for rel in required_files:
-    if not (ROOT / rel).is_file():
+    if not resource_exists(ROOT, rel):
         raise SystemExit(f"missing ServerBridge event-stream production file: {rel}")
 
 checks = {

@@ -7,6 +7,7 @@ in docs/manifests. The full certification runner performs builds and live E2E.
 from __future__ import annotations
 
 import hashlib
+import zipfile
 import os
 from pathlib import Path
 import subprocess
@@ -44,9 +45,10 @@ def audit() -> None:
     run(sys.executable, "scripts/smoke/offline/repository-policy.py")
 
     api = ROOT / "services/api/internal/dbmigrate/sql"
-    cli = ROOT / "cli/internal/dbmigrate/sql"
     a = {p.name: digest(p) for p in api.glob("*.sql")}
-    b = {p.name: digest(p) for p in cli.glob("*.sql")}
+    with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as archive:
+        b = {part.filename.removeprefix("sql/"): hashlib.sha256(archive.read(part)).hexdigest()
+             for part in archive.infolist()}
     if not a or a != b:
         raise RuntimeError("Backend/CLI migration files or checksums differ")
     for migration in (
@@ -61,7 +63,7 @@ def audit() -> None:
     drift = [name for name in SDK_GENERATED if digest(ROOT / name) != generated[name]]
     if drift:
         raise RuntimeError("SDK generation drift: " + ", ".join(drift))
-    if not (ROOT / "docs/administration/ga-0220.md").is_file():
+    if not (ROOT / "docs/administration/ga.md").is_file():
         raise RuntimeError("GA operations and rollback documentation missing")
     print(f"Admin GA source audit PASS: {version}, {len(a)} identical migrations, {len(generated)} reproducible SDK artifacts")
 

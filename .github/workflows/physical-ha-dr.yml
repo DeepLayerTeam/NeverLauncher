@@ -9,7 +9,7 @@ on:
       - 'scripts/operations/test_alert_receiver_05210.py'
       - 'scripts/operations/test_dependency_ha_0513.py'
       - 'deploy/production/physical-partition-05210.nft'
-      - 'docs/operations/physical-ha-disaster-recovery-05210.md'
+      - 'docs/operations/physical-ha-disaster-recovery.md'
       - '.github/workflows/physical-ha-dr-05210.yml'
   pull_request:
   workflow_dispatch:

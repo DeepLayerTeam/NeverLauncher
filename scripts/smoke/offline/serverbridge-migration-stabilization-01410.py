@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[3]
@@ -20,9 +21,7 @@ def require(text, needles, label):
 api = read(
     "services/api/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql"
 )
-cli = read(
-    "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql"
-)
+cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql")
 if api != cli:
     raise SystemExit("0.14.10 API/CLI migrations differ")
 require(

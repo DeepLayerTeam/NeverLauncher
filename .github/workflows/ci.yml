@@ -28,6 +28,8 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
+      - name: Verify embedded CLI resources match canonical sources
+        run: python3 scripts/build/embedded_cli_assets.py --check
       - name: Repository policy and version alignment
         run: |
           python3 scripts/smoke/offline/repository-policy.py

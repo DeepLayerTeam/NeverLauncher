@@ -81,5 +81,5 @@ jobs:
       - name: Backend/CLI migration catalogues and real upgrade prerequisites
         run: |
           go test -count=1 ./internal/dbmigrate
-          cmp internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql ../../cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          python3 ../../scripts/build/embedded_cli_assets.py --check
           (cd ../../cli && go test ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/launcher)

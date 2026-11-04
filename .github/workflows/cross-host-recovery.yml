@@ -6,7 +6,7 @@ on:
       - 'scripts/operations/test_cross_host_recovery_0519.py'
       - 'scripts/operations/consistent_backup_0518.py'
       - 'scripts/operations/dr_03512.py'
-      - 'docs/deployment/cross-host-disaster-recovery-0519.md'
+      - 'docs/deployment/cross-host-disaster-recovery.md'
       - '.github/workflows/cross-host-recovery-0519.yml'
   pull_request:
   workflow_dispatch:

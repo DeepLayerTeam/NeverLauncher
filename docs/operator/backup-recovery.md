@@ -32,7 +32,7 @@ python3 scripts/install/minimal-install.py check \
   --binary /opt/launcher/bin/launcher-api
 ```
 
-Восстановите **отдельно** TLS, systemd unit, reverse proxy и DNS. Затем поднимите API, проверьте вход **старого** владельца, сохранённый проект, доступность реальных файлов, невозможность повторного bootstrap. Не запускайте старый и новый хост одновременно с записью в одну логическую установку. [Точная процедура](../deployment/minimal-recovery-0452.md).
+Восстановите **отдельно** TLS, systemd unit, reverse proxy и DNS. Затем поднимите API, проверьте вход **старого** владельца, сохранённый проект, доступность реальных файлов, невозможность повторного bootstrap. Не запускайте старый и новый хост одновременно с записью в одну логическую установку. [Точная процедура](../deployment/minimal-recovery.md).
 
 ## Standard: холодная PostgreSQL/volumes копия
 
@@ -63,7 +63,7 @@ sudo python3 scripts/operations/dr_03512.py restore-fresh \
 
 ## Network-HA: worlds, PostgreSQL, S3 и fencing
 
-Остановите Minecraft JVM/сохраните миры через [механизм world-backup](../servers/serverbridge-world-backup-04110.md), затем прекратите всех API/workers и внешних writers. Используйте `dr_03512.py backup --network-ha` с действительным S3 bucket и повторяемыми `--world-backup name=/absolute/backup-id`; проверяйте снимок штатной командой `verify`. Для восстановления используйте **новый** S3 bucket, новые пустые volumes и `--world-destination name=/absolute/fresh/server-root` для каждого сохранённого мира. Подробная последовательность и обязательные аргументы даны в [Network-HA Recovery](../releases/0.45.4-network-ha-recovery.md).
+Остановите Minecraft JVM/сохраните миры через [механизм world-backup](../servers/serverbridge-world-backup.md), затем прекратите всех API/workers и внешних writers. Используйте `dr_03512.py backup --network-ha` с действительным S3 bucket и повторяемыми `--world-backup name=/absolute/backup-id`; проверяйте снимок штатной командой `verify`. Для восстановления используйте **новый** S3 bucket, новые пустые volumes и `--world-destination name=/absolute/fresh/server-root` для каждого сохранённого мира. Подробная последовательность и обязательные аргументы даны в [Network-HA Recovery](../releases/0.45.4-network-ha-recovery.md).
 
 **Запрещено** переносить прежний Redis AOF и leases: восстановление запускает чистый Redis и требует PostgreSQL fencing незавершённых команд/активных игровых сессий до запуска API. После этого ServerBridge повторно регистрируется. Старые команды не должны выполняться с восстановленным token. Нет автоматического запуска игрового сервера до явной проверки миров, аккаунтов, инвентарей и состояния узлов.
 

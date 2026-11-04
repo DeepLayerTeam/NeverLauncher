@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[3]
@@ -20,7 +21,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 api_migration = read(
     "services/api/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql"
 )
-cli_migration = read("cli/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql")
 if api_migration != cli_migration:
     raise SystemExit("0.14.6 API/CLI Fabric migrations differ")
 require(

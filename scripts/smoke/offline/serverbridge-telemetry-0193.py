@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from embedded_resources import resource_read_bytes, resource_read_text, resource_exists, migration_catalog
 from pathlib import Path
 import sys
 
@@ -14,7 +15,7 @@ required_files = [
     "cli/internal/dbmigrate/sql/0034_serverbridge_telemetry_0193.sql",
 ]
 for rel in required_files:
-    if not (ROOT / rel).is_file():
+    if not resource_exists(ROOT, rel):
         raise SystemExit(f"missing telemetry production file: {rel}")
 
 checks = {
