@@ -1,0 +1,214 @@
+name: 0.52.12 final-byte freeze and independent rehearsal
+
+on:
+  push:
+    paths:
+      - 'scripts/release/defect_rehearsal_05212.py'
+      - 'scripts/release/test_defect_rehearsal_05212.py'
+      - 'scripts/acceptance/sweep_05211.py'
+      - 'scripts/release/independent_current_05211.py'
+      - '.github/workflows/defect-closure-rehearsal-05212.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Immutable exact 40-digit candidate commit
+        required: true
+        type: string
+      project:
+        description: Pinned release distribution project slug
+        required: true
+        type: string
+      source_index_sha256:
+        description: SHA-256 of independently approved six-platform distribution index
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: rehearsal-05212-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          set -euo pipefail
+          python -m pip install 'cryptography>=42,<47' 'PyYAML>=6,<7'
+          PYTHONPATH=scripts/acceptance:scripts/release:scripts/operations python -m unittest -q \
+            scripts/release/test_defect_rehearsal_05212.py \
+            scripts/acceptance/test_sweep_05211.py \
+            scripts/release/test_independent_current_05211.py \
+            scripts/acceptance/test_soak_05211.py
+          python scripts/version/manage.py check
+
+  freeze:
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: [regression]
+    environment: release-candidate-freeze
+    runs-on: [self-hosted, linux, x64, release-freeze]
+    timeout-minutes: 30
+    env:
+      FREEZE_INBOX: ${{ vars.LAUNCHER_05212_FREEZE_INBOX }}
+      RELEASE_SIGN_KEY: ${{ vars.LAUNCHER_05212_FREEZE_SIGN_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - name: Seal exact original source and six final installed-package assets
+        env:
+          APPROVED_COMMIT: ${{ inputs.source_commit }}
+          APPROVED_PROJECT: ${{ inputs.project }}
+          APPROVED_INDEX_SHA: ${{ inputs.source_index_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APPROVED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$APPROVED_INDEX_SHA" =~ ^[0-9a-f]{64}$ ]]
+          test -n "$FREEZE_INBOX" && test -n "$RELEASE_SIGN_KEY"
+          mkdir -p "$RUNNER_TEMP/freeze-05212"
+          python scripts/release/defect_rehearsal_05212.py freeze \
+            --commit "$APPROVED_COMMIT" --project "$APPROVED_PROJECT" \
+            --packages "$FREEZE_INBOX/packages" --index "$FREEZE_INBOX/source-index.json" \
+            --index-sha "$APPROVED_INDEX_SHA" \
+            --release-private-key "$RELEASE_SIGN_KEY" \
+            --output "$RUNNER_TEMP/freeze-05212/candidate.json" \
+            --signature "$RUNNER_TEMP/freeze-05212/candidate.sig"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frozen-candidate-05212-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/freeze-05212/
+          if-no-files-found: error
+          retention-days: 90
+
+  rehearse:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [freeze]
+    environment: independent-release-rehearsal
+    runs-on: [self-hosted, linux, x64, independent-review]
+    timeout-minutes: 180
+    env:
+      LAB_INBOX: ${{ vars.LAUNCHER_05212_REHEARSAL_INBOX }}
+      RELEASE_PUBLIC_KEY: ${{ vars.LAUNCHER_05212_RELEASE_PUBLIC_KEY_PATH }}
+      RELEASE_PUBLIC_PIN: ${{ vars.LAUNCHER_05212_RELEASE_PUBLIC_SHA256 }}
+      ISSUES_PUBLIC_KEY: ${{ vars.LAUNCHER_05212_ISSUE_PUBLIC_KEY_PATH }}
+      ISSUES_PUBLIC_PIN: ${{ vars.LAUNCHER_05212_ISSUE_PUBLIC_SHA256 }}
+      REVIEWER_PUBLIC_KEY: ${{ vars.LAUNCHER_05212_REVIEW_PUBLIC_KEY_PATH }}
+      REVIEWER_PUBLIC_PIN: ${{ vars.LAUNCHER_05212_REVIEW_PUBLIC_SHA256 }}
+      REVIEWER_PRIVATE_KEY: ${{ vars.LAUNCHER_05212_REVIEW_PRIVATE_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          name: frozen-candidate-05212-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/freeze-05212
+      - name: Run real regressions and replay originals from all final-byte E2E sources
+        env:
+          APPROVED_COMMIT: ${{ inputs.source_commit }}
+          APPROVED_PROJECT: ${{ inputs.project }}
+          APPROVED_INDEX_SHA: ${{ inputs.source_index_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$LAB_INBOX" && test -n "$REVIEWER_PRIVATE_KEY"
+          test -n "$RELEASE_PUBLIC_PIN" && test -n "$ISSUES_PUBLIC_PIN" && test -n "$REVIEWER_PUBLIC_PIN"
+          mkdir -p "$RUNNER_TEMP/rehearsal-05212/logs"
+          python scripts/release/defect_rehearsal_05212.py rehearse \
+            --commit "$APPROVED_COMMIT" --project "$APPROVED_PROJECT" \
+            --packages "$LAB_INBOX/packages" --index "$LAB_INBOX/source-index.json" \
+            --index-sha "$APPROVED_INDEX_SHA" \
+            --freeze "$RUNNER_TEMP/freeze-05212/candidate.json" \
+            --freeze-sig "$RUNNER_TEMP/freeze-05212/candidate.sig" \
+            --release-key "$RELEASE_PUBLIC_KEY" --release-pin "$RELEASE_PUBLIC_PIN" \
+            --issues "$LAB_INBOX/issues.json" --issues-sig "$LAB_INBOX/issues.sig" \
+            --issues-key "$ISSUES_PUBLIC_KEY" --issues-pin "$ISSUES_PUBLIC_PIN" \
+            --config "$LAB_INBOX/full-sweep-paths.json" \
+            --review-key "$REVIEWER_PUBLIC_KEY" --review-pin "$REVIEWER_PUBLIC_PIN" \
+            --review-private-key "$REVIEWER_PRIVATE_KEY" \
+            --logs "$RUNNER_TEMP/rehearsal-05212/logs" \
+            --output "$RUNNER_TEMP/rehearsal-05212/rehearsal.json" \
+            --signature "$RUNNER_TEMP/rehearsal-05212/rehearsal.sig"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-rehearsal-05212-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/rehearsal-05212/
+          if-no-files-found: error
+          retention-days: 90
+
+  independent-verify:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [rehearse]
+    environment: independent-release-verification
+    runs-on: [self-hosted, linux, x64, independent-verifier]
+    timeout-minutes: 180
+    env:
+      LAB_INBOX: ${{ vars.LAUNCHER_05212_VERIFY_INBOX }}
+      RELEASE_PUBLIC_KEY: ${{ vars.LAUNCHER_05212_RELEASE_PUBLIC_KEY_PATH }}
+      RELEASE_PUBLIC_PIN: ${{ vars.LAUNCHER_05212_RELEASE_PUBLIC_SHA256 }}
+      ISSUES_PUBLIC_KEY: ${{ vars.LAUNCHER_05212_ISSUE_PUBLIC_KEY_PATH }}
+      ISSUES_PUBLIC_PIN: ${{ vars.LAUNCHER_05212_ISSUE_PUBLIC_SHA256 }}
+      REVIEWER_PUBLIC_KEY: ${{ vars.LAUNCHER_05212_REVIEW_PUBLIC_KEY_PATH }}
+      REVIEWER_PUBLIC_PIN: ${{ vars.LAUNCHER_05212_REVIEW_PUBLIC_SHA256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          name: frozen-candidate-05212-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/freeze-05212
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-rehearsal-05212-${{ inputs.source_commit }}
+          path: ${{ runner.temp }}/rehearsal-05212
+      - name: Re-execute regressions and revalidate signed observations against original files
+        env:
+          APPROVED_COMMIT: ${{ inputs.source_commit }}
+          APPROVED_PROJECT: ${{ inputs.project }}
+          APPROVED_INDEX_SHA: ${{ inputs.source_index_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$LAB_INBOX"
+          python scripts/release/defect_rehearsal_05212.py verify \
+            --commit "$APPROVED_COMMIT" --project "$APPROVED_PROJECT" \
+            --packages "$LAB_INBOX/packages" --index "$LAB_INBOX/source-index.json" \
+            --index-sha "$APPROVED_INDEX_SHA" \
+            --freeze "$RUNNER_TEMP/freeze-05212/candidate.json" \
+            --freeze-sig "$RUNNER_TEMP/freeze-05212/candidate.sig" \
+            --release-key "$RELEASE_PUBLIC_KEY" --release-pin "$RELEASE_PUBLIC_PIN" \
+            --issues "$LAB_INBOX/issues.json" --issues-sig "$LAB_INBOX/issues.sig" \
+            --issues-key "$ISSUES_PUBLIC_KEY" --issues-pin "$ISSUES_PUBLIC_PIN" \
+            --config "$LAB_INBOX/full-sweep-paths.json" \
+            --review-key "$REVIEWER_PUBLIC_KEY" --review-pin "$REVIEWER_PUBLIC_PIN" \
+            --logs "$RUNNER_TEMP/rehearsal-05212/logs" \
+            --rehearsal "$RUNNER_TEMP/rehearsal-05212/rehearsal.json" \
+            --rehearsal-sig "$RUNNER_TEMP/rehearsal-05212/rehearsal.sig"

@@ -1,4 +1,4 @@
-name: 0.52.11 real one-hour Minecraft and HTTPS soaks
+name: 0.52.12 real one-hour Minecraft and HTTPS soaks
 on:
   push:
     paths:
@@ -15,7 +15,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: real-soak-05211-${{ github.ref }}
+  group: real-soak-05212-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -69,7 +69,7 @@ jobs:
             --output "$RUNNER_TEMP/soak-$TARGET_ID"
       - uses: actions/upload-artifact@v4
         with:
-          name: game-soak-05211-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: game-soak-05212-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/soak-${{ matrix.target }}/
           if-no-files-found: error
           retention-days: 30
@@ -97,7 +97,7 @@ jobs:
             --max-p95-ms 1500 --output "$RUNNER_TEMP/soak-https"
       - uses: actions/upload-artifact@v4
         with:
-          name: https-soak-05211-${{ github.run_id }}-${{ github.run_attempt }}
+          name: https-soak-05212-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/soak-https/
           if-no-files-found: error
           retention-days: 30
@@ -118,11 +118,11 @@ jobs:
       - run: python -m pip install 'cryptography>=42,<47'
       - uses: actions/download-artifact@v4
         with:
-          pattern: game-soak-05211-*-${{ github.run_id }}-${{ github.run_attempt }}
+          pattern: game-soak-05212-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/raw-game-soaks
       - uses: actions/download-artifact@v4
         with:
-          name: https-soak-05211-${{ github.run_id }}-${{ github.run_attempt }}
+          name: https-soak-05212-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/raw-https-soak
       - name: Independently replay and sign every raw run
         env:
@@ -139,11 +139,11 @@ jobs:
           trap 'rm -f "$RUNNER_TEMP/soak-secret.pem" "$RUNNER_TEMP/soak-public.pem"' EXIT
           mkdir -p "$RUNNER_TEMP/signed-soaks"
           shopt -s nullglob
-          samples=("$RUNNER_TEMP"/raw-game-soaks/game-soak-05211-*-"$GITHUB_RUN_ID"-"$GITHUB_RUN_ATTEMPT")
+          samples=("$RUNNER_TEMP"/raw-game-soaks/game-soak-05212-*-"$GITHUB_RUN_ID"-"$GITHUB_RUN_ATTEMPT")
           test "${#samples[@]}" -eq 5
           for source in "${samples[@]}"; do
             target="$(basename "$source")"
-            target="${target#game-soak-05211-}"
+            target="${target#game-soak-05212-}"
             target="${target%-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}}"
             case "$target" in
               vanilla-26.3-linux-x64|fabric-26.3-linux-x64|quilt-26.3-linux-x64|forge-26.3-linux-x64|neoforge-26.2-linux-x64) ;;
@@ -164,7 +164,7 @@ jobs:
             --public-key "$RUNNER_TEMP/soak-public.pem" --pin "$REVIEW_PUBLIC_SHA"
       - uses: actions/upload-artifact@v4
         with:
-          name: independently-signed-soaks-05211-${{ github.run_id }}-${{ github.run_attempt }}
+          name: independently-signed-soaks-05212-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/signed-soaks/
           if-no-files-found: error
           retention-days: 90

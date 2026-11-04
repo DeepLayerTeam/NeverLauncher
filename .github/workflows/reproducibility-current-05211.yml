@@ -1,4 +1,4 @@
-name: 0.52.11 independent exact-byte native builds
+name: 0.52.12 independent exact-byte native builds
 
 on:
   push:
@@ -20,7 +20,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: repro-05211-${{ github.ref }}
+  group: repro-05212-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -87,7 +87,7 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "$(cat VERSION)" = 0.52.11
+          test "$(cat VERSION)" = 0.52.12
           git diff --exit-code HEAD --
           git diff --cached --exit-code HEAD --
       - name: Install Linux native build dependencies
@@ -102,18 +102,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export LAUNCHER_UNSIGNED_OUTPUT_DIR="${GITHUB_WORKSPACE}/dist/unsigned-0.52.11"
+          export LAUNCHER_UNSIGNED_OUTPUT_DIR="${GITHUB_WORKSPACE}/dist/unsigned-0.52.12"
           case "$TARGET" in
             windows) pwsh -NoProfile -File scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage ;;
-            linux-x64) bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.52.11" --expected-arch x64 ;;
-            linux-arm64) bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.52.11" --expected-arch arm64 ;;
+            linux-x64) bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.52.12" --expected-arch x64 ;;
+            linux-arm64) bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-0.52.12" --expected-arch arm64 ;;
             macos) bash scripts/release/build-macos-production.sh --allow-ad-hoc ;;
             *) exit 2 ;;
           esac
       - uses: actions/upload-artifact@v4
         with:
-          name: unsigned-05211-${{ matrix.builder }}-${{ matrix.target }}-${{ inputs.source_commit }}
-          path: dist/unsigned-0.52.11/*
+          name: unsigned-05212-${{ matrix.builder }}-${{ matrix.target }}-${{ inputs.source_commit }}
+          path: dist/unsigned-0.52.12/*
           if-no-files-found: error
           retention-days: 90
 
@@ -136,7 +136,7 @@ jobs:
       - run: python -m pip install 'cryptography>=42,<47'
       - uses: actions/download-artifact@v4
         with:
-          pattern: unsigned-05211-${{ matrix.builder }}-*-${{ inputs.source_commit }}
+          pattern: unsigned-05212-${{ matrix.builder }}-*-${{ inputs.source_commit }}
           path: dist/unsigned-capture
           merge-multiple: true
       - name: Reopen real archives and sign complete six-target observation
@@ -163,7 +163,7 @@ jobs:
             --private-key "$RUNNER_TEMP/signing.pem" --out dist/repro-receipts/unsigned.sig
       - uses: actions/upload-artifact@v4
         with:
-          name: independent-05211-${{ matrix.builder }}-${{ inputs.source_commit }}
+          name: independent-05212-${{ matrix.builder }}-${{ inputs.source_commit }}
           path: dist/repro-receipts/*
           if-no-files-found: error
           retention-days: 90
@@ -184,21 +184,21 @@ jobs:
       - run: python -m pip install 'cryptography>=42,<47'
       - uses: actions/download-artifact@v4
         with:
-          pattern: unsigned-05211-builder-a-*-${{ inputs.source_commit }}
+          pattern: unsigned-05212-builder-a-*-${{ inputs.source_commit }}
           merge-multiple: true
           path: dist/a
       - uses: actions/download-artifact@v4
         with:
-          pattern: unsigned-05211-builder-b-*-${{ inputs.source_commit }}
+          pattern: unsigned-05212-builder-b-*-${{ inputs.source_commit }}
           merge-multiple: true
           path: dist/b
       - uses: actions/download-artifact@v4
         with:
-          name: independent-05211-builder-a-${{ inputs.source_commit }}
+          name: independent-05212-builder-a-${{ inputs.source_commit }}
           path: dist/a-receipt
       - uses: actions/download-artifact@v4
         with:
-          name: independent-05211-builder-b-${{ inputs.source_commit }}
+          name: independent-05212-builder-b-${{ inputs.source_commit }}
           path: dist/b-receipt
       - name: Independently pin public keys and rehash every archive member
         env:
@@ -225,7 +225,7 @@ jobs:
             --out "$PWD/dist/compared/comparison.json"
       - uses: actions/upload-artifact@v4
         with:
-          name: unsigned-reproducibility-05211-${{ inputs.source_commit }}
+          name: unsigned-reproducibility-05212-${{ inputs.source_commit }}
           path: dist/compared/comparison.json
           if-no-files-found: error
           retention-days: 90

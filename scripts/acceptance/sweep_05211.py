@@ -70,16 +70,16 @@ def signed_soak(root: Path, pubkey: Path, pin: str, commit: str, run_id: str, at
     require(len(sig) == 64 and SHA.fullmatch(pin or '') is not None, 'signed soak receipt and pin required')
     key = inventory.public_key(pubkey, pin)
     try:
-        key.verify(sig, b'neverlauncher.soak.real.0.52.11\x00' + inventory.canonical(summary))
+        key.verify(sig, b'neverlauncher.soak.real.0.52.12\x00' + inventory.canonical(summary))
     except InvalidSignature as exc:
         raise Blocked('independent soak attestation signature invalid') from exc
     return raw_soak(root, commit, run_id, attempt, kind)
 
 def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
     summary = read_json(root / 'soak.json', 8*1024*1024)
-    require(summary.get('schema') == 'neverlauncher.real-soak/0.52.11' and
+    require(summary.get('schema') == 'neverlauncher.real-soak/0.52.12' and
             summary.get('status') == 'OBSERVED_NOT_GA' and
-            summary.get('version') == inventory.VERSION == '0.52.11' and
+            summary.get('version') == inventory.VERSION == '0.52.12' and
             summary.get('commit') == commit and summary.get('runId') == run_id and
             summary.get('attempt') == attempt and summary.get('mode') == kind and
             type(summary.get('seconds')) in (float,int) and summary['seconds'] >= 3600,
@@ -154,9 +154,9 @@ def verify_repro(a):
             'builders':report['builders']}
 
 def verify_full(a):
-    require(COMMIT.fullmatch(a.commit or '') is not None and inventory.VERSION == '0.52.11',
-            'current exact source commit and 0.52.11 required')
-    report = {'schema':'neverlauncher.full-compatibility-sweep/0.52.11',
+    require(COMMIT.fullmatch(a.commit or '') is not None and inventory.VERSION == '0.52.12',
+            'current exact source commit and 0.52.12 required')
+    report = {'schema':'neverlauncher.full-compatibility-sweep/0.52.12',
               'version':inventory.VERSION,'commit':a.commit,'status':'BLOCKED'}
     report['minecraft'] = verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)
     native_args = SimpleNamespace(results=a.native_results,source_index=a.source_index,
@@ -215,7 +215,7 @@ def main():
         if a.mode == 'full':
             doc = verify_full(a)
         else:
-            doc = {'schema':'neverlauncher.full-compatibility-sweep/0.52.11',
+            doc = {'schema':'neverlauncher.full-compatibility-sweep/0.52.12',
                    'version':inventory.VERSION,'commit':a.commit,
                    'status':'280_REAL_CI_OBSERVATIONS_NOT_GA',
                    'minecraft':verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)}

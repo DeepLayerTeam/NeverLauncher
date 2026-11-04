@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture and independently replay exact unsigned 0.52.11 native payloads.
+"""Capture and independently replay exact unsigned 0.52.12 native payloads.
 
 The builder must have built six *actual* OS/CPU packages through the native
 release scripts. No generated manifests, placeholder executables or local
@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SHA = re.compile(r'[a-f0-9]{40}\Z')
 ID = re.compile(r'[a-zA-Z0-9_.:-]{3,128}\Z')
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
-SCHEMA = 'neverlauncher.unsigned-build-current/0.52.11'
+SCHEMA = 'neverlauncher.unsigned-build-current/0.52.12'
 LOCKS = ('services/api/go.mod', 'services/api/go.sum', 'apps/desktop/package-lock.json',
          'apps/desktop/src-tauri/Cargo.toml', 'runtime/runtime/Cargo.toml',
          'scripts/release/unsigned_package_0470.py')
@@ -78,7 +78,7 @@ def scan(directory: Path):
     return output
 
 def capture(directory: Path, builder: str, runner: str, commit: str, run_id: str, attempt: int):
-    require(VERSION == '0.52.11', 'release version 0.52.11 required')
+    require(VERSION == '0.52.12', 'release version 0.52.12 required')
     require(SHA.fullmatch(commit) and source_sha() == commit, 'checkout/source commit mismatch')
     require(all(ID.fullmatch(x or '') for x in (builder, runner, run_id)) and
             type(attempt) is int and attempt > 0, 'invalid independent builder identity')
@@ -99,7 +99,7 @@ def pinned_key(path: Path, pin: str):
 
 def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str, attempt: int):
     require(a.get('schema') == b.get('schema') == SCHEMA, 'unsupported independent-build schema')
-    require(a.get('version') == b.get('version') == VERSION == '0.52.11' and
+    require(a.get('version') == b.get('version') == VERSION == '0.52.12' and
             a.get('commit') == b.get('commit') == commit and
             a.get('runId') == b.get('runId') == run_id and
             a.get('attempt') == b.get('attempt') == attempt,
@@ -113,7 +113,7 @@ def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str
             'signed reports disagree with actual archive bytes')
     require(a['targets'] == b['targets'] and set(a['targets']) == TARGETS,
             'two independent builds differ in unsigned byte payloads')
-    return {'schema': 'neverlauncher.reproducibility-current-comparison/0.52.11',
+    return {'schema': 'neverlauncher.reproducibility-current-comparison/0.52.12',
             'version': VERSION, 'commit': commit, 'runId': run_id, 'attempt': attempt,
             'status': 'SIX_UNSIGNED_TARGETS_BYTE_IDENTICAL_NOT_GA',
             'inputs': a['inputs'], 'builders': [

@@ -72,6 +72,22 @@ class SoakTests(unittest.TestCase):
             finally:
                 server.shutdown();server.server_close();thread.join(timeout=3)
 
+    def test_copy_replay_mismatch_blocks_even_with_python_optimized(self):
+        # This must be a require(), not `assert` (which disappears under python -O).
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            source=root/'e2e/compatibility-result';source.mkdir(parents=True)
+            (source/'compatibility-result.json').write_text('{"evidence":{"files":[]}}')
+            (root/'e2e/runtime').mkdir(parents=True)
+            destination=root/'copied'
+            with mock.patch.object(m,'ROOT',root), \
+                 mock.patch.object(m.inventory,'verify_compatibility',
+                                   side_effect=[{'resultSha256':'a'*64},
+                                                {'resultSha256':'b'*64}]):
+                with self.assertRaisesRegex(m.Blocked,'copied Minecraft session evidence'):
+                    m.session_archive({'loader':'vanilla'},destination,
+                        SimpleNamespace(commit='a'*40,run_id='42',attempt=1))
+
     def test_log_invalid_sha(self):
         with tempfile.TemporaryDirectory() as temp:
             p=Path(temp)/'log';p.write_bytes(b'actual real bytes')

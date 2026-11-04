@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent signer for independently rechecked, actual 0.52.11 soaks.
+"""Independent signer for independently rechecked, actual 0.52.12 soaks.
 
 Run this on a separate protected reviewer host. It rechecks *each* original
 Minecraft session before signing. The signing key must stay outside checkout.
@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sweep_05211 import raw_soak, signed_soak, ROOT
 from inventory_0521 import safe_file, public_key, canonical, write_exclusive
 
-DOMAIN = b'neverlauncher.soak.real.0.52.11\x00'
+DOMAIN = b'neverlauncher.soak.real.0.52.12\x00'
 
 def sign(a):
     raw_soak(a.report_dir, a.commit, a.run_id, a.attempt, a.mode)

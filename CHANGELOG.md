@@ -1,3 +1,12 @@
+## 0.52.12 — Defect Closure & Independent Rehearsal (executable candidate freeze; external GA BLOCKED)
+
+- Fix actual game-soak integrity regression: copied Minecraft runtime/loader/server evidence is now compared with explicit fail-closed `require`, not Python `assert` (which disappears under `python -O`); add a mismatch regression test.
+- Correct release-locked 0.52.11 sweep, real hour-long soak, independent-build verifier and their native workflows for 0.52.12. Signatures, receipt schemas and source identity now distinguish 0.52.12 from older 0.52.11 observations; reusing an older run cannot yield PASS.
+- Implement real three-operator candidate acceptance: freeze exact clean Git source commit/tree and *downloaded final bytes* for six OS/CPU installers plus two detached Linux signatures against separately pinned production index; independently sign freeze; protect against modified/missing/extra files, links and changed source.
+- Require an independently signed complete issue-tracker export and block any unresolved P0/P1; enforce closure backed by mandatory source regressions, re-execute them while preserving fsynced log digests; block skipped tests and modified logs.
+- Execute the existing complete raw 280-target Minecraft, native installer/native game, two-independent-builder reproducibility, five one-hour game soaks and HTTPS load verifier **twice** on the exact frozen commit; verify source and final packages again afterwards; independently sign and separately re-check the real outputs on another machine.
+- Add protected `freeze → independent rehearsal → separate verifier` workflow, negative/adversarial tests and operator runbook. **Release GA remains BLOCKED** without real independent external original signed packages, full per-target E2E, physical Guard/HA/DR and migration results. No final installer or physical game lab was run locally.
+
 ## 0.52.11 — Full Compatibility Sweep & Soak (runnable acceptance; GA BLOCKED)
 
 - Correct compatibility jobs to use the actual Go toolchain declared by `services/api/go.mod`, instead of an incompatible hardcoded Go 1.23.
