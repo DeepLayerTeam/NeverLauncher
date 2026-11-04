@@ -1,36 +1,36 @@
-# 0.52.11 — Full Compatibility Sweep & Soak
+# 0.52.11 — полный прогон совместимости и длительные испытания
 
-These commands execute production clients and servers. They are **not** a foundation-only / manifest-only acceptance. Unit tests cannot establish GA. Keep the source commit fixed for all five underlying runs; each run has its own actual GitHub run ID and attempt, which the replay checks.
+Эти команды запускают настоящие промышленные клиенты и серверы. Это **не** приёмка только архитектурных заготовок или манифестов. Одних модульных тестов недостаточно для GA. Все пять исходных прогонов должны использовать один фиксированный коммит; у каждого есть собственный действительный идентификатор запуска GitHub и номер попытки, которые проверяются при повторном воспроизведении.
 
-## Automatic paths
+## Автоматизированные сценарии
 
-1. `.github/workflows/compatibility.yml` builds and executes the 280 mandatory Minecraft combinations, uploading the actual game and server logs. `sweep_05211.py minecraft` is a mandatory fail-closed replay in the CI aggregator. The 12 optional cases are recorded but never used as a substitute for required cases.
-2. `.github/workflows/native-final-packages-0522.yml` downloads six externally SHA-pinned signed installers, validates the platform signing chain, system-installs, provisions and verifies. Its independent reviewer signature must be verified again by the full sweep.
-3. `.github/workflows/native-game-acceptance-04314.yml` runs the actual six-platform GUI game execution and adversarial checks. The full sweep replays the raw outputs. These are separate from installer checks.
-4. `.github/workflows/reproducibility-current-05211.yml` performs two **separate** native builder sets (Windows x64/ARM64, Linux x64/ARM64, macOS x64/ARM64), signs both complete source/lockfile/byte reports with different keys, and independently re-hashes all 12 unsigned archives and their members. The original 0.47.0 workflow remains historical; do not use its 0.47.0 receipt for this release.
-5. `.github/workflows/real-soak-05211.yml` runs five live game/loader anchors on the dedicated disposable gaming lab, plus an hour of concurrent HTTPS load on a disposable HA lab. The independent-review job (separate protected reviewer host) recomputes results and signs raw evidence. Every live test is blocked if the dedicated machines, keys, server ZIPs or TLS trust are missing.
+1. `.github/workflows/compatibility.yml` собирает и выполняет 280 обязательных комбинаций Minecraft, выгружая настоящие журналы игры и сервера. `sweep_05211.py minecraft` обязательно воспроизводит проверки в агрегаторе CI по принципу запрета при любой ошибке. Ещё 12 необязательных сценариев фиксируются отдельно и никогда не подменяют обязательные.
+2. `.github/workflows/native-final-packages-0522.yml` загружает шесть подписанных установщиков, хеши SHA которых независимо закреплены, проверяет цепочку платформенной подписи, выполняет системную установку, подготовку и проверку. Подпись независимого аудитора должна повторно проверяться общим прогоном.
+3. `.github/workflows/native-game-acceptance-04314.yml` выполняет реальный графический запуск игры на шести платформах и проверки на противодействие атакам. Полный прогон повторно анализирует исходные результаты. Эти испытания проводятся отдельно от проверок установщиков.
+4. `.github/workflows/reproducibility-current-05211.yml` выполняет **два независимых** набора нативных сборок (Windows x64/ARM64, Linux x64/ARM64, macOS x64/ARM64), подписывает полные отчёты об исходниках, фиксированных зависимостях и байтах разными ключами и независимо пересчитывает хеши 12 неподписанных архивов и их содержимого. Процесс версии 0.47.0 остаётся историческим; его подтверждение нельзя использовать для этого выпуска.
+5. `.github/workflows/real-soak-05211.yml` проводит пять реальных длительных испытаний игры/загрузчиков в отдельной одноразовой игровой лаборатории и часовую параллельную HTTPS-нагрузку на выделенную одноразовую лабораторию HA. Задача независимого аудита на отдельном защищённом узле пересчитывает результаты и подписывает исходные подтверждения. Отсутствие выделенных машин, ключей, архивов серверов или доверенных сертификатов TLS блокирует каждое реальное испытание.
 
-## Live soak conditions
+## Условия длительных реальных испытаний
 
-- Game targets: Vanilla 26.3, Fabric 26.3, Quilt 26.3, Forge 26.3, NeoForge 26.2 on Linux x64 with Java 25. At least 8 successful sessions **per loader** and at least 3600 seconds elapsed. Every session must satisfy the existing actual Mojang-client/Java/loader/live server join/RCON/ticks/clean stop verifier. Target selection must match `compatibility/targets.json` exactly. Each individual log and result SHA must still match after copying to a new acceptance directory.
-- HTTPS: an operator-approved real HTTPS health/read endpoint of a live Standard/HA deployment with a valid TLS chain, 8 concurrent clients, at least 10,000 successful HTTP 200 requests spanning one hour, zero failed requests and p95 ≤ 1500 ms. The verifier independently recalculates p95, byte count and duration from the hash-bound `requests.bin` samples. Adjust the target p95 only via an explicit product decision and corresponding tests, not by editing the receipt.
-- If the Minecraft runner hangs, its entire process group is killed. Its blocked result is not counted. A dedicated disposable checkout and `LAUNCHER_ACCEPTANCE_DISPOSABLE=1` are required; never run this test against an owner's production world or unbacked user data.
-- The reviewer private Ed25519 key lives **outside** the checkout and must be protected by an independently approved environment. The public SPKI SHA-256 is pinned separately. A signed report is still **not** production GA by itself.
+- Игровые конфигурации: Vanilla 26.3, Fabric 26.3, Quilt 26.3, Forge 26.3 и NeoForge 26.2 на Linux x64 с Java 25. Для **каждого загрузчика** требуется не менее восьми успешных сеансов и не менее 3600 секунд прошедшего времени. Каждый сеанс должен пройти существующую проверку настоящего клиента Mojang, Java, загрузчика, подключения к серверу, RCON, игровых тактов и корректного завершения. Набор конфигураций обязан точно соответствовать `compatibility/targets.json`. Хеши SHA каждого отдельного журнала и результата должны совпадать после копирования в новый каталог приёмки.
+- HTTPS: утверждённая оператором реальная конечная точка проверки состояния/чтения в действующем развёртывании Standard/HA, действительная цепочка TLS, восемь параллельных клиентов, не менее 10 000 успешных HTTP 200 запросов за час, ни одного неудачного запроса и p95 не выше 1500 мс. Аудитор независимо вычисляет p95, объём байтов и длительность по привязанным к хешам образцам `requests.bin`. Изменять предельное p95 можно только явным продуктовым решением и соответствующими тестами, а не редактированием подтверждения.
+- При зависании Minecraft исполнитель завершает всю группу процессов. Заблокированный результат не засчитывается. Обязательны одноразовая рабочая копия проекта и `LAUNCHER_ACCEPTANCE_DISPOSABLE=1`. Никогда не выполняйте тест на промышленном мире владельца или пользовательских данных без резервной копии.
+- Закрытый ключ Ed25519 аудитора хранится **вне** рабочей копии, в независимо утверждённом защищённом окружении. Открытый ключ закрепляется отдельным хешем SPKI SHA-256. Даже подписанный отчёт сам по себе **не является** промышленным GA.
 
-## Full independent replay
+## Полное независимое воспроизведение
 
-The final operator runs `python3 scripts/acceptance/sweep_05211.py full` with **all** of these paths/arguments (none optional):
+Итоговый оператор запускает `python3 scripts/acceptance/sweep_05211.py full` со **всеми** перечисленными путями и аргументами (необязательных нет):
 
-- `--commit`, `--compat-results`, `--compat-run-id`, `--compat-attempt` for raw output of 280 successful CI executions;
-- `--native-results`, `--source-index`, `--index-sha`, `--project`, `--native-run-id`, `--native-attempt`, `--native-review`, `--native-key`, `--native-key-pin`, `--native-reviewer` for the six final installer receipts, pinned public index, and independent reviewer signature;
-- `--native-game-results`, `--package-id`, `--native-game-run-id` for the six actual GUI game outputs;
-- `--repro-a-report`, `--repro-a-sig`, `--repro-a-key`, `--repro-a-pin`, `--repro-a-dir` and the corresponding `--repro-b-*`, plus `--repro-run-id`, `--repro-attempt` for both source-identical independently signed native build outputs;
-- `--game-soaks` containing exactly the five named loader directories (and optionally `https`), `--http-soak` pointing to the signed HTTPS evidence, `--soak-key`, `--soak-key-pin`, `--soak-run-id`, `--soak-attempt`;
-- `--output /absolute/fresh/path/sweep.json` to write an immutable replay result.
+- `--commit`, `--compat-results`, `--compat-run-id`, `--compat-attempt` — исходные результаты 280 успешных прогонов CI;
+- `--native-results`, `--source-index`, `--index-sha`, `--project`, `--native-run-id`, `--native-attempt`, `--native-review`, `--native-key`, `--native-key-pin`, `--native-reviewer` — подтверждения шести конечных установщиков, закреплённый публичный индекс и подпись независимого аудитора;
+- `--native-game-results`, `--package-id`, `--native-game-run-id` — шесть фактических результатов графического запуска игры;
+- `--repro-a-report`, `--repro-a-sig`, `--repro-a-key`, `--repro-a-pin`, `--repro-a-dir` и соответствующие параметры `--repro-b-*`, а также `--repro-run-id`, `--repro-attempt` — результаты двух независимых подписанных нативных сборок из идентичных исходников;
+- `--game-soaks` — ровно пять каталогов с установленными именами загрузчиков (допускается также `https`); `--http-soak` — подписанные данные HTTPS; `--soak-key`, `--soak-key-pin`, `--soak-run-id`, `--soak-attempt`;
+- `--output /absolute/fresh/path/sweep.json` — запись неизменяемого результата повторной проверки.
 
-All native and independent-build inputs must come from the **same source commit and product version**, but different workflows can and will have different run IDs. No manual `PASS`, absent source log, stale signature or reused native runner identity is accepted. The aggregate returns `OBSERVED_NOT_INDEPENDENT_GA`; final 0.53.0 GA still requires a distinct operator-signed final-byte release gate.
+Все нативные результаты и результаты независимых сборок должны относиться к **одному исходному коммиту и версии продукта**, хотя запуски разных процессов могут иметь разные идентификаторы. Ручная запись `PASS`, отсутствие исходного журнала, устаревшая подпись или повторно использованная идентичность нативного исполнителя не принимаются. Агрегатор возвращает `OBSERVED_NOT_INDEPENDENT_GA`; итоговый GA версии 0.53.0 по-прежнему требует отдельного подписанного оператором допуска конечных байтов релиза.
 
-## Locally executable regressions
+## Локально запускаемые регрессионные проверки
 
 ```sh
 PYTHONPATH=scripts/release:scripts/acceptance python3 -m unittest -v \
@@ -42,4 +42,4 @@ PYTHONPATH=scripts/release:scripts/acceptance python3 -m unittest -v \
 python3 scripts/version/manage.py check
 ```
 
-This work does not itself constitute proof of the six external installation/minecraft runs, 280 live targets, multi-hour soak, or independently reproduced release. Missing external evidence **must** keep 0.52.11 real acceptance BLOCKED.
+Сами по себе эти изменения не подтверждают шесть внешних запусков установщиков и Minecraft, 280 реальных конфигураций, многочасовые испытания или независимо воспроизведённый релиз. При отсутствии внешних подтверждений настоящая приёмка 0.52.11 **обязана оставаться ЗАБЛОКИРОВАННОЙ**.

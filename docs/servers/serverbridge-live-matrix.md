@@ -1,4 +1,4 @@
-# 0.41.13 — ServerBridge live compatibility certification
+# 0.41.13 — сертификация реальной совместимости ServerBridge
 
 The test driver is executable, not a list of API or compatibility claims.
 
@@ -21,7 +21,7 @@ network probes and server logs, expected node ID/port, ordered login and revoked
 login markers, and Paper's genuine player-join log. It does not accept a bare
 `status: passed` or declarations of compatibility as live evidence.
 
-## Explicit coverage boundary
+## явные границы покрытия
 
 The existing full server E2E contains ten runtime instances:
 Velocity, BungeeCord, Waterfall, Spigot, Paper, Purpur, Folia, Fabric, Forge,

@@ -1,11 +1,11 @@
-# NeverLauncher 0.49.4 — migrate Gravit users on the live Backend
+# NeverLauncher 0.49.4 — перенос пользователей Gravit на работающем Backend
 
 This operator tool **executes the existing PostgreSQL-backed migration**, not
 an offline conversion or a new shadow user database. It requires an existing
 `prepared` Gravit migration run in `source_assessment` with an inventory of the
 **exact same** original ZIP. The 0.49.3 content migration is a separate step.
 
-## Account migration
+## миграция аккаунтов
 
 1. Make a consistent backup of the Gravit auth source, Minecraft worlds,
    original TextureProvider objects and target PostgreSQL. Stop the Gravit auth
@@ -53,7 +53,7 @@ an offline conversion or a new shadow user database. It requires an existing
    password reset, the command blocks until `--allow-manual-resets` is given;
    this does **not** create a password or enable login for that user.
 
-## Project roles (explicit review and phishing-resistant MFA)
+## роли проекта (явная проверка и устойчивый к фишингу MFA)
 
 Gravit administrator/root permissions are **not** automatically trusted or
 translated to Never global owner/admin roles. To grant project-scoped roles
@@ -71,7 +71,7 @@ source-Gravit RBAC transfers, and only `viewer`, `player`, `developer`,
 `operator`, `owner` project roles are recognized. Run the import with a fresh
 admin token that satisfies the endpoint's MFA requirement.
 
-## Skins/capes
+## скины и плащи
 
 `--texture-mapping-output` writes a private (0600) one-to-one source/target
 UUID map **only** for matched or successfully imported accounts. Use the
@@ -99,7 +99,7 @@ object storage; a successful account receipt does not imply that skins were
 imported. Verify counts, assignments and in-game skin/cape rendering before
 cutover. Do not reuse upstream private keys or browser sessions.
 
-## Failure and replay
+## ошибка и повторная обработка
 
 The API holds the durable receipts; after an interrupted request **query the
 Backend** before retrying. Credential import and trust reset both use

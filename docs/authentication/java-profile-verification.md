@@ -9,19 +9,19 @@ The Minecraft token is never sufficient alone to mark an account game-ready. Eve
 
 Java player profiles are authoritative for **playability** when the entitlements list is empty (which can happen for Game Pass). The entitlement list alone NEVER qualifies an account, even if it contains a Java product. The nickname is UI metadata only; persistent account identity is the verified Minecraft UUID, not an email or mutable username.
 
-### Every use of a stored account
+### каждое использование сохранённой учётной записи
 
 Before status, textures, or launch, native code checks Never identity session and Client ID, refreshes expired Microsoft/Xbox/Minecraft credentials in the trusted process, and validates both `mcstore` and the live Java profile again. The returned UUID must match the previously stored UUID irrespective of letter case. A changed UUID **fails** and requires explicit account reconnect. Usernames may change without changing the identity. No fallback to cached profile, local session, project Yggdrasil, or offline credentials is allowed after validation failure.
 
 Tokens stay in the Rust process / protected OS credential store and are never returned to React. The old `schema=1` Backend ticket is supported unchanged during transition; the new native `schema=2` account needs no vault migration. Microsoft OIDC for logging into Never is **not** equivalent to Minecraft Java readiness.
 
-### What this does NOT prove
+### чего это НЕ доказывает
 
 - Whether Microsoft/Xbox family/privacy settings allow **multiplayer** for a specific user. Explicit XSTS family/age responses are categorized as `XboxFamily`, including `XErr` represented as a number or string. An otherwise valid profile does not override multiplayer privacy restrictions. A real vanilla/modded online-mode server join and Mojang sessionserver validation remain required for certification.
 - External registration/allowlisting of Launcher's own Client ID at Minecraft Services, or a successful production login. Requires an approved app and actual Java/Game Pass account.
 - Cancellation/refund/license changes after the last live check. A fresh check occurs on the next status/launch; no offline success is synthesized when services cannot be reached.
 
-## Negative and positive fixture checks
+## положительные и отрицательные проверки тестовых данных
 
 - Java entitlement + 404 Java profile -> denied.
 - Empty entitlements + valid token-authenticated Java profile (possible Game Pass) -> accepted.
@@ -32,7 +32,7 @@ Tokens stay in the Rust process / protected OS credential store and are never re
 
 HTTP fixtures validate client request order and bearer attachment. They are **not** proof of provider approval. The native CI gate runs on Windows, macOS and Linux; sign-off additionally requires real account and `online-mode=true` multiplayer testing.
 
-## Verification commands
+## команды проверки
 
 ```bash
 cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_verification_0266::tests

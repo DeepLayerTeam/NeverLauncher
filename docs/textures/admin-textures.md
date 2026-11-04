@@ -1,6 +1,6 @@
-# Launcher 0.25.9 — Admin Texture Management
+# Launcher 0.25.9 — управление текстурами в Admin
 
-## What is deployed
+## что развёртывается
 
 **Admin → Скины и плащи** operates on the existing local Minecraft/Yggdrasil texture service, not a second storage or identity backend. The default scope (`projectId=''`) governs the global local profiles used by the current Desktop texture service. A named project scope configures assignments explicitly scoped to that project. Official Microsoft/Minecraft identities, UUIDs and capes are unaffected.
 
@@ -35,7 +35,7 @@ All routes require an authenticated Admin Bearer token with **global** `settings
 
 **PUT exception** receives `kind` (`skin`/`cape`), `decision` (`allow`/`deny`/`inherit`), `reason` (3–500 characters), optionally the matching `userId`. The actual user must exist in the Launcher users table, and the global capability is checked before the handler.
 
-## Deployment and verification
+## развёртывание и проверка
 
 1. Back up the PostgreSQL database and previously uploaded texture objects (local/S3). Deploy backend and admin files together; apply migration `0072` using the existing migration runner. Do **not** modify the sealed earlier migrations.
 2. Confirm the current profile returns an existing Minecraft UUID and its previously selected managed texture without change.

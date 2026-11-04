@@ -1,4 +1,4 @@
-# Launcher 0.22.7 — Deterministic Launch
+# Launcher 0.22.7 — детерминированный запуск
 
 ## Исполняемый путь
 

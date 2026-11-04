@@ -1,6 +1,6 @@
-# Launcher 0.21.12 — Admin Hardening & E2E
+# Launcher 0.21.12 — защита Admin и сквозные тесты
 
-## Implemented hardening
+## реализованные меры защиты
 
 - Unified Operations `GET /operations/{id}/attempts` returns only the public attempt number, outcome, timestamps and error. Worker identities, lease fences, internal IDs and tokens stay server-side.
 - ServerBridge Admin prevents a second browser submit before React renders its disabled button; a pending control request is persisted before network IO. A lost ACK can only be retried with the exact saved request and key. Successful submissions retain the command ID for monitoring after refresh. Pending command state is scoped to the Backend URL, authenticated session and project, then cleared on explicit logout.
@@ -11,7 +11,7 @@
 
 Protocol v3 packets, command ACK schema and cryptographic/runtime binding are **unchanged**.
 
-## Locally runnable checks
+## проверки, запускаемые локально
 
 ```bash
 cd apps/admin && npm ci && npm test && npm run build
@@ -31,7 +31,7 @@ The script creates a disposable PostgreSQL 16 container on a dynamically selecte
 
 A CI workflow at `.github/workflows/admin-hardening-02112.yml` gates Admin production build, Node test suite, Go race tests and this PostgreSQL/ServerBridge integration for matching pull requests.
 
-## Real-browser certification with a deployed Backend
+## сертификация в настоящем браузере с развёрнутым Backend
 
 The optional Playwright browser probe is a **live integration test, not a mock server**. Run only against an isolated test instance with real project/account fixtures and live Admin service. Provide:
 
@@ -50,6 +50,6 @@ python3 e2e/scripts/admin-hardening-02112-browser.py
 
 The browser probe uses two independent tabs with the *real* Backend draft store to exercise conflict (one 200, one 409), reload/recovery, temporary offline state, cross-project API 403, hidden privileged actions, and accessible login labels. It creates and cleans up one release draft. A script failure must fail certification; missing environment values are errors, never "skipped and passed".
 
-## Remaining production release gates
+## оставшиеся условия промышленного релиза
 
 Do not mark 0.21.12 GA-ready unless `npm run build`, `go test -race`, PostgreSQL+ServerBridge tests and real-browser tests all complete successfully in a provisioned CI or staging environment. Existing E2E scenarios exercise server command persistence/ACK, **not** a physical Minecraft server join; physical runtime certification is a separate gate.

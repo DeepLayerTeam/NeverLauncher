@@ -40,10 +40,10 @@ jobs:
           go test ./cmd/launcher
           -run 'TestProcessorWorker0273|TestForgeProcessorRecovery0273|TestForgeAndNeoForgeProcessorMaterializers|TestClientFactory0271|TestForgeLegacy|TestFabricAndQuiltMaterializersProduceConsumableClientTree'
           -count=1 -timeout=5m
-      - name: Go vet
+      - name: Статический анализ Go (vet)
         working-directory: cli
         run: go vet ./cmd/launcher
-      - name: CLI build
+      - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
       - name: Linux worker race tests

@@ -94,7 +94,7 @@ jobs:
             --issuer "$APPLE_NOTARY_ISSUER_ID"
           echo "LAUNCHER_SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
 
-      - name: Install component-set signing dependency
+      - name: Установка зависимости для подписи набора компонентов
         run: python3 -m pip install 'cryptography>=43,<47'
       - name: Build, sign, notarize and staple x64 + ARM64 packages
         shell: bash

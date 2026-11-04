@@ -146,7 +146,7 @@ jobs:
       - name: Build Admin
         working-directory: apps/admin
         run: npm ci && npm run build
-      - name: Build Desktop frontend
+      - name: Сборка интерфейса Desktop
         working-directory: apps/desktop
         run: npm ci && npm run build
       - name: Desktop texture operations and official-account isolation tests
@@ -182,7 +182,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
-      - name: Install Linux desktop dependencies
+      - name: Установка зависимостей рабочего стола Linux
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -273,7 +273,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install Linux desktop dependencies
+      - name: Установка зависимостей рабочего стола Linux
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -488,7 +488,7 @@ jobs:
           codesign --force --sign - --options runtime --timestamp=none runtime/runtime/target/debug/guard
           codesign --force --sign - --options runtime --timestamp=none "${TEST_BIN}"
           "${TEST_BIN}" --nocapture
-      - name: Build Desktop frontend
+      - name: Сборка интерфейса Desktop
         working-directory: apps/desktop
         run: npm ci && npm run build
       - name: Build ad-hoc universal macOS package
@@ -697,16 +697,16 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
-      - name: Build Runtime for Managed Java II
+      - name: Сборка Runtime для Managed Java II
         run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
-      - name: Managed Java II Java 8/16/17/21/25 production E2E
+      - name: Сквозные производственные тесты Managed Java II для Java 8/16/17/21/25
         shell: bash
         run: |
           set -euo pipefail
           bash e2e/scripts/run-managed-java-II-e2e.sh
           mkdir -p managed-jre-artifacts
           cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json managed-jre-artifacts/MANAGED_JAVA_II_EVIDENCE.json
-      - name: Build exact-vendor Managed JRE Distribution
+      - name: Сборка дистрибутива Managed JRE с закреплённым поставщиком
         shell: bash
         run: |
           set -euo pipefail

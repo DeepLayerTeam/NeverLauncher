@@ -1,4 +1,4 @@
-# Release Workspace — Launcher 0.21.8
+# рабочее пространство выпуска — Launcher 0.21.8
 
 ## Назначение
 

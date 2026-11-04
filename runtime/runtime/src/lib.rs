@@ -309,8 +309,8 @@ pub struct RuntimeLaunch {
     pub offline_mode: bool,
 }
 
-// Preserve the existing Go-compatible Manifest v2 signing payload field order.
-// Go json.Marshal sorts map keys; Rust HashMap iteration must not introduce
+// Сохраняйте порядок полей подписываемой части Manifest v2, совместимый с Go.
+// Go json.Marshal сортирует ключи map; обход Rust HashMap не должен вносить
 // random signing payloads or intermittent Ed25519 verification failures.
 fn serialize_sorted_features_0227<S: serde::Serializer>(value: &HashMap<String, bool>, serializer: S) -> Result<S::Ok, S::Error> {
     let sorted: BTreeMap<&str, &bool> = value.iter().map(|(name, enabled)| (name.as_str(), enabled)).collect();
@@ -351,7 +351,7 @@ pub struct ManifestFile {
     pub size: u64,
     pub sha256: String,
     pub url: String,
-    /// Ordered, independently SHA-256 verified fallback sources. Included in the signed manifest.
+    /// Упорядоченные резервные источники с независимой проверкой SHA-256. Входят в подписанный манифест.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mirrors: Vec<String>,
     pub required: bool,
@@ -464,8 +464,8 @@ pub struct LaunchPlan {
     pub deterministic_sha256: String,
 }
 
-// Local user choices do not change the signed Manifest. They are validated
-// against its limits, then applied to the actual Java invocation (not just UI).
+// Локальный выбор пользователя не изменяет подписанный Manifest. Параметры
+// проверяются по его ограничениям и применяются к настоящему вызову Java, не только к UI.
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LaunchPreferences {
@@ -518,12 +518,12 @@ pub fn validate_launch_preferences(manifest: &Manifest, p: &LaunchPreferences, a
 pub fn apply_launch_preferences(manifest: &Manifest, root: &Path, plan: &mut LaunchPlan, preferences: &LaunchPreferences, credentials: Option<&MinecraftLaunchCredentials>) -> Result<(), String> {
     validate_launch_preferences(manifest, preferences, credentials.is_some())?;
     if let Some(memory) = preferences.memory_mb {
-        // Never allow unsigned extra JVM flags to override the chosen -Xmx.
+        // Никогда не разрешайте неподписанным дополнительным параметрам JVM переопределять выбранный -Xmx.
         plan.jvm_args.retain(|arg| !arg.starts_with("-Xmx"));
         plan.jvm_args.push(format!("-Xmx{memory}M"));
-        // The core planner has already verified and inserted its internal
-        // signed authlib agent. That agent is not a user JVM override and
-        // must not cause this post-auth heap-only policy check to fail.
+        // Основной планировщик уже проверил и добавил свой внутренний подписанный агент
+        // authlib. Этот агент не является пользовательским переопределением JVM и не должен
+        // приводить к отказу при последующей проверке политики размера кучи.
         let heap_check_args = plan.jvm_args.iter().filter(|arg| !arg.starts_with("-javaagent:")).cloned().collect::<Vec<_>>();
         validate_memory_arguments_0223(&manifest.runtime.memory, &heap_check_args)?;
     }
@@ -667,8 +667,8 @@ pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: 
 fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
     let mut unsigned = manifest.clone();
     unsigned.signature = None;
-    // Go encoding/json (the publishing signer) escapes HTML metacharacters
-    // and JavaScript line separators. Rust must verify those exact bytes.
+    // Go encoding/json (подписант публикации) экранирует метасимволы HTML
+    // и разделители строк JavaScript. Rust обязан проверять именно эти байты.
     let json = serde_json::to_string(&unsigned).map_err(|err| format!("не удалось сериализовать payload подписи: {err}"))?;
     Ok(json.replace('&', "\\u0026").replace('<', "\\u003c").replace('>', "\\u003e")
         .replace('\u{2028}', "\\u2028").replace('\u{2029}', "\\u2029").into_bytes())
@@ -705,8 +705,8 @@ pub async fn check_files_with_preset(manifest:&Manifest,root:&Path,preset:Option
                 // active_files() has already removed every *unselected* optional
                 // component. A missing file that remains in this list is a
                 // SELECTED game dependency, even for legacy manifest v2.
-                // Never mark it optional-missing: sync/repair/launch must fail
-                // until the actual signed bytes are installed.
+                // Не считайте отсутствие такого файла необязательным: sync/repair/launch должны
+                // завершаться отказом, пока настоящие подписанные байты не установлены.
                 results.push(FileCheckResult { path: file.path.clone(), status: "missing".into(), message: "выбранный файл отсутствует".into() });
             },
             Err(err) => return Err(format!("{}: {err}", local_path.display())),
@@ -730,9 +730,9 @@ pub async fn download_missing_files_with_preset(manifest:&Manifest,root:&Path,pi
     durable_downloads::start_with_preset(manifest,root,pinned_public_key,"download",progress,preset).await
 }
 
-// On Unix rename replaces the destination atomically. Windows rename does not
-// replace an existing file; retain the original until the verified staged bytes
-// are installed, and restore it if the replacement fails.
+// В Unix rename атомарно заменяет целевой файл. В Windows rename не заменяет
+// существующий файл: сохраняйте оригинал до установки проверенных подготовленных
+// байтов и восстанавливайте его при неудачной замене.
 async fn replace_verified_managed_file_0224(part: &Path, target: &Path) -> Result<(), String> {
     #[cfg(not(windows))]
     { fs::rename(part,target).await.map_err(|e| format!("managed file switch {}: {e}",target.display())) }
@@ -783,8 +783,8 @@ pub async fn clean_unused_files(manifest: &Manifest, root: &Path, pinned_public_
     let quarantine = root.join(".launcher-quarantine").join(now_unix()?.to_string());
     let mut result = CleanUnusedResult { moved: 0, preserved: 0, quarantine_dir: quarantine.to_string_lossy().into_owned(), messages: Vec::new() };
     if !root.exists() { return Ok(result); }
-    // Unknown files are user-owned by default. Only explicitly signed include
-    // rules for managed directories authorize quarantine. Never follow links.
+    // Неизвестные файлы по умолчанию принадлежат пользователю. Карантин разрешён
+    // только явно подписанными правилами включения управляемых каталогов. Не следуйте по ссылкам.
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
         let entries = std::fs::read_dir(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
@@ -974,8 +974,8 @@ pub async fn certify_vanilla_compatibility(
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
-    // The signed launcher environment policy clears inherited variables.
-    // Prepare Guard *after* this step so its authenticated pipe/secret reach JVM.
+    // Подписанная политика окружения лаунчера очищает унаследованные переменные.
+    // Подготавливайте Guard *после* этого шага, чтобы его защищённый канал и секрет достигли JVM.
     apply_launch_command_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
@@ -1038,7 +1038,7 @@ pub async fn certify_vanilla_compatibility(
     #[cfg(windows)]
     if exit_code == Some(0xE3) || exit_code == Some(0xC000_0409u32 as i32) {
         // Windows Rust abort() also yields 0xC0000409. Attach authenticated
-        // Guard violation details only if one actually arrived; never label
+        // Указывайте детали нарушения Guard только при фактическом получении события; не помечайте
         // an unrelated JVM/graphics fail-fast as a Guard finding.
         let guard = _sensor_session.report().module_guard;
         if !guard.last_violation.is_empty() {
@@ -1056,8 +1056,8 @@ pub async fn certify_vanilla_compatibility(
     }
     let finished_at = now_unix()?;
     let runtime_seconds = finished_at.saturating_sub(started_at);
-    // V03: process lifetime is observational only. No menu/renderer proof is
-    // collected by this legacy entrypoint, so it must not certify startup.
+    // V03: время жизни процесса лишь наблюдается. Старая точка входа не собирает
+    // подтверждение меню или рендеринга и не может сертифицировать успешный запуск.
     let observed = timed_out || success;
     let message = if timed_out {
         format!("Vanilla {version}: timeout без подтверждения GUI/menu; startup INCONCLUSIVE")
@@ -1097,8 +1097,8 @@ pub async fn launch_with_timeout(
     launch_with_timeout_matching(manifest, root, java_path, username, pinned_public_key, max_runtime_seconds, None).await
 }
 
-/// Only the operator's isolated loopback matching-server is accepted. Launches
-/// the very same verified signed installation, with the ordinary launch plan.
+/// Принимается только изолированный loopback-сервер оператора с соответствующей конфигурацией.
+/// Запускается та же проверенная подписанная установка с обычным планом запуска.
 pub async fn launch_with_timeout_matching(
     manifest: &Manifest,
     root: &Path,
@@ -1112,8 +1112,8 @@ pub async fn launch_with_timeout_matching(
         max_runtime_seconds, matching_server, None).await
 }
 
-/// Authenticated staged validation uses the exact same guarded Java runtime and
-/// immutable release installation as the normal launcher. No extra downloader.
+/// Аутентифицированная проверка подготовленного выпуска использует те же защищённые
+/// Java Runtime и неизменяемую установку релиза, что и обычный лаунчер. Без дополнительного загрузчика.
 pub async fn launch_with_timeout_matching_authenticated(
     manifest: &Manifest, root: &Path, java_path: Option<String>,
     username: Option<String>, pinned_public_key: &str, max_runtime_seconds: Option<u64>,
@@ -1152,18 +1152,18 @@ pub async fn launch_with_timeout_matching_authenticated(
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
-    // Native (modern loader) path: use the same signed Trusted JVM package
-    // as legacy ClientFactory. Keep the temporary premain configuration alive
-    // until the child has exited; Drop removes it on every error path.
-    // A Java module entrypoint cannot be forwarded through a classpath wrapper.
+    // Нативный путь (современный загрузчик): используйте тот же подписанный пакет Trusted JVM,
+    // что и устаревший ClientFactory. Временная конфигурация premain должна существовать
+    // до завершения дочернего процесса; Drop удалит её при любой ошибке.
+    // Точку входа модуля Java нельзя передавать через обёртку classpath.
     if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
         return Err("Guard Trusted JVM requires a classpath Minecraft main; module entrypoint is unsupported".into());
     }
     let _trusted = guarded_trusted_launch_0503::prepare_verified(root, &manifest.project_id,
         &manifest.minecraft.version, &manifest.minecraft.loader, &plan.main_class, manifest, &plan)?;
     if let Some(ref trusted) = _trusted {
-        // A signed Guard policy, not modded metadata or mutable JVM flags,
-        // authorizes the exact agent and its JVM transformation owners.
+        // Конкретный агент и владельцы преобразований JVM разрешаются подписанной
+        // политикой Guard, а не метаданными модов или изменяемыми флагами JVM.
         plan.jvm_args.push(trusted.agent_arg.clone());
         plan.main_class = trusted.main_class.clone();
         writeln!(log_file, "Guard policy digest: {}", trusted.policy_digest).map_err(|e| e.to_string())?;
@@ -1214,7 +1214,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         .await
         .map_err(|err| format!("launch заблокирован: Guard Sensor authentication failed: {err}"))?;
 
-    // Bind /proc observations to this exact child after fork/exec. Failure is
+    // Привязывайте наблюдения /proc к конкретному дочернему процессу после fork/exec. Ошибка
     // terminal: never continue with an unmonitored JVM.
     #[cfg(target_os = "linux")]
     if let Err(reason) = live_guard.bind_linux_process(

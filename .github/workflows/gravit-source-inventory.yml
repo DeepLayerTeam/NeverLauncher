@@ -42,16 +42,16 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Unit and race tests, native PostgreSQL integration, Backend HTTP compilation
+      - name: Модульные тесты, тесты на гонки, нативная интеграция PostgreSQL и сборка HTTP-сервера
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 10m ./internal/gravitinventory
           go test -race -count=1 -timeout 10m ./internal/repository -run 'TestMigrationInventoryTransactional0333|TestMigrationCompatibilityAssessmentTransactional0332'
           go test -count=1 -timeout 10m ./internal/httpapi -run 'TestMigration.*0331|TestGravit.*0332'
-      - name: CLI native network and ZIP tests
+      - name: Нативные сетевые тесты CLI и тесты ZIP
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestGravitSource.*0333|TestGravitCompatibilityCLI0332|TestMigrationWorkflowCLI0331'
-      - name: OpenAPI and release metadata
+      - name: OpenAPI и метаданные выпуска
         run: |
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check

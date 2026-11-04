@@ -1,8 +1,8 @@
-# Launcher HTTP Auth Connector protocol v1
+# протокол HTTP-коннектора авторизации Launcher v1
 
 `0.11.4` использует этот протокол как реальный remote authentication transport. Connector не принимает произвольный URL из login request: все endpoints строятся только относительно заранее проверенного `baseUrl` provider-конфигурации.
 
-## Endpoints
+## конечные точки
 
 По умолчанию remote auth service реализует:
 
@@ -49,7 +49,7 @@ GET  /health
 
 Launcher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, timeout и `5xx` считаются временной недоступностью provider.
 
-## Request envelope
+## оболочка запроса
 
 `POST` request содержит:
 
@@ -65,7 +65,7 @@ Launcher распознаёт `invalid_credentials`, `identity_disabled`, `ident
 
 Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Provider token никогда не является Never access/refresh token.
 
-## HMAC signing
+## подпись HMAC
 
 Каждый request содержит:
 
@@ -101,7 +101,7 @@ HEX_SHA256(BODY)
 
 Launcher использует constant-time HMAC comparison, проверяет timestamp window и отклоняет уже использованный response nonce.
 
-## Network security
+## сетевая безопасность
 
 - Только HTTPS; plaintext HTTP не поддерживается.
 - Redirects отключены.
@@ -113,7 +113,7 @@ Launcher использует constant-time HMAC comparison, проверяет 
 - Client certificate/key (`mtls.certFile` + `mtls.keyFile`) включают mutual TLS.
 - Response body имеет жёсткий size limit и strict JSON schema decoding.
 
-## Provider configuration
+## конфигурация провайдера
 
 ```json
 [

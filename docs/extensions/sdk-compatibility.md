@@ -33,7 +33,7 @@ This is an *opt-in startup check*. An extension can omit a requirement if it imp
 
 The JVM `ExtensionRunner` now loads the extension class without running its static initializer until hello succeeds. Only after agreement does it instantiate the extension and invoke `start()`; `ready()` remains after successful start. This prevents startup code from executing for an incompatible host. JVM code remains trusted with process-user privileges; none of these checks provides an OS sandbox.
 
-## Reproducible checks
+## воспроизводимые проверки
 
 ```bash
 sh sdk/java/core/build.sh test

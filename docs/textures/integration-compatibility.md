@@ -1,11 +1,11 @@
-# Launcher 0.25.12 — Texture Integration & Compatibility Certification
+# Launcher 0.25.12 — сертификация интеграции и совместимости текстур
 
 This update ships **executable** PostgreSQL/GC concurrency hardening, a live
 Yggdrasil/authlib-injector profile + PNG verifier, a real S3 lifecycle test and
 an automated CI matrix. It does **not** assert that Minecraft gameplay has
 been certified on any platform where the game was not launched.
 
-## Upgrade / operational change
+## обновление и эксплуатационные изменения
 
 - Deploy Backend, the maintenance binary and UI from **the same 0.25.12 build**.
   Apply the existing migrations 0067–0074. **There is no 0075 migration**: the
@@ -21,7 +21,7 @@ been certified on any platform where the game was not launched.
 - Keep periodic **PostgreSQL and texture object backups together**. A PNG-only
   snapshot is not sufficient to rebuild ownership, assignments or revisions.
 
-## Reproducible verification commands
+## воспроизводимые команды проверки
 
 From the repository root:
 
@@ -67,7 +67,7 @@ Desktop and Admin verification:
 (cd apps/admin && npm ci && npm test && npm run build)
 ```
 
-## Probe a running Yggdrasil/authlib-injector deployment
+## проверка действующего Yggdrasil/authlib-injector
 
 Select a **local Launcher Minecraft UUID** with an active public, managed
 PNG skin. Set a production HTTPS API origin and run:
@@ -101,7 +101,7 @@ production should **never** use that flag or disable certificate validation.
 This probes protocol responses and bytes, **not** a real game render. It does
 not authenticate Microsoft accounts, launch Minecraft, or override allowlists.
 
-## CI gates
+## условия CI
 
 `.github/workflows/texture-certification-02512.yml` includes:
 

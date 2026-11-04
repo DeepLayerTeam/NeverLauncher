@@ -46,7 +46,7 @@ export function ValidationHistory03412({api,packageId}:Props) {
         </tbody></table>}
         {next>0 && <button disabled={busy} onClick={()=>void load(next)}>Загрузить предыдущие события</button>}
       </details>
-      {selected && <section className="subcard" aria-label="Selected historic run">
+      {selected && <section className="subcard" aria-label="Выбранный исторический запуск">
         <div className="buttonRow"><strong>Исторический запуск {selected.runs[0]?.runId}</strong><button onClick={()=>setSelected(null)}>Закрыть</button></div>
         {selected.runs.map(run=><ul key={run.runId}>{Object.entries(run.stages).map(([name,stage])=><li key={name}>{name}: {stage.status} · {stage.detail||'—'} {stage.evidenceSha256&&<code>{stage.evidenceSha256}</code>}</li>)}</ul>)}
         {selected.evidence.map(ev=><p key={ev.runId}>Evidence: {ev.status} · SHA-256 <code>{ev.evidenceSha256}</code> · expires {readableTime(ev.expiresAt)}</p>)}

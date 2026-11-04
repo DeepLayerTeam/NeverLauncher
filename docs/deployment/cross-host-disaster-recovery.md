@@ -1,10 +1,10 @@
-# NeverLauncher 0.51.9 — cross-host disaster recovery
+# NeverLauncher 0.51.9 — аварийное восстановление между узлами
 
 **Status: implementation + local regressions, not independently qualified HA/DR.**
 
 The executable `scripts/operations/cross_host_recovery_0519.py` recovers a **verified, frozen 0.51.8 checkpoint** onto different physical hosts. The restore process is intentionally split into `prepare`, `replay-postgres`, and `admit`: a failed prepare cannot silently activate a partially restored control plane. It never overwrites a live PostgreSQL directory, populated S3 bucket, pre-existing Docker volume, Minecraft world directory or another project. A private fsync-backed `recovery-state-0519.json` tracks completed steps; an interrupted restore is **not automatically retried** over partially written data. Reconcile or discard the isolated recovery installation, then use a new destination.
 
-## Prerequisites (actual infrastructure, not placeholders)
+## предварительные требования (настоящая инфраструктура, а не заглушки)
 
 - A complete `consistent_backup_0518.py backup` checkpoint, validated with `consistent_backup_0518.py verify`, and its pgBackRest repository including every required WAL segment. Both must be available on the new, isolated PostgreSQL recovery host. Encrypted offsite retention and the separately escrowed trust roots, authentication signing keys, JWT/ServerBridge keys, TLS certificates and third-party provider credentials must remain recoverable. The `trust-hashes.json` file is **fingerprints, not key material**.
 - At least two **new physical Docker hosts**, each running the unchanged pinned 0.51.9 binary image, the `docker-compose.multi-host.yml` deployment and installed `cross_host_recovery_0519.py` and `multi_host_0512.py`. These Docker hosts must not be any of the physical hosts recorded in the checkpoint. Docker Compose configuration, external PostgreSQL DNS, Redis primary/cluster, empty new versioned S3 bucket, TLS key/cert and load balancer routes must be provisioned in the approved infrastructure. **Do not launch containers or `volume-init` before restore**.
@@ -13,7 +13,7 @@ The executable `scripts/operations/cross_host_recovery_0519.py` recovers a **ver
 - SSH known-hosts pinned on the operator; no shell interpolation or non-pinned network downloads. Install an OCI tar image referenced by `name@sha256:<digest>` on every new Docker host. The private work directory, trust file and optional audit ledger must have mode `0700`/`0600`. Allow adequate scratch/disk space for pgBackRest, S3, all Docker volumes and world archive transfers.
 - **Independently enforce fencing of the original PostgreSQL writer, API/worker nodes, ServerBridge authorities and game hosts** before replay promotion or ingress cutover. The command-line `--source-fenced` acknowledgement is not a fencing mechanism; use actual power/network/storage/Patroni authority controls and independent evidence. Redis must start without stale leases or AOF from the old cluster. Do not copy Redis transient state.
 
-## 1. Prepare fresh destinations
+## 1. подготовьте новые целевые каталоги
 
 Create a private operator directory on the new PG host:
 
@@ -34,7 +34,7 @@ The labels after `--node` and `--world-destination` **must match every label in 
 
 An HTTP/OIDC/external SQL auth provider's owned state is **not cloned** by this tool. An included file-backed provider export is retained in the checkpoint, but operator must restore it to the new provider via its supported recovery route. Set original trust and auth secrets in the new deployment without printing them in logs. A successful prepare receipt is `prepared-not-admitted`; it does **not** start PostgreSQL or game/API processes.
 
-## 2. Replay real WAL and promote in isolation
+## 2. воспроизведите настоящий WAL и изолированно активируйте узел
 
 Once the old writer and game/Bridge authorities have been **actually fenced** using independent infrastructure controls:
 
@@ -47,7 +47,7 @@ python3 scripts/operations/cross_host_recovery_0519.py replay-postgres \
 
 The command runs `pg_ctl start` bound only to the isolated Unix socket, polls `pg_is_in_recovery()`/`pg_is_wal_replay_paused()`, verifies that the actual replay LSN reached the sealed cohort LSN, resumes replay, waits for an actual writable primary, then runs `pg_ctl stop`. If replay, WAL or promotion fails, the operation remains blocked and no API/worker may be started. After success, configure the approved PostgreSQL/Patroni cluster manager to start **this recovered PGDATA**, with new TLS identity and a new isolated data endpoint. Verify it is not directed to the original production DB.
 
-## 3. Admit new control-plane and measure recoverability
+## 3. допустите новый управляющий контур и измерьте восстанавливаемость
 
 Start a fresh Redis cluster without old AOF, restore external providers/secrets, then configure the **same** versioned API/worker image and shared recovered PostgreSQL/Redis/S3 endpoints on both recovery Docker hosts. Verify the external load balancer is directed to the recovered topology, not the original environment. Capture the independently observed incident-onset time:
 
@@ -73,7 +73,7 @@ The default RPO field is **not measured**. `recoveryPointAgeSeconds` is the inci
 
 Pass `--ack-ledger /secure/ack-ledger.json` to `admit`. The controller readbacks each ID from the restored `audit_events` table with parameter-quoted PostgreSQL queries and reports the observed number preserved/missing and `sampledAuditRpoSeconds`. This is **only sampled audit-event RPO**; the ledger completeness/provenance, other SQL operations, world writes and S3 objects require independent application-level readbacks and incident evidence. An audit ledger does not replace original source fencing.
 
-## Acceptance and limitations
+## приёмка и ограничения
 
 The 0.51.9 code implements backup verification, distinct-host admission, isolated physical/WAL recovery, new volume extraction and verified file readback, new S3 object recovery and readback, world file restore, live API/worker restart, and timing report generation. It does **not** provision Patroni, object replication, Redis Sentinel, new game JVM authorities, secrets/KMS/identity provider state or public DNS/LB cutover; these are external prerequisites controlled by the operator. It does not perform arbitrary-time PostgreSQL PITR and then claim it matches worlds/S3. No automatic rollback of live production is supported. An interrupted partial restore must remain **BLOCKED**, not reuse populated destinations.
 

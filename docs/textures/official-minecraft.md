@@ -1,4 +1,4 @@
-# Launcher 0.25.7 — Official Minecraft Integration
+# Launcher 0.25.7 — интеграция с официальным Minecraft
 
 ## Implemented (not a local-Yggdrasil impersonation)
 
@@ -18,7 +18,7 @@ ServerBridge ownership and Yggdrasil RSA keys are never reused for official
 accounts. OAuth client ID is the registered *public* Microsoft identity
 application; this implementation does not require or retain its client secret.
 
-### Configuration
+### конфигурация
 
 Set `LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID` to the application ID of an
 Azure/Microsoft identity app configured for *personal Microsoft accounts* and
@@ -30,7 +30,7 @@ The API has a fixed allowlist of outbound origins, all Microsoft/Xbox/Minecraft;
 there are no caller-provided URLs. API-to-Microsoft redirects are disabled and
 all responses are capped to 1 MiB with finite timeouts.
 
-### Authenticated API usage
+### использование API с авторизацией
 
 All endpoints require the **Never** `Authorization: Bearer <access-token>`;
 a local Yggdrasil Minecraft bearer **must not** be used here.
@@ -60,7 +60,7 @@ operations. If Minecraft token refresh occurs, replace the ticket with the
 in memory (not localStorage or the saved Tauri account config). The Never
 access/refresh session remains in the existing OS credential store as before.
 
-### Skin/cape semantics
+### семантика скинов и плащей
 
 - Official skins are uploaded **directly** to Minecraft Services using the
   access token for the authenticated Microsoft account. The PNG goes through
@@ -75,7 +75,7 @@ access/refresh session remains in the existing OS credential store as before.
   They are never copied into local-Yggdrasil assignments and Launcher
   **never signs** them with the local Yggdrasil key.
 
-### Desktop identity selection and game launch
+### выбор идентичности в Desktop и запуск игры
 
 The **Авторизация** panel lets the player complete Microsoft device login,
 inspect the verified official profile, upload/reset its skin, and select/hide
@@ -97,7 +97,7 @@ Minecraft session tables. The API does not print or log the official bearer.
 For rotation, replacing `LAUNCHER_AUTH_TOKEN_SECRET` invalidates all
 outstanding official tickets.
 
-### Testing and remaining release checks
+### испытания и оставшиеся проверки релиза
 
 Unit tests in `internal/officialminecraft` exercise Microsoft device grants,
 Xbox/XSTS identity chain, Java profile, owned/unowned capes, multipart skin

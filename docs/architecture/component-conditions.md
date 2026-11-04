@@ -1,4 +1,4 @@
-# Component conditions in signed catalog 4.0 (Launcher 0.24.4)
+# условия компонентов в подписанном каталоге 4.0 (Launcher 0.24.4)
 
 Catalog `schemaVersion=4.0` is embedded in signed Manifest v3. Per-component optional `conditions` has **mandatory** `schemaVersion=1.0`. The component's conditions are framed into the catalog's v4 SHA-256 digest, covered again by the release Ed25519 signature. The old v1/v2/v3 digest algorithms remain byte-for-byte unchanged. Unknown condition keys are rejected by Runtime; invalid or v4-only conditions in older schemas are rejected.
 
@@ -13,7 +13,7 @@ Automatic defaults whose conditions fail are skipped, while an explicitly select
 
 The Go code supports caller-provided `ComponentEnvironment0244.VerifiedPermissions` **only when populated by trusted server authorization**, never raw JSON from the client. Native execution currently rejects permissions-gated components without attested proof. JVM version is resolved from the release's signed target and the Java launcher enforces version consistency at launch; an upgrade is required if the actual Java executable changes independently. Loader/Minecraft version ranges accept SemVer only; use exact version arrays for snapshot and non-SemVer identifiers.
 
-## Build checks
+## проверки сборки
 
 - `cd services/api && go test ./internal/model ./internal/dbmigrate`
 - `cd cli && go test ./internal/dbmigrate`

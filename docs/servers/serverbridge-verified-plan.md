@@ -1,6 +1,6 @@
-# ServerBridge Verified Plan Policy (0.24.12)
+# политика проверенного плана ServerBridge (0.24.12)
 
-## Enforcement
+## принудительное применение
 
 Set **all three** environment variables on every API instance:
 
@@ -46,7 +46,7 @@ go run ./cmd/planpolicy-02412 -policy /secure/policy.json -key /secure/offline-p
 
 The command emits a policy envelope with `schemaVersion`, base64 of the exact signed policy bytes, and an Ed25519 signature over `Launcher-ServerBridge-Plan-Policy-v1\n` + those bytes, and prints the public key for configuration. This is a **separate operator key**, not the game release signing key or ServerBridge node private key. Store the private seed offline.
 
-## Execution path
+## порядок выполнения
 
 1. Desktop launches verified Minecraft and completes Continuous Guard v2 attestation. The Backend produces a one-time Guard ticket containing the attestation digest, runtime PID, hashes and session/device bindings.
 2. Authenticated Desktop requests `POST /api/v1/server-bridge/plan-challenge` for server/project/profile/channel; Backend checks authorized project, Device Trust, pinned policy, generates an unpredictable 60-second challenge, and stores it in `device_challenges` (PostgreSQL or in-memory development).
@@ -54,7 +54,7 @@ The command emits a policy envelope with `schemaVersion`, base64 of the exact si
 4. `POST /api/v1/session/join` submits this proof together with the one-time Continuous Guard ticket. The API verifies the policy, target, session, device/binding epoch, exact allowlist tuple, Guard attestation digest and P-256 signature; atomically consumes the one-use plan challenge. Only then does the existing ServerBridge issue a one-time join ticket.
 5. The registered node cryptographically authenticates `validate-join`; existing checks for session, Guard, trust, release integrity, one-time redemption and routing still run. On policy rotation, unredeemed tickets minted before `issuedAt` are invalidated.
 
-## Limits and threat model
+## ограничения и модель угроз
 
 - **Mandatory Continuous Guard v2** is currently certified for Windows. Protected-plan admission deliberately **fails closed** on platforms that lack such proof; it must not silently downgrade to a signed mod list.
 - The evidence proves that the installed managed files were verified by the trusted native launcher when the hardware key signed, and binds that measurement to a specific authenticated session and Continuous Guard evidence. It does **not**, by itself, prove that each mod was actually loaded by the Minecraft JVM or that every byte of JVM memory still matches the disk. For that stronger claim, a future measured classloader + remote attestation protocol is needed.

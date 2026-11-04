@@ -45,21 +45,21 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Verify module and formatting
+      - name: Проверка модулей и форматирования
         run: |
           set -euo pipefail
           go mod download
           go mod verify
           test -z "$(gofmt -l internal/deployment internal/storage cmd/launcher-api/main.go)"
-      - name: Real PostgreSQL lock, Redis lease, S3 signed round-trip and failure tests
+      - name: Тесты реальных блокировок PostgreSQL, аренды Redis, подписанного обмена с S3 и отказов
         run: |
           set -euo pipefail
           go test -race -count=1 -timeout=10m ./internal/deployment ./internal/storage
           go vet ./internal/deployment ./internal/storage ./cmd/launcher-api
-      - name: Compile the actual HTTP backend with pgx
+      - name: Сборка настоящего HTTP-сервера с pgx
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-api-03212" ./cmd/launcher-api
-      - name: Verify canonical product version
+      - name: Проверка канонической версии продукта
         working-directory: .
         run: python3 scripts/version/manage.py check

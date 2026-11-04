@@ -29,7 +29,7 @@ staged execution report says `passed`.
    same signed manifest and operator-pinned key, and selects the signed Java
    major on the GUI-capable worker. No Client Factory lock or rebuild is required.
 
-## Evidence
+## доказательства
 
 `GET /api/v1/packages/{packageId}/staged-runs` returns PostgreSQL-backed
 observational reports with separate `manifest-files`, `materialization`, and

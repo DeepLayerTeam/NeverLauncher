@@ -1,17 +1,17 @@
 # Deep Java Platform 0.49.0 — source patch and acceptance status
 
-## Executable changes
+## реально исполняемые изменения
 
 - Java callback entrypoint now refuses mutations before RUNNING and after STOPPING; a STOPPING callback health response is non-responsive. Shutdown cancels outstanding callbacks, refuses new submissions and prevents re-use of the old callback token when an instance restarts.
 - `RuntimeCallbacks0490Tests` exercises real loopback TCP/HTTP, a blocking Java handler, concurrent shutdown, token rotation, and new process state; these are not mocks of the Java callback implementation.
 - `scripts/java/deep_java_e2e_0490.py` compiles three different **existing** Java extension implementations against a published binary SDK JAR only. It runs separate real JVM subprocesses for (1) Admin/Desktop/CLI actions and persisted settings, (2) Content SPI asset/texture/metadata/prepare/delivery plus SHA-256, and (3) Java SPI with a pinned nested library, live provider selection and CLI. The Host in these particular integration tests is a local Python test double, **not** the installed Go service.
 - The 0.48.12 Java external-consumer workflow previously published the Maven SDK into `$RUNNER_TEMP` while Maven, Gradle and its integrity tests looked for `dist/java-sdk/maven`. This is corrected; the example build definitions accept an explicit SDK version so the same example exercises 0.49.0 rather than silently compiling against an older artifact.
 
-## Verification and scope of evidence
+## проверка и область подтверждений
 
 A local OpenJDK 21 acceptance run covers independent public SDK publication, three JVM subprocess extensions, callbacks, CLI, heartbeat, shutdown, wrong-token denial and version metadata. The 0.49.0 CI workflow repeats these checks using Java 17 and 21. Merely adding workflow jobs does **not** prove they have run.
 
-## Blocked GA requirements
+## невыполненные требования GA
 
 **The source version number is 0.49.0, but full production GA certification is NOT established.** The following must be completed independently on a real deployment before signing a GA release:
 

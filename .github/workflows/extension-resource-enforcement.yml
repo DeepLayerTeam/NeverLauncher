@@ -31,7 +31,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Production Go package tests (real dependencies)
         run: go test -race ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
-      - name: Vet
+      - name: Статический анализ
         run: go vet ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
       - name: API integration compile
         run: go build ./...

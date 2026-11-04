@@ -4,7 +4,7 @@ This is the executable verification path for *actual* release files. It does not
 mint signatures or substitute test data for native executables. No release
 passes if the six signed packages are absent or if the native OS checks fail.
 
-## Production release pipeline
+## промышленный конвейер выпуска
 
 1. Run required CI on exact committed source. Windows production builder must
    sign both x64 and ARM64 executables with Authenticode/RFC3161 and check them
@@ -28,7 +28,7 @@ passes if the six signed packages are absent or if the native OS checks fail.
    formats and manifest bindings before promotion to public. Public production
    delivery E2E runs after publication using the original pinned trust keys.
 
-## Manual preflight
+## ручная предварительная проверка
 
 ```bash
 VERSION="$(cat VERSION)"
@@ -59,7 +59,7 @@ both local and downloaded final packages. It is operational evidence and must
 be separately approved under the independent GA policy for signing; it is not
 an approval by itself. Report must not be committed as a signed receipt.
 
-## Verification boundaries
+## границы проверки
 
 - A PE certificate table / Mach-O LC_CODE_SIGNATURE is structural evidence,
   **not** proof that a signature chains to an authorized issuer. Native

@@ -39,7 +39,7 @@ export function GuardPolicyOperations05011({canOperate}:{canOperate:boolean}){
   download05011(`guard-${restore?'rollback':'revoke'}-epoch-${next.epoch}.json`,JSON.stringify(next,null,2)+'\n');
   setStatus(`Создана НЕПОДПИСАННАЯ политика epoch ${next.epoch}. Подпишите её автономной утилитой guard-policy-sign и проверьте перед установкой.`);
  }
- return <section className="subcard" aria-label="Guard Policy Operations 0.50.11">
+ return <section className="subcard" aria-label="Операции с политиками Guard 0.50.11">
   <h3>Guard · подписанные политики и восстановление</h3>
   <p>Проверка подписи выполняется в браузере по внешнему закреплённому публичному ключу. Приватный ключ не загружается. Admin готовит изменения и проверяет результат; применение на защищённом клиенте выполняет CLI.</p>
   <label className="field">Ed25519 public key (64 hex из внешнего доверенного источника)<input spellCheck={false} autoComplete="off" value={publicKey} onChange={e=>changeKey(e.target.value.trim())}/></label>

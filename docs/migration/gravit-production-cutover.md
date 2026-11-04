@@ -13,7 +13,7 @@ No distributed transaction can atomically change PostgreSQL, two independent HAP
 - A dedicated canary Minecraft account authorized to test login on **target** and **public** HTTPS authentication endpoints. The POST request body is an owner-only file; the response must contain the precise canonical Minecraft UUID in `uuid`, `playerUuid`, or `id`. Use an actual login API—not a health endpoint that always returns a UUID. TLS host verification is mandatory, and redirects fail.
 - A post-switch stage for `nl migrate gravit rehearse-local` with a real client executable, test probes and a real loopback RCON game server. The stage's `live-session.json` `clientArgs` must include the chosen public Minecraft address (`host:port`), not a direct private server address. Both canary login and RCON-observed Minecraft join must refer to the same UUID. **The operator must independently verify that the actual launcher arguments really connect through this public HAProxy entry point.** Presence of an argument substring is only a static guard against accidental direct-target tests.
 
-## Configuration
+## конфигурация
 
 Create `/srv/never-cutover/config.json` as mode `0600`; make `/srv/never-cutover/journal` a mode `0700` directory on durable storage. Do **not** put access tokens or passwords in the config or command arguments. Replace all example values with verified production values.
 

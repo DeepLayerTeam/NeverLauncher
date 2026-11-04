@@ -2,7 +2,7 @@
 
 The importer is accessible under **Admin → Profiles → Gravit static import**. It processes a single Gravit `ClientProfile` JSON document. Inputs must be valid JSON (remove JSONC comments with a JSON-aware editor), at most 1 MiB. Input is never evaluated; no Java code, loader agent, shell, optional action or module from Gravit is executed.
 
-## Endpoints
+## конечные точки
 
 Both routes require `project:write` in the destination project; mutation additionally requires `release:prepare`.
 
@@ -44,7 +44,7 @@ The body must also include `id`, `name`, `loaderHint`, and `source` from inspect
 
 The workspace starts in `importing`. Operators must import the actual game directory, scan, stage required JARs, validate the signed classpath and file rules, and build through the existing release pipeline. Import never publishes or signs arbitrary Gravit data. Existing signed Never manifests, snapshots and access permissions are not modified.
 
-## Semantic mapping & fail-closed rules
+## семантическое сопоставление и правила запрета при сбое
 
 | Gravit | Never / status |
 | --- | --- |
@@ -64,7 +64,7 @@ The workspace starts in `importing`. Operators must import the actual game direc
 
 **Safety:** verify and exclude rules cannot authorize cleaning unknown managed files; user saves, screenshots, resourcepacks, settings, and other protected paths must not be overwritten. Classpath paths are not trusted until concrete signed files are staged. No generated report is itself a runnable or publishable Manifest. The Admin report is downloadable as JSON for audit/migration planning.
 
-## Local tests
+## локальные тесты
 
 ```sh
 cd services/api

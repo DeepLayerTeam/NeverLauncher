@@ -46,7 +46,7 @@ jobs:
           go test -race -count=1 ./internal/gravitreport
           go test -race -count=1 ./internal/repository -run '^TestMigrationReportPostgres03313$'
           go test -run '^$' ./internal/httpapi
-      - name: Full backend build
+      - name: Полная сборка серверной части
         working-directory: services/api
         run: go build ./...
       - name: CLI build and HTTP tests
@@ -59,7 +59,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Admin production build
+      - name: Сборка промышленной версии Admin
         working-directory: apps/admin
         run: |
           npm ci

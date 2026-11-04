@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.4 — Backend Java Services
+# NeverLauncher 0.48.4 — Java-сервисы Backend
 
 Java extensions call the existing authenticated Go Extension Host Broker through `ExtensionContext.runtime().backend()`; neither the Java SDK nor extensions connect to the database or obtain administrative tokens. No new public REST endpoints or untrusted classpath changes are necessary.
 
@@ -34,7 +34,7 @@ for (BackendServices.Profile profile : profiles.items()) {
 
 Declare `project:read` / `release:read` in the signed extension manifest, grant them for the correct scope, then use the negotiated Host capabilities. Missing/revoked grants fail closed; they are **never** replaced by a backend service account. Data writes, job enqueue and privileged release operations are deliberately not exposed under read permissions.
 
-## Tests and limits
+## тесты и ограничения
 
 - `sh sdk/java/core/build.sh test` includes real HTTP calls from Java SDK to an authenticated loopback broker fixture, typed response decoding, permission denial, revoked grants and malformed cross-scope response rejection.
 - `go test -race ./internal/extensionhost -run TestJavaBackendServicesBroker0484` runs against the actual Go Host Broker, memory repository with real projects/profiles/channels/releases and durable job; verifies project boundaries, grant revocation and job redaction.

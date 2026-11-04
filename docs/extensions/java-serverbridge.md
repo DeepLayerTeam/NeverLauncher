@@ -53,7 +53,7 @@ idempotency key is mandatory (8–128 characters); expiry is 10–600 seconds,
 default 120. Only the existing signed Bridge node can lease and acknowledge a
 queued command. The extension cannot fabricate an ACK or delivery credential.
 
-## Java example
+## Java пример
 
 ```java
 var bridge = context.runtime().serverBridge();

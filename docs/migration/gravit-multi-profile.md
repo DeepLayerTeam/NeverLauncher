@@ -8,7 +8,7 @@ and migration-plan calculator used for individual imports. It is read-only:
 no players, profiles, worlds, extensions, permissions, files or channels are
 created or replaced by this command.
 
-## Prerequisites
+## предварительные требования
 
 Use the existing authenticated Backend with PostgreSQL storage, a prepared
 `source_assessment` Gravit migration run and the *same* source ZIP that was

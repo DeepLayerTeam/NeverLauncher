@@ -1,6 +1,6 @@
 # Launcher 0.26.2: native Official Identity Manager
 
-## Operational functionality
+## эксплуатационная функциональность
 
 The existing Backend-owned Microsoft Device Code → Xbox Live → XSTS → Minecraft flow is
 used **without changing provider grants**. The Desktop webview no longer receives the
@@ -14,7 +14,7 @@ This release does not falsely claim that Microsoft/Minecraft provider approval h
 received. Run `official-provider-poc` from 0.26.1 using your own registered public client
 and real personal Minecraft account before enabling official GA.
 
-### Working behavior
+### действующее поведение
 
 1. User authenticates to Launcher (unmodified existing platform login). Renderer
    passes its platform bearer token and Never session ID to the native manager, which
@@ -41,7 +41,7 @@ and real personal Minecraft account before enabling official GA.
 8. `cancel` removes the native pending Device Code session; `disconnect` deletes
    the stored ticket (not a global Microsoft grant revocation).
 
-### Production security boundaries
+### границы безопасности промышленной среды
 
 - Native HTTP: HTTPS only, loopback HTTP for development, origin-only Backend URL,
   redirects disabled, bounded JSON responses (256 KiB), bounded timeouts (45 s).
@@ -57,7 +57,7 @@ and real personal Minecraft account before enabling official GA.
   older Desktop builds. Sunset/removal requires versioned Backend API deprecation and
   official client minimum-version enforcement; **do not claim cross-version isolation**.
 
-### Verification commands
+### команды проверки
 
 ```sh
 cd apps/desktop
@@ -72,7 +72,7 @@ Microsoft/Xbox/Minecraft provider credentials, successful linking, refresh and l
 No mock can substitute for these checks. External application approval is still a
 release blocker, as documented in `official-provider-poc.md`.
 
-### Deferred intentionally to later releases
+### намеренно отложено до последующих выпусков
 
 Native browser PKCE, direct provider exchange, multiple account slots, long-lived
 sessions independent of Never session ID, global provider logout/revocation, and

@@ -36,6 +36,6 @@ Use `nl server-bridge host service install --component remote --scope system --n
 
 Both services now use `Type=notify` with `NotifyAccess=main` and `WatchdogSec=30s`. The Minecraft Host reports readiness only for a verified running child. **RemoteControl separately reports `READY=1` only after binding its HTTPS listener**, periodically sends `WATCHDOG=1` while serving, and sends `STOPPING=1` before journal-preserving shutdown. An absent or broken `NOTIFY_SOCKET` fails readiness when configured; an unexpected listener exit is treated as a service failure. No watchdog success implies that a Minecraft child is healthy; that remains the Host supervisor's responsibility.
 
-## Release signatures and certificate boundaries
+## подписи релизов и границы сертификатов
 
 `nl release sign` continues to use Ed25519 signatures and the existing independent GA gates. A trusted signing/verification key must be outside the bundle **both by its path and by its resolved real path**. Symlink aliases into the release tree are rejected. A 64-byte Ed25519 private key with a public component inconsistent with its private seed is refused. These improvements do not replace Authenticode notarization/platform signatures or provide approval for an unverified Minecraft/ServerBridge matrix.

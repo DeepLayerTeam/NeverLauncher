@@ -1,30 +1,13 @@
-# NeverLauncher 0.52.3 — Real Owner & Admin E2E
+# NeverLauncher 0.52.3 — настоящие E2E-тесты владельца и администратора
 
-This is a **destructive** acceptance of a brand-new, isolated Standard installation,
-**not** an API simulator, release attestation, certificate authority, or GA override.
-The existing `scripts/acceptance/minimal_live_e2e_0378.py` is extended in 0.52.3
-to actually create/update an admin project and profile/channel, check access,
-audit, sessions, SIGTERM/SIGKILL persistence and backup/restore on real SQLite.
-The production release-bundle acceptance invokes this same Minimal runner on
-the final Linux API binary, with release/checksum validation as before.
+Это **разрушающая** приёмка совершенно новой изолированной установки Standard, **а не** симулятор API, аттестация выпуска, центр сертификации или способ обойти GA. Существующий `scripts/acceptance/minimal_live_e2e_0378.py` в 0.52.3 расширен: он действительно создаёт/обновляет административный проект, профиль и канал, проверяет доступ, аудит, сеансы, сохранение данных после SIGTERM/SIGKILL и резервное копирование/восстановление на настоящем SQLite. Приёмка промышленного релизного пакета запускает тот же минимальный сценарий на конечном Linux-бинарнике API с прежней проверкой выпуска и контрольных сумм.
 
-## Standard physical prerequisites
+## Стандартные физические предварительные условия
 
-1. Dedicated self-hosted Linux Docker machine, with no pre-existing Compose
-   containers, volumes or networks for a *unique* project `nl0523` followed by
-   8–20 lowercase alphanumeric characters. No general production credentials.
-2. Private Standard `.env` (0600), valid root-owned TLS key, publicly trusted
-   certificate for `LAUNCHER_PUBLIC_URL`, real accessible public HTTPS :443,
-   PostgreSQL, and `LAUNCHER_IMAGE_TAG=0.52.3`, `LAUNCHER_REPOSITORY_DRIVER=postgres`,
-   `LAUNCHER_DEPLOYMENT_MODE=standard`. Set `LAUNCHER_SOURCE_COMMIT` to the exact
-   tested SHA (`GITHUB_SHA` in CI). Set `LAUNCHER_COMPOSE_PROJECT` to that unique name.
-3. A *real* dedicated Minecraft JVM with running Launcher Host Supervisor,
-   ServerBridge plugin that can post signed v3 heartbeats to this new Backend,
-   and an externally installed RemoteControl endpoint with a correctly pinned
-   TLS certificate and token. DO NOT use a fake Java executable or offline mock.
-4. Three private host files, owned/readable as uid 10001 inside the API
-   container, each mode 0600 (no symlinks), referenced by absolute host paths
-   in `.env`:
+1. Выделенная собственная Linux-машина с Docker, без ранее созданных контейнеров, томов и сетей Compose для **уникального** проекта с именем `nl0523`, за которым следуют 8–20 строчных букв и цифр. Никаких общих промышленных учётных данных.
+2. Закрытый `.env` для Standard (`0600`), действительный TLS-ключ с владельцем root, общедоверенный сертификат для `LAUNCHER_PUBLIC_URL`, реально доступный извне HTTPS на порту 443, PostgreSQL и `LAUNCHER_IMAGE_TAG=0.52.3`, `LAUNCHER_REPOSITORY_DRIVER=postgres`, `LAUNCHER_DEPLOYMENT_MODE=standard`. Установите `LAUNCHER_SOURCE_COMMIT` в точный тестируемый SHA (`GITHUB_SHA` в CI), `LAUNCHER_COMPOSE_PROJECT` — в уникальное имя проекта.
+3. **Настоящая** выделенная JVM Minecraft с работающим Launcher Host Supervisor, плагином ServerBridge, способным отправлять подписанные heartbeat v3 в новый Backend, и отдельно установленной конечной точкой RemoteControl с правильно закреплённым сертификатом TLS и токеном. Не используйте поддельную Java-программу или автономную имитацию.
+4. Три закрытых файла узла, доступных для чтения/принадлежащих uid 10001 внутри контейнера API, каждый с режимом `0600` и без символических ссылок; абсолютные пути на узле указываются в `.env`:
 
    ```env
    LAUNCHER_0523_HOST_TARGETS_FILE=/private/nl0523/targets.json
@@ -32,40 +15,14 @@ the final Linux API binary, with release/checksum validation as before.
    LAUNCHER_0523_HOST_TOKEN_FILE=/private/nl0523/token
    ```
 
-   The targets JSON maps the dedicated server ID to
-   `{ "url": "https://real-remote-host", "nodeId": "real-host-node-id", "caFile": "/run/owner0523/ca.pem", "tokenFile": "/run/owner0523/token" }`.
-   The extra Compose file is activated only by these three variables and a
-   strictly isolated project name. An ordinary production installation is
-   unaffected.
-5. Private registration JSON (0600) for the already-running Java node with
-   its genuine public Ed25519 key, for example
-   `{ "id": "dedicated-paper", "name": "Dedicated Paper", "kind": "paper", "keyAlgorithm": "ed25519", "publicKey": "<real base64 public key>" }`.
-   The runner attaches it to the newly created test project/profile. The node
-   must actually reconnect and produce a fresh signed heartbeat; registration
-   alone does not count as a live server. Do not put a private key in this JSON.
-6. A pre-existing data file belonging to the dedicated Minecraft project or
-   player, accessible in the runner's filesystem. For unchanged data, prefer a
-   stable player/plugin state marker outside mutable game metadata. It is read
-   (never modified) and SHA-256 compared across start/stop/restart and API
-   service restarts. This marker alone does **not** prove the whole world is
-   crash-consistent; extended world DR is covered in OPS acceptance.
-7. Strong one-time bootstrap token and owner password (0600 file). The runner
-   enrolls real TOTP and obtains a fresh MFA token; never supply a pre-forged
-   `mfa=true` session. The disposable owner can be deleted with the test volume
-   only after acceptance data has been collected.
+   JSON целей связывает идентификатор выделенного сервера с записью `{ "url": "https://real-remote-host", "nodeId": "real-host-node-id", "caFile": "/run/owner0523/ca.pem", "tokenFile": "/run/owner0523/token" }`. Дополнительный файл Compose активируется только этими тремя переменными и строго изолированным именем проекта. Обычная промышленная установка не затрагивается.
+5. Закрытый JSON регистрации (`0600`) для уже работающего узла Java с его настоящим открытым ключом Ed25519, например `{ "id": "dedicated-paper", "name": "Dedicated Paper", "kind": "paper", "keyAlgorithm": "ed25519", "publicKey": "<real base64 public key>" }`. Исполнитель связывает его с только что созданными тестовым проектом и профилем. Узел должен фактически подключиться заново и отправить свежий подписанный heartbeat; одной регистрации недостаточно для подтверждения работающего сервера. Не помещайте в JSON закрытый ключ.
+6. Уже существующий файл данных выделенного проекта Minecraft или игрока, доступный исполнителю через файловую систему. Для неизменяемого свидетельства предпочтительна стабильная отметка состояния игрока/плагина вне изменяемых игровых метаданных. Скрипт только читает её, **никогда не изменяет**, и сравнивает SHA-256 между запусками, остановками, перезапусками и перезапусками службы API. Эта отметка **не доказывает** согласованность всего мира после сбоя; расширенное аварийное восстановление миров проверяется отдельной операционной приёмкой.
+7. Сильный одноразовый начальный токен и пароль владельца (файл `0600`). Исполнитель настраивает настоящий TOTP и получает свежий MFA-токен; нельзя подставлять заранее сфабрикованный сеанс `mfa=true`. Одноразового владельца можно удалить вместе с тестовым томом только после сбора приёмочных данных.
 
-The real runner executes production `compose check/up`, verifies HTTPS and
-PostgreSQL readiness, invokes production `first-admin`, rejects unauthenticated
-and repeated bootstrap, creates first project and performs authenticated Admin
-CRUD. It registers the real node, waits for fresh signed JVM heartbeat,
-performs a real console command with game-agent acknowledgement, performs
-stop/start/restart with pinned RemoteControl and receipt reconciliation,
-checks persistent data and idempotency, restarts the entire Compose stack,
-then re-authenticates and reads all project/profile/channel/installer data.
-The runner stops containers but **never purges volumes**. A failure retains
-project data for forensic review; do not point it at a production project.
+Настоящий исполнитель выполняет промышленные `compose check/up`, проверяет готовность HTTPS и PostgreSQL, вызывает промышленный `first-admin`, отклоняет неавторизованный и повторный начальный вход, создаёт первый проект и выполняет авторизованные CRUD-операции Admin. Он регистрирует настоящий узел, ждёт свежий подписанный heartbeat JVM, выполняет настоящую консольную команду с подтверждением игрового агента, останавливает/запускает/перезапускает узел через закреплённый RemoteControl с согласованием подтверждений, проверяет постоянство данных и идемпотентность, перезапускает весь стек Compose, затем повторно авторизуется и читает все данные проекта, профиля, канала и установщика. Контейнеры останавливаются, но тома **никогда не очищаются автоматически**. При ошибке данные проекта остаются для расследования; не направляйте скрипт на промышленный проект.
 
-Example command (use ONLY on the dedicated, prepared host):
+Пример команды (запускайте **ТОЛЬКО** на подготовленном выделенном узле):
 
 ```bash
 python3 scripts/acceptance/owner_admin_real_0523.py \
@@ -77,16 +34,6 @@ python3 scripts/acceptance/owner_admin_real_0523.py \
   --isolated-destructive-acceptance
 ```
 
-**Fail-closed acceptance:** missing Docker/HTTPS/trust files, pre-existing
-namespace, failed owner creation, a wrong backend/version/commit, missing or
-stale signed heartbeat, rejected/unacknowledged console command, host result
-remaining `accepted`/`indeterminate`, missing user file, or any persistence
-mismatch yields BLOCKED with a nonzero exit code. Reports are atomic mode
-0600 and do not contain tokens, recovery codes, passwords or raw responses.
+**Приёмка с обязательным отказом при сбое:** отсутствие Docker/HTTPS/файлов доверия, заранее существующее пространство имён, ошибка создания владельца, неверные Backend/версия/коммит, отсутствующий или устаревший подписанный heartbeat, отклонённая либо неподтверждённая консольная команда, результат узла `accepted`/`indeterminate`, отсутствующий пользовательский файл или любое расхождение сохранённых данных дают `BLOCKED` с ненулевым кодом завершения. Отчёты записываются атомарно с режимом `0600` и не содержат токенов, кодов восстановления, паролей или исходных ответов.
 
-Manual CI dispatch uses a protected environment and a dedicated self-hosted
-runner with label `neverlauncher-0523-dedicated`; supply the six `NL_0523_*`
-GitHub environment variables as *paths/identifiers*, not credentials. Without
-this physical runner the Standard result is **BLOCKED**, regardless of local
-Python tests. This stage does **not** establish six-platform client/Minecraft
-compatibility, independent GA, full world RPO or final package signatures.
+Ручной запуск в CI использует защищённое окружение и выделенный собственный исполнитель с меткой `neverlauncher-0523-dedicated`; шесть переменных окружения GitHub `NL_0523_*` передают **пути и идентификаторы**, а не учётные данные. Без этого физического исполнителя результат Standard остаётся **BLOCKED**, независимо от локальных тестов Python. Этот этап **не** подтверждает совместимость клиента/Minecraft на шести платформах, независимый GA, полную точку восстановления RPO мира или подписи конечных пакетов.

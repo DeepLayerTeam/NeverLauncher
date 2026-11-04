@@ -1,4 +1,4 @@
-# Launcher 0.31.4 — Linux TPM 2.0 Key Attestation
+# Launcher 0.31.4 — аттестация ключа TPM 2.0 на Linux
 
 ## Реализованный исполняемый сценарий
 

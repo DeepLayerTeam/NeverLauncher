@@ -1,4 +1,4 @@
-# NeverLauncher 0.50.9 — macOS Guard Runtime Protection
+# NeverLauncher 0.50.9 — защита Guard Runtime на macOS
 
 ## Запуск
 

@@ -2,7 +2,7 @@
 
 # 0.34.5 — Real staged execution with independently signed ValidationEvidence
 
-## Trust boundary
+## границы доверия
 
 `tools/validation-attestor/attestor.py` is an independently deployed host-side
 mTLS service (or one-shot CLI), NOT a job in the normal GitHub runner. An
@@ -13,7 +13,7 @@ Backend. The host holds the dedicated Ed25519 PKCS#8 key (file mode 0600).
 Release signing uses a DIFFERENT key and key store; Backend rejects an attestation key equal to the manifest-signing public key. There is NO attestation
 signing key or production database credential in the worker or CI.
 
-## Deployment
+## развёртывание
 
 1. Provision a non-root account with rootless Podman and dedicated, **firewalled**
    validator egress. Explicitly allow only staged Backend + required upstream
@@ -81,7 +81,7 @@ old staged report endpoint stays **untrusted**.
 full policy/target applicability and revocation; V11 full stable gate remains
 blocked in 0.34.5. Existing CI executes tests but never signs certification.
 
-## Operations
+## операции
 
 The host deletes its temporary download/game directories after every run and
 never mounts the signing key. Ensure rootless Podman's storage and network

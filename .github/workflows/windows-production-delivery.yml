@@ -43,7 +43,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "WINDOWS_CODESIGN_PFX_BASE64 secret is required" }
           $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\launcher-codesign.pfx", $bytes)
-      - name: Install component-set signing dependency
+      - name: Установка зависимости для подписи набора компонентов
         shell: pwsh
         run: python -m pip install 'cryptography>=43,<47'
       - name: Build and Authenticode-sign both architectures

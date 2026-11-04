@@ -4,7 +4,7 @@ This is the **live** host lifecycle path. ServerBridge Java game commands and ho
 process commands have deliberately separate authorization domains. Backend does
 not embed SSH or run arbitrary remote shells.
 
-## Provision a real host
+## подготовьте настоящий узел
 
 1. Configure an installed game server using `nl server-bridge host configure ...`.
    `nl server-bridge host status --server-root /srv/minecraft/survival` must report
@@ -48,7 +48,7 @@ PostgreSQL deployment mode. An account requires GLOBAL `host:process`, project
 visibility and a fresh MFA assertion. A project owner with game-server controls
 alone **cannot** start or stop a physical host.
 
-## Real API invocation
+## настоящий вызов API
 
 ```sh
 curl --fail-with-body -X POST \
@@ -83,7 +83,7 @@ No automated command replay, lease-based re-dispatch, or claim of a verified
 success is allowed in this release. Operational recovery from a genuinely
 unknown outcome requires a separately audited manual procedure.
 
-## Boundary and known limitations
+## границы и известные ограничения
 
 - A successful host restart is not the same as Minecraft application readiness;
   ServerBridge must report a fresh, different runtime identity. Vanilla servers

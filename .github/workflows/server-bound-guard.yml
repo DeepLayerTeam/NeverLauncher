@@ -51,6 +51,6 @@ jobs:
       - name: Compile CLI and sealed migration catalog
         working-directory: cli
         run: go build ./cmd/... && go test -count=1 ./internal/dbmigrate
-      - name: Static analysis
+      - name: Статический анализ
         working-directory: services/api
         run: go vet ./internal/repository ./internal/httpapi

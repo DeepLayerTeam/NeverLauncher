@@ -1,6 +1,6 @@
 # Launcher 0.26.3 — Browser OAuth + PKCE (MS03 preparatory integration)
 
-## Operator setup (required before enabling official login)
+## настройка оператором (обязательно до включения официальной авторизации)
 
 1. Register **your own** Microsoft Entra application supporting **personal Microsoft accounts**. Use a **Mobile and desktop** / public-client application (not SPA or confidential client). Register the exact native redirect **`http://localhost/minecraft-poc/callback`** as a desktop redirect. Azure ignores the ephemeral localhost port in redirect URI matching but **not** the path. Do not configure a client secret for this native flow.
 2. Assign the application's UUID to the existing Backend `LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID` setting (see deployment `.env.example` / Admin authentication settings for the current key). Provide a strong independently configured Backend auth token encryption secret, as required by the 0.25.7 backend.
@@ -8,7 +8,7 @@
 4. Run Backend 0.26.3 with Desktop 0.26.3. Sign into the existing Launcher platform identity first; then in Desktop open **Официальный Minecraft → Войти через браузер Microsoft (PKCE)**. The default external system browser opens automatically; after personal-account consent, the loopback callback displays completion and Desktop shows the verified Minecraft profile.
 5. If a desktop cannot open the browser or loopback callback (e.g. endpoint security), choose **Device Code (резервный режим)**. Do not embed Microsoft auth into a webview or copy someone else's client ID.
 
-## Implemented request path
+## реализованный путь обработки запросов
 
 - `GET /api/v1/minecraft/official/browser/config` — authenticated private native-client registration metadata only. Fails closed when configured client UUID or encrypted ticket secret is absent.
 - `POST /api/v1/minecraft/official/browser/exchange` — authenticated Never platform identity, strict bounded JSON containing `code`, `verifier` and `redirectUri`. Backend enforces valid PKCE verifier and fixed loopback callback path, derives own Client ID **only** from server configuration, redeems code with Microsoft and checks Xbox/Minecraft chain + Minecraft Java profile. It returns the existing authenticated/identity-bound encrypted official session.
@@ -18,7 +18,7 @@
 
 **Trust boundary:** In this milestone the Backend — not the Desktop — performs Microsoft token exchange and token refresh (existing Backend flow). Version 0.26.5 may move that work if required by the future native-client architecture. Renderer isolation does not mean the Backend has no credentials.
 
-## Mandatory local/CI verification
+## обязательная локальная проверка и CI
 
 ```bash
 cd apps/desktop
@@ -36,7 +36,7 @@ go run ./cmd/official-provider-poc --client-id YOUR_REGISTERED_UUID --flow brows
 
 Manual acceptance includes: valid account and official profile, refused consent, expired state, repeated and cross-origin callbacks, duplicate code/state, user cancellation before/during code exchange, simultaneous repeated login attempts, OS browser failure, native vault restore, and real Minecraft Services permission. Go and Rust simulated providers are **negative/regression testing only** and cannot certify real Minecraft permissions.
 
-## Provider/error notes
+## замечания о провайдерах и ошибках
 
 - Microsoft `AADSTS50011` generally means the registered redirect **path/platform** does not match; use `http://localhost/minecraft-poc/callback` in the **mobile/desktop public client** configuration.
 - A 403 `Invalid app registration` at Minecraft Services is a provider approval blocker, not something to work around with a different public Client ID.

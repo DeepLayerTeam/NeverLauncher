@@ -25,7 +25,7 @@ python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-plan \
 
 The plan confirms the **actual** healthy 0.51.6 API/worker, validates the staged config and returns only redacted image references/digests and node identifiers. Do not proceed if any host fails. Stage the target image under the real registry digest; no mutable tag is accepted.
 
-## Production rollout from a trusted operator
+## промышленное развёртывание доверенным оператором
 
 ```sh
 python3 scripts/operations/rolling_update_0517.py cluster-roll \
@@ -50,7 +50,7 @@ The controller obtains one **session-scoped PostgreSQL advisory lock** and refus
 
 **Readiness sampling is not proof of zero interrupted requests.** For a production SLO, record real client traffic, in-flight 5xx/latency, WebSocket behavior, task completion, timeouts and server joins throughout the rollout with an external load driver. A compatible control-plane update does not live-migrate Minecraft world memory.
 
-## Failure and crash recovery
+## восстановление после ошибок и аварий
 
 A host update which fails after creating its private backup attempts to restore the exact original `.env`, recreates only that host's API/worker from the previously pinned source image, and confirms **real** 0.51.6 readiness. It never restores a previous PostgreSQL backup and silently discards acknowledged writes. If the restart or verification fails, the host journal is marked `manual-recovery-required` and the controller returns a nonzero status; **do not** continue the rollout.
 
@@ -66,7 +66,7 @@ The backup and journal are separate root/operator-controlled 0600 files and **mu
 
 If only one host is running, PostgreSQL migration checks fail, a different version is detected, the load balancer is unhealthy, the PostgreSQL advisory lock/session is unavailable, or any SSH command has ambiguous results: **BLOCKED**. Do not force the next host or manually overwrite a report. In all cases verify integrity of published builds and ServerBridge command receipts separately after the update.
 
-## What is / is not verified
+## что проверено и что не проверено
 
 - The script performs *actual* Docker Compose, SSH, SQL and HTTPS operations when connected to a real multi-host environment; its Python unit tests use controlled fixtures to verify refusals and failure paths, **not** to claim a physical multi-host PASS.
 - Database migration catalog remains byte-identical to 0.51.6 (checksum pinned to 0.51.5). There is no expand/contract DDL and no independent validation of arbitrary future N/N−1 combinations.

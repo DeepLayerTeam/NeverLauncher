@@ -1,8 +1,8 @@
-# Launcher 0.31.10 — Scoped Filesystem, Network & Secrets Brokers
+# Launcher 0.31.10 — брокеры файловой системы, сети и секретов с ограниченной областью действия
 
 This release extends the **enforced Linux x86-64** sandbox from 0.31.9. It does not create host-network interfaces or mount host shares inside an extension. All privileged operations pass through the existing token-authenticated Extension Host Protocol over the inherited Unix socketpair, with server-side signed-policy checks **plus** the already-existing revocable permission manager. Extension manifest fields cannot disable the namespace, seccomp or cgroup restrictions.
 
-## Operator setup
+## настройка оператором
 
 Run API as a **dedicated unprivileged service user** with a delegated cgroup v2 subtree. Configure only the directories you intend to expose through the broker:
 
@@ -12,7 +12,7 @@ LAUNCHER_EXTENSION_SHARED_ROOTS_JSON='{"reports":"/srv/launcher-extension-shares
 
 Roots must be absolute pre-existing directories. Every path component must be a genuine directory (not a symlink); the root directory `/` is forbidden. The application fails closed for sandbox packages requesting an unmapped or invalid shared root, without falling back to `trusted`. Keep host secrets **outside** shared roots; the administrator mapping is trusted configuration, never package-controlled. The broker runs with the unprivileged API service's permissions.
 
-## Signed manifest example
+## пример подписанного манифеста
 
 The package manifest remains covered by the existing Ed25519 package signature, version-bound permission grants, and owner-approval digest. At installation/upgrade, changing the sandbox policy or requested permissions requires explicit administrator confirmation (0.31.8).
 
@@ -46,7 +46,7 @@ A `shared:<name>` grant does not grant direct mount access. Paths are slash-sepa
 
 **Operations not supported:** raw TCP/UDP sockets to the host network, direct filesystem mounts of shared resources, direct access to any secret as plaintext, arbitrary secret substitution into headers, callback/Java-host reverse RPC, and Windows/macOS OS sandboxing. They remain fail-closed until the relevant later stage. HTTP fetching remains HTTPS-only and cannot target private or loopback IPs even if an operator wrote such a hostname into the signed manifest.
 
-## Acceptance tests
+## приёмочные испытания
 
 ```sh
 cd services/api

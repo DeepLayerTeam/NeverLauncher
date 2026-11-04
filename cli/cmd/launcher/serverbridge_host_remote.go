@@ -1,8 +1,8 @@
 package main
 
-// RemoteControl v1 is a deliberately narrow host-level interface. It never
-// accepts a command line, Java argument array or arbitrary file path from a
-// remote caller. Its operations dispatch through the 0.28.2 Host Supervisor.
+// RemoteControl v1 — намеренно ограниченный интерфейс управления узлом. Он никогда
+// не принимает командную строку, массив аргументов Java или произвольный файловый путь
+// от удалённого вызывающего. Операции выполняются через Host Supervisor 0.28.2.
 import (
 	"bytes"
 	"context"
@@ -106,12 +106,12 @@ func remoteRandom0284(n int) ([]byte, error) {
 	return b, err
 }
 
-// A single active remote agent may own one server root. This prevents two
-// listeners on different TCP ports from independently executing the same
+// Один серверный корневой каталог может принадлежать лишь одному активному удалённому агенту.
+// Это не позволяет двум слушателям на разных TCP-портах независимо выполнять одну
 // durable idempotency key. A stale lock is recoverable only after the precise
 // OS process identity has disappeared.
 func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
-	// A permanent inode is locked by the kernel for the listener lifetime.
+	// Ядро удерживает блокировку постоянного inode в течение жизни слушателя.
 	// Without this, two challengers can both rename the same stale JSON lock
 	// and start listeners on different ports (split brain).
 	unlockFence, err := remoteKernelFence04112(dir)
@@ -177,8 +177,8 @@ func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 		if existing.Identity == "" && updaterProcessAlive0156(existing.PID) {
 			return nil, errors.New("unverified remote agent lock belongs to a live PID")
 		}
-		// A stale lock can only be discarded by an operator holding filesystem
-		// write permission for the private directory. Refuse blind SIGKILL/reclaim.
+		// Устаревшую блокировку может снять только оператор с правом записи в закрытый
+		// каталог. Не выполняйте безусловный SIGKILL или захват ресурсов.
 		stale := path + ".stale-" + fmt.Sprint(os.Getpid())
 		if err = os.Rename(path, stale); err != nil {
 			return nil, err
@@ -255,7 +255,7 @@ func remoteInit0284(root string) (remoteIdentity0284, error) {
 		return remoteIdentity0284{}, err
 	}
 	identity := remoteIdentity0284{Version: 1, NodeID: hex.EncodeToString(id), Key: key}
-	// O_EXCL ensures concurrent operators cannot replace each other's secrets.
+	// O_EXCL не позволяет одновременно работающим операторам заменять секреты друг друга.
 	data, err := json.Marshal(identity)
 	if err != nil {
 		return remoteIdentity0284{}, err
@@ -522,7 +522,7 @@ func remoteHostStatus0284(root string) json.RawMessage {
 		result["supervisorAlive"] = supervisor
 		result["processAlive"] = process
 		if process {
-			// Only live OS observations, bound to the managed process identity.
+			// Только реальные наблюдения ОС, привязанные к идентичности управляемого процесса.
 			if metrics := hostProcessTelemetry0419(state.ProcessPID, state.ProcessIdentity); metrics != nil {
 				result["telemetry"] = metrics
 			}
@@ -577,8 +577,8 @@ func remoteHostExecute0284(root, dir, action string) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Do not confuse the CLI returning with actual JVM/process completion.
-	// The OS process identity is checked by remoteHostStatus0284 on each poll.
+	// Завершение вызова CLI не равно фактическому завершению JVM или процесса.
+	// remoteHostStatus0284 проверяет идентичность процесса ОС при каждом опросе.
 	deadline := time.Now().Add(45 * time.Second)
 	for {
 		observed := remoteObservedState0413(root)
@@ -637,8 +637,8 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := strings.TrimPrefix(tokenField, "Bearer ")
-	// Reload the key from protected storage on every request. Rotating a
-	// key invalidates existing credentials without restarting the listener.
+	// При каждом запросе заново загружайте ключ из защищённого хранилища. Ротация
+	// ключа делает старые учётные данные недействительными без перезапуска слушателя.
 	identity, loadErr := remoteLoad0284(a.root)
 	if loadErr != nil {
 		write(http.StatusServiceUnavailable, map[string]string{"error": "node identity unavailable"})
@@ -674,8 +674,8 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && r.URL.Path == "/v1/host/status" {
 		scope = "host.status"
 	}
-	// Receipt inspection is strictly read-only: never dispatch an action to
-	// recover a dropped ACK. Scope and original token subject are rechecked.
+	// Просмотр подтверждений строго доступен только для чтения: не запускайте операции,
+	// пытаясь восстановить потерянный ACK. Область действия и субъект исходного токена проверяются повторно.
 	receiptKey := ""
 	if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/host/receipts/") {
 		receiptKey = strings.TrimPrefix(r.URL.Path, "/v1/host/receipts/")
@@ -752,7 +752,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := remoteReceiptFile0284(a.dir, key)
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	// Token expiry/revocation may change while another command is running.
+	// Срок действия или отзыв токена могут измениться во время другой выполняемой команды.
 	if a.now().Unix() >= claims.Expires {
 		write(http.StatusUnauthorized, map[string]string{"error": "token expired"})
 		return
@@ -779,8 +779,8 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		write(http.StatusServiceUnavailable, map[string]string{"error": "command journal unavailable"})
 		return
 	}
-	// Check all previous receipts, not only the current idempotency key.
-	// If a crash happened after an irreversible effect, newer keys cannot
+	// Проверяйте все предыдущие подтверждения, а не только текущий ключ идемпотентности.
+	// Если сбой произошёл после необратимого действия, новые ключи не могут
 	// silently issue a second dangerous action.
 	unknown, guardErr := remoteUnresolvedCommand04112(a.dir)
 	if guardErr != nil {
@@ -832,8 +832,8 @@ func remoteHandle0284(args []string) error {
 		return remoteCall0284(args) // A remote client has no local server root.
 	}
 	if args[0] == "tls-init" {
-		// The output directory must be new; ca.key is retained only for offline
-		// issuance and must never be left in a publicly served game directory.
+		// Выходной каталог должен быть новым; ca.key хранится только для автономной выдачи
+		// и никогда не должен оставаться в публично доступном каталоге игры.
 		days, err := strconv.Atoi(flagValue(args, "--days", "90"))
 		if err != nil {
 			return fmt.Errorf("--days: %w", err)
@@ -850,8 +850,8 @@ func remoteHandle0284(args []string) error {
 	}
 	switch args[0] {
 	case "inspect":
-		// Local operator-only inspection of a durable command journal. No
-		// automatic retry or success assertion is made from PID/process state.
+		// Локальный доступный только оператору просмотр долговременного журнала команд.
+		// Состояние PID/процесса не служит основанием для автоповтора или утверждения об успехе.
 		if _, err := remoteLoad0284(root); err != nil {
 			return err
 		}
@@ -1076,8 +1076,8 @@ func remoteCall0284(args []string) error {
 		method = http.MethodGet
 		path = "/v1/host/status"
 	} else if action == "receipt" {
-		// A response may have been lost after the host executed the operation.
-		// Read the original, fsynced receipt: NEVER retry the mutation on
+		// Ответ мог потеряться уже после выполнения операции узлом.
+		// Прочитайте исходное подтверждение, сохранённое через fsync: НИКОГДА не повторяйте изменение на
 		// another host or with a fresh idempotency key after I/O uncertainty.
 		key := flagValue(args, "--idempotency-key", "")
 		if !remoteIdempotency0284.MatchString(key) {
@@ -1130,8 +1130,8 @@ func remoteCall0284(args []string) error {
 func remoteServeManaged0428(ctx context.Context, server *http.Server, listener net.Listener) error {
 	finished := make(chan error, 1)
 	go func() { finished <- server.Serve(listener) }()
-	// A bound TLS listener is the earliest point at which systemd may consider
-	// this agent READY. No host command is dispatched by this notification.
+	// systemd может считать агента READY не раньше привязки TLS-слушателя.
+	// Это уведомление не запускает никаких команд на узле.
 	if err := remoteServiceReady0498(); err != nil {
 		_ = server.Close()
 		<-finished

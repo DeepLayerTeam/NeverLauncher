@@ -2,7 +2,7 @@
 
 This is a **running integration test**, not a manifest or a status endpoint test. It does not migrate a Gravit project, publish a release or certify 0.50 GA on its own. It does not modify migration, user, world, extension or release data.
 
-## Prerequisites
+## предварительные требования
 
 - A running **PostgreSQL** NeverLauncher Backend with current SQL migrations, an existing project and a previously created Gravit migration run (the run can still be in `source_assessment`).
 - A signed, enabled, **running** Java extension installed in `global` or `project` scope on this Backend. It must expose the already-supported Java Host `health` RPC. The expected host process must be the installation persisted in the same PostgreSQL database.

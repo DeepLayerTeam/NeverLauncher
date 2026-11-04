@@ -758,7 +758,7 @@ export function AdminExtensions({
           ))}
       </div>
       <div className="extensionWorkspaceGrid">
-        <nav className="extensionNav" aria-label="Extension navigation">
+        <nav className="extensionNav" aria-label="Навигация по расширениям">
           {nav.length === 0 && (
             <span className="muted">Нет navigation contributions</span>
           )}

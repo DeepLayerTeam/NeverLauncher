@@ -30,10 +30,10 @@ jobs:
       - name: Actual materializers, signed evidence and negative cases (fixture runtime for unit tests)
         working-directory: cli
         run: go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711' -count=1 -timeout=7m
-      - name: Race detector
+      - name: Детектор гонок данных
         working-directory: cli
         run: go test -race ./cmd/launcher -run 'TestRuntimeCertification02712' -count=1 -timeout=7m
-      - name: Go vet
+      - name: Статический анализ Go (vet)
         working-directory: cli
         run: go vet ./cmd/launcher
   actual-gui-client:

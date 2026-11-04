@@ -56,5 +56,5 @@ jobs:
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib runtime_integrity_0505
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guarded_trusted_launch_0503
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
-      - name: Version consistency
+      - name: Согласованность версий
         run: python scripts/version/manage.py check

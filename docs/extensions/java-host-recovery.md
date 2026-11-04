@@ -11,7 +11,7 @@ The extension package must already be installed, verified and **enabled** by the
 - `Reconcile` skips already healthy installations, stops missing/disabled/obsolete generations and attempts restart of previously failed instances. It never automatically resets a crash-loop for the same package generation.
 - The status reports JVM PID, `java-jvm` runtime, process/resource metrics (where supported), last heartbeat, exit code and reason, instance ID, restarts, and explicitly reported isolation. Java Host requires a **trusted** Java process and is not an OS sandbox by virtue of running out of process. The isolated Java mode stays unsupported until its reverse RPC transport meets the sandbox requirements.
 
-## Validation
+## валидация
 
 Build the original runnable extension JAR:
 

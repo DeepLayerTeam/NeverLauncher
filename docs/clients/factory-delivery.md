@@ -6,7 +6,7 @@ Build Workspace objects; no locally exported ZIP must be re-uploaded by an
 operator. It deliberately **does not** publish a release or invent runtime
 verification results.
 
-## Operator sequence
+## порядок действий оператора
 
 1. Configure an absolute, trusted executable path in `LAUNCHER_FACTORY_CLI` and
    a private absolute directory in `LAUNCHER_FACTORY_ROOT`. For Forge-like
@@ -34,7 +34,7 @@ verification results.
    creation, launch and server join. The factory transfer alone cannot confirm
    successful Minecraft execution.
 
-## Failure and retry behavior
+## поведение при ошибке и повторной попытке
 
 - Bad or changed factory output, incorrect Minecraft/loader/Java, invalid
   metadata, occupied Workspace, stale revision or wrong authorization **fails
@@ -49,7 +49,7 @@ verification results.
 - Package signing/publication must still obey the project's independent
   trust, runtime acceptance and release verification gates.
 
-## Local verification status
+## статус локальной проверки
 
 The existing Client Factory materializer fixture tests are executable with
 Go 1.23.2. The API module declares Go 1.27.3 and requires external dependencies;

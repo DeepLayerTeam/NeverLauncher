@@ -1,8 +1,8 @@
-# Launcher Java SDK Core / Runtime 0.31.0
+# Launcher ядро Java SDK / Runtime 0.31.0
 
 A **working Java 17+** SDK for the existing Extensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
 
-## Build and run tests
+## сборка и запуск тестов
 
 ```bash
 sh sdk/java/core/build.sh test
@@ -13,13 +13,13 @@ python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requir
 
 The core jar can be included in an extension package as `backend/lib/launcher-java-sdk-core.jar`; all Java classes are compiled with `--release 17`. Cross-platform Java 17/21 CI builds and tests the SDK, and Linux CI launches the example as a real child process.
 
-## Runnable extension
+## исполняемое расширение
 
 Implement `ru.launcher.sdk.core.Extension` with `start(ExtensionContext)` and `stop(ExtensionContext)` methods. The provided `ExtensionRunner` loads the implementation class, validates its shipped manifest and its host identity, performs a real authenticated `POST /v1/hello`, maintains `POST /v1/heartbeat` and executes lifecycle methods on managed executor threads. Exit when the host becomes unreachable or on process shutdown.
 
 A Linux/macOS backend target is an executable launcher script (see `examples/extensions/java-lifecycle/backend/bin/java-lifecycle`). The existing Go supervisor launches it with the active package payload directory as working directory, injecting the `LAUNCHER_EXTENSION_*` environment variables. The extension process **must not be launched as a general network-facing service**; the SDK accepts only the loopback host origin. `ExtensionRunner` supports typed subscriptions and callback dispatch. For first-class JAR launch, use the 0.30.4 Java Extension Host described below.
 
-## Packaging with existing Extensions CLI
+## упаковка через существующий CLI расширений
 
 ```bash
 sh examples/extensions/java-lifecycle/build.sh
@@ -30,7 +30,7 @@ nl extension verify java-lifecycle.nlext --public-key /secure/location/ed25519-v
 
 Register the publisher public signing key in the **existing** registry/trust policy, then publish and install using the existing Extensions workflow. `pack` can produce unsigned artifacts, but unsigned artifacts must not be trusted or installed. **Never** include private keys in a package or extension repository. Build metadata (`+...`) is preserved when checking exact package identity against the host.
 
-## Actual behavior and limitations
+## реальное поведение и ограничения
 
 - Manifest parser verifies schema, identity, target paths, dependency constraints and conflicting entries, with bounded JSON. The Go package verifier and signing/trust policy remain authoritative. Reading a manifest through this SDK does **not** verify a package signature.
 - `SemVer` uses SemVer 2.0 precedence and Extensions Go-style `^`, `~`, `>=`, `<=`, `>`, `<`, `=`, `x`, `*`, whitespace-AND and `||` version ranges. Invalid constraints are rejected instead of silently matching.
@@ -39,7 +39,7 @@ Register the publisher public signing key in the **existing** registry/trust pol
 - SDK Java code is **not** isolated or sandboxed within its own JVM; permissions are enforced by the existing Go host broker. No arbitrary JavaFX/LaunchServer/Gravit JAR compatibility is claimed.
 - The current sample launchers are POSIX-specific. The Java SDK and tests run on Linux, macOS and Windows; a Windows executable wrapper and dedicated Java Extension Host are scheduled for subsequent releases.
 
-## Shipped Java runtime APIs (0.30.3)
+## поставляемые API Java Runtime (0.30.3)
 
 `ExtensionContext.runtime()` supplies **working** services after the runner connects to the Go host:
 
@@ -60,7 +60,7 @@ python3 examples/extensions/java-runtime/test-runner.py
 `Java SDK Runtime` operates on the **existing** Extensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. The 0.30.4 Java Extension Host supports direct JAR targets on Windows, macOS and Linux. Legacy POSIX example launchers remain available; do not rely on a JVM security sandbox.
 
 
-## Java Extension Host (0.30.4)
+## хост Java-расширений (0.30.4)
 
 `backend` and `cli` manifest targets may point directly to the same **fat JAR** rather than a shell script. Build a JAR containing the SDK (`ru.launcher.sdk.host.JavaExtensionHost`), extension implementation classes and the JAR main attributes:
 
@@ -124,13 +124,13 @@ regressions, including the original 0.42.0 hello envelope. Full integration
 against a production Go host still requires Go 1.27.3 and the existing release
 matrix; a JVM HTTP fixture alone is not release certification.
 
-## 0.42.3: durable subscriptions and event envelope sizing
+## 0.42.3: долговременные подписки и размеры событий
 
 Java `runtime().events().close()` now closes only local callback handlers. Backend subscriptions remain durable, so an update or JVM restart does not erase the pending EventBus backlog. To intentionally delete a subscription, invoke `runtime().events().unsubscribe(eventType, mode)` while the host session is active. The EventBus is at-least-once and callers must deduplicate non-idempotent side effects.
 
 The authenticated callback server accepts event/hook envelopes up to 2 MiB to carry the existing 1 MiB EventBus payload limit; authenticated command/RPC requests retain their separate 64 KiB bound. Java `null` is a valid JSON command result. Full documentation and tests: `docs/extensions/eventbus-rpc-persistence.md`.
 
-## 0.48.3 — Real Java SPI provider registry
+## 0.48.3 — настоящий реестр провайдеров Java SPI
 
 `ExtensionContext.providers()` exposes a per-JVM, typed `ProviderRegistry`. Modules implement
 `JavaProvider`, register `ProviderDescriptor` instances for a `ProviderService<T>`, and call
@@ -149,19 +149,19 @@ through existing command RPC, CLI, heartbeat, shutdown and refusal of unknown se
 See `docs/extensions/java-spi.md`. This SPI is *per-extension-JVM*, not a cross-package
 registry and not a Java sandbox.
 
-## 0.48.4 — Backend Java Services
+## 0.48.4 — Java-сервисы Backend
 
 `context.runtime().backend()` exposes typed, read-only project/profile/channel/release/job-status services via the authenticated Go Host Broker. Individual capabilities require live `project:read` or `release:read` grants and enforce project scope. Bounded list pagination uses `Page<T>` with optional `nextOffset`; see [Backend Java Services](../../../docs/extensions/java-backend-services.md) for the operations, permissions and limitations.
 
-## 0.48.5 — Authentication & Identity SPI
+## 0.48.5 — SPI авторизации и идентификации
 
 `IdentityServices.CONTRACT` connects one selected `IdentityProvider` implementation to the existing authenticated callback RPC. Implementations verify external credentials, provide a stable immutable subject, introspect and revoke their **own** provider sessions. They never issue NeverLauncher tokens or Microsoft/Minecraft authentication evidence. Configuration, grants and activation: `docs/authentication/java-identity-spi.md`. Run `sh sdk/java/core/build.sh test` to exercise the live JVM callback checks.
 
-## 0.48.6 — Content & Distribution SPI
+## 0.48.6 — SPI содержимого и распространения
 
 `context.runtime().content()` provides actual provider-driven source/texture/delivery resolution, metadata enrichment, bounded pre-sign byte transformations, and SHA-256 checked content reads using the current Go Host broker. Register a `ContentProvider` via `ContentServices.CONTRACT`; the selected provider is managed by `ExtensionLifecycle`. A transformed file is not a published release and must pass the existing signing and integrity pipeline. Build the executable sample: `sh examples/extensions/java-content-spi/build.sh`. For the production opt-in `contentExtensionId` multipart package transform, permissions, strict limits and the remaining public-distribution boundaries see `docs/extensions/java-content-spi.md`.
 
-### 0.48.7 event-triggered jobs and policy hooks
+### 0.48.7 задания по событиям и хуки политик
 
 Use `runtime().events().subscribeJob(...)` for durable event-backed async jobs,
 `subscribeHook(...)` with explicit `HookDecision.allow()/deny()` for synchronous
@@ -184,7 +184,7 @@ Actual Minecraft session admission is unchanged. Details and tests:
 `docs/extensions/java-serverbridge.md` and
 `sh sdk/java/core/build.sh test`.
 
-### 0.48.9 Admin/Desktop UI and CLI integration
+### 0.48.9 интеграция интерфейсов Admin/Desktop и CLI
 
 `RuntimeServices.ui()` registers `registerAction("admin"|"desktop", actionId, JsonSchema|null, (actor, payload)->result)` and `registerSetting(surface, key, JsonSchema, defaultValue)` during `Extension.start()`. UI action IDs must be listed in the signed `admin.actions` / `desktop.actions` manifest. The existing Admin/Desktop iframe sends a `rpc.request` message to its host with method `java.action.invoke`, `java.settings.get` or `java.settings.put` and parameters including the current extension `version` and `generation`; the backend authenticates the user and routes authorized requests to a running Java backend target. UI source has no direct network access or bearer token. Settings persist through the existing `runtime.config` broker and require signed `storage:read` / `storage:write` permissions; only registered keys are exposed, and schema failure rejects the mutation.
 
@@ -192,7 +192,7 @@ Current policy requires authenticated `extension:manage` for all three Java UI m
 
 Build and test a complete example including both iframe surfaces and an executable JAR: `sh examples/extensions/java-ui/build.sh && python3 examples/extensions/java-ui/test-runner.py`. Production signing/installation uses the normal extension pipeline and is not bypassed by this demo. `sh sdk/java/core/build.sh test` exercises in-process HTTP regressions as well.
 
-### 0.48.10 — versioned state migration on safe upgrades
+### 0.48.10 — версионируемая миграция состояния при безопасных обновлениях
 
 Register migrations in `Extension.start(ExtensionContext)` before the Host reaches readiness:
 

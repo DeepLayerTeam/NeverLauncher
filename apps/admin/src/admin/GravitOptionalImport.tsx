@@ -24,7 +24,7 @@ export function GravitOptionalImport02411({api,packageId,revision,enabled,onCand
  function downloadReport(){if(!result)return;const body=JSON.stringify({format:result.migration.format,sourceSha256:result.migration.sourceSha256,ready:result.canApply,fields:result.migration.fields,summary:result.migration.summary,validation:result.preview},null,2)+'\n';const u=URL.createObjectURL(new Blob([body],{type:'application/json'}));
   try{const a=document.createElement('a');a.href=u;a.download='gravit-optional-migration-report.json';a.click()}finally{URL.revokeObjectURL(u)}
  }
- return <section className="subcard" aria-label="Gravit OptionalView migration">
+ return <section className="subcard" aria-label="Миграция Gravit OptionalView">
   <h5>Импорт Gravit OptionalFile / OptionalView · 0.24.11</h5>
   <p>Импортируются поддерживаемые действия, зависимости, конфликты и обязательные триггеры из updateOptional. Файлы сначала загружаются как optional в текущий draft. Миграция не исполняет код и не изменяет подписанные релизы.</p>
   <label className="field"><span>Gravit ClientProfile или updateOptional JSON</span><input type="file" accept=".json,application/json" disabled={!enabled||busy} onChange={e=>void load(e.target.files?.[0]||null)}/></label>

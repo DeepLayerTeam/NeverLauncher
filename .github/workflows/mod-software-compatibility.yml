@@ -57,5 +57,5 @@ jobs:
       - name: Signed policy, revocation and Linux overlay tests
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestExternalNativeCompatibility05010|TestSignedExternalModulePolicy05010|TestGuardCompatibility0502)' -count=1 -timeout 12m
-      - name: Version consistency
+      - name: Согласованность версий
         run: python scripts/version/manage.py check

@@ -1,4 +1,4 @@
-# Control Domains & RBAC — Launcher 0.28.1
+# домены управления и RBAC — Launcher 0.28.1
 
 This release changes **live authorization of ServerBridge v3 game commands**; it does not install a Host RemoteControl agent or provide Backend restart (those are later roadmap milestones).
 
@@ -15,7 +15,7 @@ The control endpoint rejects anything else (including `host.exec`, `backend.rest
 
 `backend:control`, `host:process`, and `host:exec` are distinct *global-only* RBAC actions, not project actions. They grant **no operation in ServerBridge** in this release and are not inherited from game permissions. The local Host CLI runs under the OS user's authority; this does not imply that a network RemoteControl user can execute Host operations.
 
-## Authorization flow
+## процесс авторизации
 
 1. Verify the real authenticated user and session (not the untrusted role list copied into a token). Write requests require fresh MFA within five minutes and pass risk checks.
 2. Resolve the server and its real project. A caller must be able to read that project; cross-project node IDs are hidden.
@@ -31,7 +31,7 @@ The control endpoint rejects anything else (including `host.exec`, `backend.rest
 - Existing pending/leased commands created on 0.28.0 may remain in the journal; check their effects and runtime before deploying a mixed-version cluster. Drain outstanding commands before a rolling upgrade when restricting existing operators. Later HA journal changes are covered by 0.28.5, not this release.
 - Mixed API versions must not serve mutation routes: **all** serving API instances should run 0.28.1 for consistent enforcement. The Game ServerBridge v3 wire protocol is unchanged.
 
-## Verification
+## проверка
 
 - `cd services/api && GOPROXY=off go test ./internal/authorization ./internal/dbmigrate`
 - `cd apps/admin && npm test`

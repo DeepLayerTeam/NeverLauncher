@@ -1,12 +1,12 @@
-# Launcher 0.37.5: single-host SQLite installation (Linux)
+# Launcher 0.37.5: установка SQLite на одном узле (Linux)
 
 This procedure uses the actual HTTP repository and persisted auth/session stores; it does not set up PostgreSQL or Redis. It is a **single API process** on a supported local filesystem, not network HA. Use a service account that owns the installation directory, and a reverse proxy terminating HTTPS. Never place the SQLite databases on NFS or shared/overlay writable volumes.
 
-## Prerequisites
+## предварительные требования
 
 Build `launcher-api` from the exact release sources with the toolchain pinned by `services/api/go.mod`; obtain a verified executable and the actual `Guard` and `ServerBridge` release allowlist JSON policies for your shipped artifacts. The installer intentionally cannot invent signed release data. If these policies are missing or invalid, startup must fail.
 
-## Install
+## установка
 
 ```sh
 python3 scripts/install/minimal-install.py init \
@@ -29,7 +29,7 @@ Use a TLS reverse proxy for `https://api.example.org`; the API defaults to `127.
 
 After the administrator is committed, the bootstrap token cannot be reused and restarting with a different value does not re-enable it. For local offline backup, use [minimal-backup.md](../minimal-backup.md). For authenticated transfer and restore on a second Linux host in **0.45.2**, use [minimal-recovery.md](minimal-recovery.md). Stop API and other file writers before creating the backup; never copy live `*.sqlite` files or separate blobs while API is running. The **0.37.7 SQLite ↔ PostgreSQL transfer** stage requires separate acceptance. A green offline backup test does not certify the complete deployment as production-ready.
 
-## Safety boundaries
+## границы безопасности
 
 - Production rejects a memory repository, missing or malformed release allowlists, weak signing keys, unsafe WebAuthn/CORS origins, Redis/HA selection in minimal mode, and missing fail-closed rate limiting.
 - The single-host API holds an exclusive instance lock anchored to its local storage root and SQLite's own database owner locks. Never unlink a held lock file to circumvent fencing.

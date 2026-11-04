@@ -58,7 +58,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Check formatting
+      - name: Проверка форматирования
         run: test -z "$(gofmt -l internal/sqlconnector)"
       - name: Legacy verifier unit tests including race detector
         run: go test -race -count=1 -timeout=4m ./internal/sqlconnector -run 'TestGravit|TestNormalizeGravit|TestAuthenticateGravit|TestInspectMapping'

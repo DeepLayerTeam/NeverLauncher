@@ -2,7 +2,7 @@
 
 **Status:** source implementation and verification tools. The existence of version 0.45.0 is **not** proof that the production Migration GA criteria have passed. Certification requires independently observed, real Gravit/Minecraft migration of all three reference classes and retained evidence. In the absence of that infrastructure the outcome is `BLOCKED`.
 
-## Scope
+## область действия
 
 Migration GA requires three different Gravit source projects with independent migration run IDs: `fileauth-single`, `sql-modded` (Forge and NeoForge), and `proxy-network`. The existing full 36-check matrix, actual player login/join, negative authorization, optional conflicts, module substitution, live ServerBridge, cutover and rollback drills are mandatory. The GA runner does **not** start Minecraft by itself; the operator-provided checks must exercise actual Minecraft, backend and databases. Only the protected `migration-ga-certification` runner may access the signed credentials and evidence.
 
@@ -68,7 +68,7 @@ go -C tools/migration-ga run . verify-cohort-live \
 
 It requires `LAUNCHER_MIGRATION_GA_TOKEN` and rejects absent private evidence, invalid signatures, changed original Gravit archive/JAR, stale report, altered operator review, revoked/rolled-back target or inconsistent project. The signed certificate alone never authorizes traffic changes or proves an operator is trustworthy.
 
-## Rollback constraints
+## откат ограничения
 
 Record the source/target writer fence, deployment route revision, restore point, backup verification and post-rollback player world/UUID/inventory/economy checks. The `operational-rollback-drill` and `negative-rollback` checks must actually exercise the rollback and its refusal path on an isolated real copy. After players modify the Never world, an old Gravit backup is **not** a lossless restore. Reconcile the newer player and plugin data under fenced writers before switching traffic back. Never mark a failed, unsupported or untested case PASS.
 

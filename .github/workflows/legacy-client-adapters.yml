@@ -25,7 +25,7 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: Gofmt verification
+      - name: Проверка форматирования gofmt
         if: runner.os == 'Linux'
         shell: bash
         run: test -z "$(gofmt -l cli/cmd/launcher/legacy_client_adapters_0278*.go cli/cmd/launcher/client_factory_0271.go)"
@@ -36,10 +36,10 @@ jobs:
           go test ./cmd/launcher
           -run 'TestLegacyAdapters0278|TestClientFactory0271|TestForgeLegacy|TestInstallVanillaPre16AliasAndVirtualAssets'
           -count=1 -timeout=6m
-      - name: Static analysis
+      - name: Статический анализ
         working-directory: cli
         run: go vet ./cmd/launcher
-      - name: Build CLI
+      - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
       - name: Legacy factory race tests

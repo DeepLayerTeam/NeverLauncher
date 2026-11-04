@@ -39,7 +39,7 @@ jobs:
         run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269::tests
       - name: Tauri realm command tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml launch_realm_0269_tests
-      - name: Rust compilation
+      - name: Компиляция Rust
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Renderer and full desktop verification
         working-directory: apps/desktop

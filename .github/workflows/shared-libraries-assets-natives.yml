@@ -36,13 +36,13 @@ jobs:
           go test ./cmd/launcher
           -run 'TestSharedAssets0277|TestSharedArtifacts0277|TestNativeExtraction0277|TestNativeClassifier0277|TestVanillaLibraries0277|TestClientFactory0271|TestModernLoader0272|TestMirrorHelper0274|TestModpack0275|TestManualGates0276|TestForgeAndNeoForgeProcessorMaterializers'
           -count=1 -timeout=6m
-      - name: Static analysis
+      - name: Статический анализ
         working-directory: cli
         run: go vet ./cmd/launcher
-      - name: CLI build
+      - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
-      - name: Race detector
+      - name: Детектор гонок данных
         if: runner.os == 'Linux'
         working-directory: cli
         shell: bash

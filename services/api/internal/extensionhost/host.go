@@ -415,8 +415,8 @@ func safeEntrypoint(root, rel string) (string, error) {
 	if fullAbs == rootAbs || !strings.HasPrefix(fullAbs, rootAbs+string(os.PathSeparator)) {
 		return "", errors.New("backend extension entrypoint escapes payload")
 	}
-	// The package installer rejects symlinks. Enforce the same rule again at
-	// execution time, including every parent below the trusted payload root.
+	// Установщик пакетов отклоняет символические ссылки. Повторно обеспечьте это правило
+	// при запуске, включая каждый родительский каталог внутри доверенного корня данных.
 	for parent := filepath.Dir(fullAbs); parent != rootAbs; parent = filepath.Dir(parent) {
 		info, err := os.Lstat(parent)
 		if err != nil {
@@ -476,8 +476,8 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 
 var errRecoveryRevoked0422 = errors.New("extension recovery cancelled by operator")
 
-// Automatic recovery is admitted only while its original epoch is current.
-// This admission is atomic with publishing the new process slot.
+// Автоматическое восстановление разрешено, только пока исходная эпоха актуальна.
+// Допуск атомарен по отношению к публикации нового слота процесса.
 func (s *Supervisor) startInstallation0422(ctx context.Context, install model.ExtensionInstall, recoveryEpoch *uint64) error {
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled {
 		return errors.New("extension must be persistently enabled before host start")
@@ -493,10 +493,10 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 	} else if quarantined {
 		return errors.New("extension package is quarantined")
 	}
-	// A stale installation snapshot must not resurrect an instance removed or
-	// disabled after an operator's stop request. Signed production installs
-	// require a durable, current record; legacy test/local installations are
-	// still allowed only if the repository has no such record.
+	// Устаревший снимок установки не должен восстанавливать экземпляр, удалённый или
+	// отключённый после команды остановки оператора. Подписанные промышленные установки
+	// требуют актуальную долговременную запись; старые тестовые/локальные установки
+	// допускаются только при отсутствии такой записи в репозитории.
 	current, stateErr := s.repo.GetExtensionInstallState(ctx, key.ExtensionID, key.Scope, key.ScopeID)
 	signed := strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") && install.CurrentPackageIdentity != ""
 	if stateErr == nil {
@@ -610,8 +610,8 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		"LAUNCHER_EXTENSION_HOST_URL": baseURL, "LAUNCHER_EXTENSION_HOST_TOKEN": token, "LAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "LAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "LAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "LAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"LAUNCHER_EXTENSION_ID": install.ExtensionID, "LAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "LAUNCHER_EXTENSION_SCOPE": install.Scope, "LAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "LAUNCHER_EXTENSION_TARGET": "backend",
 	})
-	// Java writes caches and temporary state only to a private, disposable
-	// directory by default. This is hygiene, not a substitute for an OS sandbox.
+	// По умолчанию Java записывает кеш и временное состояние только в закрытый
+	// одноразовый каталог. Это мера гигиены, а не замена изоляции на уровне ОС.
 	if st.javaHost {
 		scratch, err := prepareJavaScratch04811(cmd)
 		if err != nil {
@@ -664,7 +664,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		}
 		return s.abortUnstarted0422(st, errRecoveryRevoked0422)
 	}
-	// Revalidate immediately before exec, closing the installation-to-exec
+	// Повторно проверяйте непосредственно перед exec, закрывая окно между установкой и запуском
 	// window if the operator quarantined or disabled the package during JVM
 	// command/sandbox preparation.
 	if trustErr := s.enforceLiveTrust04210(ctx, st); trustErr != nil {
@@ -739,7 +739,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 	}
 }
 
-// abortUnstarted0422 retires an attempted launch before a Wait goroutine exists.
+// abortUnstarted0422 прекращает попытку запуска до появления горутины Wait.
 // Without this transition a failed java lookup/exec keeps the key permanently
 // in 'starting', making a repaired runtime impossible to launch without restart.
 func (s *Supervisor) abortUnstarted0422(st *processState, cause error) error {
@@ -847,8 +847,8 @@ func (s *Supervisor) captureStream(st *processState, stream string, r io.Reader)
 		s.addLog(st, stream, "", sc.Text(), nil)
 	}
 	if err := sc.Err(); err != nil {
-		// A single unbounded line must not evade the cumulative stdout cap:
-		// Scanner would otherwise stop consuming while the child kept running.
+		// Одна строка неограниченной длины не должна обходить общий предел stdout:
+		// Иначе Scanner прекратит чтение, пока дочерний процесс продолжит работать.
 		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
 			s.failProcess(st, "extension-output-line-limit-exceeded: "+stream, false)
 		} else {
@@ -857,13 +857,13 @@ func (s *Supervisor) captureStream(st *processState, stream string, r io.Reader)
 	}
 }
 func (s *Supervisor) addLog(st *processState, stream, level, message string, fields map[string]any) {
-	// Extensions can print their bearer credentials on stdout. Never retain
-	// either live credential in the operator-facing in-memory logs.
+	// Расширения могут вывести свои Bearer-учётные данные в stdout. Никогда не сохраняйте
+	// действующие секреты в оперативных журналах, доступных оператору.
 	message = redactHostCredentials04811(message, st.token, st.callbackToken)
 	fields = redactHostLogFields04811(fields, st.token, st.callbackToken)
 	st.mu.Lock()
-	// Charge bytes before retaining them. On exhaustion terminate isolated process,
-	// not merely drop a log line while it continues flooding stdout/IPC.
+	// Учитывайте байты до сохранения. При исчерпании лимита завершайте изолированный процесс,
+	// а не просто отбрасывайте строку, позволяя ему продолжать засорять stdout/IPC.
 	breach := false
 	if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
 		breach = !st.budget.chargeLocked03113(int64(len(message)+len(stream)+len(level)), st.manifest.Sandbox)
@@ -899,8 +899,8 @@ func (s *Supervisor) waitProcess(st *processState) {
 		st.state = "stopped"
 	} else {
 		st.state = "crashed"
-		// Preserve the actionable supervisor failure (RPC, heartbeat, memory,
-		// process quota) instead of overwriting it with "signal: killed".
+		// Сохраняйте полезную причину ошибки супервизора (RPC, heartbeat, память,
+		// лимит процессов), вместо того чтобы заменять её на «signal: killed».
 		if st.lastError == "" {
 			if err != nil {
 				st.lastError = err.Error()
@@ -918,7 +918,7 @@ func (s *Supervisor) waitProcess(st *processState) {
 	}
 }
 
-// registerCrashAndRestart is used for crashes *and* failed recovery launches.
+// registerCrashAndRestart используется и при авариях, и при неуспешном запуске восстановления.
 // Each attempt is bounded by CrashLimit, checks durable enabled state, and
 // verifies the failed instance still owns the slot. Stops/updates invalidate
 // scheduled retries through recoveryEpoch.
@@ -978,7 +978,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		if err != nil || fresh.CurrentState != model.ExtensionInstallStateEnabled || !fresh.Enabled {
 			return
 		}
-		// Never retry a stale package after an update/rollback.
+		// Никогда не повторяйте запуск устаревшего пакета после обновления или отката.
 		if fresh.Generation != st.install.Generation || fresh.CurrentVersion != st.install.CurrentVersion || fresh.CurrentPackageIdentity != st.install.CurrentPackageIdentity {
 			return
 		}
@@ -1003,8 +1003,8 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		if !sameEpoch || failed == nil || failed == st {
 			return
 		}
-		// A retry can fail before exec, or after an OS process was started
-		// but its ready handshake timed out. Wait for the old JVM to be reaped
+		// Повторная попытка может завершиться до exec либо после создания процесса ОС,
+		// у которого истёк тайм-аут подтверждения готовности. Дождитесь очистки старой JVM
 		// before scheduling another attempt so generations cannot overlap.
 		select {
 		case <-failed.doneCh:
@@ -1034,8 +1034,8 @@ func minInt(a, b int) int {
 
 func (s *Supervisor) failProcess(st *processState, reason string, expected bool) {
 	st.mu.Lock()
-	// The monitor, RPC probe and startup timer can all fire concurrently.
-	// Only the first terminal failure may kill the process and set its cause.
+	// Монитор, RPC-проверка и таймер запуска могут сработать одновременно.
+	// Только первая окончательная ошибка может завершить процесс и записать причину.
 	if st.terminationInitiated || st.expectedStop || (st.state != "running" && st.state != "starting") {
 		st.mu.Unlock()
 		return
@@ -1115,8 +1115,8 @@ func (s *Supervisor) Restart(ctx context.Context, key Key) error {
 	return s.StartInstallation(ctx, install)
 }
 
-// Reconcile converges persisted desired installations with live processes.
-// It is idempotent and stops obsolete/disabled generations before replacement.
+// Reconcile приводит сохранённое желаемое состояние установок в соответствие с процессами.
+// Операция идемпотентна; устаревшие и отключённые поколения останавливаются до замены.
 func (s *Supervisor) Reconcile(ctx context.Context) []error {
 	installs, err := s.repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {
@@ -1292,8 +1292,8 @@ func (s *Supervisor) monitorLoop() {
 }
 func (s *Supervisor) monitorOnce(now time.Time) {
 	s.mu.RLock()
-	// CLI/native one-shot hosts hold the same bearer and OS resources as
-	// persistent hosts. Monitor *every* live instance, not just backend slots.
+	// Одноразовые CLI/нативные хосты используют те же Bearer-токены и ресурсы ОС,
+	// что и постоянные хосты. Контролируйте *каждый* работающий экземпляр, не только слоты Backend.
 	items := make([]*processState, 0, len(s.processes)+len(s.tokens))
 	seen := make(map[*processState]bool, len(s.processes)+len(s.tokens))
 	transient := make(map[*processState]bool)
@@ -1393,7 +1393,7 @@ func loopbackRequest(r *http.Request) bool {
 	return ip != nil && ip.IsLoopback()
 }
 func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*processState, bool) {
-	// The Windows IPC listener is not TCP. Only its exact per-instance named
+	// Слушатель IPC Windows не использует TCP. Только точный именованный канал экземпляра
 	// pipe may authenticate a sandboxed extension; regular TCP stays loopback.
 	tcpLoopback := loopbackRequest(r)
 	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\Launcher-Extension-`)
@@ -1424,8 +1424,8 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 		return nil, false
 	}
 	if tcpLoopback && st.sandbox != nil && (st.sandbox.windows != nil || st.sandbox.macos != nil) {
-		// An AppContainer must never bypass the policy-controlled pipe by
-		// using the ordinary loopback listener.
+		// AppContainer никогда не должен обходить канал, управляемый политикой,
+		// через обычный loopback-слушатель.
 		http.Error(w, "isolated extension must use named IPC", http.StatusForbidden)
 		return nil, false
 	}

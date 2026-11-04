@@ -44,16 +44,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Compile real Guard and Runtime (no test doubles)
+      - name: Сборка настоящих Guard и Runtime (без тестовых подмен)
         run: cargo build --manifest-path runtime/runtime/Cargo.toml --bins
-      - name: Execute Rust local inventory tests
+      - name: Запуск локальных тестов инвентаризации Rust
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_inventory_0501
-      - name: Test real Linux Guard child and authenticated IPC
+      - name: Тест настоящего дочернего процесса Guard в Linux и аутентифицированного IPC
         if: runner.os == 'Linux'
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory_0501 -- --nocapture
-      - name: Verify fail-closed matrix processing
+      - name: Проверка принципа запрета при ошибке при обработке матрицы
         run: python scripts/guard_ci/test_inventory_0501.py
-      - name: Exercise authenticated Guard IPC and export observed result
+      - name: Проверка аутентифицированного IPC Guard и экспорт фактического результата
         shell: bash
         run: |
           suffix=''
@@ -62,7 +62,7 @@ jobs:
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --guard "runtime/runtime/target/debug/guard${suffix}" \
             --output "guard-inventory-${{ matrix.target }}.json"
-      - name: Upload actual local diagnostic (BLOCKED is not a pass)
+      - name: Загрузка фактической локальной диагностики (BLOCKED не означает успешную проверку)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -84,7 +84,7 @@ jobs:
           path: guard-inventory-native
           merge-multiple: true
         continue-on-error: true
-      - name: Combine real OS/CPU reports (missing is BLOCKED)
+      - name: Объединение реальных отчётов ОС и ЦП (отсутствующие помечаются BLOCKED)
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -92,7 +92,7 @@ jobs:
           reports = sorted(Path('guard-inventory-native').glob('guard-inventory-*.json'))
           sys.exit(subprocess.call([sys.executable, 'scripts/guard_ci/inventory_0501.py', 'matrix', '--output', 'guard-inventory-matrix-0501.json', *map(str, reports)]))
           PY
-      - name: Publish explicitly non-certified matrix
+      - name: Публикация матрицы без статуса сертификации
         if: always()
         uses: actions/upload-artifact@v4
         with:

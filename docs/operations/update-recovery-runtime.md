@@ -1,6 +1,6 @@
 # Launcher 0.34.9 — V09 real update / recovery / rollback runtime certification
 
-## What actually runs
+## что действительно запускается
 
 The V09 stage is executed by `e2e/scripts/staged_lifecycle_0349.py` **after** the normal staged client has passed real startup, loader readiness, live authentication, matching-server join and gameplay checks. It invokes the existing production `launcher client install`, `update`, `verify`, `repair`, `rollback` and `launcher update recover` commands, and `runtime adopt-staged` / `launch`. It does not implement a replacement/mock updater.
 

@@ -5,7 +5,7 @@ leased deliveries, event ordering, publication idempotency, exponential retry,
 and PostgreSQL-backed dead-letter entries. Java modules **do not create a second
 queue** and cannot bypass project grants, signing or the core mutation routes.
 
-## JVM SDK usage
+## JVM SDK использование
 
 ```java
 services.events().subscribeJob("project.saved", projectSchema,

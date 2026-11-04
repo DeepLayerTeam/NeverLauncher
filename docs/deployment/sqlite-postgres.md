@@ -41,7 +41,7 @@ launcher-sqlite backup-verify --backup /private/recovered-core.db
 
 The `launcher_sqlite_import_03211` schema includes immutable row mirrors and the original byte-exact SQLite backup in SHA-256-verified chunks. The reverse operation checks every mirrored table and row digest against the reconstructed SQLite snapshot and verifies Core invariants before publishing the restored file and its `.json` manifest. The original core migration bug that allowed `TRUNCATE` in its mirror is closed.
 
-## Mandatory constraints
+## обязательные ограничения
 
 - Import is **additive** and transactionally rolls back on errors; it never truncates or edits live PostgreSQL application tables. PostgreSQL transactions with unknown commit outcomes must be reconciled before any retry.
 - Import/export is **not** a conflict merge, active-session migration, credential reissuance, filesystem snapshot without stopping writers, HA migration or a PostgreSQL production backend switch.

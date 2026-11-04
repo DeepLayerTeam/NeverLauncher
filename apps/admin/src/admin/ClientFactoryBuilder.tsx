@@ -344,7 +344,7 @@ export function ClientFactoryBuilder02710({
   return (
     <section
       className="subcard clientFactory"
-      aria-label="Client Factory Builder"
+      aria-label="Сборщик Client Factory"
     >
       <header className="registryHeading">
         <div>

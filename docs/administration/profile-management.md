@@ -1,6 +1,6 @@
-# Launcher 0.22.5 — Profile Management
+# Launcher 0.22.5 — управление профилями
 
-## Real production execution paths
+## реальные промышленные сценарии
 
 The v2 profile is stored in the existing `profiles` table and append-only
 `profile_revisions_0221` history. Clone, import and preset creation all call
@@ -16,7 +16,7 @@ importing a `.json` export, comparing revisions and creating a new profile from
 a preset. Permissions are checked server-side using project:write for all
 operations; each creation writes an audit event.
 
-## API examples
+## примеры API
 
 For the following examples the operator must be authenticated and authorized
 for `project:write` on `demo-project`.
@@ -42,7 +42,7 @@ Presets initialize profile metadata and loader selection (`vanilla`, `fabric`,
 install or publish a Minecraft build. Files and signatures are still supplied
 and checked by the existing release pipeline; workspace scanning/build is P06.
 
-## Security and compatibility
+## безопасность и совместимость
 
 - The export format is allowlisted to immutable `ProfileSpec` public metadata.
   It cannot carry project roles, access grants, secrets, keys or signed releases.
@@ -58,7 +58,7 @@ and checked by the existing release pipeline; workspace scanning/build is P06.
 - Restoring a previous revision does not rewrite history; copying it to a new
   profile ID is supported with clone and `sourceRevision`.
 
-## Verification
+## проверка
 
 With Go installed and dependencies available, run:
 

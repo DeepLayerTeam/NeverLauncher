@@ -44,7 +44,7 @@ jobs:
         run: |
           go test -run 'TestLAN0308|TestDiscord0308' ./cmd/launcher
           go build ./cmd/launcher
-      - name: Verify release metadata
+      - name: Проверка метаданных выпуска
         run: python3 scripts/version/manage.py check
   desktop-ui:
     runs-on: ubuntu-24.04

@@ -1,4 +1,4 @@
-# 0.25.2 — Secure PNG Processing
+# 0.25.2 — безопасная обработка PNG
 
 ## Implemented
 
@@ -33,7 +33,7 @@ creating a competing set of identities or overwriting legacy URLs.
   Content is served as PNG with `nosniff` and quoted ETag. The public endpoint
   is only for published textures, not a way to enumerate private uploads.
 
-## Example
+## пример
 
 Get the current CAS revision from `GET /api/v1/me/textures`, then:
 
@@ -49,7 +49,7 @@ If a legacy URL-based assignment exists its revision starts at `1`, not `0`.
 A stale revision returns **409**, a disallowed cape returns **403**, malformed
 PNG returns **422**, and size-limit violations return **413**.
 
-## Deployment
+## развёртывание
 
 1. Back up PostgreSQL and the existing storage root / S3 bucket. Configure a
    **persistent** storage volume or bucket; loss of this data is not repaired
@@ -63,7 +63,7 @@ PNG returns **422**, and size-limit violations return **413**.
    and read from your **configured** local/S3 storage. Run PostgreSQL tests
    with `TEST_PG_DSN_0252` in an isolated test database.
 
-## Explicit remaining work
+## явно обозначенная незавершённая работа
 
 0.25.2 implements secure ingestion and delivery; it does **not** claim full
 T03 quotas, S3 object lifecycle/cleanup, backup restore certification,

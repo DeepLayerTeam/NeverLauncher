@@ -34,7 +34,7 @@ matrix missing any required selection at grant issuance and evidence
 acceptance. Never fabricate placeholder digest values: produce/test those
 values on the target runner and then pin them in the policy.
 
-## Trust boundary
+## границы доверия
 
 The independent attestor's `execute_matrix()` obtains a fresh grant per target,
 launches the approved OCI image by immutable digest with `--preset`, and

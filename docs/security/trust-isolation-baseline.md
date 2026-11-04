@@ -10,7 +10,7 @@
 
 Backend extension runtime reports `legacy-unisolated` and `isolationStatus=unsupported` with `osSandbox=none`, `networkSandbox=none` and `filesystemSandbox=none`; no auto-upgrade to trusted or isolated is possible. Linux PGID/RSS limits, sanitized environment and broker RPC checks are **not** an OS sandbox. Existing unsigned/untrusted package admission policies are separate from the runtime isolation claim. Existing extensions remain backwards compatible, but 0.31.1 must not be described as making them safe to execute against untrusted local users.
 
-## Executable diagnosis
+## исполняемая диагностика
 
 From an installed backend binary, without a database connection:
 
@@ -23,7 +23,7 @@ launcher-api diagnose extension-sandbox --require-isolation # exit 2 until isola
 
 Diagnostics write machine-readable JSON to stdout, including reasons, platform/architecture and **observed capabilities**. They do not request elevation, read key material, or modify system resources. Read-only kernel interface detection is not an assertion that creating the corresponding namespace, resource boundary or network broker will succeed. This describes the **backend host**, not the remote game device. Neither the local TPM character device nor a provider label proves remote key provenance.
 
-## Platform capability / release constraints
+## возможности платформы и ограничения выпуска
 
 | Platform | Hardware provenance baseline | Extension isolation baseline | Known refusal / next implementation |
 | --- | --- | --- | --- |
@@ -33,7 +33,7 @@ Diagnostics write machine-readable JSON to stdout, including reasons, platform/a
 
 WSL, virtual machines, disabled user namespaces, containerized services, restricted TPM permissions, firmware reset, revoked or missing manufacturer roots, missing entitlements and legacy manifests may alter support. A supported claim requires an actual corresponding verifier/enforcement result, not just a platform version or CPU architecture.
 
-## Reason codes, UX and recovery
+## коды причин, пользовательский интерфейс и восстановление
 
 - `device-not-verified`: log in and prove possession again, or use supported passkey-step-up recovery; revoked keys may not be resurrected.
 - `session-device-binding-missing`: verify the actual session's device binding; cross-device sessions cannot borrow a positive assessment.
@@ -43,12 +43,12 @@ WSL, virtual machines, disabled user namespaces, containerized services, restric
 
 Firmware/TPM reset, motherboard replacement or key loss: ordinary authentication remains available. Use the existing key recovery with fresh phishing-resistant step-up, which creates a new key/binding epoch and revokes the previous identity according to server policy. Do **not** rewrite local metadata to assert new hardware provenance. Admins should not authorize strict-only operations while verification is unavailable.
 
-## Threat model / non-guarantees
+## модель угроз и ограничения гарантий
 
 Threats: malicious extension or child process; forged client-supplied hardware strings; stale/proxy/cross-session or replayed device evidence; user-mode attach/injection; compromised local OS; inaccessible TPM; accessibility software, screen overlays and AV causing false positives. Boundaries: protocol/RPC and signing checks alone cannot prevent a same-user extension from reading arbitrary local files, making direct outbound requests or escaping a process group. Local hardware key storage cannot attest to the integrity of the JVM or Guard process, and PCR/Measured Boot measurements (once implemented) are a **separate** claim from key provenance.
 
 No absolute anti-cheat or defense against a compromised kernel is claimed. Overlay, accessibility and AV compatibility cannot be certified without repeatable platform-native adversarial testing on real hardware; these tests are exit gates for 0.31.14, not fictitious passed results for 0.31.1.
 
-## Reproducible tests and constraints
+## воспроизводимые тесты и ограничения
 
 `go test ./internal/model ./internal/trustbaseline ./internal/repository ./internal/extensionhost ./internal/httpapi` from `services/api`. Tests cover no-TPM standard access, revoked/foreign session denial, forged legacy provenance downgrade, strict fail-closed, expired evidence and kernel probe honesty. `go build ./cmd/launcher-api` then run diagnostics above. CI runs platform builds/tests against exact commits. Hardware-attestation and actual sandbox adversarial certification are **not** included in 0.31.1 and must not be inferred from green tests.

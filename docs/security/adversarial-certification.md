@@ -1,8 +1,8 @@
-# Launcher 0.31.14 — Adversarial Security Certification
+# Launcher 0.31.14 — сертификация противодействия атакам
 
 **Status: certification pending external test evidence.** This release adds executable regression attacks and a fail-closed results gate; it does **not** certify the kernel, physical TPM, other host applications, or the full launcher without running those tests.
 
-## Scope and guarantees
+## область действия и гарантии
 
 - TPM Certify: certified registered key, AK trust chain, nonce, device/user/session/epoch/expiration. A passing synthetic cryptographic test does not establish physical TPM provenance or attest JVM memory.
 - Quote: independently signed PCR digest, exact PCR selection, operator policy, pinned AK/root. A passing measured-boot quote says nothing about late user-mode injection.
@@ -12,7 +12,7 @@
 - macOS: `isolated` is intentionally unavailable until all descendants have an OS-enforced, non-escapable resource boundary. Signed helper alone is insufficient. Do not silently fall back to `trusted`.
 - OS-level Guard attach/injection protection cannot be inferred from self-reported user-mode evidence. Document and test normal accessibility/overlays/AV on supported hosts before enabling stricter blocking policy.
 
-## Executable tiers
+## уровни выполняемых проверок
 
 Run from repository root. Python 3 and matching Go toolchain are required.
 
@@ -50,7 +50,7 @@ These are not marked successful by the offline runner and cannot be replaced wit
 5. **Compatibility:** launch tested ordinary screen overlays, assistive technology, antivirus/EDR and debugger/dev tools according to the operator's supported app policy; document false positives and explicit allowed exceptions without disabling isolation.
 6. **macOS:** independently prove sandbox inheritance and the aggregate descendant resource boundary on physical hardware before enabling `isolated`. Until then, an explainable `unsupported` result is expected, not PASS.
 
-## Exit criteria
+## критерии завершения
 
 A real 0.32.0 GA security certification requires offline PASS, Backend Guard tests PASS, live Linux PASS, live Windows PASS, tested macOS policy disposition and PASS on all relevant physical TPM/Guard and compatibility cases, from the **same exact source tree**. Failed or skipped mandatory tests prohibit the claim. Evidence must not contain credentials, AK private keys, raw secrets or proprietary personal logs.
 

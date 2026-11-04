@@ -20,7 +20,7 @@ Backend включает внутреннюю auth-систему, поддер�
 
 Секреты провайдеров передавайте через secret manager/окружение. Не смешивайте JSON и FILE-конфиг одного провайдера, если обработчик запрещает это. Ограничивайте redirect URI, origins и host allowlist. Используйте короткие сессии, отзыв, аудит и защиту от replay. Актуальные примеры ключей и названий параметров: [`.env.example`](../../.env.example), [`deploy/production/env.production.example`](../../deploy/production/env.production.example).
 
-## Provider Routing & Account Linking (0.29.3)
+## маршрутизация провайдеров и привязка аккаунтов (0.29.3)
 
 `POST /api/v1/auth/login` принимает `identifier`, `password` и необязательный `providerId`. Если `providerId` передан, выбирается **только** он. Если не передан, применяются точные правила `emailDomain`, затем `defaultProvider`. Для несопоставленного identifier настройка `requireExplicitProvider: true` требует `providerId`; по умолчанию сохраняется `local` для обратной совместимости. Ошибки пароля, отказ/недоступность, отсутствие identity и конфликты **никогда** не вызывают попытку входа в другом провайдере.
 
@@ -44,7 +44,7 @@ Backend включает внутреннюю auth-систему, поддер�
 
 Конфигурация валидируется при старте: неизвестные/не password-capable provider, некорректные/дублирующиеся домены, неизвестные версии, конфликт JSON+FILE и превышение 64 KiB останавливают запуск, не активируя частичное правило. При изменении маршрутизации проверяйте реальные login + explicit linking на тестовых учётных записях до доставки на production; конфигурация применяется при перезапуске Backend. Для защиты от обхода через имя пользователя без email задавайте `requireExplicitProvider: true` и полагайтесь на авторизацию уже проверенного identity/issuer.
 
-## SQL Mapping & Legacy Hash (0.29.4)
+## сопоставление SQL и устаревшие хеши (0.29.4)
 
 Configure **one explicit password verifier per SQL provider**. Existing `argon2id`, `bcrypt`, `pbkdf2-sha256`, and opt-in `legacy-sha256` continue to work. In addition, Launcher supports Gravit `digest`, `doubleDigest`, and portable WordPress PHPass (`$P$`, `$H$`) from AdditionalHash. Digest algorithms are explicitly selected from `md5`, `sha1`, `sha256`, `sha512`; the recorded text format is `hex` (default) or canonical padded `base64`. `doubleDigestHex: true` hashes the lowercase hexadecimal representation of the first digest; `false` hashes its raw bytes. These Gravit digests are **unsalted**, while PHPass stores its salt and iteration count inside the hash. Do not assume that custom CMS salts, custom password verifiers, or arbitrary Gravit module extensions are compatible.
 

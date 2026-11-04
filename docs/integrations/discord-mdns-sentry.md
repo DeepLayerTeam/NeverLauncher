@@ -22,6 +22,6 @@ Backend requires an explicit `LAUNCHER_SENTRY_BACKEND_ENABLED=true` and `LAUNCHE
 
 Backend and Desktop Sentry transports do **not** follow HTTP redirects, preventing their envelopes and `X-Sentry-Auth` headers from being forwarded to new origins. The JVM transport explicitly disables redirects as well. A transient HTTP 429/502/503/504 response is retried at most twice under a three-second request deadline, retaining the same event ID; bounded `Retry-After` is respected. On Backend shutdown the queue is drained for no longer than five seconds before exiting. Sentry remains best effort: transport failure, queue overflow and host crashes can still lose diagnostics. No sensitive payload is placed in a persistent retry spool. Configure data handling, DSN access, firewall and retention on the Sentry destination.
 
-## Verification boundary
+## границы проверки
 
 The repository tests: live Unix IPC framing and restart, DNS-SD reply validation and actual TLS leaf pinning, HTTP Sentry envelope ingestion/retry/drain. A real same-host UDP multicast publish/discover plus pinned TLS endpoint has passed on Linux; the optional integration test can be repeated via `LAUNCHER_LAN_E2E=1 go test ./internal/lanmdns -run TestLiveLANPublishDiscoverAndPinnedTLS0429` from `cli/`. These tests do not replace acceptance with a running Discord account/application, a physical two-host multicast LAN, and a real Sentry tenant. These external checks plus six-platform release verification remain required before production certification.

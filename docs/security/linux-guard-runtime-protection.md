@@ -1,4 +1,4 @@
-# NeverLauncher 0.50.8 — Linux Guard Runtime Protection
+# NeverLauncher 0.50.8 — защита Guard Runtime на Linux
 
 ## Исполняемый маршрут
 

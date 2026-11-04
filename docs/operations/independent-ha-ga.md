@@ -2,7 +2,7 @@
 
 **Scope:** production code for executing/observing independent multi-host HA drills on real infrastructure. **Not a GA certificate by itself.** The attached source contains no physical lab, signed final packages, live credentials or independent reviewer approval. The `gate` command returns `BLOCKED` (exit code 3) until separate hardware, storage, JVM and release evidence is supplied and validated by an independent reviewer. Never treat green Python CI tests or a Docker bridge partition as physical failover acceptance.
 
-## Prerequisites
+## предварительные требования
 
 * On a dedicated, **different machine** from all production Docker nodes, use a named non-root independent acceptance operator (`--publisher` is the primary release operator, and must differ). Use a verified source checkout with `VERSION=0.52.0` and exact `--commit` (40 hexadecimal characters); the supplied commit identifier is a claimed release identifier and must also be matched externally against signed provenance.
 * Two or more independent Docker hosts running real 0.51.10 or 0.52.0 images, strict-key SSH, external PostgreSQL/Patroni, Redis, versioned S3, TLS ingress with independent load balancer, Alertmanager with live HTTPS receiver. The test tool never creates these clusters and never substitutes isolated containers for distinct machines. Do not use production customer workloads for destructive tests.

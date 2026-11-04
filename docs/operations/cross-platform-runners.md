@@ -8,7 +8,7 @@
 - The Linux pinned OCI worker is still the only independently attested runtime in V04/V06. A Windows/macOS **observational** run is not independently signed ValidationEvidence and cannot grant stable publication. Other architectures must have a separately approved trusted attestation worker; this release does not silently convert native CI artifacts into signed evidence.
 - Backend stable publication remains fail-closed.
 
-## Prerequisites
+## предварительные требования
 
 - Dedicated self-hosted OS user, no production data or signing keys, disposable worker VM/snapshot; outbound connections allowlisted for staged delivery, live provider and pinned server dependencies. Do not run GUI E2E unattended on a shared interactive workstation.
 - `python >=3.11`, Go toolchain from `cli/go.mod`, Rust toolchain for `Runtime`, Java runtimes for all supported target majors, real staged package grant/operator credentials, exact prior-release and pinned ServerBridge artifacts, properly authorized real-provider test accounts. No mock provider for V07.

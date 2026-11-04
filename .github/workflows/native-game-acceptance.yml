@@ -39,12 +39,12 @@ jobs:
       mode: gui
     secrets: inherit
   all-native-passed:
-    name: Six distinct native GUI executions and their actual reports required
+    name: Требуются шесть отдельных нативных запусков GUI и их реальные отчёты
     needs: [live-native-game]
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - name: Refuse unsuccessful native GUI matrix
+      - name: Отклонение неуспешной матрицы нативного GUI
         env:
           MATRIX_RESULT: ${{ needs.live-native-game.result }}
         run: |
@@ -57,7 +57,7 @@ jobs:
           pattern: v10-native-*-gui-${{ github.run_id }}
           path: ${{ runner.temp }}/native-observations
           merge-multiple: false
-      - name: Verify six matching real positive and adversarial executions
+      - name: Проверка шести соответствующих реальных позитивных и атакующих сценариев
         env:
           PACKAGE_ID: ${{ inputs.package_id }}
         shell: bash

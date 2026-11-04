@@ -63,7 +63,7 @@ jobs:
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py
           node --check services/api/internal/embeddedadmin/site/app.js
-      - name: Admin production build
+      - name: Сборка промышленной версии Admin
         working-directory: apps/admin
         run: |
           npm ci --ignore-scripts

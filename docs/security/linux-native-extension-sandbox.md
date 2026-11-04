@@ -1,6 +1,6 @@
-# Launcher 0.31.9 — Linux Native Extension Sandbox
+# Launcher 0.31.9 — изоляция нативных расширений Linux
 
-## Executable boundary
+## границы исполняемой защиты
 
 Backend and CLI targets with an Ed25519-signed manifest `sandbox.mode: isolated` use the *same* Linux launch route. They are not passed to the legacy process-group launcher. The kernel creates new user, mount, PID, network, IPC and UTS namespaces. The child is born in its cgroup through `CLONE_INTO_CGROUP` (Go `UseCgroupFD`), not attached after it starts. This prevents initial-CPU/fork races.
 
@@ -12,7 +12,7 @@ The bootstrap drops effective, permitted and inheritable capabilities, sets lock
 
 The network namespace has **only loopback**. An internal TCP listener bridges authenticated Host Protocol requests over a private, preopened Unix socketpair to the existing Backend HTTP handler. No host network path or Backend secret directory is visible. The configuration/token is passed in a sealed Linux memfd instead of an argv flag, on-disk file or environment variable. For now, shared filesystem, arbitrary outbound network and scoped secrets permissions are rejected; scoped brokers are scheduled for 0.31.10. Native callback URLs and Java callback RPC are also rejected until a secure reverse broker is available. Trusted/legacy packages continue in explicitly unisolated mode; signing alone never makes one isolated.
 
-## Deployment prerequisites
+## предварительные требования к развёртыванию
 
 - Linux x86-64, unprivileged service UID, user namespaces enabled, `clone3(CLONE_INTO_CGROUP)` available.
 - cgroups v2 subtree delegated to Launcher service (`memory`, `pids`, `cpu` controllers). Use an appropriate systemd service with `Delegate=yes` and ensure the service can create/write child cgroups. Do *not* grant root or ambient capabilities to overcome delegation failures.
@@ -20,7 +20,7 @@ The network namespace has **only loopback**. An internal TCP listener bridges au
 - Use a dedicated, minimal `/usr` runtime root. Runtime directories are mounted readonly but their public readable contents remain visible. Do not store secrets under those runtime directories.
 - Linux arm64 and non-Linux platforms refuse `isolated` until their native implementation is validated.
 
-## Live acceptance and limits
+## реальная приёмка и ограничения
 
 Run on an explicitly provisioned machine:
 

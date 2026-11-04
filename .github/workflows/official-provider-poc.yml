@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Run safe offline and simulated-negative tests
         run: go test -race -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Vet
+      - name: Статический анализ
         run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
       - name: Build live-only POC binary (no credentials in CI)
         run: go build -o "$RUNNER_TEMP/official-provider-poc" ./cmd/official-provider-poc

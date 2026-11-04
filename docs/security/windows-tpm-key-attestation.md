@@ -1,6 +1,6 @@
-# Launcher 0.31.3 — Windows TPM key attestation
+# Launcher 0.31.3 — аттестация ключа TPM на Windows
 
-## Implemented path
+## реализованный сценарий
 
 On Windows only, `windows_tpm_certify_0313` validates the local keyring's bound `deviceId`, key algorithm, `hardware-enclave` signing provider and registered P-256 public key. It opens that key **by its original PCP key name**, uses `PCP_PLATFORMHANDLE` to retrieve the loaded TPM object handle and the TBS context, and calls `TPM2_ReadPublic`. The returned P-256 public coordinates and TPM-origin key attributes must match the registered device key; no new device key is generated. A separate **pre-enrolled AK** is opened from Microsoft Platform Crypto Provider by operator-supplied name.
 
@@ -8,7 +8,7 @@ The client calls the existing `POST /api/v1/auth/devices/{deviceId}/tpm-certify/
 
 No `NCryptCreateClaim`-based assertion, CNG backend name, software signature or self-asserted certificate is converted to provenance. `NCryptCreateClaim` may use a different transient signing key; the server requires the AK credential actually signing the `TPM2_Certify` statement. No PCR/measured-boot or Guard integrity assurance is derived.
 
-## Prerequisites and operational setup
+## предварительные требования и эксплуатационная настройка
 
 1. A physical or firmware TPM 2.0 with an existing Windows device identity key stored via **Microsoft Platform Crypto Provider**. The PCP name must be the name of the key `hardware-enclave` actually generated. If the dependency stores the key under a different name or refuses to expose its loaded TPM handle, the client **fails closed**. No silent key replacement or software fallback.
 2. Independently enroll a **distinct TPM-backed Attestation Key (AK)** with a trusted attestation CA that *validates actual AK TPM provenance* (e.g. issuance bound to TPM credentials), record the AK's PCP key name and obtain the issued AK leaf X.509 certificate and intermediates. Enrollment is not performed by Launcher. Do not use a general-purpose software CA or manually self-signed AK certificate as a production trust root.
@@ -17,14 +17,14 @@ No `NCryptCreateClaim`-based assertion, CNG backend name, software signature or 
 
 Raw TPM2_Certify uses **two empty password authorization sessions** for the subject key's ADMIN role and AK's USER role. A TPM object requiring nonempty authValue, PolicyAuthorize, user presence, or an authorization mode mediated exclusively by the PCP will reject this command (TPM error returned to UI). Such hardware is **not supported by this producer** until an authorized session implementation is supplied; do **not** downgrade to unverifiable hardware metadata. The backend verifier does not accept unsupported exotic key formats or untrusted issuers. In particular, existence of a TPM alone does not mean this Windows release is compatible with all Windows Hello/enterprise provisioning policies.
 
-## Security and failure cases
+## безопасность и ошибки
 
 - Windows host, registered key, AK and issuer certificate must all refer to the actual TPM keys. A different name, key mismatch, no physical TPM, missing TBS context, unsupported auth session, unsupported TPM public parameters, invalid X.509 chain, revoked root/AK or expired/replayed challenge all return explicit errors and **no hardware verification**.
 - Device and AK keys remain OS/TPM-managed. The desktop never exports private material or writes plaintext device private keys to logs. The trust-root file lives only on the server; client-supplied PEM is not a trust anchor.
 - `TPM2_ReadPublic` is cryptographically consistent with the registered key via exact SEC1 compare; verifier computes Name from `TPM2B_PUBLIC` and checks signed certified Name and SHA-256 qualifying data independently.
 - The process remains user mode. The attacker's ability to alter or impersonate a user-mode process is **not** eliminated by attestation. No measured boot or runtime Guard property is claimed, and `strict` remains dependent on its separate checks.
 
-## Validation
+## валидация
 
 Run on a Windows host with Rust/MSVC build tools:
 

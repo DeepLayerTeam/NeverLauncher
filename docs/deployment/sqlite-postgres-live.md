@@ -1,6 +1,6 @@
 # NeverLauncher 0.47.3 — SQLite Core → SQLRepository (live data)
 
-## Supported input and safety boundary
+## поддерживаемые входные данные и границы безопасности
 
 The CLI consumes an immutable, independently verified SQLite **Core 327** backup
 created via `launcher-sqlite backup`, with its matching `.json` manifest. It first
@@ -19,7 +19,7 @@ Stop Core writers and prevent PostgreSQL Backend / setup wizard from accepting
 requests during transfer. Make and retain an independent off-host SQLite backup.
 Do **not** import into an already running/used PostgreSQL deployment.
 
-## Commands
+## команды
 
 ```bash
 # On a disposable EMPTY PostgreSQL database, after applying the full schema:
@@ -45,7 +45,7 @@ only moves representable Core project/profile/release, channel, user/role, audit
 and manifest file metadata. It does not transfer file bytes or separately
 managed HTTP/Coordinator/Redis/S3 state.
 
-## Field mapping
+## сопоставление полей
 
 | SQLite Core source | SQLRepository target |
 | --- | --- |
@@ -67,7 +67,7 @@ stored as PostgreSQL JSONB. The source's signed manifest fields are not re-signe
 or intentionally edited. Derived file IDs are SHA-256 of release ID and path;
 Core did not have separate file IDs.
 
-## Fail-closed cases
+## сценарии обязательного отказа
 
 - Unrecognized/future Core schema, invalid/incomplete `dbmigrate` state,
   mutated staging data, extra/missing/unmappable source columns or rows;
@@ -84,7 +84,7 @@ staging and original verified backup unchanged. If the connection drops during
 COMMIT, **check `sqlite_live_receipts_0473` and live data before retrying**;
 never assume an unknown commit result was rolled back.
 
-## Independent acceptance
+## независимая приёмка
 
 Run `go test ./internal/sqlitepg ./internal/repository ./cmd/launcher-sqlite`
 with Go 1.27.3 and a dedicated empty `LAUNCHER_PG_LIVE_TEST_DSN`. The PostgreSQL

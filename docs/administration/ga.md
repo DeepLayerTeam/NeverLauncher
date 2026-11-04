@@ -1,4 +1,4 @@
-# Launcher 0.22.0 — Admin GA acceptance and deployment
+# Launcher 0.22.0 — Admin GA приёмка и развёртывание
 
 **Policy:** Changing `VERSION` to `0.22.0` is not evidence that the release passed
 GA. The deployable release is certified only when the exact-commit
@@ -6,7 +6,7 @@ GA. The deployable release is certified only when the exact-commit
 platform, trust and Admin jobs have passed. Do not tag or distribute the source
 archive as a certified production release before then.
 
-## Scope
+## область действия
 
 This release completes the 0.21.6–0.21.12 Admin track without changing the
 ServerBridge protocol v3 or weakening release signing and server-side RBAC.
@@ -14,7 +14,7 @@ Daily operations include project-scoped releases and rollback, durable job
 recovery, ServerBridge control/telemetry, devices/sessions, backup/restore,
 Extensions, typed live config and server-side audit search.
 
-## Mandatory certification (no mocks / no skips)
+## обязательная сертификация (без имитаций и пропусков)
 
 Run from a **clean checkout of the intended release commit**, with pinned Go,
 Node and Python dependencies, PostgreSQL 16 via Docker and a dedicated staging
@@ -80,7 +80,7 @@ consistency but is not a cryptographic attestation on its own. Signed build
 provenance from the release pipeline and trusted staging deployment are still
 required. Do not treat a manually spoofed commit string as release proof.
 
-## Operational acceptance matrix
+## матрица эксплуатационной приёмки
 
 | Exit requirement | Certification proof |
 |---|---|
@@ -99,7 +99,7 @@ keyboard/screen-reader accessibility. Automations listed above do not
 constitute proof of these physical/interactive scenarios by themselves. Record
 evidence on the release issue before production approval.
 
-## Deployment and rollback
+## развёртывание и откат
 
 1. Back up PostgreSQL and object storage. Verify the restore procedure on an
    isolated instance. Check active sessions/jobs and ServerBridge health.
@@ -121,7 +121,7 @@ evidence on the release issue before production approval.
    preserve job idempotency records and audit trail. Release channel rollback
    is a separate durable operation and does not restore database schema.
 
-## Unverified locally
+## локально не подтверждено
 
 On machines without npm/Go modules and Docker, static checks may pass while the
 mandatory full production, PostgreSQL/ServerBridge and browser gates remain

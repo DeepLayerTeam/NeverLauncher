@@ -1,8 +1,8 @@
-# Launcher 0.41.10 — verified world backup and recovery
+# Launcher 0.41.10 — проверенное резервное копирование и восстановление мира
 
 The CLI **does not** perform a live `save-all` snapshot. A consistent snapshot is accepted only after Host Supervisor has confirmed a graceful Minecraft `stop` and the JVM has exited. Hosts that run outside the managed supervisor are not automatically discoverable: an untracked Minecraft process must be stopped separately and its exit established by the operator.
 
-## Stopped-world snapshot
+## снимок остановленного мира
 
 ```bash
 nl server-bridge host world-backup create --server-root /srv/minecraft --backup-root /srv/mc-backups --consistency stop
@@ -20,7 +20,7 @@ nl server-bridge host world-backup gate-recover --server-root /srv/minecraft --c
 
 A missing/malformed owner is intentionally not cleared automatically. An active child process prevents recovery. If a backup process was interrupted, verify the last complete backup ID and inspect partial directories manually. Never delete active locks to accelerate deployment.
 
-## Restore into an isolated root
+## восстановление в изолированный корневой каталог
 
 ```bash
 nl server-bridge host world-backup restore --server-root /srv/minecraft --backup-root /srv/mc-backups --id BACKUP_ID --confirm BACKUP_ID --destination /srv/minecraft-recovered
@@ -28,7 +28,7 @@ nl server-bridge host world-backup restore --server-root /srv/minecraft --backup
 
 The destination must not exist and cannot overlap the live server or backup store. Files are hashed again while copied, staged privately, and atomically published only after verification. A second restore to the same destination fails; no automatic JVM restart occurs. After verifying UUID playerdata, region files, and plugin state, use a **separate maintenance/deployment procedure** to switch your managed server to the restored root. Do not copy a partial restore over a running server. Do not mistake isolated file restore for evidence that a real Minecraft server can load the world; use the Paper E2E for that test.
 
-## Reproducible integration checks
+## воспроизводимые интеграционные проверки
 
 ```bash
 cd cli && go test -race ./cmd/launcher -run 'TestWorldBackup' -count=1

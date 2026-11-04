@@ -1,6 +1,6 @@
 # NeverLauncher 0.52.2 — native final installer acceptance
 
-## What actually runs
+## что действительно запускается
 
 `native_packages_0522.py run` does **not** compile a substitute binary, call a fake
 `main`, or accept cross-compilation as proof. It downloads an externally pinned

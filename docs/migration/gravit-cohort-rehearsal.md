@@ -6,7 +6,7 @@ run a mock server, forge Backend migration reports, change production traffic or
 approve 0.50.0 GA. The downloaded game client, licensed account, server and RCON
 connection must already be working in three isolated staging environments.
 
-## What is actually executed
+## что действительно выполняется
 
 For **each** of exactly `fileauth-single`, `sql-modded`, and `proxy-network`:
 
@@ -124,7 +124,7 @@ non-overwriting and private; do not publish them with bearer tokens or RCON
 passwords. Prefer short-lived MFA-elevated operator sessions and a dedicated
 isolated runner.
 
-## Acceptance boundary
+## границы приёмки
 
 - An offline run of `--preflight-only` is **not** a migration, a signed update,
   a Minecraft join or a GA approval.

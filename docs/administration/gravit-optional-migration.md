@@ -5,7 +5,7 @@ Gravit code or unverified filesystem paths. It converts recognized
 `ClientProfile.updateOptional` entries to catalog v5 and then reuses the normal
 Backend preview → atomic draft save → Ed25519 signing workflow.
 
-## Admin workflow
+## рабочий процесс администратора
 
 1. Create an **unsigned Manifest v3** package in Release Workspace for the
    appropriate project/profile. All optional JARs must first be uploaded to
@@ -27,7 +27,7 @@ Backend preview → atomic draft save → Ed25519 signing workflow.
    uses the normal verified native resolver. A Gravit payload cannot edit a
    previously signed snapshot or inject JVM commands.
 
-## Supported lossless or controlled transformations
+## поддерживаемые преобразования без потерь или с контролем
 
 | Gravit | Never signed catalog v5 |
 | --- | --- |
@@ -48,7 +48,7 @@ Gravit OptionalFile has no equivalent reliable SemVer. Review and update it
 before introducing versioned dependency constraints. The source's unchanged
 SHA-256 is included in the report so the reviewed input can be identified.
 
-## Intentional blockers
+## преднамеренные блокирующие условия
 
 - Missing, modified, unmanaged or already-owned staged file paths.
 - Source → destination renames, directory moves and implicit directory copy.
@@ -84,7 +84,7 @@ Commit is intentionally performed through the existing
 `PUT /api/v1/packages/{packageId}/component-catalog` with the reviewed
 candidate and original expected revision. The Backend recomputes the digest.
 
-## Verification
+## проверка
 
 Go: `cd services/api && go test ./internal/model -run TestGravitOptional`.
 Admin: `cd apps/admin && npm test`.

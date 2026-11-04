@@ -1316,7 +1316,7 @@ export function MigrationCenter0331({
     }
   }
   return (
-    <section className="card wide" aria-label="Migration Center 0.33.7">
+    <section className="card wide" aria-label="Центр миграции 0.33.7">
       <h2>Migration Center · 0.33.7</h2>
       <p>
         Durable workflow для проверки целевого проекта Never и фиксации

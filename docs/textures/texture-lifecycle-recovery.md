@@ -1,11 +1,11 @@
-# Launcher 0.25.11 — Texture Lifecycle & Recovery
+# Launcher 0.25.11 — жизненный цикл текстур и восстановление
 
 This release makes the existing texture maintenance CLI safe against multiple
 GC processes and concurrent backup/restore operations. It operates on the real
 PostgreSQL rows and the configured local or S3 texture storage, not a manifest
 or an independent database.
 
-## Runbook
+## инструкция оператора
 
 1. Stop previous texture-maintenance workers before upgrading. Old 0.25.3–0.25.10 GC workers do not understand backup pins or fenced leases; **never run old and new workers concurrently**. Apply database migration `0074_texture_lifecycle_recovery_02511.sql` using
    the normal Launcher migration command **before** running the updated
@@ -36,7 +36,7 @@ or an independent database.
    deletes the PostgreSQL row with full reference checks. Failed object deletion
    releases only the requesting worker's lease; crashed leases can be reclaimed.
 
-## Operational constraints
+## эксплуатационные ограничения
 
 - The `verify` mode checks all `verified` objects. `staging` and quarantined
   objects are managed by GC and are not represented as a completed backup.

@@ -49,6 +49,6 @@ jobs:
       - name: CLI migrations
         working-directory: cli
         run: go test ./internal/dbmigrate -count=1
-      - name: Go vet
+      - name: Статический анализ Go (vet)
         working-directory: services/api
         run: go vet ./pkg/protection ./internal/httpapi ./internal/repository

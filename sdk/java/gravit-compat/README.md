@@ -1,4 +1,4 @@
-# Gravit Compatibility Adapter 0.31.0 (limited API)
+# адаптер совместимости Gravit 0.31.0 (ограниченный API)
 
 This is a **working, deliberately limited source-port adapter** for GravitLauncher-style Java modules, not a universal Gravit JAR loader. It runs in Launcher's existing Java Extension Host (`java -jar`) under Go supervisor deadlines and Ed25519-signed `.nlext` package verification. Gravit's internal LaunchServer/LauncherRuntime/JavaFX APIs are not present and are not emulated. This code is independently implemented and is not a copy of Gravit sources.
 
@@ -16,7 +16,7 @@ This is a **working, deliberately limited source-port adapter** for GravitLaunch
 
 **Not supported**: binary compatibility with unmodified upstream modules, `LaunchServer` internals, `LaunchServerInitContext`, `LaunchServerPostInitPhase`, `PreConfigPhase`, providers/registries, `ModulesConfigManager`, JavaFX UI, `Event.cancel()` and cancellation semantics, arbitrary Gravit `CommandHandler` internals, unchecked classpath dependencies. Calls to unsupported cancellation or event types are rejected, not silently accepted. Port source against this published subset, use Extensions `ExtensionContext.runtime()` for config/storage/secrets, and declare permissions/dependencies in the signed package. Gravit package names are used only for the documented subset, not to promise ABI parity across Gravit versions.
 
-## Build, run and package
+## сборка, запуск и упаковка
 
 ```sh
 sh sdk/java/gravit-compat/build.sh test

@@ -1,14 +1,14 @@
-# Launcher 0.25.5 — Texture Service API & Ownership
+# Launcher 0.25.5 — API службы текстур и права владения
 
 The service is implemented in the existing authenticated Backend, PostgreSQL and local/S3 storage. It manages only the logged-in user's **local Launcher Minecraft identity**. An official Mojang/Microsoft Minecraft identity is never modified by this API. Desktop UX, Admin grants UI and Yggdrasil/authlib-injector signing are later 0.26 milestones.
 
-## Database upgrade
+## обновление базы данных
 
 Run the standard checksum-tracked DB migrator through migration `0071_texture_service_0255.sql` **before** deploying the API binary. This migration adds `texture_saved_items` referencing already-accounted `texture_blob_owners`; backfills verified managed images; allows a cleared, inactive assignment with no blob/URL; and extends immutable revision events with `delete`.
 
 This is a forward-only migration. Do not revise migrations 0067–0070. Keep database and texture-storage backups before rolling out. Rollback after applying 0071 means restoring a compatible DB snapshot, not silently starting an older API binary against the new state. The content constraint forbids empty *active* selections. Resets are tombstones with retained CAS revision/history, not physical row deletion.
 
-## Authenticated endpoints
+## конечные точки с авторизацией
 
 All endpoints require a current Launcher Bearer session and resolve `minecraft_profiles.uuid` from that account. The optional `profileUuid` JSON field is an assertion checked against the authenticated UUID, **never** an owner selector. All successful mutation responses contain `apiVersion` and updated `data`, with `Cache-Control: private, no-store`.
 
@@ -44,7 +44,7 @@ curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/reset" \
 
 Deletion semantics are different from a reset. `DELETE .../{kind}` removes the *currently assigned* saved item and resets the selection; `DELETE .../library/{kind}/{digest}` removes an *inactive* saved item. Deleting an actively assigned saved item directly returns HTTP 409; reset or delete the current selection first. Deletion never overwrites another player's shared SHA-256 object and never destroys the immutable assignment history. Physical objects become eligible for the existing seven-day GC grace window only when no assignments, gallery items or project defaults reference them. GC now explicitly excludes saved library items.
 
-## Failure modes and safety
+## сценарии отказов и безопасность
 
 - HTTP 401 when no usable user session; 403 for asserted foreign `profileUuid`, disallowed skin/cape policy, or denied cape grant.
 - HTTP 404 for an unknown/foreign digest or missing owned assignment. Distinct error messages never reveal another account's texture.
@@ -53,7 +53,7 @@ Deletion semantics are different from a reset. `DELETE .../{kind}` removes the *
 - Gallery lookup and private image serving require account ownership, verified storage status and SHA-256 validation of returned PNG bytes. Saved preview works even when not publicly assigned; its response is `private, no-store`.
 - Official identities are not accepted by these operations. Cape selection is checked against project policy and a per-user grant even if a saved cape already exists. A previously reset assignment cannot be reactivated by merely setting `active=true`: choose a saved PNG first.
 
-## Regression and release gates
+## регрессионные тесты и условия выпуска
 
 ```sh
 cd services/api

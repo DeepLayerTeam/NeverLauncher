@@ -1,10 +1,10 @@
-# Launcher 0.22.3 — Runtime Constraints
+# Launcher 0.22.3 — ограничения Runtime
 
-## What runs
+## что запускается
 
 The production paths are `model.ValidateManifestSchema` (and its v2-only runtime constraints), `adminVersionManifestUpdate`, release publication integrity checks, and `runtime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. New fields are stored in the existing signed Manifest v2 JSON; no SQL schema change is needed. Old Manifest v1 payloads and signatures remain unmodified.
 
-### Example fields inside a v2 manifest
+### примеры полей манифеста v2
 
 ```json
 {
@@ -36,10 +36,10 @@ The production paths are `model.ValidateManifestSchema` (and its v2-only runtime
 * `environmentAllowlist` is an **allowlist of inherited variable names**, not values injected from a manifest. When nonempty, the child receives only those available inherited variables (plus Windows SystemRoot/WINDIR); Java option-injection variables are always excluded for v2. With an empty list, normal host environment inheritance remains, except for the unsafe Java override variables.
 * V2 rejects shell-control characters in JVM/game args, launch-entrypoint overrides via `-cp`, `-jar`, `-m`, Java agents/bootclasspath/module-patch/command-on-error flags, and unknown classpath strategies. Authorized Java custom-agent behavior will require the signed custom-args feature in the later P07 milestone.
 
-### Publication and backward compatibility
+### публикация и обратная совместимость
 
 Existing published v1 releases are not re-signed or migrated. Incomplete draft manifests may remain persisted while being edited, but a v2 release cannot pass publication integrity checks without a usable Java major and valid runtime constraints. Editing a v2 draft changes the signed payload; the release must be re-signed using the existing publication path. The profile snapshot's identity and digest remain immutable.
 
-### Verification
+### проверка
 
 The Go `internal/model` test suite exercises valid Java module/classpath and environment policies and a matrix of rejection cases. The Rust unit suite exercises runtime policy and shell-free argument construction; its full execution requires the Rust toolchain and dependency cache. CI needs production API integration, end-to-end signed manifest import, real Java launch (classpath and modulepath), and multi-OS distribution tests before this version can be certified for GA.

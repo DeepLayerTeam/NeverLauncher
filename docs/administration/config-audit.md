@@ -1,6 +1,6 @@
 # 0.21.11 Config & Audit — operational usage
 
-## Online configuration
+## настройка в рабочей системе
 
 `Admin → Конфигурация` is available only to global `settings:manage`. The editor
 contains **six explicitly whitelisted, non-secret settings** (audit and jobs API
@@ -25,7 +25,7 @@ audit correlations. Deployment must apply migrations before sending traffic.
 The history API returns the latest 50 revisions; restoring a target more than
 100 revisions old requires operational handling rather than bypassing the CAS.
 
-## Audit search
+## поиск в журнале аудита
 
 `GET /api/v1/admin/audit` requires global `audit:read`. Backend filtering includes
 `search`, `actor`, `action`, `target`, `correlationId`, `reasonCode`, `jobId`,
@@ -44,7 +44,7 @@ Audit records do not establish exactly-once status for synchronous destructive
 operations. Inspect the target service's own state and job details before
 retrying. Export/other legacy audit consumers are separate interfaces.
 
-## Caveats
+## оговорки
 
 Go integration and full production Admin builds must be exercised in an
 environment with the pinned Go and npm dependencies plus PostgreSQL. Do not

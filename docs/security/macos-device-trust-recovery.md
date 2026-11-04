@@ -1,4 +1,4 @@
-# 0.31.6 macOS Device Trust and Device Recovery
+# 0.31.6 доверие к устройству и восстановление на macOS
 
 ## Implemented behavior
 

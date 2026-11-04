@@ -79,7 +79,7 @@ These results are **observational, not trusted release attestation**. The
 fail-closed 0.34.1 stable gate remains enforced; later V04–V06 will establish
 runner trust, evidence binding and freshness.
 
-## Verification
+## проверка
 
 ```sh
 python3 e2e/scripts/test_staged_matching_0344.py -v

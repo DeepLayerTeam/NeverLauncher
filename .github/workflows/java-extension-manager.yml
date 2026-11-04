@@ -34,25 +34,25 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Compile actual Java extension and SDK
+      - name: Сборка настоящего Java-расширения и SDK
         run: sh examples/extensions/java-host/build.sh
-      - name: Test Java archive/runtime compatibility with actual host classes
+      - name: Тест совместимости архивов и среды Java с настоящими классами хоста
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 ./internal/extensionjava
-      - name: Live repository dependency and lifecycle transaction tests
+      - name: Тесты зависимостей рабочего репозитория и транзакций жизненного цикла
         working-directory: services/api
         run: go test -race -count=1 -timeout 5m ./internal/extensionlifecycle ./internal/extensionresolver ./internal/extensionupdates
-      - name: Real supervisor with JAR and regression
+      - name: Проверка настоящего супервизора с JAR и регрессионные тесты
         working-directory: services/api
         env:
           LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 -timeout 4m ./internal/extensionhost
-      - name: Verify HTTP API compiles with new diagnostics integration
+      - name: Проверка компиляции HTTP API с новой интеграцией диагностики
         working-directory: services/api
         run: go test -run '^TestDoesNotExist$' ./internal/httpapi
-      - name: Test CLI diagnostics and signature verification
+      - name: Тестирование диагностики CLI и проверки подписей
         run: |
           (cd cli && go test -count=1 -run '^TestJavaManagerDiagnoseCLI0305$' ./cmd/launcher)
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
@@ -60,5 +60,5 @@ jobs:
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/test.nlext" --private-key "$RUNNER_TEMP/private.pem"
           "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/test.nlext" --public-key "$RUNNER_TEMP/public.pem"
-      - name: Check version metadata
+      - name: Проверка метаданных версии
         run: python3 scripts/version/manage.py check

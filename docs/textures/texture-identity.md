@@ -1,6 +1,6 @@
 # Textures 0.25.1: canonical identity and revisioned selections
 
-## Scope
+## область действия
 
 This release persists the texture identity and selection **data plane**. It is not
 PNG upload, local/S3 delivery or a complete Yggdrasil signature implementation.
@@ -15,7 +15,7 @@ same UUID as the local Yggdrasil profile. The `official-minecraft` realm is
 separate, and this release intentionally has no endpoint capable of writing an
 official texture assignment.
 
-## Deploy / migration
+## развёртывание и миграция
 
 1. Back up the production PostgreSQL database and the existing
    `server_bridge_textures_v2` table **before** deploying 0.25.1.
@@ -45,7 +45,7 @@ official texture assignment.
    original legacy table is not overwritten, but revision updates only exist
    in the new schema and would otherwise be lost after rollback.
 
-## Operational API
+## эксплуатационный API
 
 All of the following require a valid Never user access token. They resolve the
 **caller-owned local Minecraft UUID** server-side and require PostgreSQL.
@@ -85,7 +85,7 @@ server-side in 0.25.1. The future SSRF-safe fetcher, PNG verification and
 content-addressed local/S3 storage must be deployed before accepting new
 remote or uploaded bytes.
 
-## Diagnostics and verification
+## диагностика и проверка
 
 The source includes repository validation tests and an opt-in isolated
 PostgreSQL integration test at

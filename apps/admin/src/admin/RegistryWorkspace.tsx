@@ -548,7 +548,7 @@ export function RegistryWorkspace({
       )}
       <div className="registryToolbar">
         <select
-          aria-label="Extension scope"
+          aria-label="Область действия расширения"
           value={extensionScope}
           onChange={(event) =>
             setExtensionScope(event.target.value as "global" | "project")
@@ -559,7 +559,7 @@ export function RegistryWorkspace({
         </select>
         {extensionScope === "project" && (
           <input
-            aria-label="Extension project scope"
+            aria-label="Область проекта расширения"
             value={extensionScopeId}
             onChange={(event) => setExtensionScopeId(event.target.value)}
             placeholder="Project ID"
@@ -577,22 +577,22 @@ export function RegistryWorkspace({
       </div>
       <div className="registryToolbar">
         <input
-          aria-label="Registry search"
+          aria-label="Поиск по реестру"
           value={registryQuery}
           onChange={(event) => setRegistryQuery(event.target.value)}
           placeholder="Поиск extension/publisher"
         />
         <input
-          aria-label="Registry channel"
+          aria-label="Канал реестра"
           value={registryChannel}
           onChange={(event) => setRegistryChannel(event.target.value)}
           placeholder="канал: stable"
         />
         <input
-          aria-label="Registry launcher version"
+          aria-label="Версия лаунчера в реестре"
           value={registryLauncherVersion}
           onChange={(event) => setRegistryLauncherVersion(event.target.value)}
-          placeholder="Launcher version"
+          placeholder="Версия лаунчера"
         />
         <input
           aria-label="Registry OS"
@@ -601,7 +601,7 @@ export function RegistryWorkspace({
           placeholder="OS: linux"
         />
         <input
-          aria-label="Registry architecture"
+          aria-label="Архитектура реестра"
           value={registryArch}
           onChange={(event) => setRegistryArch(event.target.value)}
           placeholder="arch: amd64"
@@ -639,7 +639,7 @@ export function RegistryWorkspace({
             <button
               onClick={() =>
                 runRegistryAction(
-                  "Registry publisher",
+                  "Издатель реестра",
                   createRegistryPublisher,
                 ).catch((err) => setError(err.message))
               }
@@ -649,7 +649,7 @@ export function RegistryWorkspace({
             <button
               onClick={() =>
                 runRegistryAction(
-                  "Publisher key",
+                  "Ключ издателя",
                   addRegistryPublisherKey,
                 ).catch((err) => setError(err.message))
               }
@@ -676,12 +676,12 @@ export function RegistryWorkspace({
             onChange={setRegistryPublishChannels}
           />
           <TextInput
-            label="Min Launcher"
+            label="Мин. версия лаунчера"
             value={registryMinLauncher}
             onChange={setRegistryMinLauncher}
           />
           <TextInput
-            label="Max Launcher"
+            label="Макс. версия лаунчера"
             value={registryMaxLauncher}
             onChange={setRegistryMaxLauncher}
           />
@@ -700,7 +700,7 @@ export function RegistryWorkspace({
               disabled={!registryPackageFile}
               onClick={() =>
                 runRegistryAction(
-                  "Registry publish",
+                  "Публикация в реестре",
                   publishRegistryArtifact,
                 ).catch((err) => setError(err.message))
               }
@@ -763,7 +763,7 @@ export function RegistryWorkspace({
                   disabled={Boolean(item.yankedAt)}
                   onClick={() =>
                     runRegistryAction(
-                      "Registry install",
+                      "Установка из реестра",
                       () => installRegistryVersion(item),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -775,7 +775,7 @@ export function RegistryWorkspace({
                   disabled={Boolean(item.yankedAt)}
                   onClick={() =>
                     runRegistryAction(
-                      "Registry channel",
+                      "Канал реестра",
                       () => setRegistryVersionChannel(item),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -785,7 +785,7 @@ export function RegistryWorkspace({
                 </button>
                 <button
                   onClick={() =>
-                    runRegistryAction("Registry download", () =>
+                    runRegistryAction("Загрузка из реестра", () =>
                       downloadRegistryArtifact(item),
                     ).catch((err) => setError(err.message))
                   }
@@ -797,7 +797,7 @@ export function RegistryWorkspace({
                   className="danger"
                   onClick={() =>
                     runRegistryAction(
-                      "Registry yank",
+                      "Отзыв версии из реестра",
                       () => yankRegistryVersion(item),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -903,7 +903,7 @@ export function RegistryWorkspace({
                         }
                         onClick={() =>
                           runRegistryAction(
-                            "Host start",
+                            "Запуск хоста",
                             () => hostAction(item, "start"),
                             item.extensionId,
                           ).catch((err) => setError(err.message))
@@ -919,7 +919,7 @@ export function RegistryWorkspace({
                         }
                         onClick={() =>
                           runRegistryAction(
-                            "Host stop",
+                            "Остановка хоста",
                             () => hostAction(item, "stop"),
                             item.extensionId,
                           ).catch((err) => setError(err.message))
@@ -931,7 +931,7 @@ export function RegistryWorkspace({
                         disabled={item.currentState !== "enabled"}
                         onClick={() =>
                           runRegistryAction(
-                            "Host restart",
+                            "Перезапуск хоста",
                             () => hostAction(item, "restart"),
                             item.extensionId,
                           ).catch((err) => setError(err.message))
@@ -956,7 +956,7 @@ export function RegistryWorkspace({
                   }
                   onClick={() =>
                     runRegistryAction(
-                      "Extension enable",
+                      "Включение расширения",
                       () => lifecycleAction(item, "enable"),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -968,7 +968,7 @@ export function RegistryWorkspace({
                   disabled={item.currentState !== "enabled"}
                   onClick={() =>
                     runRegistryAction(
-                      "Extension disable",
+                      "Отключение расширения",
                       () => lifecycleAction(item, "disable"),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -980,7 +980,7 @@ export function RegistryWorkspace({
                   disabled={item.currentState === "absent"}
                   onClick={() =>
                     runRegistryAction(
-                      "Extension update",
+                      "Обновление расширения",
                       () => updateInstalledExtension(item),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -991,7 +991,7 @@ export function RegistryWorkspace({
                 <button
                   onClick={() =>
                     runRegistryAction(
-                      "Extension rollback",
+                      "Откат расширения",
                       () => lifecycleAction(item, "rollback"),
                       item.extensionId,
                     ).catch((err) => setError(err.message))
@@ -1004,7 +1004,7 @@ export function RegistryWorkspace({
                   className="danger"
                   onClick={() =>
                     runRegistryAction(
-                      "Extension uninstall",
+                      "Удаление расширения",
                       () => lifecycleAction(item, "uninstall"),
                       item.extensionId,
                     ).catch((err) => setError(err.message))

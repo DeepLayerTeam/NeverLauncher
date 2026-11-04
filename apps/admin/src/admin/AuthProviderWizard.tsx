@@ -94,7 +94,7 @@ export function AuthProviderWizard02910({
   const [rawConfig, setRawConfig] = useState(
     JSON.stringify(defaults("sql", "external-users"), null, 2),
   );
-  const [reason, setReason] = useState("Configure external identity provider");
+  const [reason, setReason] = useState("Настройка внешнего провайдера идентификации");
   const [test, setTest] = useState<Diagnostics | null>(null);
   const [testedConfig, setTestedConfig] = useState("");
   const [error, setError] = useState("");
@@ -193,7 +193,7 @@ export function AuthProviderWizard02910({
   }
 
   return (
-    <section className="card wide" aria-label="Auth Provider Wizard">
+    <section className="card wide" aria-label="Мастер настройки провайдера авторизации">
       <div className="registryHeading">
         <h2>Auth Provider Wizard</h2>
         <button disabled={busy} onClick={() => void perform(load)}>
@@ -274,7 +274,7 @@ export function AuthProviderWizard02910({
               setTest(report);
               setTestedConfig(rawConfig);
               setStep("test");
-              setNotice("Test connection and SDK conformance succeeded.");
+              setNotice("Проверка подключения и соответствия SDK выполнена успешно.");
             })
           }
         >
@@ -288,7 +288,7 @@ export function AuthProviderWizard02910({
               await load();
               setStep("activate");
               setNotice(
-                `Saved tested draft revision #${String(result.revision)}. You can now activate it after MFA.`,
+                `Проверенный черновик редакции №${String(result.revision)} сохранён. Теперь его можно активировать после MFA.`,
               );
             })
           }
@@ -297,7 +297,7 @@ export function AuthProviderWizard02910({
         </button>
       </div>
       {test && step !== "config" && (
-        <div aria-label="Connection report">
+        <div aria-label="Отчёт о подключении">
           <h3>Проверка соединения</h3>
           <p>
             Health: {test.healthy ? "OK" : "failed"} · Credentials:{" "}

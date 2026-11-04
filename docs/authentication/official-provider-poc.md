@@ -1,6 +1,6 @@
 # Launcher 0.26.1 — Own-app Microsoft → Xbox → Minecraft provider POC
 
-## What is actually implemented
+## что действительно реализовано
 
 Run the **executable** Go CLI `services/api/cmd/official-provider-poc` against the
 real Microsoft personal-account, Xbox Live, XSTS and Minecraft Services hosts.
@@ -50,7 +50,7 @@ for Minecraft Services.** `403 Invalid app registration` from Minecraft
 Services is an external-blocked state, not a reason to impersonate another
 client ID or generate local official credentials.
 
-## Run the live POC
+## запуск реального прототипа
 
 From the repository root:
 
@@ -102,7 +102,7 @@ family/child settings, region restrictions, revoked refresh credentials,
 consent denial and provider unavailability are **not** converted to success.
 No anonymous profile or fake Minecraft token is created.
 
-## Release / external approval gate
+## условия выпуска и внешнего одобрения
 
 The code and local unit tests alone **DO NOT complete MS01**. Before unblocking
 subsequent rollout, record privately:
@@ -120,7 +120,7 @@ Failure to obtain provider authorization is a **release blocker**. No CI stub,
 mock, unit test, manifest, report copy, or manual switch substitutes for
 successful live provider calls; an editable JSON report is not signed evidence.
 
-## Automated tests (do not replace live sign-in)
+## автоматизированные тесты (не заменяют настоящую авторизацию)
 
 ```sh
 cd services/api

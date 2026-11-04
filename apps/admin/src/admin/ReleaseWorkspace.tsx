@@ -1319,7 +1319,7 @@ export function ReleaseWorkspace({
             )}
           </div>
           {form.channel.toLowerCase() === "stable" && (
-            <section aria-label="Stable runtime certification">
+            <section aria-label="Сертификация стабильного Runtime">
               <p>
                 <strong>Production Runtime Gate V11:</strong>{" "}
                 {report?.effectivePolicy?.publishEligible

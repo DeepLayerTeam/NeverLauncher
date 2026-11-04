@@ -2,7 +2,7 @@
 
 Production Microsoft identity provider for Launcher Federation Core. It delegates standard OpenID Connect mechanics to `internal/oidcconnector` and adds Microsoft-specific tenant, issuer, cloud and stable-identity rules.
 
-## Trust model
+## модель доверия
 
 - Authorization Code + PKCE `S256`; no implicit flow.
 - `tid + oid` is the external identity key. Email, `preferred_username` and display name are profile attributes only.
@@ -13,7 +13,7 @@ Production Microsoft identity provider for Launcher Federation Core. It delegate
 - Microsoft refresh credentials never become Never access/refresh tokens and are encrypted before persistence.
 - External groups/roles cannot assign a Never role except through explicit local `roleMappings` policy during JIT creation.
 
-## Configuration
+## конфигурация
 
 ```json
 [
@@ -35,7 +35,7 @@ Use `LAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` or `LAUNCHER_AUTH_MICROSOFT_PROVIDE
 
 Supported clouds: `global`, `usgov`, `china`. `custom` exists for controlled testing/private-compatible authorities and requires `allowCustomAuthority=true` plus normal OIDC TLS/SSRF restrictions.
 
-## Account linking and credentials
+## привязка аккаунтов и учётные данные
 
 `explicit-only` is the default. An already authenticated Never user proves control of the Microsoft account through `/api/v1/auth/microsoft/{providerId}/link/begin` and `/link/complete`. Equality of email addresses is never sufficient to link accounts.
 
@@ -43,6 +43,6 @@ Refresh credentials are persisted in `provider_credentials` only as an AES-GCM e
 
 Provider front-channel logout and Never session logout are separate operations. `/api/v1/auth/microsoft/{providerId}/logout-url` only returns an allowlisted Microsoft logout URL.
 
-## Minecraft boundary
+## границы взаимодействия с Minecraft
 
 Successful Microsoft authentication is not treated as Minecraft ownership. This connector does not call Xbox/Minecraft entitlement/profile APIs and does not manufacture a Minecraft profile from Microsoft identity. Entitlement/profile verification is a separate compatibility layer.

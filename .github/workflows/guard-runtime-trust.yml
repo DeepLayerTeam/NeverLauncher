@@ -36,7 +36,7 @@ jobs:
       - name: Backend full build
         working-directory: services/api
         run: go build ./cmd/launcher-api
-      - name: Go vet
+      - name: Статический анализ Go (vet)
         working-directory: services/api
         run: go vet ./internal/httpapi
       - name: Race detector and replay/policy revocation tests

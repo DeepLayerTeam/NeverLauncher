@@ -44,7 +44,7 @@ jobs:
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests -- --nocapture
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
-      - name: Rust compilation
+      - name: Компиляция Rust
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Renderer regressions
         working-directory: apps/desktop

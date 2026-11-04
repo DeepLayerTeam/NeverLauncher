@@ -55,7 +55,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
-      - name: Admin production build
+      - name: Сборка промышленной версии Admin
         working-directory: apps/admin
         run: |
           npm ci

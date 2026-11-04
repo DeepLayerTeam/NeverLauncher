@@ -77,5 +77,5 @@ jobs:
           "$RUNNER_TEMP/nl" extension pack examples/extensions/gravit-compat/build/package --output "$RUNNER_TEMP/gravit-port.nlext" --private-key "$RUNNER_TEMP/private.pem"
           "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/gravit-port.nlext" --public-key "$RUNNER_TEMP/public.pem"
           test -s "$RUNNER_TEMP/gravit-port.nlext"
-      - name: Version consistency
+      - name: Согласованность версий
         run: python3 scripts/version/manage.py check

@@ -3,7 +3,7 @@
 The 0.25.3 release adds **operational storage** to the 0.25.2 secure PNG upload pipeline.
 It is a local-project-only service and does not write or impersonate official Mojang textures.
 
-## Deployment
+## развёртывание
 
 1. Back up PostgreSQL and the existing `texture-blobs/sha256/` objects **before** upgrading.
 2. Apply `services/api/internal/dbmigrate/sql/0069_texture_storage_0253.sql` using the project's normal checksum-tracked migration runner (do not replay or edit 0067/0068).
@@ -12,7 +12,7 @@ It is a local-project-only service and does not write or impersonate official Mo
 
 The project-wide default limits are 20 **unique stored blobs per user** and a **10 MiB sum of normalized bytes** across their stored blobs. Existing 0.25.2 blobs referenced by assignments are charged once to the owning user at migration; two users selecting the same digest share one physical object but have separate quota accounting. `texture_project_policies` (`project_id=''`) controls `max_blobs_per_player` and `max_bytes_per_player`. Both quota checks and ownership reservation run under one PostgreSQL transaction plus a per-user advisory lock. The upload pre-registers a `staging` row and a user quota reservation **before** writing bytes. If the storage write or final assignment CAS fails, the orphan is still in PostgreSQL and will become eligible for GC after seven days; no untracked object is produced by the 0.25.3 upload handler. Objects left untracked by older 0.25.2 instances still require a separate inventory reconciliation before upgrading (do not delete objects using filename guesses).
 
-## Offline maintenance command
+## команда автономного обслуживания
 
 Run from `services/api` with the same environment as the API and `LAUNCHER_DATABASE_DSN` set. Install/build with `go build -o texture-maintenance ./cmd/texture-maintenance-0253`.
 
@@ -30,7 +30,7 @@ Run from `services/api` with the same environment as the API and `LAUNCHER_DATAB
 
 `GET /api/v1/textures/blob/{digest}` continues to return SHA-256 ETags, bounded data integrity checks, and short public caching only while assigned and public. User previews are `private, no-store`. Deleting/replacing a selection removes public serving authorization immediately, but cannot revoke copies already cached by external clients.
 
-## Validation
+## валидация
 
 ```bash
 cd services/api

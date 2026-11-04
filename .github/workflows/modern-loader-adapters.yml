@@ -42,7 +42,7 @@ jobs:
           go test ./cmd/launcher
           -run 'TestModernLoader0272|TestClientFactory0271|TestForgeAndNeoForgeProcessorMaterializers|TestForgeNeoForgeMavenVersionSelection|TestForgeLatestStableChoosesNumericMaximumIndependentOfMetadataOrder|TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable|TestFabricAndQuiltMaterializersProduceConsumableClientTree|TestVanillaMetadataRecoveryExactVersionOnly|TestLoaderResolution'
           -count=1 -timeout=5m
-      - name: Build CLI
+      - name: Сборка CLI
         working-directory: cli
         run: go build ./cmd/launcher
       - name: Vet CLI

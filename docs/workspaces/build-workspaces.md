@@ -1,4 +1,4 @@
-# Build Workspaces (0.22.6)
+# рабочие пространства сборки (0.22.6)
 
 The Build Workspace handles real directory uploads, scans, per-file SHA-256,
 base-version diff, stage selection, publication validation, and creation of an
@@ -30,7 +30,7 @@ remains available to resume releases created before 0.22.6.
    `/operations/validate` → `/operations/execute` publish flow. **Build never
    circumvents signature, validation policy, or MFA.**
 
-## Reproducibility and security
+## воспроизводимость и безопасность
 
 The `buildDigest` is SHA-256 over canonical JSON of project/profile, frozen
 profile digest/revision, channel/version, settings, tool versions and sorted
@@ -55,7 +55,7 @@ SHA-256 of every staged object. Missing/changed objects block materialization.
 Workspaces themselves are not exposed to unauthenticated clients and cannot
 publish a signed release without the existing independent authorization flow.
 
-## Compatibility
+## совместимость
 
 Migration `0059` adds a new table and does not alter existing releases,
 profiles, manifests or their signatures. A new workspace does not mutate its

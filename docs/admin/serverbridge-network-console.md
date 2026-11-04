@@ -5,7 +5,7 @@ game commands, signed command ACKs, and a separate **Host Supervisor / JVM** pan
 The new host panel is wired to the **existing real** Backend → pinned RemoteControl
 TLS → Host Supervisor / OS-JVM path; it never runs shell commands in the browser.
 
-## Deployment
+## развёртывание
 
 - Apply the existing PostgreSQL migration `0111_server_bridge_host_operations_0413.sql`
   before deploying the Backend. A PostgreSQL-backed ServerBridge is mandatory.
@@ -18,7 +18,7 @@ TLS → Host Supervisor / OS-JVM path; it never runs shell commands in the brows
   mutation requires fresh MFA enforced on the Backend (not only in Admin).
 - Deploy Admin and Backend of the same version and restart Admin to load the new UI.
 
-## Real operation flow
+## реальная последовательность действий
 
 1. Select an existing registered ServerBridge node. A live read-only RemoteControl
    status checks the actual supervisor and JVM state; a separate signed game
@@ -41,7 +41,7 @@ mutations and shows **unknown**, not **stopped**, **healthy**, or **success**.
 History is loaded from PostgreSQL, not from local browser storage; session
 storage only keeps the exact unresolved HTTP request for safe recovery.
 
-## Existing controls
+## существующие элементы управления
 
 - `server.save`, whitelisting, bans, moderation, maintenance/drain, broadcasts,
   and allowlisted console commands use signed ServerBridge commands; result
@@ -56,7 +56,7 @@ storage only keeps the exact unresolved HTTP request for safe recovery.
   Backend data, not Minecraft worlds. Do not label it a world backup or invoke
   unaudited host shell commands from the web interface.
 
-## Test coverage and limits
+## тестовое покрытие и ограничения
 
 `node --experimental-strip-types --test apps/admin/tests/*.test.mjs` covers
 API clients, original-key replay, global host RBAC and freshness semantics. It

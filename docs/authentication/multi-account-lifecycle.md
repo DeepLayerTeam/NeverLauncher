@@ -1,6 +1,6 @@
 # Launcher 0.26.7 — Official Minecraft multi-account and session lifecycle
 
-## Working behavior
+## действующее поведение
 
 - **Add** an official account with system browser PKCE or Device Code fallback. Existing accounts remain in the native OS vault; after provider profile verification the newly authenticated Minecraft UUID is selected. Re-authenticating the *same* Minecraft UUID rotates/replaces just that credential entry.
 - **Select** from verified saved official UUIDs. Selection fetches a fresh Java profile and enforces the stored UUID before making the account active. If that step fails, the previous active selection is not changed.
@@ -10,13 +10,13 @@
 - **Re-login** adds or replaces a UUID without destroying unrelated accounts. Credentials are never transmitted to the React renderer.
 - **Launch and textures** always resolve the current selected account under a native vault lock; no cross-account credential or texture mixup when selection changes.
 
-## Security boundary and format
+## границы безопасности и формат
 
 Keyring service remains `Launcher Official Minecraft 0.26.2` for compatible migration. Key identifiers are derived by SHA-256 from Backend origin and Never session identity. Account slots are `<scope>.account.<minecraft-uuid>`; the credential-free directory is `<scope>.directory.0267`. Each account uses the existing bounded OS-keyring chunked format, with random generation and SHA-256 integrity check. The metadata-only directory stores at most 16 lowercase 32-character Minecraft UUIDs and one active UUID. No plaintext JSON files, tokens in Tauri command results, or Browser localStorage.
 
 The 0.26.7 native vault remains scoped to the authenticated Never **session**, matching 0.26.2–0.26.6. This safely prevents accidental cross-session reuse, but it does not yet share the accounts across unrelated Never sessions; cross-session Never identity linking is planned in 0.26.8. It is not an account-cloud sync feature.
 
-## Recovery and failure behavior
+## восстановление и поведение при сбое
 
 - A corrupted/missing keyring fragment or invalid account directory fails closed. It cannot promote a different UUID or silently switch to offline auth.
 - Migration saves the account in its new account-specific secure slot, commits directory metadata, and only then deletes the original single-account slot. A process interruption before completion leaves the old slot available for retry.
@@ -24,7 +24,7 @@ The 0.26.7 native vault remains scoped to the authenticated Never **session**, m
 - A temporary provider outage does not destroy a saved account. The active account remains indexed, but launch is blocked until verification works.
 - Switching selection, logging out, and game launch serialize on the native vault mutex. Backend/renderer never receive the Minecraft bearer.
 
-## Release gate
+## условие допуска релиза
 
 Run `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests`, `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`, and `npm ci && npm run test:official && npm run test:textures && npm run build` from `apps/desktop`. CI workflow `multi-account-lifecycle-0267.yml` runs these on Windows/Linux/macOS. Manual testing must cover two distinct real Microsoft accounts with Java access, switching, refreshing, OS vault persistence after restart, logging out one account, re-login same UUID, revoked refresh token, and an offline provider outage.
 

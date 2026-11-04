@@ -2,7 +2,7 @@
 
 This release integrates the existing signed `sandbox.mode=isolated` policy into **native Windows process creation**, rather than labelling a normal process as isolated.
 
-## Enforcement sequence
+## порядок принудительного применения
 
 1. The privileged host validates the signed policy, absolute executable path and configured grants, then creates a random per-launch AppContainer profile and SID.
 2. `icacls` grants that SID read/execute on the immutable extension package. No backend settings, storage or secret directories are shared.
@@ -12,7 +12,7 @@ This release integrates the existing signed `sandbox.mode=isolated` policy into 
 6. The helper owns the Job until exit or timeout. Terminating the helper closes the Job, killing all descendants. Sandbox setup failures stop launch: no fallback to trusted mode.
 7. Both Backend and CLI use this path. UI/API status reports `windows-appcontainer` only after the child has been verified, job-assigned, resumed and acknowledged.
 
-## Supported targets
+## поддерживаемые платформы
 
 Native, signed `.exe` extension targets that communicate over the updated Go Backend or CLI SDK through `LAUNCHER_EXTENSION_HOST_PIPE`. Other extension clients must explicitly implement HTTP/1.1 over the SID-restricted named pipe, including bearer authentication. Unsandboxed fallback is forbidden.
 
@@ -20,7 +20,7 @@ Java callbacks and any application requiring direct outbound network or a loopba
 
 AppContainer is not equivalent to LPAC and does not prove absence of ALL APPLICATION PACKAGES-readable objects or OS escape vulnerabilities. The trust indicator describes enforced OS sandbox boundaries, not absolute anti-cheat or kernel integrity.
 
-## Acceptance and deployment
+## приёмка и развёртывание
 
 Use Windows 10/11 or supported Windows Server with working AppContainer API and standard Job Object facilities. The service identity needs permission to create AppContainer profiles and adjust package ACLs. Do not run the API as an elevated interactive administrator unnecessarily. Keep extension payload packages immutable and restrict write access to deployment roles.
 
@@ -34,7 +34,7 @@ go test -tags launcher_nopgx -count=1 -v ./internal/windowssandbox
 
 The test creates a **real** AppContainer process, asserts it cannot read private backend files or change package contents, probes denied direct outbound access and attempts to exceed its Job active-process limit. Test failures must block deployment; availability checks and compilation alone do not certify the kernel isolation.
 
-## 0.43.10 native Windows acceptance and enforced policy readback
+## 0.43.10 нативная приёмка Windows и контрольное чтение применённой политики
 
 The sandbox helper reads the **live kernel Job configuration** (membership, process count, both memory caps, CPU hard cap and breakaway flags) after attaching the suspended AppContainer child and **before** resuming its main thread. If any value is missing or differs from the signed policy, it terminates the Job and refuses launch. The helper also verifies the actual AppContainer SID on the child token. This protects against assuming that successful Win32 setup calls imply effective restrictions.
 

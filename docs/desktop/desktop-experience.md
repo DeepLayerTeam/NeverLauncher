@@ -1,4 +1,4 @@
-# Launcher 0.22.9 — Desktop Experience
+# Launcher 0.22.9 — возможности Desktop
 
 ## Рабочие функции
 

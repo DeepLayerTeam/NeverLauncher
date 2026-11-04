@@ -13,7 +13,7 @@ has been implemented, tested, and reviewed. The HTTP API continues to require Po
 - Supported SQLite host for DEP00: **Linux with local ext4, XFS, or Btrfs**, effective user owns private `0700` DB directory. All other mounts including NFS/CIFS, overlay, tmpfs and foreign OSes fail closed until certified.
 - The local database is private (0600), parents must contain no symlinks, and single-owner fencing uses a persistent `.owner.lock` flock file. Do not unlink the lock file while the store runs. A second process is refused while the lock inode and path remain unchanged; do not rename or replace the database directory while a backend is running.
 
-## Build/verification
+## сборка/проверка
 
 ```sh
 cd services/api

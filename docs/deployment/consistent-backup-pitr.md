@@ -2,7 +2,7 @@
 
 **This is a maintenance-window, write-fenced, multi-host checkpoint.** It intentionally interrupts API/worker writes and gracefully stops affected Minecraft servers; it is not an online atomic transaction across PostgreSQL/S3/game JVMs. A physical PostgreSQL backup with continuous WAL archiving provides database PITR. The cohort's S3 objects, extension state, identities and game worlds are coordinated with one recorded PostgreSQL LSN. Restoring PostgreSQL to an *arbitrary other time* is **not** a coherent S3/game-world restore.
 
-## Provision the actual dependencies before the backup
+## подготовьте реальные зависимости до резервного копирования
 
 1. At least two distinct Docker machines deployed using `deploy/production/docker-compose.multi-host.yml`, healthy PostgreSQL primary/Patroni, Redis, S3 and ingress. A trusted operator is able to SSH into the game hosts and Docker hosts with `StrictHostKeyChecking=yes` and pinned `known_hosts`. Freeze unrelated writers, third-party auth providers, all independent console/DB scripts, publishing, scheduler tasks, DB migrations, release operations and write-enabled maintenance users **outside this tool**. Block inbound writes at the external load balancer first. No second operator may resume API or restart a Minecraft JVM during the snapshot.
 2. Provide `pgbackrest` with an existing working stanza `launcher`, independent encrypted offsite repository and *continuous* `archive-push` from the PostgreSQL primary/Patroni. Typical PostgreSQL requirements are `wal_level=replica`, `archive_mode=on`, and `archive_command='pgbackrest --stanza=launcher archive-push %p'`. Under Patroni, configure through the cluster's supported configuration interface, not an unmanaged edit. Use `pgbackrest --stanza=launcher check`, `pgbackrest --stanza=launcher info --output=json`, `pgbackrest --stanza=launcher verify --set=BACKUP_LABEL`, and monitor `pg_stat_archiver`/archive lag. Pin a pgBackRest version that supports `verify`. This tool executes those real commands; it does not fabricate a WAL archive.
@@ -12,7 +12,7 @@
 6. Identify all external identity providers. PostgreSQL identities/roles, sessions and extension installation state inside the NeverLauncher database are in the physical and logical copies. If an external file-backed provider owns identity state, use `--external-auth-policy included --external-source provider=/private/export.json`. For OIDC, remote SQL, HTTP auth providers or worlds outside the registered set, obtain a compatible independently consistent backup/fence **before** running or **do not claim full identity recovery**. `--external-auth-policy none` asserts that the installation has no external mutable auth data.
 7. Escrow signing keys, trust roots, TLS credentials, KMS keys and recovery administrator secrets in a separate restricted, independently recoverable secret manager. Prepare a 0600 `trust-hashes.json` such as `{"manifest-signing-key":"<64-char lowercase SHA-256>"}`. This tool records only those fingerprints; it never exports actual private keys.
 
-## Run a full checkpoint
+## создание полной контрольной точки
 
 On the trusted operator, create a 0600 `worlds-0518.json` with one entry for *every* managed Minecraft world (no missing worlds):
 
@@ -42,14 +42,14 @@ python3 scripts/operations/consistent_backup_0518.py backup \
 
 The actual image placeholder must be replaced by a pinned, checked OCI digest. Use a fresh 32-character hex `--run-id` per attempt; do not reuse prior journals. All private files must be regular, hardlink-free, `0600`. Operator source and destination must have sufficient free disk space; payload sizes can be larger than a database dump. Never share the local backup directory with public web services.
 
-## What is checked, in order
+## порядок выполняемых проверок
 
 - Real Compose configuration: PostgreSQL, Redis and S3 external; distinct machine identities/node IDs; same external DB/bucket and two API/worker roles. Each host persists a crash-recoverable private `.backup-freeze-0518.json` before stopping worker and API. Once all hosts are frozen, the game-host CLI requests a real stopped-world backup using the existing Host Supervisor lock/gate and creates a verified `launcher-world-backup/v1` archive. No live world file copy is accepted.
 - PostgreSQL must be the active primary with **zero other SQL client sessions**. pgBackRest `check → backup --type=full → check → verify --set=LABEL` must produce **one new physical backup** with a recorded WAL start/end range. The independent `pg_dump -Fc` is parsed via `pg_restore --list` and holds identities/extension states at the frozen cohort. Changes to `pg_current_wal_insert_lsn()` during S3/local-world copying reject the backup.
 - Every host contributes local state from `api_storage`, `api_backups`, `api_factory`, `api_coordinator`, `api_extensions` and the matching five worker volumes. All tar files are streamed and parsed with strict path/type checks and SHA-256. The backing S3 bucket is copied and downloaded again independently; version IDs/delete markers must remain identical during the copy. Every copied object byte is hashed. Any key missing or changing rejects publication.
 - The complete new checkpoint is published by rename only after the manifest, filesystem inventory, world receipts, S3 bytes and pgBackRest repository are verified. On exit, the tool attempts to restart all API/worker roles it froze, including on failure. Failure to restart is **manual recovery required**, never PASS. External ingress admission and game starts remain under operator control.
 
-## Verify and prepare recovery on another host
+## проверка и подготовка восстановления на другом узле
 
 ```sh
 python3 scripts/operations/consistent_backup_0518.py verify \
@@ -70,7 +70,7 @@ python3 scripts/operations/consistent_backup_0518.py cohort-pg-restore-fresh \
 
 For a **PostgreSQL-only arbitrary point-in-time** recovery (e.g. investigation), use `pitr-restore-fresh --target-time 2026-11-03T12:00:00Z --pg-only-reconciliation-ack` with the same arguments. Do not claim this as a multi-resource coherent restore or roll live production back over newer confirmed writes.
 
-## Recovery from failed snapshot
+## восстановление после неудачного снимка
 
 If the operator process or SSH connection is interrupted, freeze journals remain in each deployment directory. Confirm each site's actual API/worker process status; to resume the exact backup operation run on that site:
 

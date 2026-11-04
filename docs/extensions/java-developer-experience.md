@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.12 — Java Developer Experience & E2E
+# NeverLauncher 0.48.12 — инструменты Java-разработчика и E2E
 
 ## Delivered SDK publication (actual built artifacts)
 
@@ -24,7 +24,7 @@ python3 scripts/java/compare_sdk_repos_04812.py dist/java-sdk/maven /tmp/java-sd
 
 The final comparison is **byte-for-byte** and assumes the same effective compiler/Javadoc versions for the checked-in publication and the local rebuild. Cross-JDK source compatibility is tested separately; differing Javadoc output across toolchain versions does not imply API incompatibility.
 
-## Independent consumer (Maven + Gradle)
+## независимый потребитель (Maven + Gradle)
 
 The complete sample is `examples/extensions/java-developer-04812/`. Maven and Gradle **both** resolve SDK coordinates from the packaged local Maven repository, not source-tree `build/classes`. The sample implements Java extension lifecycle, Admin/Desktop action handlers, validated persisted settings and a CLI `status` command.
 

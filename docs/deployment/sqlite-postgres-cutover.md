@@ -1,4 +1,4 @@
-# NeverLauncher 0.47.5 — offline SQLite → PostgreSQL operator and cutover safety
+# NeverLauncher 0.47.5 — автономный SQLite → PostgreSQL операторские процедуры и безопасность переключения
 
 **Status: source candidate, production cutover BLOCKED by missing source parity.**
 The 0.47.4 SQLite Core importer populates PostgreSQL SQLRepository but does
@@ -8,7 +8,7 @@ turn its `readyForBackendCutover=false` report into a positive certification.
 There is no supported flag to override this block. Do not turn on a live
 PostgreSQL Backend from these receipts alone.
 
-## What the operator actually does
+## что действительно делает оператор
 
 `python3 scripts/operations/sqlite_pg_cutover_0475.py` implements a durable,
 local-only operator workflow with private journals, one-owner flock, source
@@ -68,7 +68,7 @@ requires independent fencing before running. The operator cannot prove that an
 unknown unmanaged process has stopped writing. A frozen snapshot is taken only
 after all the declared units are inactive.
 
-## Failure semantics
+## семантика сбоев
 
 - The operator retains `state.json` and fsynced append-only `stages.jsonl`
   under a private 0700 work directory. A completed stage is skipped when the
@@ -90,7 +90,7 @@ after all the declared units are inactive.
   Minecraft execution. A read-only owner/project lookup does **not** prove
   password login, working server-bridge or a complete Minecraft launch.
 
-## Acceptance still outstanding
+## приёмка ещё не завершена
 
 Full Go 1.27.3 tests, PostgreSQL integration, actual systemd freeze/restart,
 independent restore/HA fencing, owner credential login, API publication,

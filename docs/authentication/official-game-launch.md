@@ -1,6 +1,6 @@
-# Launcher 0.26.9 — Minecraft Java online/offline launch
+# Launcher 0.26.9 — Minecraft Java запуск в сети и автономно
 
-## Execution paths
+## сценарии выполнения
 
 The Desktop launch selector provides three **mutually exclusive** realms. It
 sends `authMode` to the Rust launch command; Rust rejects inconsistent
@@ -34,7 +34,7 @@ can override the selected account. Game tokens are redacted from launch
 previews. Online authlib-injector arguments cannot be set from project JVM
 flags: the injector is derived from a signed, locally verified JAR.
 
-## Real integration checks (required for GA)
+## настоящие интеграционные проверки (обязательно для GA)
 
 1. Configure the first-party Microsoft application from 0.26.1–0.26.6 and
    sign in with a licensed Java Edition account. Verify the UUID in the native

@@ -1,4 +1,4 @@
-# NeverLauncher 0.47.4 — Offline Core state import and storage copy
+# NeverLauncher 0.47.4 — автономный импорт состояния Core и копирование хранилища
 
 This upgrade extends the existing **offline** verified SQLite Core 327 staging
 import (`sqlite-to-postgres` + `sqlite-to-postgres-live`). It does not modify
@@ -6,7 +6,7 @@ historical PostgreSQL or SQLite SQL migration files. **Do not cut over the live
 application on the strength of an import receipt alone.** Source and target
 must be stopped; the target must be a new, fully migrated PostgreSQL database.
 
-## Runbook
+## инструкция оператора
 
 1. Stop API, coordinator, launchers/bridges, queue consumers, schedulers and any
    other writers. Make independently restorable offline backups of
@@ -54,7 +54,7 @@ must be stopped; the target must be a new, fully migrated PostgreSQL database.
    objects and the complete files catalog have been checked. Retry a failed
    copy only after fixing the root cause.
 
-## Import behavior
+## поведение импорта
 
 - Core `auth_sessions`, `access_tokens`, `refresh_families`, `refresh_tokens`,
   `mfa_totp`, `mfa_recovery`, `minecraft_profiles`, `minecraft_sessions`,
@@ -83,7 +83,7 @@ must be stopped; the target must be a new, fully migrated PostgreSQL database.
   source files and verify actual API, authentication, project, publish, bridge,
   extension and launcher workflows before using PostgreSQL for production.
 
-## Validation status
+## статус проверки
 
 This source patch has Go syntax/format checks and regression scenarios, but a
 Go 1.27.3 toolchain and integration PostgreSQL instance are not available in

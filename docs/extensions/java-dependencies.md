@@ -1,8 +1,8 @@
-# 0.48.2 — Java Module Packaging & Dependencies
+# 0.48.2 — упаковка модулей Java и зависимости
 
 This release adds **runtime JAR dependencies** to the existing signed `.nlext` installation lifecycle. It does not download dependencies, alter the launcher core's classpath, open an alternative install path, or grant extra capabilities to an extension.
 
-## Actual installation/startup paths
+## фактические пути установки и запуска
 
 1. Compile third-party dependencies with a pinned version and keep the resulting JAR bytes. Build the Java Extension Host as before, including the SDK classes and the actual extension's class file (compiled against dependencies but **without** embedding them among host classes).
 2. Run `python3 scripts/java/package_dependencies_0482.py --host host.jar --output bundled-host.jar --library 'org.example:greeter@1.2.3@>=1.0 <2.0@path/to/greeter.jar'`. Repeat `--library` for additional dependencies. The offline builder copies the host content, embeds each dependency under `META-INF/launcher/libs/`, and generates `META-INF/launcher/libraries.lock` containing the embedded path, group/artifact coordinate, pinned SemVer, SHA-256 digest, and SDK API constraint. It never resolves Maven coordinates or reaches the network.
@@ -16,7 +16,7 @@ This release adds **runtime JAR dependencies** to the existing signed `.nlext` i
 
 **Limits:** at most 64 embedded dependencies, 16 MiB per embedded compressed JAR, 64 MiB total embedded JAR bytes, 4,096 entries per nested JAR and 64 MiB decompressed entries per nested JAR. No external Class-Path, network fetching or multi-release JARs. The Go package inspector's signed-package validation still applies independently.
 
-## Reproducible integration
+## воспроизводимая интеграция
 
 ```
 sh sdk/java/core/build.sh test

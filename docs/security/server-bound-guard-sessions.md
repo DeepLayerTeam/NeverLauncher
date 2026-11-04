@@ -1,6 +1,6 @@
-# 0.50.7 — Server-Bound Guard Sessions
+# 0.50.7 — сеансы Guard, привязанные к серверу
 
-## Working implementation
+## работающая реализация
 
 The protected mode uses the existing signed Ed25519 ServerBridge Protocol v3 heartbeat, device-signed and one-use **continuous Windows Guard v2** attestation, hardware-key-signed exact component plan, PostgreSQL player-session authority, and correlated, runtime-bound `player.kick` controls. The code is executed on the actual HTTP admission, ServerBridge join validation and signed server heartbeat paths; there is no standalone mock attestation endpoint.
 
@@ -12,7 +12,7 @@ The protected mode uses the existing signed Ed25519 ServerBridge Protocol v3 hea
 6. The ServerBridge node redeems the join with its signed authenticated request. The backend compares the persisted account, Never session, Minecraft session, trusted device, key epoch, server, UUID, profile and build against the admission record, and rechecks current trust, attestation, allowed Guard artifacts, Guard runtime profiles and signed plan. For cross-server handoffs, the destination must be separately allowlisted for those exact build bytes.
 7. Each accepted signed ServerBridge node heartbeat checks due protected player sessions against current authoritative PostgreSQL state and policy. When revoked or mismatched, the player session is atomically invalidated and a correlation-bound `player.kick` is queued for the running proxy/backend; the execution adapter must be running and polling the control queue.
 
-## Operations and limits
+## операции и ограничения
 
 - An active player without an immutable Guard binding is not grandfathered into protected mode: the next node heartbeat queues a correlated disconnect.
 - Rechecks are driven by actual node heartbeats and batched at up to 32 active sessions per server heartbeat; due records are at least 10 seconds old. Configure bridge heartbeat frequency and test worst-case queuing latency at your player count. **Do not treat 10 seconds as a guarantee for every player.** If the bridge or database becomes unavailable, automatic in-game revocation cannot be delivered, although protected admission/heartbeat responses fail closed.
@@ -21,7 +21,7 @@ The protected mode uses the existing signed Ed25519 ServerBridge Protocol v3 hea
 - A trusted Java extension has full process privileges. Signed evidence cannot prove that a compromised player host is cheat-free.
 - Policies and revocations can force existing sessions off; never weaken checks to avoid reconnects. PostgreSQL/Guard failures should alert operators. Tune indexing and batch sizes only with measured throughput and authoritative correlation data.
 
-## Real test commands
+## команды настоящих тестов
 
 ```sh
 cd services/api

@@ -34,7 +34,7 @@ jobs:
       - name: Race detection
         working-directory: services/api
         run: go test -race ./internal/httpapi -run 'TestFactoryBuilder.*02710' -count=1 -timeout=8m
-      - name: Static analysis
+      - name: Статический анализ
         working-directory: services/api
         run: go vet ./internal/httpapi
   cli:

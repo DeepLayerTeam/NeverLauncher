@@ -1,8 +1,8 @@
-# 0.48.6 Java Content & Distribution SPI
+# 0.48.6 Java SPI содержимого и распространения
 
 The shipped Java SDK supplies `ContentServices.CONTRACT` and `ContentProvider`. A signed and enabled extension registers a concrete provider with `ExtensionContext.providers()` then selects it; the *existing* provider registry enforces API compatibility, bounded lifecycle and graceful shutdown. This release adds no public unsigned release route.
 
-## Working operations
+## работающие операции
 
 - `source(projectId,path)` resolves a SHA-256/size-pinned asset in existing project storage or a URL restricted to HTTPS. `runtime().content().readChecked(asset)` reads the real bytes **only** through the authenticated `storage.read` / `http.fetch` Go Host broker and checks size and SHA-256 before return. Existing permission grants, project scope and revocation continue to apply; HTTPS uses the Go DNS/IP filtering and signed outbound network policy where applicable.
 - `texture(projectId,profileId,kind)` resolves pinned skin/cape bytes through the same broker and validation path. This does not grant access to another user's private texture.
@@ -28,6 +28,6 @@ python3 examples/extensions/java-content-spi/test-runner.py
 
 The sample is an actual executable Java Host JAR plus signable `.nlext` payload tree; `nl extension pack`/`verify` and the trusted publisher workflow remain required for installation. Host callbacks are tested using authenticated loopback HTTP, actual source bytes, tampered-content rejection and runtime permission revocation.
 
-## Boundaries and outstanding acceptance
+## границы и незавершённая приёмка
 
 **This SPI does not replace existing package-upload, public client-download, release signing, Minecraft entitlement or texture-ownership authority.** A source provider may propose bytes or metadata, but it cannot make unverified artifacts trusted. A selected provider is integrated into bounded admin package uploads when `contentExtensionId` is explicitly supplied. Other source/texture/delivery resolution can be called via Java SDK and internal Go RPC, but **does not automatically intercept the public client distribution path**. This is a functional bounded SPI, **not** certification of the full production distribution workflow. Release GA still requires independent CI on JDK 17/21 and Go 1.27.3, native packaging, migration and Minecraft E2E gates.

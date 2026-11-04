@@ -1,6 +1,6 @@
-# Launcher 0.25.6 — Yggdrasil/authlib-injector texture signing
+# Launcher 0.25.6 — подписание текстур Yggdrasil/authlib-injector
 
-## Production deployment
+## развёртывание промышленной версии
 
 Generate a persistent RSA private key separate from the **Ed25519 release manifest keys**:
 
@@ -14,7 +14,7 @@ Set `LAUNCHER_YGGDRASIL_RSA_KEY_FILE` to its absolute path on **each replica** a
 
 Set `LAUNCHER_PUBLIC_URL` to the public HTTPS API origin. `skinDomains` automatically includes its exact hostname. For a CDN that mirrors the *same normalized digest paths*, optionally set `LAUNCHER_YGGDRASIL_TEXTURE_DOMAINS` to a CSV of explicitly trusted hosts, e.g. `textures.example.org,.cdn.example.org` (leading dot allows subdomains only). `*`, IP literal, invalid domain and scheme are rejected. Only immutable `/api/v1/textures/blob/{64-hex-sha256}` URLs are signed; raw legacy external URLs are omitted and must first pass through the bounded secure import pipeline. A texture URL on a host outside the whitelist is also omitted from signed profile attributes. Prefer managed SHA-256 texture URLs (`/api/v1/textures/blob/{digest}`) to avoid client cache staleness. Imported PNGs must have gone through the secure texture pipeline.
 
-## Endpoints
+## конечные точки
 
 * `GET /` — authlib-injector metadata with PEM `signaturePublickey` and `skinDomains`. 503 when signing unavailable.
 * `GET /sessionserver/session/minecraft/profile/{uuid}?unsigned=false` — RSA PKCS#1 v1.5 SHA-1 signed `textures`. Default `unsigned=true` returns property without the signature as specified.

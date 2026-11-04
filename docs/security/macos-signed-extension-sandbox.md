@@ -6,7 +6,7 @@ extension package. This stage supports **self-contained, single-file Mach-O**
 runtimes, scripts, bundled runtime files, universal Mach-O wrappers and other
 unsupported layouts are denied; no transition to `trusted` occurs.
 
-## Deployment
+## развёртывание
 
 1. Build helper **on a Mac** with a trusted Developer ID Application certificate:
 
@@ -27,7 +27,7 @@ unsupported layouts are denied; no transition to `trusted` occurs.
    `shared:<name>`, HTTPS and secrets are accessed through existing scoped Host
    Protocol operations, never through new macOS entitlements.
 
-## Isolation mechanism
+## механизм изоляции
 
 - Parent transfers the exact installed Mach-O image over a private FD; verifies
   its Mach-O type/architecture; binds an SHA-256 digest to a bounded transfer.
@@ -59,7 +59,7 @@ unsupported layouts are denied; no transition to `trusted` occurs.
   isolation mechanism rather than relabel this policy as fully certified.
   No absolute user-mode anti-tamper guarantees.
 
-## Mandatory macOS acceptance
+## обязательная приёмка macOS
 
 Do not label this release fully production-certified until a signed helper has
 been built and its child verified on actual macOS hardware, including:

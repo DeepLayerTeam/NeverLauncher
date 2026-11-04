@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-// playerComponentPermissions0392 returns only permissions granted by the
-// authoritative project role for the exact published, signed catalog.
-// Callers cannot submit their own grant list, and responses are never cached.
+// playerComponentPermissions0392 возвращает только разрешения, предоставленные
+// авторитетной ролью проекта для конкретного опубликованного подписанного каталога.
+// Вызывающая сторона не может передать собственный список разрешений; ответы не кешируются.
 func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Re
 			encountered[name] = true
 			// Translate signed condition names into a dedicated project role
 			// namespace. "premium" -> "component.premium"; prefixed
-			// names remain unchanged. A claim is never taken from the client.
+			// Имена остаются неизменными. Утверждения о правах никогда не берутся из данных клиента.
 			action := name
 			if !strings.HasPrefix(action, "component.") {
 				action = "component." + action
@@ -57,7 +57,7 @@ func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Re
 			}
 		}
 	}
-	// Do not expose a grant outside the authenticated session's lifetime.
+	// Не раскрывайте разрешение за пределами срока действия авторизованного сеанса.
 	validUntil := time.Now().UTC().Add(30 * time.Minute).Unix()
 	if claims.Exp < validUntil {
 		validUntil = claims.Exp

@@ -175,7 +175,7 @@ export function ProfileManagementWorkspace({
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="My profile"
+          placeholder="Мой профиль"
         />
       </label>
       <label className="field">

@@ -747,7 +747,7 @@ export function ServerBridgeWorkspace({
               </span>
               <small>
                 Protocol {n.protocolVersion || "unknown"} ·{" "}
-                {state.state === "fresh" ? "Telemetry fresh" : state.reason}
+                {state.state === "fresh" ? "Телеметрия актуальна" : state.reason}
               </small>
             </button>
           );

@@ -1,29 +1,29 @@
-# 0.52.12 — Defect Closure & Independent Rehearsal
+# 0.52.12 — закрытие дефектов и независимая репетиция приёмки
 
-## What is actually executed
+## Что действительно выполняется
 
-`defect_rehearsal_05212.py` is an executable final-byte release-candidate freeze and independent-review tool, not an issue table, passive manifest validator, or GA-authorisation endpoint. Every successful review does all of the following on the approved **exact** source commit:
+`defect_rehearsal_05212.py` — действующий инструмент фиксации побайтно определённого кандидата в релиз и независимой проверки, а не таблица задач, пассивный валидатор манифеста или конечная точка разрешения GA. Каждая успешная проверка выполняет **все** следующие действия на точно утверждённом исходном коммите:
 
-1. Requires the checkout HEAD to equal the operator-approved 40-character commit, the Git tree to remain unchanged, and the worktree to be clean, including untracked files. This is an existing native checkout with `.git`, not a source ZIP.
-2. Opens **six complete downloaded final packages** (Windows/Linux/macOS x64/ARM64), including Linux detached signatures, and verifies exact byte size and SHA-256 against a **separately pinned** production distribution index. The index is scoped to project, version and source commit. It refuses missing/extra artifacts and unsafe links. Native Authenticode/GPG/notarization and real install/launch are verified by the existing 0.52.2 **raw** native installer replay, not inferred from hash matches.
-3. Checks a **separately signed, complete issue-tracker export** for the exact source commit. Every P0/P1 must be `closed` and identify a mandatory actually executed regression suite, not an arbitrary command. Issue-list authenticity and completeness ultimately depend on the independent issue-export signer and their access to the authoritative tracker. An unsigned list or a release-signing key reused for issue review fails.
-4. Executes the real version check and a fixed collection of source regressions (compatibility, six-platform packages, independent build, Guard/ServerBridge, HA/DR and 0.52.12 tamper tests). Writes and fsyncs bounded original logs; re-execution on the verifier requires an unchanged test inventory and validates original log hashes.
-5. Calls the production **full** `sweep_05211.verify_full()` twice on the original, current-version live evidence. This replays all 280 Minecraft required outputs and original client/server logs, all six OS-signed final installers, six native game runs, separately signed two-builder reproducibility results, five one-hour real gameplay soaks and the one-hour HTTPS load ledger. Neither `status: passed` nor a unit-test fixture is sufficient. It must return the original `OBSERVED_NOT_INDEPENDENT_GA` result twice, identically.
-6. Enforces the fixed Minecraft soak session-copy equality check even when Python runs with optimisations (`-O`); rejects a replaced copied session instead of accepting an omitted `assert`.
-7. Rechecks the frozen Git tree, all six package bytes and the issue export **after** the run. The independent reviewer signs the resulting observation with a dedicated Ed25519 key; the separate verifier opens the same raw evidence, re-runs the regressions and full sweep, and validates the signature and immutable log digests.
+1. Требует совпадения `HEAD` рабочей копии с утверждённым оператором 40-символьным коммитом, неизменности дерева Git и чистой рабочей директории, включая неотслеживаемые файлы. Нужна настоящая локальная копия с `.git`, а не ZIP исходников.
+2. Открывает **шесть полных загруженных конечных пакетов** для Windows/Linux/macOS x64/ARM64, включая отделённые подписи Linux, и проверяет точное количество байтов и SHA-256 по **независимо закреплённому** индексу промышленного дистрибутива. Область индекса определяется проектом, версией и исходным коммитом. Отсутствующие/лишние артефакты и опасные ссылки запрещены. Подписи Authenticode/GPG/нотаризация и реальная установка/запуск проверяются существующим воспроизведением **исходных** результатов нативных установщиков 0.52.2; совпадения хешей недостаточно.
+3. Проверяет **отдельно подписанную полную выгрузку системы дефектов** для указанного коммита. Каждая проблема P0/P1 должна иметь состояние `closed` и ссылаться на действительно исполненный обязательный набор регрессионных испытаний, а не произвольную команду. Достоверность и полнота выгрузки зависят от независимого подписанта и его доступа к авторитетному реестру. Неподписанный перечень либо повторное применение релизного ключа для проверки задач отклоняются.
+4. Выполняет настоящую проверку версии и фиксированный набор регрессионных тестов исходников (совместимость, пакеты шести платформ, независимая сборка, Guard/ServerBridge, HA/DR и проверки подмены 0.52.12). Записывает исходные журналы ограниченного размера с `fsync`. Повторный запуск на узле аудитора требует неизменного набора тестов и сверяет хеши исходных журналов.
+5. Дважды вызывает промышленную **полную** проверку `sweep_05211.verify_full()` на исходных живых доказательствах именно текущей версии. Она повторно проверяет 280 обязательных результатов Minecraft и оригинальные журналы клиента/сервера, шесть подписанных ОС конечных установщиков, шесть нативных игровых прогонов, результаты воспроизводимости от двух независимо подписанных сборщиков, пять часовых реальных игровых испытаний и часовой журнал HTTPS-нагрузки. Ни `status: passed`, ни тестовый фикстурный набор не достаточны. Оба запуска должны вернуть идентичный исходный результат `OBSERVED_NOT_INDEPENDENT_GA`.
+6. Обеспечивает проверку совпадения скопированных сеансов длительного испытания Minecraft даже при оптимизированном запуске Python (`-O`): подменённый сеанс отклоняется, даже когда обычный `assert` пропущен.
+7. **После** выполнения повторно проверяет зафиксированное дерево Git, байты всех шести пакетов и выгрузку дефектов. Независимый проверяющий подписывает наблюдения собственным ключом Ed25519; отдельный аудитор открывает те же исходные доказательства, снова запускает регрессионные и полные проверки и сверяет подпись и неизменяемые хеши журналов.
 
-The three stages `freeze`, `rehearse`, `verify` are designed for different protected runners; the final verifier must not share release or issue-tracker signing keys. The workflow is `.github/workflows/defect-closure-rehearsal-05212.yml` with independently controlled environments `release-candidate-freeze`, `independent-release-rehearsal`, `independent-release-verification` and machine labels `release-freeze`, `independent-review`, `independent-verifier`. Its `workflow_dispatch` requires the *out-of-band* approved source commit, project and index SHA-256. CI pull requests run negative and regression tests, **not** production freeze/GA.
+Три этапа `freeze`, `rehearse`, `verify` предназначены для разных защищённых исполнителей. Итоговый аудитор не должен использовать релизный ключ или ключ системы дефектов. Процесс `.github/workflows/defect-closure-rehearsal-05212.yml` использует независимо управляемые окружения `release-candidate-freeze`, `independent-release-rehearsal`, `independent-release-verification` и метки машин `release-freeze`, `independent-review`, `independent-verifier`. Параметры `workflow_dispatch` требуют **отдельно полученные** утверждённый коммит, проект и SHA-256 индекса. Проверки pull request в CI запускают отрицательные и регрессионные тесты, **а не** промышленную фиксацию релиза или GA.
 
-## Independent inputs (never commit private keys or accounts)
+## Независимые исходные данные (никогда не коммитьте закрытые ключи и учётные записи)
 
-- Release freeze host: absolute `$LAUNCHER_05212_FREEZE_INBOX/packages` holding exactly six final `.exe`/`.deb`/`.pkg` and two Linux `.deb.asc`, plus `source-index.json`. The index hash comes from the protected workflow input, not the index itself. `LAUNCHER_05212_FREEZE_SIGN_KEY_PATH` is a 0600 Ed25519 PEM **outside** checkout.
-- Independent review host: `$LAUNCHER_05212_REHEARSAL_INBOX` has an independently fetched copy of the same final package files/index, an actual signed `issues.json`/`issues.sig` export, and `full-sweep-paths.json` pointing to original E2E/soak/rebuild inputs already transferred from the verified CI and native labs. Original logs must be present and regular files. The reviewer's private key is a separate outside-checkout, mode 0600 PEM.
-- Independent verification host: `$LAUNCHER_05212_VERIFY_INBOX` holds its **own** authentic, independently obtained source packages/index, signed issue export and original evidence. It must not silently trust a copy of a receipt from the release builder.
-- In each protected environment, the public keys and separate SPKI SHA-256 pins must be configured from an external trusted channel. Release, issue authority and reviewer pins are **different**. The signing keys must not be uploaded as workflow artifacts. Private authentication/Minecraft credentials must stay in the physical lab, never in a public report.
+- Узел фиксации релиза: абсолютный каталог `$LAUNCHER_05212_FREEZE_INBOX/packages` с ровно шестью конечными `.exe`/`.deb`/`.pkg`, двумя Linux `.deb.asc` и `source-index.json`. Хеш индекса берётся из защищённого входного параметра процесса, а не из самого индекса. `LAUNCHER_05212_FREEZE_SIGN_KEY_PATH` указывает на PEM Ed25519 с режимом `0600` **вне** рабочей копии.
+- Узел независимой проверки: `$LAUNCHER_05212_REHEARSAL_INBOX` содержит независимо загруженные копии тех же конечных пакетов/индекса, настоящую подписанную выгрузку `issues.json`/`issues.sig` и `full-sweep-paths.json` со ссылками на исходные данные E2E, длительных испытаний и пересборок из проверенных CI и нативных лабораторий. Исходные журналы должны существовать и быть обычными файлами. Закрытый ключ проверяющего — отдельный PEM с режимом `0600` за пределами рабочей копии.
+- Узел независимого подтверждения: `$LAUNCHER_05212_VERIFY_INBOX` содержит **собственные** достоверные, независимо полученные исходные пакеты/индекс, подписанную выгрузку дефектов и исходные доказательства. Нельзя без проверки доверять копии подтверждения, полученной от сборщика релиза.
+- В каждом защищённом окружении открытые ключи и отдельные закреплённые SPKI SHA-256 должны поступать по внешнему доверенному каналу. Хеши ключей релиза, реестра дефектов и аудитора **разные**. Нельзя загружать ключи подписи как артефакты процесса. Закрытые учётные данные авторизации/Minecraft должны оставаться в физической лаборатории и никогда не попадать в публичный отчёт.
 
-### Signed issue export format
+### Формат подписанной выгрузки дефектов
 
-The independent tracker-export signer signs the canonical sorted JSON (no whitespace dependence) using Ed25519 on the exact bytes `b'neverlauncher.defect-closure.0.52.12\\x00' + canonical_json`. This is **not** a way to create or close tickets in the tracker:
+Независимый подписант выгрузки реестра задач подписывает канонический отсортированный JSON (без зависимости от пробелов) с помощью Ed25519 над точной последовательностью байтов `b'neverlauncher.defect-closure.0.52.12\\x00' + canonical_json`. Это **не** интерфейс создания или закрытия задач в реестре:
 
 ```json
 {
@@ -42,21 +42,21 @@ The independent tracker-export signer signs the canonical sorted JSON (no whites
 }
 ```
 
-This is format guidance, **not** proof that the example issue exists or has been closed. The record must be an authentic complete export of the real tracker for the commit. A manufactured empty export defeats the process regardless of cryptography: restrict the issue-export key to an independently audited tracker integration.
+Это описание формата, **а не** подтверждение существования или закрытия приведённой задачи. Запись должна быть достоверной полной выгрузкой действующего реестра для соответствующего коммита. Сфабрикованная пустая выгрузка нарушает процедуру независимо от криптографии: разрешайте подпись только интеграции с независимо проверяемым реестром задач.
 
-### Full original evidence configuration
+### Конфигурация всех исходных доказательств
 
-`full-sweep-paths.json` is a JSON object with **exactly** these keys (all paths absolute; no extra fields):
+`full-sweep-paths.json` — объект JSON, содержащий **ровно** следующие ключи (все пути абсолютные, дополнительных полей нет):
 
-- Original evidence paths: `compat_results`, `native_results`, `source_index`, `native_review`, `native_key`, `native_game_results`, `repro_a_report`, `repro_b_report`, `repro_a_sig`, `repro_b_sig`, `repro_a_key`, `repro_b_key`, `repro_a_dir`, `repro_b_dir`, `game_soaks`, `http_soak`, `soak_key`.
-- String observations: `index_sha`, `project`, `native_run_id`, `native_key_pin`, `native_reviewer`, `native_game_run_id`, `package_id`, `repro_run_id`, `repro_a_pin`, `repro_b_pin`, `soak_run_id`, `soak_key_pin`, `compat_run_id`.
-- Positive integer observations: `compat_attempt`, `native_attempt`, `repro_attempt`, `soak_attempt`.
+- Пути исходных подтверждений: `compat_results`, `native_results`, `source_index`, `native_review`, `native_key`, `native_game_results`, `repro_a_report`, `repro_b_report`, `repro_a_sig`, `repro_b_sig`, `repro_a_key`, `repro_b_key`, `repro_a_dir`, `repro_b_dir`, `game_soaks`, `http_soak`, `soak_key`.
+- Строковые наблюдения: `index_sha`, `project`, `native_run_id`, `native_key_pin`, `native_reviewer`, `native_game_run_id`, `package_id`, `repro_run_id`, `repro_a_pin`, `repro_b_pin`, `soak_run_id`, `soak_key_pin`, `compat_run_id`.
+- Положительные целочисленные значения: `compat_attempt`, `native_attempt`, `repro_attempt`, `soak_attempt`.
 
-`index_sha` must equal the out-of-band pinned release index SHA-256, `project` the frozen distribution project, and every underlying receipt must itself match the approved commit and exact version. The JSON file is **only a way to point the replayer at original evidence**, not a substitute for that evidence.
+`index_sha` должен совпадать с независимо закреплённым SHA-256 индекса релиза, `project` — с проектом зафиксированного дистрибутива, а каждое исходное подтверждение — с утверждённым коммитом и точной версией. JSON-файл **только указывает инструменту повторной проверки на исходные доказательства**, а не заменяет их.
 
-### Invocations
+### Запуск команд
 
-The CI workflow invokes the concrete commands with all required arguments. For manual review:
+Процесс CI вызывает конкретные команды со всеми обязательными аргументами. Для ручной проверки:
 
 ```sh
 python3 scripts/release/defect_rehearsal_05212.py --help
@@ -65,8 +65,8 @@ python3 scripts/release/defect_rehearsal_05212.py rehearse --help
 python3 scripts/release/defect_rehearsal_05212.py verify --help
 ```
 
-Missing source checkout, missing/altered final bytes, untrusted keys, an open P0/P1, uncompleted one-hour tests, incomplete Minecraft/native runs, disagreement between two replays or a changed regression log **blocks** rehearsal and produces no signed PASS. Normal CI locally checks code and negative tests but **cannot issue** an external acceptance receipt without real input assets/hardware.
+Отсутствие рабочей копии исходников, отсутствующие/изменённые конечные байты, недоверенные ключи, незакрытый дефект P0/P1, незавершённые часовые испытания, неполные прогоны Minecraft/нативных пакетов, расхождение двух воспроизведений либо изменённый журнал регрессии **блокируют** репетицию: подписанный `PASS` не создаётся. Обычный CI локально проверяет код и отрицательные сценарии, но **не может выдать** внешнее подтверждение приёмки без настоящих исходных артефактов и оборудования.
 
-## Limits of the actual 0.52.12 claim
+## Границы подтверждения версии 0.52.12
 
-The successful status is deliberately `REHEARSED_NOT_GA`; it confirms independent replay of the supported original suites, not every possible real user task. E2E-01–18, all ServerBridge/Guard/Device Trust physical combinations, migration of three real Gravit projects and physical multi-host incidents retain their own existing dedicated 0.52.3–0.52.10 live gates. If their results are unavailable, the 0.53.0 full acceptance remains **BLOCKED**. Do **not** reclassify missing `required` targets as optional, issue GA from signed self-reports, or promote artifacts rebuilt after frozen-candidate acceptance.
+Успешный статус намеренно обозначен `REHEARSED_NOT_GA`: он подтверждает независимое воспроизведение предусмотренных исходных испытаний, а не всех возможных действий реального пользователя. E2E-01–18, все физические сочетания ServerBridge/Guard/Device Trust, миграция трёх реальных проектов Gravit и физические аварии на нескольких узлах сохраняют свои отдельные действующие требования реальной приёмки 0.52.3–0.52.10. Без этих результатов полная приёмка 0.53.0 остаётся **ЗАБЛОКИРОВАННОЙ**. **Нельзя** считать отсутствующие цели `required` необязательными, объявлять GA по подписанным собственным отчётам или продвигать артефакты, пересобранные после утверждения зафиксированного кандидата.

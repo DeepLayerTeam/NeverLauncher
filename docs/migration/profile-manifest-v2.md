@@ -47,6 +47,6 @@ Digest is lowercase hex SHA-256 of the seven spec values in the order `projectId
 
 A profile update may supply `expectedRevision` in the PATCH request. A mismatch produces HTTP 409. Unknown schema versions fail closed. Further Minecraft, server, OS, and file policy semantics are deferred to P02–P04, and are not falsely claimed as implemented in 0.22.1.
 
-## Rollback
+## откат
 
 The migration is additive except for normalizing existing profiles to v2. Rolling back the *binary* to 0.22.0 after creating v2 manifests is unsafe: the older Rust client cannot verify v2 snapshots, and earlier backend profile writes do not maintain the new revision table. Restore from a compatible backup or keep 0.22.1+ until clients are upgraded; do not edit already signed published manifests as a workaround. There is deliberately no destructive down migration.

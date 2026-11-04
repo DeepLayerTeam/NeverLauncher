@@ -1,8 +1,8 @@
-# Launcher 0.25.10 — Gravit TextureProvider Migration
+# Launcher 0.25.10 — миграция Gravit TextureProvider
 
 This version imports **real** GravitLauncher/TextureProvider texture records into the existing Launcher local-project texture pipeline. It reads either the official upstream PostgreSQL table (`textures`) or an offline JSON export. No Gravit credentials, sessions or upstream access tokens are imported. The command is operator-only; there is no public migration endpoint.
 
-## Source format and identity mapping
+## исходный формат и сопоставление идентичностей
 
 Supported upstream PostgreSQL fields are `id UUID`, `user_uuid UUID`, `texture_type` (`SKIN` / `CAPE`), `file_hash` (SHA-1 or SHA-256 of the **original PNG**), `file_url`, and optional `metadata.model` (`slim` or `default`). The schema matches the upstream TextureProvider table in `migrations/001_initial.sql` at `GravitLauncher/TextureProvider`. Supported JSON exports are arrays of objects with those snake_case properties. JSON may additionally provide `object_key` (relative to the trusted source root/bucket).
 
@@ -16,7 +16,7 @@ Launcher makes **no** username-based, user-ID-derived, or official-UUID identity
 
 This is an **operator assertion**, not proof from the legacy source: review account ownership manually before import. No import is permitted into an official Minecraft profile. Unmatched records appear in the report.
 
-## Prepare and execute
+## подготовка и выполнение
 
 Apply the normal Launcher migrations **through 0073_texture_gravit_import_02510** before running this command. Back up the target database and local/S3 bucket first; verify quotas and cape entitlements. Set the same target environment variables used by the API (`LAUNCHER_DATABASE_DSN`, `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH` or `LAUNCHER_STORAGE_S3_*`).
 
@@ -55,7 +55,7 @@ For offline JSON, use `--source-json /path/to/export.json` instead of `--source-
 
 `--source-template` supports `%kind%` (`skin` or `cape`), `%KIND%` (`SKIN`/`CAPE`) and `%hash%` (original source digest). For example `--source-template 'skins/%hash%.png'` can only import skins. If skins and capes live in separate directories, either supply per-row `object_key` in a vetted JSON export, use a common template `'%kind%/%hash%.png'`, or run separate imports with a **distinct source ID** for each appropriately filtered export. Keys cannot contain `..`, absolute paths, empty components or backslashes. If a source points only to an HTTP URL and no trusted local/S3 object is available, it is quarantined: import the PNG to the trusted source storage first, rather than bypassing the SSRF-safe fetcher.
 
-## Import behaviour and recovery
+## поведение импорта и восстановление
 
 Each row is checked independently. SHA-1/SHA-256 verification is against source bytes **before** PNG normalization; resulting content-addressed SHA-256 is stored through the existing normalizer, prewrite staging, local/S3 immutable writer, owner quotas, cape policies and revision-controlled assignment. `source=imported` and `event=gravit-import` are recorded in the existing tables. A `texture_gravit_import_receipts` row (source ID + legacy ID) is committed **atomically** with its selection to prevent a second import from overwriting a subsequently changed skin. Re-running the same source ID reports `already-imported`; choosing a new ID is a new migration and should not be used to bypass provenance.
 
@@ -63,7 +63,7 @@ Preflight refuses ambiguous many-to-one UUID mappings (including an unmapped pla
 
 Rows with missing objects, invalid/oversized PNG, unknown digest format, wrong source digest, unsupported model or type, unmatched target UUID, disabled cape permissions or exceeded quotas are not selected. The report is atomically written with mode 0600, recording per-row reasons; any `blocked`, `unmatched`, `quarantined`, or `skipped-existing` outcomes result in nonzero exit status while valid rows remain committed. Inspect report before repeating. An interrupted import can be repeated with the same source ID. Orphaned staging data and immutable objects are handled by the existing 0.25.3 garbage collector after its safety window.
 
-## Verification checklist
+## контрольный список проверки
 
 1. Start with a fresh backup; test dry run using valid, truncated, malformed, oversized, symlink-escaping, source-hash-mismatch and missing-object samples.
 2. Perform a small canary batch; inspect `texture_gravit_import_receipts`, `texture_assignment_revisions` and `texture_saved_items` and confirm original hashes are not treated as normalized hashes.

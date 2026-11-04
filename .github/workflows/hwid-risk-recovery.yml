@@ -49,7 +49,7 @@ jobs:
       - name: Verify CLI migrations and build
         working-directory: cli
         run: go test ./internal/dbmigrate && go build ./cmd/...
-      - name: Go vet
+      - name: Статический анализ Go (vet)
         working-directory: services/api
         run: go vet ./internal/httpapi ./internal/repository ./cmd/launcher-api
   desktop:

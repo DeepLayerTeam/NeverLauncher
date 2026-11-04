@@ -31,7 +31,7 @@ jobs:
           go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
           cd ..
           python3 scripts/test/host-systemd-e2e-02811.py --cli "$RUNNER_TEMP/nl"
-      - name: Vet
+      - name: Статический анализ
         working-directory: cli
         run: go vet ./cmd/launcher
   windows-compile:

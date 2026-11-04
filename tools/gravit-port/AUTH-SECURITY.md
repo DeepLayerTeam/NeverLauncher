@@ -1,4 +1,4 @@
-# 0.49.6 — Auth and protection migration: operator runbook
+# 0.49.6 — миграция авторизации и защиты: инструкция для оператора
 
 This release modifies **existing execution paths**, not the Gravit module ABI. Its supported outputs are a safer legacy password verifier, an offline FileAuthSystem writer, root-signed certificate rotation, stricter Guard gating, and stricter official Minecraft profile verification. This is **not** evidence that every Gravit AdditionalHash / FileAuthSystem / GenerateCertificate / LauncherGuard / MojangSupport JAR is binary compatible.
 
@@ -23,7 +23,7 @@ This release modifies **existing execution paths**, not the Gravit module ABI. I
 
 This maintenance tool is POSIX-only (`flock`, `fsync`, atomic same-directory rename). On Windows, perform the mutation on a supported POSIX administrative host with the storage mounted in a filesystem that supports those guarantees. If not, use the existing NeverLauncher import and account management instead.
 
-## Release trust / delegated certificates
+## доверие к релизу и делегированные сертификаты
 
 `trust_certificates_0496.py` operates on **root-signed delegated component trust**, not a Windows Authenticode or Mojang-issued certificate. It uses the existing pinned trust root; it never trusts a root advertised by Gravit input or generated at runtime. Run in the offline release-signing environment only. Keep the root seed in the provisioned `LAUNCHER_TRUST_ROOT_ED25519_SEED` environment variable, never the distributed source tree.
 
@@ -42,13 +42,13 @@ This maintenance tool is POSIX-only (`flock`, `fsync`, atomic same-directory ren
 
 `sign-trust-policy.py` now refuses duplicate JSON and key IDs, invalid validity windows, symlinked inputs/output and malformed key material. It performs signature verification and atomically writes the signed policy with `0600` permissions.
 
-## Existing runtime enforcement
+## действующая защита во время исполнения
 
 - **AdditionalHash:** an imported Argon2id PHC with large memory/iteration/parallelism parameters is rejected by the actual login verifier before allocating Argon2 memory; supported digest and PHPass verifiers remain unchanged. Weak legacy hashes are for supported migration only; a successful NeverLauncher login should rehash them using the existing local-auth flow.
 - **LauncherGuard:** malformed or overflowing release version strings can no longer disable the Windows continuous-Guard policy requirement. Module/hook allowlist digest matching and ticket revocation remain enforced by existing Backend paths. This does not imply full anti-cheat coverage or user-mode protection parity across platforms.
 - **MojangSupport:** token-authenticated Minecraft profile reads now reject invalid Minecraft usernames, not just invalid UUID strings. The existing OAuth→Xbox→XSTS→Minecraft chain, entitlement and sessionserver mechanisms remain unchanged. **Real Microsoft account / entitlement / game join must be tested separately with authorized credentials**, never test refresh tokens in a public log.
 
-## QA and promotion
+## контроль качества и продвижение релиза
 
 Run targeted Python tests:
 

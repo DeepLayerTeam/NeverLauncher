@@ -8,15 +8,15 @@ if [[ -n "${1:-}" && "$1" != "${CANONICAL_VERSION}" ]]; then
   exit 2
 fi
 VERSION="${CANONICAL_VERSION}"
-# Apply real binary inspection and frozen-input gates to every subsequent
-# release. A version bump must never disable previously mandatory checks.
+# Применяйте настоящую проверку бинарных файлов и фиксацию исходных данных к каждому
+# следующему выпуску. Изменение версии не должно отключать ранее обязательные проверки.
 release_from_0462() {
   [[ "$(printf '%s\n' '0.46.2' "${VERSION}" | sort -V | head -n1)" == '0.46.2' ]]
 }
-# Standalone CLI bundles must exactly match canonical SQL and deployment inputs.
+# Автономные пакеты CLI должны точно соответствовать каноническим SQL и файлам развёртывания.
 python3 "${ROOT_DIR}/scripts/build/embedded_cli_assets.py" --check || exit 2
-# Fail before modifying any release output when checked-in build inputs drift.
-# The same guard is executed after CI builds to detect lockfile mutation.
+# При изменении зафиксированных исходных данных сборки завершайте процесс до изменения релизных файлов.
+# Та же защита выполняется после сборок CI, чтобы выявить изменение файлов фиксации зависимостей.
 if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
 fi
@@ -42,7 +42,7 @@ SOURCE_COMMIT="${LAUNCHER_SOURCE_COMMIT:-}"
 PUBLIC_RELEASE_BASE_URL="${LAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/Launcher/releases/download/v${VERSION}}"
 export LAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
-# 0.47.0 may only advance from unsigned staging if a second independent
+# Версия 0.47.0 может выйти из стадии неподписанной подготовки, только если второй независимый
 # builder has produced all six exact packages and BOTH builders have signed
 # actual-file captures with distinct pinned Ed25519 attestation identities.
 release_from_0470() {
@@ -60,9 +60,9 @@ if release_from_0470; then
   done
 fi
 
-# 0.25.0 is GA only if a different, authorized CI attestation key has
-# cryptographically certified all six real platform installers and the actual
-# optional-components lifecycle. Perform this check before erasing any output.
+# Версия 0.25.0 считается GA, только если другой уполномоченный ключ аттестации CI
+# криптографически подтвердил все шесть настоящих платформенных установщиков и жизненный цикл
+# необязательных компонентов. Проверяйте это до удаления любого результата.
 COMPONENTS_GA_RECEIPT=""
 if [[ "${VERSION}" == "0.25.0" ]]; then
   for tool in python3 git; do
@@ -141,9 +141,9 @@ if [[ "${VERSION}" == "0.31.0" ]]; then
     --signature "${LAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE}" >/dev/null || exit 2
 fi
 
-# Trusted release policy is compiled into scripts/release/release_policy.py, not
-# read from unsigned build outputs. Check independent operator signature and
-# exact source identity BEFORE expensive staging or modification of output.
+# Доверенная политика релиза встроена в scripts/release/release_policy.py,
+# а не считывается из неподписанных результатов сборки. Проверяйте независимую подпись
+# оператора и точную идентичность исходников ДО длительной подготовки или изменения вывода.
 GA_TARGET_MODE="$(python3 "${ROOT_DIR}/scripts/release/release_policy.py" ga-mode --version "${VERSION}")"
 GA_TARGET_EVIDENCE_DIR=""
 GA_TARGET_TRUSTED_KEY=""
@@ -204,9 +204,9 @@ if [[ "${VERSION}" == "0.33.0" ]]; then
     --output "${SINGLE_NODE_GA_VERIFIED_DIR}/SINGLE_NODE_GA_CERTIFICATION.json" || exit 2
 fi
 
-# Every release from 0.35.0 onward must recheck the real protected Backend.
-# Do NOT narrow this to one historical version: otherwise all future versions
-# silently bypass the trusted-runtime publication requirement.
+# Каждый выпуск начиная с 0.35.0 обязан заново проверять настоящий защищённый Backend.
+# НЕ ограничивайте проверку одной исторической версией: иначе все последующие версии
+# незаметно обойдут условие публикации с доверенным Runtime.
 GA_RUNTIME_PREFLIGHT_FILE=""
 GA_RUNTIME_GATE_REQUIRED=0
 if [[ "${VERSION}" =~ ^([0-9]+)\.([0-9]+)\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
@@ -804,8 +804,8 @@ if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' 
     --commit "${SOURCE_COMMIT}" --run-id "${EXT_RUN}" --run-attempt "${EXT_ATTEMPT}" \
     --matrix "${ROOT_DIR}/compatibility/gravit/module-parity-04211.json" \
     --output "${OUT_DIR}/EXTENSION_RELEASE_CERTIFICATION_0430.json"
-  # BOM/SHA256SUMS enumerate the flat release root. Bundle all seven raw
-  # reports in one top-level ZIP so their exact bytes enter the signed BOM.
+  # BOM/SHA256SUMS описывают плоский корень релиза. Упакуйте все семь исходных отчётов
+  # в один ZIP верхнего уровня, чтобы их точные байты вошли в подписанный BOM.
   python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${EXT_EVIDENCE}" \
     "${OUT_DIR}/EXTENSION_ACCEPTANCE_EVIDENCE_0430.zip"
 fi
@@ -844,8 +844,8 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
     --bundle "${OUT_DIR}" --receipt "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
 fi
 
-# Final authorization is over the ACTUAL staged installer and executable bytes.
-# A preflight receipt is never enough; verification here runs after packaging.
+# Окончательное разрешение относится к ФАКТИЧЕСКИМ байтам подготовленных установщиков и программ.
+# Одного предварительного подтверждения недостаточно; проверка запускается после упаковки.
 if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   if [[ "${GA_TARGET_MODE}" == "legacy-ga036" ]]; then
     GA_RECEIPT="GA_VERIFIED_TARGETS_0360.json"
@@ -882,8 +882,8 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
       --commit "${SOURCE_COMMIT}" \
       --output "${OUT_DIR}/GA_VERIFIED_SUPPORT_0440.json"
   fi
-  # Full replay of every signed check (including player execution logs) is
-  # mandatory from 0.43.15. This goes into the flat signed final release root.
+  # Начиная с 0.43.15 обязательна полная повторная проверка каждой подписанной проверки,
+  # включая журналы запуска игрока. Результат включается в плоский корень подписанного релиза.
   if [[ "$(printf '%s\n' '0.43.15' "${VERSION}" | sort -V | head -n1)" == '0.43.15' ]]; then
     python3 "${ROOT_DIR}/scripts/ga/package_full_evidence_04315.py" \
       --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \

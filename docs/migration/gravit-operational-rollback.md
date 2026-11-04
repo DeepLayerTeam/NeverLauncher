@@ -10,7 +10,7 @@
 - Verify independent backups and test restoring them on another machine. A changed inventory, UUID, privileges, economy, world hash or other material state is not safe to silently discard. The Backend compares domain fields and is the authority for whether a rollback plan is ready. For a reconciliation, the operator must supply the existing Backend `reconciliationEvidenceSha256`, not an invented value. This local tool additionally requires the current/source exports to agree exactly after reconciliation.
 - The old baseline **NeverLauncher release** must still exist, be signed and pass its runtime gates. A PostgreSQL rollback changes the Never release channel head; it does **not** switch a Gravit proxy, restore worlds or reissue legacy sessions. A stable-channel rollback still needs the existing one-time stable gate token.
 
-## Recovery configuration
+## восстановление конфигурация
 
 `/srv/never-cutover/rollback.json` (mode 0600), created and sealed **after** the unchanged cutover JSON has been chosen:
 

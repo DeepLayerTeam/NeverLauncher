@@ -1,6 +1,6 @@
-# Launcher 0.25.8 — Desktop Textures UI
+# Launcher 0.25.8 — интерфейс текстур Desktop
 
-## What ships
+## что входит в поставку
 
 **Desktop → Скины и плащи** is a real React UI, integrated into the existing app navigation and Launcher session lifecycle (not an iframe, stub or mock backend). It consumes the previously deployed 0.25.1–0.25.7 backend texture APIs and separates two identities:
 
@@ -11,7 +11,7 @@ The preview renders the classic/slim Minecraft avatar with the actual Java skin-
 
 Owner-only gallery PNGs are fetched with the authenticated Bearer token; temporary `blob:` object URLs are revoked on preview/gallery unmount or when the selection changes. 12 images are loaded per page. The frontend never embeds the Never token in an image URL. Official skins are displayed only from `textures.minecraft.net` paths `/texture/<hash>` with canonical HTTPS, allowed explicitly in Tauri's CSP. No arbitrary user-supplied external image URL becomes a browser preview source.
 
-## Behavior
+## поведение
 
 1. Open Desktop and log in to Launcher using **Вход**.
 2. Open **Скины и плащи**. Select local or official identity explicitly; local identity never switches the selected launch identity in the background.
@@ -20,7 +20,7 @@ Owner-only gallery PNGs are fetched with the authenticated Bearer token; tempora
 5. Rotate the 3D preview with the pointer or switch to 2D; view the library and revision history. **Сбросить** removes the assignment but retains the saved PNG. **Удалить** removes the library entry (and resets first when currently active), after a confirmation.
 6. For official identities, connect Microsoft in **Вход**, then upload official skin / select owned official cape / reset. Official capes cannot be uploaded. The button **Обновить** re-fetches the official profile.
 
-## Launch and test
+## запуск и тестирование
 
 Backend must already be upgraded through 0.25.7 with working PostgreSQL migrations and configured local/S3 texture storage. Without a configured public texture base URL, Minecraft may not be able to see an assigned locally stored texture even if Desktop previews work. See `texture-service.md`, `yggdrasil-authlib-injector.md`, `official-minecraft.md`.
 

@@ -4,7 +4,7 @@ This release adds an executable, fail-closed test gate and fixes a real
 capacity-measurement defect. It does **not** make the SQLite-only HTTP backend
 available, implement SQLite → PostgreSQL cutover, or prove multi-host HA.
 
-## What runs
+## что запускается
 
 `python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/launcher-03216-rc.json"`
 

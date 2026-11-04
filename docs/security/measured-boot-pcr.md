@@ -1,6 +1,6 @@
 # Launcher 0.31.5 — TPM2 Quote, Measured Boot & PCR Verification
 
-## Guarantees and limits
+## гарантии и ограничения
 
 This version **cryptographically verifies TPM2 Quote**, compares a single
 SHA-256 PCR bank with an **operator-approved** exact PCR-value allowlist, pins
@@ -14,7 +14,7 @@ The Guard/strict-device profile remains independently governed by Guard checks.
 There is no silent fallback to software evidence, generic TPM provider claims,
 missing PCR measurements or an unsigned policy.
 
-## Deployment
+## развёртывание
 
 Provision a trusted AK issuer and root store as for 0.31.2–0.31.4. Set
 `LAUNCHER_TPM_AK_ROOTS_FILE` to the operator-controlled absolute path.
@@ -53,7 +53,7 @@ separate IDs for different approved images and configurations. Independently
 validate expected PCRs (including boot event log and image verification) before
 allowlisting. **Never enroll the first PCR values submitted by a client.**
 
-## Protocol
+## протокол
 
 1. Register a hardware P-256 identity, bind the current device session, and
    complete the existing TPM2 Certify challenge successfully.
@@ -81,7 +81,7 @@ allowlisting. **Never enroll the first PCR values submitted by a client.**
 unknown PCR policy, malformed or replayed challenge, quote digest mismatch,
 revoked AK/root, policy rotation, old session epoch → fail closed.
 
-## Linux requirements
+## требования Linux
 
 Access to `/dev/tpmrm0`, `tpm2-tools` 5.x (at fixed `/usr/bin` paths), a
 pre-provisioned persistent AK (`0x81xxxxxx`) with a trusted issuer certificate,
@@ -90,14 +90,14 @@ bounded timeouts, and the fixed TPM Resource Manager TCTI.
 `TPM2_Quote` and `PCR_Read` are separate operations. PCR values changing between
 the operations cause a signed digest mismatch and rejection, not downgrade.
 
-## Windows requirements
+## требования Windows
 
 Windows Platform Crypto Provider and TPM Base Services (TBS), an enrolled AK
 accessible as a PCP key, an AK certificate issued by the trusted CA and TPM
 authorization compatible with empty-password AK sessions. Machines requiring
 other authorization sessions fail closed. No software quote is synthesized.
 
-## Verification and production signoff
+## проверка и утверждение промышленного выпуска
 
 `go test -race -count=1 ./internal/attestverify ./internal/trustbaseline`
 from `services/api`. Windows/Linux compile/test in
