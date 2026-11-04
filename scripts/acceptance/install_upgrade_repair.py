@@ -181,7 +181,7 @@ def main() -> int:
             # Физически израсходуйте доступные блоки tmpfs: это настоящий ENOSPC ядра, а не
             # искусственная ошибка от поддельной ФС или тестового перехвата.
             free = shutil.disk_usage(mountpoint).free
-            reserve = 128 * 1024  # enough for an error journal, not a real release
+            reserve = 128 * 1024  # достаточно для журнала ошибок, но не для настоящего выпуска
             require(free > reserve + (32 << 20),'insufficient scratch to create disk-full test')
             filler = mountpoint / '.disk-full-filler'
             try:

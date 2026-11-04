@@ -1224,7 +1224,7 @@ export function AdminApp() {
                   ).catch((err) => setError(err.message))
                 }
               >
-                Integrity check
+                Проверка целостности
               </button>
               <button
                 disabled={!canPublish || !selectedProjectId}

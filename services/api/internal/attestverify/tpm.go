@@ -42,7 +42,7 @@ type Binding struct {
 	BindingEpoch    int64
 	ChallengeID     string
 	Challenge       string
-	DevicePublicKey []byte // registered uncompressed SEC1 P-256
+	DevicePublicKey []byte // зарегистрированный открытый ключ SEC1 P-256 без сжатия
 	IssuedAt        time.Time
 	ExpiresAt       time.Time
 	Platform        string

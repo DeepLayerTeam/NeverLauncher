@@ -9,7 +9,7 @@ import (
 func TestConditionalResolverEndToEnd0244(t *testing.T) {
 	m := dependencyFixture0243()
 	c := m.ComponentCatalog
-	c.DefaultPreset = "" // default components, rather than explicit preset
+	c.DefaultPreset = "" // компоненты по умолчанию, а не явно выбранный набор
 	perf := &c.Components[1]
 	perf.Conditions = &ComponentConditions0244{
 		SchemaVersion: "1.0", OS: []string{"linux"}, Arch: []string{"x86_64"},

@@ -134,7 +134,7 @@ func TestGuardCompatibility0502SignatureExpiryEquivocationAndSafety(t *testing.T
 	if err := guardCompatValidateLaunch0502(root, p.ProjectID, p.Minecraft, p.Loader, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	p.Loader = "forge" // equal epoch, different content must not install
+	p.Loader = "forge" // при одинаковой эпохе установка другого содержимого запрещена
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err == nil {
 		t.Fatal("equivocation accepted")
 	}

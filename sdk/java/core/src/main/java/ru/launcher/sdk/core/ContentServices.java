@@ -12,7 +12,7 @@ import java.util.*;
 public final class ContentServices {
     public static final ProviderService<ContentProvider> CONTRACT =
         new ProviderService<>("never.content", ContentProvider.class, SemVer.parse("1.0.0"));
-    private static final int MAX_ASSET = 512 * 1024; // Base64 must fit Host 1 MiB response.
+    private static final int MAX_ASSET = 512 * 1024; // Данные Base64 должны помещаться в ответ Host объёмом 1 МиБ.
     private static final int MAX_RPC_BYTES = 24 * 1024;
     private volatile ProviderRegistry registry;
     private final HostSession host;

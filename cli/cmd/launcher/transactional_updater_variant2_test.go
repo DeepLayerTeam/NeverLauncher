@@ -46,7 +46,7 @@ func TestUpdaterCrashChild0527(t *testing.T) {
 		if err := os.WriteFile(ready, []byte("after-live-swap"), 0600); err != nil {
 			return err
 		}
-		select {} // parent kills this *process* before the commit is journaled.
+		select {} // родитель завершает *этот процесс* до записи фиксации в журнал.
 	}})
 	t.Fatalf("must be killed before return: %v", err)
 }
@@ -135,7 +135,7 @@ func TestUpdaterDamagedBackupCannotPoisonRollback0527(t *testing.T) {
 
 func TestUpdaterStagingFailureDoesNotRetainPayload0527(t *testing.T) {
 	root, spec := updaterFixture0527(t)
-	spec.SHA256 = strings.Repeat("0", 64) // correctly detect altered/corrupt release artifact
+	spec.SHA256 = strings.Repeat("0", 64) // корректно определять изменённый или повреждённый артефакт выпуска
 	u, _ := newTransactionalUpdater0156(root)
 	if _, err := u.apply(updaterRequest0156{Root: root, Namespace: "bad-hash", Files: []updaterFileSpec0156{spec}}); err == nil {
 		t.Fatal("corrupt package committed")

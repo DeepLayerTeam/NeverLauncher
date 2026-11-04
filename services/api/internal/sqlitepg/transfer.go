@@ -269,7 +269,7 @@ func verifyRestoredCore(ctx context.Context, backup string) error {
 	if err != nil {
 		return err
 	}
-	return repo.Close() // OpenExisting already runs every Core invariant check
+	return repo.Close() // OpenExisting уже проверяет все инварианты Core
 }
 
 // Import создаёт новое неизменяемое полностью проверенное зеркало PostgreSQL за одну

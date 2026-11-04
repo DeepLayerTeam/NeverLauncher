@@ -192,7 +192,7 @@ class Recovery0519Tests(unittest.TestCase):
             self.assertEqual(len([c for c in transferred if c[1] == "local-restore-world"]), 1)
             self.assertEqual(rec.read_state(work)["phase"], "prepared-not-admitted")
             with self.assertRaises(rec.RecoveryError):
-                rec.prepare(args)  # crash/retry may not overwrite old state
+                rec.prepare(args)  # сбой или повторная попытка не должны перезаписывать прежнее состояние
 
     def test_audit_readback_count_and_sampled_rpo(self):
         with tempfile.TemporaryDirectory() as d:
@@ -231,7 +231,7 @@ class Recovery0519Tests(unittest.TestCase):
                 receipt = rec.replay_postgres(opts)
             self.assertEqual(receipt["status"], "postgres-promoted-isolated")
             self.assertEqual(rec.read_state(root)["replayedLsn"], "0/3D")
-            self.assertEqual(pgctl.call_count, 2)  # isolated start, controlled stop
+            self.assertEqual(pgctl.call_count, 2)  # изолированный запуск, управляемая остановка
 
     def test_admission_checks_real_pg_schema_and_live_cluster_before_reporting_rto(self):
         from datetime import datetime, timedelta, timezone

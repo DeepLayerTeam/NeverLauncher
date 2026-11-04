@@ -233,7 +233,7 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 		probe, err := rehearsalProbeExec03310(ctx, real, run, stage.StageID, check)
 		if err != nil {
 			return report, err
-		} // No report submitted after failed execution.
+		} // После неудачного выполнения отчёт не отправляется.
 		report.Probes = append(report.Probes, probe)
 	}
 	if e = verifyLive(); e != nil {

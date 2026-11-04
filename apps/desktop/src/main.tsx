@@ -1432,7 +1432,7 @@ function App() {
           details,
           actionUrl: settings.discordActionUrl?.trim() || null,
         },
-      }).catch(() => undefined); // Discord is optional: failure must not block gameplay.
+      }).catch(() => undefined); // Discord необязателен: ошибка интеграции не должна мешать игре.
     update();
     const timer = window.setInterval(update, 30000);
     return () => window.clearInterval(timer);
@@ -4957,7 +4957,7 @@ function App() {
                 }
               >
                 <option value="ru">Русский</option>
-                <option value="en">English</option>
+                <option value="en">Английский</option>
               </select>
             </label>
             <label>
@@ -5314,7 +5314,7 @@ function App() {
                     />
                   </label>
                   <label>
-                    AK X.509 leaf certificate PEM
+                    PEM конечного сертификата AK X.509
                     <textarea
                       rows={4}
                       value={windowsAkCert0313}
@@ -5438,7 +5438,7 @@ function App() {
                         }}
                       >
                         <option value="local">
-                          Project Yggdrasil (Never identity / ServerBridge)
+                          Yggdrasil проекта (идентификация Never / ServerBridge)
                         </option>
                         <option value="official" disabled={!officialProfile}>
                           Official Minecraft (Microsoft){" "}
@@ -5878,7 +5878,7 @@ function FirstRunPanel({
           />
         </label>
         <label>
-          ID ServerBridge
+          Идентификатор ServerBridge
           <input
             value={settings.serverId ?? ""}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
@@ -5992,7 +5992,7 @@ function Overview({
         <pre>{launchPlan?.commandPreview ?? "План запуска ещё не собран."}</pre>
         {launchPlan?.deterministicSha256 && (
           <small>
-            Resolved plan SHA-256: <code>{launchPlan.deterministicSha256}</code>
+            SHA-256 рассчитанного плана: <code>{launchPlan.deterministicSha256}</code>
           </small>
         )}
       </section>
@@ -6203,7 +6203,7 @@ function AuthPanel({
             сам по себе не подтверждает владение identity.
           </p>
           <label>
-            Provider
+            Провайдер
             <select
               value={linkedProvider0293}
               onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
@@ -7006,7 +7006,7 @@ function SettingsPanel({
         {settings.discordPresenceEnabled && (
           <>
             <label>
-              Discord Application ID
+              ID приложения Discord
               <input
                 value={settings.discordApplicationId || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -7084,7 +7084,7 @@ function LogsPanel({
         <pre>{launchPlan?.commandPreview ?? "План запуска ещё не собран."}</pre>
         {launchPlan?.deterministicSha256 && (
           <small>
-            Resolved plan SHA-256: <code>{launchPlan.deterministicSha256}</code>
+            SHA-256 рассчитанного плана: <code>{launchPlan.deterministicSha256}</code>
           </small>
         )}
       </article>

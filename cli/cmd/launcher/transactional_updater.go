@@ -37,7 +37,7 @@ type updaterRequest0156 struct {
 	Files               []updaterFileSpec0156
 	Remove              []string
 	Verify              func() error
-	ExpectedStateSHA256 string // only client-package: optimistic client-state precondition, checked under updater lock
+	ExpectedStateSHA256 string // только client-package: предварительное условие оптимистической проверки состояния клиента под блокировкой обновления
 }
 
 type updaterTouchedPath0156 struct {

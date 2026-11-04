@@ -95,7 +95,7 @@ func validate(o Options) error {
 	}
 	if !strings.HasPrefix(o.HostURL, "http://127.0.0.1:") {
 		return errors.New("sandbox-host-must-use-localhost")
-	} // only parent ever calls this address
+	} // к этому адресу обращается только родительский процесс
 	for _, x := range p.FilesystemRead {
 		if x != "package" {
 			return errors.New("sandbox-invalid-filesystem-read")

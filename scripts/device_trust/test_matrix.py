@@ -183,7 +183,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             result_dir = tmp / "results" / "native-linux"
             result_dir.mkdir(parents=True)
             bad = self.passing_result()
-            bad["arch"] = "arm64"  # metadata matches target, actual runner does not
+            bad["arch"] = "arm64"  # метаданные совпадают с целью, фактический исполнитель — нет
             bad["runtimeArch"] = "x86_64"
             self.write_result(result_dir, bad)
             proc = run(

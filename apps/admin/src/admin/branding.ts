@@ -372,9 +372,9 @@ export async function signBranding0355(
       await crypto.subtle.sign("Ed25519", signer, buffer(message)),
     ),
   );
-  await verify(expected, message, output.signature); // seed must match the installed trust root / delegated key
+  await verify(expected, message, output.signature); // Начальное значение должно соответствовать установленному корневому ключу доверия или делегированному ключу
   const json = JSON.stringify(output, null, 2) + "\n";
-  await verifyBootstrap0355(json, root, policyText); // final round trip, no unchecked download
+  await verifyBootstrap0355(json, root, policyText); // заключительная проверка по полному циклу; никакой загрузки без проверки
   return json;
 }
 export async function readPng0355(file: File): Promise<string> {

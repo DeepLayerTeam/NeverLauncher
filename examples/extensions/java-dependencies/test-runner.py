@@ -95,7 +95,7 @@ def main():
         assert data["result"] == {"state": "RUNNING", "responsive": True}, data
         child.terminate()
         out, err = child.communicate(timeout=8)
-        assert child.returncode in (0, 143, -15), (child.returncode, out, err)  # JVM SIGTERM normally exits 143
+        assert child.returncode in (0, 143, -15), (child.returncode, out, err)  # JVM после SIGTERM обычно завершается с кодом 143
         assert "Real extension JAR dependency loaded: dependency-loaded-0482" in out, (out, err)
         print("PASS: real java -jar -> locked dependency -> Extension.start() -> authenticated Host -> heartbeat -> RPC -> shutdown")
     finally:

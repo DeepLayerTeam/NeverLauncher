@@ -24,7 +24,7 @@ from staged_matching_0344 import MatchingServer, JOIN, CRASH, player_online, par
 
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 ID = re.compile(r'[a-z0-9][a-z0-9._-]{2,95}\Z')
-PLAYER = 'NL_Cert_Client'  # Actual username in Runtime's compatibility launcher.
+PLAYER = 'NL_Cert_Client'  # Фактическое имя пользователя в совместимом запускателе Runtime.
 
 
 def run_binding():
@@ -185,7 +185,7 @@ def serve(args):
             try:
                 server.rcon.query('stop')
             except (OSError, ValueError, RuntimeError, PermissionError, ConnectionError):
-                pass  # RCON socket may close as the server obeys stop.
+                pass  # При штатной остановке сервера сокет RCON может закрыться.
             try:
                 healthy_at_stop = server.process.wait(timeout=30) == 0
             except __import__('subprocess').TimeoutExpired:

@@ -176,7 +176,7 @@ def validate_events(lines: str, suite: Suite, returncode: int) -> dict:
         try:
             event = json.loads(line)
         except ValueError:
-            continue  # Go may emit build diagnostics before JSON events
+            continue  # Go может выводить сообщения сборки до событий JSON
         if not isinstance(event, dict):
             continue
         test = event.get("Test")

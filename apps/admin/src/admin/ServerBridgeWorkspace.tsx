@@ -403,7 +403,7 @@ export function ServerBridgeWorkspace({
           .join("\n") || "Без аргументов"
       }\n\nКоманда будет выполнена игровым сервером. Отмена после dispatch не гарантируется.`;
       if (!window.confirm(effect)) return;
-      persistPending(request); // Save BEFORE network IO; retry uses exactly the same payload + key.
+      persistPending(request); // Сохранить ДО сетевого ввода-вывода; при повторной попытке использовать тот же набор данных и ключ.
     }
     submitInFlight.current = true;
     setBusy(true);
@@ -821,7 +821,7 @@ export function ServerBridgeWorkspace({
                 {node.integrityStatus || "unknown"}{" "}
                 {node.upgradeRecommended ? " · upgrade recommended" : ""}
               </dd>
-              <dt>ID Runtime</dt>
+              <dt>Идентификатор Runtime</dt>
               <dd>
                 <code>{node.runtimeId || "неизвестен"}</code>
               </dd>

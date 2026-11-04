@@ -17,7 +17,7 @@ func TestReleaseManifestTransition0222(t *testing.T) {
 	}
 	mutated := candidate
 	newRevision := snapshot
-	newRevision.Revision++ // valid digest, but NOT the revision pinned to this draft
+	newRevision.Revision++ // корректный дайджест, но НЕ версия, закреплённая за этим черновиком
 	mutated.ProfileSnapshot = &newRevision
 	if err := ValidateReleaseManifestTransition(original, mutated); err == nil {
 		t.Fatal("different valid revision accepted")

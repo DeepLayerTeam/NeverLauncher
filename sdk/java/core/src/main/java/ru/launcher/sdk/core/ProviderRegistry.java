@@ -103,7 +103,7 @@ public final class ProviderRegistry implements AutoCloseable {
             try {
                 while (inflight != 0) awaitDeadline(until);
                 requireOpen();
-                slot.active = null; // fail closed before stopping the previous instance
+                slot.active = null; // при ошибке закрывать доступ до остановки предыдущего экземпляра
             } catch (Exception e) { switching = false; gate.notifyAll(); throw e; }
         }
         try {
@@ -125,7 +125,7 @@ public final class ProviderRegistry implements AutoCloseable {
             }
             if (abandon) {
                 try { invokeLifecycle(next, false, context(serviceId, providerId, until), until); }
-                catch (Exception ignored) { /* process supervisor is the final stop boundary */ }
+                catch (Exception ignored) { /* контроллер процессов обеспечивает окончательное принудительное завершение */ }
                 throw new CancellationException("SPI registry closed during selection");
             }
             return new Selection(serviceId, providerId, choice.version());

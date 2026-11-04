@@ -232,7 +232,7 @@ func TestLiveWindowsJobKillOnClose04310(t *testing.T) {
 		t.Fatalf("OpenProcess(%d): %v", childPID, callErr)
 	}
 	defer closeHandle(child)
-	h.Close() // kill helper; its last Job handle close must kill all descendants
+	h.Close() // завершить вспомогательный процесс; закрытие последнего дескриптора Job должно завершить всех потомков
 	_ = h.Cmd.Wait()
 	status, _, callErr := waitObject.Call(child, 5000)
 	if status != 0 {

@@ -112,7 +112,7 @@ final class LoaderGuard0504 implements ClassFileTransformer {
                 }
             }
         } catch(Exception ex) { reject("loader evidence unavailable for "+name+": "+ex); }
-        return null; // observe/authorize source; do not rewrite loader bytecode
+        return null; // наблюдать за источником и разрешать его; не изменять байт-код загрузчика
     }
     private boolean permitted(String actual) {
         return actual.equals(loader) || (actual.equals("modlauncher") && (loader.equals("forge") || loader.equals("neoforge"))) ||

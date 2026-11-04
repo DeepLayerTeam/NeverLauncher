@@ -238,7 +238,7 @@ func TestAuthlibClassloader0279AuthlibProvenanceAndRollback(t *testing.T) {
 func TestAuthlibClassloader0279RejectInvalidAgentAndCustomModeRequiresOptIn(t *testing.T) {
 	root := compatFixture0279(t)
 	source := filepath.Join(t.TempDir(), "agent.jar")
-	invalid := compatJarFixture0279(t, false) // valid ZIP but no Premain-Class
+	invalid := compatJarFixture0279(t, false) // корректный ZIP без Premain-Class
 	if err := os.WriteFile(source, invalid, 0600); err != nil {
 		t.Fatal(err)
 	}

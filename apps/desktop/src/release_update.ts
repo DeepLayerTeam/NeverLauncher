@@ -24,7 +24,7 @@ export function ensureReleaseApproval0359(
   manifest: SignedTarget0359, preview: RequirementPreview0359 | null,
   approvedIdentity: string, previewError = '', requestedPreset = '',
 ): void {
-  updateIdentity0359(manifest); // validate the signed target even when preview is unavailable
+  updateIdentity0359(manifest); // проверять подписанный целевой объект, даже если предварительный просмотр недоступен
   if (previewError || !preview || preview.targetVersion !== manifest.version ||
       preview.targetSignature !== manifest.signature?.signature) {
     throw new Error('Невозможно подтвердить новые требования без нативной проверки установленной сборки');

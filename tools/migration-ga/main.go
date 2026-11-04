@@ -72,7 +72,7 @@ func requiredForClass(class string) []string {
 	return append(out, classChecks[class]...)
 }
 
-var required = func() []string { // union, used only to bound check names
+var required = func() []string { // объединение, используется только для ограничения проверяемых имён
 	seen := map[string]bool{}
 	var out []string
 	for _, class := range referenceClasses {

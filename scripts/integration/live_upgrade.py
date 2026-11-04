@@ -36,7 +36,7 @@ MAX_RESPONSE = 4 * 1024 * 1024
 
 class RejectRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None  # credentials and bearer tokens must never follow redirects
+        return None  # учётные данные и bearer-токены никогда не должны передаваться при перенаправлениях
 
 _HTTP_OPENER = build_opener(RejectRedirect)
 

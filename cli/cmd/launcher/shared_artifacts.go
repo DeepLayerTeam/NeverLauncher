@@ -267,7 +267,7 @@ func validateVanillaLibraryConflicts0277(libraries []MojangLibrary, targets []va
 			parts := strings.Split(strings.TrimSpace(lib.Name), ":")
 			if len(parts) < 3 {
 				continue
-			} // original validation will reject malformed coordinates later
+			} // первоначальная проверка позднее отклонит некорректные координаты
 			key := parts[0] + ":" + parts[1]
 			if previous, ok := selected[key]; ok && previous != parts[2] {
 				return fmt.Errorf("incompatible Minecraft libraries %s:%s and %s for target %s/%s", key, previous, parts[2], target.OS, target.Arch)

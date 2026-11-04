@@ -13,7 +13,7 @@ import (
 )
 
 func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
-	payload := bytes.Repeat([]byte{0x00, 0xff, 0x01, 0x89}, 3<<20) // 12 MiB, above the old 8 MiB buffer
+	payload := bytes.Repeat([]byte{0x00, 0xff, 0x01, 0x89}, 3<<20) // 12 МиБ — больше прежнего буфера на 8 МиБ
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/projects/one/versions/two/files" {
 			t.Errorf("path %s", r.URL.Path)

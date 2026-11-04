@@ -38,7 +38,7 @@ func parseDSN(raw string) (destination, error) {
 	if _, hasPassword := u.User.Password(); hasPassword {
 		return destination{}, errors.New("Sentry DSN secret key is unsupported")
 	}
-	if u.Scheme != "https" { // HTTP accepted only on loopback, useful for local/self-hosted deployments.
+	if u.Scheme != "https" { // HTTP допускается только через loopback, что удобно для локальных развёртываний.
 		if u.Scheme != "http" || (u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil || (net.ParseIP(u.Hostname()) != nil && !net.ParseIP(u.Hostname()).IsLoopback())) {
 			return destination{}, errors.New("Sentry DSN requires HTTPS")
 		}

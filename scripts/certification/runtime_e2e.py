@@ -64,7 +64,7 @@ def sign(signer: Path, source: Path, target: Path, doc: dict) -> str:
     env = os.environ.copy()
     env["LAUNCHER_CERT_TEST_SEED"] = (
         "42" * 32
-    )  # certification-only deterministic fixture
+    )  # детерминированный набор данных исключительно для сертификации
     result = subprocess.run(
         [str(signer), str(source), str(target)],
         env=env,

@@ -38,7 +38,7 @@ func AllowedDestination(rawURL string, grants []string) bool {
 	}
 	if net.ParseIP(host) != nil {
 		return false
-	} // outbound must use verified DNS/TLS
+	} // исходящее соединение должно использовать проверенные DNS/TLS
 	if u.Host != host && u.Host != net.JoinHostPort(host, port) {
 		return false
 	}

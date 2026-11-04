@@ -272,7 +272,7 @@ export function HostOperationsWorkspace04111({
     const prompt = `${action.toUpperCase()} JVM для ${serverName} (${serverId})?\nHost session: ${host.sessionId || "отсутствует"}\nPID: ${host.telemetry?.processId || "неизвестно"}\n\nОперация сохраняется в PostgreSQL до вызова хоста. Результат может остаться неопределённым.`;
     if (!window.confirm(prompt)) return;
     const next = { serverId, action, idempotencyKey: crypto.randomUUID() };
-    persist(next); // Durable browser intent BEFORE POST; regenerate on transport failure.
+    persist(next); // Устойчивое намерение браузера фиксируется ДО POST; при сбое передачи создаётся заново.
     void send(next);
   }
   async function reconcile(op: HostOperation04111) {

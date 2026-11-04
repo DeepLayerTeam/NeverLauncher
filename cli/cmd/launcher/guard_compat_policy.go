@@ -466,7 +466,7 @@ func guardCompatValidateLaunchWithKey05011(root, key, project, minecraft, loader
 	}
 	if v == nil {
 		return nil
-	} // explicit unprotected legacy mode
+	} // явный устаревший режим без защиты
 	p := v.Policy
 	for _, name := range []string{"JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS"} {
 		if opts := strings.ToLower(os.Getenv(name)); strings.Contains(opts, "-javaagent:") || strings.Contains(opts, "-agentpath:") || strings.Contains(opts, "-agentlib:") || strings.Contains(opts, "-xrunjdwp:") {

@@ -58,7 +58,7 @@ type Report struct {
 	Wrappers        []Wrapper `json:"wrappers"`
 	Blockers        []string  `json:"blockers"`
 	Ready           bool      `json:"ready"`
-	CutoverAllowed  bool      `json:"cutoverAllowed"` // never inferred from static inspection
+	CutoverAllowed  bool      `json:"cutoverAllowed"` // никогда не определяется только по статическому анализу
 }
 
 func safePath(p string) bool {

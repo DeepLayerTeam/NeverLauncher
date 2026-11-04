@@ -26,4 +26,4 @@ func atomicReplace(from, to string) error {
 	}
 	return nil
 }
-func syncDir(path string) error { return nil } // filesystem metadata durability is provided by MOVEFILE_WRITE_THROUGH on Windows
+func syncDir(path string) error { return nil } // в Windows сохранность метаданных файловой системы обеспечивается MOVEFILE_WRITE_THROUGH

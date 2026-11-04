@@ -163,7 +163,7 @@ def verify_full(a):
        manifest_sha256=a.index_sha,version=inventory.VERSION,commit=a.commit,project=a.project,
        run_id=a.native_run_id,attempt=str(a.native_attempt),public_key=a.native_key,
        public_key_sha256=a.native_key_pin,receipt=a.native_review,reviewer=a.native_reviewer)
-    native.verify_review(native_args)  # Signature + replay all 6 installation logs.
+    native.verify_review(native_args)  # Подпись и повторная проверка всех шести журналов установки.
     report['nativePackages'] = native.aggregate(native_args)
     report['nativeGame'] = native_game.verify(a.native_game_results,a.package_id,
           inventory.VERSION,a.commit,a.native_game_run_id)

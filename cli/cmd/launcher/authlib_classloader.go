@@ -301,7 +301,7 @@ func verifyCompat0279(root string, p factoryPlan0271) error {
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		return nil // Old InstallPlans are not silently migrated.
+		return nil // Старые InstallPlan не переносятся автоматически без уведомления.
 	}
 	if err := compatValidateLock0279(p.Compatibility); err != nil {
 		return err

@@ -22,7 +22,7 @@ func TestRemoteFaultUnknownBlocksNewAction04112(t *testing.T) {
 	var effects atomic.Int32
 	a.execute = func(string) (json.RawMessage, error) {
 		effects.Add(1)
-		return nil, os.ErrDeadlineExceeded // external side effect may already have happened
+		return nil, os.ErrDeadlineExceeded // внешнее побочное действие уже могло произойти
 	}
 	call := func(agent *remoteAgent0284, action, key string) int {
 		return remoteRequest0284(t, agent, token, http.MethodPost, "/v1/host/commands", action, key, "127.0.0.1:2190").Code

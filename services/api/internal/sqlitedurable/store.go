@@ -41,7 +41,7 @@ var (
 // URI, база в памяти, специальный файл или общий сетевой/overlay-том с записью недопустимы.
 type Options struct {
 	Path        string
-	BusyTimeout time.Duration // 0 = 5s; positive values must be between 1ms and 60s
+	BusyTimeout time.Duration // 0 = 5 с; положительные значения допустимы от 1 мс до 60 с
 	Readers     int           // 0 = 4; maximum 16
 }
 

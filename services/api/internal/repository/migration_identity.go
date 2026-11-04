@@ -171,7 +171,7 @@ func (r *SQLRepository) SaveMigrationIdentities0334(ctx context.Context, id stri
 	// Один и тот же источник при неизменной цели не должен порождать новые ревизии
 	// при повторе.
 	var previousSignature string
-	if prevDigest != "" { // always reverify targets; journal is only appended on first snapshot or changed resolution
+	if prevDigest != "" { // всегда повторно проверять целевые объекты; журнал дополняется только при первом снимке или изменении разрешения
 		// Последняя записанная подпись берётся из независимо сохранённых деталей
 		// события.
 		_ = tx.QueryRowContext(ctx, `SELECT detail->>'mappingSha256' FROM migration_events_0331 WHERE run_id=$1 AND kind='gravit_identity_mapped' ORDER BY seq DESC LIMIT 1`, id).Scan(&previousSignature)

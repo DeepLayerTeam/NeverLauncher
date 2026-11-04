@@ -138,7 +138,7 @@ public final class LauncherSpongeBridge {
                     java.util.UUID session = java.util.UUID.fromString(uuid);
                     if (!kickConfirmations.begin(username, session)) return BridgeControlResult.indeterminate("player_kick_already_pending");
                     tracked=true;
-                } catch (IllegalArgumentException ignored) { /* Missing Sponge profile UUID: execution cannot be verified. */ }
+                } catch (IllegalArgumentException ignored) { /* UUID профиля Sponge отсутствует: выполнение нельзя подтвердить. */ }
                 if (!invokeComponent(player,"kick",Component.text(safe(p.getOrDefault("reason","Disconnected by server operator"),512)))) {
                     if(tracked) kickConfirmations.cancel(username);
                     return BridgeControlResult.indeterminate("sponge_kick_dispatch_unconfirmed");

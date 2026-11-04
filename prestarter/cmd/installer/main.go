@@ -12,7 +12,7 @@ import (
 	"syscall"
 )
 
-var embeddedRootPublicKey string // filled by linker from release-time provisioned key
+var embeddedRootPublicKey string // заполняется компоновщиком из ключа, предоставленного при выпуске
 var version = "0.52.7"
 
 func rootDir() (string, error) {

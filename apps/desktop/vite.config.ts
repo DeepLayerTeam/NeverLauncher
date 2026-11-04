@@ -18,7 +18,7 @@ export default defineConfig({
   build: {
     sourcemap:
       process.env.LAUNCHER_SENTRY_RELEASE_BUILD === "1" ? "hidden" : false,
-  }, // maps only in authenticated release pipeline
+  }, // карты исходного кода — только в аутентифицированном конвейере выпуска
   server: {
     port: 1420,
     strictPort: true,

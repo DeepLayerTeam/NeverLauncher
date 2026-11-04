@@ -35,7 +35,7 @@ type TexturePolicyChange0259 struct {
 type TextureException0259 struct {
 	UserID      string    `json:"userId"`
 	Kind        string    `json:"kind"`
-	Decision    string    `json:"decision"` // allow, deny or inherit (delete)
+	Decision    string    `json:"decision"` // разрешить, запретить или наследовать (удалить)
 	Reason      string    `json:"reason"`
 	ActorUserID string    `json:"actorUserId,omitempty"`
 	UpdatedAt   time.Time `json:"updatedAt,omitempty"`

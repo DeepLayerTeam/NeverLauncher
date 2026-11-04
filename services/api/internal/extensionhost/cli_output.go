@@ -26,7 +26,7 @@ func (w *cliOutputWriter03113) Write(p []byte) (int, error) {
 	w.st.mu.Unlock()
 	if !allowed {
 		w.once.Do(func() { go w.abort() })
-		return n, nil // drain pipe until kernel terminates the process
+		return n, nil // читать канал до завершения процесса ядром ОС
 	}
 	_, err := w.target.Write(p)
 	if err != nil {

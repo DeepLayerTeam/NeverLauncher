@@ -71,7 +71,7 @@ def verify_runtime(
         port,
     ):
         raise ValueError("wrong server/node/port identity")
-    jar = ROOT if root is None else root  # use requested source checkout
+    jar = ROOT if root is None else root  # использовать запрошенную рабочую копию исходников
     jar = jar / "artifacts/plugins" / f"launcher-{service}-bridge-{version}.jar"
     observed_digest = proof.get("bridgeJarSha256")
     if not isinstance(observed_digest, str) or not HEX64.fullmatch(observed_digest):

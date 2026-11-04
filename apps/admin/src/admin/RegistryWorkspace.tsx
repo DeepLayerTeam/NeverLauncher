@@ -244,7 +244,7 @@ export function RegistryWorkspace({
     setMessage(null);
     try {
       const result = await fn();
-      if (result === cancelledOperation) return; // user declined; no request sent
+      if (result === cancelledOperation) return; // пользователь отказался; запрос не отправлен
       setLastOperation({ label, output: result, target });
       setMessage(
         `${label}: Backend вернул результат. Уточните текущее состояние в карточке.`,
@@ -756,7 +756,7 @@ export function RegistryWorkspace({
                 <code>{item.artifact.packageIdentity}</code>
               </p>
               {item.yankReason && (
-                <p className="error">Yank: {item.yankReason}</p>
+                <p className="error">Отзыв: {item.yankReason}</p>
               )}
               <div className="buttonRow">
                 <button
@@ -872,7 +872,7 @@ export function RegistryWorkspace({
                 return host ? (
                   <>
                     <p className="muted">
-                      Host: <strong>{host.state}</strong> · trust{" "}
+                      Хост: <strong>{host.state}</strong> · trust{" "}
                       <strong>{host.executionTrust ?? "неизвестно"}</strong> · OS
                       sandbox {host.osSandbox ?? "none"} · healthy{" "}
                       {host.healthy ? "да" : "нет"} · PID {host.pid ?? "—"} ·
@@ -893,7 +893,7 @@ export function RegistryWorkspace({
                       {host.filesystemSandbox ?? "none"}.
                     </p>
                     {host.lastError && (
-                      <p className="error">Host: {host.lastError}</p>
+                      <p className="error">Хост: {host.lastError}</p>
                     )}
                     <div className="buttonRow">
                       <button
@@ -909,7 +909,7 @@ export function RegistryWorkspace({
                           ).catch((err) => setError(err.message))
                         }
                       >
-                        Host Start
+                        Запустить хост
                       </button>
                       <button
                         disabled={
@@ -925,7 +925,7 @@ export function RegistryWorkspace({
                           ).catch((err) => setError(err.message))
                         }
                       >
-                        Host Stop
+                        Остановить хост
                       </button>
                       <button
                         disabled={item.currentState !== "enabled"}
@@ -937,7 +937,7 @@ export function RegistryWorkspace({
                           ).catch((err) => setError(err.message))
                         }
                       >
-                        Host Restart
+                        Перезапустить хост
                       </button>
                     </div>
                   </>
@@ -962,7 +962,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Enable
+                  Включить
                 </button>
                 <button
                   disabled={item.currentState !== "enabled"}
@@ -974,7 +974,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Disable
+                  Отключить
                 </button>
                 <button
                   disabled={item.currentState === "absent"}
@@ -986,7 +986,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Update
+                  Обновить
                 </button>
                 <button
                   onClick={() =>
@@ -997,7 +997,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Rollback
+                  Откатить
                 </button>
                 <button
                   disabled={item.currentState === "absent"}
@@ -1010,7 +1010,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Uninstall
+                  Удалить
                 </button>
               </div>
             </article>

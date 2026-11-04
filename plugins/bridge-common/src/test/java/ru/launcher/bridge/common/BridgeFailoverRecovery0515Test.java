@@ -38,7 +38,7 @@ public final class BridgeFailoverRecovery0515Test {
         check(recovered.nextBatch(64).size() == 1, "lost HTTP reply must preserve event after restart");
         LauncherApiClient.requireEventStream0515(protocol(true));
         check(recovered.ackSequence() == 0, "negotiation alone is never an ACK");
-        recovered.acknowledge(1); // only after an actual backend ACK is verified
+        recovered.acknowledge(1); // только после проверки фактического подтверждения ACK от Backend
         check(recovered.ackSequence() == 1 && recovered.nextBatch(64).isEmpty(), "real ACK advances checkpoint");
         BridgeEventJournal reloaded = new BridgeEventJournal(journal, "server", runtime, node);
         check(reloaded.ackSequence() == 1 && reloaded.nextBatch(64).isEmpty(), "ACK survives restart");

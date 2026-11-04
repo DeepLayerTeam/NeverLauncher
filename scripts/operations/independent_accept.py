@@ -397,7 +397,7 @@ def atomic_report(path, value):
             os.fchmod(f.fileno(), 0o600)
             json.dump(value, f, indent=2, ensure_ascii=False)
             f.write('\n'); f.flush(); os.fsync(f.fileno())
-        os.link(tmp_name, path)  # O_EXCL behavior: concurrent process cannot overwrite
+        os.link(tmp_name, path)  # поведение O_EXCL: параллельный процесс не может перезаписать файл
         dfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
         try: os.fsync(dfd)
         finally: os.close(dfd)

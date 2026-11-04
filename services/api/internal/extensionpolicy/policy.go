@@ -70,7 +70,7 @@ func netGrant(v string) bool {
 func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, error) {
 	if in == nil {
 		return nil, nil
-	} // legacy packages retain explicit unconfined behavior
+	} // устаревшие пакеты сохраняют явно заданный режим без изоляции
 	p := *in
 	if p.Version != "1" {
 		return nil, errors.New("sandbox.version must be 1")

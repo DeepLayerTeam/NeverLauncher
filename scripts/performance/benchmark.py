@@ -31,11 +31,11 @@ from urllib.request import Request, urlopen
 
 try:
     import psutil
-except ImportError:  # explicit failure in process measurement, not made-up zeros
+except ImportError:  # явная ошибка измерения процесса, а не вымышленные нулевые значения
     psutil = None
 
 MIB = 1024 * 1024
-SEED = "42" * 32  # fixture-only signing seed, never a production signing key
+SEED = "42" * 32  # начальное значение подписи только для тестового набора, никогда не рабочий ключ подписи
 
 
 def percentile(values: list[float], fraction: float) -> float:

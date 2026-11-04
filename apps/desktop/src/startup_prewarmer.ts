@@ -9,7 +9,7 @@ export function warmAfterIdle03011<T>(schedule: IdleScheduler03011, warm: (key: 
     void (async () => {
       for (const key of keys) {
         if (stopped || !canWarm()) return;
-        try { await warm(key); } catch { /* retry on user navigation */ }
+        try { await warm(key); } catch { /* повторять попытку при переходе пользователя */ }
       }
     })();
   });

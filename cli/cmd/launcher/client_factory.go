@@ -145,7 +145,7 @@ func (r *factoryRecorder0271) recordSource(s factorySource0271) error {
 		if prev.SHA256 != s.SHA256 || prev.Size != s.Size {
 			return fmt.Errorf("source %s changed during the same install", s.Path)
 		}
-		return nil // identical bytes can be used by multiple adapters
+		return nil // одни и те же байты могут использоваться несколькими адаптерами
 	}
 	r.sources[s.Path] = s
 	return nil

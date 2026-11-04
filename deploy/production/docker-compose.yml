@@ -80,7 +80,7 @@ services:
       LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST: ${LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST:-}
       LAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
       LAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
-      LAUNCHER_REDIS_URL: ""  # Redis is not used in Standard
+      LAUNCHER_REDIS_URL: ""  # В режиме Standard Redis не используется
       LAUNCHER_SERVERBRIDGE_HA_REQUIRED: "false"
       LAUNCHER_REPLICA_ID: ${LAUNCHER_REPLICA_ID:-}
       LAUNCHER_RATE_LIMIT_ENABLED: "true"

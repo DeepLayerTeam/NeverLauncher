@@ -56,7 +56,7 @@ func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 	}
 	if err := Write(root, "hardlink", payload); err != nil {
 		t.Fatal(err)
-	} // Replacement, not inode mutation.
+	} // Замена файла, а не изменение inode.
 	got, err := os.ReadFile(secret)
 	if err != nil || !bytes.Equal(got, []byte("immutable-secret")) {
 		t.Fatalf("outside inode changed: %q %v", got, err)

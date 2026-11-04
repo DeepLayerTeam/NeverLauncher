@@ -54,7 +54,7 @@ type Report struct {
 	Decisions       []Decision     `json:"operatorDecisions"`
 	Counts          map[string]int `json:"counts"`
 	Blockers        []string       `json:"blockers"`
-	Status          string         `json:"status"` // blocked, review_required, rc_candidate (NEVER GA certified)
+	Status          string         `json:"status"` // заблокировано, требует проверки, кандидат RC (НИКОГДА не подтверждено как GA)
 	ReportSHA256    string         `json:"reportSha256"`
 }
 
@@ -216,7 +216,7 @@ func Finalize(v Report) (Report, error) {
 	v.Blockers = uniq
 	if len(v.Blockers) == 0 {
 		v.Status = "review_required"
-	} // no automatic production certification, ever
+	} // автоматическая сертификация для рабочей среды категорически запрещена
 	digest, e := Digest(v)
 	if e != nil {
 		return Report{}, e

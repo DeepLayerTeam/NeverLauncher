@@ -15,6 +15,6 @@ type ExtensionSandboxPolicy struct {
 	MaxMemoryBytes       int64    `json:"maxMemoryBytes,omitempty"`
 	MaxCPUPercent        int      `json:"maxCpuPercent,omitempty"`
 	TimeoutSeconds       int      `json:"timeoutSeconds,omitempty"`
-	MaxRequestsPerSecond int      `json:"maxRequestsPerSecond,omitempty"` // 0 -> host default 64; lower is stricter
-	MaxOutputBytes       int64    `json:"maxOutputBytes,omitempty"`       // 0 -> host default 8MiB; includes logs and IPC replies
+	MaxRequestsPerSecond int      `json:"maxRequestsPerSecond,omitempty"` // 0 — значение хоста по умолчанию 64; меньшее значение ужесточает ограничение
+	MaxOutputBytes       int64    `json:"maxOutputBytes,omitempty"`       // 0 — значение хоста по умолчанию 8 МиБ; включает журналы и ответы IPC
 }

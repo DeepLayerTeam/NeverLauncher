@@ -65,7 +65,7 @@ type Plan struct {
 	Counts          map[string]int  `json:"counts"`
 	TransferBytes   int64           `json:"transferBytes"`
 	Blockers        []string        `json:"blockers"`
-	Status          string          `json:"status"` // blocked or manual; NEVER means approved to cutover
+	Status          string          `json:"status"` // заблокировано или вручную; НИКОГДА не означает разрешения на переключение
 	Content         gc.Plan         `json:"content"`
 	Modules         gm.Report       `json:"modules"`
 	Identities      IdentityPreview `json:"identities"`

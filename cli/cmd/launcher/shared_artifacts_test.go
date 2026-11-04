@@ -170,7 +170,7 @@ func TestSharedArtifacts0277ConcurrentAndUnsafeRoots(t *testing.T) {
 	}
 	cas := sharedArtifactsFromContext0277(ctx)
 	sum := sha256.Sum256(data)
-	for i := 0; i < 8; i++ { // independent writers must verify the same stored content
+	for i := 0; i < 8; i++ { // независимые записывающие процессы должны подтвердить совпадение сохранённого содержимого
 		if err := cas.store(ctx, src, sha1hex(data), hex.EncodeToString(sum[:]), int64(len(data))); err != nil {
 			t.Fatal(err)
 		}

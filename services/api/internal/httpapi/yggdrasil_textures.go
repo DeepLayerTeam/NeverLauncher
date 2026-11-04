@@ -199,7 +199,7 @@ func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (
 			}
 		}
 		record := bridgeTextureFromModelV2(selected)
-		record.UUID, record.Username = uuid, name // canonical local GameProfile is authoritative
+		record.UUID, record.Username = uuid, name // канонический локальный GameProfile является источником достоверных данных
 		return record, nil
 	}
 	if s.State == nil || s.State.ServerBridge == nil {

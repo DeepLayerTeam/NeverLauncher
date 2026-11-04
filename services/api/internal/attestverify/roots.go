@@ -117,7 +117,7 @@ func Load(path string, now time.Time) (*Store, error) {
 		}
 		store.roots = append(store.roots, parsedRoot{Root: r, certificate: cert, fingerprint: fingerprint})
 	}
-	_ = now // validity is deliberately evaluated per verification rather than during load
+	_ = now // действительность намеренно проверяется при каждой верификации, а не при загрузке
 	return store, nil
 }
 func Fingerprint(der []byte) string { h := sha256.Sum256(der); return hex.EncodeToString(h[:]) }

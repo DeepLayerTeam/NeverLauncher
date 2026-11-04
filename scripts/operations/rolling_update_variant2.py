@@ -462,7 +462,7 @@ def rollout(args):
         require(len(expected_targets) == 1, "hosts do not agree on exactly one target OCI digest")
         for label, target in nodes.items():
             if versions[label] == TARGET:
-                continue   # safe re-entry after an earlier partial rollout
+                continue   # безопасное повторное выполнение после ранее частично завершённого развёртывания
             lock.ping()
             require(all(reports[n]["ready"] for n in nodes if n != label),
                     "no independent healthy survivor")

@@ -77,7 +77,7 @@ func TestSQLCredentialsSelectiveManual335(t *testing.T) {
 		t.Fatalf("unexpected SQL selection %+v", entries)
 	}
 	invalid := strings.ReplaceAll(string(src), "password_hash", "invalid")
-	_ = invalid // A mutated ZIP would fail the inventory check before parsing.
+	_ = invalid // Изменённый ZIP не пройдёт проверку состава до начала разбора.
 	_, e = parseSQL([]byte("id,username,uuid,password_hash,password_format\n7,Bob,11111111-2222-4333-8444-555555555555,nothex,sha256-hex\n"), "sql-export/users.csv")
 	if e == nil {
 		t.Fatal("accepted invalid claimed password hash")

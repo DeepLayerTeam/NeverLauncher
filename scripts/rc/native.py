@@ -320,7 +320,7 @@ def main() -> int:
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     args.output.unlink(
         missing_ok=True
-    )  # stale PASSED artifact must not survive a failed rerun
+    )  # устаревший артефакт PASSED не должен сохраняться после неудачного повторного запуска
     try:
         result = execute(args.runtime, args.signer, version, args.commit)
     except (RCBlocked, ValueError, OSError, RuntimeError, CertificationBlocked) as exc:

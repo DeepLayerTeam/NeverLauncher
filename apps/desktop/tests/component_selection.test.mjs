@@ -63,7 +63,7 @@ test('dependency of new mod conflicts with installed mod and removes dependents'
   const candidate=proposeChoice0247('',cat,['legacy','legacyaddon'],'newaddon',true);
   assert.deepEqual(candidate.removed,['legacy','legacyaddon']);
   assert.deepEqual(candidate.added,['newaddon','engine']);
-  assert.doesNotMatch(candidate.choice,/\+engine/); // native expands signed dependencies
+  assert.doesNotMatch(candidate.choice,/\+engine/); // нативный компонент раскрывает подписанные зависимости
 });
 
 test('switching exclusive engines removes the old engine and its dependent mods',()=>{

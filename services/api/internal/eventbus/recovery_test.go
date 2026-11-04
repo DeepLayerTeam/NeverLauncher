@@ -27,7 +27,7 @@ func TestBusWorkerRestartResumesDurableDelivery0423(t *testing.T) {
 	if err != nil || !inserted {
 		t.Fatalf("publish inserted=%v: %v", inserted, err)
 	}
-	first.Start(ctx) // no dispatcher registered, delivery must remain pending
+	first.Start(ctx) // обработчик рассылки не зарегистрирован; доставка должна оставаться в ожидании
 	first.Close()
 	resumed, err := New(Config{WorkerInterval: 5 * time.Millisecond, LeaseDuration: time.Second}, repo)
 	if err != nil {

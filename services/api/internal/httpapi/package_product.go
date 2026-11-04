@@ -495,7 +495,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	manifest.GameReleaseGeneration = generation
-	manifest.RollbackSource = nil // arbitrary historic content is never a rollback without a privileged rollback job
+	manifest.RollbackSource = nil // произвольное историческое содержимое не считается откатом без привилегированного задания отката
 	signed, err := s.signManifest(manifest)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось подписать manifest: "+err.Error())

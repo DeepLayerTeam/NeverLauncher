@@ -636,7 +636,7 @@ export function ClientFactoryBuilder02710({
                   className="clientFactoryFileList"
                   aria-label="Изменённые файлы"
                 >
-                  <h5>Diff ({diff.length})</h5>
+                  <h5>Различия ({diff.length})</h5>
                   {diff.slice(0, 350).map((f) => (
                     <div key={f.path}>
                       <code>{f.path}</code> — {f.change}

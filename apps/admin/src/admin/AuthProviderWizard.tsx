@@ -208,7 +208,7 @@ export function AuthProviderWizard02910({
       <h3>1. Конфигурация</h3>
       <div className="formGrid">
         <label>
-          Provider ID
+          ID провайдера
           <input
             value={id}
             onChange={(e) => changeId(e.target.value)}

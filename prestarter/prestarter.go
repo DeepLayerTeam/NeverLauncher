@@ -27,7 +27,7 @@ type Options struct {
 	Offline         bool
 	LaunchProfile   bool
 	Username        string
-	NoDesktop       bool // unattended installer checks / provisioning
+	NoDesktop       bool // проверки и подготовка установки без участия пользователя
 }
 type manifestIdentity struct {
 	ProjectID string `json:"projectId"`

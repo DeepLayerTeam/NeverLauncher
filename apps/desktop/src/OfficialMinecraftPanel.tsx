@@ -203,7 +203,7 @@ export function OfficialMinecraftPanel0257({
               disabled={busy}
               onClick={() => call((m) => m.deviceLogin())}
             >
-              Device Code
+              Код устройства
             </button>
           </div>
         )}
@@ -474,7 +474,7 @@ export function OfficialMinecraftPanel0257({
           </div>
         </>
       )}
-      {/* Parent launch mode is driven solely by the verified profile callback, by stored metadata. */}
+      {/* Режим запуска родительского процесса определяется только обратным вызовом проверенного профиля и сохранёнными метаданными. */}
       {linkedProfile && !ready && (
         <p className="officialAuthError02610">
           Данные о ранее активном аккаунте перепроверяются. Официальный запуск

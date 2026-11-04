@@ -179,7 +179,7 @@ def atomic_receipt(target, receipt):
             out.write("\n")
             out.flush()
             os.fsync(out.fileno())
-        os.link(temporary, output)  # no overwrite when another operator races
+        os.link(temporary, output)  # не перезаписывать данные при конкурирующем действии другого оператора
         os.unlink(temporary)
     finally:
         if os.path.exists(temporary):

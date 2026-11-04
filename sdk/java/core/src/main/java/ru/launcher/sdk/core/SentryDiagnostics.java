@@ -28,7 +28,7 @@ public final class SentryDiagnostics {
             // Сохраняйте стандартное поведение диагностики и завершения JVM.
             if (original != null) original.uncaughtException(thread,failure);
             else {System.err.println("Java extension failed: " + failure.getClass().getSimpleName());}
-            try {send(destination,release,failure);} catch (Exception ignored) { /* diagnostics never hide failure */ }
+            try {send(destination,release,failure);} catch (Exception ignored) { /* диагностика никогда не скрывает ошибку */ }
         });
     }
     private record Destination(String dsn,String endpoint,String key) {
@@ -54,7 +54,7 @@ public final class SentryDiagnostics {
         String dsn=env.get("LAUNCHER_SENTRY_JVM_DSN");if(dsn==null||dsn.isBlank())return;
         String release=env.getOrDefault("LAUNCHER_SENTRY_RELEASE","launcher@0.31.0");
         if(!release.matches("[A-Za-z0-9_.@+\\-]{1,128}"))return;
-        try {send(Destination.parse(dsn),release,failure);} catch(Exception ignored) { /* fail open game / preserve original throwable */ }
+        try {send(Destination.parse(dsn),release,failure);} catch(Exception ignored) { /* не блокировать игру при ошибке; сохранить исходное исключение */ }
     }
     private static void send(Destination dest,String release,Throwable failure) throws Exception {
         String name=failure.getClass().getName();
@@ -69,7 +69,7 @@ public final class SentryDiagnostics {
             if(f.getLineNumber()>0)item.put("lineno",f.getLineNumber());
             frames.add(item);
         }
-        Collections.reverse(frames); // Sentry expects oldest frame first.
+        Collections.reverse(frames); // Sentry ожидает сначала самый ранний кадр стека.
         String id=UUID.randomUUID().toString().replace("-","");
         Map<String,Object> event=new LinkedHashMap<>();
         event.put("event_id",id);event.put("timestamp",Instant.now().toString());event.put("platform","java");event.put("level","error");event.put("release",release);

@@ -123,7 +123,7 @@ class StandardBackupTests(unittest.TestCase):
                 self.assertEqual(dr.verify_snapshot(snapshot)['schema'], 2)
             self.assertEqual(running['api'], 'running')
             self.assertEqual(running['nginx'], 'running')
-            self.assertEqual(running['admin'], 'exited')  # previously stopped, must stay stopped
+            self.assertEqual(running['admin'], 'exited')  # был остановлен ранее и должен оставаться остановленным
             self.assertEqual((snapshot / 'database.dump').read_bytes(), b'pgdump-data')
             self.assertEqual(len([f for f in snapshot.iterdir() if f.name.endswith('.tar.gz')]), len(dr.STANDARD_VOLUMES))
             self.assertEqual(len([v for v in calls if v[0] == 'exec']), 2)
@@ -234,7 +234,7 @@ class StandardRecoveryHardeningTests(unittest.TestCase):
                  patch.object(dr, 'compose', side_effect=dr.DrillError('simulated create failed')) as compose, \
                  self.assertRaisesRegex(dr.DrillError, 'simulated create failed'):
                 dr.restore_fresh('launcher', env, root, 'launcher', ready_url='https://launcher.example.org/ready', production=True, approved=True)
-            self.assertTrue(compose.called)  # reached creation, not rejected by matching source project name
+            self.assertTrue(compose.called)  # операция дошла до создания и не отклонена из-за совпадения имени исходного проекта
 
     def test_unsafe_coordinator_member_is_rejected_by_real_tar_reader(self):
         with tempfile.TemporaryDirectory() as folder:

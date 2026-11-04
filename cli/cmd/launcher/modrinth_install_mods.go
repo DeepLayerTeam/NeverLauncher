@@ -194,7 +194,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 		for _, dep := range v.Dependencies {
 			if dep.Type != "required" {
 				continue
-			} // optional/embedded are not silently installed
+			} // необязательные и встроенные компоненты не устанавливаются без уведомления
 			depID := dep.VersionID
 			if depID == "" {
 				if dep.ProjectID == "" {

@@ -206,7 +206,7 @@ export async function observeOwnerOperation(
         job.result?.status ===
           "rolled-back-as-new-validated-immutable-release" &&
         typeof job.result?.packageId === "string" &&
-        head.releaseId === job.result.packageId; // Rollback creates a NEW release.
+        head.releaseId === job.result.packageId; // Откат создаёт НОВЫЙ выпуск.
   return {
     phase: matches ? "confirmed" : "unconfirmed",
     job,

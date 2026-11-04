@@ -67,7 +67,7 @@ type remoteReceipt0284 struct {
 	Digest        string          `json:"digest"`
 	Subject       string          `json:"subject"`
 	Action        string          `json:"action"`
-	State         string          `json:"state"` // indeterminate before external operation, succeeded after confirmation
+	State         string          `json:"state"` // статус неизвестен до внешней операции; успех подтверждён после проверки
 	CreatedAt     string          `json:"createdAt"`
 	FinishedAt    string          `json:"finishedAt,omitempty"`
 	Result        json.RawMessage `json:"result,omitempty"`
@@ -808,7 +808,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		receipt.State = "succeeded"
 		receipt.Result = result
 	} else {
-		receipt.Error = runErr.Error() /* cannot prove external action was not applied */
+		receipt.Error = runErr.Error() /* невозможно доказать, что внешнее действие не было выполнено */
 	}
 	if err = remotePersistReceipt0284(path, receipt); err != nil {
 		write(http.StatusServiceUnavailable, map[string]string{"error": "result persistence failed; command outcome indeterminate"})
@@ -830,7 +830,7 @@ func remoteHandle0284(args []string) error {
 		return errors.New("usage: nl server-bridge host remote init|tls-init|issue|revoke|rotate-key|inspect|serve|call")
 	}
 	if args[0] == "call" {
-		return remoteCall0284(args) // A remote client has no local server root.
+		return remoteCall0284(args) // У удалённого клиента нет локального корневого каталога сервера.
 	}
 	if args[0] == "tls-init" {
 		// Выходной каталог должен быть новым; ca.key хранится только для автономной выдачи

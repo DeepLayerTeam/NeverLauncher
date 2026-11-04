@@ -105,7 +105,7 @@ func (h *Handle) Close() {
 			time.Sleep(10 * time.Millisecond)
 		}
 		_ = syscall.Kill(-pid, syscall.SIGKILL)
-	} // fallback for an unresponsive helper / process group
+	} // резервный вариант при отсутствии ответа вспомогательного процесса или группы процессов
 	if h.server != nil {
 		_ = h.server.Close()
 	}
@@ -223,7 +223,7 @@ func Available() error {
 	if _, err := signedHelper(); err != nil {
 		return err
 	}
-	return nil // Signed, specifically identified App Sandbox helper is installed.
+	return nil // Установлен подписанный вспомогательный процесс App Sandbox с однозначно подтверждённой идентичностью.
 }
 func Prepare(o Options) (_ *Handle, err error) {
 	// macOS не предоставляет непривилегированного аналога cgroup/Job Object.

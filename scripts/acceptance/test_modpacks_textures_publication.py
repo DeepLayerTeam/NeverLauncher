@@ -91,7 +91,7 @@ class ModpackPublicationTests0526(unittest.TestCase):
         for data in (b'',b'not-a-png',b'\x89PNG\r\n\x1a\n'+b'\x00'*25):
             with self.subTest(data=data), self.assertRaises(acceptance.Blocked): acceptance.check_png(data,'skin')
         fake=b'\x89PNG\r\n\x1a\n'+b'\x00'*8+struct.pack('>II',64,64)+b'\x00'*9
-        acceptance.check_png(fake,'skin')  # Header preflight only; Backend fully decodes PNG.
+        acceptance.check_png(fake,'skin')  # Предварительно проверяется только заголовок; Backend выполняет полное декодирование PNG.
         with self.assertRaises(acceptance.Blocked): acceptance.check_png(fake,'cape')
 
     def test_no_external_credentials_always_block(self):

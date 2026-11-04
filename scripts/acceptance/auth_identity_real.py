@@ -88,7 +88,7 @@ def private_write(path: Path, data: dict):
             stream.write('\n')
             stream.flush()
             os.fsync(stream.fileno())
-        os.link(tmp, path)  # exclusive creation; a raced output cannot be overwritten
+        os.link(tmp, path)  # эксклюзивное создание: результат конкурирующего процесса нельзя перезаписывать
         d = os.open(path.parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
         try: os.fsync(d)
         finally: os.close(d)

@@ -44,7 +44,7 @@ def sources_in(directory: Path) -> list[Path]:
             raise PortError(f"source symlink forbidden: {p}")
         if p.is_file():
             if p.suffix != ".java":
-                continue  # Non-Java assets are deliberately not embedded.
+                continue  # Ресурсы не на Java намеренно не встраиваются.
             if p.stat().st_size > 1 << 20 or not p.resolve().is_relative_to(source):
                 raise PortError(f"unsafe source file: {p}")
             result.append(p)

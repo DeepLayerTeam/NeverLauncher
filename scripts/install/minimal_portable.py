@@ -235,7 +235,7 @@ def backup_portable(root, output, secret_file):
     core.read_install(root)
     core.require(not core.safe_absolute(secret_file).is_relative_to(root),
                  "recovery passphrase must be kept outside backed-up installation")
-    passphrase(secret_file)  # preflight before making any plaintext snapshot
+    passphrase(secret_file)  # предварительная проверка до создания любого незашифрованного снимка
     output = core.safe_absolute(output)
     core.private_directory(output.parent)
     core.require(not output.exists() and not output.is_symlink(),

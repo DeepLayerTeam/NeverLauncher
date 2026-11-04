@@ -27,7 +27,7 @@ const tpmQuote uint16 = 0x8018
 type PCRPolicy0315 struct {
 	ID        string            `json:"id"`
 	Platform  string            `json:"platform"`
-	PCRs      map[string]string `json:"pcrs"` // SHA-256 bank: index => exactly 32 bytes hex
+	PCRs      map[string]string `json:"pcrs"` // банк SHA-256: для каждого индекса — ровно 32 байта в шестнадцатеричном представлении
 	NotBefore time.Time         `json:"notBefore"`
 	NotAfter  time.Time         `json:"notAfter"`
 }
@@ -107,7 +107,7 @@ func PCRIndices0315(p PCRPolicy0315) []int {
 type QuoteEvidence0315 struct {
 	TPM2BAttest      string            `json:"tpm2bAttest"`
 	TPMTSignature    string            `json:"tpmtSignature"`
-	PCRValues        map[string]string `json:"pcrValues"` // hex digests, strictly selected PCR indices
+	PCRValues        map[string]string `json:"pcrValues"` // хеши в шестнадцатеричном виде, только явно выбранные индексы PCR
 	AKCertificatePEM string            `json:"akCertificatePem"`
 	IntermediatesPEM []string          `json:"intermediatesPem,omitempty"`
 }
@@ -247,7 +247,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	if !rootMatched {
 		return fail("quote AK certificate chain no longer trusted")
 	}
-	expiration := now.Add(5 * time.Minute) // short-lived; revocation checked again on status
+	expiration := now.Add(5 * time.Minute) // краткосрочный объект; статус отзыва повторно проверяется при запросе состояния
 	if p.NotAfter.Before(expiration) {
 		expiration = p.NotAfter
 	}

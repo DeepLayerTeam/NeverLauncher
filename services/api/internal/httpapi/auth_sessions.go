@@ -551,7 +551,7 @@ func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID stri
 // смену привязки.
 func (s *authSessionStore) replaceDeviceBinding0432(sessionID, userID, previousDeviceID string, previousEpoch int64, newDeviceID string, verifiedAt time.Time) (authSessionRecord, error) {
 	if s.persistent != nil {
-		return authSessionRecord{}, errSessionBindingChanged0432 // SQL replacement is handled in one repository transaction.
+		return authSessionRecord{}, errSessionBindingChanged0432 // Замена в SQL выполняется одной транзакцией репозитория.
 	}
 	if strings.TrimSpace(newDeviceID) == "" || previousEpoch < 1 {
 		return authSessionRecord{}, errSessionBindingChanged0432

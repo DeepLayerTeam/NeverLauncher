@@ -491,7 +491,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
     result.bytes_reused = stats.bytes_reused.load(Ordering::Relaxed);
     stats.emit(match *control.borrow() {
         Directive::Running if result.failed > 0 => "failed",
-        Directive::Running => "staged", // The release has NOT yet been published.
+        Directive::Running => "staged", // Выпуск ещё НЕ опубликован.
         Directive::Paused => "paused", Directive::Cancelled => "cancelled"
     }, None, true);
     Ok(result)
@@ -582,7 +582,7 @@ mod tests {
         let observed = received.lock().unwrap();
         let event = observed.last().unwrap();
         assert_eq!(event.bytes_transferred, 600);
-        assert_eq!(event.bytes_verified, 0); // not signed/hash-verified yet
+        assert_eq!(event.bytes_verified, 0); // подпись и хеш ещё не проверены
         assert!(event.speed_bytes_per_second > 0);
         assert_eq!(event.eta_seconds, Some(1));
         assert!(event.elapsed_seconds >= 2);
@@ -821,7 +821,7 @@ mod content_cache_mirror_integration_tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn detects_tampered_primary_falls_back_to_mirror_and_second_profile_is_offline() {
         let trusted = b"real-verified-jar";
-        let poisoned = b"fake-verified-jar"; // same length; only SHA-256 rejects this
+        let poisoned = b"fake-verified-jar"; // длина совпадает; несоответствие обнаружит только SHA-256
         assert_eq!(trusted.len(), poisoned.len());
         let (primary, primary_count, primary_server) = serve(poisoned).await;
         let (mirror, mirror_count, mirror_server) = serve(trusted).await;

@@ -119,7 +119,7 @@ final class BridgeControlJournal implements AutoCloseable {
         props.setProperty(p + "channel", command.channelId());
         props.setProperty(p + "lease", command.leaseToken());
         props.setProperty(p + "updated", Long.toString(System.currentTimeMillis()));
-        persist(); // durable write and directory fsync before invoking any side effect
+        persist(); // надёжная запись и fsync каталога перед выполнением любого побочного действия
     }
 
     synchronized void complete(BridgeControlCommand command, BridgeControlResult result) throws IOException {
@@ -251,6 +251,6 @@ final class BridgeControlJournal implements AutoCloseable {
     }
     private static void setOwnerOnly(Path p) throws IOException {
         try { Files.setPosixFilePermissions(p, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------")); }
-        catch (UnsupportedOperationException ignored) { /* Windows ACL controlled by host configuration. */ }
+        catch (UnsupportedOperationException ignored) { /* ACL Windows определяется конфигурацией хоста. */ }
     }
 }

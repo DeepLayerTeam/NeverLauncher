@@ -130,7 +130,7 @@ class RollbackTests(unittest.TestCase):
         prev.write_private(self.fresh,self.snapshot)
         self.assertEqual(self.call('commit'),0)
         self.assertEqual(self.statefile.read_text(),'rolled_back')
-        self.assertEqual(self.call('reconcile'),0)  # readback is idempotent; commit is not retried
+        self.assertEqual(self.call('reconcile'),0)  # повторное чтение идемпотентно; фиксация транзакции не повторяется
         state = rb.state_load(self.journal,hashlib.sha256(self.cfgfile.read_bytes()).hexdigest(),
                               hashlib.sha256(self.cutfile.read_bytes()).hexdigest())
         self.assertEqual(state['phase'],'committed_fenced')

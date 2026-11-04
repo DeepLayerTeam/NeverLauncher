@@ -136,7 +136,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 	start := time.Now()
 	if e = cmd.Start(); e != nil {
 		return res, e
-	} // The child runs in a private process group on POSIX; group termination prevents orphaned test grandchildren.
+	} // В POSIX дочерний процесс работает в отдельной группе; завершение группы предотвращает появление осиротевших процессов следующих уровней.
 	done := make(chan struct{})
 	go func() {
 		select {

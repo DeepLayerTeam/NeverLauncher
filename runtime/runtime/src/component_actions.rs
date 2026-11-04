@@ -121,7 +121,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
         if !selected_paths.iter().any(|p|active.contains(p)){continue}
         for action in &component.actions {
             match action.kind.as_str() {
-                "File"=>{ /* the signed file is already staged by active_files */ },
+                "File"=>{ /* подписанный файл уже подготовлен механизмом active_files */ },
                 "ClassPath"=>{
                     if !plan.main_module.is_empty(){return Err(format!("component {} classpath action is incompatible with modular entrypoint",component.id))}
                     if !active.contains(&action.path){return Err(format!("component {} classpath file is not installed: {}",component.id,action.path))}

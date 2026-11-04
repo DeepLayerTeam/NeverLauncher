@@ -1,6 +1,6 @@
 "use strict";
 const byId = (id) => document.getElementById(id);
-let token = ""; // Volatile only: never persisted to sessionStorage/localStorage or URLs.
+let token = ""; // Только в оперативной памяти: никогда не сохраняется в sessionStorage, localStorage или URL.
 const show = (id, state) => {
   byId(id).hidden = !state;
 };

@@ -228,7 +228,7 @@ export function BackendOperations0289({
             новую команду.
           </p>
           <label className="field">
-            Точное подтверждение: <code>RESTART {status.instanceId}</code>
+            Точное подтверждение: <code>ПЕРЕЗАПУСТИТЬ {status.instanceId}</code>
             <input
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
@@ -317,7 +317,7 @@ export function BackendOperations0289({
         push-соединение.
       </p>
       <label className="field">
-        User ID
+        ID пользователя
         <input
           value={recipient}
           maxLength={128}
@@ -350,13 +350,13 @@ export function BackendOperations0289({
           Validate / apply / rollback конфигурации
         </button>
         <button onClick={() => navigate("job-monitor")}>
-          Build / publish jobs
+          Задания сборки и публикации
         </button>
         <button onClick={() => navigate("extensions-manager")}>
-          Extension lifecycle
+          Жизненный цикл расширений
         </button>
         <button onClick={() => navigate("devices")}>
-          Token / session lifecycle
+          Жизненный цикл токенов и сеансов
         </button>
         <button onClick={() => navigate("audit")}>Журнал аудита</button>
       </div>

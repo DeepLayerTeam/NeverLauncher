@@ -61,7 +61,7 @@ class ReleaseUploadTests(unittest.TestCase):
             self.assertIn('upload-proguard --uuid '+uuid,commands)
             self.assertIn('releases finalize',commands)
             self.assertNotIn('test-secret',commands)
-            self.assertTrue(mapping.exists())  # Retained for audit/retry.
+            self.assertTrue(mapping.exists())  # Сохранено для аудита и повторной попытки.
 
     def test_no_credential_no_file_deletion(self):
         with tempfile.TemporaryDirectory() as temporary:

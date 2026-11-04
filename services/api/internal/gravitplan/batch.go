@@ -31,7 +31,7 @@ type Dependency0492 struct {
 type ProfileResult0492 struct {
 	Destination     Destination      `json:"destination"`
 	SourceDirectory string           `json:"sourceDirectory,omitempty"`
-	Status          string           `json:"status"` // blocked or manual, never "approved"
+	Status          string           `json:"status"` // заблокировано или вручную, но никогда не «одобрено»
 	PlanSHA256      string           `json:"planSha256,omitempty"`
 	FilesSHA256     string           `json:"filesSha256,omitempty"`
 	FileCount       int              `json:"fileCount"`
@@ -48,7 +48,7 @@ type Batch0492 struct {
 	TargetSHA256    string              `json:"targetSha256"`
 	Profiles        []ProfileResult0492 `json:"profiles"`
 	ProfileCount    int                 `json:"profileCount"`
-	Status          string              `json:"status"` // blocked or manual, never approved
+	Status          string              `json:"status"` // заблокировано или вручную, но никогда не одобрено
 	Blockers        []string            `json:"blockers"`
 	BatchSHA256     string              `json:"batchSha256"`
 }

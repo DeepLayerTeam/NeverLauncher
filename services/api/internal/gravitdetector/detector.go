@@ -54,9 +54,9 @@ type Report struct {
 	SourceEntries    int            `json:"sourceEntries"`
 	ClaimedVersion   string         `json:"claimedVersion,omitempty"`
 	DetectedVersion  string         `json:"detectedVersion,omitempty"`
-	VersionEvidence  string         `json:"versionEvidence"` // signed upstream provenance is outside the scope
+	VersionEvidence  string         `json:"versionEvidence"` // проверка подписанного происхождения исходного проекта не входит в область этой операции
 	VersionStatus    string         `json:"versionStatus"`   // recognized | unverified | unsupported | conflict
-	Status           string         `json:"status"`          // manual | blocked, never production compatible by inference
+	Status           string         `json:"status"`          // ручной режим или блокировка; совместимость с рабочей средой не предполагается автоматически
 	CutoverAllowed   bool           `json:"cutoverAllowed"`
 	Components       []Component    `json:"components"`
 	Findings         []Finding      `json:"findings"`

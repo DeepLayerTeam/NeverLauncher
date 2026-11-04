@@ -91,7 +91,7 @@ class FaultServer:
                             self.send_body(416, b"")
                             return
                         if self.headers.get("If-Range") != etag and self.headers.get("If-Range"):
-                            offset = 0  # validator changed; return a full 200
+                            offset = 0  # валидатор изменился; вернуть полный ответ 200
                         if offset >= len(data):
                             code = 416
                             self.send_body(416, b"", {"Content-Range": f"bytes */{len(data)}"})

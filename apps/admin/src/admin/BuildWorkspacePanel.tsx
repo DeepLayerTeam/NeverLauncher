@@ -494,7 +494,7 @@ export function BuildWorkspacePanel({
             canBuild={canFileWrite && workspace.state !== "built"}
           />
           <p>
-            Workspace: <code>{workspace.id}</code> · {workspace.state} ·
+            Рабочая область: <code>{workspace.id}</code> · {workspace.state} ·
             revision {workspace.revision} · Profile revision{" "}
             {workspace.profileRevision}
           </p>
@@ -509,7 +509,7 @@ export function BuildWorkspacePanel({
               Другой workspace
             </button>
             <button disabled={busy} onClick={() => void scanFiles()}>
-              Scan / SHA-256
+              Проверка / SHA-256
             </button>
           </div>
           {workspace.state !== "built" && (
@@ -708,7 +708,7 @@ export function BuildWorkspacePanel({
                 disabled={busy || !canFileWrite || !selected.length}
                 onClick={() => void stage()}
               >
-                Stage selected ({selected.length})
+                Подготовить выбранные ({selected.length})
               </button>
               <button
                 disabled={
@@ -723,7 +723,7 @@ export function BuildWorkspacePanel({
                 }
                 onClick={() => void validate()}
               >
-                Validate staged files
+                Проверить подготовленные файлы
               </button>
               <button
                 disabled={

@@ -276,7 +276,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 		event = "visibility-change"
 	} else if !oldActive {
 		event = "select"
-	} // remaining state is in snapshot
+	} // оставшееся состояние находится в снимке
 	if _, err := tx.ExecContext(ctx, `INSERT INTO texture_assignment_revisions(assignment_id,revision,snapshot,actor_user_id,reason,event) VALUES($1,$2,$3,$4,$5,$6)`, a.ID, a.Revision, snapshot, a.UserID, "player selection update", event); err != nil {
 		return model.TextureAssignment0251{}, err
 	}

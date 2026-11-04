@@ -62,7 +62,7 @@ type Fetcher struct {
 	hosts  map[string]bool
 	lookup func(context.Context, string) ([]netip.Addr, error)
 	dial   func(context.Context, string, string) (net.Conn, error)
-	roots  *x509.CertPool // test-only injection; production uses system CAs
+	roots  *x509.CertPool // внедрение только для тестов; рабочая среда использует системные центры сертификации
 }
 
 func isDNSName(host string) bool {

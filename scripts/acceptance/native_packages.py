@@ -511,7 +511,7 @@ def trusted_review_key(path, fingerprint):
 
 
 def sign_review(a):
-    summary = aggregate(a)  # No signature before all six raw receipts/logs replay.
+    summary = aggregate(a)  # Не подписывать до повторной проверки всех шести исходных квитанций и журналов.
     reviewer = a.reviewer or ''
     require(re.fullmatch('[A-Za-z][A-Za-z0-9._-]{2,63}', reviewer) is not None,
             'independent reviewer identifier required')

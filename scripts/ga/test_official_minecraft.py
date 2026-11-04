@@ -117,7 +117,7 @@ class OfficialGATest(unittest.TestCase):
         self.root = Path(self.directory.name)
         self.key = (
             Ed25519PrivateKey.generate()
-        )  # Only synthetic test data, never a release key.
+        )  # Только синтетические тестовые данные, ни в коем случае не ключ выпуска.
         self.pub = (
             self.key.public_key()
             .public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)

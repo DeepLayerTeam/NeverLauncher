@@ -60,7 +60,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
         <div className="brandColors0355">
           {([['accentColor','Акцент'],['backgroundColor','Фон'],['textColor','Текст']] as const).map(([key,label])=><label key={key}>{label}<input aria-label={label} type="color" value={brand[key]||'#ffffff'} onChange={e=>change(key,e.target.value)}/></label>)}
         </div>
-        <label className="field">Язык оформления<select value={brand.locale||'ru'} onChange={e=>change('locale',e.target.value)}><option value="ru">Русский</option><option value="en">English</option></select></label>
+        <label className="field">Язык оформления<select value={brand.locale||'ru'} onChange={e=>change('locale',e.target.value)}><option value="ru">Русский</option><option value="en">Английский</option></select></label>
         {([['logoPng','Логотип'],['iconPng','Иконка в Desktop'],['splashPng','Фон splash']] as const).map(([field,label])=><label className="field" key={field}>{label} · PNG до 128 KiB
           <input type="file" accept="image/png" onChange={e=>{const f=e.target.files?.[0];if(f)readPng0355(f).then(s=>change(field,s)).catch(err=>setError(String(err)))}}/>
           {brand[field]&&<button type="button" onClick={()=>change(field,'')}>Удалить {label.toLowerCase()}</button>}

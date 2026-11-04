@@ -49,7 +49,7 @@ type Report struct {
 	EntriesSHA256   string         `json:"entriesSha256"`
 	Rows            []Mapping      `json:"rows"`
 	Summary         map[string]int `json:"summary"`
-	Ready           bool           `json:"ready"` // All UUIDs matched; does NOT authorize cutover.
+	Ready           bool           `json:"ready"` // Все UUID совпали; это НЕ разрешает переключение.
 }
 
 func UUID(s string) (string, error) {

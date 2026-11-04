@@ -15,7 +15,7 @@ import shutil
 import stat
 import zipfile
 
-ZIP_EPOCH = 315532800  # 1980-01-01T00:00:00Z, oldest ZIP date
+ZIP_EPOCH = 315532800  # 1980-01-01T00:00:00Z — самая ранняя дата в формате ZIP
 
 
 def timestamp() -> tuple[int, int, int, int, int, int]:

@@ -17,7 +17,7 @@ public final class Cancellation implements AutoCloseable {
     public boolean cancel(){
         List<Runnable> pending;
         synchronized(this){if(cancelled)return false;cancelled=true;pending=List.copyOf(listeners);listeners.clear();}
-        for(Runnable callback:pending){try{callback.run();}catch(RuntimeException ignored){/* independent callbacks must still run */}}
+        for(Runnable callback:pending){try{callback.run();}catch(RuntimeException ignored){/* независимые обратные вызовы всё равно должны выполняться */}}
         return true;
     }
     public Cancellation child(){Cancellation child=new Cancellation();onCancel(child::cancel);return child;}

@@ -84,7 +84,7 @@ export class NeverLauncherAPI {
             if (total > max) { await reader.cancel('response size limit'); throw new Error('API response exceeds configured size limit'); }
             controller.enqueue(value);
           } catch (error) {
-            if (!finished) { finished = true; try { await reader.cancel(error); } catch { /* stream already errored */ } reader.releaseLock(); }
+            if (!finished) { finished = true; try { await reader.cancel(error); } catch { /* в потоке уже произошла ошибка */ } reader.releaseLock(); }
             controller.error(error);
           }
         },
@@ -115,7 +115,7 @@ export class NeverLauncherAPI {
       try {
         const decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw));
         if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) error = decoded;
-      } catch { /* Non-JSON errors still include status and request ID. */ }
+      } catch { /* Даже ошибки не в формате JSON содержат статус и идентификатор запроса. */ }
       throw new ApiError(response.status, String(error.code ?? ''), String(error.message ?? error.error ?? response.statusText), response.headers.get('x-correlation-id') ?? '');
     }
     if (type === 'bytes') return raw as T;

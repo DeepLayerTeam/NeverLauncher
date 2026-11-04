@@ -1177,7 +1177,7 @@ export function ReleaseWorkspace({
               disabled={busy || !canPrepare || !form.packageId}
               onClick={() => void packageAction("validate")}
             >
-              Validate
+              Проверить
             </button>
             <button
               disabled={
@@ -1191,13 +1191,13 @@ export function ReleaseWorkspace({
               disabled={busy || !canPrepare || !form.packageId}
               onClick={() => void packageAction("stage")}
             >
-              Stage
+              Подготовить
             </button>
             <button
               disabled={busy || !canPrepare || !form.packageId}
               onClick={() => void packageAction("integrity-check")}
             >
-              Integrity check
+              Проверка целостности
             </button>
             <button
               disabled={!form.packageId || busy}

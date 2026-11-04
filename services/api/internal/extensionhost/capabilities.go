@@ -5,7 +5,7 @@ import (
 )
 
 type Capability0311 struct {
-	State      string `json:"state"` // detected, blocked, unknown, unsupported
+	State      string `json:"state"` // обнаружено, заблокировано, неизвестно, не поддерживается
 	ReasonCode string `json:"reasonCode"`
 }
 

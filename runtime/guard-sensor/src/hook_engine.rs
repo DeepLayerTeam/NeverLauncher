@@ -447,7 +447,7 @@ fn reconcile_after_library_load(module: *mut c_void) {
     // Само согласование перехватов может требовать операций загрузчика ОС. Никогда не ждите ENGINE_STATE
     // рекурсивно из обратного вызова LoadLibrary.
     let Ok(mut state) = ENGINE_STATE.try_lock() else {
-        return; // regular heartbeat remains mandatory and will reconcile
+        return; // регулярные сигналы работоспособности обязательны и обеспечат согласование состояния
     };
     if !state.active || !state.healthy || state.seen_modules.contains(&(module as usize)) {
         return;

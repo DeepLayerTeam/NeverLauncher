@@ -31,7 +31,7 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 	files := make([]updaterFileSpec0156, 0, len(newManifest.Files))
 	wanted := map[string]bool{}
 	for _, file := range newManifest.Files {
-		wanted[file.Path] = true // existing user-owned/optional files must never become stale removal targets
+		wanted[file.Path] = true // существующие пользовательские и необязательные файлы нельзя удалять как устаревшие
 		if !manifestFileAppliesToCurrentOS0156(file) || !managedUpdateFile0224(file) {
 			continue
 		}

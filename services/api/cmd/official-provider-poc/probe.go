@@ -87,10 +87,10 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 		return errors.New("server handshake failed")
 	}
 	login := putVarInt(nil, 0)
-	name := "NLProbe26" // not a valid player's real username
+	name := "NLProbe26" // не настоящее имя пользователя допустимого игрока
 	login = putVarInt(login, len(name))
 	login = append(login, name...)
-	if protocol >= 764 { // 1.20.2+: Login Start UUID is required (16 raw bytes).
+	if protocol >= 764 { // Для версии 1.20.2+ в Login Start обязателен UUID (16 байт).
 		login = append(login, make([]byte, 16)...)
 	} else if protocol >= 759 {
 		// Современные варианты Login Start до 1.20.2 не сертифицируются этой пробой;
@@ -119,7 +119,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	}
 	// В состоянии входа 0x01 означает Encryption Request. Проверяйте наличие
 	// открытого ключа в запросе; одного байта 0x01 недостаточно.
-	idLength, err := readVarInt(packetReader) // serverId string length
+	idLength, err := readVarInt(packetReader) // длина строки serverId
 	if err != nil || idLength < 0 || idLength > 64 {
 		return ErrNoOnlineModeChallenge
 	}

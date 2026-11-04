@@ -14,7 +14,7 @@ test("0.28.9 backend operations require a global permission, not a project wildc
   const global = { ...scoped, permissions: ["backend:control"] };
   assert.equal(canSeeSection(global, "backend-operations", "demo"), true);
   assert.equal(can(global, "host:exec"), false);
-  assert.equal(can(global, "gameserver:console", "demo"), true); // project wildcard only, from backend grant
+  assert.equal(can(global, "gameserver:console", "demo"), true); // только шаблон всех проектов из разрешений Backend
   assert.equal(
     endpointForSection("backend-operations", "demo"),
     "/api/v1/operations/backend/status",

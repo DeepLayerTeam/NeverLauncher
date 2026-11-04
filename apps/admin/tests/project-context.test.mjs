@@ -42,7 +42,7 @@ test('only an authenticated owner and backend share their own persisted context'
 test('changing projects discards stale profile/channel IDs and forbids cross-project selection', () => {
   const saved={projectId:'alpha',profileId:'a-main',channelId:'stable'};
   assert.deepEqual(resolveProjectContext({projectId:'beta'},saved,catalog),{projectId:'beta',profileId:'',channelId:''});
-  assert.deepEqual(resolveProjectContext({projectId:'alpha'},saved,catalog),{projectId:'alpha',profileId:'',channelId:''}); // explicit clearing works
+  assert.deepEqual(resolveProjectContext({projectId:'alpha'},saved,catalog),{projectId:'alpha',profileId:'',channelId:''}); // явная очистка работает
   assert.deepEqual(resolveProjectContext({projectId:'beta',profileId:'a-main',channelId:'stable'},saved,catalog),{projectId:'beta',profileId:'',channelId:''});
   assert.deepEqual(resolveProjectContext({projectId:'beta',profileId:'b-main',channelId:'test'},saved,catalog),{projectId:'beta',profileId:'b-main',channelId:'test'});
 });

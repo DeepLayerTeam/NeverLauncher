@@ -39,7 +39,7 @@ func (p *simulatedProvider) AuthorizationURL(_ string, redirect, state, challeng
 		return "", errors.New("missing PKCE challenge")
 	}
 	go func() {
-		if p.badState { // Wrong state may never authorize or terminate the local listener.
+		if p.badState { // Неверное состояние не должно разрешать вход или завершать локальный прослушиватель.
 			_, _ = http.Get(redirect + "?state=attacker&code=wrong")
 			time.Sleep(15 * time.Millisecond)
 		}

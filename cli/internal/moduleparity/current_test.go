@@ -9,7 +9,7 @@ import (
 
 func currentFixture(t *testing.T) string {
 	t.Helper()
-	root := fixture(t) // historical evidence and Java contract fixture
+	root := fixture(t) // исторические доказательства и эталонный набор для контракта Java
 	original, err := filepath.Abs("../../..")
 	if err != nil {
 		t.Fatal(err)

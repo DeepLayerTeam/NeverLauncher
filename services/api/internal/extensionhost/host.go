@@ -62,8 +62,8 @@ type Config struct {
 	CrashLimit           int
 	CrashWindow          time.Duration
 	RestartBackoff       time.Duration
-	JavaExecutable       string            // trusted absolute java binary; otherwise resolved from PATH
-	SharedRoots          map[string]string // administrator-defined shared:<name> destinations
+	JavaExecutable       string            // доверенный абсолютный путь к Java; иначе поиск через PATH
+	SharedRoots          map[string]string // назначения shared:<name>, определённые администратором
 }
 
 func (c Config) normalized() Config {
@@ -690,7 +690,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 	}
 	if isolatedHandle != nil {
 		if err := isolatedHandle.Started(); err != nil {
-			_ = cmd.Wait() // sandbox Close() killed the entire cgroup; reap the bootstrap
+			_ = cmd.Wait() // вызов Close() песочницы завершил всю cgroup; необходимо дождаться завершения стартового процесса
 			return s.abortUnstarted0422(st, fmt.Errorf("sandbox enforcement failed: %w", err))
 		}
 		st.mu.Lock()
@@ -1055,7 +1055,7 @@ func (s *Supervisor) failProcess(st *processState, reason string, expected bool)
 func (s *Supervisor) Stop(ctx context.Context, key Key) error {
 	key = key.normalized()
 	s.mu.Lock()
-	s.recoveryEpoch[key.String()]++ // cancel scheduled resurrection after an operator stop/disable
+	s.recoveryEpoch[key.String()]++ // отменить запланированный перезапуск после остановки или отключения оператором
 	s.mu.Unlock()
 	if err := s.stopTransients0209(ctx, key); err != nil {
 		return err
@@ -1147,7 +1147,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) []error {
 		}
 		if err == nil && status.State == "crashloop" && status.Version == item.CurrentVersion && status.Generation == item.Generation {
 			continue
-		} // only operator can reset a crash loop
+		} // только оператор может сбросить цикл аварийных перезапусков
 		if err := s.StartInstallation(ctx, item); err != nil && !errors.Is(err, ErrNoBackendTarget) {
 			errs = append(errs, fmt.Errorf("%s/%s/%s: %w", item.Scope, item.ScopeID, item.ExtensionID, err))
 		}
@@ -1669,12 +1669,12 @@ func (s *Supervisor) allowedCapabilities(st *processState) []string {
 			}
 		}
 		if st.javaHost && item.capability == "secret.get" {
-			continue // raw secret material is never exposed to an unisolated JVM
+			continue // секретные данные в исходном виде никогда не передаются неизолированной JVM
 		}
 		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
 			if item.capability == "secret.get" {
 				continue
-			} // raw secrets are not exposed to isolated processes
+			} // секретные данные в исходном виде не раскрываются изолированным процессам
 			if (item.capability == "fs.read" && len(st.manifest.Sandbox.FilesystemRead) == 0) || (item.capability == "fs.write" && len(st.manifest.Sandbox.FilesystemWrite) == 0) {
 				continue
 			}

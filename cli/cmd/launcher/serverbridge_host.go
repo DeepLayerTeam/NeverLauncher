@@ -990,7 +990,7 @@ func stopServerBridgeHost01910(args []string) error {
 	}
 	requestPID := state.ProcessPID
 	if !processAlive {
-		requestPID = 0 // scoped to restart backoff, no historical PID reused
+		requestPID = 0 // ограничено паузой перед перезапуском; прежние PID не используются
 	}
 	request := hostStopRequest0282{SessionID: state.SessionID, ProcessPID: requestPID, RequestedAt: time.Now().UTC().Format(time.RFC3339Nano)}
 	if err := atomicWriteJSON01910(paths["stop"], request, 0o600); err != nil {

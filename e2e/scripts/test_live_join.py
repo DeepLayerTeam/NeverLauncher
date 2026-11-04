@@ -116,7 +116,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
 
     def test_negative_fixture_validation_binds_actual_file_bytes(self):
         runtime, args = self.construct_fake_negative_fixture()
-        self.assertEqual(gate.verify(args), 0)  # isolated parser fixture, never real game
+        self.assertEqual(gate.verify(args), 0)  # изолированный тестовый набор для парсера, не настоящая игра
         result = gate.read_json(runtime / 'live-join.json')
         self.assertEqual(result['serverLogSha256'], gate.file_sha256(runtime / 'matching-server.log'))
         self.assertEqual(result['clientCertificationSha256'], gate.file_sha256(runtime / 'fabric-certification.json'))

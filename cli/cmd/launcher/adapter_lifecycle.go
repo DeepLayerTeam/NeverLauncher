@@ -69,7 +69,7 @@ func currentFactoryAdapterPins02711(loader string) []factoryAdapterPin02711 {
 	for _, step := range steps {
 		pin, err := factoryAdapterPinByID02711(step.Adapter)
 		if err != nil {
-			panic(err) // programmer error: factorySteps includes an unknown embedded adapter
+			panic(err) // ошибка разработчика: factorySteps содержит неизвестный встроенный адаптер
 		}
 		pins = append(pins, pin)
 	}

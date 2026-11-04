@@ -45,7 +45,7 @@ export function hostSnapshotFresh04111(snapshot: HostSnapshot04111 | null, now =
   if (!Number.isFinite(observed) || observed > now + 30000 || now - observed >= 20000) return false;
   const host = snapshot.host;
   if (!host?.nodeId || !host.status?.configured) return false;
-  return true; // This is a live RemoteControl observation, NOT a game-ready verdict.
+  return true; // Это актуальное наблюдение RemoteControl, а НЕ подтверждение готовности сервера к игре.
 }
 export function bridgeReady04111(snapshot: HostSnapshot04111 | null, now = Date.now()): boolean {
   if (!hostSnapshotFresh04111(snapshot, now)) return false;

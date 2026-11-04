@@ -198,7 +198,7 @@ export function OperationsWorkspace({
           setBusy(false);
           return;
         }
-        persist({ intent }); // Before transport, including an ACK loss.
+        persist({ intent }); // До отправки запроса, включая случай потери подтверждения ACK.
       }
       if (recovery) {
         const existing = await new ReleaseApi(

@@ -302,7 +302,7 @@ pub fn pcr_read_command_0315(indices:&[u8])->Vec<u8>{
 pub fn parse_pcr_read_response_0315(reply:&[u8],indices:&[u8])->Result<Vec<[u8;32]>,String>{
     let params=response_parameters(reply,false)?;
     if params.len()<4+4+2+1+3+4 {return Err("truncated PCR_Read response".into());}
-    let mut pos=4; // pcrUpdateCounter (unsigned; not a trust signal)
+    let mut pos=4; // pcrUpdateCounter (беззнаковое число; не является признаком доверия)
     if be32(&params[pos..])?!=1{return Err("PCR_Read returned unsupported bank count".into());}pos+=4;
     if be16(&params[pos..])?!=0x000b || params[pos+2]!=3{return Err("PCR_Read returned unexpected bank".into());}
     let mut mask=[0u8;3];for &i in indices{mask[(i/8) as usize]|=1<<(i%8);}

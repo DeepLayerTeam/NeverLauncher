@@ -300,6 +300,6 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
     static void reject(String message) {
         System.err.println("[Launcher Guard 0.50.6] "+message);
         Runtime.getRuntime().halt(79);
-        throw new SecurityException(message); // unreachable in production, enables static analysis
+        throw new SecurityException(message); // недостижимо в рабочей среде; используется для статического анализа
     }
 }

@@ -166,7 +166,7 @@ func TestJavaStopCancelsScheduledRestart0422(t *testing.T) {
 	if err := host.Stop(ctx, key); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1500 * time.Millisecond) // greater than the one-second retry backoff
+	time.Sleep(1500 * time.Millisecond) // больше секундной паузы перед повторной попыткой
 	after, _ := host.Get(key)
 	if after.InstanceID != before.InstanceID || after.State == "running" {
 		t.Fatalf("operator Stop did not cancel restart: %+v", after)

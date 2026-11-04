@@ -21,8 +21,8 @@ type VerifiedTexture0252 struct {
 	Driver, ObjectKey       string
 	Kind, Model, Visibility string
 	Source                  string // managed-upload or managed-url-import
-	ExpectedRevision        int64  // 0 means create-only; >0 means CAS replacement
-	GravitSourceID          string // set together with GravitRowID for verified operator imports
+	ExpectedRevision        int64  // 0 означает только создание; >0 — замену с проверкой CAS
+	GravitSourceID          string // задаётся вместе с GravitRowID при подтверждённом импорте оператором
 	GravitRowID             string
 	GravitExternalUUID      string
 	GravitOriginalHash      string

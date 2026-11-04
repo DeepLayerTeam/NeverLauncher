@@ -83,7 +83,7 @@ type Runner struct {
 	SourceID       string
 	Mapping        map[string]string // exact source UUID -> administrator-confirmed local UUID
 	ObjectTemplate string            // e.g. skins/%hash%.png or %kind%/%hash%.png
-	Replace        bool              // only explicitly authorized operators may overwrite existing local assignment
+	Replace        bool              // только оператор с явным разрешением вправе перезаписать существующее локальное назначение
 	DryRun         bool
 }
 
@@ -311,7 +311,7 @@ func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error 
 		rowIDs[row.ID] = struct{}{}
 		from, err := CanonicalUUID(row.UserUUID)
 		if err != nil {
-			continue // per-row unmatched; no target can be assigned
+			continue // для строки не найдено соответствие; целевой объект не может быть назначен
 		}
 		to := from
 		if mapped, ok := mapping[from]; ok {

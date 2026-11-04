@@ -237,7 +237,7 @@ export class AuthenticationExperience02610 {
   async cancelLogin(): Promise<void> {
     if (this.value.activity !== "browser" && this.value.activity !== "device")
       return;
-    const token = ++this.generation; // synchronous fence, before the awaited IPC operation
+    const token = ++this.generation; // синхронный барьер до ожидаемой операции IPC
     // Сохраняйте блокировку UI до завершения нативной отмены. Новый вход не должен
     // конкурировать с незавершённой отменой, которая может уничтожить нативный процесс входа.
     this.update({

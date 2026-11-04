@@ -87,7 +87,7 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 			if e = rows.Scan(&name); e != nil {
 				return e
 			}
-			if name != "http_repository_state_0372" { // other tables need the state table as an owner
+			if name != "http_repository_state_0372" { // другим таблицам требуется таблица состояний в качестве владельца
 				existing = true
 				continue
 			}

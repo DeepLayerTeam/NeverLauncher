@@ -27,7 +27,7 @@ from security_capabilities_0431 import checks as security_checks, verify_all as 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-DOMAIN = policy("0.36.0").signing_domain  # exported for historical 0.36.0 readers
+DOMAIN = policy("0.36.0").signing_domain  # экспортируется для прежних считывателей версии 0.36.0
 TARGETS = (
     "windows-x64",
     "windows-arm64",

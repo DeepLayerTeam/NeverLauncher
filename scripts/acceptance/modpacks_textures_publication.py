@@ -279,7 +279,7 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
         try:
             server.rcon.query('stop')
         except (OSError, ValueError, RuntimeError):
-            pass  # socket may close because the real server is stopping
+            pass  # сокет может закрыться, потому что реальный сервер останавливается
         need(server.process.wait(timeout=40) == 0, 'Minecraft server did not stop cleanly')
         report['serverArtifactSha256'] = server.artifact_sha
         report['observedOnlineTicks'] = True

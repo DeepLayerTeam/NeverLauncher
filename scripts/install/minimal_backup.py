@@ -467,7 +467,7 @@ def backup(root, destination=None):
 
 def restore(bundle, target_root):
     source = safe_absolute(bundle)
-    manifest = verify(source)  # validate EVERYTHING before touching target
+    manifest = verify(source)  # проверить ВСЁ до изменения целевой системы
     root = safe_absolute(target_root)
     require(
         not root.exists() and not root.is_symlink(),

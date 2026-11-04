@@ -1905,7 +1905,7 @@ export function MigrationCenter0331({
           {contentState && (
             <>
               <p>
-                Workspace: <code>{contentState.workspaceId}</code>; сохранено{" "}
+                Рабочая область: <code>{contentState.workspaceId}</code>; сохранено{" "}
                 {contentState.stagedFiles}/{contentState.totalFiles} файлов;
                 состояние: {contentState.state}.
               </p>

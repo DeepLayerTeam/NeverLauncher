@@ -79,7 +79,7 @@ public final class Agent {
         }
         pluginLoader = new URLClassLoader(urls.toArray(new URL[0]), Agent.class.getClassLoader());
         for (MinecraftHook hook : ServiceLoader.load(MinecraftHook.class, pluginLoader)) {
-            if (guardPolicyActive) pluginDigest(hook); // reject hooks outside pinned jars before callbacks
+            if (guardPolicyActive) pluginDigest(hook); // отклонять хуки вне закреплённых JAR до вызова обработчиков
             HOOKS.add(hook);
         }
         instrumentation.addTransformer(new ClassFileTransformer() {
@@ -99,7 +99,7 @@ public final class Agent {
                                 Set<String> allowed = ALLOWED_TRANSFORMS.get(owner);
                                 if (allowed == null || !allowed.contains(binary)) {
                                     System.err.println("[Launcher Guard] unauthorized class transformation: " + binary);
-                                    Runtime.getRuntime().halt(79); // JVM may swallow transformer exceptions
+                                    Runtime.getRuntime().halt(79); // JVM может скрывать исключения трансформатора
                                 }
                             }
                             if (result.length == 0 || result.length > 64*1024*1024) throw new IllegalStateException("invalid class transform result");
@@ -111,7 +111,7 @@ public final class Agent {
                 } catch (Throwable ex) {
                     System.err.println("[Launcher trusted JVM] transform rejected for " + name + ": " + ex);
                     if (guardPolicyActive) Runtime.getRuntime().halt(79);
-                    return null; // legacy unguarded callback behavior
+                    return null; // устаревшее поведение обратных вызовов без Guard
                 } finally { IN_CALLBACK.remove(); }
             }
         }, false);

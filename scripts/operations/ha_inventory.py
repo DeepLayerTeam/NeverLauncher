@@ -562,7 +562,7 @@ def write_report(path, payload):
             output.write(content)
             output.flush()
             os.fsync(output.fileno())
-        os.link(temp, destination)  # atomic exclusive publication (no overwrite)
+        os.link(temp, destination)  # атомарная публикация с эксклюзивным доступом (без перезаписи)
         dirfd = os.open(destination.parent, os.O_RDONLY)
         try:
             os.fsync(dirfd)

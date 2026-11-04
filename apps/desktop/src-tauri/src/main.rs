@@ -1967,7 +1967,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
     let helper = if cfg!(target_os = "macos") {
         bin_dir.parent().ok_or("invalid macOS Contents path")?.join("Helpers").join(launcher_update_helper_name())
     } else { bin_dir.join(launcher_update_helper_name()) };
-    if !helper.is_file() { return Ok(()); } // Prestarter-only layout has no CLI updater.
+    if !helper.is_file() { return Ok(()); } // В конфигурации только с Prestarter отсутствует средство обновления CLI.
     let hm = std::fs::symlink_metadata(&helper).map_err(|e| e.to_string())?;
     if !hm.file_type().is_file() || hm.file_type().is_symlink() {
         return Err("unsafe installed updater helper".into());

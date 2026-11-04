@@ -58,7 +58,7 @@ func TestUnsupportedMacOSResourcePolicyRefusedBeforeExecution04311(t *testing.T)
 	if err == nil {
 		t.Fatal("unsupported multi-process macOS sandbox accepted")
 	}
-	if !strings.Contains(err.Error(), "helper") { // Missing helper is itself fail-closed.
+	if !strings.Contains(err.Error(), "helper") { // Отсутствие вспомогательного процесса само по себе приводит к отказу по умолчанию.
 		t.Fatalf("unexpected error for unsigned isolated mode: %v", err)
 	}
 }

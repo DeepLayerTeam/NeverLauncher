@@ -35,7 +35,7 @@ func TestRollbackBoundSnapshot0448(t *testing.T) {
 	}
 	if _, _, err := rollbackReadSnapshot0448(path); err != nil {
 		t.Fatal(err)
-	} // API validates typed snapshot
+	} // API проверяет типизированный снимок
 	if err := os.Symlink(path, filepath.Join(dir, "alias")); err != nil {
 		t.Fatal(err)
 	}

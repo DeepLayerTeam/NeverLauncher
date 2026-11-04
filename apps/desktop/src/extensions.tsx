@@ -505,7 +505,7 @@ export function DesktopExtensions0209({
               />
             ) : (
               <div className="desktopExtensionEmpty">
-                Extension UI unavailable.
+                Интерфейс расширения недоступен.
               </div>
             )}
           </div>

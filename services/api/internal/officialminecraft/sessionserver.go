@@ -33,7 +33,7 @@ var (
 // SignedServerHash соответствует Java BigInteger(SHA1(serverId + sharedSecret + DER key)).toString(16).
 // Он намеренно отличается от hex-кодирования сырых байтов SHA-1.
 func SignedServerHash(serverID string, sharedSecret, derKey []byte) string {
-	hash := sha1.New() // SHA-1 is mandated by the Minecraft online-mode protocol.
+	hash := sha1.New() // Использование SHA-1 предписано протоколом Minecraft online-mode.
 	_, _ = hash.Write([]byte(serverID))
 	_, _ = hash.Write(sharedSecret)
 	_, _ = hash.Write(derKey)

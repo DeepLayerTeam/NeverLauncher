@@ -54,7 +54,7 @@ func (c *discoveryCache0498) observe(packet []byte, now time.Time) {
 		owner := strings.ToLower(rr.name)
 		deadline := ttlDeadline0498(now, rr.ttl)
 		switch rr.typ {
-		case 12: // PTR only under the requested DNS-SD service.
+		case 12: // PTR разрешён только для запрошенной службы DNS-SD.
 			if owner != strings.ToLower(Service) {
 				continue
 			}
@@ -69,7 +69,7 @@ func (c *discoveryCache0498) observe(packet []byte, now time.Time) {
 			} else if len(c.ptr) < 256 || c.ptr[name].expiry.After(now) {
 				c.ptr[name] = cachedPTR0498{deadline}
 			}
-		case 33: // SRV target name can be compressed against this packet.
+		case 33: // Имя цели SRV можно сжать со ссылкой на этот пакет.
 			if len(rr.data) < 7 {
 				continue
 			}

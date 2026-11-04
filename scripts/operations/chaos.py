@@ -289,7 +289,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
     start = monotonic()
     try:
         pg_write(project, env_file, token, digest)
-        wrote_s3 = True  # a successful PUT followed by failed readback still needs cleanup
+        wrote_s3 = True  # после успешного PUT и неудачного чтения результата всё равно требуется очистка
         s3_prepare(s3_url, bucket, key, payload)
         for service in ("postgres", "redis", "s3"):
             outcomes.append(dependency_fault(project, env_file, service, ready_url, s3_url, bucket,

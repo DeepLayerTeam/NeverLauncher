@@ -32,7 +32,7 @@ func guardRuntimePolicyRequired0317(version string) bool {
 	// политики.
 	matches := guardSemver0317.FindStringSubmatch(version)
 	if matches == nil {
-		return true // malformed releases cannot disable Guard enforcement
+		return true // некорректные выпуски не могут отключить применение политик Guard
 	}
 	major, errA := strconv.ParseUint(matches[1], 10, 32)
 	minor, errB := strconv.ParseUint(matches[2], 10, 32)

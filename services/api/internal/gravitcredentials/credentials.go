@@ -25,7 +25,7 @@ const Format = "launcher.gravit-credentials.v1"
 
 type Credential struct {
 	gi.Account
-	PasswordHash string `json:"-"` // Only ever passed to the SQL insert; never serialize.
+	PasswordHash string `json:"-"` // Передаётся только в SQL INSERT; никогда не сериализуется.
 	Algorithm    string `json:"algorithm"`
 	State        string `json:"state"` // importable, manual_reset
 	Reason       string `json:"reason,omitempty"`
@@ -40,7 +40,7 @@ type Result struct {
 	ExistingUnchanged int    `json:"existingUnchanged"`
 	ManualReset       int    `json:"manualReset"`
 	Complete          bool   `json:"complete"`
-	DryRun            bool   `json:"dryRun"` // Credential processing only, not permission for cutover.
+	DryRun            bool   `json:"dryRun"` // Только обработка учётных данных, не разрешение на переключение.
 	Rows              []Row  `json:"rows"`
 }
 

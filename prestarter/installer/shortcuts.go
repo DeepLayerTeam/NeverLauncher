@@ -25,7 +25,7 @@ func (i *installation) shortcutPath() string {
 		}
 		return filepath.Join(base, "applications", "launcher.desktop")
 	default:
-		return "" // macOS has an app bundle installed by pkgbuild.
+		return "" // В macOS пакет приложения устанавливается через pkgbuild.
 	}
 }
 func (i *installation) createShortcut(r record, cfg prestarter.Config) error {

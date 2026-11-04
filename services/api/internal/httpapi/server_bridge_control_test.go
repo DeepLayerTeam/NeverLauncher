@@ -45,7 +45,7 @@ func TestSessionBoundKickPayload0418(t *testing.T) {
 	for _, bad := range []string{"short", "", "A" + correlation[1:], "g" + correlation[1:], correlation + "0"} {
 		if bad == "" {
 			continue
-		} // empty is the existing explicit moderator action
+		} // пустое значение обозначает уже существующее явное действие модератора
 		if _, err := validateServerBridgeControlRequest0195("player.kick", map[string]string{"username": "Steve", "sessionCorrelationId": bad}); err == nil {
 			t.Fatalf("invalid session correlation accepted: %q", bad)
 		}

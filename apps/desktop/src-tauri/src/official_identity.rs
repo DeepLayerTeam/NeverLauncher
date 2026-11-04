@@ -13,7 +13,7 @@ use runtime::MinecraftLaunchCredentials;
 use tokio::sync::watch;
 use crate::{official_browser_0263, official_exchange_0265::{NativeProvider, MicrosoftGrant, ProviderError, now}};
 
-const SERVICE: &str = "Launcher Official Minecraft 0.26.2"; // preserve existing vault slots
+const SERVICE: &str = "Launcher Official Minecraft 0.26.2"; // сохранить существующие записи защищённого хранилища
 const PREFIX: &str = "/api/v1/minecraft/official";
 const RESPONSE_LIMIT: usize = 256 * 1024;
 const MAX_ACCOUNTS: usize = 16;
@@ -47,7 +47,7 @@ pub struct PollResult { pub pending: bool, #[serde(skip_serializing_if="Option::
 #[serde(rename_all = "camelCase")]
 struct StoredAccount {
     schema: u32,
-    #[serde(default)] ticket: String, // 0.26.4 backend ticket; retained for migration
+    #[serde(default)] ticket: String, // заявка Backend версии 0.26.4; сохранена для миграции
     profile: OfficialProfile,
     #[serde(default, skip_serializing_if="Option::is_none")] native: Option<NativeAccount0265>,
 }
@@ -593,7 +593,7 @@ impl IdentityManager {
             let interval = result.data.get("intervalSeconds").and_then(Value::as_u64).unwrap_or(5).clamp(5, 3600);
             flow.ticket.zeroize();
             flow.ticket = continuation;
-            flow.interval = interval; // Includes provider slow_down (+5 seconds).
+            flow.interval = interval; // Учитывает ответ провайдера slow_down (дополнительные 5 секунд).
             // После успешного разрешения Microsoft Backend может выделить короткое окно
             // восстановления для завершения Xbox/Minecraft без повторного использования кода.
             if let Some(expires_in) = result.data.get("expiresIn").and_then(Value::as_u64) {
@@ -962,7 +962,7 @@ impl IdentityManager {
                     let mut flows = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
                     let flow = flows.get_mut(&id).filter(|f| f.nonce == nonce)
                         .ok_or("Microsoft-авторизация отменена")?;
-                    flow.grant = microsoft; // do NOT redeem Microsoft Device Code again
+                    flow.grant = microsoft; // НЕ использовать Microsoft Device Code для повторного обмена на токен
                     flow.failures = flow.failures.saturating_add(1);
                     let delay = retry_delay(flow.interval,flow.failures,None);
                     flow.next = Instant::now() + Duration::from_secs(delay);

@@ -29,8 +29,8 @@ import (
 var factoryID02710 = regexp.MustCompile(`^[a-f0-9]{32}$`)
 var factoryVersion02710 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._+\-]{0,95}$`)
 var factoryMinecraft02710 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._+\- ]{0,95}$`)
-var factoryProcesses02710 sync.Map             // job ID -> context.CancelFunc (one API process)
-var factorySlots02710 = make(chan struct{}, 2) // bound concurrent build processes
+var factoryProcesses02710 sync.Map             // ID задания → context.CancelFunc (в рамках одного процесса API)
+var factorySlots02710 = make(chan struct{}, 2) // ограничение числа параллельных процессов сборки
 
 type factoryBuilderRequest02710 struct {
 	Source        string `json:"source,omitempty"`
@@ -838,7 +838,7 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 	// Импортируемые наборы определяют точный загрузчик по архиву. Закреплённое
 	// рабочее пространство без версии загрузчика допустимо и проверяется после
 	// установки.
-	if req.Loader != "vanilla" && req.LoaderVersion == "" { // validate only the target and pinned MC/loader here
+	if req.Loader != "vanilla" && req.LoaderVersion == "" { // здесь проверяются только целевой объект и закреплённые версии Minecraft/загрузчика
 		if !factoryMinecraft02710.MatchString(req.Minecraft) || factoryMutableSelector02710(req.Minecraft) {
 			writeError(w, 409, "workspace Minecraft version must be exact")
 			return

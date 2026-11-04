@@ -53,5 +53,5 @@ public final class PortedSuite implements Extension {
             return next;
         });
     }
-    @Override public void stop(ExtensionContext ctx) {} // SDK drains providers and callbacks.
+    @Override public void stop(ExtensionContext ctx) {} // SDK дожидается завершения провайдеров и обратных вызовов.
 }

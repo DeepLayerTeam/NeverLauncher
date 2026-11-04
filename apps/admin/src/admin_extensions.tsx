@@ -1031,31 +1031,31 @@ export function AdminExtensions({
                   disabled={operationBusy}
                   onClick={() => void lifecycleOperation(item, "start")}
                 >
-                  Host Start
+                  Запустить хост
                 </button>
                 <button
                   disabled={operationBusy}
                   onClick={() => void lifecycleOperation(item, "stop")}
                 >
-                  Host Stop
+                  Остановить хост
                 </button>
                 <button
                   disabled={operationBusy}
                   onClick={() => void lifecycleOperation(item, "restart")}
                 >
-                  Host Restart
+                  Перезапустить хост
                 </button>
                 <button
                   disabled={operationBusy}
                   onClick={() => void lifecycleOperation(item, "enable")}
                 >
-                  Enable
+                  Включить
                 </button>
                 <button
                   disabled={operationBusy}
                   onClick={() => void lifecycleOperation(item, "disable")}
                 >
-                  Disable
+                  Отключить
                 </button>
                 <button
                   disabled={operationBusy}
@@ -1076,7 +1076,7 @@ export function AdminExtensions({
                     )
                   }
                 >
-                  Update
+                  Обновить
                 </button>
                 <button
                   disabled={operationBusy || !install.previousVersion}
@@ -1092,7 +1092,7 @@ export function AdminExtensions({
                     )
                   }
                 >
-                  Rollback
+                  Откатить
                 </button>
                 <button
                   disabled={operationBusy}
@@ -1108,7 +1108,7 @@ export function AdminExtensions({
                     )
                   }
                 >
-                  Uninstall (MFA)
+                  Удалить (MFA)
                 </button>
                 <button
                   disabled={operationBusy}
@@ -1124,7 +1124,7 @@ export function AdminExtensions({
                     )
                   }
                 >
-                  Emergency disable
+                  Аварийное отключение
                 </button>
               </div>
               <div className="buttonRow">

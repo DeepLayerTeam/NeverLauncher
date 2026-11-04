@@ -1901,7 +1901,7 @@ func libraryArtifactAppliesToTarget(name string, target vanillaTarget) bool {
 		case "arm32", "arm":
 			return target.Arch == "arm"
 		default:
-			return false // never install an unknown native architecture
+			return false // никогда не устанавливать для неизвестной аппаратной архитектуры
 		}
 	}
 	return false

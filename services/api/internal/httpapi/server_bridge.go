@@ -556,7 +556,7 @@ func (s Server) textureGet(w http.ResponseWriter, r *http.Request) {
 	texture := s.State.ServerBridge.textureFor(uuid, uuid)
 	legacy := textureProfile910(texture)
 	legacy["schemaVersion"] = serverBridgeSchema910
-	legacy["profileId"] = texture.UUID // preserve the original REST API UUID representation
+	legacy["profileId"] = texture.UUID // сохранить исходное представление UUID в REST API
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": legacy})
 }

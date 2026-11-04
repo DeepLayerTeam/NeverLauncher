@@ -426,7 +426,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
             proxy.state(r["backend"], r["target"], "ready")
         inspect_proxy(proxy, cfg, "open")
         update_phase(directory, state, "target_open", trafficOpen=True)
-        auth_canary(cfg, public=True)  # Real public HTTPS ingress, not just direct upstream.
+        auth_canary(cfg, public=True)  # Настоящий публичный HTTPS-вход, а не только прямое соединение с вышестоящим сервером.
         # Тот же UUID должен действительно подключиться к серверу Minecraft после переключения.
         live_canary(cfg, directory)
         route = route_list(cfg, directory, "route-final.json")

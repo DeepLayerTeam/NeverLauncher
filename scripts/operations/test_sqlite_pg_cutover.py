@@ -118,7 +118,7 @@ class Operator0475Tests(unittest.TestCase):
         op = self.operator()
         op.env[op.a.dsn_env] = "postgres://localhost/test"
         with self.assertRaises(cutover.CutoverError):
-            op.preflight()  # /tmp/http.db does not exist
+            op.preflight()  # /файл tmp/http.db отсутствует
 
     def test_journal_resume_does_not_repeat_completed_stage(self):
         op = self.operator()
