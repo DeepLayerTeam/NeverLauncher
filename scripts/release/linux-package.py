@@ -180,9 +180,10 @@ def write_package(out: Path, version: str, arch: str) -> None:
             "executable": False,
         })
     update_manifest_bytes, component_sig = signed_set(update_manifest)
-    # The production updater verifies the delegated component signature
-    # against the pinned root-signed policy. Ship these alongside the exact
-    # update manifest, not only the historical component signature.
+    # Промышленный обновлятор проверяет делегированную подпись компонентов по
+    # закреплённой политике, подписанной корневым ключом. Поставляйте эти данные
+    # вместе с точным манифестом обновления, а не только со старой подписью
+    # компонента.
     delegated_sig = None
     delegated_policy = None
     if tuple(int(x) for x in version.split(".")[:3]) >= (0, 41, 0):

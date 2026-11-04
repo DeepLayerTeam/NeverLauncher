@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// A request-specific correlation identifier is always generated server-side:
-// client-supplied X-Correlation-ID is untrusted, and cannot poison audit logs.
-// Neither URLs nor query parameters, headers, bodies, users or remote IPs are logged.
+// Корреляционный идентификатор запроса всегда создаётся сервером: клиентскому
+// X-Correlation-ID доверять нельзя, он не должен отравлять аудит. В журналы не пишутся
+// URL, параметры запроса, заголовки, тела, пользователи или удалённые IP.
 var accessLogger0459 = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 type observedResponse0459 struct {
@@ -41,8 +41,9 @@ func (o *observedResponse0459) Flush() {
 	}
 }
 
-// Bound categories, not route or resource identifiers, prevent accidental
-// leakage and high-cardinality observability data.
+// Используйте ограниченный перечень категорий, а не идентификаторы маршрутов
+// или ресурсов: это предотвращает случайные утечки и метрики с высокой
+// кардинальностью.
 func requestCategory0459(path string) string {
 	switch {
 	case path == "/health":

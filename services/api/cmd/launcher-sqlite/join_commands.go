@@ -1,7 +1,8 @@
 package main
 
-// 0.32.4 operational CLI: durable one-time join tickets and signed node nonces.
-// Credentials must enter via private JSON files; never command-line arguments.
+// Операционный CLI 0.32.4: устойчивые одноразовые билеты присоединения и подписанные
+// nonce узла. Учётные данные должны поступать через закрытые JSON-файлы, а не
+// аргументы командной строки.
 import (
 	"context"
 	"crypto/ed25519"

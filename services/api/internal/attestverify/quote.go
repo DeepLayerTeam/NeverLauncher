@@ -1,9 +1,9 @@
 package attestverify
 
-// TPM2 Quote verification is independent of TPM2 Certify. A valid AK chain
-// identifies the attestation key; only a signed PCR digest and an operator
-// policy identify an approved measured-boot configuration. Neither implies
-// integrity of a user-mode JVM process.
+// Проверка TPM2 Quote независима от TPM2 Certify. Действительная цепочка AK
+// идентифицирует ключ аттестации; только подписанный дайджест PCR и политика
+// оператора определяют одобренную конфигурацию измеренной загрузки. Ни одно из
+// них не доказывает целостность JVM в пользовательском режиме.
 import (
 	"bytes"
 	"crypto/sha256"
@@ -36,10 +36,10 @@ type PCRPolicyFile0315 struct {
 	Policies []PCRPolicy0315 `json:"policies"`
 }
 
-// LoadPCRPolicy0315 reads the policy on every use; no client-controlled path.
-// Its SHA-256 digest is bound into the challenge, so an in-flight policy change
-// invalidates the challenge. An explicit allowlist is required, never an all-zero
-// baseline or TOFU enrollment.
+// LoadPCRPolicy0315 читает политику при каждом использовании; пути под контролем
+// клиента нет. Её SHA-256 связан с запросом, так что изменение политики во время
+// проверки аннулирует запрос. Обязателен явный список разрешений, а не нулевая базовая
+// линия или регистрация TOFU.
 func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, error) {
 	var out PCRPolicyFile0315
 	if !filepath.IsAbs(path) {
@@ -113,7 +113,8 @@ type QuoteEvidence0315 struct {
 }
 
 func ExpectedQuoteData0315(b Binding, policyID, policyHash string) [32]byte {
-	// Independent, domain-separated nonce (Certify evidence is never a quote).
+	// Независимый nonce с разделением доменов (доказательство Certify никогда не
+	// является Quote).
 	return sha256.Sum256([]byte(fmt.Sprintf("Launcher TPM Quote v1\nuser=%s\ndevice=%s\nsession=%s\nbinding-epoch=%d\nchallenge-id=%s\nchallenge=%s\nissued-at=%s\nexpires-at=%s\npolicy-id=%s\npolicy-hash=%s\n", b.UserID, b.DeviceID, b.SessionID, b.BindingEpoch, b.ChallengeID, b.Challenge, b.IssuedAt.UTC().Format(time.RFC3339Nano), b.ExpiresAt.UTC().Format(time.RFC3339Nano), policyID, policyHash)))
 }
 
@@ -262,14 +263,16 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	return QuoteResult0315{RootID: pinned.RootID, RootFingerprint: pinned.RootFingerprint, AKFingerprint: fp, PCRDigest: hex.EncodeToString(expectedDigest), PolicyID: p.ID, PolicyHash: policyHash, ExpiresAt: expiration}, nil
 }
 
-// Helper used only for emitting the canonical required PCR list to native clients.
+// Вспомогательная функция только для передачи канонического списка обязательных PCR
+// нативным клиентам.
 func EncodeQuoteNonce0315(b Binding, p PCRPolicy0315, policyHash string) string {
 	x := ExpectedQuoteData0315(b, p.ID, policyHash)
 	return base64.RawURLEncoding.EncodeToString(x[:])
 }
 
-// For external policy tools and future auditing: value is checked against
-// the exact quote selection, never treated as self-reported evidence.
+// Для внешних инструментов политики и будущего аудита: значение сверяется с
+// точным выбором Quote, а не считается самостоятельно заявленным
+// доказательством.
 func PCRPolicySelection0315(p PCRPolicy0315) string {
 	ids := PCRIndices0315(p)
 	xs := make([]string, 0, len(ids))

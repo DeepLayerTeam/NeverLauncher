@@ -85,7 +85,8 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
         if not outcome.get("applicationVerified") or not outcome.get("serverbridgeFenced") or outcome.get("redisRestored") is not False:
             raise dr.DrillError("incomplete Network-HA restore may not be accepted")
         if checkpoint:
-            # Verify the actual restored PostgreSQL bytes, not a source receipt.
+            # Проверяйте реальные восстановленные байты PostgreSQL, а не исходную
+            # квитанцию.
             result = dr.compose(project, env_file, "exec", "-T", "postgres", "sh", "-ec",
                 'export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -X -A -t -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"',
                 stdin=io.BytesIO(
@@ -93,8 +94,9 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
             if result.stdout.decode().strip() != checksum:
                 raise dr.DrillError("acknowledged checkpoint was not retained in restored PostgreSQL")
     except Exception:
-        # Do not expose a restored application if additional independent
-        # acceptance checks failed after the underlying DR script returned.
+        # Не открывайте восстановленное приложение, если дополнительные независимые
+        # приёмочные проверки провалились после успешного завершения базового скрипта
+        # DR.
         for service in ("nginx", "admin", "api", "api-b", "worker-a", "worker-b"):
             try:
                 dr.compose(project, env_file, "stop", "-t", "10", service, timeout=30)

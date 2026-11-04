@@ -127,8 +127,8 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{"challengeId": challengeID, "challenge": secret, "expiresAt": record.ExpiresAt, "policyEpoch": policy.Epoch}})
 }
 
-// Evaluate before creating a one-time join ticket. Challenge consumption is an
-// atomic repository operation (also across multi-node PostgreSQL deployments).
+// Вычисляйте до создания одноразового билета входа. Погашение challenge — атомарная
+// операция репозитория, в том числе при многоузловом PostgreSQL.
 func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req bridgeJoinRequest, guardTicket model.DeviceChallenge) error {
 	policy, err := loadPlanPolicy02412(time.Now().UTC())
 	if err != nil {
@@ -150,8 +150,8 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 	if !planMatches02412(policy, e.ServerID, e.ProjectID, e.ProfileID, e.Channel, e.ReleaseSignature, e.CatalogDigest, e.PlanSHA256) {
 		return errors.New("signed policy denies resolved component plan")
 	}
-	// This release requires a freshly completed continuous Guard v2 attestation.
-	// A user-supplied list of mods, plan digest or P-256 signature alone is NEVER sufficient.
+	// Для этого релиза необходима только что завершённая непрерывная аттестация Guard v2. Одного
+	// списка модов, хеша плана или подписи P-256 от пользователя НИКОГДА недостаточно.
 	if guardTicket.ID == "" || metadataString0121(guardTicket.Metadata, "attestationSha256") != e.GuardAttestationSHA256 {
 		return errors.New("verified plan is not bound to current continuous Guard evidence")
 	}
@@ -179,9 +179,9 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 	return nil
 }
 
-// A signed policy activated after a ticket was issued invalidates that ticket.
-// This also closes the rollout window where a pre-policy legacy join was
-// minted before REQUIRE_PLAN_POLICY was enabled.
+// Подписанная политика, активированная после выдачи билета, делает его
+// недействительным. Это также закрывает окно развёртывания, когда старый билет
+// входа создавался до включения REQUIRE_PLAN_POLICY.
 func planJoinEpochValid02412(created time.Time) error {
 	if !planPolicyRequired02412() {
 		return nil

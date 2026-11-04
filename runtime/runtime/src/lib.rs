@@ -702,9 +702,9 @@ pub async fn check_files_with_preset(manifest:&Manifest,root:&Path,preset:Option
                 }
             }
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                // active_files() has already removed every *unselected* optional
-                // component. A missing file that remains in this list is a
-                // SELECTED game dependency, even for legacy manifest v2.
+                // active_files() уже удалил все необранные необязательные компоненты.
+                // Отсутствующий файл, оставшийся в этом списке, является ВЫБРАННОЙ игровой
+                // зависимостью даже для старого манифеста v2.
                 // Не считайте отсутствие такого файла необязательным: sync/repair/launch должны
                 // завершаться отказом, пока настоящие подписанные байты не установлены.
                 results.push(FileCheckResult { path: file.path.clone(), status: "missing".into(), message: "выбранный файл отсутствует".into() });
@@ -1215,7 +1215,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         .map_err(|err| format!("launch заблокирован: Guard Sensor authentication failed: {err}"))?;
 
     // Привязывайте наблюдения /proc к конкретному дочернему процессу после fork/exec. Ошибка
-    // terminal: never continue with an unmonitored JVM.
+    // Терминальное состояние: никогда не продолжайте игру с JVM без мониторинга.
     #[cfg(target_os = "linux")]
     if let Err(reason) = live_guard.bind_linux_process(
         child.id().ok_or("Linux Guard JVM PID unavailable")?,

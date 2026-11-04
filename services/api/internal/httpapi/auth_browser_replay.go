@@ -12,12 +12,13 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// The encrypted browser transaction is an authenticity proof, not a single-use
-// credential. Claim its state atomically BEFORE exchanging the authorization
-// code: otherwise replay on a different API replica can link a provider twice
-// (and a fixture/reused upstream code may create multiple Never sessions).
-// ConsumeDurableNonce uses PostgreSQL's unique key, or the shared on-disk
-// SQLite coordinator. An unavailable store must never allow login.
+// Зашифрованная браузерная транзакция — доказательство подлинности, а не
+// одноразовые учётные данные. Захватывайте state атомарно ДО обмена кода
+// авторизации, иначе повтор на другой реплике API сможет дважды привязать
+// провайдера и при повторно используемом upstream-коде создать несколько сессий
+// Never. ConsumeDurableNonce использует уникальный ключ PostgreSQL или общий
+// дисковый координатор SQLite. Недоступное хранилище никогда не должно разрешать
+// вход.
 type browserNonceStore0525 interface {
 	ConsumeDurableNonce(context.Context, string, string, string, map[string]any, time.Time) error
 }
@@ -32,8 +33,9 @@ func (s Server) claimBrowserTransaction0525(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUnauthorized, "browser transaction invalid or expired")
 		return false
 	}
-	// Exactly the same state cannot be consumed through another endpoint,
-	// link mode or encrypted-envelope re-sealing. Never persist raw state or code.
+	// Одно и то же состояние нельзя поглотить через другую точку входа, режим привязки
+	// или повторную запечатку зашифрованного конверта. Сырой state и code никогда не
+	// сохраняются.
 	digest := sha256.Sum256([]byte(strings.ToLower(tx.ProviderID) + "\x00" + tx.State))
 	kind := "login"
 	if tx.LinkUserID != "" {

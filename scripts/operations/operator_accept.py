@@ -180,8 +180,8 @@ def probe_compose(project, env, mode):
                 name + ' is not healthy')
         checked[name] = entry['health'] or 'running (no healthcheck)'
     if mode == 'network-ha':
-        # Validate the actual worker-only/backend readiness directly; public Nginx
-        # alone cannot prove workers have resumed PostgreSQL polling.
+        # Проверяйте готовность настоящего backend и отдельного рабочего процесса
+        # напрямую; один публичный Nginx не доказывает возобновление опроса PostgreSQL.
         for name in ('api', 'api-b', 'worker-a', 'worker-b'):
             output = run(compose_command(project, env, mode, 'exec', '-T', name,
                                          'wget', '-qO-', 'http://127.0.0.1:8080/ready'))
@@ -205,8 +205,9 @@ def probe_minimal(root):
     for name in ('http.sqlite', 'coordinator.sqlite'):
         database = root / 'db' / name
         require(database.is_file() and not database.is_symlink(), name + ' missing')
-        # Actual file-backed sqlite connection with read-only immutable disabled,
-        # so committed WAL pages are visible. This does not lock writers or backup.
+        # Настоящее SQLite-соединение к файлу без режима read-only immutable, чтобы были
+        # видны зафиксированные страницы WAL. Это не блокирует записывающие процессы и
+        # не создаёт резервную копию.
         connection = sqlite3.connect('file:' + urllib.parse.quote(str(database.resolve())) + '?mode=ro', uri=True, timeout=5)
         try:
             require(connection.execute('PRAGMA integrity_check').fetchone() == ('ok',), name + ' corrupt')
@@ -232,15 +233,17 @@ def verify_docs():
         content = path.read_text(encoding='utf-8')
         require(len(content) > 180, 'empty operator document: ' + name)
         count += 1
-        # Relative Markdown links in operator docs must resolve. Absolute URLs
-        # are left as references; no downloads or network reads in this step.
+        # Относительные Markdown-ссылки в руководствах оператора должны разрешаться.
+        # Абсолютные URL оставляются ссылками; на этом шаге ничего не скачивается и
+        # сеть не читается.
         for dest in re.findall(r'(?<!!)\[[^\]]*\]\(([^)]+)\)', content):
             target = dest.split('#', 1)[0]
             if not target or target.startswith(('https://', 'http://', 'mailto:')):
                 continue
             require((path.parent / target).exists(), name + ': missing linked file ' + target)
             count += 1
-    # Verify each entrypoint mentioned in operator runbooks actually exists.
+    # Проверяйте реальное существование каждой точки входа, упомянутой в
+    # эксплуатационных руководствах.
     for entry in ('scripts/install/production-deploy.py', 'scripts/install/minimal-install.py',
                   'scripts/operations/dr_03512.py', 'scripts/operations/db_upgrade_0457.py',
                   'scripts/operations/component_upgrade_0458.py',
@@ -262,8 +265,9 @@ def atomic_report(output, report):
             stream.write('\n')
             stream.flush()
             os.fsync(stream.fileno())
-        # Hard-link fails with EEXIST even if another process creates the report
-        # between the initial check and publication. Never overwrite evidence.
+        # Создание жёсткой ссылки возвращает EEXIST, даже если другой процесс создал
+        # отчёт между начальной проверкой и публикацией. Никогда не перезаписывайте
+        # доказательства.
         os.link(tmp, output)
         dir_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY)
         try:
@@ -324,7 +328,8 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (AcceptanceError, OSError, sqlite3.Error) as exc:
-        # Never copy low-level exception text that could contain secrets/paths.
+        # Никогда не копируйте низкоуровневый текст исключения, где могут оказаться
+        # секреты или пути.
         if isinstance(exc, AcceptanceError):
             reason = str(exc)
         else:

@@ -174,8 +174,9 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		writeJSON(w, 422, map[string]any{"data": plan, "error": map[string]any{"message": "resolve content blockers before import", "code": "content-blocked"}})
 		return
 	}
-	// The release pipeline uses a separate deterministic workspace lock. Holding
-	// it across the whole request prevents concurrently mutating the stage list.
+	// Конвейер релиза использует отдельную детерминированную блокировку рабочего
+	// пространства. Удержание её в течение всего запроса предотвращает параллельное
+	// изменение списка подготовленных файлов.
 	key := gc.WorkspaceID(run.ID, profilePath)
 	unlock, e := s.lockPackageMutation(r.Context(), "build-workspace:"+key)
 	if e != nil {
@@ -216,8 +217,9 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 				migrationHTTPError0331(w, mw.ErrConflict)
 				return
 			}
-			// Re-read and authenticate the staged encrypted object, including on retry:
-			// an indexed file with missing/bad object is not considered imported.
+			// Повторно прочитайте и аутентифицируйте подготовленный зашифрованный объект, в
+			// том числе при повторной попытке: индексированный файл с отсутствующим или
+			// повреждённым объектом не считается импортированным.
 			if e = s.workspaceVerifyFile0226(ws, old); e == nil {
 				continue
 			}
@@ -257,10 +259,10 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		migrationHTTPError0331(w, mw.ErrConflict)
 		return
 	}
-	// Run the existing manifest/stage validator; it verifies hashes, classpath,
-	// runtime compatibility and the pinned profile snapshot. Never sign or
-	// publish on a failed validation. Materialization and signing remain the
-	// normal explicitly approved Build Workspace release workflow.
+	// Запускайте существующий валидатор манифеста и подготовки; он проверяет хеши,
+	// classpath, совместимость Runtime и закреплённый снимок профиля. При неуспешной
+	// проверке запрещено подписывать или публиковать. Материализация и подпись
+	// остаются частью обычной процедуры явно утверждённого выпуска Build Workspace.
 	ws.State = "staged"
 	ws.BuildDigest = ""
 	ws, e = workspaceStore.SaveBuildWorkspace(r.Context(), ws)
@@ -283,10 +285,10 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 	writeJSON(w, 200, map[string]any{"data": response})
 }
 
-// Applies a supported optional-mod catalog to the actual v3 draft produced by
-// the normal workspace builder. The operator must subsequently run the usual
-// validation and high-assurance Ed25519 signing flow; an unverified archive
-// cannot create a signed release through this route.
+// Применяет поддерживаемый каталог необязательных модов к реальному черновику v3,
+// сформированному штатным сборщиком рабочего пространства. После этого оператор
+// должен запустить обычную проверку и надёжную подпись Ed25519; непроверенный
+// архив не может создать подписанный релиз через данный маршрут.
 func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.migrationContentStore0337(w)
 	if !ok {
@@ -333,8 +335,9 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		writeError(w, 409, "package must be an unsigned v3 draft belonging to the migrated profile")
 		return
 	}
-	// Reject any package file divergence after staging. The optional catalog
-	// must bind to the same verified bytes selected by the original import.
+	// Отклоняйте любые расхождения файлов пакета после подготовки. Необязательный
+	// каталог должен быть привязан к тем же проверенным байтам, которые выбраны
+	// при исходном импорте.
 	expected := map[string]gc.File{}
 	for _, f := range plan.Files {
 		expected[f.TargetPath] = f

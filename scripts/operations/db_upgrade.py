@@ -43,7 +43,8 @@ def require(condition: bool, message: str):
 def exec_checked(command: list[str], *, timeout=1800):
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
     if result.returncode:
-        # Tool outputs can include credentials; never print raw stdout/stderr.
+        # Вывод инструментов может содержать учётные данные; никогда не печатайте
+        # необработанные stdout/stderr.
         raise UpgradeError(f'{command[0]} exited {result.returncode}')
     return result.stdout
 
@@ -110,7 +111,8 @@ def run_minimal_backup(root: Path, destination: Path, service_user: str):
 
 
 def run_sqlite_migration(binary: Path, env: Path, root: Path, service_user: str):
-    # systemd loads secret EnvironmentFile without exposing its values via argv.
+    # systemd загружает секретный EnvironmentFile, не раскрывая его значения через
+    # argv.
     exec_checked(['systemd-run', '--quiet', '--wait', '--collect',
                   '--unit=launcher-db-upgrade-0457', '-p', f'User={service_user}',
                   '-p', f'Group={service_user}',
@@ -198,7 +200,8 @@ def upgrade_sqlite(root: Path, destination: Path, binary: Path, env: Path,
                 return {'status': 'upgraded' if originally_active else 'migrated-offline', 'mode': 'minimal', 'backup': str(destination),
                         'schema': expect_schema, 'applicationVerified': originally_active}
             except Exception as primary:
-                # Do not claim the old binary works against a partially upgraded DB.
+                # Не утверждайте, что старый бинарник работает с частично обновлённой базой
+                # данных.
                 exec_checked(['systemctl', 'stop', service], timeout=90)
                 revert_native_service(override)
                 override = None
@@ -218,7 +221,8 @@ def upgrade_sqlite(root: Path, destination: Path, binary: Path, env: Path,
                 raise UpgradeError('SQLite migration failed; previous backup restored and original service verified') from primary
     finally:
         if not backup_verified and originally_active:
-            # No DB change attempted yet. Resume only if we failed before migration.
+            # Изменения БД ещё не предпринимались. Возобновляйте только в случае сбоя до
+            # миграции.
             exec_checked(['systemctl', 'start', service], timeout=90)
 
 
@@ -244,7 +248,8 @@ def validate_source_target(source: Path, target: Path, network_ha: bool):
     require(before['LAUNCHER_IMAGE_TAG'] != TARGET, 'source must be an earlier release')
     require(after.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false',
             'target env must persist LAUNCHER_DATABASE_AUTO_MIGRATE=false for all API replicas')
-    # Treat immutable secrets and storage topology as a single consistency domain.
+    # Рассматривайте неизменяемые секреты и топологию хранилища как единую область
+    # согласованности.
     for name in ('POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB',
                  'LAUNCHER_AUTH_TOKEN_SECRET', 'LAUNCHER_STORAGE_S3_BUCKET',
                  'LAUNCHER_STORAGE_S3_ENDPOINT', 'LAUNCHER_STORAGE_S3_ACCESS_KEY',
@@ -257,7 +262,8 @@ def validate_source_target(source: Path, target: Path, network_ha: bool):
 
 
 def resume(project: str, env: Path, services: list[str], *, expected: str, network_ha: bool):
-    # Disable auto-migrate on every API replica; only the one-shot migrator may DDL.
+    # Отключите автоматические миграции на каждой реплике API: DDL разрешён только
+    # одноразовому мигратору.
     old = os.environ.get('LAUNCHER_DATABASE_AUTO_MIGRATE')
     os.environ['LAUNCHER_DATABASE_AUTO_MIGRATE'] = 'false'
     try:
@@ -280,23 +286,26 @@ def resume(project: str, env: Path, services: list[str], *, expected: str, netwo
 
 def postgres_migrate(project: str, env: Path):
     for _ in range(2):
-        # Second run verifies migrations are safe to reapply/idempotent and that
-        # the new binary sees the resulting schema. All application writers stop.
+        # Второй запуск проверяет безопасность повторного применения миграций
+        # (идемпотентность) и совместимость нового бинарника с итоговой схемой. Все
+        # записывающие процессы приложения остановлены.
         dr.compose(project, env, 'run', '--rm', '--no-deps', '-T',
                    '-e', 'LAUNCHER_PROCESS_ROLE=migrate',
                    '-e', 'LAUNCHER_DATABASE_AUTO_MIGRATE=true', 'api', timeout=300)
 
 
 def reset_postgres(project: str, env: Path, snapshot: Path):
-    # A failed migration may have created objects NOT in the previous dump.
-    # Reset the entire application database before restoring. Never restore
-    # over a schema that might contain post-upgrade objects and new constraints.
+    # Неудачная миграция могла создать объекты, которых нет в предыдущем дампе.
+    # Полностью очистите базу приложения перед восстановлением. Никогда не
+    # восстанавливайте поверх схемы, где могли появиться объекты и ограничения после
+    # обновления.
     dr.compose(project, env, 'exec', '-T', 'postgres', 'sh', '-ec',
                'export PGPASSWORD="$POSTGRES_PASSWORD"; '
                'dropdb --if-exists --force -U "$POSTGRES_USER" "$POSTGRES_DB" && '
                'createdb -U "$POSTGRES_USER" -O "$POSTGRES_USER" "$POSTGRES_DB"', timeout=120)
     dr.compose_pg_restore(project, env, snapshot / 'database.dump')
-    # Coordinator and blob volumes must come from SAME pre-upgrade checkpoint.
+    # Тома координатора и бинарных объектов должны происходить из ОДНОЙ контрольной
+    # точки до обновления.
     for logical in dr.required_volumes():
         name = dr.volume_name(project, logical)
         dr.run(['docker', 'run', '--rm', '--network', 'none', '--mount',
@@ -317,7 +326,8 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
     require(snapshot_dir.parent.is_dir() and not snapshot_dir.parent.is_symlink(), 'snapshot parent unsafe')
     if network_ha:
         raise UpgradeError('Network-HA schema upgrade requires world/server coordination; use maintenance-specific DR runbook, not this Standard upgrade path')
-    # Lock independent of the snapshot itself and maintain it throughout DDL and recovery.
+    # Блокировка должна быть независимой от самого снимка и сохраняться в течение всего DDL и
+    # восстановления.
     with lock(snapshot_dir.parent):
         states = dr.compose_states(project, source)
         require(states.get('postgres') == 'running', 'source PostgreSQL must be running')
@@ -328,12 +338,13 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
         require(not any(states.get(name) == 'running' for name in ('worker-a','worker-b','api-b')),
                 'Standard upgrade refuses unexpected HA workers or API replicas')
         dr.check_restored_backend(project, source, version=source_version, storage='local')
-        # Build the actual target binaries BEFORE downtime; the one-shot
-        # migration must never silently fall back to an old API image.
+        # Соберите настоящие целевые бинарники ДО простоя; одноразовая миграция
+        # никогда не должна незаметно возвращаться к старому образу API.
         dr.compose(project, target, 'build', 'api', 'admin', timeout=2400)
         dr.run(['docker', 'image', 'inspect', 'launcher-api:' + TARGET], timeout=30)
-        # The snapshot function leaves stopped services off until migration and
-        # validation finish; unlike normal DR backup it cannot auto-resume.
+        # Функция snapshot оставляет службы остановленными до конца миграции и
+        # проверок; в отличие от обычной резервной копии DR она не должна
+        # автоматически возобновлять их.
         dr.snapshot(project, source, snapshot_dir, confirm, production=production,
                     approved=approved, resume_after=False, source_version=source_version)
         try:
@@ -343,7 +354,8 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
             return {'status': 'upgraded', 'mode': 'standard', 'from': source_version,
                     'to': TARGET, 'backup': str(snapshot_dir), 'applicationVerified': True}
         except Exception as primary:
-            # Guarantee no post-migration writer can race with recovery.
+            # Гарантируйте, что записывающий процесс после миграции не сможет
+            # конфликтовать с восстановлением.
             for svc in original:
                 try:
                     dr.compose(project, target, 'stop', '-t', '30', svc)

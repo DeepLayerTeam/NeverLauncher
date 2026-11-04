@@ -48,8 +48,8 @@ func NewRuntimeState() *RuntimeState {
 	}
 }
 
-// CloseProductRuntime releases the exclusive single-node SQLite owner lock.
-// Call after HTTP requests and workers have stopped.
+// CloseProductRuntime освобождает эксклюзивную блокировку владельца SQLite для
+// одного узла. Вызывайте после остановки HTTP-запросов и воркеров.
 func (s *RuntimeState) CloseProductRuntime() error {
 	if s == nil || s.productRuntimeCloser == nil {
 		return nil

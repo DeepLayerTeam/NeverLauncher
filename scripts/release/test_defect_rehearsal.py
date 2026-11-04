@@ -111,7 +111,8 @@ class CandidateTests(unittest.TestCase):
                 data.write_bytes(data.read_bytes()+b'tamper')
                 with self.assertRaises(m.Blocked):
                     m.sealed_freeze(manifest,sig,pub,kpin,COMMIT,PROJECT,packages,index,pin)
-                # Altered signed metadata must also be rejected before comparing bytes.
+                # Изменённые подписанные метаданные также должны отклоняться до сравнения
+                # байтов.
                 frozen['sourceTree']='f'*40
                 manifest.write_bytes(m.inventory.canonical(frozen))
                 with self.assertRaises(m.Blocked):

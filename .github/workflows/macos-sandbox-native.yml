@@ -18,7 +18,8 @@ permissions:
   contents: read
 jobs:
   macos-signed-native:
-    # A missing ARM64 worker does not become an x64 PASS. Both jobs are needed.
+    # Отсутствие рабочего узла ARM64 не превращается в PASS на x64. Требуются обе
+    # задачи.
     strategy:
       fail-fast: false
       matrix:
@@ -70,7 +71,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(uname -m)" = "$(test '${{ matrix.arch }}' = 'amd64' && echo x86_64 || echo arm64)"
-          # The helper must live below a trusted non-group/world-writable tree.
+          # Вспомогательный исполняемый файл должен находиться в доверенном дереве
+          # каталогов, недоступном для записи группе и другим пользователям.
           DEST="$HOME/Library/Application Support/NeverLauncher/SandboxHelpers/NeverExtensionSandbox"
           LAUNCHER_MACOS_SANDBOX_TEAM_ID="$TEAM_ID" LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY="$SIGN_IDENTITY" \
             bash scripts/security/build-macos-sandbox-helper-03112.sh "$DEST"

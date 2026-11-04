@@ -1,5 +1,6 @@
-# ONLY for isolated nl-dr-* lab projects. Never attach this override to production.
-# Bring up with the existing Network-HA Compose overlay and valid isolated secrets.
+# ТОЛЬКО для изолированных лабораторных проектов nl-dr-*. Никогда не применяйте это
+# переопределение в промышленной среде. Запускайте с существующим оверлеем Compose
+# Network-HA и действительными изолированными секретами.
 services:
   s3:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -14,8 +15,9 @@ services:
       - chaos_s3_data:/data
     networks: [launcher]
   nginx:
-    # Compose 2.24.4+ !override replaces public 80/443 bindings entirely.
-    # Lab ingress may only be accessed from this host.
+    # Конструкция !override в Compose 2.24.4+ полностью заменяет публичные
+    # привязки портов 80/443. К лабораторной точке входа можно обращаться только
+    # с этого хоста.
     ports: !override
       - '127.0.0.1:${LAUNCHER_CHAOS_HTTPS_PORT:-18443}:443'
   api:

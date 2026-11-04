@@ -127,7 +127,8 @@ func (s Server) authMeasuredBootComplete0315(w http.ResponseWriter, r *http.Requ
 		writeError(w, 401, "TPM Quote rejected: "+err.Error())
 		return
 	}
-	// A valid Quote for a session revoked during signature verification is not usable.
+	// Действительная Quote для сеанса, отозванного во время проверки подписи, не может
+	// использоваться.
 	currentSession, sessionErr := sessionBoundToDevice0124(s, claims, id)
 	currentDevice, deviceErr := s.Repo.GetTrustedDevice(claims.Sub, id)
 	if sessionErr != nil || deviceErr != nil || currentSession.ID != session.ID ||

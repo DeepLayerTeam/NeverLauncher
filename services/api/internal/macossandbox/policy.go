@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// ValidateGrants rejects anything that cannot be brokered without granting
-// additional App Sandbox entitlements to the extension process.
+// ValidateGrants отклоняет всё, что нельзя передать через брокер без выдачи
+// дополнительных разрешений App Sandbox процессу расширения.
 func ValidateGrants(read, write, network, secrets []string) error {
 	for _, v := range read {
 		if v != "package" && !sharedGrant(v) {

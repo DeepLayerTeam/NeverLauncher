@@ -19,8 +19,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Build workspaces are private to the operator; uploaded bytes are stored in
-// content-addressed, non-public storage keys until a build is materialized.
+// Рабочие пространства сборки доступны только оператору; загруженные данные
+// хранятся под непубличными ключами с адресацией по содержимому до создания
+// сборки.
 const maxWorkspaceFiles0226 = 25000
 
 func (s Server) workspaceStore0226(w http.ResponseWriter) (repository.BuildWorkspaceStore, bool) {
@@ -104,7 +105,8 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "profile not found or invalid: "+err.Error())
 		return
 	}
-	// Server identity is not a user-controlled tool fingerprint.
+	// Идентичность сервера не является отпечатком инструмента, задаваемым
+	// пользователем.
 	if req.Settings.ToolVersions == nil {
 		req.Settings.ToolVersions = make(map[string]string)
 	}
@@ -148,9 +150,9 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Validate runtime and ownership before retaining input settings.
-	// Classpath/modulepath entries reference files that have not been imported yet.
-	// Validate their syntax and membership after staging against actual hashes.
+	// Проверьте Runtime и права владения до сохранения входных настроек. Записи
+	// classpath/modulepath ссылаются на файлы, которые ещё не импортированы. После
+	// размещения проверьте синтаксис и принадлежность по фактическим хешам.
 	preflightRuntime := req.Settings.Runtime
 	preflightRuntime.Launch.ClasspathEntries = nil
 	preflightRuntime.Launch.ModulepathEntries = nil
@@ -220,10 +222,10 @@ func normalizeBuildFile0226(f repository.BuildFile) error {
 	return nil
 }
 
-// Workspace blobs are encrypted before reaching Local/S3/CDN-configured
-// storage. This prevents public-storage configurations from leaking source
-// files before publication. The key is domain-separated from the manifest
-// Ed25519 signing seed, and AEAD binds project/workspace/content digest.
+// Объекты рабочего пространства шифруются до передачи в хранилище Local/S3/CDN.
+// Это предотвращает утечку исходников при открытой конфигурации хранилища до
+// публикации. Ключ доменно отделён от Ed25519 seed подписи манифеста, а AEAD
+// связывает проект, рабочее пространство и хеш содержимого.
 func (s Server) workspaceCipher0226() (cipher.AEAD, error) {
 	key, err := s.manifestSigningPrivateKey()
 	if err != nil {
@@ -336,7 +338,8 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 413, "workspace file limit reached")
 		return
 	}
-	// Hash actual bytes; the browser's hash, if provided, is only an assertion.
+	// Вычисляйте хеш фактических байтов; хеш браузера, если он передан, является
+	// лишь заявлением.
 	data, err := io.ReadAll(io.LimitReader(src, s.maxUploadBytes()+1))
 	if err != nil || int64(len(data)) > s.maxUploadBytes() {
 		writeError(w, 413, "file too large")
@@ -391,10 +394,10 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 201, map[string]any{"apiVersion": apiContractVersion, "data": saved})
 }
 
-// workspaceRemoveFile0384 removes an incorrectly imported logical file before
-// a package is materialized. The content-addressed encrypted blob is retained
-// for deferred garbage collection: another path may share the same digest.
-// The workspace revision prevents a stale browser from removing newer input.
+// workspaceRemoveFile0384 удаляет ошибочно импортированный логический файл до
+// создания пакета. Зашифрованный объект с адресацией по хешу сохраняется для
+// отложенной очистки: другой путь может иметь тот же хеш. Ревизия рабочего
+// пространства не позволяет устаревшей вкладке удалить более новый ввод.
 func (s Server) workspaceRemoveFile0384(w http.ResponseWriter, r *http.Request) {
 	store, ws, ok := s.ownedWorkspace0226(w, r, "file:write")
 	if !ok {
@@ -604,8 +607,9 @@ func (s Server) workspaceStage0226(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": saved})
 }
 
-// buildDigest is stable across servers, timezones, map iteration and transport
-// order. Runtime settings and tool versions are part of the input identity.
+// buildDigest стабилен между серверами, часовыми поясами, порядком обхода map и
+// порядком передачи. Настройки Runtime и версии инструментов входят в идентичность
+// входных данных.
 func buildDigest0226(ws repository.BuildWorkspace) (string, error) {
 	basis := struct {
 		Schema          string                   `json:"schema"`
@@ -704,9 +708,9 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 409, "cannot build: "+err.Error())
 		return
 	}
-	// Reserve the release identity *before* creating files. Both workspace and
-	// package locks protect retries and competing uploads; a foreign package
-	// can never be adopted merely because metadata happens to match.
+	// Зарезервируйте идентичность релиза ДО создания файлов. Блокировки рабочего
+	// пространства и пакета защищают повторы и конкурирующие загрузки; чужой пакет
+	// нельзя присвоить только из-за совпадения метаданных.
 	packageID := ws.ProjectID + "-" + ws.ProfileID + "-" + ws.Version
 	packageUnlock, err := s.lockPackageMutation(r.Context(), "package:"+packageID)
 	if err != nil {
@@ -799,7 +803,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		if _, ok := oldByPath[f.Path]; ok {
 			continue
 		}
-		// Every source is AEAD-authenticated and SHA-256 verified again before copying.
+		// Каждый источник повторно проверяется по AEAD и SHA-256 до копирования.
 		data, e := s.readWorkspaceSource0226(ws, f)
 		if e != nil {
 			writeError(w, 409, "source content changed: "+e.Error())
@@ -828,7 +832,8 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 	manifest.Directories = ws.Settings.Directories
 	manifest.FileRules = ws.Settings.FileRules
 	manifest.Signature = nil
-	// The profile snapshot is owned by CreateVersion, never overwritten here.
+	// Снимком профиля управляет CreateVersion; здесь он никогда не
+	// перезаписывается.
 	if e := model.ValidateManifestSchema(manifest); e != nil {
 		writeError(w, 409, e.Error())
 		return

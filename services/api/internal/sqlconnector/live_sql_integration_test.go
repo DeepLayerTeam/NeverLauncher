@@ -13,8 +13,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
-// Run against real database servers by setting the DSNs. CI runs all three.
-// No test silently substitutes the fake database driver for a live E2E.
+// Запускайте с настоящими серверами БД, задав DSN. CI проверяет все три
+// варианта. Тест не должен незаметно подменять живой E2E фиктивным драйвером.
 func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 	targets := []struct{ name, driver, env string }{
 		{"postgresql", "postgresql", "LAUNCHER_SQL_TEST_POSTGRES_DSN"},
@@ -86,7 +86,8 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 				}
 				t.Fatal("connector activated with nonexistent mapped password column")
 			}
-			// An unknown stored verifier must not result in local auth fallback.
+			// Неизвестный сохранённый проверяющий формат не должен вызывать резервный
+			// переход на локальную аутентификацию.
 			_, err = db.ExecContext(ctx, "UPDATE nl_auth_0294_users SET pass_hash="+bind(1)+" WHERE account_id="+bind(2), "unknown", "42")
 			if err != nil {
 				t.Fatal(err)
@@ -95,8 +96,8 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 				t.Fatalf("unknown hash must fail closed, got %v", err)
 			}
 
-			// Switch to a configured Gravit doubleDigest source: this runs
-			// through the same real SQL password-authentication path.
+			// Переключитесь на настроенный источник Gravit doubleDigest: он использует
+			// тот же реальный SQL-путь проверки пароля.
 			first := sha256.Sum256([]byte("secret"))
 			second := sha256.Sum256([]byte(hex.EncodeToString(first[:])))
 			_, err = db.ExecContext(ctx, "UPDATE nl_auth_0294_users SET pass_hash="+bind(1)+" WHERE account_id="+bind(2), hex.EncodeToString(second[:]), "42")

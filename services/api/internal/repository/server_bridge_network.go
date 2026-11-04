@@ -93,9 +93,9 @@ func (r *SQLRepository) ListServerBridgeNetworkStates(ctx context.Context, proje
 	return out, rows.Err()
 }
 
-// SetServerBridgeNetworkCapacity applies an operator ceiling atomically with an
-// optimistic revision and exact runtime precondition. The target row lock also
-// serializes policy changes against handoff minting (which takes FOR UPDATE).
+// SetServerBridgeNetworkCapacity атомарно устанавливает операторский потолок с
+// оптимистичной ревизией и точным предусловием Runtime. Блокировка целевой строки
+// также сериализует изменение политики с выпуском handoff, использующим FOR UPDATE.
 func (r *SQLRepository) SetServerBridgeNetworkCapacity(ctx context.Context, serverID, projectID, runtimeID string, runtimeEpoch, expectedRevision int64, limit *int, actor string, now time.Time) (int64, error) {
 	if err := r.check(); err != nil {
 		return 0, err
@@ -130,8 +130,8 @@ func (r *SQLRepository) SetServerBridgeNetworkCapacity(ctx context.Context, serv
 	if err = tx.QueryRowContext(ctx, `UPDATE server_bridge_nodes_v2 SET operator_capacity_max=$2,operator_capacity_revision=operator_capacity_revision+1,operator_capacity_updated_at=$3,operator_capacity_updated_by=$4 WHERE id=$1 RETURNING operator_capacity_revision`, serverID, value, now.UTC(), actor).Scan(&newRevision); err != nil {
 		return 0, err
 	}
-	// Existing unredeemed tickets may refer to an earlier, less restrictive
-	// route. Invalidating them is safer than allowing a capacity race.
+	// Существующие непогашенные билеты могут относиться к более свободному
+	// маршруту. Безопаснее их аннулировать, чем допускать гонку ёмкости.
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE target_node_id=$1 AND status='active'`, serverID, now.UTC()); err != nil {
 		return 0, err
 	}

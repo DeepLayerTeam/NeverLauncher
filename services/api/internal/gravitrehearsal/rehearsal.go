@@ -1,6 +1,6 @@
-// Package gravitrehearsal validates the evidence produced by an isolated,
-// operator-owned Gravit -> Never test deployment. It never runs on production
-// resources and never treats unexecuted tests as passing.
+// Package gravitrehearsal проверяет доказательства из изолированного тестового
+// развёртывания Gravit → Never под контролем оператора. Не запускается на
+// промышленных ресурсах и не считает невыполненные тесты успешными.
 package gravitrehearsal
 
 import (
@@ -22,9 +22,10 @@ var digest = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var economyAmount = regexp.MustCompile(`^-?[0-9]+(?:\.[0-9]{1,6})?$`)
 var validUUID = regexp.MustCompile(`^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`)
 
-// Player is a point-in-time fixture read from the *source* and from the
-// isolated test environment. Digests are generated from actual data exports,
-// not arbitrary pass/fail flags. Economy is decimal text to avoid float loss.
+// Player — фикстура на конкретный момент времени, прочитанная ИЗ ИСТОЧНИКА и из
+// изолированного тестового окружения. Дайджесты создаются из реального экспорта
+// данных, а не произвольных флагов успешности. Экономика записана десятичным
+// текстом во избежание потерь float.
 type Player struct {
 	SourceID          string `json:"sourceId"`
 	UUID              string `json:"uuid"`
@@ -72,7 +73,8 @@ type Report struct {
 	LiveSession           *LiveSession `json:"liveSession,omitempty"`
 	Blockers              []string     `json:"blockers"`
 	Ready                 bool         `json:"ready"`
-	// Cutover remains unauthorized until MIG11; a rehearsal is not a cutover.
+	// Переключение остаётся неавторизованным до MIG11; репетиция не равна
+	// переключению.
 	CutoverAllowed bool `json:"cutoverAllowed"`
 }
 
@@ -87,8 +89,8 @@ func SnapshotDigest(v Snapshot) (string, error) {
 	return hex.EncodeToString(h[:]), nil
 }
 
-// Evaluate independently recomputes readiness. The backend MUST use this
-// function on submitted evidence, not accept client-supplied Ready or Blockers.
+// Evaluate независимо пересчитывает готовность. Backend ОБЯЗАН вызывать его на
+// переданных доказательствах, а не принимать Ready или Blockers от клиента.
 func Evaluate(v Report) (Report, error) {
 	if v.Format != Format || len(v.RunID) < 8 || len(v.RunID) > 128 || len(v.StageID) < 16 || len(v.StageID) > 128 || !digest.MatchString(v.SourceInventorySHA256) {
 		return Report{}, errors.New("invalid run/stage/inventory binding")
@@ -189,11 +191,11 @@ func Evaluate(v Report) (Report, error) {
 			add("required probe missing: " + name)
 		}
 	}
-	// A script returning `passed:true` is not a live Minecraft acceptance
-	// result. Require the native CLI observation of a foreground client process
-	// and a new player session visible on the isolated server via RCON.
-	// The backend validates its internal consistency, not remote attestation:
-	// it still trusts the staging operator and his RCON server.
+	// Скрипт с результатом `passed:true` не означает живую приёмку Minecraft.
+	// Требуйте от нативного CLI наблюдение клиентского процесса на переднем плане и
+	// новую сессию игрока, видимую на изолированном сервере через RCON. Backend
+	// проверяет внутреннюю согласованность, но не удалённую аттестацию: он всё ещё
+	// доверяет оператору staging и его RCON-серверу.
 	if v.LiveSession == nil {
 		add("native Minecraft launch and live join evidence missing")
 	} else {

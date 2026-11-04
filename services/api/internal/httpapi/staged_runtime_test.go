@@ -34,7 +34,8 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 		h.ServeHTTP(rr, req)
 		return rr
 	}
-	// Previous public delivery leaked staged files without any grant.
+	// Раньше публичная доставка раскрывала подготовленные файлы без какого-либо
+	// допуска.
 	pub := call("GET", "/api/v1/files/demo-project/"+id+"/mods/honest-validation.jar", "", nil)
 	if pub.Code != 404 {
 		t.Fatalf("staged file is public: %d %s", pub.Code, pub.Body.String())
@@ -81,7 +82,7 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 	if rr := call("GET", path, forged, nil); rr.Code != 401 {
 		t.Fatalf("cross-package grant: %d", rr.Code)
 	}
-	// Append a verified manifest-level report. This does NOT open stable.
+	// Добавляйте проверенный отчёт уровня манифеста. Это НЕ открывает stable.
 	now := time.Now().UTC()
 	report := stagedRunReport0342{Schema: stagedRunSchema0342, RunID: issued.Data.RunID, PackageID: id, ManifestSHA256: issued.Data.ManifestSHA256, ArtifactSHA256: issued.Data.ArtifactSHA256, StartedAt: now.Add(-time.Second), FinishedAt: now, Stages: map[string]stagedStep0342{"manifest-files": {Status: "passed", Detail: "observed download"}, "materialization": {Status: "failed", Detail: "missing runtime lock"}}}
 	body, _ := json.Marshal(report)
@@ -95,7 +96,7 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 	if list.Code != 200 || !strings.Contains(list.Body.String(), issued.Data.RunID) || !strings.Contains(list.Body.String(), `"trustedCertification":false`) {
 		t.Fatalf("report not persisted: %d %s", list.Code, list.Body.String())
 	}
-	// Object mutation after token issue MUST be detected before emitting HTTP 200.
+	// Изменение объекта после выдачи токена ДОЛЖНО обнаруживаться до отправки HTTP 200.
 	_, _, e := store.Save("demo-project", id, "mods/honest-validation.jar", strings.NewReader("poison bytes with owner-recomputed hashes not in snapshot"))
 	if e != nil {
 		t.Fatal(e)
@@ -126,8 +127,9 @@ func TestStagedGrantRejectsStaleAndCrossSnapshot0342(t *testing.T) {
 	}
 }
 
-// The new matching-server and gameplay stages are persisted as observations,
-// not upgraded to trusted release certification by the reporting endpoint.
+// Новые этапы соответствующего сервера и игрового процесса сохраняются как
+// наблюдения, а не повышаются через точку отчётности до доверенной сертификации
+// релиза.
 func TestMatchingStagedReportObservations0344(t *testing.T) {
 	now := time.Now().UTC()
 	grant := stagedGrant0342{Schema: stagedGrantSchema0342, PackageID: "pkg", RunID: "run-0344",

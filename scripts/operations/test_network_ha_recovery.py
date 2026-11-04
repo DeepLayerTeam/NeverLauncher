@@ -350,7 +350,7 @@ class NetworkHA0454Tests(unittest.TestCase):
     def test_schema_3_snapshot_rejects_corrupted_worlds(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            # Target receipt verification is performed on the actual bytes.
+            # Проверка целевой квитанции выполняется на реальных байтах.
             source = make_world(root / 'remote')
             stage = root / 'snap'
             stage.mkdir()

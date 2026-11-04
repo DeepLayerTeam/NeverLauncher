@@ -8,9 +8,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// The channel generation is an authorization sequence, not the user's
-// Minecraft version number and not a local release transaction pointer.
-// Caller serializes signatures using the durable game-generation scope lease.
+// Поколение канала — последовательность авторизации, а не версия Minecraft
+// пользователя и не локальный указатель транзакции релиза. Вызывающий сериализует
+// подписи устойчивой арендой области поколений игры.
 func (s Server) nextGameReleaseGeneration02311(project, profile, channel, exceptID string) (uint64, error) {
 	versions, err := s.Repo.ListVersions(project)
 	if err != nil {
@@ -31,12 +31,14 @@ func (s Server) nextGameReleaseGeneration02311(project, profile, channel, except
 	return highest + 1, nil
 }
 
-// A package that was signed while current but published after a newer release
-// must be signed again; otherwise an old but valid signature could move the
-// channel backwards. The durable publish CAS still resolves racing publishers.
+// Пакет, подписанный как текущий, но опубликованный после более нового релиза,
+// нужно подписать повторно; иначе старая, но действительная подпись может откатить
+// канал назад. Устойчивый CAS публикации по-прежнему разрешает конкуренцию
+// издателей.
 func (s Server) checkGameReleasePublishGeneration02311(candidate model.ReleaseVersion) error {
-	// Legacy releases may remain readable; once a channel accepts generations
-	// even a zero-generation signed release must not become its head again.
+	// Устаревшие релизы могут оставаться читаемыми; после принятия поколений
+	// каналом даже подписанный релиз с нулевым поколением не должен вновь стать
+	// его head.
 	versions, err := s.Repo.ListVersions(candidate.ProjectID)
 	if err != nil {
 		return err
@@ -61,8 +63,8 @@ func (s Server) checkGameReleasePublishGeneration02311(candidate model.ReleaseVe
 			}
 			digest, digestErr := manifestDigest0212(v.Manifest)
 			if digestErr == nil && digest == source.ManifestSHA256 {
-				// A rollback is the old content under a new identity and URL,
-				// not an arbitrary release claiming a historical reference.
+				// Откат — это старое содержимое под новой идентичностью и URL, а не
+				// произвольный релиз со ссылкой на историческую запись.
 				if sameGameFileSet02311(v.Manifest.Files, candidate.Manifest.Files) {
 					matched = true
 				}

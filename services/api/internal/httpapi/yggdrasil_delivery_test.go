@@ -101,8 +101,9 @@ func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
 	if textures["SKIN"].(map[string]any)["metadata"].(map[string]any)["model"] != "slim" || textures["CAPE"].(map[string]any)["url"] != r.texture.CapeURL {
 		t.Fatalf("first skin/cape mismatch: %#v", textures)
 	}
-	// Change the selected skin/cape while the same Server instance is running.
-	// The next request must read the current DB values, not an old bridge cache.
+	// Изменяйте выбранные skin/cape при работающем том же экземпляре Server.
+	// Следующий запрос должен читать актуальные значения БД, а не устаревший кэш
+	// моста.
 	r.texture.SkinURL = "https://api.example.test/api/v1/textures/blob/" + strings.Repeat("c", 64)
 	r.texture.CapeURL = ""
 	r.texture.Model = "classic"

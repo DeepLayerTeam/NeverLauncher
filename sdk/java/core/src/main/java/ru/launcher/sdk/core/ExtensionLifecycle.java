@@ -55,8 +55,8 @@ public final class ExtensionLifecycle implements AutoCloseable {
             previous=state;
             if(previous==State.STOPPED)return;
             if(previous==State.STOPPING){
-                // The first caller owns stop(); concurrent callers must not
-                // close the SDK services before its callback has completed.
+                // Первый вызывающий поток владеет stop(); параллельные вызовы не должны
+                // закрывать службы SDK до окончания его обратного вызова.
             }else if(previous==State.NEW||previous==State.STARTING||previous==State.FAILED){
                 state=State.STOPPED;
                 if(active!=null)active.cancel(true);

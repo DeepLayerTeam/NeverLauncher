@@ -39,7 +39,8 @@ func TestJavaPermanentRejectionDeadLettersImmediately0487(t *testing.T) {
 	if len(items) != 1 || items[0].Attempts != 1 || d.calls != 1 {
 		t.Fatalf("deadletters=%+v calls=%d", items, d.calls)
 	}
-	// Repeating the same idempotency key must not re-enqueue a completed item.
+	// Повтор того же ключа идемпотентности не должен снова ставить завершённый
+	// элемент в очередь.
 	_, inserted, err := bus.Publish(ctx, PublishInput{Type: "project.saved", ProjectID: "p1", AggregateType: "project", AggregateID: "p1", OrderingKey: "project:p1", IdempotencyKey: "permanent", Source: "java", Payload: map[string]any{"k": 1}})
 	if err != nil || inserted {
 		t.Fatalf("replay inserted=%v err=%v", inserted, err)

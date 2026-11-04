@@ -87,7 +87,8 @@ func TestGuardProcessID0317RejectsControlCharacters(t *testing.T) {
 		}
 	}
 	e := guardContinuousEvidence01810{Schema: guardContinuousEvidenceSchema01810, EvidenceVersion: 2, ProcessID: "runtime:123", RuntimePID: 10}
-	// A malformed identifier must fail before any other runtime health checks.
+	// Некорректный идентификатор должен отклоняться до любых других проверок
+	// состояния Runtime.
 	e.ProcessID = "one\ntwo"
 	if err := validateGuardContinuousEvidence01810(e, time.Now()); err == nil {
 		t.Fatal("malformed process ID accepted")

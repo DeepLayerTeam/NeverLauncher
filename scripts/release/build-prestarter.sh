@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Build Java-free native Prestarter binaries for all supported desktop targets.
-# Release root trust is compiled into the binary, never downloaded or TOFU'd.
+# Соберите нативные бинарники Prestarter без Java для всех поддерживаемых целевых
+# Desktop. Корневое доверие выпуска компилируется в бинарник, а не загружается и не
+# принимается по TOFU.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"

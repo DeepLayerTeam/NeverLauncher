@@ -39,15 +39,16 @@ func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
 		t.Fatalf("valid fixture: %v", err)
 	}
 
-	// Removing an owned optional JAR must break graph validation, even though
-	// the old preflight accepted a matching empty subset of storage objects.
+	// Удаление принадлежащего пакету необязательного JAR должно нарушить проверку
+	// графа, даже если старая предварительная проверка принимала совпадающее
+	// пустое подмножество объектов хранилища.
 	without := lookup
 	without.Files = uploaded[1:]
 	if err := validatePackageCandidate0526(without); err == nil {
 		t.Fatal("missing signed mod accepted by publication preflight")
 	}
 
-	// Invalid ownership also fails before the manifest is signed.
+	// Неверное владение также должно отклоняться до подписи манифеста.
 	tampered := lookup
 	tampered.Files = append([]model.FileObject(nil), uploaded...)
 	tampered.Files[0].Ownership = "required"

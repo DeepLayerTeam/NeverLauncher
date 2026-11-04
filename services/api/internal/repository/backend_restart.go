@@ -11,8 +11,9 @@ import (
 	"time"
 )
 
-// BackendRestartJournal provides durable at-most-once scheduling across API restarts.
-// An accepted restart is never implicitly rescheduled on a retry (including after a crash).
+// BackendRestartJournal обеспечивает устойчивое планирование не более одного раза между
+// перезапусками API. Принятый запрос перезапуска никогда не ставится в очередь повторно неявно,
+// в том числе после сбоя.
 type BackendRestartJournal interface {
 	ClaimBackendRestart0289(context.Context, string, string, string) (BackendRestartRecord0289, bool, error)
 }
@@ -49,8 +50,8 @@ func (r *SQLRepository) ClaimBackendRestart0289(ctx context.Context, actor, key,
 	if err := r.check(); err != nil {
 		return BackendRestartRecord0289{}, false, err
 	}
-	// Conflict handling is serialized by PostgreSQL's unique index. The first claim
-	// wins regardless of which replica receives subsequent requests.
+	// Конфликт сериализуется уникальным индексом PostgreSQL. Первая заявка побеждает
+	// независимо от того, на какую реплику поступают последующие запросы.
 	row := r.db.QueryRowContext(ctx, `INSERT INTO backend_restart_requests_0289 (id, actor, instance_id, state)
  VALUES ($1,$2,$3,'accepted') ON CONFLICT DO NOTHING RETURNING id,actor,instance_id,state,accepted_at`, id, actor, instance)
 	var rec BackendRestartRecord0289

@@ -11,9 +11,9 @@ import (
 	"sync"
 )
 
-// One inherited Unix socketpair is the ONLY route to the host in App Sandbox.
-// The HTTP transport must reuse this connection; a closed connection fails
-// closed instead of opening a loopback TCP route.
+// Единственный путь к хосту внутри App Sandbox — одна наследуемая пара
+// Unix-сокетов. HTTP-транспорт обязан переиспользовать это соединение; при
+// закрытии он отклоняет запрос, а не открывает TCP на loopback.
 func hostPipeDialer() func(context.Context, string, string) (net.Conn, error) {
 	fd, err := strconv.Atoi(os.Getenv("LAUNCHER_EXTENSION_HOST_FD"))
 	if err != nil || fd != 4 {

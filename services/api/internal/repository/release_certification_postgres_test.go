@@ -14,8 +14,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// This is a mandatory database integration case in the 0.23 release workflow.
-// It must run against a real PostgreSQL instance, not an in-memory substitute.
+// Это обязательный интеграционный тест БД в конвейере выпуска 0.23. Он должен
+// выполняться на настоящем PostgreSQL, а не замене в памяти.
 func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -52,7 +52,8 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 	if saved.Revision != 1 || w.ProfileDigest != saved.Digest || w.Revision != 1 {
 		t.Fatalf("invalid imported record: %+v %+v", saved, w)
 	}
-	// The imported profile and workspace must be visible on another connection.
+	// Импортированные профиль и рабочее пространство должны быть видны из другого
+	// соединения.
 	got, err := b.GetBuildWorkspace(ctx, w.ID)
 	if err != nil || got.ProfileDigest != saved.Digest {
 		t.Fatalf("not durable: %+v %v", got, err)
@@ -65,7 +66,8 @@ func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
 	if _, err := a.GetBuildWorkspace(ctx, conflict.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("partial import: %v", err)
 	}
-	// An existing workspace ID cannot be adopted even if timestamps or payloads happen to match.
+	// Существующий ID рабочего пространства нельзя присвоить, даже если время создания или полезная
+	// нагрузка совпадают.
 	if _, err := b.CreateBuildWorkspace(ctx, base); !errors.Is(err, ErrConflict) {
 		t.Fatalf("duplicate workspace accepted: %v", err)
 	}

@@ -98,7 +98,8 @@ type Reporter struct {
 	once                 sync.Once
 }
 
-// New returns nil for an unset DSN. Invalid nonempty DSNs fail startup rather than silently disabling reporting.
+// New возвращает nil при незаданном DSN. Некорректный непустой DSN вызывает ошибку запуска вместо незаметного
+// отключения отчётности.
 func New(dsn, release, environment string) (*Reporter, error) {
 	if dsn == "" {
 		return nil, nil
@@ -109,8 +110,9 @@ func New(dsn, release, environment string) (*Reporter, error) {
 	}
 	r := &Reporter{dest: d, release: release, environment: environment, events: make(chan event, 64), done: make(chan struct{}), stop: make(chan struct{}), client: &http.Client{
 		Timeout: 3 * time.Second,
-		// Never forward the Sentry public key or envelope to a redirect target.
-		// The ingest origin comes from operator configuration, not the response.
+		// Никогда не пересылайте публичный ключ Sentry или envelope на цель
+		// перенаправления. Origin приёма берётся из конфигурации оператора, а не
+		// HTTP-ответа.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}}
 	go r.loop()
@@ -134,8 +136,9 @@ func (r *Reporter) Capture(category, component, message string) {
 	}
 }
 
-// loop flushes events accepted before shutdown, with a strict upper bound.
-// The caller cannot wait indefinitely when the remote ingest is unavailable.
+// loop отправляет события, принятые до остановки, со строгим верхним ограничением
+// времени. Вызывающий не должен ждать бесконечно при недоступном удалённом
+// приёме.
 func (r *Reporter) loop() {
 	defer close(r.done)
 	for {
@@ -177,8 +180,8 @@ func (r *Reporter) send(ctx context.Context, e event) error {
 	data.WriteByte('\n')
 	data.Write(body)
 	data.WriteByte('\n')
-	// Retry only transient ingest failures. The event_id remains stable so
-	// Sentry can deduplicate a request whose acknowledgement was lost.
+	// Повторяйте только при временных сбоях приёма. event_id остаётся стабильным,
+	// чтобы Sentry мог дедуплицировать запрос с потерянным подтверждением.
 	var lastErr error
 	for attempt := 0; attempt < 3; attempt++ {
 		if err := ctx.Err(); err != nil {
@@ -224,8 +227,8 @@ func (r *Reporter) send(ctx context.Context, e event) error {
 	return lastErr
 }
 
-// Wrap captures HTTP panics and 5xx status codes without request metadata and re-panics
-// so the standard net/http recovery behavior remains intact.
+// Wrap перехватывает HTTP-паники и статусы 5xx без метаданных запроса и повторно вызывает
+// панику, сохраняя стандартное восстановление net/http.
 func (r *Reporter) Wrap(next http.Handler) http.Handler {
 	if r == nil {
 		return next
@@ -280,7 +283,7 @@ func (r *Reporter) Close() {
 	}
 }
 
-// EnabledFromEnvironment deliberately does not turn on reporting merely because a DSN exists.
+// EnabledFromEnvironment намеренно не включает отчётность только по наличию DSN.
 func EnabledFromEnvironment() bool {
 	return strings.EqualFold(os.Getenv("LAUNCHER_SENTRY_BACKEND_ENABLED"), "true")
 }

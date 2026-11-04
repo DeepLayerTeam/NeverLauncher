@@ -23,8 +23,8 @@ func isDurableAction(s string) bool {
 	return false
 }
 
-// Secrets (lease tokens) are supplied from a private 0600 input JSON file, not
-// argv. Output containing a lease token must be redirected to a private file.
+// Секреты (токены аренды) передаются из закрытого JSON-файла с правами 0600, а не
+// через argv. Вывод с токеном аренды необходимо направлять в закрытый файл.
 func runDurableAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)

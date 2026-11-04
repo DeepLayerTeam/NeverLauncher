@@ -8,8 +8,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// OperationLister provides a project-isolated, bounded view of durable jobs.
-// The API checks the caller's project permission before using this interface.
+// OperationLister предоставляет ограниченный и изолированный по проекту обзор
+// устойчивых задач. API проверяет права вызывающего в проекте до применения
+// интерфейса.
 type OperationLister interface {
 	ListProjectOperations(ctx context.Context, projectID, status string, limit, offset int) ([]model.DurableJob, error)
 }

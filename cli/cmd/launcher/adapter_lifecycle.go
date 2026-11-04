@@ -12,11 +12,11 @@ import (
 	"strings"
 )
 
-// Each pinned adapter has an independent release version and an implementation
-// fingerprint. The embedded sources are from the binary that actually executes
-// the installation, not files read from the (potentially untrusted) client.
-// This intentionally changes fingerprints when executable materialization code
-// changes without a matching manually updated version constant.
+// Каждый закреплённый адаптер имеет независимую версию выпуска и отпечаток
+// реализации. Встроенные исходники берутся из бинарника, который действительно
+// выполняет установку, а не из файлов потенциально недоверенного клиента. Поэтому
+// отпечаток намеренно меняется при изменении кода материализации исполняемых файлов
+// без соответствующего ручного обновления константы версии.
 //
 //go:embed adapter_lifecycle_02711.go client_factory_0271.go vanilla_runtime.go loader_runtime.go loader_resolution.go modern_loader_adapters_0272.go forge_runtime.go forge_processor_recovery.go isolated_build_worker_0273.go isolated_build_worker_0273_linux.go isolated_build_worker_0273_darwin.go isolated_build_worker_0273_windows.go isolated_build_worker_0273_other.go shared_artifacts_0277.go legacy_client_adapters_0278.go authlib_classloader_0279.go
 var factoryAdapterSources02711 embed.FS

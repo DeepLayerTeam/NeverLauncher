@@ -95,8 +95,9 @@ func TestRuntimeStoreQuotas0303(t *testing.T) {
 	}
 }
 
-// Real local HTTP broker integration: permission changes are effective immediately,
-// even when a caller retains the same authenticated instance token.
+// Настоящая интеграция локального HTTP-брокера: изменение разрешений действует
+// немедленно, даже если вызывающий код удерживает тот же аутентифицированный токен
+// экземпляра.
 func TestRuntimeHTTPPermissions0303(t *testing.T) {
 	ctx := context.Background()
 	repo := repository.NewMemoryRepository("http://example.test")

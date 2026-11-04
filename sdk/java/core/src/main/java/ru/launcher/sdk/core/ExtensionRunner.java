@@ -41,8 +41,8 @@ public final class ExtensionRunner {
         String kind=argv==null?"backend":"cli";
         if(manifest.targets().stream().noneMatch(t->t.kind().equals(kind)))throw new IllegalArgumentException("Java extension requires "+kind+" target");
         if(!kind.equals(env.getOrDefault("LAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("host target mismatch");
-        // Loading without initialization prevents extension static initializers
-        // from running until the authenticated host has negotiated the API.
+        // Загрузка без инициализации не допускает выполнения статических
+        // инициализаторов расширения, пока аутентифицированный хост не согласует API.
         try(BundledLibraries libraries=BundledLibraries.open(manifest.api())) {
         Class<?> type=Class.forName(className,false,libraries.classLoader());
         if(!Extension.class.isAssignableFrom(type))throw new IllegalArgumentException("class does not implement Extension: "+className);
@@ -53,8 +53,9 @@ public final class ExtensionRunner {
             RuntimeServices services=new RuntimeServices(host,declared,declaredUIActions(source));
             RuntimeCallbackServer callback=new RuntimeCallbackServer(required(env,"LAUNCHER_EXTENSION_CALLBACK_TOKEN"),services,
                 ()->{ExtensionLifecycle current=lifecycleRef.get();return current==null?"STARTING":current.state().name();})) {
-            // No extension constructor, static initializer or start() is invoked
-            // if the host rejects the version, identity or advertised features.
+            // Если хост отклоняет версию, идентичность или объявленные возможности, не
+            // вызываются ни конструктор расширения, ни статический инициализатор, ни
+            // start().
             host.connect(callback.url());
             Thread currentThread=Thread.currentThread();
             ClassLoader previousLoader=currentThread.getContextClassLoader();

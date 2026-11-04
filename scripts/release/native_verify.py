@@ -59,7 +59,7 @@ def normalize_pe(unsigned: bytes, signed: bytes) -> None:
         arr[sec_a:sec_a+8]=b'\0'*8
     if u!=s[:len(u)] or any(s[len(u):cert_off]):
         raise ValueError('signer altered executable bytes outside Authenticode metadata')
-    # Any post-certificate data needs separate declaration/verification.
+    # Любые данные после сертификата требуют отдельного объявления и проверки.
     if cert_off+cert_size!=len(s):
         raise ValueError('unsigned trailing data after Authenticode certificate')
 
@@ -76,8 +76,9 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
     unsigned_file=require_path(unsigned,file)
     visit_archive(unsigned_file,plat,arch)
     actual=verify_target(signed_root,target,file,RELEASE_VERSION)
-    # Existing compiled release CLI checks exact manifest, signed Ed25519 and
-    # operator trust policy. Native checks do not replace that trust gate.
+    # Существующий скомпилированный CLI выпуска проверяет точный манифест, подпись
+    # Ed25519 и политику доверия оператора. Нативные проверки не заменяют этот
+    # барьер доверия.
     call([str(release_cli),'release','verify',str(signed_root),
           '--public-key',str(public_key),'--trust-state',str(trust_state),
           '--trust-policy',str(trust_policy)])
@@ -102,7 +103,8 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
                 path=Path(t)/name
                 path.write_bytes(signed_files[name])
                 call([signtool,'verify','/pa','/all','/v',str(path)])
-                # Validate Windows-trusted chain, not a certificate-table flag.
+                # Проверяйте доверенную Windows цепочку, а не флаг наличия таблицы
+                # сертификатов.
                 powershell_script=(
                     'param([string]$File) '
                     '$s=Get-AuthenticodeSignature -FilePath $File; '
@@ -119,8 +121,8 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
             raise ValueError('macOS native Gatekeeper/notary validators unavailable')
         with tempfile.TemporaryDirectory(prefix='launcher-codesign-') as t:
             app=Path(t)/'Launcher.app'
-            # Check member safety before native extraction; ditto is required
-            # to retain the resource metadata needed by codesign.
+            # Проверяйте безопасность элементов перед нативной распаковкой; ditto
+            # обязателен для сохранения метаданных ресурсов, необходимых codesign.
             read_archive(signed_root/file)
             call([ditto,'-xk',str(signed_root/file),t])
             if not app.is_dir():
@@ -128,8 +130,8 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
             call([codesign,'--verify','--deep','--strict','--verbose=2',str(app)])
             call([str(gatekeeper),'--assess','--type','execute','--verbose=2',str(app)])
             call([stapler,'stapler','validate',str(app)])
-        # codesign modifies Mach-O executable load commands/linkedit; the
-        # independent signing operator must audit the transformation too.
+        # codesign изменяет команды загрузки и linkedit исполняемого Mach-O;
+        # независимый оператор подписи должен проверить и это преобразование.
         actual_check='codesign-gatekeeper-and-notarization-verified'
     return {'schema':'neverlauncher.native-verification.v1','version':RELEASE_VERSION,
             'target':target,'unsignedSha256':sha256_file(unsigned_file),

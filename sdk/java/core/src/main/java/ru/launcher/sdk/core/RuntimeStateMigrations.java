@@ -32,8 +32,8 @@ public final class RuntimeStateMigrations {
         if(executing)throw new IllegalStateException("concurrent state migration");
         executing=true;
         try{
-            // Extensions that retain their existing JSON schema need no migration.
-            // When a migration graph is registered, every hop must be complete.
+            // Расширениям с прежней JSON-схемой миграция не нужна. Если зарегистрирован
+            // граф миграций, каждый переход должен быть полным.
             if(steps.isEmpty())return Map.of("applied",false,"fromVersion",fromVersion,"toVersion",toVersion);
             SemVer cursor=from;
             int applied=0;

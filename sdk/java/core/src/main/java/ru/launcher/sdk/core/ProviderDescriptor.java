@@ -13,7 +13,8 @@ public record ProviderDescriptor<T extends JavaProvider>(
             throw new IllegalArgumentException("invalid provider id");
         Objects.requireNonNull(version, "version");
         Objects.requireNonNull(factory, "factory");
-        // Parse now, before a library gets a chance to execute its constructor.
+        // Разбирайте сейчас, до того как библиотека получит возможность выполнить
+        // конструктор.
         SemVer.parse("0.0.0").matches(supportedSpi);
         SemVer.parse("0.0.0").matches(supportedExtensionApi);
     }

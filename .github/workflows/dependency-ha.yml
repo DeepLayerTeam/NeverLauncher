@@ -44,5 +44,5 @@ jobs:
           mkdir "$d/out"
           python scripts/operations/dependency_ha_0513.py render --env-file "$d/ha.env" --output-dir "$d/out"
           sudo haproxy -c -f "$d/out/haproxy.launcher-0513.cfg"
-          # Configuration test does not change system network or start VRRP.
+          # Проверка конфигурации не изменяет системную сеть и не запускает VRRP.
           sudo keepalived --config-test --use-file="$d/out/keepalived.launcher-0513.conf"

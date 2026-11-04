@@ -1,6 +1,7 @@
-// Command official-provider-poc verifies an OWN Microsoft Entra public-client
-// registration against LIVE Microsoft, Xbox Live, XSTS and Minecraft Services.
-// It never persists credentials or treats an offline/mock response as approval.
+// Команда official-provider-poc проверяет СОБСТВЕННУЮ регистрацию публичного клиента
+// Microsoft Entra по ЖИВЫМ Microsoft, Xbox Live, XSTS и Minecraft Services. Она
+// никогда не сохраняет учётные данные и не принимает офлайн-ответ или имитацию за
+// одобрение.
 package main
 
 import (
@@ -29,7 +30,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 )
 
-// Overridden by -ldflags -X at production build time.
+// Переопределяется через -ldflags -X при промышленной сборке.
 var releaseVersion = "0.27.0"
 
 type providerClient interface {
@@ -152,8 +153,9 @@ type callbackResult struct {
 	Err  error
 }
 
-// browserGrant binds only IPv4 loopback, validates Host, state, callback path
-// and code length; no HTTP server logs credentials or redirects to a remote URL.
+// browserGrant привязывается только к IPv4 loopback, проверяет Host, state, путь
+// обратного вызова и длину кода. HTTP-сервер не пишет учётные данные в журналы и не
+// перенаправляет на удалённый URL.
 func browserGrant(ctx context.Context, c providerClient, opt options, output io.Writer) (officialminecraft.OAuthTokens, error) {
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -408,8 +410,9 @@ func writeReport(path string, r *report) error {
 		_, err = os.Stdout.Write(b)
 		return err
 	}
-	// Exclusive creation, restrictive permissions and no symlink following:
-	// credentials are absent, but proof can identify a user's app registration.
+	// Эксклюзивное создание, строгие права и запрет следования символьным ссылкам:
+	// учётных данных нет, но доказательство может идентифицировать регистрацию
+	// приложения пользователя.
 	file, err := os.OpenFile(filepath.Clean(path), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err

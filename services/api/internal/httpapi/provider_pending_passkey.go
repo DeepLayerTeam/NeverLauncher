@@ -7,9 +7,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// pendingProviderIdentity0296 pins the encrypted credential to the exact
-// already-authenticated issuer-scoped identity rather than a mutable email or
-// provider-only selection (which can be ambiguous across issuers).
+// pendingProviderIdentity0296 привязывает зашифрованные учётные данные к точной
+// уже аутентифицированной идентичности с учётом issuer, а не к изменяемому email
+// или одному провайдеру, неоднозначному между издателями.
 func (s Server) pendingProviderIdentity0296(userID, provider, identityID string) (model.AuthIdentity, error) {
 	if userID == "" || identityID == "" || strings.TrimSpace(provider) == "" {
 		return model.AuthIdentity{}, errors.New("pending provider identity is incomplete")
@@ -22,9 +22,9 @@ func (s Server) pendingProviderIdentity0296(userID, provider, identityID string)
 	return model.AuthIdentity{}, errors.New("pending provider identity changed or unlinked")
 }
 
-// commitPendingProviderCredential0296 is invoked only after a successful
-// WebAuthn assertion and Never session issuance. AAD binds the sealed token to
-// the exact owner/provider/subject so it cannot be swapped between challenges.
+// commitPendingProviderCredential0296 вызывается только после успешного
+// WebAuthn-подтверждения и выдачи сеанса Never. AAD привязывает запечатанный токен
+// к конкретному владельцу, провайдеру и субъекту, исключая подмену между challenge.
 func (s Server) commitPendingProviderCredential0296(user model.User, provider, identityID, sealed string) error {
 	identity, err := s.pendingProviderIdentity0296(user.ID, provider, identityID)
 	if err != nil {

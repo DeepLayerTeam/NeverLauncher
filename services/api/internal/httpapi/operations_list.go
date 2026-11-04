@@ -8,8 +8,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// List stored operations without exposing payloads, idempotency keys or worker leases.
-// Project membership is required independently of ownership of individual jobs.
+// Перечисляйте сохранённые операции без раскрытия полезной нагрузки, ключей идемпотентности
+// и аренд воркеров. Членство в проекте проверяется независимо от владения отдельными
+// задачами.
 func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.adminClaims(r)
 	if err != nil {

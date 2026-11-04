@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Requires an actual trusted Apple Developer ID Application identity.
+# Требуется настоящая доверенная идентичность Apple Developer ID Application.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 : "${LAUNCHER_MACOS_SANDBOX_TEAM_ID:?required: ten-character Apple team ID}"

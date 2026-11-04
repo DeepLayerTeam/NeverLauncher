@@ -13,8 +13,9 @@ import (
 	"time"
 )
 
-// The control plane uses the same role-separated, root-signed policy bytes as
-// Prestarter and Runtime. An API request may NOT supply its own trust root.
+// Плоскость управления использует те же разделённые по ролям и подписанные корнем
+// байты политики, что Prestarter и Runtime. API-запрос НЕ может задавать
+// собственный доверенный корень.
 type gameTrustEnvelope02312 struct {
 	SchemaVersion string `json:"schemaVersion"`
 	Payload       string `json:"payload"`

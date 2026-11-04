@@ -17,10 +17,10 @@ type passwordIdentityProof0291 struct {
 	Password   string `json:"password"`
 }
 
-// Self-service legacy issuer migration for SQL/HTTP/local password providers:
-// a valid Never session and a fresh successful password verification from the
-// explicitly selected external provider are both required. No JIT provisioning,
-// cross-provider failover, email-based matching or password export occurs.
+// Самостоятельная миграция старого издателя для провайдеров SQL/HTTP/локального
+// пароля: нужны действительная сессия Never и новая успешная парольная проверка у
+// явно выбранного внешнего провайдера. JIT-регистрация, запасной другой провайдер,
+// сопоставление по email и экспорт пароля запрещены.
 func (s Server) authProviderLinkPassword0291(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
@@ -42,9 +42,9 @@ func (s Server) authProviderLinkPassword0291(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Each external credential proof is rate-limited independently from the
-	// canonical user session to prevent a signed-in attacker from guessing
-	// passwords of other accounts or exhausting the provider.
+	// Каждое внешнее подтверждение учётных данных ограничено по частоте
+	// независимо от канонической пользовательской сессии, чтобы вошедший
+	// злоумышленник не угадывал чужие пароли и не истощал провайдера.
 	rateKey := "provider-link:" + providerID + ":" + strings.ToLower(strings.TrimSpace(req.Identifier))
 	if allowed, retry := s.State.Security.allowLogin(rateKey, clientIP(r)); !allowed {
 		writeError(w, http.StatusTooManyRequests, "слишком много неудачных попыток; повторите после "+retry.Format(time.RFC3339))

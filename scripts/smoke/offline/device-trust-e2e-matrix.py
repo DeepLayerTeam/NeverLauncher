@@ -57,8 +57,8 @@ if len(actual) != len(rows):
 for target_id, identity in expected.items():
     if actual.get(target_id) != identity:
         raise SystemExit(f"missing or changed mandatory Device Trust baseline target: {target_id}")
-# New required targets are validated by scripts/device_trust/matrix.py as well;
-# this historical gate must not reject legitimately expanded security coverage.
+# Новые обязательные платформы также проверяются scripts/device_trust/matrix.py;
+# исторический этап не должен отклонять законно расширенный охват защиты.
 
 matrix = read("scripts/device_trust/matrix.py")
 require(

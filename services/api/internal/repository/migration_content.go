@@ -16,9 +16,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// EnsureMigrationContent0337 makes the profile/workspace reservation durable
-// before object staging. A network interruption returns to precisely the same
-// profile/workspace; it never silently adopts an unrelated existing profile.
+// EnsureMigrationContent0337 сохраняет резервирование профиля/рабочего
+// пространства до подготовки объектов. При сетевом обрыве возвращается ровно тот
+// же профиль/пространство; чужой существующий профиль не присваивается молча.
 func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, owner, channel, version string, plan gc.Plan, expectedPlanSHA ...string) (BuildWorkspace, error) {
 	if e := r.check(); e != nil {
 		return BuildWorkspace{}, e
@@ -58,9 +58,9 @@ func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, o
 	if kind != "gravit" || status != "prepared" || step != "source_assessment" || project != profile.ProjectID {
 		return BuildWorkspace{}, mw.ErrBusy
 	}
-	// A migration triggered through the 0.44.2 API supplies a pinned dry-run
-	// digest. Validate it in the SAME serializable transaction as the profile
-	// creation so a concurrent replacement cannot change its contents.
+	// Миграция, вызванная через API 0.44.2, передаёт закреплённый хеш пробного
+	// запуска. Проверяйте его в ТОЙ ЖЕ сериализуемой транзакции, что создание
+	// профиля, чтобы параллельная замена не изменила содержимое.
 	if len(expectedPlanSHA) != 0 {
 		if len(expectedPlanSHA) != 1 || len(expectedPlanSHA[0]) != 64 {
 			return BuildWorkspace{}, mw.ErrConflict
@@ -98,8 +98,9 @@ func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, o
 	if invSource != plan.SourceSHA256 || invManifest != plan.InventorySHA256 {
 		return BuildWorkspace{}, mw.ErrConflict
 	}
-	// Bind the migrated content to MIG04's approved source identity whenever
-	// MIG04 exists; content import itself does not grant login or permissions.
+	// Связывайте мигрированное содержимое с одобренной идентичностью источника
+	// MIG04 при её наличии; сам импорт содержимого не даёт права входа или
+	// разрешений.
 	var oldSource, oldManifest, oldFiles, oldProfile, oldWorkspace, oldOwner string
 	e = tx.QueryRowContext(ctx, `SELECT source_sha256,manifest_sha256,files_sha256,profile_id,workspace_id,owner_id FROM migration_content_0337 WHERE run_id=$1 AND profile_path=$2`, runID, plan.ProfilePath).Scan(&oldSource, &oldManifest, &oldFiles, &oldProfile, &oldWorkspace, &oldOwner)
 	if e == nil {

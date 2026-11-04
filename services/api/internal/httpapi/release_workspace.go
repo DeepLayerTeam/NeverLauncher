@@ -12,8 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Drafts are server-owned records (never client localStorage). Only their owner
-// with current project rights may read/write them. Revision is an optimistic CAS.
+// Черновики принадлежат серверу и никогда не хранятся в localStorage клиента. Читать и
+// изменять их может только владелец с действующими правами проекта. Ревизия
+// используется для оптимистичного CAS.
 func (s Server) draftStore0218(w http.ResponseWriter) (repository.ReleaseDraftStore, bool) {
 	store, ok := s.Repo.(repository.ReleaseDraftStore)
 	if !ok {
@@ -93,7 +94,7 @@ func (s Server) draftCreate0218(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "project not found")
 		return
 	}
-	// The ID, owner and revision are not accepted from the browser.
+	// Браузер не может задавать ID, владельца или ревизию.
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
 		writeError(w, 500, "ID allocation failed")

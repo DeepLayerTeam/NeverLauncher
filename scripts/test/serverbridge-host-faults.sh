@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Live CLI/RemoteControl fault regression. Requires Go >=1.22 and OpenJDK 21.
+# Живая регрессия CLI/RemoteControl с внедрением отказов. Требуются Go >=1.22 и
+# OpenJDK 21.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT/cli"

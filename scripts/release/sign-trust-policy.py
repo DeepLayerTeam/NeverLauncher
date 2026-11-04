@@ -44,8 +44,8 @@ def _read_policy(path: Path):
         or not 1 <= value["epoch"] < 2**64
     ):
         raise ValueError("trust policy version/domain/epoch invalid")
-    # A certificate with an expired or inverted validity interval must never
-    # be signed by the offline root and later accidentally promoted as valid.
+    # Сертификат с истёкшим или перевёрнутым интервалом действия никогда нельзя
+    # подписывать автономным корнем и затем случайно продвигать как действующий.
     def parse_time(field):
         raw = value.get(field)
         if not isinstance(raw, str) or len(raw) != 20:
@@ -105,7 +105,7 @@ def sign_policy(
         "rootSignature": signature.hex(),
     }
     output = (json.dumps(envelope, sort_keys=True, indent=2) + "\n").encode()
-    # Perform an actual cryptographic verification before publishing the bytes.
+    # До публикации байтов выполните настоящую криптографическую проверку.
     private.public_key().verify(bytes.fromhex(envelope["rootSignature"]), PREFIX + payload)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temp = None
@@ -119,7 +119,7 @@ def sign_policy(
             os.fsync(writer.fileno())
         os.replace(temp, output_path)
         temp = None
-        # Ensure that the renamed directory entry is durable on POSIX.
+        # Убедитесь, что переименованная запись каталога надёжно сохранена в POSIX.
         if os.name == "posix":
             directory_fd = os.open(output_path.parent, os.O_RDONLY)
             try:

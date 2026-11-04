@@ -13,8 +13,8 @@ const defaultRequestsPerSecond03113 = 64
 const defaultOutputBytes03113 int64 = 8 << 20
 const maxConcurrentRequests03113 = 16
 
-// Protected by processState.mu. Budgets are per INSTANCE, never per token/IP/
-// connection, so reconnecting the SDK cannot reset enforcement.
+// Защищено processState.mu. Лимиты действуют для ЭКЗЕМПЛЯРА, а не токена, IP или
+// соединения; переподключение SDK не сбрасывает ограничения.
 type hostBudget03113 struct {
 	window   time.Time
 	requests int
@@ -72,9 +72,9 @@ func (w *boundedHostResponse03113) Write(p []byte) (int, error) {
 	return w.ResponseWriter.Write(p)
 }
 
-// Applies to both TCP Host Protocol and the Windows/macOS private IPC proxies.
-// Authentication still happens inside handlers. Unrecognized tokens do not
-// consume a legitimate instance's quota.
+// Применяется и к TCP Host Protocol, и к закрытым IPC-прокси Windows/macOS.
+// Аутентификация по-прежнему происходит в обработчиках. Неизвестные токены не
+// расходуют квоту законного экземпляра.
 func (s *Supervisor) limitedHostHandler03113(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := strings.TrimSpace(r.Header.Get("Authorization"))
@@ -86,9 +86,9 @@ func (s *Supervisor) limitedHostHandler03113(next http.Handler) http.Handler {
 		s.mu.RLock()
 		st := s.tokens[token]
 		s.mu.RUnlock()
-		// A Java process is not a sandbox, even when its manifest does not
-		// request OS isolation. Enforce the same authenticated IPC quotas for
-		// Java rather than offering it an unlimited loopback broker.
+		// Процесс Java не является песочницей, даже если его манифест не требует
+		// изоляции ОС. Применяйте к Java те же аутентифицированные ограничения IPC
+		// вместо безлимитного брокера loopback.
 		if st == nil || subtle.ConstantTimeCompare([]byte(token), []byte(st.token)) != 1 ||
 			(!st.javaHost && (st.manifest.Sandbox == nil || st.manifest.Sandbox.Mode != "isolated")) {
 			next.ServeHTTP(w, r)

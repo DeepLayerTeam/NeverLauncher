@@ -72,7 +72,8 @@ func TestMacOSRecoveryRejectsReuseAndRequiresFreshPasskey0316(t *testing.T) {
 	if err != nil || previous.Status != "revoked" || previous.ReplacedByDeviceID != newID {
 		t.Fatalf("old identity not tombstoned: %+v %v", previous, err)
 	}
-	// Consumed challenge cannot be used twice, nor can a revoked source be replaced again.
+	// Погашенный challenge нельзя использовать дважды, как нельзя повторно заменить отозванный
+	// источник.
 	replay, _ := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+old.ID+"/key-recovery/complete", access, complete)
 	if replay == http.StatusOK {
 		t.Fatal("recovery replay accepted")

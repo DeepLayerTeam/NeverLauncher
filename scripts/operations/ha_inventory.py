@@ -43,7 +43,7 @@ TARGETS = (
     "/var/lib/launcher/factory", "/var/lib/launcher/coordinator",
     "/var/lib/launcher/extensions", "/app/extensions",
 )
-# Names only. Values are never written to a report or to an exception.
+# Только имена. Значения никогда не записываются ни в отчёт, ни в исключение.
 VISIBLE_ENV = frozenset((
     "LAUNCHER_DEPLOYMENT_MODE", "LAUNCHER_PROCESS_ROLE", "LAUNCHER_REPLICA_ID",
     "LAUNCHER_REPOSITORY_DRIVER", "LAUNCHER_SQL_DRIVER",
@@ -93,8 +93,8 @@ def machine_identity():
 
 
 def hostname_from_endpoint(raw):
-    # Only the host is returned; userinfo, path, db name, query and secret
-    # never leave this function. libpq keyword DSNs are not exposed.
+    # Возвращается только хост; userinfo, путь, имя БД, запрос и секрет не
+    # выходят из функции. DSN libpq в формате ключей также не раскрываются.
     try:
         parsed = urlsplit(raw.strip())
         if parsed.scheme and parsed.hostname:
@@ -181,8 +181,8 @@ def docker_ready(container_id, count):
         try:
             raw = execute(["docker", "exec", container_id, "wget", "-qO-", "-T", "5",
                            "http://127.0.0.1:8080/ready"], timeout=8)
-            # Only a JSON {status:"ready",version:"..."} from the backend
-            # is a trustworthy software version. Never silently infer it.
+            # Надёжной версией программы считается только JSON backend вида
+            # {status:"ready",version:"..."}. Никогда не определяйте её по предположению.
             try:
                 body = json.loads(raw)
             except (ValueError, TypeError):
@@ -337,8 +337,8 @@ def node_inventory(project, samples, growth=True, source_root=None):
             item["postgresState"] = probe_postgres(item["containerId"])
         elif service == "redis" and item["running"]:
             item["redisState"] = probe_redis(item["containerId"])
-    # Collisions in identifiers on the same host are unsafe even if Docker uses
-    # different container IDs: ServerBridge routing is keyed by replica ID.
+    # Совпадение идентификаторов на одном хосте небезопасно даже при разных ID
+    # контейнеров Docker: маршрутизация ServerBridge привязана к ID реплики.
     replica_ids = [i["environment"].get("LAUNCHER_REPLICA_ID") for i in items
                    if i["service"] in ("api", "api-b", "worker", "worker-a", "worker-b")]
     nonempty = [x for x in replica_ids if x]
@@ -523,7 +523,8 @@ def remote_node(target, remote_script, project, samples, growth):
                "--samples", str(samples), "--output", "-"]
     if not growth:
         command.append("--skip-growth")
-    # Single quoted remote command argument, never interpolated shell input.
+    # Один аргумент удалённой команды, заключённый в кавычки; никаких подстановок
+    # ввода в оболочку.
     raw = execute(["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
                    "-o", "ConnectTimeout=7", "-o", "NumberOfPasswordPrompts=0",
                    target, shlex.join(command)], timeout=max(45, 55 + 8 * samples), allowed_codes=(0, 3))
@@ -617,7 +618,7 @@ def main(argv=None):
         write_report(args.output, result)
         return 3 if assessment["status"] == "RISK" else 0
     except InventoryError as exc:
-        # The error never contains command output, credentials or an environment.
+        # Ошибка никогда не содержит вывод команды, учётные данные или окружение.
         print("HA inventory unavailable: " + str(exc), file=sys.stderr)
         return 2
 

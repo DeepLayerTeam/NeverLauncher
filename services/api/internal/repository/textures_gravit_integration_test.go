@@ -15,8 +15,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Requires TEST_PG_DSN_02510 pointing to a disposable PostgreSQL 17+ instance.
-// Runs real migrations, Staging, CAS, provenance, replay and owner isolation.
+// Требуется TEST_PG_DSN_02510 на одноразовый PostgreSQL 17+. Запускаются настоящие
+// миграции, Staging, CAS, проверки происхождения, повторов и изоляции владельцев.
 func TestTextureGravitImportPostgres02510(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_02510")
 	if dsn == "" {

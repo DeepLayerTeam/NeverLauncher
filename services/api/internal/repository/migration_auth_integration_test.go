@@ -17,8 +17,8 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// Requires a disposable PostgreSQL. Exercises actual inserts, transaction
-// rollback, receipt replay, UUID ownership, and CAS-upgraded password replay.
+// Нужна одноразовая PostgreSQL. Проверяются настоящие вставки, откат транзакции,
+// повтор квитанции, владение UUID и повтор с паролем, обновлённым CAS.
 func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -89,8 +89,8 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	if e = repo.db.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE id=$1`, userID).Scan(&count); e != nil || count != 0 {
 		t.Fatal("dry-run created users", e)
 	}
-	// A bad hash selection is rejected by server-side source parser; once a
-	// decision has been imported, a different format cannot replay the receipt.
+	// Неверный выбор формата хеша отклоняется серверным парсером источника; после
+	// импорта решения квитанцию нельзя повторить с другим форматом.
 	saved, e := repo.ImportMigrationCredentials0335(ctx, run.ID, source.SourceSHA256, "", input, false)
 	if e != nil || saved.Imported != 1 || saved.DryRun {
 		t.Fatalf("import: %+v %v", saved, e)
@@ -114,9 +114,9 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 		t.Fatalf("expected exactly one event %d %v", count, e)
 	}
 
-	// A separate migration run can map this account by its exact UUID, but
-	// must not replace the Never credential, even if a different source hash
-	// is explicitly offered by an operator.
+	// Отдельная миграция может сопоставить аккаунт по точному UUID, но не менять
+	// его Never-учётные данные, даже если оператор явно предложил другой хеш
+	// источника.
 	run2, e := repo.CreateMigration0331(ctx, project, "gravit", "auth-second-run-0335-key")
 	if e != nil {
 		t.Fatal(e)
@@ -146,9 +146,9 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	if e = repo.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id=$1`, userID).Scan(&hash); e != nil || hash != "$argon2id$verified-upgrade" {
 		t.Fatalf("source password overwrote Never: %v %q", e, hash)
 	}
-	// 0.44.4: two independent Gravit SQL sources may both use id=1.
-	// Importing the second UUID must create its own Never account, not
-	// collide with the first source's database-local primary key.
+	// В версии 0.44.4 два независимых SQL-источника Gravit могут использовать
+	// id=1. Импорт второго UUID должен создавать отдельную учётную запись Never,
+	// а не сталкиваться с локальным первичным ключом первой БД.
 	run3, e := repo.CreateMigration0331(ctx, project, "gravit", "auth-third-run-0444-key")
 	if e != nil {
 		t.Fatal(e)

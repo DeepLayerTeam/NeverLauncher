@@ -43,8 +43,9 @@ REHEARSAL_DOMAIN = ('neverlauncher.independent-rehearsal.'+VERSION+'\x00').encod
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
 
-# Fixed production regression entrypoints; the issue export cannot replace
-# real tests with arbitrary shell commands or paths from its own JSON.
+# Фиксированные промышленные точки входа регрессии: экспорт задач не может
+# подменить настоящие тесты произвольными командами оболочки или путями из
+# своего JSON.
 REGRESSIONS = (
  'scripts.release.test_independent_current_05211',
  'scripts.acceptance.test_sweep_05211',
@@ -70,7 +71,7 @@ def require(ok, why):
         raise Blocked(why)
 
 def safe(path: Path, maximum: int):
-    # Do not resolve before checking: resolving would hide a symlink substitution.
+    # Не разрешайте путь до проверки: разрешение скрыло бы подмену символьной ссылкой.
     require(path.is_absolute() and not path.is_symlink() and path.is_file(),
             'missing/unsafe original evidence: ' + str(path))
     require(not any(parent.is_symlink() for parent in path.parents),
@@ -115,7 +116,8 @@ def package_set(directory: Path, index_file: Path, index_pin: str, commit: str, 
     expected = {entry['filename'] for entry in records.values()}
     for item in records.values():
         if 'signatureUrl' in item:
-            # The Linux detached .asc name follows the final package asset.
+            # Имя отделённого Linux-файла .asc следует имени окончательного артефакта
+            # пакета.
             expected.add(item['filename'] + '.asc')
     require({p.name for p in directory.iterdir()} == expected,
             'exact six final packages and their detached Linux signatures required')
@@ -267,8 +269,9 @@ def rehearse(freeze_path,freeze_sig,release_key,release_pin,commit,project,packa
     require(args.project == project and args.index_sha == index_sha and
             sha(args.source_index) == index_sha,
             'sweep uses a different final distribution source index')
-    # Independently replay the *original* whole 280+six+soaks+repro corpus,
-    # twice, rather than copying a JSON with status=PASS from the builder.
+    # Независимо повторите ИСХОДНЫЙ полный набор 280+шесть+длительные
+    # испытания+воспроизводимость дважды, а не копируйте JSON со status=PASS от
+    # сборщика.
     first=sweep.verify_full(args)
     require(first.get('status')=='OBSERVED_NOT_INDEPENDENT_GA',
             'full sweep has not verified all original live results')

@@ -467,8 +467,9 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 				if err != nil {
 					return nil, fmt.Errorf("Guard release %s platform %s: %w", version, platform, err)
 				}
-				// Windows Guard Attestation v2 has runtime evidence. Starting in
-				// 0.31.7, an unpinned module/JVM set is not a certified runtime.
+				// Windows Guard Attestation v2 содержит свидетельства Runtime. Начиная с
+				// 0.31.7 набор модулей/JVM без закреплённой версии не является
+				// сертифицированным Runtime.
 				if platform == "windows" && guardRuntimePolicyRequired0317(s.Version) && len(profiles) == 0 {
 					return nil, fmt.Errorf("Guard release %s windows requires runtimeProfiles for Guard Runtime Trust", version)
 				}

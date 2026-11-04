@@ -11,7 +11,8 @@ class RetentionTests(unittest.TestCase):
         source = (ROOT / "scripts/release/build-release.sh").read_text()
         match = re.search(r"(?m)^release_from_0462\(\) \{.*?^\}", source, re.S | re.M)
         self.assertIsNotNone(match)
-        # The same predicate guards preflight, package verification and signing.
+        # Одно и то же условие защищает предварительную проверку, верификацию пакета
+        # и подписание.
         self.assertEqual(source.count("if release_from_0462; then"), 6)
         for version, expected in (("0.46.1", "excluded"), ("0.46.2", "included"), ("0.46.3", "included"), ("0.47.0", "included")):
             script = match.group() + '\nVERSION=' + version + '\nif release_from_0462; then printf included; else printf excluded; fi\n'

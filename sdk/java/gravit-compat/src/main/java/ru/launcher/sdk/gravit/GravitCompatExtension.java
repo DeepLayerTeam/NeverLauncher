@@ -22,13 +22,14 @@ public final class GravitCompatExtension implements Extension {
         if(!LauncherModule.class.isAssignableFrom(type)||java.lang.reflect.Modifier.isAbstract(type.getModifiers()))throw new SecurityException("class is not a concrete LauncherModule");
         module=(LauncherModule)type.getDeclaredConstructor().newInstance();
         LauncherModulesManager manager=new LauncherModulesManager(context.runtime());
-        // Dependencies must be ported to Extensions manifest: do not silently resolve Gravit internal modules.
+        // Зависимости нужно перенести в манифест Extensions: не разрешайте незаметно внутренние модули Gravit.
         for(String dependency:module.getModuleInfo().dependencies) {
             if(dependency==null||!dependency.isBlank())throw new UnsupportedOperationException("Gravit internal dependency requires an explicit port: "+dependency);
         }
-        // A source port can allocate resources during preInitAction()/init().
-        // If event subscriptions or a declared command are rejected by the live
-        // host, close those resources rather than leaking them until JVM exit.
+        // Перенесённый исходник может выделять ресурсы во время
+        // preInitAction()/init(). Если живой хост отклонил подписку на события или
+        // объявленную команду, освобождайте ресурсы, а не оставляйте утечку до
+        // завершения JVM.
         try {
             module.initialize(manager,new GravitInitContext(context,manager));
             manager.activate();

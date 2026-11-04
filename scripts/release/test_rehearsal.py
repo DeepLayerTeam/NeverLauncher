@@ -357,8 +357,9 @@ class RehearsalTests(unittest.TestCase):
             self.check()
 
     def prepare_dryrun(self):
-        # The unit fixture tests copy/checksum mechanics only. Production calls
-        # the release CLI from the signed bundle, never this fixture program.
+        # Модульные фикстуры проверяют только механику копирования и контрольных
+        # сумм. В промышленной среде вызывается CLI выпуска из подписанного пакета, а
+        # не эта тестовая программа.
         report = self.check()
         (self.bundle / "RELEASE_REHEARSAL_0365.json").write_text(json.dumps(report))
         cli = self.bundle / "launcher-cli-linux-x64"
@@ -455,7 +456,8 @@ class RehearsalTests(unittest.TestCase):
     def test_stale_other_ci_run_is_rejected(self):
         self.check()
         with patch.dict(os.environ, {"GITHUB_RUN_ID": "7654322"}):
-            # In production, a copied old signed receipt fails its run binding.
+            # В промышленной среде копия старой подписанной квитанции не пройдёт проверку
+            # привязки к запуску.
             cli, key, policy_file, state, stage = self.prepare_dryrun()
             with patch.dict(os.environ, {"GITHUB_RUN_ID": "7654323"}):
                 with self.assertRaises(Blocked):

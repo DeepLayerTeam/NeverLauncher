@@ -14,9 +14,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// The native Tauri manager is the only caller that supplies the short-lived
-// Minecraft bearer. The Backend verifies it with Minecraft Services itself.
-// Tokens never enter the Never database, renderer, response, or audit event.
+// Нативный менеджер Tauri — единственный вызывающий, передающий краткоживущий
+// Minecraft bearer. Backend самостоятельно проверяет его через Minecraft
+// Services. Токены никогда не попадают в БД Never, renderer, ответы или события
+// аудита.
 type officialLinkRequest0268 struct {
 	MinecraftAccessToken string `json:"minecraftAccessToken"`
 	ExpectedUUID         string `json:"expectedUuid"`
@@ -31,8 +32,9 @@ type minecraftProfileVerifier0268 interface {
 }
 
 func freshNeverIdentity0268(claims authClaims, clock time.Time) bool {
-	// The authenticated Never session is proof of its side of the link. Require
-	// recent Never authentication to prevent account linking via a stolen old JWT.
+	// Аутентифицированный сеанс Never доказывает свою сторону привязки. Требуйте
+	// недавнюю аутентификацию Never, чтобы нельзя было привязать учётную запись по
+	// украденному старому JWT.
 	return claims.AuthTime > 0 && claims.AuthTime <= clock.Unix() && clock.Unix()-claims.AuthTime <= 15*60
 }
 
@@ -134,7 +136,8 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
-	// Input bearer intentionally never appears in logs, error strings or stored rows.
+	// Входной bearer намеренно не появляется в журналах, текстах ошибок и сохранённых
+	// записях.
 	profile, err := verifiedLinkProfile0268(ctx, officialminecraft.New(), input.MinecraftAccessToken, input.ExpectedUUID)
 	input.MinecraftAccessToken = ""
 	if errors.Is(err, errLinkProofMalformed0268) {

@@ -34,7 +34,7 @@ func TestGravitLegacyVerifierVectors(t *testing.T) {
 		{"sha512 digest", hex.EncodeToString(sha512Once[:]), "digest", "sha512", "hex", false},
 		{"double digest bytes", hex.EncodeToString(sha256DoubleBytes[:]), "double-digest", "sha256", "hex", false},
 		{"double digest hex", hex.EncodeToString(sha256DoubleHex[:]), "double-digest", "sha256", "hex", true},
-		// Cross-checked independently against PHP's portable PHPass reference algorithm.
+		// Результат независимо сопоставлен с эталонным переносимым алгоритмом PHPass на PHP.
 		{"phpass wordpress", "$P$B12345678QjY5zqJqT433Q3av7QGRM/", "phpass", "", "", false},
 		{"phpass drupal", "$H$B12345678QjY5zqJqT433Q3av7QGRM/", "phpass", "", "", false},
 	}

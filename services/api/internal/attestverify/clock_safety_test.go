@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// These regressions exercise the actual cryptographic verifiers rather than
-// relying on a client-declared TPM state or an unsigned platform label.
+// Эти регрессии выполняют настоящие криптографические верификаторы, а не
+// доверяют заявленному клиентом состоянию TPM или неподписанной метке платформы.
 func TestCertifyUnsafeTPMClock0436(t *testing.T) {
 	evidence, binding, roots, _ := makeCertifyFixture(t)
 	now := time.Now().UTC()

@@ -13,8 +13,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// A field added to the domain model must not silently be dropped during
-// persistence. This test is intentionally in the repository package.
+// Добавленное поле модели домена нельзя молча отбрасывать при сохранении.
+// Тест намеренно расположен в пакете репозитория.
 func TestSQLiteHTTPStateCoverage0372(t *testing.T) {
 	source := reflect.TypeOf(MemoryRepository{})
 	persisted := reflect.TypeOf(sqliteHTTPState0372{})
@@ -145,7 +145,7 @@ func TestSQLiteHTTPConcurrentWritesAndSafeFailure0372(t *testing.T) {
 	if got := len(r.ListProjects()); got != n {
 		t.Fatalf("concurrent writes lost: got %d want %d", got, n)
 	}
-	// A missing release cannot be promoted to stable. No bypass of runtime gate.
+	// Отсутствующий релиз нельзя продвинуть в stable. Обхода Runtime-гейта нет.
 	if _, err := r.PublishVersion("pa", "client", "stable", "1.0"); err == nil {
 		t.Fatal("stable publish unexpectedly succeeded")
 	}

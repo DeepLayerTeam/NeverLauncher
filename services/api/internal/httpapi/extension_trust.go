@@ -99,8 +99,8 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 			if item.PublisherID != publisher || item.Artifact.SignatureKeyFingerprint != fingerprint {
 				continue
 			}
-			// A retry of publisher revocation must not create unbounded
-			// duplicate active quarantine records for the same package.
+			// Повторный отзыв издателя не должен создавать неограниченное число
+			// дублирующих активных записей карантина для одного пакета.
 			exists, lookupErr := s.Repo.IsExtensionPackageQuarantined(r.Context(), item.Artifact.PackageIdentity)
 			if lookupErr != nil {
 				quarantineErr = errors.Join(quarantineErr, lookupErr)
@@ -176,8 +176,9 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 			reason += ": " + strings.Join(decision.Violations, "; ")
 		}
 		scope := extensionlifecycle.Scope{Scope: install.Scope, ScopeID: install.ScopeID}
-		// Persist the deny decision BEFORE attempting to stop a running JVM.
-		// Recovery and concurrent starts consult this record fail-closed.
+		// Сохраняйте решение о запрете ДО попытки остановить работающую JVM.
+		// Восстановление и параллельные запуски должны проверять эту запись и
+		// отказывать по умолчанию.
 		if _, err := s.Repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Reason: reason, Source: source}); err != nil {
 			return blocked, err
 		}
@@ -237,8 +238,9 @@ func (s Server) extensionEmergencyDisable02012(w http.ResponseWriter, r *http.Re
 	}
 	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
 	id := r.PathValue("extensionId")
-	// Crash-loop recovery is prohibited immediately; never leave a window
-	// where a stopped JVM can be automatically restarted before the deny is saved.
+	// Восстановление после цикла падений немедленно запрещается; не оставляйте окно, в
+	// котором остановленная JVM может автоматически перезапуститься до сохранения
+	// запрета.
 	item, err := s.Repo.SetExtensionEmergencyDisable(r.Context(), model.ExtensionEmergencyDisable{ExtensionID: id, Scope: scope.Scope, ScopeID: scope.ScopeID, Reason: req.Reason, Source: "admin"})
 	if err != nil {
 		writeError(w, 400, err.Error())

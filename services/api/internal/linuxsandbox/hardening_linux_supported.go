@@ -86,9 +86,9 @@ func setupMounts(c childConfig) error {
 	if e := bindRO(c.PayloadRoot, filepath.Join(root, "package"), true); e != nil {
 		return fmt.Errorf("package readonly mount: %w", e)
 	}
-	// Only runtime libraries/executables are exposed, never /etc, /home,
-	// /var, /run or the backend's private files. Recursive RO applies even
-	// if /usr contains additional submounts.
+	// Предоставляйте только библиотеки и исполняемые файлы Runtime, но никогда
+	// /etc, /home, /var, /run и закрытые файлы Backend. Рекурсивный режим RO
+	// действует даже при дополнительных монтированиях внутри /usr.
 	for _, dir := range []string{"usr", "bin", "lib", "lib64", "sbin"} {
 		host := "/" + dir
 		info, e := os.Lstat(host)
@@ -113,7 +113,8 @@ func setupMounts(c childConfig) error {
 			}
 		}
 	}
-	// Dynamic ELF loaders need their cache, but /etc is intentionally absent.
+	// Динамическим загрузчикам ELF нужен их кэш, но каталог /etc намеренно
+	// отсутствует.
 	if _, e := os.Stat("/etc/ld.so.cache"); e == nil {
 		if e := bindRO("/etc/ld.so.cache", filepath.Join(root, "etc/ld.so.cache"), true); e != nil {
 			return e
@@ -168,9 +169,9 @@ func setupMounts(c childConfig) error {
 	return os.Remove("/.oldroot")
 }
 
-// Bring up only loopback inside the newly created network namespace.
-// Neither veth nor host routing is configured; the only host connection is
-// the pre-opened, authenticated HTTP protocol socketpair.
+// В новом сетевом пространстве имён поднимайте только loopback. Не
+// настраиваются ни veth, ни маршрутизация хоста; единственное соединение с
+// хостом — заранее открытая аутентифицированная пара сокетов HTTP-протокола.
 func enableLoopback() error {
 	fd, e := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
 	if e != nil {
@@ -228,11 +229,11 @@ func lockdown() error {
 	if _, _, er := syscall.RawSyscall6(syscall.SYS_PRCTL, 4, 0, 0, 0, 0, 0); er != 0 {
 		return er
 	} // PR_SET_DUMPABLE=0
-	// No root or file capabilities may be regained across execve.
+	// После execve нельзя вновь получить root или файловые capabilities.
 	if _, _, er := syscall.RawSyscall6(syscall.SYS_PRCTL, prSetSecurebits, secureNoRoot|secureNoRootLocked|secureNoSetuidFixup|secureNoSetuidFixupLocked, 0, 0, 0, 0); er != 0 {
 		return er
 	}
-	// Linux V3 capset structure, two 32-bit words for all 64 capabilities.
+	// Структура capset Linux V3: два 32-битных слова для всех 64 capabilities.
 	type header struct {
 		Version uint32
 		Pid     int32
@@ -250,8 +251,8 @@ func lockdown() error {
 	if _, _, er := syscall.RawSyscall6(syscall.SYS_PRCTL, prSetNoNewPrivs, 1, 0, 0, 0, 0); er != 0 {
 		return er
 	}
-	// Audit architecture is selected at build time, not from untrusted runtime
-	// input. A wrong architecture must be rejected before syscall inspection.
+	// Архитектура аудита выбирается при сборке, а не из недоверенного ввода
+	// Runtime. Неверную архитектуру нужно отклонить до проверки системных вызовов.
 	prog := []sockFilter{
 		{Code: bpfLDWABS, K: 4},
 		{Code: bpfJMPJEQK, Jt: 1, Jf: 0, K: sandboxAuditArch},
@@ -259,7 +260,8 @@ func lockdown() error {
 		{Code: bpfLDWABS, K: 0},
 	}
 	if sandboxRejectX32 {
-		// On x86-64 reject the alternate x32 ABI syscall-number namespace.
+		// На x86-64 отклоняйте альтернативное пространство номеров системных вызовов
+		// ABI x32.
 		prog = append(prog,
 			sockFilter{Code: bpfJMPJSETK, Jt: 0, Jf: 1, K: 0x40000000},
 			sockFilter{Code: bpfRETK, K: seccompErrno | uint32(syscall.EPERM)},
@@ -268,8 +270,8 @@ func lockdown() error {
 	for _, num := range sandboxDeniedSyscalls {
 		action := uint32(seccompErrno | uint32(syscall.EPERM))
 		if num == sandboxClone3Syscall {
-			// ENOSYS permits a libc/Go fallback to clone(2), whose namespace
-			// flag bits are checked below. Never allow unfiltered clone3.
+			// ENOSYS разрешает libc/Go перейти к clone(2), чьи биты флагов пространства
+			// имён проверяются ниже. Никогда не разрешайте нефильтрованный clone3.
 			action = seccompErrno | uint32(syscall.ENOSYS)
 		}
 		prog = append(prog,
@@ -277,8 +279,8 @@ func lockdown() error {
 			sockFilter{Code: bpfRETK, K: action},
 		)
 	}
-	// clone(2) normal threads/processes remain permitted, but creating a new
-	// namespace with CLONE_NEW* flags is prohibited after the boundary exists.
+	// Обычные потоки и процессы через clone(2) разрешены, но создавать новые
+	// пространства имён флагами CLONE_NEW* после установления границы запрещено.
 	namespaceMask := uint32(syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC | syscall.CLONE_NEWUTS)
 	prog = append(prog,
 		sockFilter{Code: bpfJMPJEQK, Jt: 0, Jf: 3, K: uint32(syscall.SYS_CLONE)},

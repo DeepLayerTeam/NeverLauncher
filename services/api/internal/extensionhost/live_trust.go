@@ -11,10 +11,11 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// enforceLiveTrust04210 reads durable policy for each privileged broker action
-// and each monitor pass. Cached hello capabilities are never a grant: a token
-// issued before an emergency disable, quarantine, update or publisher-key
-// revocation must not keep authorizing commands on a running process.
+// enforceLiveTrust04210 читает устойчивую политику перед каждым привилегированным
+// действием брокера и каждым проходом монитора. Кэшированные возможности hello
+// никогда не являются грантом: токен, выданный до экстренного отключения,
+// карантина, обновления или отзыва ключа издателя, не должен разрешать команды
+// работающего процесса.
 func (s *Supervisor) enforceLiveTrust04210(ctx context.Context, st *processState) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -65,9 +66,9 @@ func (s *Supervisor) enforceLiveTrust04210(ctx context.Context, st *processState
 	return nil
 }
 
-// denyRevokedHost04210 prevents restart of a process whose durable authority
-// has been withdrawn. The actual durable ban/transition belongs to the owner
-// operation; this supervisor enforces it even when that operation races RPC.
+// denyRevokedHost04210 предотвращает перезапуск процесса с отозванными
+// устойчивыми полномочиями. Само устойчивое запрещение/переход выполняет операция
+// владельца; супервизор обеспечивает запрет даже при гонке этой операции с RPC.
 func (s *Supervisor) denyRevokedHost04210(st *processState, err error) {
 	if err == nil {
 		return

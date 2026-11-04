@@ -1,7 +1,8 @@
 package sqlitecore
 
-// All ticket and replay data lives in the same durable WAL database as auth.
-// No Redis, in-memory fallback or detached transaction participates in redemption.
+// Все билеты и сведения о повторах находятся в той же устойчивой WAL-БД, что и
+// авторизация. Ни Redis, ни резервная память, ни отдельная транзакция не участвуют в
+// погашении.
 var joinDDL = []string{
 	`CREATE TABLE bridge_nodes (
  id TEXT PRIMARY KEY CHECK(length(id) BETWEEN 1 AND 128),

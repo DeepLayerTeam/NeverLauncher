@@ -13,8 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// Run after sqlite-to-postgres-live against an OFFLINE destination. The source
-// and target must be different stores and all service writers must be stopped.
+// Запускайте после sqlite-to-postgres-live с ОТКЛЮЧЁННОЙ целевой базой. Источник и
+// цель должны быть разными хранилищами, все записывающие процессы служб
+// остановлены.
 func runPGFiles0474(args []string) int {
 	fs := flag.NewFlagSet("sqlite-to-postgres-files", flag.ContinueOnError)
 	sourceRoot := fs.String("source-root", "", "SQLite LocalStorage root")

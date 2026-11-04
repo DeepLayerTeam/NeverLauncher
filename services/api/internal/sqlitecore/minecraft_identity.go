@@ -53,7 +53,8 @@ func (a *Auth) SaveMinecraftIdentity(ctx context.Context, p model.MinecraftProfi
 		if errors.Is(e, sql.ErrNoRows) {
 			created = now
 		}
-		// Reject assigning the identity of an inactive user to a live token later.
+		// Запрещайте позднюю выдачу действующего токена идентичности неактивного
+		// пользователя.
 		var status string
 		if e = q.QueryRowContext(ctx, `SELECT status FROM users WHERE id=?`, p.UserID).Scan(&status); e != nil {
 			return notFound(e)
@@ -85,9 +86,9 @@ func (a *Auth) MinecraftIdentity(ctx context.Context, userID string) (p model.Mi
 	return
 }
 
-// IssueMinecraftSession requires the current access token, joins the
-// canonical profile and writes only the hash of the new bearer. Password or
-// disabled user changes instantly invalidate the token via auth_epoch.
+// IssueMinecraftSession требует текущий access-токен, связывает канонический
+// профиль и записывает только хеш нового bearer. Изменение пароля или отключение
+// пользователя немедленно аннулирует токен через auth_epoch.
 func (a *Auth) IssueMinecraftSession(ctx context.Context, Access string, ttl time.Duration) (string, string, error) {
 	if ttl <= 0 || ttl > 24*time.Hour {
 		return "", "", errors.New("Minecraft token TTL must be <=24h")
@@ -165,8 +166,8 @@ func (a *Auth) ValidateMinecraftSession(ctx context.Context, raw string) (model.
 	return p, nil
 }
 
-// RevokeMinecraftSession invalidates one Minecraft bearer without revoking the
-// parent session. Session ownership is checked in the same transaction.
+// RevokeMinecraftSession аннулирует один Minecraft bearer, не отзывая родительский
+// сеанс. Владение сеансом проверяется в той же транзакции.
 func (a *Auth) RevokeMinecraftSession(ctx context.Context, userID, id, reason string) error {
 	if userID == "" || id == "" || strings.TrimSpace(reason) == "" {
 		return errors.New("owner/session/reason required")

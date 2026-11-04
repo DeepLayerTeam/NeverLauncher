@@ -10,8 +10,8 @@ import (
 
 const PortableProfileFormat0225 = "launcher.profile.v1"
 
-// PortableProfile0225 deliberately exports ONLY the immutable public ProfileSpec.
-// Release signatures, access rights, credentials and project roles cannot be exported.
+// PortableProfile0225 намеренно экспортирует ТОЛЬКО неизменяемый публичный ProfileSpec.
+// Подписи релизов, права доступа, учётные данные и роли проекта экспортировать нельзя.
 type PortableProfile0225 struct {
 	Format   string          `json:"format"`
 	Snapshot ProfileSnapshot `json:"snapshot"`
@@ -26,8 +26,9 @@ func ExportProfile0225(snapshot ProfileSnapshot) (PortableProfile0225, error) {
 
 var profileID0225 = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{0,63}$`)
 
-// CreateFromSnapshot0225 constructs a new, unprivileged profile. Its identity and
-// revision are never copied; callers MUST persist it with exclusive-create.
+// CreateFromSnapshot0225 создаёт новый непривилегированный профиль. Его идентичность и
+// ревизия никогда не копируются; вызывающие ОБЯЗАНЫ сохранять его с эксклюзивным
+// созданием.
 func CreateFromSnapshot0225(source ProfileSnapshot, projectID, newID, newName string) (Profile, error) {
 	if err := ValidateProfileSnapshot(source, source.Spec.ProjectID, source.Spec.ID); err != nil {
 		return Profile{}, fmt.Errorf("source snapshot: %w", err)
@@ -65,7 +66,7 @@ type ProfileDifference0225 struct {
 	Equal   bool                     `json:"equal"`
 }
 
-// DiffProfile0225 compares actual stored revisions, rather than mutable heads.
+// DiffProfile0225 сравнивает фактические сохранённые ревизии, а не изменяемые head.
 func DiffProfile0225(from, to ProfileSnapshot) (ProfileDifference0225, error) {
 	for _, snap := range []ProfileSnapshot{from, to} {
 		if err := ValidateProfileSnapshot(snap, snap.Spec.ProjectID, snap.Spec.ID); err != nil {

@@ -8,9 +8,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// OperationJournal extends durable jobs without weakening their lease fencing.
-// Cancellation is only permitted before execution; running operations must not be
-// reported cancelled while their external side effects may still be in progress.
+// OperationJournal расширяет устойчивые задачи без ослабления ограждения арендой.
+// Отмена разрешена только до исполнения; выполняющиеся операции нельзя объявлять
+// отменёнными, пока внешние эффекты могут продолжаться.
 type OperationJournal interface {
 	FindOperationByKey(ctx context.Context, kind, actor, key string) (model.DurableJob, error)
 	CompleteOperationJob(ctx context.Context, id, leaseToken string, result []byte) (model.DurableJob, error)
@@ -104,7 +104,8 @@ func (r *SQLRepository) RetryOperationJob(ctx context.Context, id string) (model
 	if j.Status != model.DurableJobStatusFailed && j.Status != model.DurableJobStatusDead && j.Status != model.DurableJobStatusRevoked {
 		return model.DurableJob{}, ErrImmutable
 	}
-	// Attempt IDs stay monotonic across retries: overwrite prior audit records.
+	// ID попыток остаются монотонными между повторами: перезаписывайте прежние
+	// записи аудита.
 	_, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='pending',max_attempts=GREATEST(max_attempts,attempt_count+8),last_error='',result='{}'::jsonb,available_at=now(),completed_at=NULL,updated_at=now() WHERE id=$1`, id)
 	if err != nil {
 		return model.DurableJob{}, err
@@ -138,9 +139,10 @@ func (r *SQLRepository) ListOperationAttempts(ctx context.Context, id string) ([
 	return out, rows.Err()
 }
 
-// FindOperationByKey returns a saved operation independent of the mutable
-// current release state. This makes retries after a successful publish replay
-// the recorded result rather than trying to revalidate an immutable release.
+// FindOperationByKey возвращает сохранённую операцию независимо от изменяемого
+// текущего состояния релиза. Благодаря этому повторы после успешной публикации
+// воспроизводят записанный результат вместо повторной проверки неизменяемого
+// релиза.
 func (r *SQLRepository) FindOperationByKey(ctx context.Context, kind, actor, key string) (model.DurableJob, error) {
 	if err := r.check(); err != nil {
 		return model.DurableJob{}, err

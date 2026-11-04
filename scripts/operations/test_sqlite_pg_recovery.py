@@ -226,7 +226,7 @@ class FailureRecovery0477(unittest.TestCase):
         self.op.state['receipts'] = {'verify': {'readyForBackendCutover': True}}
         self.op.save()
         def killed(*_a, **_kw):
-            # Represents process interruption during atomic env write.
+            # Представляет прерывание процесса во время атомарной записи env.
             state = json.loads(self.op.state_path.read_text())
             self.assertTrue(state['writeBoundaryCrossed'])
             raise OSError('injected cutover crash')
@@ -248,7 +248,8 @@ class FailureRecovery0477(unittest.TestCase):
         with mock.patch.object(self.op, 'service', side_effect=service):
             with self.assertRaisesRegex(opmod.CutoverError, 'automatic rollback forbidden|unsafe'):
                 self.op.run()
-        # No successful cutover is declared; all possible PG writers stopped.
+        # Успешное переключение не объявляется; все возможные записывающие процессы
+        # PostgreSQL остановлены.
         self.assertNotIn('health_check', self.op.state['completed'])
         self.assertEqual([u for cmd, u in stops if cmd == 'stop'], self.op.a.units)
 

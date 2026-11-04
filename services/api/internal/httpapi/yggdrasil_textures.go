@@ -16,9 +16,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/yggdrasiltexture"
 )
 
-// The authlib-injector key is NOT a ServerBridge or release manifest key.
-// Loaded once per process to maintain stable public key/signatures for the life
-// of the server (key rotation requires restart and coordinated metadata cache).
+// Ключ authlib-injector НЕ является ключом ServerBridge или манифеста релиза. Он
+// загружается один раз на процесс для стабильного публичного ключа и подписей на
+// протяжении жизни сервера; смена ключа требует перезапуска и согласованного
+// обновления кэша метаданных.
 var yggdrasilSigners0256 sync.Map // file path -> *yggdrasiltexture.Signer
 
 func (s Server) yggdrasilSigner0256() (*yggdrasiltexture.Signer, error) {
@@ -111,8 +112,9 @@ func textureURLAllowed0256(raw string, domains []string, production bool) bool {
 	if u.Scheme != "https" && (production || u.Scheme != "http") {
 		return false
 	}
-	// Only normalized content-addressed PNGs are suitable for signed properties.
-	// Legacy arbitrary URLs must be imported by the bounded fetcher first.
+	// Для подписанных свойств подходят только нормализованные PNG с адресацией по
+	// хешу. Устаревшие произвольные URL сначала нужно импортировать через
+	// ограниченный загрузчик.
 	const prefix = "/api/v1/textures/blob/"
 	if !strings.HasPrefix(u.Path, prefix) {
 		return false
@@ -139,7 +141,8 @@ func (s Server) textureProperty0256(texture bridgeTextureRecord, signed bool) (m
 		return nil, err
 	}
 	production := config.IsProductionEnvironment(s.Config.Environment)
-	// Never vouch for arbitrary legacy external URLs that bypassed PNG import.
+	// Никогда не подтверждайте доверие к произвольным внешним URL, не прошедшим
+	// импорт PNG.
 	if !textureURLAllowed0256(texture.SkinURL, domains, production) {
 		texture.SkinURL = ""
 	}
@@ -163,11 +166,11 @@ func (s Server) textureProperty0256(texture bridgeTextureRecord, signed bool) (m
 	return property, nil
 }
 
-// localTextureRecord0394 resolves *each* Yggdrasil request against the active
-// SQL texture selection. In production a transient database failure must never
-// be misrepresented as an empty (default Steve/Alex) texture profile: clients
-// cache those results and players appear to lose their skin until restart.
-// The legacy in-memory ServerBridge store remains usable in development tests.
+// localTextureRecord0394 разрешает КАЖДЫЙ запрос Yggdrasil по текущему выбору
+// текстур в SQL. В промышленной среде временный сбой БД нельзя выдавать за пустой
+// профиль текстур Steve/Alex по умолчанию: клиенты кэшируют такой ответ, и игроки
+// теряют скин до перезапуска. Устаревшее хранилище ServerBridge в памяти остаётся
+// пригодным для тестов разработки.
 func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (bridgeTextureRecord, error) {
 	if textures, ok := s.Repo.(repository.TextureRepository0251); ok {
 		selected, found, err := textures.ReadTextureProfile0251(ctx, uuid)
@@ -175,9 +178,10 @@ func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (
 			return bridgeTextureRecord{}, err
 		}
 		if !found {
-			// A migrated Minecraft profile can predate the texture identity table.
-			// Backfill only a genuine local GameProfile, then retry once; never
-			// substitute an arbitrary caller-supplied UUID for proof of ownership.
+			// Мигрированный профиль Minecraft может предшествовать таблице идентичностей
+			// текстур. Заполняйте пропуски только для подлинного локального GameProfile и
+			// повторяйте один раз; никогда не подставляйте произвольный UUID вызывающего
+			// вместо доказательства владения.
 			if mcRepo, repoErr := s.minecraftRepo119(); repoErr == nil {
 				if profile, lookupErr := mcRepo.GetMinecraftProfileByUUID(uuid); lookupErr == nil &&
 					profile.Issuer == "launcher" && profile.Realm == "local" && profile.Name == name {

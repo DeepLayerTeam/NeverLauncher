@@ -18,7 +18,8 @@ func (s Server) channelHead0228(ctx context.Context, projectID, profileID, chann
 	return reader.GetChannelHead(ctx, projectID, profileID, channel)
 }
 
-// Authenticated read endpoint for administrators planning an optimistic publish.
+// Авторизованная точка чтения для администраторов, планирующих оптимистичную
+// публикацию.
 func (s Server) channelHeadGet0228(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.adminClaims(r)
 	if err != nil {

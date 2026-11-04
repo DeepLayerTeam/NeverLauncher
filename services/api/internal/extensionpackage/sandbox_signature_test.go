@@ -9,8 +9,9 @@ import (
 	"testing"
 )
 
-// A sandbox policy is authenticated by the existing Ed25519 package signature;
-// no separate unsigned policy file or bypassable "trusted" marker is used.
+// Политика песочницы аутентифицируется существующей подписью Ed25519 пакета;
+// отдельный неподписанный файл политики или обходной маркер trusted не
+// используется.
 func TestSignedManifestSandboxPolicy0318(t *testing.T) {
 	filename, key := buildRegistryTestPackage0203(t, "0.31.8")
 	verified, err := VerifyFile(filename, key)

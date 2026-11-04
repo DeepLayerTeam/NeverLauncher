@@ -212,8 +212,8 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		}
 		controls = filtered
 	}
-	// Do not leak console payloads, player moderation results or privileged
-	// command history via a project-read-only overview.
+	// Не раскрывайте консольные полезные нагрузки, результаты модерации игроков
+	// или историю привилегированных команд через обзор проекта только для чтения.
 	claims, authErr := s.adminClaims(r)
 	if authErr != nil {
 		writeError(w, http.StatusUnauthorized, "invalid admin session")
@@ -224,8 +224,8 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		projectByServer[server.ID] = server.ProjectID
 	}
 	filteredControls := controls[:0]
-	// Authorization is evaluated from the live repository, but avoid an
-	// expensive repeat DB lookup for every journal row of the same server.
+	// Авторизация проверяется по действующему репозиторию, но избегайте дорогого
+	// повторного запроса БД для каждой строки журнала того же сервера.
 	controlPermissionCache := make(map[string]bool)
 	for _, cmd := range controls {
 		permission, known := authorization.GameCommandPermission(cmd.Type)

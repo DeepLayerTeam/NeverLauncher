@@ -34,5 +34,5 @@ jobs:
         run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
       - name: Build live-only POC binary (no credentials in CI)
         run: go build -o "$RUNNER_TEMP/official-provider-poc" ./cmd/official-provider-poc
-      # No provider secrets/client accounts in CI; live verification and
-      # independent external approval remain explicit mandatory release gates.
+      # В CI нет секретов провайдера и клиентских учётных записей; живая проверка и
+      # независимое внешнее одобрение остаются явно обязательными этапами выпуска.

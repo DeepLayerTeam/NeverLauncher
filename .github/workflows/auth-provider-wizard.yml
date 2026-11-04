@@ -44,7 +44,8 @@ jobs:
         env:
           LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
         run: |
-          # Apply migration catalogue with the same repository implementation used by production.
+          # Применяйте каталог миграций той же реализацией репозитория, которая используется в
+          # промышленной среде.
           go test ./internal/dbmigrate -count=1
           psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
       - name: Auth Provider Wizard unit, race and PostgreSQL integration tests

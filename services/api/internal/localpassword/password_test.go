@@ -38,9 +38,10 @@ func TestExistingLegacyNeverSHA0295(t *testing.T) {
 	}
 }
 
-// The same Argon2id limits must apply to a directly loaded account as to a
-// Gravit Database.json import; otherwise a crafted database can exhaust RAM
-// on the next login despite a successful import preflight.
+// Одинаковые лимиты Argon2id должны действовать для напрямую загруженного
+// аккаунта и импорта Gravit Database.json; иначе специально подготовленная БД
+// может исчерпать RAM при следующем входе, даже после успешного предварительного
+// анализа.
 func TestArgonImportAndLoginHaveIdenticalResourceLimits0496(t *testing.T) {
 	actual, err := Hash("protected")
 	if err != nil {

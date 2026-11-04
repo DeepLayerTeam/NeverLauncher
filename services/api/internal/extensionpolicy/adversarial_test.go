@@ -6,12 +6,13 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// A digest is consent to the exact extension ID, version, permission set and
-// sandbox policy. Auto updates never carry consent across an escalation.
+// Дайджест означает согласие с точными ID расширения, версией, набором прав и
+// политикой песочницы. Автообновления никогда не переносят согласие через
+// повышение привилегий.
 func TestAdversarialSignedPolicyEscalation03114(t *testing.T) {
 	base := signedPolicy0318()
 	base.Version = "1.0.0"
-	// The approved release changes a privilege, requiring explicit consent.
+	// Одобренный выпуск изменяет привилегию и требует явного согласия.
 	base.Sandbox = nil
 	target := signedPolicy0318()
 	target.Sandbox.MaxOutputBytes = 1 << 20
@@ -62,7 +63,8 @@ func TestAdversarialSignedPolicyEscalation03114(t *testing.T) {
 	}
 }
 
-// A policy-preserving upgrade cannot switch the signed extension identity.
+// Обновление без изменения политики не может подменить подписанную идентичность
+// расширения.
 func TestAdversarialCrossExtensionApprovalWithoutPolicyDelta03114(t *testing.T) {
 	before := signedPolicy0318()
 	after := signedPolicy0318()

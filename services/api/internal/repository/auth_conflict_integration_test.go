@@ -13,9 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Exercises the production PostgreSQL identity constraints using separate
-// connections; a duplicate issuer+subject may never be assigned to another
-// canonical user, nor may the same user silently change subject.
+// Проверяет промышленные ограничения идентичностей PostgreSQL через отдельные
+// соединения: одинаковые issuer+subject нельзя назначить другому каноническому
+// пользователю, как нельзя и незаметно менять subject того же пользователя.
 func TestAuthIdentityCollisionPostgres0293(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {

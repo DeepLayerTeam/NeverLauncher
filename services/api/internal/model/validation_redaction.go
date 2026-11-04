@@ -5,8 +5,9 @@ import (
 	"strings"
 )
 
-// Secrets are *always* redacted. Account identifiers are redacted by the
-// conservative V12 policy (there is no HTTP override). Digests remain intact.
+// Секреты ВСЕГДА скрываются. Идентификаторы учётных записей скрывает
+// консервативная политика V12 без возможности переопределить её через HTTP. Хеши
+// сохраняются без изменений.
 var validationSecrets03412 = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(\b(?:authorization\s*:\s*bearer|bearer)\s+)[^\s,"'<>]+`),
 	regexp.MustCompile(`(?i)(["'](?:access[_-]?token|refresh[_-]?token|client[_-]?secret|password|passwd|secret|api[_-]?key|session[_-]?id|credentials|authorization|account[_-]?id|player[_-]?name|username|uuid|xuid)["']\s*:\s*["'])[^"']+`),
@@ -22,7 +23,8 @@ var validationIdentifiers03412 = []*regexp.Regexp{
 }
 
 func RedactValidationDetail03412(detail string) string {
-	// Bound the input *before* processing and never log the unredacted content.
+	// Ограничивайте вход ДО обработки и никогда не записывайте незамаскированное
+	// содержимое в журналы.
 	if len(detail) > 4096 {
 		detail = detail[:4096]
 	}

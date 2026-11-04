@@ -2,8 +2,9 @@ package model
 
 import "time"
 
-// ValidationAttempt03412 contains only opaque IDs, digests and bounded reason
-// codes. It cannot certify a run and never contains user-supplied log text.
+// ValidationAttempt03412 содержит только непрозрачные ID, хеши и ограниченные коды
+// причин. Он не может сертифицировать запуск и никогда не содержит текст журнала
+// пользователя.
 type ValidationAttempt03412 struct {
 	ID            int64     `json:"id"`
 	PackageID     string    `json:"packageId"`

@@ -14,8 +14,9 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// MigrationSecurityReport0336 deliberately contains no user credentials, old
-// trust material, access tokens, device public keys or authentication secrets.
+// MigrationSecurityReport0336 намеренно не содержит учётных данных пользователей,
+// старого материала доверия, access-токенов, публичных ключей устройств и секретов
+// аутентификации.
 type MigrationSecurityReport0336 struct {
 	Format                      string     `json:"format"`
 	RunID                       string     `json:"runId"`
@@ -39,9 +40,9 @@ type MigrationSecurityReport0336 struct {
 
 type migrationSecurityTarget0336 struct{ UserID, Name, UUID string }
 
-// Deterministically derives affected targets from the *committed* MIG05 receipt,
-// never from a client-supplied username or request body. Existing Never users are
-// expressly excluded; their sessions/keys are owned and are not Gravit trust.
+// Детерминированно выводит затронутые цели из ЗАФИКСИРОВАННОЙ квитанции MIG05, а не из
+// имени пользователя или тела запроса. Существующие пользователи Never явно исключены:
+// их сеансы и ключи принадлежат им и не являются доверием Gravit.
 func migrationSecurityTargets0336(rows []gc.Row) ([]migrationSecurityTarget0336, error) {
 	out := make([]migrationSecurityTarget0336, 0, len(rows))
 	seen := make(map[string]bool)
@@ -69,19 +70,19 @@ func migrationSecurityTargets0336(rows []gc.Row) ([]migrationSecurityTarget0336,
 	return out, nil
 }
 
-// Trust reset MUST derive the same identifier used by the credential import.
-// The old implementation hashed the SQL *source row ID*, while MIG05 creates
-// SQL users from their Minecraft UUID. The mismatch made legitimate SQL
-// migrations fail security activation after accounts had been committed.
+// Сброс доверия ДОЛЖЕН использовать тот же идентификатор, что и импорт учётных
+// данных. Старая реализация хешировала SQL ID исходной строки, а MIG05 создаёт
+// пользователей SQL по Minecraft UUID. Несовпадение приводило к ошибке активации
+// безопасности законных SQL-миграций после фиксации аккаунтов.
 func migratedUserID0335FromRow(row gc.Row) string {
 	return migratedUserID0335(gi.Account{Provider: row.Provider, SourceID: row.SourceID, Username: row.Username, UUID: row.UUID})
 }
 
 func securityAffected0336(res sql.Result) (int64, error) { return res.RowsAffected() }
 
-// ResetMigrationTrust0336 does real durable revocation, in a single transaction
-// with receipt and workflow event. Failed statements rollback all effects.
-// Previews execute *the same validations and locks*, then rollback changes.
+// ResetMigrationTrust0336 выполняет настоящий устойчивый отзыв одной транзакцией с
+// квитанцией и событием процесса. Неуспешные SQL-операторы откатывают все эффекты.
+// Предпросмотр выполняет ТЕ ЖЕ проверки и блокировки, затем откатывает изменения.
 func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid, manifestPublicSHA string, preview bool) (MigrationSecurityReport0336, error) {
 	var report MigrationSecurityReport0336
 	if err := r.check(); err != nil {
@@ -140,8 +141,9 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 	if blocked > 0 {
 		return report, mw.ErrConflict
 	}
-	// A replay must never issue another destructive reset (including after a
-	// player has enrolled a fresh Never device). Verify the signer and receipt.
+	// Повтор никогда не должен выполнять новый разрушительный сброс, в том числе
+	// после регистрации нового устройства Never игроком. Проверяйте подписанта и
+	// квитанцию.
 	var raw []byte
 	var oldDigest, oldKID, oldPublic string
 	err = tx.QueryRowContext(ctx, `SELECT report,auth_decision_sha256,active_jwt_kid,manifest_public_sha256 FROM migration_security_resets_0336 WHERE run_id=$1`, runID).Scan(&raw, &oldDigest, &oldKID, &oldPublic)
@@ -162,7 +164,8 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 		return report, err
 	}
 	report = MigrationSecurityReport0336{Format: "never/migration-security/v1", RunID: runID, ImportedAccounts: len(targets), ExistingNeverUntouched: auth.ExistingUnchanged, ManualResets: auth.ManualReset, ActiveJWTKID: kid, ManifestPublicSHA256: manifestPublicSHA, RequiresLogin: true, RequiresDeviceEnrollment: true, RequiresGuardAttestation: true}
-	// Store target identities in the SAME transaction. Preview rolls them back.
+	// Сохраняйте целевые идентичности в ТОЙ ЖЕ транзакции. Предпросмотр откатывает
+	// их.
 	for start := 0; start < len(targets); start += 200 {
 		end := start + 200
 		if end > len(targets) {
@@ -182,9 +185,10 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 			return report, err
 		}
 	}
-	// Lock the target user rows in stable order. The user FKs in session/device
-	// registration take KEY SHARE locks, so concurrent enrollment cannot pass
-	// through the cutover while these locks are held.
+	// Блокируйте строки целевых пользователей в стабильном порядке. Внешние ключи
+	// пользователя при регистрации сеанса/устройства берут KEY SHARE, поэтому
+	// параллельная регистрация не пройдёт через переключение, пока удерживаются эти
+	// блокировки.
 	locked, err := tx.QueryContext(ctx, `SELECT u.id FROM users u JOIN migration_security_targets_0336 t ON t.user_id=u.id AND t.run_id=$1 ORDER BY u.id FOR UPDATE OF u`, runID)
 	if err != nil {
 		return report, err
@@ -217,13 +221,14 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 	if preview {
 		return report, nil
 	}
-	// Use DB clock *after* user row locks, not transaction start time.
+	// Используйте часы БД ПОСЛЕ блокировок строк пользователей, а не время начала
+	// транзакции.
 	var stamp time.Time
 	if err = tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&stamp); err != nil {
 		return report, err
 	}
-	// The 0.29.7 session revocation trigger invalidates refresh families,
-	// Minecraft/Yggdrasil sessions, joins, ServerBridge tickets and transfers.
+	// Триггер отзыва сеансов 0.29.7 аннулирует семейства refresh, сеансы
+	// Minecraft/Yggdrasil, входы, билеты ServerBridge и передачи.
 	var n sql.Result
 	n, err = tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason='gravit-security-migration-0336' WHERE status='active' AND user_id IN (SELECT user_id FROM migration_security_targets_0336 WHERE run_id=$1)`, runID, stamp)
 	if err != nil {
@@ -288,8 +293,9 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 	return report, nil
 }
 
-// Revalidation checks actual post-cutover state: fresh logins/enrollments
-// created *after* the reset are allowed, earlier trust must remain revoked.
+// Повторная проверка исследует фактическое состояние после переключения: новые
+// входы и регистрации ПОСЛЕ сброса разрешены, прежнее доверие остаётся
+// отозванным.
 func verifyReset0336(ctx context.Context, tx *sql.Tx, runID string, report MigrationSecurityReport0336) error {
 	if report.AppliedAt == nil {
 		return mw.ErrConflict

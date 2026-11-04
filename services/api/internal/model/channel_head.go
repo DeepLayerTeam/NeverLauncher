@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// ChannelHead identifies the only visible release of a (project, profile, channel).
-// Revision zero means no release has ever been published to this channel.
+// ChannelHead определяет единственный видимый релиз для сочетания проект/профиль/канал.
+// Нулевая ревизия означает, что в канал ещё ничего не публиковали.
 type ChannelHead struct {
 	ProjectID      string    `json:"projectId"`
 	ProfileID      string    `json:"profileId"`

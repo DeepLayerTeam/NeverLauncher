@@ -18,5 +18,6 @@ func TestIsolationDiagnosisCannotConflateKernelFeaturesWithEnforcement0311(t *te
 	if !strings.Contains(string(b), "extension-os-sandbox-not-enforced") || !strings.Contains(string(b), `"enforced":false`) {
 		t.Fatalf("inaccurate serialization: %s", b)
 	}
-	// Probing never requests user secrets or changes host confinement settings.
+	// Проба никогда не запрашивает секреты пользователя и не меняет ограничения
+	// хоста.
 }

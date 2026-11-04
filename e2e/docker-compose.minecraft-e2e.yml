@@ -230,8 +230,9 @@ services:
       ONLINE_MODE: "FALSE"
       MEMORY: 768M
       ENABLE_RCON: "true"
-      # Internal E2E console only; no host RCON port exposure. The world GA
-      # test must request `save-all flush` and `stop`, never trust SIGTERM alone.
+      # Только внутренняя консоль E2E; порт RCON не публикуется на хосте. Проверка GA
+      # игрового мира должна отправить `save-all flush` и `stop`, не полагаясь лишь на
+      # SIGTERM.
       RCON_PASSWORD: ${LAUNCHER_E2E_RCON_PASSWORD:?E2E private RCON password required}
       SPAWN_PROTECTION: "0"
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}

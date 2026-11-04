@@ -37,8 +37,8 @@ type RuntimeInfo struct {
 	Feature    int    `json:"feature"`
 }
 
-// Inspect verifies an extracted Java host JAR without executing its code.
-// It is not a signature verifier or a malware scanner.
+// Inspect проверяет распакованный JAR Java-хоста, не исполняя его код. Это не
+// проверка подписи и не антивирусный сканер.
 func Inspect(file string) (JarInfo, error) {
 	st, err := os.Lstat(file)
 	if err != nil {
@@ -97,7 +97,8 @@ func Inspect(file string) (JarInfo, error) {
 		header := make([]byte, 8)
 		_, e = io.ReadFull(r, header)
 		if e == nil {
-			// Finish the stream so the ZIP CRC is actually checked, not merely the header.
+			// Дочитайте поток до конца, чтобы действительно проверить CRC ZIP, а не только
+			// заголовок.
 			_, e = io.Copy(io.Discard, r)
 		}
 		closeErr := r.Close()
@@ -173,8 +174,8 @@ func Inspect(file string) (JarInfo, error) {
 	if !classes[strings.ReplaceAll(class, ".", "/")+".class"] {
 		return JarInfo{}, errors.New("declared extension class absent from JAR")
 	}
-	// The Gravit adapter is opt-in, with a fixed entrypoint and an explicit
-	// ported module. Never treat arbitrary Gravit JARs as compatible.
+	// Адаптер Gravit включается явно, имеет фиксированную точку входа и явно
+	// перенесённый модуль. Не считайте произвольные JAR Gravit совместимыми.
 	const gravitAdapter = "ru.launcher.sdk.gravit.GravitCompatExtension"
 	portedModule := attrs["launcher-gravit-module-class"]
 	if class == gravitAdapter {
@@ -210,7 +211,8 @@ func Inspect(file string) (JarInfo, error) {
 	return result, nil
 }
 
-// ProbeRuntime checks the actual JVM executable with an enforced deadline.
+// ProbeRuntime проверяет настоящий исполняемый файл JVM с ограниченным сроком
+// выполнения.
 func ProbeRuntime(ctx context.Context, javaBinary string, requiredFeature int) (RuntimeInfo, error) {
 	javaBinary = strings.TrimSpace(javaBinary)
 	if javaBinary == "" {

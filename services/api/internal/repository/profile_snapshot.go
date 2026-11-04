@@ -4,8 +4,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// ReadProfileSnapshot returns a stable copy of the *current* revision.
-// Release creation freezes this copy, subsequent profile edits cannot affect the release.
+// ReadProfileSnapshot возвращает стабильную копию ТЕКУЩЕЙ ревизии. Создание релиза фиксирует
+// эту копию; будущие изменения профиля не влияют на релиз.
 func ReadProfileSnapshot(repo Repository, projectID, profileID string) (model.ProfileSnapshot, error) {
 	if reader, ok := repo.(interface {
 		CurrentProfileSnapshot(projectID, profileID string) (model.ProfileSnapshot, error)

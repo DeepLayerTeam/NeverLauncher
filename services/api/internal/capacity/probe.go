@@ -12,8 +12,9 @@ import (
 	"time"
 )
 
-// Thresholds are conservative OPERATIONAL alarm conditions, not certified
-// throughput maxima. Actual sizing must be benchmarked on the target hardware.
+// Пороги — консервативные ЭКСПЛУАТАЦИОННЫЕ сигналы, а не сертифицированные
+// максимумы пропускной способности. Реальный подбор ресурсов требует тестов на
+// целевом оборудовании.
 const (
 	MinDiskFreeBytes           uint64 = 2 << 30
 	MinDiskFreeFraction               = 0.10
@@ -80,9 +81,9 @@ func (r *Report) issue(level, metric, observed, condition, advice string) {
 	r.Issues = append(r.Issues, Issue{level, metric, observed, condition, advice})
 }
 
-// Probe collects actual operating-system and database readings. Every failed
-// mandatory probe is visible and marks the report unverified; zero is never used
-// as a fabricated successful measurement.
+// Probe собирает фактические показатели ОС и БД. Каждая неудачная обязательная
+// проверка видна и помечает отчёт как непроверенный; ноль никогда не подставляется
+// как выдуманный успешный результат.
 func Probe(ctx context.Context, opt Options) Report {
 	r := Report{Mode: opt.Mode, At: time.Now().UTC(), Source: "live readings; thresholds are operational guardrails, not load benchmarks", Issues: []Issue{}, Verified: true, Limitations: []string{"S3 capacity/quota is not observable through a portable S3 API", "Distributed failover/fencing remains separately subject to diagnose growth and multi-host testing"}}
 	var ms runtime.MemStats
@@ -117,7 +118,8 @@ func Probe(ctx context.Context, opt Options) Report {
 				r.Errors = append(r.Errors, "PostgreSQL open: "+err.Error())
 				r.Verified = false
 			} else {
-				// A bounded probe cannot starve the app's normal connection pool.
+				// Ограниченная по времени проба не должна истощать обычный пул соединений
+				// приложения.
 				db.SetMaxOpenConns(2)
 				db.SetMaxIdleConns(0)
 				pg, probeErr := probePostgres(ctx, db)
@@ -167,7 +169,7 @@ func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	var maxText string
-	// MAX connections is server-wide, active connections are server-wide too.
+	// MAX connections относится ко всему серверу, активные соединения — тоже.
 	if err := db.QueryRowContext(ctx, "SHOW max_connections").Scan(&maxText); err != nil {
 		return p, err
 	}
@@ -186,8 +188,8 @@ func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {
 	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM event_outbox WHERE status='pending'").Scan(&p.PendingOutbox); err != nil {
 		return p, err
 	}
-	// Keep the existing aggregate Prometheus counters without fetching full
-	// entity lists into memory on every HTTP scrape.
+	// Сохраняйте существующие агрегированные счётчики Prometheus, не загружая при
+	// каждом HTTP-опросе полные списки объектов в память.
 	if err := db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM projects),
  (SELECT count(*) FROM users), (SELECT count(*) FROM roles),
  (SELECT count(*) FROM audit_events), (SELECT count(*) FROM telemetry_events),
@@ -197,7 +199,7 @@ func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {
 	return p, nil
 }
 
-// measureDisk implemented by platform-specific helpers.
+// measureDisk реализуется отдельными платформенными функциями.
 func canonicalExistingDir(path string) (string, error) {
 	p, err := filepath.Abs(path)
 	if err != nil {

@@ -24,7 +24,7 @@ public final class AdminDesktop0489Tests {
         var manifest=ExtensionManifest.parse(source);
         String base="http://127.0.0.1:7";
         var env=Map.of("LAUNCHER_EXTENSION_HOST_URL",base,"LAUNCHER_EXTENSION_HOST_TOKEN","unused","LAUNCHER_EXTENSION_ID",manifest.id(),"LAUNCHER_EXTENSION_VERSION",manifest.versionText(),"LAUNCHER_EXTENSION_HOST_PROTOCOL","1.0","LAUNCHER_EXTENSION_API_VERSION","1.0","LAUNCHER_EXTENSION_INSTANCE_ID","run");
-        // A local broker responds with real HTTP for settings storage operations.
+        // Локальный брокер отвечает настоящим HTTP на операции хранения настроек.
         var stored=new java.util.concurrent.ConcurrentHashMap<String,Object>();
         HttpServer broker=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         broker.createContext("/v1/hello",exchange->{

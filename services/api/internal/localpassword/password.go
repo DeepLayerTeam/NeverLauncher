@@ -66,8 +66,8 @@ func Verify(password, stored string) bool {
 	}
 }
 
-// Verify PHC without trusting cost parameters from the imported database.
-// The upper limits prevent a malicious JSON import from exhausting memory.
+// Проверяйте PHC, не доверяя параметрам стоимости из импортированной БД.
+// Верхние лимиты предотвращают исчерпание памяти вредоносным JSON-импортом.
 func verifyArgon(password, encoded string) bool {
 	parts := strings.Split(encoded, "$")
 	if !fileauth.ValidateArgon2id(encoded) || len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != "v=19" {

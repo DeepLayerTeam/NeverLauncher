@@ -13,9 +13,10 @@ import (
 	"time"
 )
 
-// Requires a delegated cgroup v2 and working unprivileged namespaces. Unlike
-// a mock, this test launches the actual sandbox and verifies that a child
-// spawned into a different process group cannot survive cgroup.kill.
+// Необходимы делегированная cgroup v2 и работающие непривилегированные
+// пространства имён. В отличие от mock, тест запускает настоящую песочницу и
+// проверяет, что дочерний процесс, перешедший в другую группу процессов, не
+// переживает cgroup.kill.
 func TestLinuxAdversarialDescendants03114(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_LINUX_SANDBOX") != "1" {
 		t.Skip("live kernel host explicitly required")
@@ -79,7 +80,7 @@ sleep 15
 			if errors.Is(err, syscall.ESRCH) {
 				break
 			}
-			// Zombies have exited, and cannot execute even before reap.
+			// Процессы-зомби уже завершились и не могут исполняться даже до вызова reap.
 			status, readErr := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/status")
 			if readErr != nil || strings.Contains(string(status), "State:\tZ") {
 				break

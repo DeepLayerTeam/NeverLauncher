@@ -56,7 +56,8 @@ func (s Server) wizardList02910(w http.ResponseWriter, r *http.Request) {
 	if heads == nil {
 		heads = []repository.ManagedProviderHead02910{}
 	}
-	// These revisions contain only non-secret, validated configs with env references.
+	// Эти ревизии содержат только проверенные конфигурации без секретов со ссылками на
+	// окружение.
 	writeJSON(w, 200, map[string]any{"items": heads})
 }
 func wizardRevision02910(req managedWizardRequest02910) repository.ManagedProviderRevision02910 {
@@ -153,8 +154,8 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 409, "active revision changed; reload before applying")
 		return
 	}
-	// A candidate is tested AGAINST THE LIVE provider before moving the durable
-	// pointer. This also checks environment-injected credentials without exposing them.
+	// Кандидат проверяется НА ЖИВОМ провайдере до переключения устойчивого указателя. Это
+	// также проверяет введённые из окружения учётные данные без их раскрытия.
 	if req.Revision != 0 {
 		var candidate *repository.ManagedProviderRevision02910
 		for i := range head.Revisions {
@@ -174,7 +175,7 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 422, "provider connection or SDK conformance failed; active settings unchanged")
 			return
 		}
-		// Do not allow a database-managed provider to override an env-configured source.
+		// Не разрешайте провайдеру из БД переопределять источник, настроенный через env.
 		if _, exists := s.Federation.Connector(id); exists && s.Federation.ManagedRevision(id) == 0 {
 			_ = closeManaged02910(probe.Connector)
 			writeError(w, 409, "provider is managed by bootstrap configuration")
@@ -195,8 +196,9 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 503, "activation transaction failed")
 		return
 	}
-	// Load now, not only on the next authentication request. If another node
-	// cannot reach the provider its auth middleware fails closed.
+	// Загружайте сейчас, а не только при следующем запросе авторизации. Если
+	// другой узел не может достичь провайдера, его middleware авторизации
+	// отказывает.
 	syncErr := s.syncManagedProviders02910(r.Context())
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "auth-provider:activate", Target: id + ":" + strconv.FormatInt(req.Revision, 10), CreatedAt: time.Now().UTC()})
 	if syncErr != nil {
@@ -206,8 +208,9 @@ func (s Server) wizardActivate02910(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, changed)
 }
 
-// Current state is based on the actual, running connector (not stored metadata).
-// Health error strings are never returned: drivers sometimes include DSNs.
+// Текущее состояние основано на настоящем работающем коннекторе, а не сохранённых
+// метаданных. Текст ошибок здоровья никогда не возвращается: драйверы иногда включают
+// DSN.
 func (s Server) wizardStatus02910(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 	defer cancel()

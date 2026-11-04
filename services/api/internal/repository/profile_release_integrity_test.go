@@ -12,7 +12,8 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 		t.Fatal(err)
 	}
 	frozen := *release.Manifest.ProfileSnapshot
-	// A caller must not mutate a stored release via the pointer returned by CreateVersion.
+	// Вызывающий не должен менять сохранённый релиз через указатель, возвращённый
+	// CreateVersion.
 	release.Manifest.ProfileSnapshot.Revision = 123
 	current, _ := r.ListVersions("demo-project")
 	var draft model.ReleaseVersion
@@ -24,7 +25,7 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 	if draft.Manifest.ProfileSnapshot == nil || *draft.Manifest.ProfileSnapshot != frozen {
 		t.Fatal("CreateVersion leaked mutable snapshot pointer")
 	}
-	// Legitimate draft metadata edit preserves the pinned revision.
+	// Законное изменение метаданных черновика сохраняет закреплённую ревизию.
 	draft.Manifest.Minecraft.Version = "1.21.1"
 	saved, err := r.UpdateVersionManifest(draft.ProjectID, draft.ID, draft.Manifest)
 	if err != nil {
@@ -43,7 +44,7 @@ func TestMemoryReleaseSnapshotPinnedThroughAllMutations0222(t *testing.T) {
 	if _, err := r.PublishVersionWithManifest(draft.ProjectID, draft.ProfileID, draft.Channel, draft.Version, changed); err == nil {
 		t.Fatal("publish substituted a different snapshot")
 	}
-	// An unrelated profile change has no effect on the frozen draft.
+	// Постороннее изменение профиля не влияет на зафиксированный черновик.
 	profiles, _ := r.ListProfiles("demo-project")
 	for _, p := range profiles {
 		if p.ID == "vanilla" {

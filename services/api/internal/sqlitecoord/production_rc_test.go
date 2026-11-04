@@ -8,8 +8,9 @@ import (
 	"time"
 )
 
-// Production RC stress of the REAL WAL-backed rate limiter. It measures a
-// specific bounded contention workload; no platform-wide RPS claim is made.
+// Промышленная нагрузочная проверка НАСТОЯЩЕГО WAL-ограничителя частоты.
+// Измеряется конкретная ограниченная конкурентная нагрузка, а не заявленная
+// производительность RPS всей платформы.
 func TestProductionRCConcurrentRateLimitStress(t *testing.T) {
 	path := coordTestPath(t)
 	coordinator := openTestCoordinator(t, path)

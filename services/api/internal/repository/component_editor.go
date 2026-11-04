@@ -10,10 +10,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// UpdateDraftComponentCatalog0248 repairs intermediate draft state (optional
-// files have been uploaded but are not assigned yet). It may alter ONLY the
-// catalog on a draft, never the pinned profile/identity or any signed release.
-// Repository-side CAS is required even if an API instance holds a package lock.
+// UpdateDraftComponentCatalog0248 исправляет промежуточное состояние черновика,
+// когда необязательные файлы уже загружены, но ещё не назначены. Менять можно ТОЛЬКО
+// каталог черновика, а не закреплённый профиль, идентичность или подписанный релиз.
+// CAS на уровне репозитория обязателен даже при блокировке пакета экземпляром API.
 func (r *MemoryRepository) UpdateDraftComponentCatalog0248(projectID, versionID string, expected uint64, cat model.ComponentCatalog0241) (model.ReleaseVersion, error) {
 	for i := range r.releases {
 		release := &r.releases[i]

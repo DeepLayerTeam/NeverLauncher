@@ -11,8 +11,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
-// Ban checks always read the authoritative repository, rather than a per-replica
-// snapshot. Storage outage on a mandatory protection gate denies access.
+// Проверки блокировки всегда читают авторитетный репозиторий, а не локальный снимок
+// реплики. Недоступность хранилища на обязательном этапе защиты приводит к отказу.
 type banHandler0298 struct{ store repository.ProtectionBanStore }
 
 func (h banHandler0298) Name() string { return "account-ban" }
@@ -30,8 +30,9 @@ func (h banHandler0298) Evaluate(ctx context.Context, req protection.Request) (p
 	return protection.Decision{Action: protection.Allow, Reason: "no_active_ban"}, nil
 }
 
-// Account state and permissions are checked against the live user record. The
-// session check uses the same authoritative session store as token validation.
+// Состояние учётной записи и разрешения проверяются по действующей записи
+// пользователя. Проверка сеанса использует то же авторитетное хранилище, что и
+// проверка токена.
 type accountHandler0298 struct {
 	repo     repository.Repository
 	sessions *authSessionStore
@@ -151,8 +152,8 @@ func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "ban transaction failed")
 		return
 	}
-	// DB trigger performs the cross-replica revocation transaction before Set returns.
-	// Development mode has no trigger and must explicitly revoke in-memory sessions.
+	// Триггер БД выполняет транзакцию межрепликового отзыва до возврата Set. В режиме
+	// разработки триггера нет, поэтому сеансы в памяти нужно явно отзывать.
 	s.State.AuthSessions.revokeUser(userID, "protection-ban")
 	if mc, err := s.minecraftRepo119(); err == nil {
 		mc.RevokeMinecraftSessionsByUser(userID, "protection-ban")

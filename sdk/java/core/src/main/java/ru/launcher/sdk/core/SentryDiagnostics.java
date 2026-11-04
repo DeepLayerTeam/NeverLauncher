@@ -25,7 +25,7 @@ public final class SentryDiagnostics {
         if (!release.matches("[A-Za-z0-9_.@+\\-]{1,128}")) throw new IllegalArgumentException("invalid Sentry release");
         Thread.UncaughtExceptionHandler original = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, failure) -> {
-            // Preserve the JVM's standard diagnostic/exit behavior.
+            // Сохраняйте стандартное поведение диагностики и завершения JVM.
             if (original != null) original.uncaughtException(thread,failure);
             else {System.err.println("Java extension failed: " + failure.getClass().getSimpleName());}
             try {send(destination,release,failure);} catch (Exception ignored) { /* diagnostics never hide failure */ }

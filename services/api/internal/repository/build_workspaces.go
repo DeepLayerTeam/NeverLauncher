@@ -15,8 +15,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// BuildFile identifies immutable, content-addressed uploaded bytes. Path is a
-// logical path inside the game, never a filesystem path on the API host.
+// BuildFile идентифицирует неизменяемые загруженные байты с адресацией по
+// содержимому. Path — логический игровой путь, а не путь файловой системы хоста
+// API.
 type BuildFile struct {
 	Path       string   `json:"path"`
 	Size       int64    `json:"size"`
@@ -61,9 +62,9 @@ type BuildWorkspaceStore interface {
 	SaveBuildWorkspace(context.Context, BuildWorkspace) (BuildWorkspace, error)
 }
 
-// BuildPackageLocator0384 prevents a materialized workspace package from being
-// changed through the older direct file-upload API. Signing and publication
-// remain separate release operations.
+// BuildPackageLocator0384 запрещает менять материализованный пакет рабочего
+// пространства через старый API прямой загрузки файлов. Подпись и публикация
+// остаются отдельными операциями релиза.
 type BuildPackageLocator0384 interface {
 	MaterializedBuildForPackage0384(context.Context, string) (bool, error)
 }
@@ -100,9 +101,9 @@ func validWorkspace0226(w BuildWorkspace) error {
 	return nil
 }
 
-// validateWorkspaceTransition0230 enforces the durable identities and immutable
-// input settings used to derive BuildDigest. Without this check a second caller
-// can change the toolchain/runtime inputs while retaining the pinned snapshot.
+// validateWorkspaceTransition0230 обеспечивает устойчивые идентичности и
+// неизменяемые входные настройки, формирующие BuildDigest. Без проверки другой
+// клиент может сменить инструментарий/Runtime, сохранив закреплённый снимок.
 func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 	if old.Revision != next.Revision || old.ProjectID != next.ProjectID ||
 		old.OwnerID != next.OwnerID || old.ProfileID != next.ProfileID ||
@@ -141,9 +142,10 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 	return nil
 }
 
-// FactoryWorkspaceStore0401 atomically adopts verified Client Factory outputs
-// and the exact launch metadata path. Ordinary workspace writes keep immutable
-// settings; only a new, empty, unbuilt workspace can use this transition.
+// FactoryWorkspaceStore0401 атомарно принимает проверенный результат Client Factory
+// и точный путь метаданных запуска. Обычные изменения рабочего пространства
+// сохраняют неизменяемость настроек; такой переход допустим только для нового
+// пустого несобранного пространства.
 type FactoryWorkspaceStore0401 interface {
 	SaveFactoryWorkspace0401(context.Context, BuildWorkspace) (BuildWorkspace, error)
 }
@@ -174,8 +176,9 @@ func validateFactoryWorkspace0401(old, next BuildWorkspace) error {
 }
 
 func cloneWorkspace0226(w BuildWorkspace) BuildWorkspace {
-	// JSON roundtrip produces fully independent nested slices/maps; no caller can
-	// mutate a persisted record without passing through revision-checked save.
+	// Преобразование JSON туда и обратно создаёт независимые вложенные срезы и карты;
+	// вызывающий не может изменить сохранённую запись без сохранения с проверкой
+	// ревизии.
 	b, _ := json.Marshal(w)
 	var c BuildWorkspace
 	_ = json.Unmarshal(b, &c)

@@ -33,11 +33,11 @@ func authMethodStrength117(methods []string) string {
 // удовлетворить второму фактору. Политика пользователя также
 // может требовать любой MFA или устойчивый к фишингу passkey.
 func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp, recovery string) (loginMFAResult117, error) {
-	// A connector's authMethods (including signed HTTP claims and verified OIDC
-	// amr) report what the *upstream* provider did. They are not evidence that
-	// Launcher verified a local TOTP, recovery code or passkey. In
-	// particular a remote "passkey"/"mfa" string must never satisfy the local
-	// MFA policy or produce a privileged Never authStrength.
+	// authMethods коннектора, включая подписанные HTTP-утверждения и проверенный
+	// OIDC amr, описывают действия ВНЕШНЕГО провайдера. Они не доказывают, что
+	// Launcher локально проверил TOTP, код восстановления или passkey. В частности,
+	// удалённая строка passkey/mfa никогда не удовлетворяет локальной политике MFA и
+	// не создаёт привилегированную authStrength Never.
 	methods := mergeAuthMethods117(authconnector.SafeUpstreamAuthMethods(baseMethods))
 	strength := authMethodStrength117(methods)
 	policy := s.State.Passkeys.policy(user.ID)

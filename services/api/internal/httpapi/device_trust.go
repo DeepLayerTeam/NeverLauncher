@@ -211,8 +211,9 @@ func metadataString0121(m map[string]any, key string) string {
 
 func sanitizeTrustedDevice0121(d model.TrustedDevice) model.TrustedDevice {
 	d = sanitizeAttestationFreshness0124(d)
-	// No remotely verifiable TPM/Secure Enclave attestation is implemented in
-	// 0.31.1. Downgrade legacy claims even when the repository contains
+	// В версии 0.31.1 удалённо проверяемая аттестация TPM/Secure Enclave не
+	// реализована. Понижайте доверие к устаревшим заявлениям, даже если
+	// репозиторий содержит
 	// "verified". This must never cause a privilege increase.
 	d.RemoteHardwareProvenance = "not-verified"
 	d.TrustAssessment = trustbaseline.Evaluate(d, false, time.Now().UTC())
@@ -338,7 +339,8 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	}
 	session, err := s.State.AuthSessions.bindTrustedDevice121(claims.SessionID, claims.Sub, device.ID, now)
 	if err != nil {
-		// A concurrent binding must not leave a second active device identity.
+		// Параллельная привязка не должна оставлять вторую активную идентичность
+		// устройства.
 		_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, device.ID, "registration-binding-conflict")
 		writeError(w, http.StatusConflict, "сессия уже привязана; используйте key rotation или recovery")
 		return
@@ -539,8 +541,8 @@ func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request
 					clean.TrustAssessment = trustbaseline.EvaluateWithHardwareEvidence(d, bound, evidence, time.Now().UTC())
 					clean.RemoteHardwareProvenance = "verified"
 				} else if previous, err := s.Repo.LatestHardwareEvidence(r.Context(), claims.Sub, d.ID); err == nil && previous.DeviceID == d.ID {
-					// Stale epoch, revoked/removed AK root or expired certificate:
-					// make the re-attestation requirement explicit to the UI.
+					// Устаревшая эпоха, отозванный/удалённый корень AK или истёкший сертификат:
+					// явно сообщайте интерфейсу о необходимости повторной аттестации.
 					strict := clean.TrustAssessment.ProfileDecisions[trustbaseline.Strict]
 					strict.ReasonCodes = append(strict.ReasonCodes, "tpm-evidence-expired-revoked-or-binding-changed")
 					strict.RecoveryAction = "repeat-tpm-certify-on-current-device-session"

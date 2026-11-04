@@ -8,9 +8,10 @@ import (
 	"time"
 )
 
-// HWID data is deliberately a *risk observation*, never an identity, ban,
-// permission, device-key attestation or proof of hardware ownership. Only a
-// keyed, account-scoped digest is stored. These structs must not be sent to UI.
+// HWID намеренно является наблюдением РИСКА, но не идентичностью, блокировкой,
+// разрешением, аттестацией ключа устройства или доказательством владения
+// оборудованием. Хранится только хеш с ключом и областью учётной записи. Эти
+// структуры нельзя передавать в UI.
 type HWIDObservation0299 struct {
 	UserID, DeviceID, Baseline, Pending, State string
 	UpdatedAt, ExpiresAt                       time.Time
@@ -31,10 +32,10 @@ type HWIDStore0299 interface {
 
 const hwidRetention0299 = 30 * 24 * time.Hour
 
-// nextHWIDObservation0433 keeps a detected hardware change latched until a
-// verified owner confirmation or an operator approval. Merely resending the
-// previous (untrusted) signal cannot lower the security decision.
-// When the proposed replacement itself changes, the prior appeal becomes stale.
+// nextHWIDObservation0433 удерживает обнаруженное изменение оборудования до
+// подтверждения владельцем или одобрения оператора. Повторная отправка прежнего
+// недоверенного сигнала не снижает уровень риска. При смене предложенной замены
+// прежняя апелляция устаревает.
 func nextHWIDObservation0433(previous HWIDObservation0299, digest string, now time.Time) (HWIDObservation0299, bool) {
 	if !previous.ExpiresAt.After(now) {
 		previous.Baseline, previous.Pending, previous.State = "", "", ""
@@ -45,7 +46,7 @@ func nextHWIDObservation0433(previous HWIDObservation0299, digest string, now ti
 		previous.Baseline, previous.Pending, previous.State = digest, "", "recognized"
 		changed = true
 	case previous.State == "changed" && previous.Pending != "":
-		// Returning to the baseline is not proof that the change was safe.
+		// Возврат к исходному отпечатку не доказывает, что изменение было безопасным.
 		if digest != previous.Baseline && digest != previous.Pending {
 			previous.Pending = digest
 			superseded, changed = true, true
@@ -56,7 +57,8 @@ func nextHWIDObservation0433(previous HWIDObservation0299, digest string, now ti
 		previous.Pending, previous.State = digest, "changed"
 		changed = true
 	}
-	// An unchanged repeat cannot move the risk event after a completed MFA.
+	// Неизменный повтор не может переносить событие риска на время после
+	// завершённой MFA.
 	if changed || previous.UpdatedAt.IsZero() {
 		previous.UpdatedAt = now
 	}
@@ -73,8 +75,9 @@ func (r *SQLRepository) ObserveHWID0299(ctx context.Context, userID, deviceID, d
 		return HWIDObservation0299{}, err
 	}
 	defer tx.Rollback()
-	// The device lock serializes observation/confirmation/forget and prevents
-	// cross-user data injection even when a caller bypasses HTTP validation.
+	// Блокировка устройства сериализует наблюдение, подтверждение и удаление
+	// данных и предотвращает межпользовательское внедрение, даже если вызывающий
+	// обходит HTTP-валидацию.
 	var owner, status string
 	err = tx.QueryRowContext(ctx, `SELECT user_id,status FROM trusted_devices WHERE id=$1 FOR UPDATE`, deviceID).Scan(&owner, &status)
 	if err != nil {
@@ -94,8 +97,8 @@ func (r *SQLRepository) ObserveHWID0299(ctx context.Context, userID, deviceID, d
 	}
 	obs, superseded := nextHWIDObservation0433(previous, digest, now)
 	if superseded {
-		// A pending appeal is tied to the exact proposed replacement. Never
-		// approve an appeal for a different machine after another observation.
+		// Ожидающая апелляция привязана к конкретной предложенной замене. Никогда не
+		// утверждайте её для другой машины после нового наблюдения.
 		if _, err = tx.ExecContext(ctx, `UPDATE hwid_risk_appeals SET status='rejected',resolution='superseded',actor='system',updated_at=$3 WHERE user_id=$1 AND device_id=$2 AND status='pending'`, userID, deviceID, now); err != nil {
 			return HWIDObservation0299{}, err
 		}
@@ -142,7 +145,8 @@ func (r *SQLRepository) ConfirmHWID0299(ctx context.Context, userID, deviceID, e
 	if err != nil {
 		return HWIDObservation0299{}, err
 	}
-	// An owner-confirmed replacement invalidates any unresolved operator appeal.
+	// Подтверждённая владельцем замена делает все незавершённые апелляции оператору
+	// недействительными.
 	if _, err = tx.ExecContext(ctx, `UPDATE hwid_risk_appeals SET status='rejected',resolution='confirmed-by-owner',actor='system',updated_at=$3 WHERE user_id=$1 AND device_id=$2 AND status='pending'`, userID, deviceID, now); err != nil {
 		return HWIDObservation0299{}, err
 	}
@@ -250,7 +254,8 @@ func (r *SQLRepository) ResolveHWIDAppeal0299(ctx context.Context, id, actor, de
 		return HWIDAppeal0299{}, err
 	}
 	defer tx.Rollback()
-	// Lock device first in the same order as Observe to prevent approve-vs-new-observation races.
+	// Сначала блокируйте устройство в том же порядке, что Observe, предотвращая гонку одобрения и
+	// нового наблюдения.
 	var userID, deviceID string
 	err = tx.QueryRowContext(ctx, `SELECT user_id,device_id FROM hwid_risk_appeals WHERE id=$1`, id).Scan(&userID, &deviceID)
 	if err != nil {
@@ -271,8 +276,8 @@ func (r *SQLRepository) ResolveHWIDAppeal0299(ctx context.Context, id, actor, de
 	if status != "pending" || (decision != "approved" && decision != "rejected") {
 		return HWIDAppeal0299{}, ErrConflict
 	}
-	// Rejection as well as approval must refer to the exact active change.
-	// Otherwise an obsolete appeal could be resolved against a new observation.
+	// Отказ и одобрение должны относиться строго к действующему изменению. Иначе
+	// устаревшая апелляция может разрешиться относительно нового наблюдения.
 	var currentPending, currentState string
 	if err = tx.QueryRowContext(ctx, `SELECT pending_digest,state FROM hwid_risk_observations WHERE user_id=$1 AND device_id=$2 AND expires_at>$3 FOR UPDATE`, userID, deviceID, now).Scan(&currentPending, &currentState); err != nil {
 		return HWIDAppeal0299{}, ErrConflict
@@ -422,7 +427,7 @@ func (r *MemoryRepository) ListHWIDAppeals0299(_ context.Context, userID string)
 	return out, nil
 }
 func (r *MemoryRepository) ResolveHWIDAppeal0299(_ context.Context, id, actor, decision string, now time.Time) (HWIDAppeal0299, error) {
-	// Match the SQL adapter: a revoked device cannot receive an approval.
+	// Как и в SQL-адаптере, отозванное устройство не может получить одобрение.
 	r.hwidMu.Lock()
 	defer r.hwidMu.Unlock()
 	a, ok := r.hwidAppeals[id]
@@ -461,14 +466,14 @@ func (r *MemoryRepository) ResolveHWIDAppeal0299(_ context.Context, id, actor, d
 	return a, nil
 }
 
-// Utility intentionally excludes digests from all user-visible responses.
+// Утилита намеренно исключает хеши из всех ответов для пользователя.
 func PublicHWIDState0299(o HWIDObservation0299) map[string]any {
 	return map[string]any{"deviceId": o.DeviceID, "state": strings.TrimSpace(o.State), "updatedAt": o.UpdatedAt, "expiresAt": o.ExpiresAt, "signalIsProofOfIdentity": false, "automaticBan": false}
 }
 
-// PruneHWID0299 physically removes expired observations and user appeals.
-// Every API replica can run this; DELETE operations are idempotent. Expired
-// observations are no longer consulted even if cleanup temporarily fails.
+// PruneHWID0299 физически удаляет просроченные наблюдения и апелляции. Любая
+// реплика API может это выполнять; DELETE идемпотентен. Истёкшие наблюдения
+// больше не учитываются, даже если очистка временно не удалась.
 func (r *SQLRepository) PruneHWID0299(ctx context.Context, now time.Time) error {
 	if err := r.check(); err != nil {
 		return err

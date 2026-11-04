@@ -141,8 +141,8 @@ func (r *Repository) GetProfile(ctx context.Context, projectID, profileID string
 	return
 }
 
-// SaveProfile performs first-writer insertion or revision-CAS update along
-// with immutable history in a single BEGIN IMMEDIATE / FULL-sync COMMIT.
+// SaveProfile выполняет первичную вставку или обновление по ревизии CAS вместе
+// с неизменяемой историей в одной BEGIN IMMEDIATE / FULL-sync COMMIT.
 func (r *Repository) SaveProfile(ctx context.Context, p model.Profile, actor string) (actual model.Profile, err error) {
 	if strings.TrimSpace(actor) == "" {
 		return actual, errors.New("profile mutation requires audit actor")

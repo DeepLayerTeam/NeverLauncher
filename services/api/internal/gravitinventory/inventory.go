@@ -476,16 +476,18 @@ func Export(ctx context.Context, out io.Writer, src io.ReaderAt, size int64, v I
 	return zw.Close()
 }
 
-// Spool makes a bounded, private temporary copy of an HTTP request with an
-// independently verified source digest. Caller must Close and Remove the file.
+// Spool создаёт ограниченную закрытую временную копию HTTP-запроса с независимо
+// проверенным дайджестом источника. Вызывающая сторона обязана закрыть и удалить
+// файл.
 func Spool(ctx context.Context, source io.Reader) (*os.File, int64, string, error) {
 	f, e := os.CreateTemp("", "gravit-source-*.zip")
 	if e != nil {
 		return nil, 0, "", e
 	}
 	_ = f.Chmod(0600)
-	// On Unix unlink immediately: a killed worker cannot leave sensitive
-	// config/credential ZIPs in a discoverable temp path.
+	// В Unix удаляйте имя файла сразу: аварийно завершённый worker не должен
+	// оставлять ZIP с чувствительными конфигурациями и учётными данными по
+	// доступному временному пути.
 	if runtime.GOOS != "windows" {
 		if err := os.Remove(f.Name()); err != nil {
 			f.Close()

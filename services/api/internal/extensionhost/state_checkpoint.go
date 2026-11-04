@@ -13,10 +13,10 @@ import (
 	"strings"
 )
 
-// Durable copy-on-upgrade checkpoints of extension-owned JSON runtime documents.
-// The supervisor serializes copies with broker mutations via runtimeMu0303;
-// callers must stop the old Java Host before calling Snapshot. Snapshots are
-// stored independently of signed payloads, and are never executable.
+// Устойчивые контрольные копии JSON-документов Runtime, принадлежащих расширению, при
+// обновлении. Супервизор сериализует копирование с изменениями брокера через
+// runtimeMu0303; вызывающая сторона должна остановить прежний Java Host перед
+// Snapshot. Снимки хранятся независимо от подписанных пакетов.
 const checkpointMaxFiles04810 = runtimeKeyLimit0303
 const checkpointMaxBytes04810 = runtimeTotalLimit0303
 
@@ -135,12 +135,13 @@ func snapshotRuntime04810(ctx context.Context, root string, key Key, txID string
 		return err
 	}
 	source := runtimeDir0303(root, key)
-	// Refuse a symlinked runtime-data parent even if the state leaf itself
-	// appears to be a regular directory through that symlink.
+	// Отклоняйте символьную ссылку в родительском каталоге данных Runtime, даже
+	// если конечное состояние выглядит обычным каталогом после прохода по ссылке.
 	if err = secureDirectory0303(filepath.Dir(source)); err != nil {
 		return err
 	}
-	// Existing complete snapshots are immutable, allowing deterministic retries.
+	// Существующие завершённые снимки неизменяемы, что позволяет детерминированные
+	// повторы.
 	if _, err := os.Lstat(path); err == nil {
 		_, _, err = checkpointRead04810(path)
 		return err

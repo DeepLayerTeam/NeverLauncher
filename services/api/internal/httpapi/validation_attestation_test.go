@@ -125,8 +125,9 @@ func TestTrustedAttestationMatchesPersistedRun0345(t *testing.T) {
 		t.Fatal(e)
 	}
 	signed.Evidence.Preset = "other"
-	// V05 must do policy-derived preset applicability: in V04 the signed preset
-	// is tied to immutable evidence, not yet to a policy-derived target matrix.
+	// V05 обязан выводить применимость пресетов из политики: в V04 подписанный
+	// пресет связан с неизменяемым свидетельством, но ещё не с вычисленной из
+	// политики матрицей целей.
 	signed.Evidence.RunID = "other-run"
 	if e := matchObservation0345(signed.Evidence, run); e == nil {
 		t.Fatal("cross-run attestation accepted")

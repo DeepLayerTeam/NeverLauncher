@@ -1,7 +1,7 @@
 package httpapi
 
-// Player support reports are deliberately small and machine-readable.
-// Free-form logs, paths, URLs, usernames and credentials are never accepted.
+// Отчёты игроков в поддержку намеренно компактны и машиночитаемы. Произвольные
+// журналы, пути, URL, имена пользователей и учётные данные не принимаются.
 import (
 	"crypto/rand"
 	"encoding/hex"

@@ -75,7 +75,7 @@ func TestTextureURLImportProvenance0254(t *testing.T) {
 	if event != "import" || source != "managed-url-import" || external != "" {
 		t.Fatalf("incorrect imported revision %s %s %s", event, source, external)
 	}
-	// Same digest remains immutable, and second request must pass a fresh CAS revision.
+	// Тот же хеш остаётся неизменяемым; второму запросу требуется новая CAS-ревизия.
 	if _, err = repo.UploadTexture0252(ctx, owner, input); !errors.Is(err, ErrTextureRevisionConflict0251) {
 		t.Fatalf("expected stale revision conflict: %v", err)
 	}

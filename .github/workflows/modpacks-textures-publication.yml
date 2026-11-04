@@ -58,8 +58,9 @@ jobs:
           cargo test --test selected_optional_0526
           cargo build --bin runtime
   live-physical:
-    # Deliberately not an automatic GA claim: requires a dedicated real JVM,
-    # already-uploaded package, operator MFA, trust pins and actual Minecraft.
+    # Это намеренно не является автоматическим подтверждением GA: нужны выделенная
+    # настоящая JVM, заранее загруженный пакет, MFA оператора, закреплённые ключи
+    # доверия и реальный Minecraft.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, neverlauncher-game-acceptance]
     environment: modpacks-textures-physical-acceptance

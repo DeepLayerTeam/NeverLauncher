@@ -10,8 +10,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// Before backing up or applying DDL, require the complete known predecessor
-// family; a forged user_version on a different SQLite database is not enough.
+// До резервного копирования или применения DDL требуйте полное известное семейство
+// предыдущей схемы; поддельного user_version чужой БД недостаточно.
 func (r *Repository) preflightLegacy0472(ctx context.Context, version int) error {
 	return r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		groups := [][]string{ddl}
@@ -44,8 +44,8 @@ func (r *Repository) preflightLegacy0472(ctx context.Context, version int) error
 				}
 			}
 		}
-		// Persisted identifiers, role membership and profile history must not be
-		// silently remapped by a version-number-only migration.
+		// Сохранённые ID, членство ролей и история профилей не должны незаметно
+		// переназначаться миграцией по одному номеру версии.
 		for table, cols := range map[string]map[string]string{
 			"projects":          {"id": "TEXT", "name": "TEXT"},
 			"profiles":          {"project_id": "TEXT", "id": "TEXT", "revision": "INTEGER", "digest": "TEXT"},
@@ -118,8 +118,9 @@ func hasCoreColumn0472(ctx context.Context, q sqlitedurable.Executor, table, col
 	return found, err
 }
 
-// Validate the domain invariants that existed before migration as well as
-// afterwards. Invalid old rows stop the upgrade before any schema changes.
+// Проверяйте доменные инварианты, существовавшие как до миграции, так и после.
+// Некорректные старые строки должны останавливать обновление до любых изменений
+// схемы.
 func coreRecordPreflight0472(ctx context.Context, q sqlitedurable.Executor) error {
 	checks := []string{
 		`SELECT COUNT(*) FROM profiles p LEFT JOIN profile_revisions h ON h.project_id=p.project_id AND h.profile_id=p.id AND h.revision=p.revision AND h.digest=p.digest WHERE h.profile_id IS NULL`,
@@ -140,13 +141,14 @@ func coreRecordPreflight0472(ctx context.Context, q sqlitedurable.Executor) erro
 	return nil
 }
 
-// Replay a historical DDL step safely after interrupted/partly stamped
-// upgrades: an already-existing object is accepted only if its actual SQL
-// matches the archived migration. Never use an indiscriminate IF NOT EXISTS.
+// Безопасно воспроизводите исторический шаг DDL после прерванного или частично
+// отмеченного обновления: уже существующий объект принимается только при точном
+// совпадении его SQL с архивной миграцией. Не используйте безусловно IF NOT
+// EXISTS.
 func applyCoreDDL0472(ctx context.Context, q sqlitedurable.Executor, stmt string) error {
-	// Historical authDDL uses a forbidden SQLite namespace collision:
-	// INDEX minecraft_sessions has the same name as TABLE minecraft_sessions.
-	// Preserve the historical DDL source, but execute its fixed index name.
+	// Исторический authDDL содержит запрещённую коллизию пространства имён SQLite:
+	// INDEX minecraft_sessions имеет имя TABLE minecraft_sessions. Сохраняйте
+	// исторический текст DDL, но исполняйте его с исправленным именем индекса.
 	if strings.HasPrefix(strings.TrimSpace(stmt), "CREATE INDEX minecraft_sessions ON minecraft_sessions(") {
 		stmt = strings.Replace(stmt, "INDEX minecraft_sessions ON", "INDEX minecraft_sessions_session ON", 1)
 	}

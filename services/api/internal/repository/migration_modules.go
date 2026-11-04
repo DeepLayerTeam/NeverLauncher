@@ -28,8 +28,8 @@ func (r *SQLRepository) GetMigrationModules0338(ctx context.Context, runID strin
 	return v, err
 }
 
-// SaveMigrationModules0338 is immutable and replay-safe. The migration run row
-// serializes assessment writes with every other migration stage.
+// SaveMigrationModules0338 неизменяем и безопасен для повторов. Строка миграции
+// сериализует запись оценки с остальными этапами миграции.
 func (r *SQLRepository) SaveMigrationModules0338(ctx context.Context, runID string, report gm.Report) (gm.Report, error) {
 	if err := r.check(); err != nil {
 		return gm.Report{}, err
@@ -115,8 +115,8 @@ func (r *SQLRepository) GetMigrationWrapperEnrollment0338(ctx context.Context, r
 	return
 }
 
-// Reserve migration enrollment before creating the ServerBridge node. The
-// immutable intent prevents a retry from adopting unrelated pre-existing keys.
+// Зарезервируйте регистрацию миграции до создания узла ServerBridge. Неизменяемое
+// намерение не позволяет повтору присвоить чужие ранее существовавшие ключи.
 func (r *SQLRepository) RecordMigrationWrapperEnrollment0338(ctx context.Context, runID, wrapperPath, serverID, fingerprint string) error {
 	if err := r.check(); err != nil {
 		return err
@@ -133,7 +133,8 @@ func (r *SQLRepository) RecordMigrationWrapperEnrollment0338(ctx context.Context
 	if status != "prepared" || step != "source_assessment" {
 		return mw.ErrBusy
 	}
-	// Same run and wrapper can only enroll one key/node, including on retry.
+	// Один запуск и wrapper могут зарегистрировать только один ключ и узел, в том
+	// числе при повторе.
 	res, err := tx.ExecContext(ctx, `INSERT INTO migration_wrapper_enrollments_0338(run_id,wrapper_path,server_id,public_key_fingerprint)
  VALUES($1,$2,$3,$4) ON CONFLICT(run_id,wrapper_path) DO UPDATE SET server_id=EXCLUDED.server_id
  WHERE migration_wrapper_enrollments_0338.server_id=EXCLUDED.server_id AND migration_wrapper_enrollments_0338.public_key_fingerprint=EXCLUDED.public_key_fingerprint`, runID, wrapperPath, serverID, fingerprint)

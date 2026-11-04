@@ -96,8 +96,9 @@ func (s Server) migrationCutoverActivate03311(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	// Source fencing is out-of-band and must have been completed and audited by
-	// the operator. This acknowledgement is retained but not cryptographic proof.
+	// Ограждение источника выполняется вне основного канала и должно быть завершено и
+	// проверено оператором. Подтверждение сохраняется, но не является
+	// криптографическим доказательством.
 	if r.Header.Get("X-Migration-Cutover-Confirm") != id || r.Header.Get("X-Migration-Source-Fenced") != "true" {
 		writeError(w, 400, "migration run and independently fenced source must be confirmed")
 		return

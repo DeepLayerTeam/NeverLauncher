@@ -13,8 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// The live probe must not become a status-only success path. A Java install
-// that is missing, stopped, or the host is disabled is never reported healthy.
+// Реальная проверка не должна сводиться к успешному чтению статуса. Отсутствующая
+// или остановленная Java-установка либо отключённый хост никогда не считаются
+// исправными.
 func TestJavaIntegrationProbe0491RejectsAbsentHost(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/extension-hosts/example.java/probe", nil)
 	req.SetPathValue("extensionId", "example.java")

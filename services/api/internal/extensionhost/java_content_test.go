@@ -36,7 +36,8 @@ func TestJavaContentRPC0486(t *testing.T) {
 	attempts := 0
 	cb := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		attempts++
-		// Invalid ID makes it fail *after* delivery; this tests the real preflight.
+		// Недопустимый ID вызывает отказ ПОСЛЕ доставки; так проверяется настоящая
+		// предварительная проверка.
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"protocolVersion": "1.0", "requestId": "wrong", "ok": true, "result": map[string]any{"asset": map[string]any{"projectId": "project-a"}}})
 	}))
@@ -45,7 +46,8 @@ func TestJavaContentRPC0486(t *testing.T) {
 	host.processes[st.key.String()] = st
 	projectA := json.RawMessage(`{"projectId":"project-a","path":"example.jar"}`)
 	projectB := json.RawMessage(`{"projectId":"project-b","path":"example.jar"}`)
-	// No release grant: a running, trusted JVM must never receive the callback.
+	// Нет разрешения выпуска: работающая доверенная JVM никогда не должна получать
+	// обратный вызов.
 	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
 		t.Fatalf("ungranted content RPC: %v", e)
 	}
@@ -83,7 +85,7 @@ func TestJavaContentRPC0486(t *testing.T) {
 	if attempts != before {
 		t.Fatal("revoked preparation reached JVM")
 	}
-	// Read-only metadata is permitted independently of package preparation.
+	// Метаданные только на чтение допускаются независимо от подготовки пакета.
 	_, _ = host.CallJavaRPC0304(ctx, st.key, "content.metadata.enrich", projectA)
 	if attempts != before+1 {
 		t.Fatal("release:read unexpectedly revoked with prepare")

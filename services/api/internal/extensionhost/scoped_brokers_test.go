@@ -11,8 +11,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Execute the production Host capability handlers and the real memory-backed
-// grants manager. Isolated unit tests do not pretend to certify kernel state.
+// Выполняйте промышленные обработчики возможностей Host и настоящий менеджер
+// разрешений в памяти. Изолированные модульные тесты не претендуют на сертификацию
+// состояния ядра.
 func TestScopedBrokerCapabilities03110(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()

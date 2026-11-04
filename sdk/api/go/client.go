@@ -1,4 +1,4 @@
-// Package neverapi provides a production HTTP client for the canonical NeverLauncher OpenAPI v1.
+// Package neverapi предоставляет промышленный HTTP-клиент канонического NeverLauncher OpenAPI v1.
 package neverapi
 
 import (
@@ -163,8 +163,9 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 	return nil
 }
 
-// CheckCompatibility accepts current API contract v1 and the deployed 0.45.11 predecessor.
-// Older backends did not publish X-Launcher-API-Contract, so /ready version is checked.
+// CheckCompatibility принимает текущий контракт API v1 и установленного предшественника
+// 0.45.11. Старые backend не публиковали X-Launcher-API-Contract, поэтому проверяется версия
+// через /ready.
 func (c *Client) CheckCompatibility(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+"/ready", nil)
 	if err != nil {
@@ -197,8 +198,9 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 	return nil
 }
 
-// CallRaw sends multipart/binary payloads to any registered OpenAPI operation.
-// Use Call for JSON; raw responses are returned as bytes without lossy JSON coercion.
+// CallRaw отправляет multipart/бинарные данные в любую зарегистрированную операцию
+// OpenAPI. Для JSON используйте Call; необработанные ответы возвращаются байтами, без
+// искажающего преобразования в JSON.
 func (c *Client) CallRaw(ctx context.Context, operationID string, params map[string]string, query url.Values, body []byte, contentType, idempotencyKey string) ([]byte, error) {
 	op, ok := Operations[operationID]
 	if !ok {
@@ -262,11 +264,11 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 	return data, nil
 }
 
-// CallStream transfers an OpenAPI operation's request and response without
-// buffering the successful response. Multipart bodies can be supplied via a
-// streaming io.Reader; callers own requestReader and responseWriter.
-// A response limit of 0 uses the default 1 GiB cap. The caller must discard
-// a partially written destination if an error is returned.
+// CallStream передаёт запрос и ответ операции OpenAPI без буферизации успешного
+// ответа. Для multipart допускается потоковый io.Reader; вызывающая сторона
+// отвечает за requestReader и responseWriter. Нулевой предел ответа означает
+// стандартные 1 ГиБ. При ошибке вызывающая сторона должна удалить частично
+// записанный файл назначения.
 func (c *Client) CallStream(ctx context.Context, operationID string, params map[string]string, query url.Values, requestReader io.Reader, contentType string, responseWriter io.Writer, maxResponseBytes int64, idempotencyKey string) (int64, error) {
 	op, ok := Operations[operationID]
 	if !ok {
@@ -279,8 +281,9 @@ func (c *Client) CallStream(ctx context.Context, operationID string, params map[
 	return c.RequestStream(ctx, op.Method, path, query, requestReader, contentType, responseWriter, maxResponseBytes, idempotencyKey)
 }
 
-// RequestStream prevents cross-origin redirects even if a caller provided an
-// http.Client with redirect-following enabled. It does not alter that client.
+// RequestStream предотвращает перенаправления на другой origin, даже если
+// вызывающий код передал http.Client с разрешёнными редиректами. Сам клиент не
+// изменяется.
 func (c *Client) RequestStream(ctx context.Context, method, path string, query url.Values, requestReader io.Reader, contentType string, responseWriter io.Writer, maxResponseBytes int64, key string) (int64, error) {
 	if c == nil || c.HTTP == nil {
 		return 0, errors.New("uninitialized client")
@@ -327,8 +330,8 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Do not leak an authorization token to a redirect target, and do not
-		// parse attacker-controlled unbounded error responses.
+		// Не раскрывайте токен авторизации адресату редиректа и не разбирайте
+		// неограниченные ответы об ошибках под контролем атакующего.
 		data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytesForError+1))
 		if err != nil {
 			return 0, err
@@ -354,8 +357,8 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 	if resp.ContentLength > maxResponseBytes {
 		return 0, errors.New("API stream exceeds configured size limit")
 	}
-	// LimitReader(max+1) detects a chunked response larger than announced;
-	// no full-response allocation is performed.
+	// LimitReader(max+1) выявляет chunked-ответ больше объявленного предела;
+	// полный ответ не выделяется в память.
 	n, err := io.Copy(responseWriter, io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil {
 		return n, err
@@ -368,8 +371,9 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 
 const maxResponseBytesForError = 1 << 20
 
-// doNoRedirect protects bearer credentials and prevents treating a cross-origin
-// redirect as an API response. A caller-supplied client cannot override it.
+// doNoRedirect защищает Bearer-учётные данные и не позволяет принять перенаправление
+// на другой origin за ответ API. Клиент, предоставленный вызывающим кодом, не может
+// это отменить.
 func (c *Client) doNoRedirect(req *http.Request) (*http.Response, error) {
 	client := *c.HTTP
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }

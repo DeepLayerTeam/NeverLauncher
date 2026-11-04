@@ -18,7 +18,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
-// Per-instance abuse control; clusters should also apply an ingress limit.
+// Контроль злоупотреблений в рамках экземпляра; в кластерах также нужен лимит
+// на ingress.
 var textureURLImportWindow0254 = struct {
 	sync.Mutex
 	users map[string]textureURLImportCount0254
@@ -64,9 +65,10 @@ type textureURLImport0254 struct {
 	Visibility       string `json:"visibility"`
 }
 
-// textureImport0254 is an authenticated, self-profile-only URL import.
-// Remote URLs are never persisted as live texture references. Only verified,
-// normalized PNGs are stored using the same CAS/quota/storage path as uploads.
+// textureImport0254 — авторизованный импорт URL только в собственный профиль.
+// Удалённые URL никогда не сохраняются как действующие ссылки на текстуры. Хранятся
+// только проверенные нормализованные PNG по тем же CAS, квотам и пути хранилища,
+// что и загрузки.
 func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 	profile, user, err := s.ownedTextureProfile0251(r)
 	if err != nil {
@@ -117,8 +119,8 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid model or visibility")
 		return
 	}
-	// Reject obviously stale CAS revisions before consuming outbound network
-	// resources. StageTextureUpload0253 revalidates this under a database lock.
+	// Отклоняйте заведомо устаревшие ревизии CAS до использования исходящих сетевых
+	// ресурсов. StageTextureUpload0253 перепроверяет их под блокировкой БД.
 	selectionRepo, ok := s.textureRepository0251()
 	if !ok {
 		writeError(w, http.StatusServiceUnavailable, "texture database unavailable")
@@ -165,23 +167,24 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, texturefetch.ErrRemote):
 			status = http.StatusBadGateway
 		}
-		// Avoid reflecting remote content, URL, DNS results or internal addresses.
+		// Не отражайте удалённое содержимое, URL, результаты DNS или внутренние адреса.
 		writeError(w, status, "remote URL must be public HTTPS and return a valid bounded Minecraft PNG")
 		return
 	}
 	s.persistTexture0254(w, r, profile, user, normalized, kind, input.Model, input.Visibility, *input.ExpectedRevision, "import")
 }
 
-// persistTexture0254 is the single persistence path used by both multipart
-// uploads and remote imports. Staging is done before any object write.
+// persistTexture0254 — единый путь сохранения для multipart-загрузок и
+// удалённого импорта. Подготовка выполняется до любой записи объекта.
 func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profile model.MinecraftProfile, user model.User, normalized texturepng.Result, kind, modelName, visibility string, expected int64, action string) {
 	repo, ok := s.Repo.(repository.TextureUploadRepository0252)
 	if !ok || s.Storage == nil {
 		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
 		return
 	}
-	// Reserve digest and enforce ownership, revision and quota BEFORE any
-	// persistent object write. Failed saves remain GC-visible as staging rows.
+	// Резервируйте хеш и проверяйте владение, ревизию и квоту ДО долговременной
+	// записи объекта. Неудачные сохранения остаются видны очистке в виде строк
+	// staging.
 	source := "managed-upload"
 	if action == "import" {
 		source = "managed-url-import"

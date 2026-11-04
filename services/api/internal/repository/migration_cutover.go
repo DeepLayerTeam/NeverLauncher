@@ -58,9 +58,9 @@ func (r *SQLRepository) MigrationCutovers03311(ctx context.Context, runID string
 	return out, rows.Err()
 }
 
-// checkCutoverReadiness03311 must execute under a migration-run FOR UPDATE lock.
-// MIG10 is re-evaluated on every transition; later failed rehearsals take
-// precedence and invalidate a previous ready report.
+// checkCutoverReadiness03311 должен выполняться под блокировкой FOR UPDATE миграции.
+// MIG10 пересчитывается при каждом переходе; поздние неуспешные репетиции
+// приоритетнее и отменяют прежний отчёт ready.
 func checkCutoverReadiness03311(ctx context.Context, tx *sql.Tx, runID, stageID, currentSourceDigest string) error {
 	var raw []byte
 	var recordedAt time.Time
@@ -104,8 +104,8 @@ func checkCutoverReadiness03311(ctx context.Context, tx *sql.Tx, runID, stageID,
 	return nil
 }
 
-// readSignedRelease03311 rejects unsigned/self-signed/foreign and unreleased
-// content, including a package belonging to a different migration workflow.
+// readSignedRelease03311 отклоняет неподписанное, самоподписанное, чужое и
+// неопубликованное содержимое, в том числе пакет другой миграции.
 func readSignedRelease03311(ctx context.Context, tx *sql.Tx, runID, project string, s co.Stage, trusted ed25519.PublicKey) (string, string, error) {
 	var ver, status string
 	var raw []byte
@@ -131,9 +131,10 @@ func readSignedRelease03311(ctx context.Context, tx *sql.Tx, runID, project stri
 	return ver, digest, nil
 }
 
-// StageMigrationCutover03311 performs *real* channel writer fencing. Existing
-// published routes continue serving unchanged until activation. No Gravit
-// server is contacted and no claim about its writer state is inferred.
+// StageMigrationCutover03311 выполняет НАСТОЯЩЕЕ ограждение писателя канала.
+// Существующие опубликованные маршруты продолжают работать без изменений до
+// активации. Сервер Gravit не опрашивается, и о состоянии его писателя выводов не
+// делается.
 func (r *SQLRepository) StageMigrationCutover03311(ctx context.Context, runID string, s co.Stage, trusted ed25519.PublicKey) (co.Route, error) {
 	if e := r.check(); e != nil {
 		return co.Route{}, e
@@ -157,7 +158,7 @@ func (r *SQLRepository) StageMigrationCutover03311(ctx context.Context, runID st
 	if kind != "gravit" || status != "prepared" || step != "source_assessment" {
 		return co.Route{}, mw.ErrBusy
 	}
-	// A project lock is shared with ordinary release publication.
+	// Блокировка проекта общая с обычной публикацией релизов.
 	var locked string
 	if e = tx.QueryRowContext(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, project).Scan(&locked); e != nil {
 		return co.Route{}, e
@@ -215,9 +216,9 @@ func eventCutover03311(ctx context.Context, tx *sql.Tx, runID, kind string, v co
 	return e
 }
 
-// ActivateMigrationCutover03311 atomically changes the actual Never delivery
-// pointer. SourceFenceReference is an OPERATOR attestation (not independently
-// proven by Never), retained to support MIG12 reconciliation and audit.
+// ActivateMigrationCutover03311 атомарно меняет реальный указатель доставки Never.
+// SourceFenceReference — аттестация ОПЕРАТОРА, независимо не доказанная Never,
+// сохраняемая для сверки MIG12 и аудита.
 func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID string, a co.Activate, trusted ed25519.PublicKey) (co.Route, error) {
 	if e := r.check(); e != nil {
 		return co.Route{}, e
@@ -279,8 +280,8 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 	if current != v.BaselineRevision {
 		return co.Route{}, mw.ErrConflict
 	}
-	// The migration fence is not a runtime certification. For stable, a
-	// separately verified, one-use permit is mandatory in this transaction.
+	// Ограждение миграции не является сертификацией Runtime. Для stable в этой
+	// транзакции обязателен отдельно проверенный одноразовый допуск.
 	if IsStableChannel0341(v.Channel) {
 		token := stablePermitToken03411(ctx)
 		if len(token) != 64 {
@@ -290,8 +291,9 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 			return co.Route{}, e
 		}
 	}
-	// A SET LOCAL marker permits only this run's exact channel update through
-	// the DB trigger. Stale workers/ordinary publication remain fenced.
+	// Маркер SET LOCAL разрешает триггеру БД только точное обновление канала
+	// текущего запуска. Устаревшие воркеры и обычная публикация остаются
+	// ограждёнными.
 	if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, runID); e != nil {
 		return co.Route{}, e
 	}
@@ -327,8 +329,9 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 	return v, nil
 }
 
-// Cancel affects staged (unactivated) scopes ONLY. Post-switch reconciliation
-// is MIG12; an old snapshot is never restored over live writes here.
+// Отмена действует ТОЛЬКО на подготовленные, ещё не активированные области. Сверка
+// после переключения — MIG12; здесь старый снимок никогда не восстанавливается
+// поверх живых изменений.
 func (r *SQLRepository) CancelMigrationCutover03311(ctx context.Context, runID, profile, channel string, expected int64) (co.Route, error) {
 	if e := r.check(); e != nil {
 		return co.Route{}, e

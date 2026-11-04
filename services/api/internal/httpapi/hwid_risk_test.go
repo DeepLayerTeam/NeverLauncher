@@ -38,8 +38,9 @@ func TestHWIDDigestIsAccountScoped0299(t *testing.T) {
 	}
 }
 
-// A privacy deletion is still allowed, but cannot reset an already elevated
-// security decision on an active session without the required step-up.
+// Удаление по требованию конфиденциальности по-прежнему разрешено, но не может
+// сбросить уже повышенный уровень риска активного сеанса без необходимого
+// усиленного подтверждения.
 func TestHWIDRiskPersistsAfterPrivacyDeletion0433(t *testing.T) {
 	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-hwid-sticky-risk", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)

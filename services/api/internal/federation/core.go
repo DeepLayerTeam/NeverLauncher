@@ -169,9 +169,10 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 	return c.resolveAuthentication(ctx, meta, auth)
 }
 
-// LinkPasswordIdentity uses fresh provider credentials solely as proof for an
-// explicitly authenticated Never account. Unlike AuthenticatePassword it never
-// provisions a user or creates a Never session. No provider fallback is allowed.
+// LinkPasswordIdentity использует новые учётные данные провайдера только для
+// подтверждения явно аутентифицированного аккаунта Never. В отличие от
+// AuthenticatePassword он не создаёт пользователя и сессию Never. Запасной провайдер
+// запрещён.
 func (c *Core) LinkPasswordIdentity(ctx context.Context, userID, providerID string, request authconnector.PasswordRequest) (model.AuthIdentity, authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	if err := c.EnsureLinkAllowed(providerID); err != nil {
@@ -300,9 +301,9 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 		if !policy.AutoProvision {
 			return Result{}, ErrIdentityNotLinked
 		}
-		// An unqualified pre-0.29.1 identity must not be silently claimed by
-		// a new issuer (even when the email/subject matches). Require an
-		// authenticated Never user to explicitly perform browser linking.
+		// Неквалифицированная идентичность до 0.29.1 не должна незаметно
+		// присваиваться новому издателю, даже при совпадении email/субъекта. Для
+		// явной браузерной привязки требуется аутентифицированный пользователь Never.
 		legacyIssuer, _ := model.CanonicalAuthIssuer(meta.ID, "")
 		if issuer != legacyIssuer {
 			if _, legacyErr := c.repo.GetAuthIdentityByIssuer(meta.ID, legacyIssuer, auth.Identity.Subject); legacyErr == nil {
@@ -359,9 +360,10 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 	digest := sha256.Sum256([]byte(providerID + "\x00" + issuer + "\x00" + subject))
 	stableSuffix := hex.EncodeToString(digest[:12])
 	userID := "user-" + providerID + "-" + stableSuffix
-	// Email is a mutable claim and may be shared across distinct issuers.
-	// Reserve a unique internal login address; the asserted address is saved
-	// only on AuthIdentity and is never used for implicit account linking.
+	// Email — изменяемое утверждение и может совпадать у разных издателей.
+	// Резервируйте уникальный внутренний адрес входа; заявленный адрес
+	// сохраняется только в AuthIdentity и никогда не используется для неявной
+	// привязки аккаунта.
 	email := stableSuffix + "@identity.invalid"
 	displayName := strings.TrimSpace(identity.DisplayName)
 	if displayName == "" {
@@ -438,9 +440,9 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Issuer: issuer, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: time.Now().UTC()})
 }
 
-// ResolveProviderIdentity reads the configured issuer's subject without linking
-// or provisioning a Never account. Response subjects must match the requested
-// value; identity data cannot retarget a canonical account.
+// ResolveProviderIdentity читает субъект настроенного издателя без привязки и
+// создания аккаунта Never. Субъект ответа должен совпадать с запросом; данные
+// идентичности не могут перенаправить канонический аккаунт.
 func (c *Core) ResolveProviderIdentity(ctx context.Context, providerID, subject string) (authconnector.Identity, error) {
 	connector, ok := c.Connector(providerID)
 	if !ok {
@@ -467,7 +469,7 @@ func (c *Core) ResolveProviderIdentity(ctx context.Context, providerID, subject 
 	return identity, nil
 }
 
-// ResolveProviderProfile resolves a profile from its verified provider subject.
+// ResolveProviderProfile разрешает профиль по проверенному субъекту провайдера.
 func (c *Core) ResolveProviderProfile(ctx context.Context, providerID, subject string) (authconnector.Profile, error) {
 	connector, ok := c.Connector(providerID)
 	if !ok {

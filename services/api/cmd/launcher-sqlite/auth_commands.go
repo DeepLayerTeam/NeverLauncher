@@ -1,8 +1,8 @@
 package main
 
-// Private local operational CLI for the functional DEP01 SQLite auth engine.
-// This is not an unauthenticated HTTP API; it requires OS access to the
-// database owner's private directory, 0600 input and independent MFA key.
+// Закрытый локальный операционный CLI для функционального механизма авторизации
+// SQLite DEP01. Это не открытый HTTP API; требуется доступ ОС к закрытому
+// каталогу владельца БД, ввод 0600 и независимый ключ MFA.
 
 import (
 	"context"
@@ -65,8 +65,9 @@ func runAuthAction(args []string) int {
 	if *timeout <= 0 || flags.NArg() != 0 {
 		return 2
 	}
-	// Offline password hashing needs no storage or MFA key and never accepts
-	// password material from argv, process list or environment variables.
+	// Для автономного хеширования пароля не нужны хранилище и ключ MFA; пароль
+	// никогда не принимается через argv, список процессов или переменные
+	// окружения.
 	if action == "auth-hash-password" {
 		var v struct {
 			Password string `json:"password"`

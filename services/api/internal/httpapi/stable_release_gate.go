@@ -14,11 +14,11 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// This evaluator runs on the API host, not the runner. An evidence record is
-// counted only if its signature, audience, challenge, key, exact target,
-// immutable content and every mandatory execution stage still verify.
-// The database independently checks these saved rows again inside the head
-// transaction. Legacy runtime evidence has no path into this evaluator.
+// Этот оценщик работает на хосте API, а не раннера. Свидетельство учитывается
+// только при действительных подписи, audience, challenge, ключе, точной цели,
+// неизменяемом содержимом и всех обязательных этапах исполнения. БД независимо
+// перепроверяет сохранённые строки внутри транзакции head. Устаревшие
+// свидетельства Runtime не принимаются этим оценщиком.
 type stableCoverage03411 struct {
 	Required       int                    `json:"required"`
 	Verified       int                    `json:"verified"`
@@ -49,9 +49,10 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 	if e != nil {
 		return block("required target policy: " + e.Error())
 	}
-	// A release may have platform-specific build digests, but every target
-	// must originate from one exact source revision. Mixed-source evidence
-	// cannot certify a single staged release (including promotion/rollback).
+	// У релиза могут быть разные хеши сборки для платформ, но каждая цель должна
+	// происходить из одной точной ревизии исходников. Смешанные свидетельства не
+	// могут сертифицировать единый подготовленный релиз, включая продвижение и
+	// откат.
 	source, consistent := stableSourceConsistency0350(targets)
 	if !consistent {
 		return block("required targets use different source revisions")
@@ -140,7 +141,8 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 }
 
 func decodeStoredEvidence03411(raw []byte, p *validationPayload0345) error {
-	// Reject records with non-canonical, unknown fields as well as invalid JSON.
+	// Отклоняйте записи с неканоническими и неизвестными полями, а также некорректный
+	// JSON.
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(p); err != nil {
@@ -153,9 +155,9 @@ func decodeStoredEvidence03411(raw []byte, p *validationPayload0345) error {
 	return nil
 }
 
-// Called immediately before irrevocable publication. The permit is scoped to
-// one package+snapshot, expires in five minutes, and is consumed by the SQL
-// channel-head trigger. There is no API for setting certification manually.
+// Вызывается непосредственно перед необратимой публикацией. Допуск ограничен
+// одним пакетом и снимком, действует пять минут и погашается SQL-триггером head
+// канала. API для ручной установки сертификации нет.
 func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup) (string, stableCoverage03411, error) {
 	coverage := s.evaluateStableRelease03411(ctx, lookup)
 	if !coverage.Eligible {
@@ -184,7 +186,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	if e != nil {
 		return "", coverage, e
 	}
-	// Eligibility is recorded, but a permit alone NEVER establishes a publish.
+	// Пригодность записывается, но один допуск НИКОГДА не доказывает публикацию.
 	if e = s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "eligible",
 		"checked-before-commit", safeValidationDecisionDigest03412(coverage.Runs)); e != nil {
 		return "", coverage, errors.New("stable runtime gate audit unavailable")
@@ -192,7 +194,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	return token, coverage, nil
 }
 
-// All targets of one release must be built from the same source revision.
+// Все цели одного релиза должны собираться из одной ревизии исходников.
 func stableSourceConsistency0350(targets []validationTarget0346) (string, bool) {
 	if len(targets) == 0 {
 		return "", false

@@ -14,9 +14,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// Exercise the authenticated broker, not just the file helpers. The second
-// Supervisor runs with the same configured durable root but a new HTTP server,
-// instance token and process state.
+// Проверяйте аутентифицированный брокер, а не только файловые помощники. Второй
+// Supervisor использует тот же настроенный устойчивый корень, но новый HTTP-сервер,
+// токен экземпляра и состояние процесса.
 func TestRuntimeBrokerDocumentsSurviveSupervisorRestart0423(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()

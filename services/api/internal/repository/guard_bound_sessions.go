@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// GuardBoundSession0507 contains only verified measurements and immutable account,
-// server and build bindings. It contains neither an access token nor a device key.
+// GuardBoundSession0507 содержит только проверенные измерения и неизменяемые привязки
+// учётной записи, сервера и сборки. Он не содержит ни access-токенов, ни ключей
+// устройств.
 type GuardBoundSession0507 struct {
 	CorrelationID, JoinID, UserID, SessionID, MinecraftSessionID, TrustedDeviceID, DeviceKeyFingerprint string
 	BindingEpoch                                                                                        int64
@@ -21,14 +22,15 @@ type GuardBoundSession0507 struct {
 	JavaMajor                                                                                           int
 	GuardPID                                                                                            int64
 	IssuedAt, LastCheckedAt                                                                             time.Time
-	// Snapshot from the authoritative active player row, never from the node.
+	// Снимок берётся из авторитетной строки активного игрока, но не из узла.
 	LiveUserID, LiveSessionID, LiveMinecraftSessionID, LiveTrustedDeviceID string
 	LiveBindingEpoch                                                       int64
 	LiveProjectID, LiveProfileID, LiveChannel, LiveUsername, LiveUUID      string
 }
 
-// GuardBoundSessionStore0507 is intentionally only implemented by the durable
-// PostgreSQL backend; memory/SQLite must not silently simulate protected joins.
+// GuardBoundSessionStore0507 намеренно реализован только в устойчивом
+// PostgreSQL-бэкенде; память и SQLite не должны незаметно имитировать защищённые
+// подключения.
 type GuardBoundSessionStore0507 interface {
 	SaveGuardBoundSession0507(context.Context, GuardBoundSession0507) error
 	GetGuardBoundSession0507(context.Context, string) (GuardBoundSession0507, error)
@@ -76,8 +78,9 @@ func (r *SQLRepository) SaveGuardBoundSession0507(ctx context.Context, b GuardBo
 	if !validPlayerCorrelation0197(b.CorrelationID) || b.JoinID == "" || b.UserID == "" || b.SessionID == "" || b.TrustedDeviceID == "" || b.BindingEpoch < 1 || b.JavaMajor < 1 || b.GuardPID < 1 || b.IssuedAt.IsZero() {
 		return fmt.Errorf("%w: invalid Guard session binding", ErrConflict)
 	}
-	// Insert-only. A reissued ticket cannot silently rewrite the original
-	// signed plan or the account/device identity of a correlated session.
+	// Только вставка. Повторно выданный билет не должен незаметно перезаписывать
+	// исходный подписанный план или идентичность учётной записи и устройства
+	// связанного сеанса.
 	_, err := r.db.ExecContext(ctx, `INSERT INTO server_bridge_guard_sessions_0507 (`+guardBoundColumns0507[:len(guardBoundColumns0507)-len(",last_checked_at")]+`) VALUES (`+placeholdersGuard0507()+`)`,
 		b.CorrelationID, b.JoinID, b.UserID, b.SessionID, b.MinecraftSessionID, b.TrustedDeviceID, b.DeviceKeyFingerprint, b.BindingEpoch,
 		b.ServerID, b.ProjectID, b.ProfileID, b.Channel, b.Username, b.PlayerUUID, b.IdentityRealm, b.PlanSHA256, b.CatalogSHA256, b.ReleaseSignature,
@@ -128,8 +131,8 @@ func (r *SQLRepository) ListDueGuardBoundSessions0507(ctx context.Context, node 
 	return out, rows.Err()
 }
 
-// A policy may be enabled while pre-0.50.7 players are already connected.
-// Do not silently grandfather those sessions into a protected server.
+// Политику могут включить, когда игроки версии до 0.50.7 ещё подключены.
+// Нельзя молча принимать их прежние сеансы на защищённом сервере.
 func (r *SQLRepository) ListUnboundGuardPlayerSessions0507(ctx context.Context, node string, max int) ([]string, error) {
 	if err := r.check(); err != nil {
 		return nil, err

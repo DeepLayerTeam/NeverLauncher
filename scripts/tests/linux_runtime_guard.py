@@ -35,7 +35,8 @@ def digest(path):
 
 
 def linux_harden():
-    # PR_SET_NO_NEW_PRIVS. This is the actual syscall used by Linux Runtime.
+    # PR_SET_NO_NEW_PRIVS — фактический системный вызов, используемый Linux
+    # Runtime.
     libc = ctypes.CDLL(None, use_errno=True)
     if libc.prctl(38, 1, 0, 0, 0) != 0:
         raise OSError(ctypes.get_errno(), 'PR_SET_NO_NEW_PRIVS')

@@ -59,8 +59,8 @@ public final class ProviderRegistry implements AutoCloseable {
                 throw new IllegalArgumentException("conflicting SPI contract: " + descriptor.service().id());
             if (slot.candidates.size() >= 64) throw new IllegalStateException("too many SPI implementations");
             if (slot.candidates.containsKey(descriptor.id())) throw new IllegalArgumentException("duplicate SPI provider: " + descriptor.id());
-            // Both the extension's package API and the SPI type version must agree, even if
-            // a provider implementation was compiled against a different SDK release.
+            // Должны совпасть и API пакета расширения, и версия типа SPI, даже если провайдер
+            // собран с другим выпуском SDK.
             SemVer api = SemVer.parse(manifest.api() + (manifest.api().chars().filter(c -> c == '.').count() == 1 ? ".0" : ""));
             if (!descriptor.service().version().matches(descriptor.supportedSpi()) ||
                     !api.matches(descriptor.supportedExtensionApi()))

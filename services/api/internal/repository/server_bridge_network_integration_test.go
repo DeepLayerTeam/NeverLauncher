@@ -11,8 +11,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// This executes real PostgreSQL route selection and the optimistic admission
-// mutation; a source-only test cannot prove SQL behavior. CI must supply a DSN.
+// Выполняет настоящий выбор маршрута PostgreSQL и оптимистичное изменение допуска;
+// тест только по исходникам не доказывает работу SQL. CI должен задавать DSN.
 func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
@@ -45,8 +45,8 @@ func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
 		if _, err := r.SaveServerBridgeNode(ctx, node); err != nil {
 			t.Fatal(err)
 		}
-		// Repository-level fixture representing an already verified signed
-		// heartbeat: cryptographic ingress verification has separate tests.
+		// Фикстура уровня репозитория представляет уже проверенный подписанный
+		// heartbeat; криптографическая проверка входа покрывается отдельными тестами.
 		_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET runtime_id=$2,runtime_epoch=1,routing_state='ready',routing_health='healthy',routing_accepting=true,routing_players_online=2,routing_capacity_max=15,routing_revision=1,routing_observed_at=$3,last_heartbeat_at=$3,routing_digest=$2,routing_signature='synthetic-test-only' WHERE id=$1`, it.id, runtime, now)
 		if err != nil {
 			t.Fatal(err)

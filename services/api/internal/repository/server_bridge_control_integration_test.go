@@ -100,10 +100,10 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 		t.Fatalf("expected queued+completed transactional audit rows, got %d", auditCount)
 	}
 
-	// 0.51.5: two independent API replicas can process the same delivery
-	// despite a six-hour time skew on either HTTP/worker host. The DB clock
-	// determines the lease and when it is safe to reconcile an unacknowledged
-	// side effect. An expired delivery NEVER becomes a second execution.
+	// В 0.51.5 две независимые реплики API могут обработать одну доставку даже при
+	// шестичасовом расхождении времени на HTTP- или worker-хосте. Аренду и момент
+	// безопасной сверки неподтверждённого побочного эффекта определяют часы БД.
+	// Истёкшая доставка НИКОГДА не становится вторым выполнением.
 	second, ok := NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*SQLRepository)
 	if !ok {
 		t.Fatal("second repository is not SQLRepository")

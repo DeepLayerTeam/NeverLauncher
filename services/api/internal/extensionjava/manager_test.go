@@ -125,7 +125,8 @@ func TestJavaRuntimeProbe0305(t *testing.T) {
 	}
 }
 
-// Runs against the real SDK-built host JAR in CI (no fake class bytes).
+// В CI запускается с настоящим JAR хоста, собранным SDK, без поддельных
+// байтов классов.
 func TestRealJavaHostArtifact0305(t *testing.T) {
 	source := os.Getenv("LAUNCHER_TEST_JAVA_HOST_JAR")
 	if source == "" {

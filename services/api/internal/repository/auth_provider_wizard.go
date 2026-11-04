@@ -10,8 +10,9 @@ import (
 	"time"
 )
 
-// ManagedProviderRevision02910 contains only non-secret settings. Credentials must
-// reference pre-provisioned environment variables, never inline values.
+// ManagedProviderRevision02910 содержит только несекретные настройки. Учётные данные
+// должны ссылаться на предварительно заданные переменные окружения, а не храниться в
+// явном виде.
 type ManagedProviderRevision02910 struct {
 	ID        string          `json:"id"`
 	Revision  int64           `json:"revision"`
@@ -35,7 +36,7 @@ type ManagedProviderStore02910 interface {
 var ErrManagedProviderConflict02910 = errors.New("managed auth provider revision conflict")
 var ErrManagedProviderMissing02910 = errors.New("managed auth provider revision not found")
 
-// SQL methods operate in transactions and serialize activations on the head row.
+// SQL-методы работают в транзакциях и сериализуют активации блокировкой строки head.
 func (r *SQLRepository) ListManagedProviders02910(ctx context.Context) ([]ManagedProviderHead02910, error) {
 	if err := r.check(); err != nil {
 		return nil, err
@@ -78,7 +79,8 @@ func (r *SQLRepository) SaveManagedProviderDraft02910(ctx context.Context, v Man
 	if _, err = tx.ExecContext(ctx, `INSERT INTO auth_provider_heads_02910(provider_id,active_revision) VALUES($1,0) ON CONFLICT DO NOTHING`, v.ID); err != nil {
 		return v, err
 	}
-	// Serialise writers by locking the same head row before assigning a revision.
+	// Сериализуйте писателей блокировкой одной и той же строки head до назначения
+	// ревизии.
 	var active int64
 	if err = tx.QueryRowContext(ctx, `SELECT active_revision FROM auth_provider_heads_02910 WHERE provider_id=$1 FOR UPDATE`, v.ID).Scan(&active); err != nil {
 		return v, err
@@ -138,7 +140,8 @@ func (r *SQLRepository) ActivateManagedProvider02910(ctx context.Context, id str
 	return ManagedProviderHead02910{ID: id, ActiveRevision: target}, nil
 }
 
-// Memory mode has identical revision semantics, useful in single-node dev.
+// Режим памяти имеет те же правила ревизий, что полезно для одноузловой
+// разработки.
 
 func (r *MemoryRepository) ListManagedProviders02910(_ context.Context) ([]ManagedProviderHead02910, error) {
 	r.managedProviderMu.Lock()
@@ -200,8 +203,8 @@ func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 	return nil
 }
 
-// ActiveManagedProviderReader02910 avoids materializing unbounded revision
-// history during each authentication request. Full history is for Admin only.
+// ActiveManagedProviderReader02910 не загружает неограниченную историю ревизий при
+// каждой аутентификации. Полная история предназначена только для Admin.
 type ActiveManagedProviderReader02910 interface {
 	ListActiveManagedProviders02910(context.Context) ([]ManagedProviderRevision02910, error)
 }

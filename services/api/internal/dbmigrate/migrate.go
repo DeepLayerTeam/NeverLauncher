@@ -122,10 +122,11 @@ func EvaluateApplied(applied map[string]string) (Status, error) {
 	return st, nil
 }
 
-// StatusOf is strictly read-only. Rolling N/N-1 API and worker readiness
-// probes must never attempt DDL or repair tracking metadata. An absent or
-// partially upgraded tracking table is an unsafe schema and fails closed;
-// only the exclusive one-shot migrator role may initialize/modify it.
+// StatusOf строго работает только на чтение. Проверки готовности API и worker
+// при поэтапном обновлении N/N-1 никогда не выполняют DDL и не исправляют
+// метаданные миграций. Отсутствующая или частично обновлённая таблица учёта
+// означает небезопасную схему и приводит к отказу; инициализировать или менять
+// её разрешено только эксклюзивной одноразовой роли мигратора.
 func StatusOf(ctx context.Context, db *sql.DB) (Status, error) {
 	rows, err := db.QueryContext(ctx, `SELECT version, checksum FROM schema_migrations WHERE version IS NOT NULL`)
 	if err != nil {

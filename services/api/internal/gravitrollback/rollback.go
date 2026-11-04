@@ -1,5 +1,5 @@
-// Package gravitrollback implements fail-closed MIG12 reconciliation. It does
-// not import or overwrite Minecraft worlds, SQL plugins, or Gravit databases.
+// Package gravitrollback реализует согласование MIG12 с отказом при ошибке. Он не
+// импортирует и не перезаписывает миры Minecraft, плагины SQL или базы Gravit.
 package gravitrollback
 
 import (
@@ -24,13 +24,14 @@ type PlanInput struct {
 	ProfileID        string `json:"profileId"`
 	Channel          string `json:"channel"`
 	ExpectedRevision int64  `json:"expectedRevision"`
-	// This snapshot MUST be collected after production writers have been
-	// externally fenced; it is not proof that they are stopped.
+	// Этот снимок ОБЯЗАТЕЛЬНО собирается после внешнего разграничения
+	// промышленных записывающих процессов; сам по себе он не доказывает их
+	// остановку.
 	Current           gr.Snapshot `json:"current"`
 	EvidenceReference string      `json:"evidenceReference"`
 	EvidenceSHA256    string      `json:"evidenceSha256"`
-	// Required only if the Never state has diverged from MIG10. The operator
-	// must FIRST reconcile changed data into the fenced Gravit destination.
+	// Требуется только при расхождении состояния Never с MIG10. Оператор обязан
+	// СНАЧАЛА согласовать изменённые данные с изолированным назначением Gravit.
 	ReconciledSource             *gr.Snapshot `json:"reconciledSource,omitempty"`
 	ReconciliationEvidenceSHA256 string       `json:"reconciliationEvidenceSha256,omitempty"`
 }
@@ -41,7 +42,8 @@ type CommitInput struct {
 	PlanSHA256         string `json:"planSha256"`
 	SourceWriterFenced bool   `json:"sourceWriterFenced"`
 	NeverWriterFenced  bool   `json:"neverWriterFenced"`
-	// Fresh independently exported state, captured immediately before commit.
+	// Свежий независимо экспортированный снимок, полученный непосредственно перед
+	// фиксацией.
 	Current                      gr.Snapshot  `json:"current"`
 	CurrentEvidenceSHA256        string       `json:"currentEvidenceSha256"`
 	ReconciledSource             *gr.Snapshot `json:"reconciledSource,omitempty"`
@@ -79,9 +81,10 @@ func ValidateCommit(c CommitInput) error {
 	return nil
 }
 
-// Compare uses the same domain-specific semantic validation as MIG10. This
-// catches player UUID/inventory/rights/economy/skins and world/loader/optionals
-// even when JSON entry order or formatting differs. No changed state is lost.
+// Compare использует ту же доменную семантическую проверку, что MIG10. Она
+// обнаруживает UUID игроков, инвентарь, права, экономику, текстуры, миры, загрузчики
+// и необязательные компоненты даже при разном порядке JSON или форматировании.
+// Изменения состояния не теряются.
 func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error) {
 	if err := ValidatePlan(input); err != nil {
 		return Result{}, err
@@ -102,8 +105,9 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 		return Result{}, fmt.Errorf("invalid current snapshot: %w", err)
 	}
 	blockers := append([]string{}, compared.Blockers...)
-	// Count + source identities must remain intact. New players after cutover
-	// are allowed only if they are verifiably represented on BOTH sides.
+	// Количество и идентичности источника должны сохраняться. Новые игроки после
+	// переключения допустимы только при достоверном представлении на ОБЕИХ
+	// сторонах.
 	if len(input.Current.Players) != len(rehearsal.Target.Players) {
 		blockers = append(blockers, "player population changed")
 	}
@@ -117,7 +121,8 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 		if err != nil {
 			return Result{}, err
 		}
-		// Never -> externally reconciled Gravit, with all live writers fenced.
+		// Never → внешне согласованный Gravit, при изоляции всех живых записывающих
+		// процессов.
 		pair := rehearsal
 		pair.Source = *input.ReconciledSource
 		pair.Target = input.Current
@@ -141,7 +146,8 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 		return Result{}, err
 	}
 	result := Result{Format: Format, RunID: runID, ProfileID: input.ProfileID, Channel: input.Channel, State: "evaluated", RouteRevision: input.ExpectedRevision, CurrentSnapshotSHA256: currentDigest, BaselineSnapshotSHA256: b, EvidenceReference: input.EvidenceReference, EvidenceSHA256: input.EvidenceSHA256, ReconciledSourceSHA256: sourceDigest, ReconciliationEvidenceSHA256: input.ReconciliationEvidenceSHA256, Mode: mode, Blockers: blockers, Ready: len(blockers) == 0}
-	// Plan hash binds the exact authority-to-source remerging evidence.
+	// Хеш плана связывает точные доказательства повторного объединения полномочий
+	// с источником.
 	raw, _ := json.Marshal(struct {
 		Format, RunID, ProfileID, Channel, Mode                                                string
 		Revision                                                                               int64
@@ -152,5 +158,5 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 	return result, nil
 }
 
-// ValidSHA256 validates externally retained evidence hash metadata.
+// ValidSHA256 проверяет метаданные хеша доказательств, хранящихся отдельно.
 func ValidSHA256(v string) bool { return sha.MatchString(v) }

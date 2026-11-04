@@ -62,9 +62,10 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	if device.KeyBinding == "" {
 		device.KeyBinding = "software"
 	}
-	// No remote vendor verifier is installed in 0.31.1. A legacy DB field
-	// or registering client label must never promote a key into hardware
-	// provenance. Normalize older values down when a row is saved.
+	// В версии 0.31.1 нет внешнего проверяющего поставщика. Устаревшее поле БД
+	// или метка клиента при регистрации никогда не должны повышать доверие к
+	// аппаратному происхождению ключа. Понижайте старые значения при сохранении
+	// записи.
 	if device.RemoteHardwareProvenance != "not-verified" && device.RemoteHardwareProvenance != "verified" && device.RemoteHardwareProvenance != "" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported remote hardware provenance %q", device.RemoteHardwareProvenance)
 	}
@@ -155,8 +156,8 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 		if existing.UserID != device.UserID {
 			return model.TrustedDevice{}, fmt.Errorf("%w: device id is already owned by another user", ErrConflict)
 		}
-		// A revoked key is a permanent tombstone. Registration and stale
-		// writers must never reactivate it or replace its public key.
+		// Отозванный ключ — постоянная tombstone-запись. Регистрация и устаревшие
+		// писатели никогда не должны активировать его или заменить публичный ключ.
 		if existing.Status != "active" || existing.TrustState != "verified" ||
 			device.Status != "active" || device.TrustState != "verified" ||
 			existing.PublicKey != device.PublicKey || existing.KeyFingerprint != device.KeyFingerprint ||
@@ -171,10 +172,10 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 	return device, nil
 }
 
-// RecoverRevokedTrustedDeviceKey0435 claims a previously revoked identity once.
-// The permanent tombstone is never reactivated. The new key and the link to
-// the old identity are committed together under deviceMu, preventing two
-// concurrent recovery challenges from minting two replacement identities.
+// RecoverRevokedTrustedDeviceKey0435 однократно захватывает ранее отозванную
+// идентичность. Постоянная tombstone-запись не активируется повторно. Новый ключ и
+// ссылка на старую идентичность фиксируются совместно под deviceMu, чтобы два
+// параллельных challenge восстановления не выдали две замены.
 func (r *MemoryRepository) RecoverRevokedTrustedDeviceKey0435(ctx context.Context, userID, oldDeviceID string, replacement model.TrustedDevice, now time.Time) (model.TrustedDevice, model.TrustedDevice, error) {
 	if err := ctx.Err(); err != nil {
 		return model.TrustedDevice{}, model.TrustedDevice{}, err
@@ -216,8 +217,8 @@ func (r *MemoryRepository) RecoverRevokedTrustedDeviceKey0435(ctx context.Contex
 	return old, replacement, nil
 }
 
-// A failed session CAS must not permanently strand a recovery claim. The
-// replacement must first be permanently revoked; no active key is resurrected.
+// Неуспешный CAS сеанса не должен навсегда блокировать заявку восстановления.
+// Сначала замену необходимо окончательно отозвать; активный ключ не воскрешается.
 func (r *MemoryRepository) ReleaseFailedRevokedDeviceRecovery0435(ctx context.Context, userID, oldDeviceID, replacementID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -616,11 +617,11 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 		return model.DeviceRevocationResult{}, ErrNotFound
 	}
 	result := model.DeviceRevocationResult{AlreadyRevoked: status == "revoked", CascadeHandled: true}
-	// Lock and record the affected parent sessions *before* changing device
-	// status. The global revocation trigger synchronously revokes those sessions,
-	// Minecraft tokens and bridge tickets during the device UPDATE. Querying
-	// afterward would return no active rows and incorrectly report zero
-	// revocations to callers that must invalidate replica-local bridge joins.
+	// Заблокируйте и запомните затронутые родительские сеансы ДО смены статуса
+	// устройства. Глобальный триггер отзыва синхронно отзывает эти сеансы,
+	// Minecraft-токены и билеты моста во время UPDATE устройства. Запрос после него не
+	// найдёт активных строк и ошибочно сообщит ноль отзывов вызывающим, которые
+	// обязаны аннулировать локальные подключения моста на репликах.
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, owner, deviceID)
 	if err != nil {
 		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: lock bound sessions: %w", err)
@@ -853,9 +854,9 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	if mode == "recover" && oldStatus == "revoked" && (!oldRevokedAt.Valid || !sessionAuthTime.After(oldRevokedAt.Time)) {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: recovery requires phishing-resistant reauthentication after revocation", ErrConflict)
 	}
-	// A previously revoked key cannot authenticate a recovery session. Its
-	// replacement must be claimed by a separate unbound, freshly stepped-up
-	// session, never a session bound to a different trusted device.
+	// Ранее отозванный ключ не может аутентифицировать сеанс восстановления. Его
+	// замену должен запросить отдельный непривязанный сеанс с новым усиленным
+	// подтверждением, а не сеанс другого доверенного устройства.
 	if mode == "recover" && oldStatus == "revoked" && sessionTrustedDevice != "" {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: revoked device recovery requires an unbound session", ErrConflict)
 	}
@@ -883,8 +884,8 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: current session changed during replacement", ErrConflict)
 	}
 
-	// The 0.43.4 terminal-revocation trigger deliberately permits only a
-	// metadata link on an existing tombstone, never a status/key change.
+	// Триггер окончательного отзыва 0.43.4 допускает только метаданные ссылки на
+	// существующую tombstone-запись, но никогда изменение статуса или ключа.
 	oldUpdate := `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='active' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121
 	if oldStatus == "revoked" {
 		oldUpdate = `UPDATE trusted_devices SET replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='revoked' AND trust_state='revoked' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121

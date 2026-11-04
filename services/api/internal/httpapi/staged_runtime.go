@@ -22,8 +22,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// A staging grant conveys read/report access ONLY to one already integrity-checked
-// release snapshot. It is not runtime attestation and cannot certify stable.
+// Разрешение для staging предоставляет ТОЛЬКО чтение и отчётность по одному уже
+// проверенному снимку релиза. Это не аттестация Runtime и не основание сертификации
+// stable.
 const stagedGrantSchema0342 = "launcher.staged-runtime-grant.v1"
 const stagedRunSchema0342 = "launcher.staged-runtime-run.v1"
 
@@ -180,7 +181,8 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, e.Error())
 		return
 	}
-	// No grant is issued if signed metadata or an actual storage object fails verification.
+	// Разрешение не выдаётся, если подписанные метаданные или реальный объект хранилища не
+	// проходят проверку.
 	if _, e = s.stagedSnapshot0342(r.Context(), stagedGrant0342{PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd}); e != nil {
 		writeError(w, 409, e.Error())
 		return
@@ -194,9 +196,9 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "secure run ID unavailable")
 		return
 	}
-	// Persist a separate one-time challenge BEFORE a worker can report a run.
-	// A plain staged run can remain diagnostic without target configuration, but
-	// it cannot produce a trusted attestation while the policy is unconfigured.
+	// Сохраняйте отдельный одноразовый challenge ДО того, как воркер сможет сообщить
+	// о запуске. Обычный staging-запуск может оставаться диагностическим без целевой
+	// конфигурации, но не создаёт доверенную аттестацию при ненастроенной политике.
 	targetHash := strings.Repeat("0", 64)
 	var targets []validationTarget0346
 	if strings.TrimSpace(s.Config.ValidationRequiredTargetsJSON0346) != "" {
@@ -238,8 +240,8 @@ func (s Server) stagedRunDownloadManifest0342(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	// This is the signed release manifest plus a client-consumable description.
-	// The worker downloads bytes separately and installs them using the regular updater.
+	// Это подписанный манифест релиза с описанием для клиента. Воркер скачивает байты
+	// отдельно и устанавливает их штатным обновлятором.
 	files := make([]map[string]any, 0, len(lookup.Files))
 	for _, f := range lookup.Files {
 		files = append(files, map[string]any{"path": f.Path, "size": f.Size, "sha256": strings.ToLower(f.SHA256), "url": "/api/v1/staged-runs/" + g.PackageID + "/files/" + stagedEscapePath0342(f.Path), "required": f.Required, "group": f.Ownership, "executable": f.Executable, "targetOs": f.TargetOS})
@@ -291,7 +293,8 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 		writeError(w, 409, "staged object size mismatch")
 		return
 	}
-	// Read to a bounded temporary file, hash before sending any HTTP 200 bytes.
+	// Читайте в ограниченный временный файл и вычисляйте хеш до отправки каких-либо
+	// байтов HTTP 200.
 	tmp, err := os.CreateTemp("", "launcher-staged-0342-*")
 	if err != nil {
 		writeError(w, 503, "staged temporary storage unavailable")
@@ -380,7 +383,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validateStagedRunReport0342(g, p); err != nil {
-		// Even an invalid runner report is an attempt, never certification.
+		// Даже неверный отчёт раннера является попыткой, а не сертификацией.
 		if s.saveValidationDecision03412(r.Context(), g.PackageID, g.RunID, "staged-report", "rejected",
 			"invalid-observation", safeValidationDecisionDigest03412(p)) != nil {
 			writeError(w, 503, "validation audit unavailable")
@@ -389,8 +392,9 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 409, err.Error())
 		return
 	}
-	// Observational diagnostics are untrusted. Never persist credentials,
-	// authentication headers, JVM sensitive arguments or account identifiers.
+	// Наблюдательная диагностика недоверенна. Никогда не сохраняйте учётные
+	// данные, заголовки авторизации, чувствительные аргументы JVM или
+	// идентификаторы учётных записей.
 	for name, stage := range p.Stages {
 		stage.Detail = redactValidationDetail03412(stage.Detail)
 		p.Stages[name] = stage

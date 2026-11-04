@@ -6,15 +6,16 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
-// SwapManaged replaces a live connector without closing one still in use by
-// another request. Retired connections are closed during Core.Close.
+// SwapManaged заменяет живой коннектор, не закрывая соединение, которое ещё
+// использует другой запрос. Устаревшие соединения закрываются при Core.Close.
 func (c *Core) SwapManaged(connector authconnector.Connector, policy ProviderPolicy, revision int64) error {
 	if err := authconnector.ValidateConnector(connector); err != nil {
 		return err
 	}
 	id := authconnector.NormalizedMetadata(connector.Metadata()).ID
-	// Policies are applied to real JIT users: do not accept unknown local
-	// roles, including mappings which could otherwise elevate privileges.
+	// Политики применяются к реальным JIT-пользователям: нельзя принимать
+	// неизвестные локальные роли, включая отображения, которые иначе могли бы
+	// повысить привилегии.
 	known := make(map[string]bool)
 	for _, role := range c.repo.ListRoles() {
 		known[role.ID] = true

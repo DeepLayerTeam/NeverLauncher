@@ -14,7 +14,8 @@ import (
 var ErrTextureNotSelected0255 = errors.New("no selected texture")
 var ErrTextureInUse0255 = errors.New("texture is still selected")
 
-// TextureSavedItem0255 is a verified, per-account PNG, not an arbitrary URL.
+// TextureSavedItem0255 — проверенный PNG конкретной учётной записи, а не
+// произвольный URL.
 type TextureSavedItem0255 struct {
 	Digest         string     `json:"digest"`
 	Kind           string     `json:"kind"`
@@ -150,8 +151,9 @@ func (r *SQLRepository) SelectSavedTexture0255(ctx context.Context, p model.Mine
 	if err = texturePermission0255(ctx, tx, p, kind); err != nil {
 		return zero, err
 	}
-	// The join verifies that the actual account has saved this kind of normalized
-	// PNG and still owns a verified object. The FOR SHARE lock excludes GC claims.
+	// Соединение таблиц подтверждает, что аккаунт действительно сохранил
+	// нормализованный PNG этого типа и по-прежнему владеет проверенным объектом.
+	// Блокировка FOR SHARE исключает заявки GC.
 	var savedModel, savedSource string
 	err = tx.QueryRowContext(ctx, `SELECT i.model,i.source FROM texture_saved_items i JOIN texture_blob_owners o
  ON o.user_id=i.user_id AND o.digest=i.digest JOIN texture_blobs b ON b.digest=i.digest
@@ -171,7 +173,8 @@ func (r *SQLRepository) SelectSavedTexture0255(ctx context.Context, p model.Mine
 		if expected != 0 {
 			return zero, ErrTextureRevisionConflict0251
 		}
-		// Identity upsert is safe because it selects an owner-proven profile row.
+		// Upsert идентичности безопасен, поскольку выбирает строку профиля с
+		// доказанным владельцем.
 		_, err = tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)
  SELECT 'local-project',uuid,user_id,name,'local-profile',uuid FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2
  ON CONFLICT(realm,profile_uuid) DO UPDATE SET profile_name=EXCLUDED.profile_name WHERE texture_identities.user_id=EXCLUDED.user_id`, p.UUID, p.UserID)
@@ -280,8 +283,9 @@ func (r *SQLRepository) ClearTexture0255(ctx context.Context, p model.MinecraftP
 	return a, nil
 }
 
-// Remove owner quota only if the user has neither saved nor selected this blob.
-// GC retains physical content through its grace period, other users unchanged.
+// Удаляйте квоту владельца только если пользователь не сохранил и не выбрал этот
+// объект. GC сохраняет физическое содержимое в льготный период; другие пользователи
+// не затрагиваются.
 func releaseTextureOwner0255(ctx context.Context, tx *sql.Tx, userID, digest string) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM texture_blob_owners o WHERE o.user_id=$1 AND o.digest=$2
  AND NOT EXISTS(SELECT 1 FROM texture_saved_items i WHERE i.user_id=o.user_id AND i.digest=o.digest)
@@ -304,8 +308,9 @@ func (r *SQLRepository) DeleteSavedTexture0255(ctx context.Context, p model.Mine
 	if err = lockOwnedTexture0255(ctx, tx, p); err != nil {
 		return err
 	}
-	// Same advisory lock as StageTextureUpload0253; quota and removal cannot
-	// race staging or finalization for this account.
+	// Та же advisory-блокировка, что StageTextureUpload0253; учёт квоты и
+	// удаление не могут конкурировать с подготовкой и завершением загрузки этого
+	// аккаунта.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(253,hashtext($1))`, p.UserID); err != nil {
 		return err
 	}
@@ -331,8 +336,9 @@ func (r *SQLRepository) DeleteSavedTexture0255(ctx context.Context, p model.Mine
 	return tx.Commit()
 }
 
-// ReadSavedTextureBlob0255 is the only preview lookup for inactive private
-// library items. Neither a digest alone nor a supplied UUID grants access.
+// ReadSavedTextureBlob0255 — единственный поиск предпросмотра неактивных
+// закрытых элементов библиотеки. Ни один хеш сам по себе, ни предоставленный
+// UUID не дают доступ.
 func (r *SQLRepository) ReadSavedTextureBlob0255(ctx context.Context, p model.MinecraftProfile, kind, digest string) (TextureBlob0252, bool, error) {
 	var meta TextureBlob0252
 	if err := r.check(); err != nil {
@@ -353,5 +359,6 @@ func (r *SQLRepository) ReadSavedTextureBlob0255(ctx context.Context, p model.Mi
 	return meta, err == nil, err
 }
 
-// Compile-time type assertion also enforces full implementation by SQLRepository.
+// Проверка типа при компиляции также гарантирует полную реализацию интерфейса
+// SQLRepository.
 var _ TextureServiceRepository0255 = (*SQLRepository)(nil)

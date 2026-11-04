@@ -7,9 +7,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// bridgeCurrentTelemetry0419 is the fail-closed view of the persisted history.
-// Historical samples remain in PostgreSQL; this is ONLY for live dashboards.
-// A heartbeat alone does not establish that a telemetry sample is healthy.
+// bridgeCurrentTelemetry0419 — представление сохранённой истории с отказом по
+// умолчанию. Исторические образцы остаются в PostgreSQL; это представление ТОЛЬКО
+// для живых панелей. Сам heartbeat не доказывает исправность образца телеметрии.
 func bridgeCurrentTelemetry0419(node bridgeServerRecord, now time.Time) (*model.ServerBridgeTelemetry, string) {
 	if node.Telemetry == nil {
 		return nil, "unknown"

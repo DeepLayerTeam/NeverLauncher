@@ -33,8 +33,8 @@ func (r *SQLRepository) GetMigrationPlan0442(ctx context.Context, runID string) 
 	return p, nil
 }
 
-// SaveMigrationPlan0442 transactionally pins the source inventory and the
-// compatibility assessment. Re-running an identical dry-run is idempotent.
+// SaveMigrationPlan0442 транзакционно закрепляет инвентаризацию источника и
+// оценку совместимости. Повтор идентичного пробного запуска идемпотентен.
 func (r *SQLRepository) SaveMigrationPlan0442(ctx context.Context, p gp.Plan) (gp.Plan, error) {
 	if e := r.check(); e != nil {
 		return gp.Plan{}, e
@@ -91,7 +91,7 @@ func (r *SQLRepository) SaveMigrationPlan0442(ctx context.Context, p gp.Plan) (g
 		}
 		return p, nil
 	}
-	// Do not silently replace a plan after any content has already been imported.
+	// Не заменяйте молча план после начала импорта содержимого.
 	var imported bool
 	e = tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM migration_content_0337 WHERE run_id=$1)`, p.RunID).Scan(&imported)
 	if e != nil {

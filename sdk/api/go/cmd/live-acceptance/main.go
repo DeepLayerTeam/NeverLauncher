@@ -1,5 +1,6 @@
-// Live acceptance of the published Go SDK against the running production API.
-// Credentials are provided only via private inherited environment, never argv.
+// Живая приёмка опубликованного Go SDK против работающего промышленного API.
+// Учётные данные передаются только через наследуемое закрытое окружение, никогда
+// через argv.
 package main
 
 import (
@@ -27,7 +28,7 @@ func run() error {
  var jsonBody map[string]any
  if err=client.Request(ctx,"GET",jsonPath,nil,nil,&jsonBody,"");err!=nil{return err}
  if len(jsonBody)==0{return errors.New("real API returned empty JSON")}
- // Exercise true streamed responses, not JSON coercion.
+ // Проверяйте настоящие потоковые ответы, а не преобразование в JSON.
  var text strings.Builder
  n,err:=client.RequestStream(ctx,"GET",textPath,nil,nil,"",&text,1<<20,"")
  if err!=nil || n<10 || !utf8.ValidString(text.String()) || strings.ContainsRune(text.String(),'\x00') {
@@ -36,7 +37,7 @@ func run() error {
  hash:=sha256.New()
  n,err=client.RequestStream(ctx,"GET",binaryPath,nil,nil,"",hash,1<<30,"")
  if err!=nil{return err};if n<8 || hex.EncodeToString(hash.Sum(nil))!=expected{return errors.New("live binary stream digest mismatch")}
- // Invalid locations must fail before transmitting the bearer token.
+ // Некорректные адреса должны отклоняться до передачи Bearer-токена.
  if _,err=client.RequestStream(ctx,"GET","https://untrusted.invalid",nil,nil,"",io.Discard,1024,"");err==nil{return errors.New("external origin not rejected")}
  fmt.Printf("PASS sdk=go checks=3 binaryBytes=%d binarySha256=%s\n",n,expected)
  return nil

@@ -12,8 +12,8 @@ type profileRevisionReader0221 interface {
 	ListProfileRevisions(projectID, profileID string) ([]model.ProfileSnapshot, error)
 }
 
-// Public metadata snapshots are the same non-secret fields as GET /profiles.
-// A missing requested revision is 404, not a fallback to the mutable head.
+// Публичные снимки метаданных содержат те же несекретные поля, что GET /profiles.
+// Отсутствие запрошенной ревизии даёт 404, а не переход к изменяемому head.
 func (s Server) profileRevisions0221(w http.ResponseWriter, r *http.Request) {
 	reader, ok := s.Repo.(profileRevisionReader0221)
 	if !ok {

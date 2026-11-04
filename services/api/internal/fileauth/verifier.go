@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
-// VerifyDigest is the portable Gravit digest/doubleDigest verifier for explicit
-// algorithms. Gravit toHexMode hashes the lowercase hex *text* of pass one;
-// binary mode hashes the original digest bytes.
+// VerifyDigest — переносимый верификатор Gravit digest/doubleDigest для явно
+// выбранных алгоритмов. В режиме Gravit toHexMode хешируется текст нижнего регистра
+// hex первого прохода; в бинарном режиме — байты исходного дайджеста.
 func VerifyDigest(password, format, stored string) bool {
 	algorithm := format
 	doubled := strings.HasPrefix(algorithm, "double-")

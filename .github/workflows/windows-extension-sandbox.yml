@@ -22,8 +22,9 @@ permissions:
 
 jobs:
   windows-native-isolation:
-    # ARM64 is intentionally a real native host, never an x64 cross-build or
-    # emulator. An unavailable runner blocks this job; there is no fallback.
+    # ARM64 намеренно проверяется на настоящем нативном хосте, а не в
+    # кросс-сборке x64 или эмуляторе. Если раннер недоступен, задача блокируется;
+    # запасного пути нет.
     strategy:
       fail-fast: false
       matrix:

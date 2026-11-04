@@ -1,6 +1,7 @@
-// SQLite-backed HTTP repository delegations. Every mutation is serialized and
-// synchronously checkpointed to the durable store before returning success.
-// Generated from exported MemoryRepository methods; no method is silently lost.
+// Делегирование HTTP-репозитория с хранением в SQLite. Каждое изменение
+// сериализуется и синхронно сохраняется в устойчивом хранилище до сообщения об
+// успехе. Сгенерировано из экспортируемых методов MemoryRepository; ни один метод не
+// теряется молча.
 package repository
 
 import (
@@ -489,8 +490,8 @@ func (r *SQLiteHTTPRepository0372) ReleaseDurableScopeLease(arg0 context.Context
 	return
 }
 
-// CommitDurablePublish is implemented in sqlite_http_stable_0374.go. The
-// release, channel head, durable job, outbox and one-use grant share one WAL commit.
+// CommitDurablePublish реализован в sqlite_http_stable_0374.go. Релиз, head канала,
+// устойчивая задача, outbox и одноразовый допуск фиксируются одной WAL-транзакцией.
 func (r *SQLiteHTTPRepository0372) ClaimOutboxEvents(arg0 context.Context, worker string, limit int, ttl time.Duration) (out0 []model.DurableOutboxEvent, out1 error) {
 	r.mu.Lock()
 	auditStart := len(r.mem.audit)

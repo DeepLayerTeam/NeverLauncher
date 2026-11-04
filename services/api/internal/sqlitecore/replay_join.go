@@ -37,8 +37,8 @@ type BridgeNode struct {
 	Status        string `json:"status"`
 }
 
-// NodeProof is signed by the node's Ed25519 private key over CanonicalNodeRequest.
-// Timestamp is Unix seconds. Nonce is 16..64 bytes, unpadded base64url.
+// NodeProof подписывается закрытым ключом Ed25519 узла по CanonicalNodeRequest.
+// Timestamp — секунды Unix. Nonce — от 16 до 64 байтов в base64url без дополнения.
 type NodeProof struct {
 	NodeID        string `json:"nodeId"`
 	IdentityEpoch int64  `json:"identityEpoch"`
@@ -47,7 +47,8 @@ type NodeProof struct {
 	Signature     string `json:"signature"`
 }
 
-// JoinGrant supplies the client with a one-use bearer. Only its SHA-256 hash is persisted.
+// JoinGrant предоставляет клиенту одноразовый bearer. В хранилище сохраняется только его
+// SHA-256.
 type JoinGrant struct {
 	Ticket     string    `json:"ticket"`
 	ExpiresAt  time.Time `json:"expiresAt"`
@@ -120,8 +121,8 @@ func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (
 			return er
 		}
 		if er == nil {
-			// Explicit key rotation must advance the generation even if the key is unchanged;
-			// old proofs and pending tickets are invalidated in this same transaction.
+			// Явная ротация ключа увеличивает поколение даже при неизменном ключе; старые
+			// доказательства и ожидающие билеты аннулируются той же транзакцией.
 			if _, er = q.ExecContext(ctx, `UPDATE bridge_join_tickets SET status='invalidated',terminal_at=? WHERE node_id=? AND status='active'`, now, input.ID); er != nil {
 				return er
 			}
@@ -226,8 +227,8 @@ func consumeNonceTx(ctx context.Context, q sqlitedurable.Executor, action string
 	return nil
 }
 
-// ConsumeSignedNonce is used after verifying the caller's signed request payload.
-// Its unique index survives crash/restart and cannot be bypassed via in-memory fallback.
+// ConsumeSignedNonce используется после проверки подписанной полезной нагрузки запроса. Его
+// уникальный индекс переживает сбой и перезапуск; обойти его через резервную память нельзя.
 func (r *Repository) ConsumeSignedNonce(ctx context.Context, proof NodeProof, payload []byte) error {
 	digest := sha256.Sum256(payload)
 	hash := hex.EncodeToString(digest[:])
@@ -240,9 +241,9 @@ func (r *Repository) ConsumeSignedNonce(ctx context.Context, proof NodeProof, pa
 	})
 }
 
-// IssueJoinTicket atomically checks a access session, matching Minecraft
-// session, node scope and identity, and replaces any prior active ticket for the
-// same node/player. Only the hashed token is persisted.
+// IssueJoinTicket атомарно проверяет access-сеанс, соответствующий Minecraft-сеанс,
+// область узла и идентичность и заменяет прежний активный билет того же узла и
+// игрока. Сохраняется только хеш токена.
 func (a *Auth) IssueJoinTicket(ctx context.Context, accessToken, minecraftToken, nodeID string) (JoinGrant, error) {
 	var grant JoinGrant
 	if !validBearer(accessToken, "nla_") || !validBearer(minecraftToken, "nlm_") || nodeID == "" {
@@ -315,10 +316,10 @@ func (a *Auth) IssueJoinTicket(ctx context.Context, accessToken, minecraftToken,
 	return grant, e
 }
 
-// RedeemJoinTicket checks a node-signed proof over the ticket's hash, then
-// burns its nonce and consumes the ticket atomically, with every auth/identity
-// generation and session status revalidated under the BEGIN IMMEDIATE lock.
-// No caller ever receives success before SQLite COMMIT succeeds.
+// RedeemJoinTicket проверяет подписанное узлом доказательство по хешу билета, затем
+// атомарно погашает nonce и билет, заново проверяя поколения авторизации и
+// идентичности и статусы сеансов под BEGIN IMMEDIATE. Ни один вызывающий не
+// получает успех до фиксации SQLite COMMIT.
 func (r *Repository) RedeemJoinTicket(ctx context.Context, raw string, proof NodeProof, remoteIP string) (RedeemedJoin, error) {
 	var out RedeemedJoin
 	if !validBearer(raw, "nlj_") || len(remoteIP) > 128 || strings.ContainsAny(remoteIP, "\x00\n\r") {
@@ -347,8 +348,8 @@ func (r *Repository) RedeemJoinTicket(ctx context.Context, raw string, proof Nod
    JOIN access_tokens at ON at.token_hash=j.access_token_hash AND at.session_id=s.id
    WHERE j.token_hash=?`, hash).Scan(&out.UserID, &out.SessionID, &out.MinecraftSessionID, &out.PlayerUUID, &out.Username, &out.NodeID, &out.ProjectID, &out.ProfileID, &out.Channel, &tStatus, &expires, &issuedEpoch, &issuedFP, &nodeEpoch, &nodeFP, &nodeStatus, &authEpoch, &currentEpoch, &sessionStatus, &userStatus, &mcStatus, &sessionExpires, &mcExpires, &accessExpires, &accessRevoked)
 		if errors.Is(e, sql.ErrNoRows) {
-			// Burn a validly signed nonce even when the bearer is unknown.
-			// Returning ErrJoinRejected from the callback would roll it back.
+			// Погашайте корректно подписанный nonce, даже если bearer неизвестен. Возврат
+			// ErrJoinRejected из callback откатил бы погашение.
 			rejected = true
 			return nil
 		}
@@ -359,8 +360,9 @@ func (r *Repository) RedeemJoinTicket(ctx context.Context, raw string, proof Nod
 			rejected = true
 			return nil
 		}
-		// Explicitly fence the consumed state with a CAS; the SQL CHECK + trigger
-		// prevent resurrection of a consumed ticket after crash or restore.
+		// Явно ограждайте погашенное состояние через CAS; SQL CHECK и триггер
+		// исключают восстановление использованного билета после сбоя или
+		// восстановления.
 		res, e := q.ExecContext(ctx, `UPDATE bridge_join_tickets SET status='consumed',consumed_at=?,terminal_at=?,redeemed_nonce_hash=?,redeemed_remote_ip=? WHERE token_hash=? AND status='active'`, ns(now), ns(now), SignedPayloadHash(mustDecodeNonce(proof.Nonce)), remoteIP, hash)
 		if e != nil {
 			return e
@@ -403,8 +405,9 @@ func (r *Repository) PruneExpiredReplayNonces(ctx context.Context) (int64, error
 	return count, e
 }
 
-// TicketStatus returns only durable metadata (no bearer). Useful for recovery
-// from ambiguous commit: terminal consumed state must be retried.
+// TicketStatus возвращает только устойчивые метаданные без bearer. Полезен для
+// восстановления после неоднозначного commit: конечное состояние consumed
+// необходимо повторно сверять.
 func (r *Repository) TicketStatus(ctx context.Context, raw string) (string, error) {
 	if !validBearer(raw, "nlj_") {
 		return "", ErrJoinRejected
@@ -416,6 +419,7 @@ func (r *Repository) TicketStatus(ctx context.Context, raw string) (string, erro
 	return status, e
 }
 
-// SignedPayloadHash is the exact 32-byte digest required in canonical signing.
+// SignedPayloadHash — точный 32-байтовый хеш, обязательный для канонической
+// подписи.
 func SignedPayloadHash(data []byte) string { h := sha256.Sum256(data); return hex.EncodeToString(h[:]) }
 func mustDecodeNonce(raw string) []byte    { b, _ := base64.RawURLEncoding.DecodeString(raw); return b }

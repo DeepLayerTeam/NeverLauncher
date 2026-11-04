@@ -19,10 +19,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// factoryReadSource0401 refuses symlinks at every level, rejects changing
-// contents, and hashes bytes rather than trusting a CLI-supplied JSON digest.
-// The caller holds the workspace mutation lock and re-verifies the entire
-// factory plan with the real CLI before reading any output.
+// factoryReadSource0401 запрещает символьные ссылки на каждом уровне, отклоняет
+// изменяемое содержимое и хеширует байты, а не доверяет JSON-хешу CLI. Вызывающий
+// удерживает блокировку изменения рабочего пространства и повторно проверяет весь
+// план фабрики настоящим CLI до чтения результата.
 func factoryReadSource0401(root string, f struct {
 	Path   string `json:"path"`
 	SHA256 string `json:"sha256"`
@@ -157,9 +157,10 @@ func factoryPrepareWorkspace0401(ws repository.BuildWorkspace, p factoryPlanView
 	return ws, nil
 }
 
-// Factory output moves into encrypted, private Build Workspace storage. The
-// entire workspace record commits in one CAS operation after every byte has
-// been rechecked and stored, preventing partial, publishable imports.
+// Результат фабрики переносится в зашифрованное закрытое хранилище Build
+// Workspace. После повторной проверки и сохранения каждого байта вся запись
+// рабочего пространства фиксируется одной операцией CAS, исключая частично
+// импортируемые данные, доступные для публикации.
 func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	store, ws, ok := s.ownedWorkspace0226(w, r, "file:write")
 	if !ok {
@@ -206,7 +207,8 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	client := filepath.Join(dir, "client")
 	verifyCtx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	defer cancel()
-	// Do not write into a path inside client; a CLI verifier only inspects it.
+	// Не записывайте файлы по пути внутри client; проверяющий CLI только изучает
+	// его.
 	if err = factoryInvoke02710(verifyCtx, binary, dir, io.Discard, "runtime", "client-factory", "verify", "--client-dir", client, "--output", filepath.Join(dir, "delivery-verify.json")); err != nil {
 		writeError(w, 409, "factory verification failed before delivery")
 		return
@@ -252,8 +254,8 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// All objects have been written; independent decryption prevents storage
-	// backends that silently truncate or corrupt data from creating a workspace.
+	// Все объекты записаны; независимая расшифровка не позволяет хранилищам,
+	// незаметно обрезающим или повреждающим данные, создать рабочее пространство.
 	for _, file := range ws.Files {
 		if err = s.workspaceVerifyFile0226(ws, file); err != nil {
 			writeError(w, 503, "stored factory source failed integrity verification")
@@ -269,5 +271,6 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": saved})
 }
 
-// Keep references to both wire constraints and real per-file storage in this
-// adapter; no client-supplied manifest or untrusted download URL is accepted.
+// В этом адаптере сохраняйте ссылки как на ограничения передачи, так и на реальное
+// пофайловое хранилище; предоставленные клиентом манифесты и недоверенные URL
+// загрузки не принимаются.

@@ -1,6 +1,6 @@
-// Package gravitcredentials imports only explicitly supported Gravit password
-// verifiers from an already inventoried, immutable source ZIP. No secrets are
-// emitted in reports; old sessions, permissions and keys are never imported.
+// Package gravitcredentials импортирует только явно поддерживаемые верификаторы
+// паролей Gravit из уже инвентаризированного неизменяемого ZIP. Секреты не
+// попадают в отчёты; старые сессии, разрешения и ключи никогда не импортируются.
 package gravitcredentials
 
 import (
@@ -53,9 +53,9 @@ type Row struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
-// Extract always re-inspects the entire source through the 0.33.3 inventory
-// and re-extracts the 0.33.4 identity map before reading any password hashes.
-// A source cannot silently add or change a credential after mapping.
+// Extract всегда повторно проверяет весь источник по инвентаризации 0.33.3 и
+// извлекает карту идентичностей 0.33.4 перед чтением хешей паролей. Источник не
+// может незаметно добавить или изменить учётные данные после сопоставления.
 func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.Inventory, fileauthFormat string) ([]Credential, error) {
 	identities, err := gi.Extract(ctx, source, size, inventory)
 	if err != nil {
@@ -99,11 +99,12 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 			return nil, errors.New("credential file overflow")
 		}
 		if isFile {
-			// Use the exact UUID/username set already verified by gravitidentity.
-			// The legacy FileAuth parser caps at 16 MiB/20k users, while the
-			// inventoried source supports 64 MiB/200k. Parsing a second time with
-			// weaker limits would reject valid migration snapshots. Unknown hash
-			// algorithms are explicitly marked for reset, never guessed.
+			// Используйте точный набор UUID/имён, уже проверенный gravitidentity. Старый
+			// парсер FileAuth ограничен 16 МиБ и 20 тысячами пользователей, а
+			// инвентаризация поддерживает 64 МиБ и 200 тысяч. Повторный разбор со слабее
+			// установленными пределами отклонил бы допустимые снимки миграции.
+			// Неизвестные алгоритмы хеширования явно помечаются для сброса, а не
+			// угадываются.
 			accounts, e := parseFileAuthCredentials(data, f.Name, fileauthFormat, expected)
 			if e != nil {
 				return nil, fmt.Errorf("FileAuth %s: %w", f.Name, e)
@@ -132,10 +133,10 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 	return out, nil
 }
 
-// parseFileAuthCredentials only extracts password verifiers for identities that
-// the independently verified MIG04 map contains. It does not accept roles,
-// sessions, emails or arbitrary claims from Gravit. Unknown hash formats never
-// become login-capable credentials.
+// parseFileAuthCredentials извлекает верификаторы паролей только для идентичностей
+// из независимо проверенной карты MIG04. Роли, сессии, email и произвольные
+// утверждения Gravit не принимаются. Неизвестные форматы хеша никогда не становятся
+// действительными для входа.
 func parseFileAuthCredentials(data []byte, path, format string, expected map[string]gi.Account) ([]Credential, error) {
 	if format != "" && !fileauth.SupportedFormat(format) {
 		return nil, errors.New("unsupported FileAuth password format")
@@ -165,8 +166,9 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		if !ok {
 			return nil, errors.New("FileAuth UUID not found in verified identity map")
 		}
-		// MIG04 rejects duplicate keys in each user object. Re-use that
-		// checked source, decoding only the verifier field here.
+		// MIG04 отклоняет повторяющиеся ключи в каждом объекте пользователя.
+		// Переиспользуйте этот проверенный источник, декодируя здесь только поле
+		// верификатора.
 		var user struct {
 			Password string `json:"password"`
 		}
@@ -262,8 +264,8 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 	return out, nil
 }
 
-// SourceFingerprint is a collision-resistant binding of the exported bytes and
-// an explicit format decision. It doesn't reveal an individual password hash.
+// SourceFingerprint — устойчивое к коллизиям связывание экспортированных байтов с
+// явным решением о формате. Он не раскрывает хеш отдельного пароля.
 func SourceFingerprint(sourceSHA, identitySHA, format string) string {
 	h := sha256.Sum256([]byte(sourceSHA + "\x00" + identitySHA + "\x00" + format))
 	return hex.EncodeToString(h[:])

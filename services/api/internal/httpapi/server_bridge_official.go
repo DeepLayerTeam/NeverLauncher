@@ -12,9 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Official tickets are issued only after Minecraft Services proves the bearer
-// owns the selected Java profile AND the profile is linked to this Never user.
-// The Minecraft bearer never enters a ticket, database row or response.
+// Официальные билеты выдаются только после доказательства Minecraft Services, что
+// bearer владеет выбранным Java-профилем и этот профиль связан с данным
+// пользователем Never. Minecraft bearer не попадает в билет, строку БД или ответ.
 var errOfficialBridgeProof0397 = errors.New("serverbridge_official_identity_not_verified")
 
 func verifiedOfficialBridgeProfile0397(ctx context.Context, verifier minecraftProfileVerifier0268,
@@ -43,9 +43,9 @@ func verifiedOfficialBridgeProfile0397(ctx context.Context, verifier minecraftPr
 	return officialminecraft.Profile{}, errOfficialBridgeProof0397
 }
 
-// Stores a *non-secret* integrity snapshot in the one-time join record. It is
-// never derived from renderer-provided JSON; only a consumed trusted-device
-// challenge may populate it.
+// В одноразовой записи входа хранится НЕСЕКРЕТНЫЙ снимок целостности. Он никогда
+// не создаётся из JSON renderer; его может заполнить только погашенный challenge
+// доверенного устройства.
 func officialJoinProof0397(owner, session, device string, bindingEpoch int64,
 	p officialminecraft.Profile, snapshot *minecraftIntegritySnapshot0135, now time.Time) (string, error) {
 	uuid, ok := canonicalMinecraftUUID0268(p.ID)
@@ -91,8 +91,8 @@ func (s Server) evaluateOfficialBridgeIntegrity0397(join bridgeJoinRecord) minec
 		proof.CreatedAt.After(join.CreatedAt.Add(5*time.Second)) || !proof.ExpiresAt.After(now) {
 		return deny("official_bridge_proof_binding_mismatch")
 	}
-	// Relinking to a different Never identity and unlinking immediately revoke
-	// pending official admissions, including ones issued on another API node.
+	// Повторная привязка к другой личности Never и отвязка немедленно отзывают
+	// ожидающие официальные допуски, в том числе выданные на другом узле API.
 	store, ok := s.officialLinkStore0268()
 	if !ok {
 		return deny("official_bridge_identity_store_unavailable")
@@ -116,10 +116,11 @@ func (s Server) evaluateOfficialBridgeIntegrity0397(join bridgeJoinRecord) minec
 	return s.evaluateMinecraftIntegrity0135(proof)
 }
 
-// A Windows continuous Guard ticket is tied to its actual running process and
-// current Never device. Official mode has no project/Yggdrasil MinecraftSession
-// ID: compare its artifact evidence against the independently verified launch
-// attestation, never manufacture a local session or bypass the guard policy.
+// Непрерывный билет Windows Guard привязан к реальному запущенному процессу и
+// текущему устройству Never. В официальном режиме нет ID MinecraftSession
+// проекта/Yggdrasil: сравнивайте свидетельства артефактов с независимо проверенной
+// аттестацией запуска, не создавая фиктивный локальный сеанс и не обходя политику
+// Guard.
 func validateOfficialContinuousGuard0397(ticket model.DeviceChallenge, proof string) error {
 	var session model.MinecraftSession
 	if json.Unmarshal([]byte(proof), &session) != nil || !session.IntegrityVerified ||

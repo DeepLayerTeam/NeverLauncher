@@ -19,9 +19,9 @@ type networkCapacityUpdate0288 struct {
 	ExpectedRevision *int64          `json:"expectedRevision"`
 }
 
-// An operator limit is not a command to the Minecraft plugin. It is an
-// independently-enforced, PostgreSQL-backed ceiling in the actual admission
-// paths. Client-supplied runtime and revision prevent stale Admin writes.
+// Операторский лимит — не команда плагину Minecraft, а независимо обеспечиваемый
+// в реальных путях допуска потолок, хранящийся в PostgreSQL. Runtime и ревизия
+// из клиента предотвращают устаревшие изменения Admin.
 func (s Server) serverBridgeNetworkCapacity0288(w http.ResponseWriter, r *http.Request) {
 	nodeID := strings.TrimSpace(r.PathValue("serverId"))
 	node, err := s.State.ServerBridge.getNode0142(nodeID)

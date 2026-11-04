@@ -1,8 +1,9 @@
 package httpapi
 
-// Host operations use RemoteControl's existing on-disk receipt and Host
-// Supervisor's real OS-process identity. The Backend persists a separate
-// intent before sending a single request and never auto-reissues that request.
+// Операции хоста используют существующие файловые квитанции RemoteControl и
+// настоящую идентичность процесса ОС из Host Supervisor. Backend сохраняет
+// отдельное намерение до отправки одного запроса и никогда автоматически не
+// повторяет его.
 import (
 	"context"
 	"crypto/rand"
@@ -55,7 +56,7 @@ func (s Server) hostOperationPreflight0413(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusUnauthorized, "invalid admin session")
 		return bridgeServerRecord{}, repository.HostOperation0413{}, nil, false
 	}
-	// Host process permissions are GLOBAL; project roles or game-server scopes are not enough.
+	// Права на процессы хоста ГЛОБАЛЬНЫ; ролей проекта или областей игрового сервера недостаточно.
 	if !s.authorizeClaims(r, claims, "project:read", node.ProjectID, "server", serverID).Allowed {
 		writeError(w, http.StatusNotFound, "serverbridge_server_not_found")
 		return bridgeServerRecord{}, repository.HostOperation0413{}, nil, false
@@ -106,8 +107,9 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 	}
 	digest := sha256.Sum256([]byte(op.ServerID + "\x00" + action + "\x00" + op.RequestedBy + "\x00" + key))
 	fingerprint := hex.EncodeToString(digest[:])
-	// Idempotent retries never need to reach RemoteControl, even when it or the
-	// credential provider is down. Only an exact request digest may replay.
+	// Идемпотентным повторам не нужно обращаться в RemoteControl даже при
+	// недоступности его самого или поставщика учётных данных. Повтор допустим только
+	// с точно тем же хешем запроса.
 	existing, lookupErr := rp.GetHostOperationByKey0413(r.Context(), op.ServerID, key)
 	if lookupErr == nil {
 		if existing.RequestDigest != fingerprint || existing.Action != action || existing.RequestedBy != op.RequestedBy {
@@ -132,7 +134,8 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 	op.RemoteNodeID = target.NodeID
 	op.BaselineRuntimeID = node.RuntimeID
 	op.BaselineRuntimeEpoch = node.RuntimeEpoch
-	// Only an operator-provisioned, pinned RemoteControl host may receive a command.
+	// Команду можно отправлять только на заранее настроенный и закреплённый оператором
+	// хост RemoteControl.
 	client, err := hostcontrol.NewClient(target)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "host_operation_tls_or_token_unavailable")
@@ -140,7 +143,8 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 110*time.Second)
 	defer cancel()
-	// This is a read-only preflight. If it fails no command intent is created.
+	// Это предварительная проверка только для чтения. Если она не проходит,
+	// намерение команды не создаётся.
 	before, err := client.Status(ctx)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "host_operation_preflight_failed")
@@ -167,8 +171,8 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusOK, map[string]any{"data": hostOperationOutput0413(stored, node, true)})
 		return
 	}
-	// The journal is committed BEFORE any external effect. On crash or timeout
-	// the intent remains indeterminate and another Backend replica cannot retry.
+	// Журнал фиксируется ДО любого внешнего эффекта. При сбое или тайм-ауте намерение
+	// остаётся неопределённым, и другая реплика Backend не может повторить его.
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "serverbridge-host-intent-" + stored.ID, Actor: stored.RequestedBy, Action: "serverbridge:host:intent:" + stored.Action, Target: stored.ServerID + ":" + stored.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	receipt, runErr := client.Execute(ctx, action, hostOperationWireKey0413(stored.ID))
 	if runErr != nil {
@@ -184,8 +188,9 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 				stored.Error = "remote acknowledgement received but host status unavailable: " + statusErr.Error()
 			} else {
 				stored.HostAfter, _ = json.Marshal(after)
-				// A JVM can start before the game plugin reconnects. 'accepted' is not
-				// represented as verified success until both host and ServerBridge agree.
+				// JVM может запуститься до переподключения игрового плагина. Статус accepted
+				// не является проверенным успехом, пока хост и ServerBridge не придут к
+				// согласию.
 				latest, nodeErr := s.State.ServerBridge.getNode0142(op.ServerID)
 				if nodeErr == nil {
 					node = latest
@@ -202,8 +207,8 @@ func (s Server) serverBridgeHostCreate0413(w http.ResponseWriter, r *http.Reques
 			}
 		}
 	}
-	// A disconnected HTTP caller must not cancel persistence of an already
-	// executed external operation. Complete using a bounded independent context.
+	// Разрыв связи с HTTP-клиентом не должен отменять сохранение уже выполненной
+	// внешней операции. Завершайте её в отдельном ограниченном контексте.
 	persistCtx, persistCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer persistCancel()
 	completed, err := rp.FinishHostOperation0413(persistCtx, stored, "indeterminate")
@@ -235,10 +240,10 @@ func (s Server) serverBridgeHostGet0413(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusServiceUnavailable, "host_operation_journal_unavailable")
 		return
 	}
-	// Reconcile only by inspecting the RemoteControl's durable receipt and
-	// independently observing the OS/bridge state. This path MUST NOT POST a
-	// command. A lost ACK or crashed Backend remains indeterminate unless the
-	// agent can prove it executed the exact original operation.
+	// Сверяйте только устойчивую квитанцию RemoteControl и независимо наблюдаемое
+	// состояние ОС и моста. Этот путь НЕ ДОЛЖЕН отправлять команду POST.
+	// Потерянный ACK или сбой Backend остаются неопределёнными, пока агент не
+	// докажет выполнение точной исходной операции.
 	if r.URL.Query().Get("refresh") == "1" && (op.State == "accepted" || op.State == "indeterminate") {
 		target, loadErr := hostcontrol.LoadTarget(s.Config.ServerBridgeHostTargetsFile0413, op.ServerID)
 		if loadErr == nil && target.NodeID == op.RemoteNodeID {
@@ -282,8 +287,9 @@ func (s Server) serverBridgeHostGet0413(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"data": hostOperationOutput0413(op, node, false)})
 }
 
-// Host views are privileged, read-only and use the existing pinned TLS client.
-// Never convert an unavailable RemoteControl host into a healthy JVM.
+// Представления хостов привилегированны, доступны только для чтения и используют
+// существующий закреплённый TLS-клиент. Недоступный RemoteControl нельзя показывать
+// как исправную JVM.
 func (s Server) serverBridgeHostStatus04111(w http.ResponseWriter, r *http.Request) {
 	node, _, _, ok := s.hostOperationPreflight0413(w, r)
 	if !ok {
@@ -306,8 +312,8 @@ func (s Server) serverBridgeHostStatus04111(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusServiceUnavailable, "host_operation_status_unavailable")
 		return
 	}
-	// A host's processAlive means only that the Supervisor observed its process.
-	// A signed game heartbeat is an independent, separately reported observation.
+	// processAlive хоста означает только наблюдение процесса Supervisor. Подписанный
+	// heartbeat игры — независимое наблюдение, сообщаемое отдельно.
 	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
 		"host": host, "observedAt": time.Now().UTC(), "bridge": map[string]any{
 			"serverId": node.ID, "status": node.Status, "runtimeId": node.RuntimeID,

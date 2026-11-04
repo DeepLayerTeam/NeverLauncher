@@ -10,8 +10,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Independent connections and concurrent requests share a single isolated
-// extension's counters; a reconnect never resets the per-instance budget.
+// Независимые соединения и параллельные запросы разделяют счётчики одного
+// изолированного расширения; переподключение не сбрасывает лимит экземпляра.
 func TestAdversarialHostReconnectAndBurst03114(t *testing.T) {
 	policy := &model.ExtensionSandboxPolicy{Mode: "isolated", MaxRequestsPerSecond: 8, MaxOutputBytes: 1024}
 	state := &processState{token: "valid-token", manifest: model.ExtensionManifest{Sandbox: policy}}
@@ -78,8 +78,8 @@ func TestAdversarialHostQuotaFailsClosed03114(t *testing.T) {
 		t.Fatalf("expected 4 billed bytes; got %d", st.budget.output)
 	}
 	st.mu.Unlock()
-	// Avoid requesting the sixth byte through the supervisor because quota
-	// expiry intentionally initiates the actual process-kill path asynchronously.
+	// Не запрашивайте шестой байт через супервизор: истечение квоты намеренно
+	// асинхронно запускает настоящее завершение процесса.
 	st.mu.Lock()
 	if st.budget.chargeLocked03113(2, policy) {
 		t.Fatal("output over quota admitted")

@@ -96,8 +96,9 @@ public final class ContentServices {
     public Map<String,Object> metadata(String projectId,String releaseId,Map<String,Object> original) throws Exception {
         ident(projectId);ident(releaseId);Objects.requireNonNull(original);
         if (Json.encode(original).length()>MAX_RPC_BYTES) throw new IllegalArgumentException("metadata too large");
-        // The provider receives an isolated copy: even mutating nested maps cannot
-        // change the canonical signed values against which its output is compared.
+        // Провайдер получает изолированную копию: даже изменение вложенных карт не
+        // может изменить канонические подписанные значения, с которыми сравнивается его
+        // вывод.
         Map<String,Object> baseline=Json.object(Json.parse(Json.encode(original)));
         Map<String,Object> input=Json.object(Json.parse(Json.encode(original)));
         var result = checked(p -> p.metadata(projectId,releaseId,input));

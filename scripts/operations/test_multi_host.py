@@ -67,8 +67,8 @@ def node_report(node_id, machine_id):
 
 class MultiHostExecutorTest(unittest.TestCase):
     def test_production_compose_is_independent_and_uses_distinct_worker_volumes(self):
-        # Validate actual source YAML structure; extra dependencies are not
-        # needed by production (Compose parses YAML itself).
+        # Проверяйте фактическую структуру исходного YAML; дополнительные зависимости
+        # промышленной среде не нужны (Compose сам разбирает YAML).
         import yaml
         root = Path(__file__).resolve().parents[2]
         data = yaml.safe_load((root / "deploy/production/docker-compose.multi-host.yml").read_text())

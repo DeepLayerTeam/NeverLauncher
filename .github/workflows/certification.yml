@@ -137,10 +137,11 @@ jobs:
             e2e/runtime/vanilla-install.json
           if-no-files-found: warn
           retention-days: 45
-  # This workflow is an executable per-platform test matrix, not an authority to
-  # approve 0.25.0. Full certification requires six independently collected
-  # evidence records, actual Minecraft launch on each required target, live
-  # Guard/ServerBridge integration and separate signed clean-machine GA gate.
+  # Этот workflow выполняет платформенную матрицу тестов, но сам по себе не даёт
+  # права одобрить 0.25.0. Для полной сертификации необходимы шесть независимо
+  # собранных записей доказательств, настоящий запуск Minecraft на каждой
+  # обязательной платформе, живая интеграция Guard/ServerBridge и отдельный
+  # подписанный этап GA на чистой машине.
 
   aggregate-certification:
     if: always() && github.event_name == 'workflow_dispatch'

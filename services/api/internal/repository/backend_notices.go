@@ -64,7 +64,8 @@ func (r *SQLRepository) EnqueueBackendNotice0289(ctx context.Context, actor, key
 	if err != nil {
 		return out, false, err
 	}
-	// Replaying a key with a different payload cannot silently return success.
+	// Повтор ключа с другой полезной нагрузкой не должен незаметно возвращать
+	// успех.
 	if recipient != out.RecipientUserID || body != out.Body {
 		return BackendNotice0289{}, false, fmt.Errorf("notification idempotency key already used with different content: %w", ErrConflict)
 	}

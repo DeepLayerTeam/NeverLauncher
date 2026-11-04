@@ -181,7 +181,8 @@ class PublicationAcceptance(unittest.TestCase):
         (self.bundle / "GA_TARGET_APPROVAL.sig").write_bytes(
             (self.fixture.evidence / "approval.sig").read_bytes()
         )
-        # Recomputed public checksum is not enough to forge independent approval.
+        # Пересчитанной публичной контрольной суммы недостаточно, чтобы подделать
+        # независимое одобрение.
         (self.bundle / "SHA256SUMS").write_text(
             "\n".join(
                 p.sha(x) + "  " + x.name

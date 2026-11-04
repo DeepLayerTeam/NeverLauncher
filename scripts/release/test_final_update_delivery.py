@@ -190,8 +190,9 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         report = release.exact_package(self.root, VERSION, "linux-x64")
         self.assertEqual(report["target"], "linux-x64")
 
-        # An installer checksum alone can be updated by a compromised staging
-        # step. The inner updater manifest must still reject altered payloads.
+        # Контрольную сумму установщика можно обновить скомпрометированным этапом
+        # staging. Внутренний манифест обновлятора по-прежнему должен отклонять
+        # изменённые данные.
         mutated = dict(members)
         mutated["launcher/runtime"] += b"corrupt"
         with self.assertRaises(release.Blocked):
@@ -212,8 +213,8 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             release.verify_update_payload_0410(
                 mutated, manifest, "linux", "x64", VERSION
             )
-        # A forged signature with a correct manifest digest is still rejected
-        # by the pinned delegated key and root-signed trust policy.
+        # Поддельная подпись при правильном дайджесте манифеста всё равно отклоняется
+        # закреплённым делегированным ключом и политикой доверия с корневой подписью.
         mutated = dict(members)
         forged = json.loads(mutated["launcher/COMPONENT_SET_SIGNATURE_V2.json"])
         forged["signature"] = "a" * 128
@@ -365,8 +366,9 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             release.exact_package(self.root / "dist", VERSION, "darwin-x64")["target"],
             "darwin-x64",
         )
-        # Detect post-signing drift between the sealed component update list
-        # and the final signed main application executable.
+        # Обнаруживайте расхождение после подписания между запечатанным списком
+        # обновлений компонентов и окончательным подписанным главным исполняемым
+        # файлом.
         modified = dict(members)
         modified["Launcher.app/Contents/MacOS/launcher-desktop"] += b"codesign-drift"
         with self.assertRaises(release.Blocked):

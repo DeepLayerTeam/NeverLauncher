@@ -81,8 +81,9 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
         key['status'] = 'revoked'
     else:
         raise CertificateError("unknown certificate operation")
-    # A new epoch for issuance/revocation is signed by the existing anchored
-    # offline root; new private seed is never placed inside policy JSON.
+    # Новая эпоха выдачи и отзыва подписывается существующим закреплённым
+    # автономным корнем; новый закрытый seed никогда не помещается в JSON
+    # политики.
     staged_seed = None
     try:
         if private is not None:
@@ -101,7 +102,8 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
         return {'operation': operation, 'keyId': key_id, 'epoch': existing['epoch'],
                 'signedPolicySha256': hashlib.sha256(output.read_bytes()).hexdigest()}
     except Exception:
-        # Never leave an unusable private seed on disk if root signing failed.
+        # Если подпись корневым ключом не удалась, никогда не оставляйте на диске
+        # непригодный закрытый seed.
         if staged_seed is not None:
             staged_seed.unlink(missing_ok=True)
         raise

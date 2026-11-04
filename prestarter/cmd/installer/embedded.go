@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-// A release builder substitutes a VERIFIED signed bundle here before building
-// a single-file Windows installer. An empty zip means external bundle mode.
+// Сборщик выпуска подставляет здесь ПРОВЕРЕННЫЙ подписанный пакет перед созданием
+// однофайлового установщика Windows. Пустой ZIP означает режим внешнего пакета.
 //
 //go:embed embedded.bundle.zip
 var embeddedBundle []byte

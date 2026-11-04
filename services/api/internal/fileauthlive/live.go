@@ -1,9 +1,9 @@
 package fileauthlive
 
-// A live, read-only Gravit FileAuthSystem authentication provider. The account
-// source remains authoritative; Never stores only its own identity link and
-// sessions. Sessions.json, external permissions and external refresh tokens are
-// deliberately never read or imported.
+// Живой провайдер аутентификации Gravit FileAuthSystem только на чтение. Источник
+// аккаунтов остаётся авторитетным; Never сохраняет только собственную привязку
+// идентичности и сессии. Sessions.json, внешние полномочия и внешние refresh-токены
+// намеренно никогда не читаются и не импортируются.
 
 import (
 	"bytes"
@@ -41,7 +41,7 @@ type LiveConfig struct {
 	Provisioning   LiveProvisioning `json:"provisioning,omitempty"`
 }
 
-// LoadLiveConfigs rejects ambiguous and malformed configuration during startup.
+// LoadLiveConfigs отклоняет неоднозначную и повреждённую конфигурацию при запуске.
 func LoadLiveConfigs(jsonValue, filePath string) ([]LiveConfig, error) {
 	if strings.TrimSpace(jsonValue) != "" && strings.TrimSpace(filePath) != "" {
 		return nil, errors.New("configure only one live FileAuth providers source")
@@ -135,8 +135,8 @@ type LiveConnector struct {
 	snapshot *liveSnapshot
 }
 
-// NewLiveConnector validates the actual source at registration, rather than
-// accepting a nominally configured but unusable provider.
+// NewLiveConnector проверяет настоящий источник при регистрации, а не принимает
+// номинально настроенного, но непригодного провайдера.
 func NewLiveConnector(ctx context.Context, input LiveConfig, verifier func(password, encoded string) bool) (*LiveConnector, error) {
 	if verifier == nil {
 		return nil, errors.New("live FileAuth password verifier is required")
@@ -173,9 +173,9 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	// Never trust a cached snapshot when the filesystem became unreadable,
-	// disappeared or changed. Read and hash on each request so replacement
-	// with identical size and mtime cannot bypass invalidation.
+	// Никогда не доверяйте кэшированному снимку, если файловая система стала
+	// нечитаемой, исчезла или изменилась. Читайте и хешируйте при каждом запросе,
+	// чтобы замена с теми же размером и mtime не обходила инвалидацию.
 	before, err := os.Lstat(c.cfg.DatabasePath)
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		next.byUUID[a.UUID] = a
 	}
 	c.mu.Lock()
-	// Readers always see a complete, immutable snapshot.
+	// Читатели всегда видят полный неизменяемый снимок.
 	if c.snapshot != nil && c.snapshot.digest == digest {
 		next = c.snapshot
 	} else {
@@ -250,14 +250,14 @@ func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnec
 		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "live FileAuth source unavailable", err)
 	}
 	a, exists := current.byName[strings.ToLower(req.Identifier)]
-	// Use the explicitly configured and validated verifier; never fall back
-	// to a different algorithm or to an existing Never account.
+	// Используйте явно настроенный и проверенный верификатор; никогда не
+	// переходите на другой алгоритм или существующий аккаунт Never.
 	if !exists || !c.verify(req.Secret, a.PasswordHash) {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
 	}
-	// A password check (especially PHPass/Argon2id) can be expensive. The source
-	// may have been revoked/replaced while verification was executing. Do not
-	// authorize a superseded snapshot even if it was valid when read.
+	// Проверка пароля, особенно PHPass/Argon2id, может быть дорогой. Источник могли
+	// отозвать или заменить во время верификации. Не авторизуйте устаревший снимок,
+	// даже если при чтении он был действительным.
 	latest, checkErr := c.current(ctx)
 	if checkErr != nil || latest.digest != current.digest {
 		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "live FileAuth source changed during verification", checkErr)

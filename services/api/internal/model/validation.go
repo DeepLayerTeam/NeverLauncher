@@ -47,8 +47,8 @@ type RuntimeValidationResult struct {
 	CreatedAt            time.Time         `json:"createdAt"`
 }
 
-// TrustProfileDecision exposes a deterministic server-computed allow/deny per
-// profile; it is an assessment, not an authorization token.
+// TrustProfileDecision предоставляет детерминированное решение разрешить/запретить
+// для каждого профиля, вычисленное сервером; это оценка, а не токен авторизации.
 type TrustProfileDecision struct {
 	Profile        string   `json:"profile"`
 	Result         string   `json:"result"`

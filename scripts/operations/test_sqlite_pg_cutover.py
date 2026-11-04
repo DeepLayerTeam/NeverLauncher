@@ -38,8 +38,8 @@ class Operator0475Tests(unittest.TestCase):
 
     def operator(self):
         p = cutover.argparse.ArgumentParser()
-        # Test parser via main arguments, but construct an operator with the
-        # same well-defined values for exercising individual stages.
+        # Проверяйте парсер через основные аргументы, но создавайте объект оператора
+        # с теми же явно определёнными значениями для испытания отдельных этапов.
         args = cutover.argparse.Namespace(
             work_dir=str(self.root / "journal"), launcher_sqlite="launcher-sqlite",
             source_env=str(self.source_env), core_db=str(self.core), http_db="/tmp/http.db",

@@ -16,8 +16,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// Only explicitly known later-added fields may be synthesized. Identity,
-// profile, release and authorization records are NEVER defaulted away.
+// Синтезировать можно только явно известные поля, добавленные позднее. Записи
+// идентичностей, профилей, релизов и авторизации НИКОГДА не заменяются
+// значениями по умолчанию.
 var httpOptionalLegacyFields0472 = map[string]bool{
 	"stagedRuntimeRuns0342": true, "validationAttestations0345": true,
 	"validationAttempts03412": true, "validationChallenges0346": true, "validationRevocations0346": true,
@@ -84,9 +85,9 @@ func zeroJSON0472(t reflect.Type) (json.RawMessage, error) {
 	return json.Marshal(reflect.Zero(t).Interface())
 }
 
-// An older v1 JSON envelope is only accepted when its SQL layout proves a
-// preceding release (an absent later-added runtime or stable-permit table).
-// Current fully initialized databases retain the stricter 0.47.1 decoder.
+// Старая оболочка JSON v1 принимается только тогда, когда SQL-схема доказывает
+// более ранний выпуск без добавленных позднее таблиц Runtime или stable-permit.
+// Полностью инициализированные современные БД сохраняют строгий декодер 0.47.1.
 func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 	root, err := strictObject0472(raw)
 	if err != nil {
@@ -98,8 +99,8 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 			return nil, fmt.Errorf("unknown HTTP legacy field %q", key)
 		}
 	}
-	// A missing high-water counter may only be synthesized when the old
-	// collection has no records. Never reset a live sequence to zero.
+	// Отсутствующий верхний счётчик можно синтезировать лишь при пустой старой
+	// коллекции. Никогда не сбрасывайте действующую последовательность в ноль.
 	counterSources := map[string]string{
 		"nextExtensionInstallRevisionID": "extensionInstallRevisions",
 		"nextExtensionEventSequence":     "extensionEvents",
@@ -107,8 +108,8 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 		"nextExtensionDeliveryID":        "extensionEventDeliveries",
 		"nextExtensionDeadLetterID":      "extensionEventDeadLetters",
 	}
-	// Trust, revocation and quarantine defaults cannot be safely invented
-	// when there are already persisted objects that rely on those policies.
+	// Нельзя безопасно выдумывать значения по умолчанию для доверия, отзыва и
+	// карантина, если уже сохранены зависящие от них объекты.
 	securitySources := map[string][]string{
 		"extensionTrustPolicy":       {"extensionInstalls", "extensionRegistryKeys"},
 		"extensionRegistryKeys":      {"extensionRegistryPublishers"},
@@ -144,8 +145,8 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 		}
 		root[key] = v
 	}
-	// Legacy private arrays cannot be missing when their public record slice is
-	// populated: synthesizing blank password hashes or tokens would lose access.
+	// Устаревшие закрытые массивы не могут отсутствовать при заполненном публичном
+	// срезе записей: создание пустых хешей паролей или токенов лишит доступа.
 	priv, err := strictObject0472(root["private0373"])
 	if err != nil {
 		return nil, fmt.Errorf("legacy auth state: %w", err)
@@ -215,8 +216,9 @@ func httpDDL0472() map[string]string {
 	return expected
 }
 
-// Returns whether this is a recognized older layout, and the migrated bytes.
-// This read-only preflight runs before any CREATE, UPDATE or backup operation.
+// Возвращает признак распознанной старой схемы и мигрированные байты.
+// Предварительная проверка только для чтения выполняется до CREATE, UPDATE или
+// резервного копирования.
 func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, existing bool) (bool, []byte, error) {
 	if !existing {
 		return false, nil, nil
@@ -317,7 +319,8 @@ func migrateHTTPSnapshot0472(ctx context.Context, store *sqlitedurable.Store, co
 				return err
 			}
 		}
-		// CAS update in the same SQLite transaction as missing-table creation.
+		// CAS-обновление в той же транзакции SQLite, что и создание отсутствующих
+		// таблиц.
 		res, err := q.ExecContext(ctx, `UPDATE http_repository_state_0372 SET document=?, sha256=?,sequence=sequence+1 WHERE singleton=1 AND sequence=? AND sha256=?`, converted, hex.EncodeToString(sum[:]), seq, oldSHA)
 		if err != nil {
 			return err

@@ -411,8 +411,8 @@ func (s Server) restoreStorageObjectsSequential880(root string) (int, error) {
 		if closeErr != nil {
 			return closeErr
 		}
-		// S3 writes can succeed at the HTTP layer while an object is still
-		// inaccessible or corrupted. Verify the exact data after upload.
+		// Запись в S3 может успешно завершиться по HTTP, хотя объект остаётся
+		// недоступным или повреждённым. После загрузки проверяйте точные данные.
 		wantSHA, wantSize, hashErr := hashFile880(path)
 		if hashErr != nil {
 			return hashErr
@@ -590,8 +590,9 @@ func (s Server) auditExportPayload880() map[string]any {
 	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "createdAt": time.Now().UTC().Format(time.RFC3339), "mode": "append-only-hash-chain", "events": chain, "headHash": prev, "count": len(chain)}
 }
 
-// Operator export is an allowlisted health snapshot; no infrastructure path,
-// host, URL, DSN, credentials, raw error or personal identifier leaves the API.
+// Операторский экспорт представляет собой разрешённый снимок состояния; пути
+// инфраструктуры, хосты, URL, DSN, учётные данные, сырые ошибки и персональные
+// идентификаторы не должны выходить за пределы API.
 func (s Server) diagnosticsBundlePayload880() map[string]any {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -891,8 +892,9 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 	defer gz.Close()
 	tr := tar.NewReader(gz)
 	actual := map[string]operationsBackupFile880{}
-	// Bound decompression before writing to disk. Large production archives are
-	// supported, but malformed tar headers cannot exhaust the restore host.
+	// Ограничивайте распаковку до записи на диск. Крупные промышленные архивы
+	// поддерживаются, но повреждённые заголовки tar не должны истощать ресурсы хоста
+	// восстановления.
 	const maxUncompressedBackup880 int64 = 256 << 30
 	const maxBackupMembers880 = 200000
 	var unpackedBytes int64

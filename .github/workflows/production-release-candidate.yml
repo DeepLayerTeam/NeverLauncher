@@ -822,9 +822,11 @@ jobs:
           python3 scripts/release/delivery_verify_0462.py \
             --bundle "dist/release-${VERSION}" --release-manifest
           python3 scripts/release/inputs_guard_0461.py verify
-      # Run the real minimal deployment against the exact Linux x64 API inside
-      # the final, independently signed bundle. No rebuild or mock server here.
-      # This is in addition to six-platform independent GA evidence and base CI.
+      # Запустите настоящее минимальное развёртывание с точно тем Linux x64 API,
+      # который содержится в окончательном независимо подписанном пакете. Здесь
+      # нельзя пересобирать код или подставлять фиктивный сервер. Это дополнительная
+      # проверка сверх независимых доказательств GA для шести платформ и основного
+      # CI.
       - name: Required final-bundle SQLite install, crash, restart and restore E2E 0.38.0
         shell: bash
         run: |
@@ -834,14 +836,15 @@ jobs:
           DIR="dist/release-${VERSION}"
           test -s "$DIR/SHA256SUMS.sig"
           test -s "$DIR/launcher-api-linux-x64"
-          # Downloaded build artifacts may lose executable mode. chmod changes
-          # file metadata, not the independently approved artifact bytes.
+          # Загруженные артефакты сборки могут потерять бит исполняемости. Команда
+          # chmod изменяет метаданные файла, но не байты независимо одобренного
+          # артефакта.
           chmod u+x "$DIR/launcher-api-linux-x64"
           mkdir -p "$RUNNER_TEMP/nl-final-e2e-0380" "$RUNNER_TEMP/nl-final-e2e-policies"
           python3 - <<'PYCODE'
           import hashlib,json,os,pathlib
           folder=pathlib.Path(os.environ['RUNNER_TEMP'])/'nl-final-e2e-policies'
-          # These are validation configuration, operator signing evidence.
+          # Это конфигурация проверки и доказательства подписания оператором.
           fixture=hashlib.sha256(b'Launcher E2E NON-RELEASE fixture no signing').hexdigest()
           guard={'schemaVersion':'2.0','releases':{'0.1.0':{'protocolVersion':4,
             'platforms':{'linux':{'signingMode':'integrity-only','artifacts':[

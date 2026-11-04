@@ -1,6 +1,6 @@
-// SQLite-backed HTTP repository state. Generated from the MemoryRepository state
-// fields to guarantee that an added mutable field cannot silently become volatile.
-// This state is persisted atomically in a FULL-sync WAL transaction after mutations.
+// Состояние HTTP-репозитория на SQLite. Сгенерировано из полей MemoryRepository, чтобы
+// добавленное изменяемое поле не могло незаметно стать эфемерным. После изменений
+// состояние атомарно сохраняется в WAL-транзакции с FULL-sync.
 package repository
 
 import (

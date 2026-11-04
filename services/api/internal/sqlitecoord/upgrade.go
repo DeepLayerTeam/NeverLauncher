@@ -10,9 +10,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// Legacy coordinator v0 is the original channels/leases/limits layout without
-// the replay tombstones or expiry indexes. The original tables are never
-// dropped or rewritten. An unrelated, damaged or future schema fails closed.
+// Устаревший координатор v0 — исходная схема каналов, аренд и лимитов без
+// tombstone-записей повторов и индексов срока. Исходные таблицы никогда не
+// удаляются и не переписываются. Посторонняя, повреждённая или будущая схема
+// отклоняется по умолчанию.
 func coordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor) (bool, error) {
 	expected := map[string]string{}
 	for _, raw := range strings.Split(schema, ";\n") {
@@ -72,7 +73,8 @@ func coordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor) (bool,
 		return false, fmt.Errorf("unsupported coordinator legacy schema %d", version)
 	}
 	if version == schemaVersion {
-		// A partial current schema is corruption, not an older release.
+		// Частично созданная современная схема является повреждением, а не старым
+		// релизом.
 		_, err = validateExistingSchema0471(ctx, q)
 		return false, err
 	}
@@ -96,8 +98,8 @@ func migrateCoordinatorLegacy0472(ctx context.Context, q sqlitedurable.Executor)
 			return fmt.Errorf("coordinator legacy DDL: %w", err)
 		}
 	}
-	// Preserve the current lease's token hash and fencing history: upgrades
-	// cannot permit an already-issued lease token to be issued a second time.
+	// Сохраняйте хеш токена действующей аренды и историю ограждений: обновление не
+	// должно повторно выдавать ранее выданный токен аренды.
 	if _, err = q.ExecContext(ctx, `INSERT OR IGNORE INTO coord_lease_tokens(server_id,command_id,token_hash,fence)
  SELECT server_id,command_id,token_hash,fence FROM coord_leases`); err != nil {
 		return err

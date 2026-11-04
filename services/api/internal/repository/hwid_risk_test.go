@@ -87,8 +87,8 @@ func TestHWIDExpiryDoesNotLeaveActiveRisk0299(t *testing.T) {
 	}
 }
 
-// A changed host signal is an untrusted hint, but once observed it must not be
-// cleared by replaying the old hint. Review decisions are bound to a candidate.
+// Изменившийся сигнал хоста — недоверенная подсказка, но после обнаружения нельзя
+// очищать её повтором старого сигнала. Решения проверки привязаны к кандидату.
 func TestHWIDChangeIsStickyAndAppealCannotBeReplayed0433(t *testing.T) {
 	r := NewMemoryRepository("https://test.invalid")
 	r.deviceMu.Lock()

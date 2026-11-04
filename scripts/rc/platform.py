@@ -44,7 +44,8 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
     js = list((frontend / "assets").glob("*.js"))
     if not main.is_file() or not js:
         raise ValueError("no production HTML and JavaScript bundle")
-    # Use actual generated artifacts, no source-only or package.json proof.
+    # Используйте настоящие сгенерированные артефакты, а не свидетельство только
+    # по исходникам или package.json.
     files = sorted([main, *js])
     for path in files:
         if (
@@ -83,7 +84,8 @@ def main():
     p.add_argument("--commit", required=True)
     p.add_argument("--output", type=Path, required=True)
     a = p.parse_args()
-    # Never leave a stale passing result after a subsequent failure.
+    # Никогда не оставляйте устаревший успешный результат после последующей
+    # ошибки.
     a.output.unlink(missing_ok=True)
     try:
         result = inspect(a.binary, a.frontend, a.commit)

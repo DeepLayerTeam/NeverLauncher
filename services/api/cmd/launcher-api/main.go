@@ -35,12 +35,13 @@ import (
 
 var version = "dev"
 
-// commit is injected by production builds using -ldflags; local builds report unknown.
+// commit подставляется при промышленной сборке через -ldflags; локальные сборки показывают
+// unknown.
 var commit = "unknown"
 
 func main() {
-	// Read-only diagnostics work without a database, signing keys, TPM rights
-	// or a running backend. They cannot produce a trusted attestation verdict.
+	// Диагностика только на чтение работает без БД, ключей подписи, прав TPM или
+	// запущенного Backend. Она не может выдавать доверенный вердикт аттестации.
 	if len(os.Args) >= 3 && os.Args[1] == "diagnose" {
 		switch os.Args[2] {
 		case "device-trust":
@@ -158,9 +159,9 @@ func main() {
 	if err := httpapi.ValidatePersistenceConfig950(cfg); err != nil {
 		log.Fatal(err)
 	}
-	// Lock the entire service BEFORE schema migration, installation bootstrap,
-	// workers or an HTTP listener can mutate shared state. A second process
-	// with a different SQLite coordinator path still conflicts on local storage.
+	// Блокируйте всю службу ДО того, как миграция схемы, начальная установка, рабочие
+	// процессы или HTTP-слушатель смогут менять общее состояние. Второй процесс с
+	// другим путём координатора SQLite всё равно конфликтует на локальном хранилище.
 	plan, err := deployment.Detect(cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -180,9 +181,10 @@ func main() {
 		log.Printf("deployment infrastructure verified PostgreSQL=%t RedisLease=%t S3RoundTrip=%t", growth.PostgreSQL, growth.RedisLease, growth.S3RoundTrip)
 	}
 	log.Printf("deployment mode=%s repository=%s coordinator=%s storage=%s single_instance=%t reasons=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
-	// No imported SQLite Core database can be served as a live PostgreSQL
-	// backend before independent HTTP/Coordinator/Extensions parity has a real
-	// approval gate. The schema-only 'migrate' role does not serve requests.
+	// Ни одна импортированная база SQLite Core не должна обслуживаться как живой
+	// Backend PostgreSQL до независимого настоящего одобрения совместимости
+	// HTTP/Coordinator/Extensions. Роль migrate, работающая только со схемой,
+	// запросы не обслуживает.
 	if role.name != "migrate" && (strings.EqualFold(cfg.RepositoryDriver, "postgres") || strings.EqualFold(cfg.RepositoryDriver, "postgresql") || strings.EqualFold(cfg.RepositoryDriver, "sql")) {
 		gateCtx, gateCancel := context.WithTimeout(context.Background(), 20*time.Second)
 		gateErr := sqlitepg.RejectUnapprovedBackend0475(gateCtx, cfg.DatabaseDSN)
@@ -219,13 +221,15 @@ func main() {
 	}
 
 	if role.name == "migrate" {
-		// One-shot schema migration; no listener, extensions or worker leases.
+		// Одноразовая миграция схемы: без слушателя, расширений и аренд рабочих
+		// процессов.
 		log.Printf("database migration completed for %s; exiting without starting services", plan.Mode)
 		return
 	}
 
-	// Physically purge expired voluntary HWID risk observations and appeals.
-	// Runs on all replicas; the idempotent repository operation is safe in HA.
+	// Физически удаляйте устаревшие добровольные наблюдения риска HWID и апелляции.
+	// Выполняется на всех репликах; идемпотентная операция репозитория безопасна в
+	// HA.
 	if janitor, ok := repo.(interface {
 		PruneHWID0299(context.Context, time.Time) error
 	}); ok {
@@ -425,8 +429,9 @@ func main() {
 
 	var workerLastSuccess atomic.Int64
 	if role.workers {
-		// Independent worker processes use the same fenced PostgreSQL leases as
-		// the previously embedded workers. No in-memory job fallback is allowed.
+		// Независимые рабочие процессы используют те же аренды PostgreSQL с защитой
+		// от устаревших владельцев, что и ранее встроенные обработчики. Запасной
+		// очереди заданий в памяти нет.
 		durableCancel, durableErr := server.StartDurableControlPlaneWithReadiness0455(context.Background(), &workerLastSuccess)
 		if durableErr != nil {
 			log.Fatalf("durable control-plane initialization failed: %v", durableErr)
@@ -435,8 +440,9 @@ func main() {
 		log.Printf("Durable control-plane worker active: publish, rollback and outbox (role=%s)", role.name)
 	}
 	if !role.api {
-		// Worker probes are bound to loopback only: no public admin/auth routes.
-		// A successful database tick is mandatory for readiness.
+		// Проверки рабочих процессов привязаны только к loopback: без публичных
+		// маршрутов Admin/Auth. Для готовности обязателен успешный шаг обращения к
+		// БД.
 		if err := runWorkerProbe0455(cfg.HTTPAddr, &workerLastSuccess, server.Handler()); err != nil {
 			log.Fatalf("worker probe failed: %v", err)
 		}
@@ -454,8 +460,9 @@ func main() {
 		store.Driver(),
 		cfg.Environment,
 	)
-	// Own the HTTP server so a fenced restart request can drain open requests
-	// without killing unrelated processes or using shell commands.
+	// Владейте HTTP-сервером, чтобы запрос перезапуска с разграничением полномочий
+	// мог завершить открытые запросы без убийства посторонних процессов или вызова
+	// оболочки.
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -483,8 +490,8 @@ func main() {
 		log.Printf("graceful shutdown failed: %v; closing open connections", err)
 		_ = httpServer.Close()
 	}
-	// Exiting successfully is intentional. Only the externally configured service
-	// manager should restart this process; the API does not spawn its own child.
+	// Успешное завершение здесь намеренно. Только внешний настроенный менеджер служб
+	// должен перезапускать процесс; API не создаёт собственный дочерний процесс.
 }
 
 func newRepository(cfg config.Config) repository.Repository {
@@ -542,7 +549,8 @@ func hasCommandArg02012(args []string, wanted string) bool {
 	return false
 }
 
-// Only select configured local paths; the report never includes secrets or paths.
+// Выбирайте только настроенные локальные пути; отчёт никогда не содержит секретов или
+// путей.
 func capacityOptions03215(cfg config.Config, mode string) capacity.Options {
 	opt := capacity.Options{Mode: mode, Driver: cfg.RepositoryDriver, DatabaseDSN: cfg.DatabaseDSN, CoordinatorPath: cfg.SQLiteCoordinatorPath, BackupPath: cfg.BackupRoot}
 	if strings.EqualFold(cfg.StorageDriver, "local") || cfg.StorageDriver == "" {

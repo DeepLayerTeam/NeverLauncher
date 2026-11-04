@@ -54,9 +54,10 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		}
 	}
 
-	// Live Gravit FileAuthSystem sources are opt-in and read-only. A corrupt,
-	// unreadable or ambiguous database must fail registration and later login;
-	// Never never falls back to its own local accounts.
+	// Живые источники Gravit FileAuthSystem включаются явно и работают только для
+	// чтения. Повреждённая, нечитаемая или неоднозначная БД должна блокировать
+	// регистрацию и дальнейший вход; Never никогда не переходит на свои локальные
+	// аккаунты.
 	fileConfigs, err := fileauthlive.LoadLiveConfigs(cfg.AuthFileProvidersJSON, cfg.AuthFileProvidersFile)
 	if err != nil {
 		_ = core.Close()

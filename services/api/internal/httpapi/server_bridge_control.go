@@ -221,7 +221,8 @@ func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "serverbridge_control_type_unsupported")
 		return
 	}
-	// First establish project visibility; do not disclose cross-project node IDs.
+	// Сначала установите видимость проекта; не раскрывайте ID узлов из других
+	// проектов.
 	if !s.authorizeClaims(r, claims, "project:read", node.ProjectID, "server", serverID).Allowed {
 		writeError(w, http.StatusNotFound, "serverbridge_server_not_found")
 		return
@@ -400,8 +401,8 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
 		return
 	}
-	// A runtime may have been replaced or its capabilities revoked after command creation.
-	// Never sign delivery to a node that no longer advertises this operation.
+	// Runtime мог быть заменён, а его возможности отозваны после создания команды. Никогда не
+	// подписывайте доставку на узел, больше не объявляющий данную операцию.
 	if !serverBridgeNodeAllowsControl0286(node, cmd.Type) {
 		writeError(w, http.StatusConflict, "serverbridge_control_capability_revoked")
 		return
@@ -414,9 +415,9 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 	payloadBytes, _ := canonicalControlPayload0195(cmd.Payload)
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadBytes)
 	issued := now.UnixMilli()
-	// Bound the SIGNED execution authorization to the active fenced lease.
-	// A delayed HTTP response must not authorize an external side effect after
-	// PostgreSQL/Redis has moved ownership away from this delivery.
+	// Ограничивайте ПОДПИСАННОЕ разрешение выполнения действующей ограждённой
+	// арендой. Запоздалый HTTP-ответ не должен разрешать внешний побочный эффект
+	// после передачи владения PostgreSQL/Redis другому получателю.
 	expires := controlWireExpiry0285(cmd)
 	if expires <= issued {
 		writeError(w, http.StatusConflict, "serverbridge_control_delivery_lease_expired")
@@ -453,12 +454,12 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 	}})
 }
 
-// classifyBridgeControlOutcome0411 enforces the difference between a platform
-// acknowledgement, an invoked operation, and an observed postcondition.
-// Old agents' "succeeded" receipts are never grandfathered into verified success.
-// A verification claim is an attestation by the enrolled game agent, NOT an
-// independent observation by the Backend. Only explicitly observable operations
-// and a result matching the original command can claim the stronger status.
+// classifyBridgeControlOutcome0411 разделяет подтверждение платформы, вызов операции и
+// наблюдаемое постусловие. Квитанции succeeded от старых агентов никогда не
+// принимаются автоматически как проверенный успех. Заявление о проверке является
+// аттестацией зарегистрированного игрового агента, а НЕ независимым наблюдением
+// Backend. Более строгий статус допустим только для явно наблюдаемых операций с
+// результатом, соответствующим исходной команде.
 func classifyBridgeControlOutcome0411(command model.ServerBridgeControlCommand, status string, result map[string]string) string {
 	if status != "succeeded" && status != "executed" && status != "accepted" {
 		return status
@@ -469,8 +470,8 @@ func classifyBridgeControlOutcome0411(command model.ServerBridgeControlCommand, 
 	if status != "succeeded" {
 		return status
 	}
-	// PlayerQuitEvent is observed by the agent's registered Bukkit/Folia event
-	// listener. It proves departure, not merely a kickPlayer() invocation.
+	// PlayerQuitEvent наблюдается зарегистрированным слушателем событий
+	// Bukkit/Folia агента. Он доказывает выход, а не только вызов kickPlayer().
 	if command.Type == "player.kick" && result["verification"] == "player-quit-event" {
 		if command.Payload["username"] != "" && result["username"] == command.Payload["username"] &&
 			result["online"] == "false" && result["uuid"] != "" {
@@ -576,8 +577,9 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusConflict, "serverbridge_control_ack_lease_mismatch")
 		return
 	}
-	// Normalize against the persisted signed command, never the claimed payload.
-	// Both the first ACK and an idempotent retry get the same classification.
+	// Нормализуйте по сохранённой подписанной команде, а не заявленной полезной
+	// нагрузке. Первый ACK и идемпотентный повтор должны получать одинаковую
+	// классификацию.
 	status = classifyBridgeControlOutcome0411(current, status, result)
 	terminal := current.Status == "accepted" || current.Status == "executed" || current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate"
 	if !terminal {
@@ -620,8 +622,9 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": "acknowledged", "commandId": completed.ID, "commandStatus": completed.Status, "deliverySequence": completed.DeliverySequence}})
 }
 
-// A signed ServerBridge command cannot remain executable after its specific
-// PostgreSQL delivery lease ends, even if the logical command expiry is later.
+// Подписанная команда ServerBridge не может оставаться исполнимой после завершения
+// её конкретной аренды доставки PostgreSQL, даже если логический срок команды ещё
+// не истёк.
 func controlWireExpiry0285(cmd model.ServerBridgeControlCommand) int64 {
 	expires := cmd.ExpiresAt.UnixMilli()
 	if cmd.LeaseUntil.IsZero() {
@@ -674,8 +677,9 @@ func (b *serverBridgeStore) createControl0195(c model.ServerBridgeControlCommand
 	return c, false, nil
 }
 
-// A lost ACK does not prove the game command was not applied. In particular,
-// never re-lease work that has already been delivered to any runtime/channel.
+// Потерянный ACK не доказывает, что игровая команда не была выполнена. В
+// частности, никогда не переарендуйте задание, уже доставленное любому Runtime или
+// каналу.
 func reconcileControlInMemory0285(c model.ServerBridgeControlCommand, now time.Time) model.ServerBridgeControlCommand {
 	if c.Status == "leased" && (!c.LeaseUntil.After(now) || !c.ExpiresAt.After(now)) {
 		c.Status = "indeterminate"
@@ -803,9 +807,9 @@ func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, ru
 	return c, nil
 }
 
-// In-memory mode follows the same late-receipt policy as PostgreSQL.
-// Only a synthetic lease-loss transition is reversible; an actual agent
-// indeterminate result is immutable.
+// Режим памяти применяет ту же политику запоздалых квитанций, что PostgreSQL.
+// Обратим только синтетический переход потери аренды; фактический
+// неопределённый результат агента неизменяем.
 func recoverableControlLease0412(c model.ServerBridgeControlCommand) bool {
 	if c.Status != "indeterminate" || len(c.Result) != 0 || c.LeaseOwner == "" || c.LeaseToken == "" {
 		return false

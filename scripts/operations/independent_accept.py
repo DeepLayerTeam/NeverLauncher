@@ -58,8 +58,8 @@ def sha(path: Path) -> str:
 
 
 def actor(primary: str) -> str:
-    # Login identity from kernel session or sudo-origin, NOT a command-line
-    # assertion of the independent operator's username.
+    # Идентичность входа берётся из сессии ядра или источника sudo, а НЕ из
+    # утверждения имени независимого оператора в командной строке.
     real_user = pwd.getpwuid(os.getuid()).pw_name
     sudo_user = os.environ.get('SUDO_USER', '') if os.geteuid() == 0 else ''
     if os.geteuid() == 0:
@@ -155,8 +155,8 @@ def checked_env(env, version, mode, url):
 
 
 def assert_fresh_compose_project(project: str):
-    # A lost installer state file does not make a previously used PostgreSQL
-    # volume a clean installation. Do not accept/adopt foreign Compose data.
+    # Потерянный файл состояния установщика не превращает ранее использованный
+    # том PostgreSQL в чистую установку. Не принимайте чужие данные Compose.
     for kind, scope in (('ps', 'container'), ('volume', 'volume')):
         args = (['docker', 'ps', '-a'] if kind == 'ps' else ['docker', 'volume', 'ls'])
         args += ['--filter', 'label=com.docker.compose.project=' + project,
@@ -262,8 +262,9 @@ def accept_upgrade(args):
     checked_env(args.source_env, args.from_version, 'standard', args.url)
     checked_env(args.target_env, args.to_version, 'standard', args.url)
     ensure(args.from_version != args.to_version, 'source and target versions must differ')
-    # Production component updater builds real images, takes PostgreSQL/blobs
-    # checkpoint and performs verified rollback of earlier images on failure.
+    # Промышленный обновлятор компонентов собирает настоящие образы, создаёт
+    # контрольную точку PostgreSQL/бинарных объектов и выполняет проверенный откат
+    # прежних образов при ошибке.
     output = invoke([sys.executable, str(UPGRADE), 'standard', '--project', args.project,
                      '--confirm', args.confirm, '--source-env', str(args.source_env),
                      '--target-env', str(args.target_env), '--backup', str(args.snapshot),
@@ -312,9 +313,10 @@ def accept_restore(args):
         ensure(args.project_id == source['identity']['oldProjectId'],
                'restored project does not match upgrade source')
     except Exception:
-        # A correct PostgreSQL restore with a failed owner/project readback is
-        # NOT safe to expose as an accepted replacement. Stop public ingress
-        # AND API to avoid unattended writes until an operator diagnoses it.
+        # Даже корректно восстановленный PostgreSQL при неудачном повторном чтении
+        # владельца и проекта НЕЛЬЗЯ открывать как принятую замену. Остановите
+        # публичный вход И API, предотвращая новые записи до расследования
+        # оператором.
         try:
             dr.compose(args.project, args.env_file, 'stop', '-t', '10',
                        'nginx', 'admin', 'api', timeout=45)
@@ -334,9 +336,10 @@ def accept_failover(args):
            'destructive failover only allowed in isolated nl-dr-* projects')
     checked_env(args.env_file, args.version, 'network-ha', args.url)
     ensure(args.version == VERSION, 'failover test must use matching source release')
-    # The chaos script enforces loopback ingress/S3, checks actual Docker
-    # container identity, interrupts PostgreSQL/Redis/S3/API/network, checks
-    # acknowledged canaries and restores services in finally blocks.
+    # Скрипт хаос-тестов требует локальный вход/S3, проверяет настоящую
+    # идентичность контейнера Docker, прерывает PostgreSQL/Redis/S3/API/сеть,
+    # проверяет подтверждённые контрольные записи и восстанавливает службы в
+    # finally.
     with tempfile.TemporaryDirectory(prefix='nl-04514-chaos-') as tmp:
         path = Path(tmp) / 'chaos.json'
         ran = invoke([sys.executable, str(CHAOS), '--project', args.project,
@@ -363,7 +366,8 @@ def accept_verify(args):
         ('install-standard', args.install_receipt), ('upgrade-standard', args.upgrade_receipt),
         ('restore-standard', args.restore_receipt), ('failover-network-ha', args.failover_receipt))}
     inst, upgrade, restore, fail = (records[name] for name in records)
-    # Fresh install and previous-version upgrade may run on separate source hosts.
+    # Свежая установка и обновление предыдущей версии могут выполняться на отдельных
+    # исходных хостах.
     ensure(restore['machineFingerprint'] != upgrade['machineFingerprint'], 'restore reused original host')
     ensure(restore['sourceHostFingerprint'] == upgrade['machineFingerprint'], 'restore source mismatch')
     ensure(restore['sourceReceiptSha256'] == sha(args.upgrade_receipt), 'restore does not bind exact upgrade receipt')
@@ -473,7 +477,7 @@ def main(argv=None):
         print(json.dumps({'status': 'passed', 'stage': args.stage, 'receipt': str(args.report)}, ensure_ascii=False))
         return 0
     except (Rejected, live.AcceptanceError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
-        # Paths, argv, secret credentials, env and private backend bodies are never emitted.
+        # Пути, argv, секреты, окружение и закрытые тела ответов backend никогда не выводятся.
         print(json.dumps({'status': 'failed', 'stage': args.stage,
                           'reason': str(exc) if isinstance(exc, Rejected) else 'operational verification failed'},
                          ensure_ascii=False), file=sys.stderr)

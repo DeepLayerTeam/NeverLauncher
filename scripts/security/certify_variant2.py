@@ -23,8 +23,9 @@ TIERS = ("offline", "backend-security", "linux-live", "windows-live")
 
 def source_fingerprint():
     sha = hashlib.sha256()
-    # Git's index is the canonical source list in release CI. This avoids
-    # fingerprinting generated test output or user-supplied evidence.
+    # Индекс Git — канонический список исходников в CI выпуска. Это исключает
+    # вычисление отпечатка сгенерированных результатов тестов или доказательств,
+    # переданных пользователем.
     try:
         names = subprocess.check_output(
             ["git", "ls-files", "-z"], cwd=ROOT, stderr=subprocess.DEVNULL

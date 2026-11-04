@@ -1,7 +1,8 @@
-# Only enabled by the production deploy CLI when the isolated acceptance
-# namespace and all three externally provisioned private files are present.
-# Docker mount ownership: the Backend runs as uid=10001 and MUST be able to
-# read the 0600 trust files. Not suitable as a generic production override.
+# Включается промышленным CLI развёртывания только при наличии изолированного
+# пространства приёмки и всех трёх внешних закрытых файлов. Владение
+# монтированиями Docker: Backend работает с uid=10001 и ОБЯЗАТЕЛЬНО должен
+# читать доверенные файлы с правами 0600. Не подходит как универсальное
+# переопределение для промышленной среды.
 services:
   api:
     environment:

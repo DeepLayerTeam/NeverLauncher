@@ -65,8 +65,8 @@ func (r *Repository) ListReleases(ctx context.Context, projectID string) (out []
 	return
 }
 
-// CreateDraft freezes the profile revision before any release file/editing
-// operations; a concurrent profile update cannot alter the signed identity.
+// CreateDraft фиксирует ревизию профиля до любых файловых операций релиза;
+// параллельное изменение профиля не может изменить подписанную идентичность.
 func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, channel, version, actor string) (out model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
 		return out, errors.New("draft mutation requires audit actor")
@@ -151,8 +151,9 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	if len(roots) == 0 {
 		return errors.New("production release requires configured trusted Ed25519 root")
 	}
-	// A signed draft is not a runnable production release. Enforce the
-	// minimum executable metadata before writing the published channel head.
+	// Подписанный черновик не является запускаемым промышленным релизом. Перед
+	// записью опубликованного head канала требуйте минимальные исполняемые
+	// метаданные.
 	if strings.TrimSpace(m.Minecraft.Version) == "" || m.Runtime.Java.MajorVersion == 0 || (m.Runtime.Launch.MainClass == "" && m.Minecraft.MainClass == "") {
 		return errors.New("cannot publish incomplete Minecraft/runtime launch metadata")
 	}
@@ -192,10 +193,10 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	return model.ValidateManifestSchema(m)
 }
 
-// PublishDraft checks the trusted signature (not merely its presence), uses
-// a revision CAS and atomically moves channel head + publishes + appends audit.
-// The caller must enforce authorization and product-specific launch/trust checks
-// before calling; this DB method enforces cryptographic and storage invariants.
+// PublishDraft проверяет доверенную подпись, а не её наличие, использует CAS ревизии
+// и атомарно продвигает head канала, публикует и добавляет запись аудита. Вызывающий
+// обязан до вызова обеспечить авторизацию и специфичные для продукта проверки запуска
+// и доверия; метод БД обеспечивает криптографические и хранилищные инварианты.
 func (r *Repository) PublishDraft(ctx context.Context, projectID, releaseID string, expectedHeadRevision int64, roots []ed25519.PublicKey, actor string) (out model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
 		return out, errors.New("actor required")
@@ -222,7 +223,8 @@ func (r *Repository) PublishDraft(ctx context.Context, projectID, releaseID stri
 		if rev != expectedHeadRevision {
 			return ErrConflict
 		}
-		// Channel head pointer uses the hash of the exact persisted signed JSON.
+		// Указатель head канала использует хеш точного сохранённого подписанного
+		// JSON.
 		raw, e := json.Marshal(current.Manifest)
 		if e != nil {
 			return e
@@ -290,8 +292,8 @@ func (r *Repository) GetChannelHead(ctx context.Context, projectID, profileID, c
 	return
 }
 
-// Published reads fail closed if the signed release and immutable channel
-// pointer do not verify against the supplied trusted roots.
+// Опубликованные чтения отказывают по умолчанию, если подписанный релиз и
+// неизменяемый указатель канала не проходят проверку доверенными корнями.
 func (r *Repository) Published(ctx context.Context, projectID, profileID, channel string, roots []ed25519.PublicKey) (out model.ReleaseVersion, err error) {
 	err = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		var digest, raw string

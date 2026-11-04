@@ -10,9 +10,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// Runtime components are stored in the SAME SQLite WAL file as the HTTP
-// repository, under its exclusive process lock. Each component is committed
-// synchronously before its caller may report success.
+// Компоненты Runtime хранятся в ТОМ ЖЕ файле SQLite WAL, что и HTTP-репозиторий,
+// под его эксклюзивной блокировкой процесса. Каждый компонент фиксируется
+// синхронно до сообщения вызывающему об успехе.
 const sqliteRuntimeDDL0373 = `CREATE TABLE IF NOT EXISTS http_runtime_components_0373 (
  component TEXT PRIMARY KEY,
  format_version INTEGER NOT NULL CHECK(format_version=1),

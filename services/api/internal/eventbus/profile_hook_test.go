@@ -8,7 +8,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Exercises the actual durable Go bus, subscription scope and veto semantics.
+// Проверяет настоящий устойчивый Go EventBus, область подписки и семантику
+// запрета.
 func TestProfileBeforeSaveVeto0495(t *testing.T) {
 	_, bus := eventRepo0206(t)
 	ctx := context.Background()

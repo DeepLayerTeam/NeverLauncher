@@ -188,8 +188,8 @@ func (r *SQLRepository) ListProfiles(projectID string) ([]model.Profile, error) 
 	return result, rows.Err()
 }
 
-// SaveProfile atomically writes both the mutable head and append-only history.
-// The caller's nonzero revision is a compare-and-swap precondition.
+// SaveProfile атомарно записывает изменяемый head и историю только с добавлением.
+// Ненулевая ревизия вызывающего является предусловием CAS.
 func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 	if err := r.check(); err != nil {
 		return model.Profile{}, err
@@ -209,8 +209,9 @@ func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 		return model.Profile{}, err
 	}
 	defer tx.Rollback()
-	// INSERT initially serializes concurrent first-writers on the unique index.
-	// No overwriting on conflict; a subsequent SELECT FOR UPDATE handles updates.
+	// При первичной вставке конкурирующие писатели сериализуются уникальным индексом.
+	// При конфликте перезапись запрещена; последующий SELECT FOR UPDATE обрабатывает
+	// обновления.
 	now := time.Now().UTC()
 	res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,loader_version,java_major)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,'2.0',1,$9,$10,$11,$12) ON CONFLICT (project_id,id) DO NOTHING`, p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Digest, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor)
@@ -261,9 +262,10 @@ func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 	return actual, nil
 }
 
-// CurrentProfileSnapshot reads the mutable head and the matching immutable
-// history revision in one PostgreSQL statement. If history is corrupt/missing,
-// release creation fails closed instead of snapshotting untracked metadata.
+// CurrentProfileSnapshot читает изменяемый head и соответствующую неизменяемую
+// ревизию истории одним запросом PostgreSQL. При повреждённой или отсутствующей
+// истории создание релиза отказывает по умолчанию, не делая снимок непроверенных
+// метаданных.
 func (r *SQLRepository) CurrentProfileSnapshot(projectID, profileID string) (model.ProfileSnapshot, error) {
 	if err := r.check(); err != nil {
 		return model.ProfileSnapshot{}, err
@@ -552,9 +554,9 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 	if err != nil {
 		return model.User{}, err
 	}
-	// Update only changed bindings. A security trigger revokes sessions on
-	// real role changes, so delete-and-reinsert of identical bindings would
-	// otherwise log users out on an unrelated profile update.
+	// Обновляйте только изменённые привязки. Триггер безопасности отзывает сеансы
+	// при реальных изменениях ролей; удаление и повторная вставка идентичных
+	// связей иначе выходили бы из аккаунта при несвязанном обновлении профиля.
 	if _, err = tx.Exec(`DELETE FROM project_user_roles WHERE user_id=$1 AND NOT (project_id = ANY(SELECT jsonb_object_keys($2::jsonb)))`, user.ID, string(projectRoles)); err != nil {
 		return model.User{}, err
 	}
@@ -1041,8 +1043,8 @@ func (r *SQLRepository) CreateVersion(projectID, profileID, channel, version str
 	return r.saveRelease(model.ReleaseVersion{ID: fmt.Sprintf("%s-%s-%s", projectID, profileID, version), ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, Status: "draft", Manifest: manifest, PublishedAt: now})
 }
 
-// CreateVersionV3 writes a v3 draft directly. No v2->v3 UPDATE is performed:
-// the database snapshot immutability trigger remains effective.
+// CreateVersionV3 непосредственно записывает черновик v3. UPDATE v2->v3 не
+// выполняется: триггер неизменяемости снимка БД продолжает действовать.
 func (r *SQLRepository) CreateVersionV3(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
 	if profileID == "" {
 		profileID = "vanilla"
@@ -1144,7 +1146,7 @@ func (r *SQLRepository) PublishVersionWithManifestCAS(projectID, profileID, chan
 	if currentStatus == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
 	}
-	// Serialize even the first insert into a previously empty channel.
+	// Сериализуйте даже первую вставку в ранее пустой канал.
 	var projectLock string
 	if err := tx.QueryRow(`SELECT id FROM projects WHERE id=$1 FOR UPDATE`, projectID).Scan(&projectLock); err != nil {
 		return model.ReleaseVersion{}, err
@@ -1174,7 +1176,7 @@ func (r *SQLRepository) PublishVersionWithManifestCAS(projectID, profileID, chan
 		ON CONFLICT (project_id, id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, protected = EXCLUDED.protected`, channel, projectID, channel, "Канал релиза", channel == "stable"); err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	// Release and channel pointer advance together, not in separate commits.
+	// Релиз и указатель канала продвигаются совместно, одной фиксацией.
 	digest := sha256.Sum256(manifestRaw)
 	if currentRevision == 0 {
 		_, err = tx.Exec(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest,updated_at) VALUES($1,$2,$3,1,$4,$5,$6,$7)`, projectID, profileID, channel, releaseID, version, hex.EncodeToString(digest[:]), now)
@@ -1958,8 +1960,8 @@ func (r *SQLRepository) ConsumeMinecraftJoin(username, serverID, expectedSession
 	return item, err
 }
 
-// Close releases the underlying connection pool. Operators and integration
-// tests must close repository instances rather than leaking PostgreSQL sessions.
+// Close освобождает базовый пул соединений. Операторы и интеграционные тесты обязаны
+// закрывать экземпляры репозитория, не оставляя сеансы PostgreSQL.
 func (r *SQLRepository) Close() error {
 	if r == nil {
 		return nil

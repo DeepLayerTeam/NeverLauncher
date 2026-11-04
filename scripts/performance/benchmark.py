@@ -160,8 +160,8 @@ class ProcessMonitor:
             raise RuntimeError("process exited before CPU/RAM could be sampled")
         cpu = [x["cpuSeconds"] for x in self.samples]
         delta = max(cpu) - min(cpu)
-        # CPU percentage is expressed in units of one logical CPU (100% per core).
-        # A multithreaded process can legitimately exceed 100%.
+        # Процент загрузки CPU измеряется в единицах одного логического процессора
+        # (100% на ядро). Многопоточный процесс может закономерно превышать 100%.
         return {
             "peakRssBytes": max(x["rssBytes"] for x in self.samples),
             "sampledCpuSeconds": delta,
@@ -283,7 +283,8 @@ def verify_10k(
     for n in range(count):
         relative = f"libraries/benchmark/{n:05d}.jar"
         path = root / relative
-        # 4 KiB of deterministic non-compressible-looking fixture data per file.
+        # По 4 КиБ детерминированных тестовых данных, выглядящих несжимаемыми, на
+        # файл.
         block = hashlib.shake_256(f"launcher-bench-{n}".encode()).digest(4096)
         path.write_bytes(block)
         entries.append(
@@ -435,8 +436,9 @@ def benchmark_download(
     if size_mib < 1 or repetitions < 1:
         raise ValueError("invalid download size or repetitions")
     size = size_mib * MIB
-    # One installed copy plus the content-addressed native cache may coexist.
-    # Reject unsafe disk pressure instead of filling a production volume.
+    # Одна установленная копия может сосуществовать с нативным кэшем с адресацией
+    # по содержимому. Отклоняйте опасную нагрузку на диск вместо заполнения
+    # промышленного тома.
     available = shutil.disk_usage(work).free
     if available < int(size * 2.5) + 128 * MIB:
         raise RuntimeError(
@@ -458,7 +460,8 @@ def benchmark_download(
             ),
         )
         for index in range(repetitions):
-            # Fresh root and cache to ensure a full network download, not OS/app cache only.
+            # Новый корень и пустой кэш гарантируют полную сетевую загрузку, а не только чтение
+            # из кэша ОС/приложения.
             root = work / f"game-{index}"
             env = isolated_env(work / f"cache-{index}")
             wire_before = server.transferred
@@ -484,7 +487,7 @@ def benchmark_download(
                 or output.stat().st_size != size
             ):
                 raise RuntimeError("native download did not publish expected file")
-            # Independent digest, not merely relying on native ready flag.
+            # Независимый дайджест, без опоры только на нативный флаг ready.
             if hash_file(output) != digest:
                 raise RuntimeError("independent SHA-256 mismatch on downloaded file")
             if wire < size or wire > size * 1.05:
@@ -499,7 +502,8 @@ def benchmark_download(
                     "throughputMiBPerSec": size_mib / (observed["elapsedMs"] / 1000),
                 }
             )
-            # Real warm update against the exact installed release, must avoid HTTP downloads.
+            # Настоящее тёплое обновление точно установленного выпуска должно обходиться без
+            # HTTP-загрузок.
             warm_before = server.transferred
             warm, warm_data = run_native(
                 [
@@ -520,7 +524,8 @@ def benchmark_download(
                     "warm native update transferred network bytes or failed"
                 )
             rows[-1]["warmUpdate"] = {**warm, "wireBytes": 0}
-            # Keep 10 GiB runs sequential and bounded in disk space.
+            # Запуски с 10 ГиБ выполняйте последовательно с ограничением использования
+            # диска.
             shutil.rmtree(root)
             shutil.rmtree(work / f"cache-{index}")
     return {

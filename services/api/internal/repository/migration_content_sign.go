@@ -13,9 +13,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// VerifyMigrationContentBeforeSign0337 is a last-mile guard: a migrated build
-// can only be signed if it contains the exact source-vetted bytes and a
-// completed optional catalog. Other (non-migration) releases are unaffected.
+// VerifyMigrationContentBeforeSign0337 — последняя граница: мигрированную сборку
+// можно подписать только с точными проверенными байтами источника и завершённым
+// каталогом необязательных компонентов. Прочие релизы вне миграции не
+// затрагиваются.
 func (r *SQLRepository) VerifyMigrationContentBeforeSign0337(ctx context.Context, projectID, packageID string, manifest model.Manifest) error {
 	if e := r.check(); e != nil {
 		return e
@@ -85,8 +86,8 @@ func checkMigrationContentSign0337(p gc.Plan, m model.Manifest) error {
 	return nil
 }
 
-// A signed content release cannot assert a safe launch migration while the
-// pinned module assessment is missing or contains unreviewed executable JARs.
+// Подписанный релиз содержимого не может заявлять безопасный перенос запуска, если
+// нет закреплённой оценки модулей или имеются непроверенные исполняемые JAR.
 func verifyModuleRelease0338(plan gc.Plan, report gm.Report) error {
 	if report.Format != gm.Format || report.SourceSHA256 != plan.SourceSHA256 || report.InventorySHA256 != plan.InventorySHA256 ||
 		!report.Ready || len(report.Blockers) > 0 || report.CutoverAllowed {

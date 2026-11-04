@@ -6,10 +6,10 @@ import (
 	"fmt"
 )
 
-// enforceCLITrust04312 checks the *current* installation, publisher and
-// capability grant, not the permissions captured when the command started.
-// Both RunCLI and the process monitor use it. A failed repository read is a
-// denial, never an implicit grant.
+// enforceCLITrust04312 проверяет ТЕКУЩУЮ установку, издателя и грант
+// возможностей, а не права в момент запуска команды. Его используют и RunCLI, и
+// монитор процесса. Ошибка чтения репозитория означает отказ, никогда не неявное
+// разрешение.
 func (s *Supervisor) enforceCLITrust04312(ctx context.Context, st *processState) error {
 	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
 		return err

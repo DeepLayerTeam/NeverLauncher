@@ -6,9 +6,10 @@ import (
 	"time"
 )
 
-// This is a *maximum* capability policy for signed node claims, not proof that
-// a specific Minecraft build passed runtime certification. Absent capabilities
-// never become implicit permissions. ServerBridge v3's wire protocol is unchanged.
+// Это политика МАКСИМАЛЬНЫХ возможностей для подписанных заявлений узла, а не
+// доказательство прохождения сертификации Runtime конкретной сборкой Minecraft.
+// Отсутствующие возможности не превращаются в неявные разрешения. Wire-протокол
+// ServerBridge v3 не меняется.
 var serverBridgeFamilies0286 = map[string]string{
 	"velocity": "proxy", "bungeecord": "proxy", "waterfall": "proxy",
 	"bukkit": "bukkit", "spigot": "bukkit", "paper": "bukkit", "purpur": "bukkit", "folia": "bukkit",
@@ -81,8 +82,8 @@ func verifyAdapterCapabilities0286(platform, serverBrand string, capabilities []
 		if !serverBridgeAdapterCaps0286[c] {
 			return fmt.Errorf("serverbridge_adapter_capability_unknown")
 		}
-		// An adapter can advertise a subset, but never a privilege that its
-		// actual command handler / hook does not implement.
+		// Адаптер может объявить подмножество возможностей, но никогда привилегию,
+		// которую не реализует его фактический обработчик команд или hook.
 		switch {
 		case c == "adapter.auth.login-gate" && platform == "vanilla":
 			return fmt.Errorf("serverbridge_adapter_login_gate_not_supported")
@@ -107,9 +108,9 @@ func verifyAdapterCapabilities0286(platform, serverBrand string, capabilities []
 	return nil
 }
 
-// Authorize a command only against the last authenticated, signed runtime
-// identity of the current node. Unknown or legacy/no-capability runtimes are
-// not treated as full-featured adapters.
+// Разрешайте команду только по последней аутентифицированной подписанной
+// идентичности Runtime текущего узла. Неизвестные и устаревшие Runtime без
+// объявленных возможностей не считаются полнофункциональными адаптерами.
 func serverBridgeNodeAllowsControl0286(node bridgeServerRecord, commandType string) bool {
 	required, ok := serverBridgeControlCaps0286[commandType]
 	if !ok || node.RuntimeEpoch < 1 || strings.TrimSpace(node.RuntimeID) == "" {

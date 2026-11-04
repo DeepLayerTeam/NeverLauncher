@@ -58,7 +58,8 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 	}
 	begin := deviceTrustData0121(t, body)
 	completePath := "/api/v1/auth/devices/" + lost.ID + "/key-recovery/complete"
-	// A wrong new-key signature consumes the challenge but cannot claim the tombstone.
+	// Неверная подпись нового ключа расходует запрос, но не может присвоить отозванную
+	// идентичность.
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, completePath, freshAccess, map[string]any{
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(lost.Private, []byte(begin["signingPayload"].(string)))),
 	})

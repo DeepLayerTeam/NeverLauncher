@@ -158,7 +158,8 @@ fn load(root:&Path)->Result<Option<Verified>,String>{
 }
 /// Проверенная политика оператора с ограниченной областью действия,
 // доступная только нативному мосту Trusted JVM.
-/// Artifacts are SHA-256 checked again immediately before spawn.
+/// Артефакты повторно проверяются по SHA-256 непосредственно перед запуском
+/// процесса.
 pub struct GamePolicy0503 { policy:Policy, digest:String }
 impl GamePolicy0503 {
  /// Возвращайте только независимо подписанные и проверенные исполняемые артефакты для контроля

@@ -118,7 +118,7 @@ def write_receipt(path, result):
 
 
 def operator(primary):
-    # Do not accept an arbitrary --reviewer string in lieu of the OS identity.
+    # Не принимайте произвольную строку --reviewer вместо идентичности ОС.
     require(bool(IDENTITY.fullmatch(primary or '')), 'valid publisher/primary operator is required')
     name = pwd.getpwuid(os.getuid()).pw_name
     if os.geteuid() == 0:
@@ -302,7 +302,8 @@ def stage(args):
         require(outcome.get('status') == 'PASS', 'real chaos command failed')
         details = verify_suite(home, nodes, args.iterations)
     elif args.stage == 'rolling':
-        # Before rolling, require N-1 processes; mixed initial state is not a fresh GA run.
+        # Перед поэтапным обновлением требуйте N-1 работающих процессов; смешанное исходное
+        # состояние не является свежим испытанием GA.
         before = observe(args, expected='0.51.10')
         require(args.allow_update, 'explicit --allow-update required for real OCI rollout')
         roll_path = target.with_name(target.name + '.rolling.json')
@@ -314,8 +315,8 @@ def stage(args):
             *sum((['--node', node] for node in args.node), [])], 3600, json_output=False)
         details = validate_rolling(roll_path, nodes)
     elif args.stage == 'recovery':
-        # Recovery must have actually been performed via 0.51.9 prepare/replay/admit,
-        # on *new* physical hosts, with the old cluster separately fenced.
+        # Восстановление должно действительно пройти этапы 0.51.9 prepare/replay/admit на
+        # НОВЫХ физических хостах, а старый кластер должен быть отдельно изолирован.
         before = observe(args, expected=VERSION)
         details = validate_recovery(Path(args.recovery_work), args.maximum_rto,
                                     args.maximum_sample_rpo, nodes)
@@ -347,7 +348,7 @@ def validate_stage_receipts(files, *, commit, publisher):
                 IDENTITY.fullmatch(data['operator']) is not None and
                 isinstance(data.get('liveCluster'), (dict, type(None))),
                 'invalid independent operator receipt')
-        # Observer machine IDs in inventory are shortened host fingerprints.
+        # ID машин-наблюдателей в инвентаризации — сокращённые отпечатки хостов.
         require(isinstance(data.get('observerMachine'), str) and
                 data['observerMachine'].startswith('machine:'), 'missing observer host fingerprint')
         machine = machine or data['observerMachine']
@@ -358,7 +359,8 @@ def validate_stage_receipts(files, *, commit, publisher):
 
 
 def final_bundle(args):
-    # Actual release directory is inspected again, not taken from the receipt.
+    # Фактический каталог выпуска проверяется повторно, а не принимается из
+    # сохранённых сведений.
     from delivery_verify_0462 import verify_bundle
     bundle = Path(args.bundle)
     require(bundle.is_absolute(), 'final download directory must be absolute')

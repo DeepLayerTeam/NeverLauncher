@@ -2,9 +2,10 @@ package repository
 
 import "gitflic.ru/skif4er/launcher/services/api/internal/model"
 
-// Memory repository must not return aliases to immutable release snapshots.
-// The production PostgreSQL repository materializes JSON on each read;
-// memory mode needs the same isolation to avoid test/dev-only bypasses.
+// Репозиторий памяти не должен возвращать псевдонимы вместо неизменяемых снимков
+// релизов. Промышленный PostgreSQL материализует JSON при каждом чтении; режим
+// памяти нуждается в такой же изоляции для исключения обходов только в тестах
+// или разработке.
 func cloneManifest0222(m model.Manifest) model.Manifest {
 	if m.ComponentCatalog != nil {
 		original := m.ComponentCatalog

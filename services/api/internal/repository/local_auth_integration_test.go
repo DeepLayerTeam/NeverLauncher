@@ -14,8 +14,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
 )
 
-// A disposable PostgreSQL database proves atomic import, live identity lookup,
-// immutable game UUID, rollback, and CAS without any mocked SQL database.
+// Одноразовая БД PostgreSQL доказывает атомарность импорта, живой поиск
+// идентичностей, неизменяемость игрового UUID, откат и CAS без mock SQL.
 func TestFileAuthImportPostgres0295(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -37,7 +37,8 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 		t.Fatal(err)
 	}
 	account := fileauth.Account{UUID: uuid, Username: name, Email: name + "@fileauth.invalid", PasswordHash: hash}
-	// `UsernameEmail` normalizes case. This fixture uses only lowercase hex suffix.
+	// UsernameEmail нормализует регистр. Фикстура использует только суффикс hex в нижнем
+	// регистре.
 	account.Email, _ = fileauth.UsernameEmail(name)
 	key := "gravit-fileauth-" + "8af62031233343338333" + id
 	defer r.db.ExecContext(context.Background(), `DELETE FROM users WHERE id=$1`, key)
@@ -62,7 +63,8 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 	if err != nil || profile.UUID != uuid || profile.Name != name {
 		t.Fatalf("Minecraft UUID lost: %+v %v", profile, err)
 	}
-	// Second collision aborts whole batch. Earlier account remains unchanged.
+	// Вторая коллизия отменяет всю партию. Ранее созданный аккаунт остаётся
+	// неизменным.
 	other := fileauth.Account{UUID: "8af62031-2333-4333-8333-000000000099", Username: "Unused0099", Email: "unused0099@fileauth.invalid", PasswordHash: hash}
 	if _, err := r.ImportFileAuth0295(ctx, []fileauth.Account{other, account}, false); err == nil {
 		t.Fatal("duplicate import unexpectedly accepted")

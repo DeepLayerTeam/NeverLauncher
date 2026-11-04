@@ -12,7 +12,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Check the operator's mapping before we ever claim OS-isolated execution.
+// Проверяйте соответствие оператора до любого утверждения об исполнении с
+// изоляцией ОС.
 func (s *Supervisor) validateSharedRoots03110(policy *model.ExtensionSandboxPolicy) error {
 	if policy == nil || policy.Mode != "isolated" {
 		return nil
@@ -28,8 +29,8 @@ func (s *Supervisor) validateSharedRoots03110(policy *model.ExtensionSandboxPoli
 		if s.sharedRoots[name] == "" {
 			return fmt.Errorf("sandbox broker shared root %q not configured", name)
 		}
-		// Revalidate at launch and at every operation; a root that is replaced
-		// by a symlink does not silently gain access to another subtree.
+		// Повторно проверяйте при запуске и каждой операции: если корень заменён
+		// символьной ссылкой, доступ к другому поддереву не появляется незаметно.
 		raw, err := json.Marshal(map[string]string{name: s.sharedRoots[name]})
 		if err != nil {
 			return err
@@ -83,8 +84,9 @@ func (s *Supervisor) fileCapability03110(ctx context.Context, st *processState, 
 	return capabilityResult0205{status: http.StatusOK, value: map[string]any{"written": true}}
 }
 
-// The host transitions sandboxReady while HTTP capability requests are served.
-// Treat readiness as immutable per request and synchronize with lifecycle.
+// Хост переводит sandboxReady при обслуживании HTTP-запросов возможностей.
+// Готовность нужно считать неизменной в пределах запроса и синхронизировать с
+// жизненным циклом.
 func sandboxEnforced03110(st *processState) bool {
 	st.mu.Lock()
 	defer st.mu.Unlock()

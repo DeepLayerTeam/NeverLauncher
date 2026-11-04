@@ -28,8 +28,8 @@ func TestProviderRuntimeParity0296UpstreamCannotSatisfyNeverMFA(t *testing.T) {
 			}
 		})
 	}
-	// Without a local MFA requirement, the login can proceed but the signed
-	// Never session must remain single-factor, regardless of upstream amr.
+	// Без требования локальной MFA вход может продолжаться, но подписанный сеанс
+	// Never должен оставаться однофакторным независимо от внешнего amr.
 	if err := server.State.Passkeys.setPolicy(user.ID, mfaOptional117); err != nil {
 		t.Fatal(err)
 	}

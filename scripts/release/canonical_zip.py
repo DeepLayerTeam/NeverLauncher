@@ -62,8 +62,8 @@ def write_zip(root: Path, output: Path, members: list[tuple[str, str]]) -> None:
     normalized = sorted((safe_member(arc), rel) for rel, arc in members)
     if len({arc for arc, _ in normalized}) != len(normalized):
         raise ValueError('duplicate release archive member')
-    # Production source-package places output in ROOT/dist; that is safe if
-    # the output itself is not an input to the same archive.
+    # Промышленная упаковка исходников складывает результат в ROOT/dist; это
+    # безопасно, пока этот результат не входит во входные данные того же архива.
     if any((root / rel).resolve() == output.resolve() for _, rel in normalized):
         raise ValueError('release archive cannot contain itself')
     output.parent.mkdir(parents=True, exist_ok=True)

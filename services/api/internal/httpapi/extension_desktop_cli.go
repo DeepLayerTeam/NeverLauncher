@@ -297,8 +297,9 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		}
 		respond(result, callErr)
 	case "bridge.authorize":
-		// Unlike the catalog's UI hint, this is checked for every native action.
-		// Revocation, disabling the extension or replacing its version fails closed.
+		// В отличие от подсказки каталога, это проверяется для каждого нативного
+		// действия. Отзыв, отключение расширения или смена его версии приводят к отказу
+		// по умолчанию.
 		var p struct {
 			Version    string `json:"version"`
 			Generation int64  `json:"generation"`

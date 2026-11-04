@@ -17,8 +17,8 @@ func TestV07FailClosedRealProviderAttestation(t *testing.T) {
 	if err := verifyValidation0345(signed, public); err != nil {
 		t.Fatal(err)
 	}
-	// A correctly signed mock, skipped, inconclusive or missing provider
-	// result must not certify the staged runtime.
+	// Даже корректно подписанный результат mock, skipped, inconclusive или
+	// отсутствие результата провайдера не сертифицирует подготовленный Runtime.
 	for _, status := range []string{"mock", "inconclusive", "blocked", "failed", "skipped", ""} {
 		t.Run("stage-"+status, func(t *testing.T) {
 			changed := signed
@@ -76,6 +76,7 @@ func TestV07MissingAuthTargetAndAuthStageRejected(t *testing.T) {
 	if err := validateStagedRunReport0342(grant, report); err != nil {
 		t.Fatalf("auth stage digest diagnostic rejected: %v", err)
 	}
-	// Untrusted staged report never directly certifies a release; only the
-	// separately pinned attestor's v4 evidence can enter the trust store.
+	// Недоверенный staging-отчёт никогда непосредственно не сертифицирует релиз;
+	// в доверенное хранилище могут попадать только свидетельства v4 отдельно
+	// закреплённого аттестатора.
 }

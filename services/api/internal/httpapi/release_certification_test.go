@@ -8,8 +8,9 @@ import (
 	"testing"
 )
 
-// An HTTP end-to-end conversion must go through auth, preview and atomic
-// persistence. It must never create a profile for a blocked input or stale hash.
+// Сквозное HTTP-преобразование должно пройти авторизацию, предпросмотр и атомарное
+// сохранение. Оно не должно создавать профиль при заблокированном вводе или
+// устаревшем хеше.
 func TestGAHTTPGravitPreviewCommitAndConflict0230(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)

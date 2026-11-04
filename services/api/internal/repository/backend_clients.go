@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// Minecraft clients are active authorization sessions recently seen by the API.
-// A session does not prove the game process has a live TCP connection.
+// Minecraft-клиенты — активные авторизованные сеансы, недавно наблюдавшиеся API.
+// Наличие сеанса не доказывает живое TCP-соединение игрового процесса.
 type BackendMinecraftClient0289 struct {
 	SessionID       string    `json:"sessionId"`
 	UserID          string    `json:"userId"`

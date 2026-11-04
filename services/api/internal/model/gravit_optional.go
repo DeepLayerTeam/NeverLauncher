@@ -13,10 +13,10 @@ import (
 	"unicode"
 )
 
-// GravitOptionalMigration02411 is an owner-reviewable conversion, NEVER a
-// trusted release. Only a draft package's already hashed, optional-owned files
-// can be referenced. The normal catalog preview, CAS save and release signing
-// pipeline is mandatory after import.
+// GravitOptionalMigration02411 — преобразование для проверки владельцем, НИКОГДА не
+// доверенный релиз. Ссылаться можно только на уже захешированные файлы
+// необязательных компонентов черновика. После импорта обязательны обычные
+// предпросмотр каталога, CAS-сохранение и подпись релиза.
 type GravitOptionalMigration02411 struct {
 	Format       string                   `json:"format"`
 	SourceSHA256 string                   `json:"sourceSha256"`
@@ -62,10 +62,10 @@ func gravitInt02411(raw json.RawMessage) (int, bool) {
 	return n, e == nil && len(raw) > 0 && (raw[0] == '-' || (raw[0] >= '0' && raw[0] <= '9')) && !bytes.ContainsAny(raw, ".eE")
 }
 
-// ConvertGravitOptionalView02411 converts a Gravit ClientProfile's updateOptional
-// or an explicit OptionalFile array. No network/download, signing, permission
-// grants or foreign command execution occurs here. Unknown semantics are never
-// silently dropped: Ready=false and each incompatibility is enumerated.
+// ConvertGravitOptionalView02411 преобразует updateOptional из Gravit ClientProfile
+// либо явный массив OptionalFile. Здесь нет сети и загрузок, подписания, выдачи прав
+// или исполнения чужих команд. Неизвестная семантика не отбрасывается молча:
+// Ready=false, а несовместимости перечисляются.
 func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, signedFiles []ManifestFile) (GravitOptionalMigration02411, error) {
 	if len(source) == 0 || len(source) > 1<<20 {
 		return GravitOptionalMigration02411{}, errors.New("Gravit optional source must be 1 byte to 1 MiB")
@@ -96,7 +96,8 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 	if len(entries) > 4096 {
 		return out, errors.New("too many Gravit optional entries")
 	}
-	// Never overwrite existing components or retarget an existing file owner.
+	// Никогда не перезаписывайте существующие компоненты и не меняйте владельца
+	// существующего файла.
 	cat := base
 	cat.Components = append([]CatalogComponent0241(nil), base.Components...)
 	cat.Categories = append([]CatalogCategory0242(nil), base.Categories...)
@@ -417,8 +418,8 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					switch lower {
 					case "file", "classpath":
 						if lower == "classpath" {
-							// Gravit OptionalActionClassPath has args: List<String> and
-							// useAltClasspath. Never only supports the primary classpath.
+							// У Gravit OptionalActionClassPath есть args: List<String> и useAltClasspath.
+							// Never поддерживает только основной classpath.
 							for k := range a {
 								if k != "type" && k != "args" && k != "useAltClasspath" {
 									note(fld+"."+k, "blocked", "", "unknown classpath action attribute")

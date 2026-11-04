@@ -45,8 +45,8 @@ func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Re
 				continue
 			}
 			encountered[name] = true
-			// Translate signed condition names into a dedicated project role
-			// namespace. "premium" -> "component.premium"; prefixed
+			// Преобразуйте подписанные имена условий в отдельное пространство ролей
+			// проекта. premium переходит в component.premium; имена с префиксом
 			// Имена остаются неизменными. Утверждения о правах никогда не берутся из данных клиента.
 			action := name
 			if !strings.HasPrefix(action, "component.") {

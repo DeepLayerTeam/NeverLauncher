@@ -12,9 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
 )
 
-// A sandbox can be reported as isolated only after Started has confirmed that
-// the kernel applied its process identity and resource boundary. This is not
-// inferred from the manifest or the successful spawning of a bootstrapper.
+// Песочницу можно считать изолированной только после подтверждения Started, что
+// ядро применило идентичность процесса и границы ресурсов. Это нельзя выводить из
+// манифеста или успешного запуска bootstrapper.
 type extensionSandbox03111 struct {
 	Cmd     *exec.Cmd
 	linux   *linuxsandbox.Handle

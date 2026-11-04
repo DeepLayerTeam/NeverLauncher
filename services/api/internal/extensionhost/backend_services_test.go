@@ -14,8 +14,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// Exercises actual local authenticated Host Broker, real repository objects,
-// live capability revocation and cross-project isolation (not mock endpoints).
+// Проверяет настоящий локальный аутентифицированный Host Broker, реальные объекты
+// репозитория, живой отзыв возможностей и изоляцию проектов, а не фиктивные
+// маршруты.
 func TestJavaBackendServicesBroker0484(t *testing.T) {
 	ctx := context.Background()
 	repo := repository.NewMemoryRepository("http://example.test")
@@ -84,7 +85,7 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 		return res.StatusCode, response
 	}
 	for _, capability := range []string{"profile.list", "channel.list", "release.page", "job.get", "profile.get", "channel.get", "release.get"} {
-		// Some lookups require explicit entity identifiers.
+		// Для некоторых запросов нужны явные идентификаторы сущностей.
 		payload := map[string]any{"projectId": "demo-project", "offset": 0, "limit": 1, "name": "stable", "profileId": "vanilla"}
 		if capability == "job.get" {
 			payload["name"] = job.ID
@@ -132,7 +133,7 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 	if status, _ := request("profile.list", map[string]any{"projectId": "demo-project"}); status != http.StatusForbidden {
 		t.Fatalf("revoked project permission ignored: %d", status)
 	}
-	// release:read is independent of project:read.
+	// release:read не зависит от project:read.
 	if status, _ := request("channel.list", map[string]any{"projectId": "demo-project"}); status != 200 {
 		t.Fatalf("release grant lost after project revoke: %d", status)
 	}
@@ -142,7 +143,8 @@ func TestJavaBackendServicesBroker0484(t *testing.T) {
 	if status, _ := request("channel.list", map[string]any{"projectId": "demo-project"}); status != 403 {
 		t.Fatalf("revoked release permission ignored: %d", status)
 	}
-	// An explicitly global extension with an explicit global grant may enumerate.
+	// Расширение с явно глобальной областью и явным глобальным разрешением может
+	// перечислять проекты.
 	if _, err := repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: ext, Scope: "global", Permission: "project:read", GrantedBy: "test"}); err != nil {
 		t.Fatal(err)
 	}

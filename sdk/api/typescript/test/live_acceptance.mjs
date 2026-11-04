@@ -1,4 +1,4 @@
-// A real cross-language SDK probe, not a fetch() imitation of the client.
+// Настоящая межъязыковая проверка SDK, а не имитация клиента через fetch().
 import { NeverLauncherAPI } from '../dist/client.js';
 import { createHash } from 'node:crypto';
 const need = (name) => {const v = process.env[name]; if (!v) throw new Error(`missing live SDK setting ${name}`); return v;};

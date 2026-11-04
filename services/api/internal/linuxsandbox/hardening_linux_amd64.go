@@ -2,8 +2,8 @@
 
 package linuxsandbox
 
-// Constants from Linux x86_64 syscall ABI and AUDIT_ARCH_X86_64.
-// Keep the established amd64 policy unchanged when adding arm64.
+// Константы из ABI системных вызовов Linux x86_64 и AUDIT_ARCH_X86_64. При
+// добавлении arm64 сохраняйте существующую политику amd64.
 const (
 	sandboxAuditArch     uint32 = 0xc000003e
 	sandboxClone3Syscall uint32 = 435

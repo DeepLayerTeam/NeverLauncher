@@ -9,10 +9,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// StageTextureUpload0253 reserves a verified-in-memory normalized PNG digest
-// and charges the owner BEFORE writing any physical object. Failed uploads are
-// tracked as staging objects and can be reclaimed by the seven-day GC.
-// Selection revision is preflighted; the final CAS is still enforced on commit.
+// StageTextureUpload0253 резервирует хеш проверенного в памяти нормализованного PNG
+// и учитывает квоту владельца ДО физической записи. Неудачные загрузки отслеживаются
+// как staging-объекты и могут быть очищены GC через семь дней. Ревизия выбора
+// проверяется заранее; окончательный CAS по-прежнему обязателен при фиксации.
 func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile model.MinecraftProfile, input VerifiedTexture0252) error {
 	if err := r.check(); err != nil {
 		return err
@@ -107,9 +107,9 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 	if size != input.Size || driver != input.Driver || key != input.ObjectKey || (status != "verified" && status != "staging") {
 		return fmt.Errorf("staging digest conflict or GC in progress")
 	}
-	// Touch under the same row lock used by GC's SKIP LOCKED selector.
-	// A previously orphaned but verified digest must not be deleted while
-	// another authenticated user is uploading it again.
+	// Обновляйте отметку под той же блокировкой строки, что выборщик GC SKIP
+	// LOCKED. Ранее осиротевший, но проверенный хеш нельзя удалять, пока другой
+	// аутентифицированный пользователь загружает его вновь.
 	if _, err = tx.ExecContext(ctx, `UPDATE texture_blobs SET last_upload_at=now() WHERE digest=$1 AND status IN ('verified','staging')`, input.Digest); err != nil {
 		return err
 	}

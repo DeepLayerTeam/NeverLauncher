@@ -10,9 +10,10 @@ import (
 	"time"
 )
 
-// A one-commit, content-bound permit issued only after the API verifies each
-// required signed attestation. The database checks the referenced attestation
-// rows again under locks before changing a protected channel head.
+// Допуск на одну фиксацию, привязанный к содержимому, выдаётся только после
+// проверки API каждой обязательной подписанной аттестации. Перед изменением
+// защищённого head канала БД повторно проверяет связанные строки аттестации под
+// блокировками.
 type StableRuntimePermit03411 struct {
 	PackageID      string
 	ProjectID      string
@@ -55,8 +56,8 @@ func (r *SQLRepository) IssueStableRuntimePermit03411(ctx context.Context, p Sta
 	token := hex.EncodeToString(buf[:])
 	digest := sha256.Sum256([]byte(token))
 	now := time.Now().UTC()
-	// Expired permits have no operational value; persisted attestations and
-	// audit events retain the permanent history.
+	// Истёкшие допуски не имеют эксплуатационной ценности; сохранённые аттестации
+	// и события аудита удерживают постоянную историю.
 	if _, e = r.db.ExecContext(ctx, `DELETE FROM stable_runtime_permits_03411 WHERE expires_at < now()-interval '1 day'`); e != nil {
 		return "", e
 	}
@@ -68,8 +69,9 @@ func (r *SQLRepository) IssueStableRuntimePermit03411(ctx context.Context, p Sta
 	return token, nil
 }
 
-// PostgreSQL and SQLite use one-use, snapshot-bound stable grants. Direct
-// non-durable publish paths remain denied; durable jobs store the token.
+// PostgreSQL и SQLite используют одноразовые допуски stable, привязанные к
+// снимку. Прямые неустойчивые пути публикации остаются запрещёнными;
+// устойчивые задачи хранят токен.
 type stablePermitContextKey03411 struct{}
 
 func WithStablePermit03411(ctx context.Context, token string) context.Context {

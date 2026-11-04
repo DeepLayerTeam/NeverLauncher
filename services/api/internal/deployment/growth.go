@@ -20,8 +20,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// GrowthReport represents actual external dependency checks; it is NOT a
-// claim of completed multi-host failover certification.
+// GrowthReport отражает фактические проверки внешних зависимостей, но НЕ
+// удостоверяет завершённую сертификацию многохостового переключения после
+// отказа.
 type GrowthReport struct {
 	Mode        Mode      `json:"mode"`
 	PostgreSQL  bool      `json:"postgresql"`
@@ -30,9 +31,10 @@ type GrowthReport struct {
 	CheckedAt   time.Time `json:"checkedAt"`
 }
 
-// VerifyGrowth checks the real infrastructure BEFORE migrations, workers and
-// listeners start. It never falls back to local storage, memory or SQLite.
-// A second live Redis client and a second S3 client must see the same writes.
+// VerifyGrowth проверяет реальную инфраструктуру ДО запуска миграций, рабочих
+// процессов и слушателей. Он никогда не переходит на локальное хранилище, память
+// или SQLite. Второй живой клиент Redis и второй клиент S3 должны видеть те же
+// записи.
 func VerifyGrowth(ctx context.Context, cfg config.Config, plan Plan) (GrowthReport, error) {
 	r := GrowthReport{Mode: plan.Mode}
 	if plan.Mode != NetworkHA && plan.Mode != Standard {
@@ -63,8 +65,9 @@ func VerifyGrowth(ctx context.Context, cfg config.Config, plan Plan) (GrowthRepo
 	return r, nil
 }
 
-// Two separately pinned PostgreSQL sessions confirm that transaction-scoped
-// advisory fencing is shared, and that a released fence can be reclaimed.
+// Две отдельно закреплённые сессии PostgreSQL подтверждают общность
+// консультативной блокировки на время транзакции и возможность повторного
+// захвата освобождённой блокировки.
 func verifyPostgresGrowth(ctx context.Context, dsn string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

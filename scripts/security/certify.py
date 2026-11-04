@@ -152,8 +152,9 @@ def run_tier(tier):
         specs = OFFLINE
         env = os.environ.copy()
         if platform.system() != "Linux":
-            # The Linux fd-relative broker is platform-specific. The offline
-            # tier here is intentionally Linux-only, not a portable pass.
+            # Брокер Linux на относительных файловых дескрипторах специфичен для
+            # платформы. Этот автономный уровень намеренно работает только в Linux и не
+            # является переносимым подтверждением.
             return [
                 {
                     "status": "BLOCKED",

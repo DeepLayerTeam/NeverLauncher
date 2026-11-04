@@ -468,8 +468,8 @@ func ValidateProduction(cfg Config) error {
 		}
 	}
 
-	// Explicit single-node SQLite is mutually exclusive with distributed HA.
-	// Legacy production configurations retain their Redis/HA policy.
+	// Явно выбранная одноузловая SQLite несовместима с распределённым HA. Старые
+	// промышленные конфигурации сохраняют свою политику Redis/HA.
 	singleNode := strings.TrimSpace(cfg.SQLiteCoordinatorPath) != ""
 	if singleNode {
 		if !filepath.IsAbs(cfg.SQLiteCoordinatorPath) {

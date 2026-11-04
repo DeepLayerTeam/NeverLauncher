@@ -172,8 +172,8 @@ if 'const cliSchemaVersion = "1.0"' not in main_go:
     fail('cli/cmd/launcher/main.go: отсутствует canonical cliSchemaVersion = "1.0"')
 
 # Документация Markdown необязательна; проверяйте согласование версий только в работающем интерфейсе.
-# The Admin entrypoint only mounts the modular AdminApp. Validate its executable
-# component rather than requiring version code in the entrypoint's source.
+# Точка входа Admin лишь монтирует модульный AdminApp. Проверяйте исполняемый
+# компонент, а не требуйте код версии непосредственно в исходнике точки входа.
 if "<AdminApp" not in read("apps/admin/src/main.tsx"):
     fail("apps/admin/src/main.tsx must render the canonical versioned AdminApp")
 ui_files = ["apps/admin/src/admin/AdminApp.tsx", "apps/desktop/src/main.tsx"]
@@ -917,9 +917,9 @@ for required in ["ErrImmutable", 'Status == "published"']:
         fail(
             f"repository immutable guard отсутствует на memory/postgres слое: {required}"
         )
-# The release pipeline was split between package_product, mutation locking,
-# admin handlers and the durable rollback worker. Check the actual execution
-# locations, not that all tokens happen to appear in one legacy monolith.
+# Конвейер выпуска разделён между package_product, блокировкой изменений,
+# обработчиками Admin и устойчивым обработчиком отката. Проверяйте настоящие
+# места выполнения, а не наличие всех слов в одном устаревшем монолите.
 for required in ["published release immutable", "http.StatusConflict"]:
     if required not in package_product:
         fail(f"HTTP package lifecycle immutable guard missing: {required}")
@@ -1143,10 +1143,10 @@ if "#[serde(default)]\n    pub executable: bool," not in runtime_lib:
     fail(
         "Runtime manifest signing payload must preserve executable=false exactly like Go ManifestFile"
     )
-# The real signed-file download path is lib.rs -> durable_downloads ->
-# download_scheduler -> http_resume -> network_resilience. Checking old
-# inlined retry constants in lib.rs was a false negative and missed the actual
-# execution path. Keep this guard tied to every active hop instead.
+# Настоящий путь загрузки подписанных файлов: lib.rs → durable_downloads →
+# download_scheduler → http_resume → network_resilience. Проверка старых встроенных
+# констант повторов в lib.rs давала ложную ошибку и упускала исполняемый путь.
+# Привязывайте защиту к каждому действующему звену.
 resilience = read("runtime/runtime/src/network_resilience.rs")
 resume = read("runtime/runtime/src/http_resume.rs")
 scheduler = read("runtime/runtime/src/download_scheduler.rs")
@@ -1377,8 +1377,9 @@ for required in [
 ]:
     if required not in forge_runtime_tests:
         fail(f"NeoForge Maven metadata retry regression test missing: {required}")
-# Java 1.3 record validates the entire file inventory and then performs one
-# real JVM -version self-test with OS/arch checks (not a cached metadata claim).
+# Запись Java 1.3 проверяет всю файловую инвентаризацию и затем один настоящий
+# самотест JVM -version с проверкой ОС/архитектуры, а не только кэшированные
+# метаданные.
 if (
     managed_java.count(
         "if self_test_java(&java, major, &record.os, &record.arch).await.is_err()"
@@ -3340,7 +3341,8 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     ):
         fail("0.13.0 Device Trust Release gate is not wired into preflight/CI")
 
-# 0.15.10 Migration + stabilization: verify state migration, locking and recovery.
+# Миграция и стабилизация 0.15.10: проверьте перенос состояния, блокировки и
+# восстановление.
 # В 0.15.10: миграция и стабилизация фиксируют локальное состояние и восстановление:
 # сериализованную проверку доверия, переход 2.0 -> 2.1, привязку манифеста к версии,
 # каноническое состояние компонентов и очистку завершённых данных обновления.
@@ -5034,9 +5036,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in sensor_bootstrap_0182:
             fail(f"0.18.2 Guard Sensor fail-closed bootstrap incomplete: {required}")
-    # Vanilla certification uses the generic bootstrap; game launches use the
-    # stronger, manifest-bound prepare_sensor_command_for_game introduced later.
-    # Both launch routes must still authenticate the sensor before proceeding.
+    # Сертификация Vanilla использует общий bootstrap; запуск игры использует более
+    # строгий prepare_sensor_command_for_game с привязкой к манифесту, добавленный
+    # позже. Оба пути должны аутентифицировать Sensor до продолжения.
     if (
         sensor_runtime_0182.count("prepare_sensor_command(&mut command)") < 1
         or sensor_runtime_0182.count(
@@ -5799,7 +5801,7 @@ for scenario_id, scenario_type in (
     ("live-debugger", "adversarial"),
     ("foreign-executable-allocation", "adversarial"),
 ):
-    # Check the executable scenario declarations, independent of formatting.
+    # Проверяйте исполняемые объявления сценариев независимо от форматирования.
     pattern = r'Scenario\(\s*"' + re.escape(scenario_id) + r'"\s*,\s*"' + scenario_type + r'"'
     if not re.search(pattern, adversarial_runner_01811):
         fail(f"0.18.11 Windows Adversarial CI missing {scenario_type} scenario: {scenario_id}")
@@ -6054,9 +6056,9 @@ if (
 ):
     fail("0.19.0 mandatory Windows Protection GA gate incomplete")
 
-# 0.29.0: the production candidate must contain evidence from a real
-# Minecraft JVM and an independently checked restore of *its* saved world.
-# A synthetic Host test never substitutes for this execution path.
+# 0.29.0: промышленный кандидат должен содержать доказательства от настоящей
+# JVM Minecraft и независимо проверенного восстановления ЕЁ сохранённого мира.
+# Синтетический тест Host никогда не заменяет этот путь.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (
     0,
     29,

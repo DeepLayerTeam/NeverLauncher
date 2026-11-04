@@ -9,8 +9,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// Every production instance exposes the build-time commit for exact-source
-// Admin/Backend staging verification. An absent build identifier cannot pass GA.
+// Каждый производственный экземпляр раскрывает commit времени сборки для точной
+// проверки исходников при подготовке Admin/Backend. Отсутствующий идентификатор
+// сборки не может пройти GA.
 func TestStatusAndHealthExposeSourceCommit0220(t *testing.T) {
 	const source = "0123456789abcdef0123456789abcdef01234567"
 	api := Server{Version: "0.22.0", SourceCommit: source, Storage: storage.NewLocalStorage(t.TempDir())}

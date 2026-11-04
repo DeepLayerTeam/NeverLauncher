@@ -48,8 +48,9 @@ func (s Server) StartDurableControlPlane0213(parent context.Context) (context.Ca
 	return s.StartDurableControlPlaneWithReadiness0455(parent, nil)
 }
 
-// StartDurableControlPlaneWithReadiness0455 tracks successful durable polls, not
-// just a running goroutine. The cancellation function waits for in-flight work.
+// StartDurableControlPlaneWithReadiness0455 отслеживает успешные устойчивые опросы, а
+// не только работающую goroutine. Функция отмены дожидается операций в процессе
+// выполнения.
 func (s Server) StartDurableControlPlaneWithReadiness0455(parent context.Context, last *atomic.Int64) (context.CancelFunc, error) {
 	cp, err := s.durableControlPlane0213()
 	if err != nil {
@@ -225,8 +226,9 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "invalid publish job payload")
 		return model.ReleaseVersion{}, err
 	}
-	// Fail closed for legacy queued jobs with no frozen head; detect stale work
-	// early, while the repository CAS remains the final concurrency boundary.
+	// Отказывайте по умолчанию устаревшим заданиям без зафиксированного head;
+	// обнаруживайте устаревшие задания заранее, сохраняя CAS репозитория последней
+	// границей конкуренции.
 	if payload.ExpectedHeadRevision == nil {
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job missing channel head revision")
 		return model.ReleaseVersion{}, repository.ErrConflict
@@ -314,8 +316,9 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, fmt.Errorf("%w: %s", errDurableAuthorizationRevoked0213, decision.ReasonCode)
 	}
 
-	// Issue a five-minute, one-use durable permit after all authorization and
-	// integrity checks. A stale durable job never carries a reusable token.
+	// После всех проверок авторизации и целостности выдавайте устойчивый
+	// одноразовый допуск на пять минут. Устаревшее задание никогда не получает
+	// повторно используемый токен.
 	stableToken := ""
 	if repository.IsStableChannel0341(lookup.Release.Channel) {
 		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)

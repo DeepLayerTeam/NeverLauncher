@@ -6,9 +6,10 @@ import (
 	"unicode"
 )
 
-// CanonicalAuthIssuer retains the exact, verified external issuer (OIDC iss is
-// case-sensitive). A connector without a protocol-level issuer is namespaced by
-// its provider ID. This namespace is NOT an independently verified OIDC issuer.
+// CanonicalAuthIssuer сохраняет точный проверенный внешний issuer: OIDC iss
+// чувствителен к регистру. Коннектор без issuer на уровне протокола помещается в
+// пространство имён своего provider ID. Это пространство имён НЕ является независимо
+// проверенным OIDC issuer.
 func CanonicalAuthIssuer(provider, issuer string) (string, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if provider == "" || len(provider) > 128 || strings.IndexFunc(provider, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {

@@ -12,10 +12,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 )
 
-// OAuth code/verifier is received exclusively from the native desktop client,
-// not from its renderer or from the user's browser. The account is bound to
-// the authenticated Never session before issuing the existing opaque ticket.
-// Client ID always comes from this server's own application registration.
+// OAuth code/verifier поступает исключительно от нативного клиента Desktop, а не
+// от его renderer или браузера пользователя. Учётная запись привязывается к
+// аутентифицированному сеансу Never до выдачи существующего непрозрачного билета.
+// Client ID всегда берётся из собственной регистрации приложения на этом сервере.
 type officialBrowserRequest0263 struct {
 	Code        string `json:"code"`
 	Verifier    string `json:"verifier"`
@@ -45,15 +45,16 @@ func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	// Native Desktop must prove the bearer belongs to the exact session used
-	// to address OS vault slots. Without this an arbitrary renderer-supplied
-	// session ID could read a different local user's Microsoft credentials.
+	// Нативный Desktop должен доказать, что bearer принадлежит точно тому сеансу,
+	// которым адресуются слоты хранилища секретов ОС. Иначе произвольный ID
+	// сеанса из renderer мог бы читать Microsoft-учётные данные другого
+	// локального пользователя.
 	w.Header().Set("Cache-Control", "no-store")
 	officialWrite0257(w, 200, map[string]any{"clientId": policy.ClientID, "enabled": policy.Enabled, "browserEnabled": policy.BrowserEnabled, "deviceEnabled": policy.DeviceEnabled, "issuer": policy.Issuer, "neverSessionId": claims.SessionID, "neverUserId": claims.Sub})
 }
 
-// provider is a narrow injectable seam for verifying the complete token chain
-// with a local HTTP fixture. Production always uses officialminecraft.New().
+// provider — узкая подменяемая точка для проверки полной цепочки токенов локальной
+// HTTP-фикстурой. В производстве всегда используется officialminecraft.New().
 type officialBrowserProvider0263 interface {
 	ExchangeAuthorizationCode(context.Context, string, string, string, string) (officialminecraft.OAuthTokens, error)
 	Exchange(context.Context, string) (officialminecraft.MinecraftToken, error)

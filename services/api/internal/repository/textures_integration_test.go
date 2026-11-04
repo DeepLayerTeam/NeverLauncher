@@ -16,8 +16,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Run with TEST_PG_DSN_0251 pointing to an isolated PostgreSQL 17+ test DB.
-// This test creates and drops its OWN schema; it executes against public.
+// Запускайте с TEST_PG_DSN_0251 на изолированной тестовой БД PostgreSQL 17+.
+// Тест создаёт и удаляет СОБСТВЕННУЮ схему; работает против public.
 func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0251")
 	if dsn == "" {
@@ -104,7 +104,7 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	if _, err := r.UpdateTextureSelection0251(ctx, p, "skin", 1, "slim", "public", true); !errors.Is(err, ErrTextureRevisionConflict0251) {
 		t.Fatalf("stale revision accepted: %v", err)
 	}
-	// Deny cape activation until an explicit grant; then allow it.
+	// Запрещайте активацию плаща до явного разрешения, затем допускайте её.
 	if _, err := db.ExecContext(ctx, `INSERT INTO texture_assignments(realm,profile_uuid,user_id,kind,external_url,source,model)
       VALUES ('local-project',$1,$2,'cape','https://textures.example/cape.png','remote-reference','classic')`, p.UUID, p.UserID); err != nil {
 		t.Fatal(err)
@@ -133,7 +133,8 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	if err != nil || len(history) != 2 {
 		t.Fatalf("lazy backfill reinserted revisions: %v %v", len(history), err)
 	}
-	// Ensure no zero-owner record can sneak past ownership checks.
+	// Убедитесь, что запись с отсутствующим владельцем не проходит проверку
+	// владения.
 	fake := p
 	fake.UserID = "account_b"
 	if err := r.EnsureTextureIdentity0251(ctx, fake); err == nil {

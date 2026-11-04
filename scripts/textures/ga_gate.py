@@ -206,8 +206,9 @@ def verify_target(
             )
         )
         check_report(report, name, target, commit)
-    # An actual release installer must be present, digest-bound to the signed
-    # attestation, and carry separately verified native OS signature evidence.
+    # Настоящий установщик выпуска обязан существовать, быть привязанным дайджестом
+    # к подписанной аттестации и иметь отдельно проверенные доказательства нативной
+    # подписи ОС.
     installer = data.get("releaseArtifact")
     if not isinstance(installer, dict) or set(installer) != {"file", "sha256"}:
         raise GateError(f"{target}: release installer missing")

@@ -150,8 +150,8 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		permissions[p] = struct{}{}
 	}
 	st := &processState{key: Key{install.ExtensionID, install.Scope, install.ScopeID}.normalized(), install: install, manifest: ver.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", javaHost: sameHostJar0304(entrypoint), helloCh: make(chan struct{}), readyCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
-	// The permission snapshot above is for reporting only. Neither an old
-	// installation generation nor a revoked CLI grant may authorize exec.
+	// Снимок разрешений выше предназначен только для отчёта. Ни старое поколение
+	// установки, ни отозванный грант CLI не должны разрешать exec.
 	if err := s.enforceCLITrust04312(ctx, st); err != nil {
 		return CLIResult0209{}, fmt.Errorf("cli extension trust refused: %w", err)
 	}
@@ -212,7 +212,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if ver.Manifest.Sandbox != nil && ver.Manifest.Sandbox.Mode == "isolated" {
-		// A shared quota covers both streams and the Host Protocol replies.
+		// Общая квота покрывает оба потока и ответы Host Protocol.
 		var outputBreach sync.Once
 		abort := func() {
 			if cmd.Process != nil {
@@ -222,9 +222,9 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		cmd.Stdout = &cliOutputWriter03113{st: st, target: stdout, policy: ver.Manifest.Sandbox, abort: abort, once: &outputBreach}
 		cmd.Stderr = &cliOutputWriter03113{st: st, target: stderr, policy: ver.Manifest.Sandbox, abort: abort, once: &outputBreach}
 	}
-	// Check durable authority a second time after package/sandbox preparation.
-	// An emergency disable, publisher-key revocation or grant withdrawal in
-	// that window must prevent execution, even if the original snapshot passed.
+	// Повторно проверяйте устойчивые полномочия после подготовки пакета/песочницы.
+	// Экстренное отключение, отзыв ключа издателя или удаление разрешения в это окно
+	// должны предотвратить исполнение, даже если первоначальный снимок прошёл.
 	if err := s.enforceCLITrust04312(ctx, st); err != nil {
 		return CLIResult0209{}, fmt.Errorf("cli extension trust changed before exec: %w", err)
 	}
@@ -288,8 +288,8 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	for {
 		select {
 		case waitErr := <-waitCh:
-			// A short-lived command may finish between monitor ticks. Do not
-			// report successful execution once its authority was withdrawn.
+			// Краткоживущая команда может закончиться между проверками монитора. Не
+			// сообщайте об успешном исполнении после отзыва полномочий.
 			if err := s.enforceCLITrust04312(ctx, st); err != nil {
 				return CLIResult0209{}, fmt.Errorf("cli extension authority revoked: %w", err)
 			}
@@ -309,8 +309,8 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			}
 			return result, nil
 		case <-ticker.C:
-			// Do not depend on the 1-second global monitor: enforce the
-			// current grant and install generation while CLI code is executing.
+			// Не полагайтесь на глобальный монитор с интервалом 1 секунду: проверяйте
+			// текущие разрешения и поколение установки во время исполнения кода CLI.
 			if err := s.enforceCLITrust04312(ctx, st); err != nil {
 				_ = killProcessTree(cmd.Process)
 				return CLIResult0209{}, fmt.Errorf("cli extension authority revoked: %w", err)

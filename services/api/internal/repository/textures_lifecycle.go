@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// TextureGCLease02511 fences the physical delete to one selected GC attempt.
+// TextureGCLease02511 ограждает физическое удаление одной выбранной попыткой GC.
 type TextureGCLease02511 struct {
 	TextureGarbage0253
 	Token string
@@ -31,10 +31,10 @@ func textureStorageDriver02511(driver string) error {
 	return nil
 }
 
-// BeginTextureSnapshot02511 atomically pins every verified object for an
-// operator backup/verification/restore. Row locks serialize against GC claims;
-// a crashed process releases protection automatically after 45 minutes.
-// Operations must use a context deadline of less than 45 minutes.
+// BeginTextureSnapshot02511 атомарно закрепляет каждый проверенный объект для
+// резервного копирования, проверки или восстановления оператором. Блокировки строк
+// сериализуются с заявками GC; после падения процесса защита автоматически
+// снимается через 45 минут. Операции должны использовать deadline менее 45 минут.
 func (r *SQLRepository) BeginTextureSnapshot02511(ctx context.Context, driver string) (string, []TextureBackupRow0253, error) {
 	if err := r.check(); err != nil {
 		return "", nil, err
@@ -97,8 +97,9 @@ func (r *SQLRepository) EndTextureSnapshot02511(ctx context.Context, token strin
 	return err
 }
 
-// ClaimTextureGarbage02511 fences each GC lease, protects in-flight backup
-// snapshots, active selections, saved items, defaults and recent history.
+// ClaimTextureGarbage02511 ограждает каждую аренду GC, защищая снимки
+// резервирования, активные выборы, сохранённые элементы, значения по умолчанию
+// и недавнюю историю.
 func (r *SQLRepository) ClaimTextureGarbage02511(ctx context.Context, driver string, limit int) ([]TextureGCLease02511, error) {
 	if err := r.check(); err != nil {
 		return nil, err
@@ -109,7 +110,8 @@ func (r *SQLRepository) ClaimTextureGarbage02511(ctx context.Context, driver str
 	if limit < 1 || limit > 100 {
 		return nil, errors.New("texture GC batch must be between 1 and 100")
 	}
-	// Every claim receives a unique token, so a worker cannot complete another's lease.
+	// Каждая заявка получает уникальный токен, поэтому один воркер не может завершить чужую
+	// аренду.
 	token, err := textureLeaseToken02511()
 	if err != nil {
 		return nil, err
@@ -148,8 +150,8 @@ func (r *SQLRepository) ClaimTextureGarbage02511(ctx context.Context, driver str
 	return result, rows.Err()
 }
 
-// CheckTextureGCLease02511 ensures a worker has not been superseded. An expired
-// lease is *not* valid even if no other worker has reclaimed it yet.
+// CheckTextureGCLease02511 проверяет, что воркер не вытеснен. Истёкшая аренда
+// НЕДЕЙСТВИТЕЛЬНА, даже если другой воркер ещё её не занял.
 func (r *SQLRepository) CheckTextureGCLease02511(ctx context.Context, b TextureGCLease02511) error {
 	if err := r.check(); err != nil {
 		return err
@@ -170,8 +172,9 @@ func (r *SQLRepository) CheckTextureGCLease02511(ctx context.Context, b TextureG
 	return nil
 }
 
-// Finish is compare-and-delete: an outdated worker cannot delete a row claimed
-// by a later worker. All storage references are checked again in PostgreSQL.
+// Завершение выполняется как compare-and-delete: устаревший воркер не может удалить
+// строку, уже заявленную другим. Все ссылки хранилища повторно проверяются в
+// PostgreSQL.
 func (r *SQLRepository) FinishTextureGC02511(ctx context.Context, b TextureGCLease02511) error {
 	if err := r.check(); err != nil {
 		return err
@@ -210,7 +213,8 @@ func (r *SQLRepository) ReleaseTextureGC02511(ctx context.Context, b TextureGCLe
 	return err
 }
 
-// Reduce storage of stale crash pins; expired pins block GC even before cleanup.
+// Сокращайте хранение старых закреплений от упавших процессов; истёкшие закрепления
+// блокируют GC даже до очистки.
 func (r *SQLRepository) PruneTextureSnapshotPins02511(ctx context.Context) (int64, error) {
 	if err := r.check(); err != nil {
 		return 0, err
@@ -222,5 +226,5 @@ func (r *SQLRepository) PruneTextureSnapshotPins02511(ctx context.Context) (int6
 	return res.RowsAffected()
 }
 
-// Kept as a compile-time guard that the lease TTL exceeds the maintenance CLI deadline.
+// Оставлено как проверка при компиляции, что TTL аренды превышает deadline CLI обслуживания.
 const TextureSnapshotTTL02511 = 45 * time.Minute

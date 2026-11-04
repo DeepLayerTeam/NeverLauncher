@@ -128,8 +128,9 @@ SUITES = (
     ),
 )
 
-# 0.35.14 executes these additional *real* Go tests before it is allowed
-# to reuse the historical crash/Redis/S3 capacity certification.
+# Версия 0.35.14 выполняет эти дополнительные НАСТОЯЩИЕ тесты Go, прежде чем
+# ей позволено повторно использовать историческую сертификацию устойчивости к
+# сбоям и нагрузки Redis/S3.
 RC_03514_SUITES = (
     Suite(
         "35.14-protected-release-and-operator-journey",

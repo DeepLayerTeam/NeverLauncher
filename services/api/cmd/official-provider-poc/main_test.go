@@ -19,8 +19,8 @@ import (
 
 const ownClientID = "4b8f7734-4f10-44ca-b870-b4d89d34a319"
 
-// All these tests are SIMULATIONS. The CLI has no switch for replacing real
-// endpoints, and none of these reports constitutes external approval evidence.
+// Все эти тесты — СИМУЛЯЦИИ. CLI не имеет переключателя для подмены настоящих
+// точек, и ни один из отчётов не является свидетельством внешнего одобрения.
 type simulatedProvider struct {
 	reject            error
 	badState          bool

@@ -17,8 +17,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
-// The real federated login route must use the live file, not a nominal
-// registration test or the one-time imported Never local password.
+// Настоящий маршрут федеративного входа обязан использовать действующий файл,
+// а не формальный тест регистрации или одноразовый импортированный локальный
+// пароль Never.
 func TestLiveFileAuthFederatedLogin0426(t *testing.T) {
 	db := filepath.Join(t.TempDir(), "Database.json")
 	secret := "live-legacy-password-426"

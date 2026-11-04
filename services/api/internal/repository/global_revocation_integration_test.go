@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// Exercises both connections: revocation is committed by one replica and the
-// other must observe terminal Minecraft/bridge/work state without polling.
+// Проверяются оба соединения: отзыв фиксирует одна реплика, другая обязана
+// наблюдать терминальное состояние Minecraft, моста и работы без опроса.
 func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -49,7 +49,8 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, pair := range [][2]string{{first, familyA}, {second, familyB}} {
-		// Auth session and its refresh family have a deferred bidirectional FK.
+		// Сеанс авторизации и его семейство refresh-токенов имеют отложенный
+		// двусторонний внешний ключ.
 		tx, err := a.db.BeginTx(ctx, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -131,8 +132,8 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND command_type='player.kick' AND status='pending' AND requested_by='serverbridge-player-session'`, node).Scan(&kicks); err != nil || kicks != 1 {
 		t.Fatalf("online player was not scheduled for disconnection: %d %v", kicks, err)
 	}
-	// Even the second API connection must be unable to issue a Minecraft token
-	// against a revoked parent, independent of replica-local caches.
+	// Даже второе соединение API не должно выдавать Minecraft-токен для отозванного
+	// родителя независимо от локальных кэшей реплик.
 	if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`, "late-"+suffix, user, first, uuid, strings.Repeat("d", 64)); err == nil {
 		t.Fatal("concurrent-revocation gate allowed new Minecraft authorization")
 	}
@@ -140,7 +141,8 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	if err := b.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(&status); err != nil || status != "running" {
 		t.Fatalf("other active session should preserve job: %q %v", status, err)
 	}
-	// A sensitive user change revokes all remaining sessions through the DB trigger.
+	// Изменение чувствительных данных пользователя отзывает все оставшиеся сеансы
+	// триггером БД.
 	if _, err := b.db.ExecContext(ctx, `UPDATE users SET role_id='viewer' WHERE id=$1`, user); err != nil {
 		t.Fatal(err)
 	}
@@ -152,11 +154,12 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	if err := a.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(&status); err != nil || status != "revoked" {
 		t.Fatalf("job not fenced: %q %v", status, err)
 	}
-	// Revoked session IDs are permanently terminal.
+	// ID отозванных сеансов окончательно недействительны.
 	if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='active',revoked_at=NULL,revoked_reason='' WHERE id=$1`, second); err == nil {
 		t.Fatal("a revoked session was resurrected")
 	}
-	// Updating an unrelated user field must not log out a new session.
+	// Изменение несвязанного поля пользователя не должно выводить новый сеанс из
+	// системы.
 	fresh := "new-" + suffix
 	tx, err := a.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -179,8 +182,9 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	if err := b.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, fresh).Scan(&status); err != nil || status != "active" {
 		t.Fatalf("profile update incorrectly revoked session: %q %v", status, err)
 	}
-	// Editing role permissions is a live security change even if users.role_id
-	// and users.project_roles remain identical. It must reject cached tokens.
+	// Редактирование прав роли — действующее изменение безопасности, даже если
+	// users.role_id и users.project_roles совпадают. Кэшированные токены должны
+	// отклоняться.
 	role := "role-0297-" + suffix
 	if _, err := a.db.ExecContext(ctx, `INSERT INTO roles(id,name,permissions) VALUES($1,'Role Revocation Test','["project:read"]'::jsonb)`, role); err != nil {
 		t.Fatal(err)

@@ -26,9 +26,9 @@ type preparedJavaContent0486 struct {
 	ErrorCode       string `json:"errorCode"`
 }
 
-// Verify byte-for-byte output from an UNTRUSTED Java callback before it is
-// handed to the existing unsigned package file store. The *core* still does
-// integrity validation, Ed25519 signing and separate publication.
+// Побайтово проверяйте результат НЕДОВЕРЕННОГО Java-callback до передачи в
+// существующее хранилище неподписанных файлов пакета. Ядро по-прежнему проверяет
+// целостность, подписывает Ed25519 и отдельно публикует результат.
 func decodeJavaPreparedContent0486(raw json.RawMessage) ([]byte, error) {
 	var answer preparedJavaContent0486
 	if len(raw) == 0 || len(raw) > 64<<10 || json.Unmarshal(raw, &answer) != nil {
@@ -51,10 +51,10 @@ func decodeJavaPreparedContent0486(raw json.RawMessage) ([]byte, error) {
 	return bytes, nil
 }
 
-// Explicit opt-in on the already file:write-authorized package upload route.
-// Requires a RUNNING approved project-scoped extension, with live
-// release:prepare permission checked by the Go Host before and after RPC.
-// There is no fallback to unsigned untransformed bytes on provider failure.
+// Явное включение уже существующего маршрута загрузки пакета с правом file:write.
+// Требуется работающее утверждённое расширение в рамках проекта; Go Host
+// проверяет активное разрешение release:prepare до и после RPC. При ошибке
+// провайдера возврат к неподписанным непреобразованным байтам запрещён.
 func (s Server) prepareJavaPackageFile0486(ctx context.Context, extensionID, projectID, filename string, raw []byte) ([]byte, error) {
 	if s.ExtensionHost == nil {
 		return nil, errors.New("Java extension Host unavailable")

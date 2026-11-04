@@ -1,9 +1,9 @@
 package model
 
-// ExtensionSandboxPolicy is covered by the Ed25519 signature of the canonical
-// extension manifest and the .nlext package identity. "isolated" can only be
-// launched by an OS sandbox implementation, never by manifest declaration.
-// Trusted means unconfined execution, not an assurance label.
+// ExtensionSandboxPolicy покрывается подписью Ed25519 канонического манифеста
+// расширения и идентичностью пакета .nlext. isolated может запускаться только
+// реализацией песочницы ОС, а не объявлением в манифесте. trusted означает запуск
+// без ограничений, а не метку подтверждённой надёжности.
 type ExtensionSandboxPolicy struct {
 	Version              string   `json:"version"`
 	Mode                 string   `json:"mode"`                      // trusted, isolated

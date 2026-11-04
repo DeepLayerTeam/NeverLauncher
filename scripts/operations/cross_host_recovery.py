@@ -87,7 +87,8 @@ def target_spec(args, manifest):
     for host in nodes.values():
         require(bool(multi.HOST_REGEX.fullmatch(host)) and not host.startswith("-"), "unsafe restore SSH target")
     worlds = parse_pairs(args.world_destination, expected={r["name"] for r in manifest["worlds"]})
-    # name=ssh-target:/absolute/new/path; no shell or user controlled command is executed.
+    # Формат name=ssh-target:/absolute/new/path; команды оболочки или вводимые пользователем
+    # команды не исполняются.
     entries = {}
     for name, value in worlds.items():
         host, sep, path = value.partition(":")
@@ -163,7 +164,8 @@ def restore_volume_local(args):
     require(args.volume in cb.VOLUMES and bool(multi.DIGEST_REGEX.fullmatch(args.tar_image)),
             "unsupported recovery volume/image")
     vol = args.project + "_" + args.volume
-    # Check BEFORE reading large payloads; Docker will otherwise auto-create destinations.
+    # Проверяйте ДО чтения больших полезных данных, иначе Docker автоматически создаст каталоги
+    # назначения.
     probe = subprocess.run(["docker", "volume", "inspect", vol], stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, timeout=20, check=False)
     require(probe.returncode != 0, "volume already exists (no overwrite)")
@@ -247,8 +249,9 @@ def prepare(args):
                 data["machineIdentity"] not in {r["machineIdentity"] for r in manifest["nodes"]},
                 "recovery host must be a new independent machine")
         machine_ids.add(data["machineIdentity"])
-    # Durable journal BEFORE any destructive side effects. Never retry an uncertain
-    # restore into partly filled volumes/bucket/PGDATA by silently overwriting.
+    # Записывайте устойчивый журнал ДО любых разрушительных побочных эффектов. Никогда
+    # не повторяйте неопределённое восстановление в частично заполненные тома, бакет или
+    # PGDATA посредством незаметной перезаписи.
     state = {"schema": SCHEMA, "runId": manifest["runId"], "phase": "preparing",
              "startedUtc": now().isoformat(), "prepared": [], "nodes": nodes,
              "worldTargets": {n: list(v) for n,v in worlds.items()}, "project": args.project,
@@ -289,8 +292,8 @@ def prepare(args):
         require(reply.get("status") == "restored" and reply.get("backupId") == wid,
                 "world recovery not acknowledged")
         state["prepared"].append("world:" + name); persist(work, state)
-    # External exports and secrets require explicit independent restoration and
-    # original-cluster fencing; no arbitrary secrets are restored by this script.
+    # Внешние экспорты и секреты требуют отдельного явного восстановления и изоляции
+    # прежнего кластера; скрипт не восстанавливает произвольные секреты.
     state["phase"] = "prepared-not-admitted"
     state["preparedUtc"] = now().isoformat()
     persist(work, state)
@@ -318,7 +321,8 @@ def replay_postgres(args):
     socket_dir = Path(args.socket_dir)
     private_directory(socket_dir)
     require(not any(socket_dir.iterdir()), "PostgreSQL recovery socket directory must be empty")
-    # Bind UNIX SOCKET ONLY, not a public TCP interface, until the WAL target is verified.
+    # До проверки целевой точки WAL привязывайтесь ТОЛЬКО К UNIX-СОКЕТУ, а не к публичному
+    # TCP-интерфейсу.
     options = f"-c listen_addresses='' -c unix_socket_directories={socket_dir} -c port={args.pg_port} -c hot_standby=on"
     cb.execute(["pg_ctl", "-D", str(target), "-o", options, "-w", "-t", "120", "start"], timeout=180)
     should_stop = True
@@ -339,7 +343,8 @@ def replay_postgres(args):
         require(re.fullmatch(r"[0-9A-F]+/[0-9A-F]+", actual) and
                 lsn_value(actual) >= lsn_value(state["cohortLsn"]),
                 "WAL replay did not reach cohort LSN")
-        # pg_wal_replay_resume() reaches end-of-recovery for recovery_target_action=pause.
+        # pg_wal_replay_resume() доводит восстановление до конца при
+        # recovery_target_action=pause.
         pg_sql(args.pg_port, "SELECT pg_wal_replay_resume();", socket_dir)
         deadline = time.monotonic() + 120
         while time.monotonic() < deadline:
@@ -348,7 +353,8 @@ def replay_postgres(args):
             time.sleep(2)
         else:
             raise RecoveryError("recovered PostgreSQL never became primary")
-        # Only then declare ready for operator-managed PostgreSQL/Patroni startup.
+        # Только после этого объявляйте готовность PostgreSQL/Patroni к запуску под
+        # управлением оператора.
         state["phase"] = "postgres-promoted-isolated"
         state["replayedLsn"] = actual
         state["promotedUtc"] = now().isoformat()
@@ -381,7 +387,8 @@ def audit_recovery(ledger_file, pg_env, incident):
         stamp = datetime.fromisoformat(row["ackUtc"].replace("Z", "+00:00"))
         require(stamp.tzinfo is not None and stamp <= incident,
                 "audit acknowledgement outside incident window")
-        # psql :'-quoted' variables avoid passing IDs as SQL literals.
+        # Переменные psql с кавычками :'-quoted' позволяют не подставлять
+        # идентификаторы как SQL-литералы.
         actual = cb.execute(["psql", "-X", "-q", "-A", "-t", "-w", "-v", "ON_ERROR_STOP=1",
                              "-v", "audit_id=" + event_id],
                             input=b"SELECT id FROM audit_events WHERE id = :'audit_id';\n",
@@ -393,8 +400,9 @@ def audit_recovery(ledger_file, pg_env, incident):
         else:
             missing.append((event_id, stamp))
     require(last is not None, "no independently acknowledged audit event survived")
-    # A later ack may not be recovered while an earlier ack is. Preserve this
-    # disclosure rather than pretending that RPO is exactly one checkpoint age.
+    # Более поздний ACK может не восстановиться, хотя более ранний восстановлен.
+    # Сохраняйте это предупреждение вместо недостоверного утверждения, что RPO равен
+    # возрасту одной контрольной точки.
     nonmonotonic = any(stamp <= last for _, stamp in missing)
     return {"sampledAuditRpoSeconds": None if nonmonotonic else
             round(max(0, (incident - last).total_seconds()), 3),
@@ -427,7 +435,8 @@ def admission(args):
     frozen = datetime.fromisoformat(state["frozenUtc"].replace("Z", "+00:00"))
     require(incident.tzinfo is not None and frozen.tzinfo is not None and frozen <= incident <= now(),
             "incident timestamp invalid or older than checkpoint")
-    # Check *new* PostgreSQL is genuinely writable on its secured service endpoint.
+    # Проверьте, что НОВЫЙ PostgreSQL действительно допускает запись через свою
+    # защищённую служебную точку подключения.
     from nn1_compat_0516 import dsn_environment
     env = dsn_environment(Path(args.pg_dsn_file))
     result = cb.execute(["psql", "-X", "-q", "-A", "-t", "-w", "-v", "ON_ERROR_STOP=1",
@@ -449,9 +458,10 @@ def admission(args):
     require(multi.cluster_verify(reports, args.ready_url)["multiHostControlPlaneObserved"] is True,
             "public ingress and recovered multi-host services failed readiness")
     end = now()
-    # RTO is measured from *supplied incident-onset time* to actual readiness.
-    # RPO cannot be measured without independently logged acknowledged writes;
-    # elapsed time is only a conservative recovery-point age estimate.
+    # RTO измеряется от УКАЗАННОГО времени начала инцидента до фактической
+    # готовности. RPO невозможно измерить без независимо зарегистрированных
+    # подтверждённых записей; прошедшее время даёт лишь консервативную оценку
+    # возраста точки восстановления.
     result = {"schema": SCHEMA, "status": "recovery-ready", "runId": state["runId"],
               "readyUtc": end.isoformat(), "incidentUtc": incident.isoformat(),
               "rtoSeconds": round((end - incident).total_seconds(), 3),

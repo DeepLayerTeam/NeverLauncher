@@ -7,8 +7,9 @@ import (
 	"time"
 )
 
-// OfficialNeverLink0268 is a persistent verified relationship, not an auth credential.
-// A Never identity may link multiple Minecraft UUIDs; a UUID has one owner globally.
+// OfficialNeverLink0268 — постоянная проверенная связь, а не учётные данные. Одна
+// идентичность Never может связывать несколько Minecraft UUID; у каждого UUID глобально
+// один владелец.
 type OfficialNeverLink0268 struct {
 	MinecraftUUID string    `json:"minecraftUuid"`
 	MinecraftName string    `json:"minecraftName"`
@@ -48,8 +49,8 @@ func (r *SQLRepository) UpsertOfficialLink0268(ctx context.Context, owner, uuid,
 	if err := r.check(); err != nil {
 		return OfficialNeverLink0268{}, err
 	}
-	// Conditional upsert is atomic across all Backend instances. An owner cannot
-	// take over another owner's Minecraft identity through a racing POST.
+	// Условный upsert атомарен между всеми экземплярами Backend. Владелец не может
+	// захватить чужую Minecraft-идентичность через конкурирующий POST.
 	var result OfficialNeverLink0268
 	err := r.db.QueryRowContext(ctx, `INSERT INTO official_identity_links_0268(minecraft_uuid,user_id,minecraft_name)
  VALUES($1,$2,$3) ON CONFLICT(minecraft_uuid) DO UPDATE SET

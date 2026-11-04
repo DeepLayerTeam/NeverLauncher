@@ -35,9 +35,10 @@ func strictProviderConfig02910(raw json.RawMessage, dest any) error {
 	return authrequest.Decode(bytes.NewReader(raw), dest)
 }
 
-// Prevent secret material reaching the DB, API responses, audit or browser.
-// All credentials must be injected in the API process via explicitly named env
-// variables; paths to secret files and inline DB connection strings are rejected.
+// Не допускайте утечки секретов в БД, ответы API, аудит или браузер. Все учётные
+// данные передаются процессу API только через явно именованные переменные окружения;
+// пути к файлам секретов и строки подключения БД непосредственно в конфигурации
+// запрещены.
 func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) error {
 	if err := repository.ValidateManagedProviderDraft02910(v); err != nil {
 		return err
@@ -69,8 +70,8 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 	if err := banned(fields); err != nil {
 		return err
 	}
-	// Require an exact ID match, to prevent a staged configuration replacing an
-	// unrelated issuer/provider during activation.
+	// Требуйте точного совпадения ID, чтобы staging-конфигурация не заменила чужого
+	// издателя/провайдера при активации.
 	var identity struct {
 		ID string `json:"id"`
 	}
@@ -80,8 +81,8 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 	if identity.ID != v.ID {
 		return errors.New("provider id and config id must match")
 	}
-	// Enforce the actual connector's strict schema before any JSON is stored;
-	// otherwise arbitrary unknown fields can smuggle raw credentials into history.
+	// До сохранения любого JSON применяйте строгую схему настоящего коннектора; иначе
+	// неизвестные поля могут протащить необработанные учётные данные в историю.
 	switch v.Kind {
 	case "sql":
 		var cfg sqlconnector.Config
@@ -228,8 +229,8 @@ func closeManaged02910(c authconnector.Connector) error {
 	return nil
 }
 
-// Active revisions are reconciled before auth requests on every API replica.
-// A DB error fails closed; no stale provider is used as a fallback.
+// Активные ревизии согласуются до запросов авторизации на каждой реплике API.
+// Ошибка БД означает отказ; устаревший провайдер не используется как запасной.
 func (s Server) syncManagedProviders02910(ctx context.Context) error {
 	store, ok := s.Repo.(repository.ManagedProviderStore02910)
 	if !ok {
@@ -275,7 +276,8 @@ func (s Server) syncManagedProviders02910(ctx context.Context) error {
 func (s Server) withManagedProviders02910(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		// Admin recovery remains available when an active configuration is broken.
+		// Восстановление Admin остаётся доступным при повреждённой активной
+		// конфигурации.
 		if strings.HasPrefix(path, "/api/v1/admin/auth/provider-wizard") || !(strings.HasPrefix(path, "/api/v1/auth/") || strings.HasPrefix(path, "/api/v1/admin/login") || strings.HasPrefix(path, "/authserver/") || strings.HasPrefix(path, "/api/v1/minecraft/") || strings.HasPrefix(path, "/api/v1/server-bridge/")) {
 			next.ServeHTTP(w, r)
 			return

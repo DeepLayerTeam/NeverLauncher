@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Runs actual compile, race tests, PostgreSQL/ServerBridge integration and live browser against staging.
-# Aborts on ANY failure or missing credential; no stub/mock fallbacks and no "skipped means passed".
+# Выполняются реальные компиляция, race-тесты, интеграция PostgreSQL/ServerBridge и живой браузер против
+# staging. При ЛЮБОЙ ошибке или отсутствии учётных данных процесс останавливается; никаких заглушек, имитаций
+# или правила «пропуск означает успех».
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-# A failed preflight must never leave a previous green GA certificate behind.
+# Неудачная предварительная проверка никогда не должна оставлять прежний зелёный
+# сертификат GA.
 rm -f dist/ga-certification/admin-0220.json dist/ga-certification/owner-cycle-0390.json
 RELEASE_VERSION="$(< VERSION)"
 python3 scripts/release/release_policy.py ga-mode --version "$RELEASE_VERSION" >/dev/null || exit 2
@@ -52,10 +54,12 @@ python3 -m unittest scripts/release/test_owner_cycle_0390.py -v
   go vet ./...
   go build -trimpath -o /tmp/launcher-ga-cli ./cmd/launcher
 )
-# Covers live pgx migration, CAS, durable/ServerBridge enqueue, lease and signed ACK.
+# Охватывает живую миграцию pgx, CAS, устойчивую постановку задач/ServerBridge в очередь,
+# аренду и подписанный ACK.
 bash e2e/scripts/run-admin-hardening-02112-e2e.sh
 python3 e2e/scripts/admin-hardening-02112-browser.py
-# Since 0.39.0 the REAL browser owner-cycle is mandatory, not a manifest receipt.
+# С версии 0.39.0 обязателен НАСТОЯЩИЙ браузерный цикл владельца, а не квитанция
+# манифеста.
 if python3 - "$RELEASE_VERSION" <<'PYVERSION'
 import sys
 raise SystemExit(0 if tuple(map(int,sys.argv[1].split('-',1)[0].split('+',1)[0].split('.')[:3])) >= (0,39,0) else 1)
@@ -72,7 +76,8 @@ PYOWNER
 fi
 python3 e2e/scripts/admin-ga-0220-serverbridge.py
 
-# Emit evidence only AFTER all processes return success; an incomplete run has no PASS file.
+# Формируйте доказательства ТОЛЬКО ПОСЛЕ успешного завершения всех процессов; неполный запуск не
+# имеет файла PASS.
 mkdir -p dist/ga-certification
 python3 - "$COMMIT" <<'PY'
 import hashlib, json, pathlib, sys

@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// OperationalConfig contains only hot-reloadable, non-secret API presentation limits.
-// Credentials, signer keys, network listeners and infrastructure settings stay deployment-managed.
+// OperationalConfig содержит только несекретные лимиты представления API, обновляемые без перезапуска.
+// Учётные данные, ключи подписантов, сетевые слушатели и инфраструктурные настройки остаются под
+// управлением развёртывания.
 type OperationalConfig struct {
 	AuditDefaultPageSize     int  `json:"auditDefaultPageSize"`
 	AuditMaxPageSize         int  `json:"auditMaxPageSize"`
@@ -55,7 +56,8 @@ func (v OperationalConfig) Validate() error {
 	return nil
 }
 
-// The memory implementation is used only in development/test. Production shares revisions via SQL.
+// Реализация в памяти применяется только в разработке и тестах. В промышленной среде ревизии разделяются
+// через SQL.
 func (r *MemoryRepository) GetOperationalConfig(_ context.Context) (OperationalConfigRevision, error) {
 	r.operationalConfigMu.Lock()
 	defer r.operationalConfigMu.Unlock()

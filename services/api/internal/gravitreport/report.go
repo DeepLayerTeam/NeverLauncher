@@ -1,6 +1,6 @@
-// Package gravitreports provides deterministic, fail-closed Migration Center
-// certification reports derived from committed database receipts. No password,
-// bearer token, device key or source configuration is included.
+// Package gravitreports формирует детерминированные отчёты сертификации Migration
+// Center с отказом при ошибке из зафиксированных квитанций БД. Пароли,
+// Bearer-токены, ключи устройств и исходная конфигурация не включаются.
 package gravitreports
 
 import (
@@ -92,9 +92,10 @@ func Verify(v Report) error {
 	return nil
 }
 
-// Finalize recomputes every readiness and count field, ignoring the caller's
-// decision. It makes missing evidence explicit, rather than treating empty
-// source data as compatible or a historical manual acknowledgment as proof.
+// Finalize заново вычисляет каждое поле готовности и количества, игнорируя
+// решение вызывающего кода. Отсутствующие доказательства указываются явно: пустые
+// данные источника не считаются совместимостью, а историческое ручное
+// подтверждение — доказательством.
 func Finalize(v Report) (Report, error) {
 	if v.RunID == "" || v.ProjectID == "" {
 		return Report{}, errors.New("missing migration scope")
@@ -172,7 +173,7 @@ func Finalize(v Report) (Report, error) {
 		if _, ok := stages[ev.Stage]; ok {
 			return Report{}, errors.New("duplicate evidence stage")
 		}
-		// Never interpret a new/unrecognized state as a successful check.
+		// Никогда не трактуйте новое или неизвестное состояние как успешную проверку.
 		switch ev.State {
 		case "verified", "missing", "blocked", "manual":
 		default:
@@ -205,7 +206,7 @@ func Finalize(v Report) (Report, error) {
 	sort.Slice(v.Evidence, func(i, j int) bool { return v.Evidence[i].Stage < v.Evidence[j].Stage })
 	sort.Slice(v.Decisions, func(i, j int) bool { return v.Decisions[i].Sequence < v.Decisions[j].Sequence })
 	sort.Strings(v.Blockers)
-	// Duplicate identical messages are not useful and shouldn't change digest.
+	// Повторяющиеся идентичные сообщения бесполезны и не должны менять дайджест.
 	uniq := v.Blockers[:0]
 	for _, s := range v.Blockers {
 		if len(uniq) == 0 || uniq[len(uniq)-1] != s {

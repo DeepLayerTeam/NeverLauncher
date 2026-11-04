@@ -20,23 +20,25 @@ func migratedUserID0335(a gi.Account) string {
 	if a.Provider == "fileauth" {
 		return "gravit-fileauth-" + strings.ReplaceAll(a.UUID, "-", "")
 	}
-	// SQL source IDs are local to an upstream database, often starting at 1.
-	// Different projects must not claim the same Never user by source ID.
-	// Minecraft UUID is the cross-server identity we are preserving.
+	// SQL ID источника локальны для внешней БД и часто начинаются с 1. Разные
+	// проекты не должны претендовать на одного пользователя Never по исходному
+	// ID. Межсерверная идентичность, которую мы сохраняем, — Minecraft UUID.
 	return "gravit-sql-" + strings.ReplaceAll(a.UUID, "-", "")
 }
 
-// Used ONLY to verify 0.44.3 receipts: older imports keyed SQL users solely
-// by upstream row ID. New imports must never use this collision-prone scheme.
+// Используется ТОЛЬКО для проверки квитанций 0.44.3: старые импорты индексировали
+// SQL-пользователей лишь по ID внешней строки. Новые импорты никогда не должны
+// применять эту схему с коллизиями.
 func legacyMigratedSQLUserID0335(a gi.Account) string {
 	sum := sha256.Sum256([]byte("sql\x00" + a.SourceID))
 	return "gravit-sql-" + hex.EncodeToString(sum[:16])
 }
 
-// ImportMigrationCredentials0335 atomically creates only new local users and
-// preserves the immutable Minecraft UUID. Existing Never users are NEVER
-// overwritten, merged, assigned permissions, or silently given source hashes.
-// Dry-run uses the same collision checks but doesn't mutate database state.
+// ImportMigrationCredentials0335 атомарно создаёт только новых локальных
+// пользователей и сохраняет неизменяемый Minecraft UUID. Существующих
+// пользователей Never НИКОГДА не перезаписывают, объединяют, наделяют правами или
+// незаметно снабжают хешами источника. Пробный запуск применяет те же проверки
+// коллизий без изменений БД.
 func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, source, format string, credentials []gc.Credential, dryRun bool) (gc.Result, error) {
 	if e := r.check(); e != nil {
 		return gc.Result{}, e
@@ -49,7 +51,8 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		return gc.Result{}, e
 	}
 	defer tx.Rollback()
-	// Match the existing importer lock to avoid concurrent FileAuth mass imports.
+	// Используйте ту же блокировку импортёра, чтобы не допустить параллельных массовых
+	// импортов FileAuth.
 	if _, e = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(2945,1)`); e != nil {
 		return gc.Result{}, e
 	}
@@ -98,8 +101,8 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		if e = json.Unmarshal(oldRaw, &old); e != nil {
 			return gc.Result{}, e
 		}
-		// Verify the created accounts before reporting replay success. Passwords may
-		// have legitimately been upgraded after authentication and are not compared.
+		// Проверяйте созданные аккаунты перед сообщением об успехе повтора. Пароли могли
+		// законно обновиться после входа и не сравниваются.
 		for _, row := range old.Rows {
 			if row.State != "imported" {
 				continue
@@ -109,8 +112,8 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 			userID := migratedUserID0335(a)
 			e = tx.QueryRowContext(ctx, `SELECT m.uuid,m.name,u.role_id,u.status,u.email FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, userID).Scan(&uuid, &name, &role, &status, &email)
 			if errors.Is(e, sql.ErrNoRows) && a.Provider == "sql" {
-				// Historical, verified receipts may still refer to a 0.44.3
-				// source-ID-based user. Validate ownership before allowing replay.
+				// Проверенные исторические квитанции ещё могут ссылаться на пользователя
+				// 0.44.3 с привязкой к исходному ID. Перед повтором проверяйте владение.
 				e = tx.QueryRowContext(ctx, `SELECT m.uuid,m.name,u.role_id,u.status,u.email FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, legacyMigratedSQLUserID0335(a)).Scan(&uuid, &name, &role, &status, &email)
 			}
 			if e != nil || uuid != a.UUID || name != a.Username || role != "player" || status != "active" || email != strings.ToLower(a.Username)+"@fileauth.invalid" {
@@ -146,8 +149,8 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 	if e != nil {
 		return gc.Result{}, e
 	}
-	// Cross-check the *previously approved* ownership with the current
-	// account table: a pending UUID claimed since MIG04 is not an approved link.
+	// Сопоставьте РАНЕЕ ОДОБРЕННОЕ владение с действующей таблицей учётных записей:
+	// UUID, занятый после MIG04, не является утверждённой связью.
 	savedRows, e := tx.QueryContext(ctx, `SELECT status,COALESCE(target_user_id,'') FROM migration_identity_rows_0334 WHERE run_id=$1 ORDER BY ordinal`, id)
 	if e != nil {
 		return gc.Result{}, e
@@ -179,9 +182,9 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 			return gc.Result{}, mw.ErrConflict
 		}
 		m := resolved[i]
-		// An identity previously blocked or matched cannot silently turn
-		// into an import candidate because another operator deleted/changed
-		// its conflicting target. A new MIG04 verification is required.
+		// Ранее заблокированная или сопоставленная идентичность не должна незаметно
+		// становиться кандидатом на импорт из-за удаления или изменения конфликтующей
+		// цели другим оператором. Нужна новая проверка MIG04.
 		if approved[i].status != m.Status || approved[i].user != m.TargetUserID {
 			return gc.Result{}, fmt.Errorf("UUID ownership changed since approved mapping for %s: %w", a.SourceID, mw.ErrConflict)
 		}
@@ -190,7 +193,8 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		}
 		row := gc.Row{Provider: a.Provider, SourceID: a.SourceID, Username: a.Username, UUID: a.UUID}
 		if m.Status == "matched" {
-			// Account's current local credentials belong to Never. Never replace them.
+			// Текущие локальные учётные данные аккаунта принадлежат Never. Никогда не
+			// заменяйте их.
 			row.State = "existing_unchanged"
 			row.Reason = "Never identity already exists; source password not installed; operator must verify login"
 			result.ExistingUnchanged++

@@ -13,8 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Every operation is resolved against the authenticated account's canonical
-// local Minecraft UUID; profileUuid is only a (strict) ownership assertion.
+// Каждая операция разрешается по каноническому локальному Minecraft UUID
+// аутентифицированной учётной записи; profileUuid служит только строгим
+// утверждением о владении.
 type textureServiceRequest0255 struct {
 	ProfileUUID      string `json:"profileUuid,omitempty"`
 	ExpectedRevision *int64 `json:"expectedRevision,omitempty"`

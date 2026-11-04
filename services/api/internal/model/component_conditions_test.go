@@ -26,7 +26,8 @@ func TestConditionalResolverEndToEnd0244(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// No preset/default selects performance; required Core only.
+	// Ни пресет, ни значение по умолчанию не выбирают performance; требуется
+	// только Core.
 	if !reflect.DeepEqual(selected, []string{"core", "performance.sodium"}) {
 		t.Fatalf("unexpected selection %v", selected)
 	}
@@ -118,9 +119,9 @@ func TestConditionalVersionRanges0244(t *testing.T) {
 	}
 }
 
-// Named presets are explicit roots, unlike implicit defaults. Reject an
-// impossible preset during publishing rather than letting every player discover
-// the problem only after choosing it in Desktop.
+// Именованные пресеты являются явными корнями, в отличие от неявных значений по
+// умолчанию. Отклоняйте невозможный пресет при публикации, а не после выбора игроком
+// в Desktop.
 func TestConditionalCatalogRejectsConflictingNamedPreset0391(t *testing.T) {
 	for _, schema := range []string{"4.0", "5.0"} {
 		t.Run(schema, func(t *testing.T) {

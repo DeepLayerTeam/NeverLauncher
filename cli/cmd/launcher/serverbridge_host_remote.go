@@ -108,12 +108,13 @@ func remoteRandom0284(n int) ([]byte, error) {
 
 // Один серверный корневой каталог может принадлежать лишь одному активному удалённому агенту.
 // Это не позволяет двум слушателям на разных TCP-портах независимо выполнять одну
-// durable idempotency key. A stale lock is recoverable only after the precise
-// OS process identity has disappeared.
+// Устойчивый ключ идемпотентности. Устаревшую блокировку можно восстановить лишь
+// после исчезновения конкретной идентичности процесса ОС.
 func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 	// Ядро удерживает блокировку постоянного inode в течение жизни слушателя.
-	// Without this, two challengers can both rename the same stale JSON lock
-	// and start listeners on different ports (split brain).
+	// Без этого два претендента могут переименовать одну и ту же устаревшую
+	// JSON-блокировку и запустить слушатели на разных портах, вызвав разделение
+	// управления (split brain).
 	unlockFence, err := remoteKernelFence04112(dir)
 	if err != nil {
 		return nil, err

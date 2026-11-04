@@ -124,7 +124,7 @@ func TestNodeNonceReplaySignatureAndTamper(t *testing.T) {
 func TestJoinReplacementRotationRevocation(t *testing.T) {
 	r, a, _, priv, first, tokens := joinFixture(t)
 	ctx := context.Background()
-	// A second issuance replaces the first without leaving two valid tickets.
+	// Вторая выдача заменяет первую, не оставляя два действительных билета.
 	_, newerMC, e := a.IssueMinecraftSession(ctx, tokens.AccessToken, time.Hour)
 	if e != nil {
 		t.Fatal(e)
@@ -137,7 +137,7 @@ func TestJoinReplacementRotationRevocation(t *testing.T) {
 	if e != nil || status != "replaced" {
 		t.Fatalf("first ticket not replaced: %q %v", status, e)
 	}
-	// Key rotation invalidates outstanding tickets, changes the signing epoch.
+	// Ротация ключа аннулирует ожидающие билеты и меняет эпоху подписи.
 	pub2, priv2, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
 		t.Fatal(e)

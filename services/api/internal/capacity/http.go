@@ -1,6 +1,7 @@
-// Package capacity records bounded, low-cardinality live measurements and
-// derives operational warnings from measured quantities. Guardrails are not
-// benchmarked maximum throughput claims.
+// Package capacity сохраняет ограниченные живые измерения с малой
+// кардинальностью и формирует эксплуатационные предупреждения по измеренным
+// величинам. Защитные пороги не являются заявлением о максимальной
+// производительности по результатам бенчмарка.
 package capacity
 
 import (
@@ -151,7 +152,8 @@ func (r *responseStatus) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return nil, nil, http.ErrNotSupported
 }
 
-// Prometheus is a stable, aggregate-only metric set without URLs, users or IDs.
+// Prometheus содержит стабильный набор только агрегированных метрик без URL,
+// пользователей и ID.
 func (m *HTTPMetrics) Prometheus(w io.Writer) {
 	s := m.Snapshot(time.Now())
 	fmt.Fprintln(w, "# HELP launcher_http_requests_60s Requests observed in the last 60 seconds\n# TYPE launcher_http_requests_60s gauge")

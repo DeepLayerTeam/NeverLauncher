@@ -1,5 +1,5 @@
-// Package migrationworkflow defines persisted execution states for the 0.33.1
-// migration coordinator. Source adapters, importing and cutover are not in 0.33.1.
+// Пакет migrationworkflow описывает сохраняемые состояния исполнения координатора
+// миграций 0.33.1. Адаптеры источников, импорт и переключение не входят в 0.33.1.
 package migrationworkflow
 
 import (
@@ -15,8 +15,8 @@ var (
 	ErrConflict = errors.New("migration run changed concurrently")
 )
 
-// Prepared means the Never target baseline was collected, NOT that a Gravit
-// project was imported, verified, or cut over.
+// Prepared означает сбор исходных сведений о целевом состоянии Never, а НЕ
+// импорт, проверку или переключение проекта Gravit.
 type Run struct {
 	ID         string          `json:"id"`
 	ProjectID  string          `json:"projectId"`
@@ -46,8 +46,9 @@ type Event struct {
 	CreatedAt time.Time       `json:"createdAt"`
 }
 
-// Store methods are transactional and reject operations with stale fencing
-// tokens. An expired worker can never checkpoint after a new worker takes over.
+// Методы хранилища транзакционны и отклоняют операции с устаревшими токенами
+// ограждения. Воркер с истёкшей арендой не может записать контрольную точку после
+// передачи работы новому воркеру.
 type Store interface {
 	CreateMigration0331(context.Context, string, string, string) (Run, error)
 	GetMigration0331(context.Context, string) (Run, error)

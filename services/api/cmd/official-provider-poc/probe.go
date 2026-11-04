@@ -1,9 +1,9 @@
 package main
 
-// Probe the encryption boundary of a user-supplied Minecraft Java server.
-// This is non-credentialed: it never submits tokens and does not claim a
-// successful game login. Only servers the operator owns/has permission to test
-// should be passed to this function.
+// Проверяйте границу шифрования предоставленного пользователем Java-сервера
+// Minecraft. Это проверка без учётных данных: она не отправляет токены и не
+// утверждает успешный игровой вход. Передавайте только серверы, которыми оператор
+// владеет или вправе проверять.
 
 import (
 	"bufio"
@@ -72,8 +72,8 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(8 * time.Second))
-	// A standard login handshake, then Login Start; do NOT send a real
-	// username, UUID or credentials as part of this probe.
+	// Стандартное рукопожатие входа, затем Login Start; НЕ передавайте настоящее
+	// имя пользователя, UUID или учётные данные в ходе пробы.
 	payload := putVarInt(nil, 0)
 	payload = putVarInt(payload, protocol)
 	if len(host) > 255 {
@@ -93,8 +93,8 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	if protocol >= 764 { // 1.20.2+: Login Start UUID is required (16 raw bytes).
 		login = append(login, make([]byte, 16)...)
 	} else if protocol >= 759 {
-		// Modern pre-1.20.2 Login Start variants are not certifiable by
-		// this probe; avoid reporting false encryption failures.
+		// Современные варианты Login Start до 1.20.2 не сертифицируются этой пробой;
+		// не сообщайте о ложных ошибках шифрования.
 		return errors.New("probe supports Minecraft 1.20.2+ protocols only")
 	}
 	if err := writeFrame(conn, login); err != nil {
@@ -117,8 +117,8 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	if err != nil || id != 1 {
 		return ErrNoOnlineModeChallenge
 	}
-	// In the login state, 0x01 is Encryption Request. Validate the challenge
-	// includes a public key; a bare 0x01 is not sufficient proof.
+	// В состоянии входа 0x01 означает Encryption Request. Проверяйте наличие
+	// открытого ключа в запросе; одного байта 0x01 недостаточно.
 	idLength, err := readVarInt(packetReader) // serverId string length
 	if err != nil || idLength < 0 || idLength > 64 {
 		return ErrNoOnlineModeChallenge

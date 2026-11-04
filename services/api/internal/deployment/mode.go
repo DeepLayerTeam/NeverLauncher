@@ -1,5 +1,6 @@
-// Package deployment selects and enforces the actual, supported API topology.
-// It never turns an unavailable durable dependency into an in-memory backend.
+// Package deployment выбирает и обеспечивает фактическую поддерживаемую топологию
+// API. Он никогда не подменяет недоступную устойчивую зависимость внутренним
+// хранилищем в памяти.
 package deployment
 
 import (
@@ -33,10 +34,10 @@ type Plan struct {
 	requireLocalFS bool
 }
 
-// Detect performs an offline, fail-closed topology selection. It must run before
-// migrations or workers start. Run config.ValidateProduction separately for all
-// security policy and signing-key checks. Availability is checked by the real
-// connectors during bootstrap, not inferred from the presence of env variables.
+// Detect выбирает топологию автономно с отказом при ошибке. Запускайте его до
+// миграций и рабочих процессов. Отдельно выполняйте config.ValidateProduction для
+// всех политик безопасности и ключей подписи. Доступность проверяют реальные
+// коннекторы при начальной загрузке.
 func Detect(cfg config.Config) (Plan, error) {
 	requested := strings.ToLower(strings.TrimSpace(cfg.DeploymentMode))
 	if requested == "" {
@@ -125,7 +126,8 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.SingleInstance = true
 		p.requireLocalFS = true
 		p.Limitations = append(p.Limitations, "one Linux API process only; no distributed HA", "SQLite-to-PostgreSQL migration requires a separate verified procedure")
-		// The storage root is the canonical ownership anchor across deployments.
+		// Корневой каталог хранилища — каноническая точка привязки владения между
+		// развёртываниями.
 		p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
 		if lock := strings.TrimSpace(cfg.DeploymentLockPath); lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
 			problems = append(problems, "single-node owner lock cannot be overridden")
@@ -155,9 +157,9 @@ func Detect(cfg config.Config) (Plan, error) {
 			}
 		}
 		if p.Mode == NetworkHA {
-			// Routing and lease ownership are keyed by this identity across API
-			// and workers. A PID/hostname-generated fallback changes on restart
-			// and can collide in cloned containers; reject it for Network-HA.
+			// Маршрутизация и владение арендой привязаны к этой идентичности для API и
+			// workers. Запасной ID из PID/hostname меняется при перезапуске и может
+			// конфликтовать в клонированных контейнерах; отклоняйте его для Network-HA.
 			id := strings.TrimSpace(cfg.ServerBridgeReplicaID)
 			if id == "" {
 				problems = append(problems, "network-ha requires an explicitly configured stable LAUNCHER_REPLICA_ID for each API/worker")

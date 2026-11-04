@@ -22,9 +22,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
-// Tickets use AES-256-GCM, scoped to a live Never account and session. Neither
-// Microsoft refresh credentials nor Minecraft tokens are persisted in local
-// Yggdrasil profile tables, ServerBridge or the user's browser storage.
+// Билеты шифруются AES-256-GCM и ограничены действующими учётной записью и сеансом
+// Never. Ни Microsoft refresh-учётные данные, ни Minecraft-токены не сохраняются в
+// локальных таблицах профилей Yggdrasil, ServerBridge или браузерном хранилище
+// пользователя.
 type officialState0257 struct {
 	Kind             string `json:"kind"`
 	User             string `json:"user"`
@@ -34,9 +35,9 @@ type officialState0257 struct {
 	Interval         int    `json:"interval,omitempty"`
 	NextPoll         int64  `json:"nextPoll,omitempty"`
 	MicrosoftRefresh string `json:"microsoftRefresh,omitempty"`
-	// A successfully redeemed device grant must not be redeemed again if an
-	// Xbox/Minecraft stage times out. These fields exist ONLY in AES-GCM flow
-	// tickets, never in the JSON shown to Desktop's renderer.
+	// Успешно погашенный допуск устройства нельзя погашать повторно, если этап
+	// Xbox/Minecraft завершился по тайм-ауту. Эти поля существуют ТОЛЬКО в билетах
+	// потока AES-GCM, никогда в JSON для renderer Desktop.
 	MicrosoftAccess        string `json:"microsoftAccess,omitempty"`
 	MicrosoftAccessExpires int64  `json:"microsoftAccessExpires,omitempty"`
 	MinecraftToken         string `json:"minecraftToken,omitempty"`
@@ -215,9 +216,10 @@ func (s Server) officialBegin0257(w http.ResponseWriter, r *http.Request) {
 	officialWrite0257(w, 200, map[string]any{"verificationUri": challenge.VerificationURI, "userCode": challenge.UserCode, "message": challenge.Message, "intervalSeconds": challenge.Interval, "expiresIn": challenge.ExpiresIn, "flow": ticket})
 }
 
-// Temporary upstream failures after Microsoft token redemption must preserve
-// the successful grant. Never repeat the one-use device_code redemption merely
-// because Xbox Live, XSTS or Minecraft Services was briefly unavailable.
+// Временные ошибки внешнего сервиса после погашения Microsoft-токена должны
+// сохранять успешно полученный допуск. Не повторяйте одноразовое погашение
+// device_code только потому, что Xbox Live, XSTS или Minecraft Services временно
+// недоступны.
 func officialTransient0257(err error) bool {
 	if err == nil {
 		return false
@@ -236,8 +238,9 @@ func officialTransient0257(err error) bool {
 	if errors.As(err, &upstream) {
 		return upstream.Status == http.StatusRequestTimeout || upstream.Status == http.StatusTooManyRequests || upstream.Status >= 500
 	}
-	// Malformed, unexpected or empty upstream responses can be transient.
-	// Permission/grant failures above are ServiceError or sentinel errors.
+	// Некорректные, неожиданные или пустые ответы внешнего сервиса могут быть
+	// временными. Ошибки разрешений и предоставленных допусков выше представлены
+	// ServiceError или специальными ошибками.
 	return !errors.Is(err, officialminecraft.ErrDenied) && !errors.Is(err, officialminecraft.ErrExpired) &&
 		!errors.Is(err, officialminecraft.ErrUnlicensed)
 }
@@ -305,8 +308,8 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 		st.MicrosoftAccess = tokens.AccessToken
 		st.MicrosoftRefresh = tokens.RefreshToken
 		st.MicrosoftAccessExpires = time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second).Unix()
-		// The Device Code has already been consumed, but a short recovery window
-		// is needed to finish the Xbox/Minecraft profile verification.
+		// Device Code уже погашен, но для завершения проверки профиля Xbox/Minecraft
+		// необходимо короткое окно восстановления.
 		if recoveryExpiry := time.Now().Add(5 * time.Minute).Unix(); st.Expires < recoveryExpiry {
 			st.Expires = recoveryExpiry
 		}
@@ -494,7 +497,8 @@ func (s Server) officialSkinUpload0257(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 422, "invalid Minecraft skin PNG")
 		return
 	}
-	// Mojang's official upload API does not promise support for HD PNGs.
+	// Официальный API загрузки Mojang не гарантирует поддержку PNG повышенного
+	// разрешения.
 	if normalized.Width != 64 || (normalized.Height != 64 && normalized.Height != 32) {
 		writeError(w, 422, "official skin must be 64x64 or classic 64x32")
 		return

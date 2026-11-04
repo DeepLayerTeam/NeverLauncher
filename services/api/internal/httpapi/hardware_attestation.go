@@ -159,7 +159,8 @@ func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Reques
 		writeError(w, 401, "TPM Certify rejected: "+err.Error())
 		return
 	}
-	// Cryptography may take seconds: binding/revocation is checked again before storage.
+	// Криптографическая проверка может длиться несколько секунд: привязка и отзыв повторно
+	// проверяются до сохранения.
 	currentSession, sessionErr := sessionBoundToDevice0124(s, claims, id)
 	currentDevice, deviceErr := s.Repo.GetTrustedDevice(claims.Sub, id)
 	if sessionErr != nil || deviceErr != nil || currentSession.ID != session.ID ||
@@ -173,7 +174,8 @@ func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Reques
 		writeError(w, 409, "cannot commit hardware evidence")
 		return
 	}
-	// Do not modify legacy "challenge-response-v1" or turn key provenance into Guard trust.
+	// Не изменяйте устаревший challenge-response-v1 и не превращайте происхождение ключа в
+	// доверие Guard.
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "tpm-certify-" + req.ChallengeID, Actor: claims.Sub, Action: "auth:device:tpm-certify:verified", Target: id, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"verification": "tpm-ak-certified", "rootId": result.RootID, "akFingerprint": result.AKFingerprint, "expiresAt": result.ExpiresAt, "bindingEpoch": session.BindingEpoch, "runtimeEvidence": "none", "measuredBoot": "not-verified",

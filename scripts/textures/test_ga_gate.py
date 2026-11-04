@@ -164,8 +164,9 @@ class TextureGAGate0260Tests(unittest.TestCase):
         folder = self.root / "windows-amd64"
         report = folder / "official.json"
         raw = report.read_bytes()
-        # Signed hashes must match any change; also test the duplicate-key parser
-        # by re-signing the altered content as if a signer had made a mistake.
+        # Подписанные хеши должны совпадать при любом изменении; проверяйте также
+        # парсер повторяющихся ключей, повторно подписав изменённое содержимое, как
+        # при ошибке подписанта.
         report.write_bytes(raw[:-1] + b',"actualExecution":true}')
         attestation = json.loads((folder / "attestation.json").read_text())
         attestation["reports"]["official"]["sha256"] = hashlib.sha256(

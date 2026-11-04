@@ -29,14 +29,16 @@ func (r *SQLRepository) GetMigrationRehearsal03310(ctx context.Context, runID st
 	if e = json.Unmarshal(raw, &report); e != nil {
 		return gr.Report{}, e
 	}
-	// Never show a persisted pre-0.44.7 synthetic receipt as ready.
-	// Stage/activate performs the same authoritative re-evaluation.
+	// Никогда не показывайте сохранённую синтетическую квитанцию до 0.44.7 как
+	// ready. Подготовка и активация выполняют ту же авторитетную повторную
+	// оценку.
 	return gr.Evaluate(report)
 }
 
-// SaveMigrationRehearsal03310 binds external staging evidence to durable MIG03,
-// MIG04, MIG05, MIG06, MIG07 and MIG08 receipts in the SAME transaction. A
-// rerun with changed evidence cannot overwrite the first certified rehearsal.
+// SaveMigrationRehearsal03310 связывает внешние свидетельства подготовки с
+// устойчивыми квитанциями MIG03, MIG04, MIG05, MIG06, MIG07 и MIG08 в ОДНОЙ
+// транзакции. Повтор с другими свидетельствами не может перезаписать первую
+// сертифицированную репетицию.
 func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID string, input gr.Report) (gr.Report, error) {
 	var empty gr.Report
 	if err := r.check(); err != nil {
@@ -82,8 +84,8 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 	if inventory != v.SourceInventorySHA256 {
 		return empty, mw.ErrConflict
 	}
-	// A blocker in module inspection or identity mapping is never overridden by
-	// a staging probe, even one whose test executable returned success.
+	// Блокирующая проблема анализа модулей или сопоставления идентичностей не
+	// снимается staging-проверкой, даже если тестовая программа завершилась успешно.
 	var modulesReady bool
 	err = tx.QueryRowContext(ctx, `SELECT COALESCE((report->>'ready')::boolean,false) AND jsonb_array_length(report->'blockers')=0 FROM migration_modules_0338 WHERE run_id=$1`, runID).Scan(&modulesReady)
 	if err != nil {
@@ -100,8 +102,9 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 	if blocked != 0 {
 		return empty, mw.ErrConflict
 	}
-	// Ensure the actual player UUID mapping matches the earlier imported source
-	// mapping, not just two operator supplied staging files.
+	// Убедитесь, что реальное сопоставление UUID игроков совпадает с ранее
+	// импортированным сопоставлением источника, а не только с двумя файлами
+	// подготовки от оператора.
 	rows, err := tx.QueryContext(ctx, `SELECT provider||':'||source_id,minecraft_uuid FROM migration_identity_rows_0334 WHERE run_id=$1 ORDER BY source_id`, runID)
 	if err != nil {
 		return empty, err
@@ -133,8 +136,9 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 			return empty, mw.ErrConflict
 		}
 	}
-	// Must have real imported account/security receipts and at least one staged
-	// migrated workspace before accepting a rehearsal. Missing is NOT success.
+	// Перед принятием репетиции необходимы реальные квитанции импорта учётных
+	// записей/безопасности и хотя бы одно подготовленное мигрированное рабочее
+	// пространство. Отсутствие НЕ означает успех.
 	for _, table := range []string{"migration_auth_imports_0335", "migration_security_resets_0336", "migration_content_0337"} {
 		var n int
 		switch table {
@@ -152,7 +156,8 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 			return empty, mw.ErrConflict
 		}
 	}
-	// A reserved but incompletely staged workspace is not a rehearsable release.
+	// Зарезервированное, но не полностью подготовленное рабочее пространство не может
+	// участвовать в репетиции релиза.
 	var incompletes int
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM migration_content_0337 c JOIN build_workspaces_0226 w ON w.id=c.workspace_id
  WHERE c.run_id=$1 AND (
@@ -175,8 +180,8 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 	if incompletes > 0 {
 		return empty, mw.ErrConflict
 	}
-	// Existing Never data may change between rehearsal and cutover; checking it
-	// again remains mandatory in MIG11. Rehearsal never authorizes a cutover.
+	// Данные Never могут меняться между репетицией и переключением; повторная
+	// проверка в MIG11 обязательна. Репетиция никогда не разрешает переключение.
 	var previous string
 	err = tx.QueryRowContext(ctx, `SELECT report_sha256 FROM migration_rehearsals_03310 WHERE run_id=$1 AND stage_id=$2`, runID, v.StageID).Scan(&previous)
 	if err == nil {

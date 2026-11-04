@@ -9,8 +9,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Exact run retrieval makes older attempts reproducible despite bounded
-// list endpoints and protects access by the enclosing package identity.
+// Получение точного запуска делает старые попытки воспроизводимыми, несмотря
+// на ограниченные списки, и защищает доступ идентичностью пакета.
 func (r *MemoryRepository) GetValidationRun03412(_ context.Context, pkg, run string) (model.StagedRuntimeRun0342, error) {
 	r.validationMu.Lock()
 	defer r.validationMu.Unlock()

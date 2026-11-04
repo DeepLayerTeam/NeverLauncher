@@ -23,7 +23,8 @@ func TestCheckpointRestoresRealState04810(t *testing.T) {
 	if err = snapshotRuntime04810(ctx, root, key, tx); err != nil {
 		t.Fatal(err)
 	}
-	// A versioned Java migration mutates existing documents and adds new ones.
+	// Версионированная миграция Java изменяет существующие документы и добавляет
+	// новые.
 	if err = runtimeWrite0303(ctx, dir, file, []byte(`{"counter":4}`)); err != nil {
 		t.Fatal(err)
 	}

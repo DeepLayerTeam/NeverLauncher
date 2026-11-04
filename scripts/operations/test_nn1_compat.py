@@ -77,7 +77,7 @@ class NN1Admission(unittest.TestCase):
     def test_real_mixed_hosts_with_matching_api_worker_and_protocol(self):
         pairs = {"a": report("a", "0.51.5"), "b": report("b", "0.51.6")}
         self.assertEqual(set(nn.validate_live_nodes(pairs, require_mixed=True).values()), nn.PAIR)
-        # Same version is permissible after the last old process drains.
+        # Совпадение версий допустимо после остановки последнего старого процесса.
         pairs["a"] = report("a", "0.51.6")
         self.assertEqual(len(set(nn.validate_live_nodes(pairs).values())), 1)
         with self.assertRaisesRegex(nn.CompatibilityError, "both N and N-1"):

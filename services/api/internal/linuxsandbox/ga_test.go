@@ -11,8 +11,8 @@ import (
 	"testing"
 )
 
-// The release must not claim process-tree lifetime enforcement on kernels
-// lacking cgroup.kill (the child may have escaped the initial process group).
+// Релиз не должен утверждать контроль жизненного цикла дерева процессов на ядрах
+// без cgroup.kill: дочерний процесс мог выйти из исходной группы.
 func TestGACgroupKillMandatory0320(t *testing.T) {
 	dir := t.TempDir()
 	if err := requireCgroupKill03120(dir); err == nil || !strings.Contains(err.Error(), "cgroup-kill-required") {
@@ -35,8 +35,8 @@ func TestGACgroupKillMandatory0320(t *testing.T) {
 	}
 }
 
-// A concurrent shutdown must never panic with close-of-closed-channel and
-// cause a host process crash triggered by a disconnected extension.
+// Параллельное завершение не должно вызывать панику из-за повторного закрытия
+// канала и приводить к падению хоста по вине отключившегося расширения.
 func TestGAConcurrentIPCListenerShutdown0320(t *testing.T) {
 	left, right := net.Pipe()
 	defer right.Close()

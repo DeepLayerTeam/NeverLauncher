@@ -1,5 +1,6 @@
-// Package gravitplan builds a reproducible, read-only Gravit migration preview
-// from the same verified sources and converters used by the import operations.
+// Package gravitplan формирует воспроизводимый предпросмотр миграции Gravit только
+// на чтение по тем же проверенным источникам и конвертерам, что используются
+// операциями импорта.
 package gravitplan
 
 import (
@@ -37,8 +38,8 @@ type Item struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-// IdentityPreview includes only counts and diagnostic reasons. Passwords,
-// usernames, UUIDs and tokens are never persisted in a migration plan.
+// IdentityPreview содержит только количества и причины диагностики. Пароли,
+// имена пользователей, UUID и токены никогда не сохраняются в плане миграции.
 type IdentityPreview struct {
 	SourceAccounts         int    `json:"sourceAccounts"`
 	DuplicateOrConflicting int    `json:"duplicateOrConflicting"`

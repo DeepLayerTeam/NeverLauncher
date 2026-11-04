@@ -119,7 +119,7 @@ func (r *SQLRepository) SaveOfficialProvider02611(ctx context.Context, expected 
 	}
 	defer tx.Rollback()
 	var v OfficialProviderRevision02611
-	// CAS UPDATE/INSERT works across independent API replicas; transaction includes the immutable history row.
+	// CAS UPDATE/INSERT работает между независимыми репликами API; транзакция включает неизменяемую строку истории.
 	if expected == 0 {
 		v, err = scanOfficialProvider02611(tx.QueryRowContext(ctx, `INSERT INTO official_provider_config_02611(singleton,revision,client_id,enabled,browser_enabled,device_enabled,issuer,actor,reason) VALUES(true,1,$1,$2,$3,$4,$5,$6,$7) ON CONFLICT(singleton) DO NOTHING RETURNING `+officialProviderColumns02611, settings.ClientID, settings.Enabled, settings.BrowserEnabled, settings.DeviceEnabled, settings.Issuer, actor, reason))
 	} else {

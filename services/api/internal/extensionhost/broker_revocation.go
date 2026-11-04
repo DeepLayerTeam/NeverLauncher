@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-// revalidateCapability04312 closes the authorization-to-response gap for
-// secret and data reads. Side effects remain subject to checks in their
-// individual brokers; this additional gate prevents revoked instances from
-// receiving results computed before the revoke committed.
+// revalidateCapability04312 закрывает промежуток между авторизацией и выдачей
+// ответа при чтении секретов/данных. Побочные эффекты остаются под проверками
+// соответствующих брокеров; этот дополнительный барьер не допускает выдачу
+// отозванным экземплярам результатов, вычисленных до отзыва.
 func (s *Supervisor) revalidateCapability04312(ctx context.Context, st *processState, name string, req capabilityRequest) error {
 	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
 		s.denyRevokedHost04210(st, err)

@@ -1,8 +1,9 @@
 package main
 
-// OS-local SQLite core maintenance. These commands execute real transactional
-// repository operations, not a mock HTTP backend. The DB owner-lock, private
-// directory and private JSON input are required; no unauthenticated listener.
+// Локальное обслуживание SQLite Core на уровне ОС. Команды выполняют настоящие
+// транзакционные операции репозитория, а не имитацию HTTP Backend. Необходимы
+// блокировка владельца БД, закрытый каталог и закрытый JSON-ввод; анонимного
+// слушателя нет.
 
 import (
 	"context"
@@ -121,9 +122,9 @@ func runCoreAction(args []string) int {
 				output, err = repo.SaveChannel(ctx, v, *actor)
 			}
 		case "user":
-			// Explicit passwordHash is read only from a private JSON file.
-			// Missing passwordHash preserves existing credentials; role/status
-			// must be explicitly supplied to avoid implicit re-enablement.
+			// Явный passwordHash читается только из закрытого JSON-файла. Его отсутствие
+			// сохраняет текущие учётные данные; роль и статус нужно передать явно во
+			// избежание неявной повторной активации.
 			var v struct {
 				model.User
 				PasswordHash *string `json:"passwordHash"`
@@ -217,7 +218,7 @@ func runCoreAction(args []string) int {
 		fmt.Fprintln(os.Stderr, "SQLite core operation refused:", err)
 		return 1
 	}
-	// User password hashes are hidden by model.User's JSON tags.
+	// Хеши паролей пользователей скрыты JSON-тегами model.User.
 	if err = json.NewEncoder(os.Stdout).Encode(output); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

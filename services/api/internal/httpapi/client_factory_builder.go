@@ -22,10 +22,10 @@ import (
 	"time"
 )
 
-// This is an execution bridge, not a second Minecraft installer. Every job
-// invokes the pinned CLI materializers and CLI verification, never a shell.
-// It is disabled unless an operator supplies an absolute CLI binary and a
-// private root directory. Requests cannot supply paths, URLs or executables.
+// Это мост выполнения, а не второй установщик Minecraft. Каждая задача вызывает
+// закреплённые CLI-материализаторы и проверку CLI, но никогда оболочку. Функция
+// отключена, пока оператор не задаст абсолютный путь к CLI и закрытый корневой
+// каталог. Запросы не могут задавать пути, URL или исполняемые файлы.
 var factoryID02710 = regexp.MustCompile(`^[a-f0-9]{32}$`)
 var factoryVersion02710 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._+\-]{0,95}$`)
 var factoryMinecraft02710 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._+\- ]{0,95}$`)
@@ -139,7 +139,8 @@ func factoryRead02710(root, id string) (factoryBuilderJob02710, string, error) {
 	if job.ID != id {
 		return job, "", errors.New("job identity mismatch")
 	}
-	// A process crash cannot leave an indefinitely "running" job in the UI.
+	// Сбой процесса не должен навсегда оставлять задачу в состоянии «выполняется»
+	// в интерфейсе.
 	if job.State == "running" || job.State == "verifying" || job.State == "queued" {
 		if _, live := factoryProcesses02710.Load(id); !live && (job.State != "queued" || time.Since(job.UpdatedAt) > time.Minute) {
 			job.State = "interrupted"
@@ -171,7 +172,7 @@ func factoryValidateRequest02710(r factoryBuilderRequest02710) error {
 }
 func factoryCleanEnv02710(dir string) []string {
 	env := []string{"PATH=/usr/bin:/bin", "HOME=" + dir, "TMPDIR=" + filepath.Join(dir, "tmp"), "LANG=C.UTF-8"}
-	// Explicitly selected proxy / certificate configuration, not parent tokens.
+	// Явно выбранная конфигурация прокси и сертификатов, а не унаследованные токены.
 	for _, key := range []string{"HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "SSL_CERT_FILE", "SSL_CERT_DIR"} {
 		if value := os.Getenv(key); value != "" {
 			env = append(env, key+"="+value)
@@ -283,8 +284,9 @@ func factoryRun02710(binary, root string, job factoryBuilderJob02710) {
 		err = factoryInvoke02710(ctx, binary, dir, log, "runtime", "client-factory", "verify", "--client-dir", filepath.Join(dir, "client"), "--output", filepath.Join(dir, "verified-plan.json"))
 	}
 	if err == nil && job.Request.Source == "modpack" {
-		// Import emits a report, not a factory plan. The verified CLI plan is
-		// the only authoritative result, and must match this workspace.
+		// Импорт создаёт отчёт, а не план фабрики. Единственным авторитетным
+		// результатом является проверенный план CLI, который должен соответствовать
+		// этому рабочему пространству.
 		b, e := os.ReadFile(filepath.Join(dir, "verified-plan.json"))
 		if e != nil {
 			err = e
@@ -539,9 +541,9 @@ func factoryVerifyArtifact02710(root, path, digest string) (string, error) {
 	return full, nil
 }
 
-// factoryPackageVerified0280 writes to a temporary archive before the response starts.
-// In addition to the CLI verifier, hash every file as it is copied to prevent
-// handing out a partial or silently modified ZIP after a concurrent file edit.
+// factoryPackageVerified0280 записывает временный архив до отправки ответа. Помимо проверки
+// CLI, при копировании хешируйте каждый файл, чтобы не выдать частично сформированный или
+// незаметно изменённый ZIP при параллельном редактировании.
 func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (string, error) {
 	const maxExportBytes int64 = 8 << 30
 	paths := make([]string, 0, len(p.Outputs)+1)
@@ -580,7 +582,8 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 	}()
 	archive := zip.NewWriter(archiveFile)
 	for _, path := range paths {
-		// Neither the file nor any directory on its path may be a symlink.
+		// Ни файл, ни один каталог на пути к нему не могут быть символическими
+		// ссылками.
 		if path == "" || filepath.IsAbs(path) || strings.Contains(path, "\\") {
 			return "", errors.New("unsafe output path")
 		}
@@ -732,8 +735,9 @@ func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, job.OwnerID, "client-factory:export", job.ID)
 }
 
-// Lists durable jobs after browser refresh or an API restart. No directory
-// listing is exposed: only jobs owned by this operator and workspace appear.
+// Перечисляет сохранённые задачи после обновления страницы или перезапуска API.
+// Список каталогов не раскрывается: видны только задачи этого оператора и
+// рабочего пространства.
 func (s Server) factoryList02710(w http.ResponseWriter, r *http.Request) {
 	_, ws, ok := s.ownedWorkspace0226(w, r, "release:prepare")
 	if !ok {
@@ -770,8 +774,9 @@ func (s Server) factoryList02710(w http.ResponseWriter, r *http.Request) {
 	factoryResult02710(w, map[string]any{"items": items})
 }
 
-// Only inactive jobs can be deleted. Removal reclaims large client trees and
-// makes job quotas sustainable without allowing removal of running outputs.
+// Удалять можно только неактивные задачи. Очистка освобождает большие деревья
+// клиентов и позволяет соблюдать квоты без удаления результатов выполняющихся
+// заданий.
 func (s Server) factoryDelete02710(w http.ResponseWriter, r *http.Request) {
 	job, dir, _, _, ok := s.factoryOwnedJob02710(w, r)
 	if !ok {
@@ -796,8 +801,9 @@ func endedFactoryJob02710(state string) bool {
 	return state == "completed" || state == "failed" || state == "cancelled" || state == "interrupted"
 }
 
-// Receive the archive with a strict bound; the real CLI parses and validates
-// CurseForge/Modrinth ZIP contents. Upload never trusts browser file paths.
+// Принимайте архив с жёстким ограничением размера; настоящий CLI разбирает и
+// проверяет содержимое ZIP CurseForge/Modrinth. Загрузка никогда не доверяет
+// путям файлов из браузера.
 func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request) {
 	_, ws, ok := s.ownedWorkspace0226(w, r, "release:prepare")
 	if !ok {
@@ -829,8 +835,9 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 		return
 	}
 	req := factoryBuilderRequest02710{Minecraft: ws.Settings.Minecraft.Version, Loader: ws.Settings.Minecraft.Loader, LoaderVersion: ws.Settings.Minecraft.LoaderVersion, Target: r.FormValue("target"), Source: "modpack"}
-	// Imported packs determine their exact loader from the archive. A pinned
-	// workspace without a loader version is valid and checked after install.
+	// Импортируемые наборы определяют точный загрузчик по архиву. Закреплённое
+	// рабочее пространство без версии загрузчика допустимо и проверяется после
+	// установки.
 	if req.Loader != "vanilla" && req.LoaderVersion == "" { // validate only the target and pinned MC/loader here
 		if !factoryMinecraft02710.MatchString(req.Minecraft) || factoryMutableSelector02710(req.Minecraft) {
 			writeError(w, 409, "workspace Minecraft version must be exact")

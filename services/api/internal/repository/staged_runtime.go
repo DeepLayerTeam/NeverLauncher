@@ -51,7 +51,7 @@ func (r *MemoryRepository) SaveStagedRun0342(_ context.Context, v model.StagedRu
 	}
 	v.Stages = append(json.RawMessage(nil), v.Stages...)
 	r.stagedRuntimeRuns0342 = append(r.stagedRuntimeRuns0342, v)
-	// In-memory repository mirrors the PostgreSQL AFTER INSERT audit trigger.
+	// Репозиторий памяти воспроизводит PostgreSQL-триггер аудита AFTER INSERT.
 	digest := sha256.Sum256(v.Stages)
 	r.validationAttempts03412 = append(r.validationAttempts03412, model.ValidationAttempt03412{
 		ID: int64(len(r.validationAttempts03412) + 1), PackageID: v.PackageID, RunID: v.RunID,

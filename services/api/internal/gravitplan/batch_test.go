@@ -107,7 +107,7 @@ func TestMultiProfilePreviewAndDeterminism0492(t *testing.T) {
 	if bytes.Contains(encoded, []byte("11111111-2222-4333-8444-555555555555")) {
 		t.Fatal("identity leaked to batch report")
 	}
-	// Producing the report never writes any new target data or release.
+	// Формирование отчёта никогда не записывает новые целевые данные или выпуск.
 	_ = gc.WorkspaceID("run", "profiles/alpha.json")
 }
 func TestMultiProfileFailClosed0492(t *testing.T) {

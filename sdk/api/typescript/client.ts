@@ -24,7 +24,8 @@ export function resolvePath(template: string, parameters: Record<string, string>
 export type RequestOptions = {
   params?: Record<string, string>; query?: Record<string, string | number | boolean>;
   body?: unknown; idempotencyKey?: string; signal?: AbortSignal;
-  // For multipart or binary API endpoints pass FormData/Blob/Uint8Array directly.
+  // Для multipart- или бинарных точек API передавайте FormData/Blob/Uint8Array
+  // напрямую.
   rawBody?: BodyInit; contentType?: string;
   responseType?: ResponseType; maxResponseBytes?: number;
 };
@@ -60,7 +61,8 @@ export class NeverLauncherAPI {
     if (options.rawBody !== undefined) { body = options.rawBody; if (options.contentType) headers['Content-Type'] = options.contentType; }
     else if (options.body !== undefined) { body = JSON.stringify(options.body); headers['Content-Type'] = 'application/json'; }
     const response = await this.transport(url, { method, headers, body, signal: options.signal, redirect: 'manual' });
-    // Redirects are never followed; an API redirect must not leak auth or be treated as a successful response.
+    // Редиректы никогда не выполняются; перенаправление API не должно раскрывать авторизацию или считаться успешным
+    // ответом.
     const failed = !response.ok || response.type === 'opaqueredirect';
     const max = failed ? Math.min(limit, MAX_BODY) : limit;
     const declared = response.headers.get('content-length');
@@ -123,7 +125,8 @@ export class NeverLauncherAPI {
     try { return JSON.parse(text) as T; } catch { throw new Error('invalid JSON API response'); }
   }
   async checkCompatibility(): Promise<void> {
-    // 0.45.11 did not emit the contract header; use its /ready product version as fallback.
+    // Версия 0.45.11 не отправляла заголовок контракта; запасной источник — версия продукта в
+    // /ready.
     const response = await this.transport(new URL('/ready', this.baseURL), { redirect: 'manual' });
     if (!response.ok) throw new Error(`backend not ready: ${response.status}`);
     const version = response.headers.get('X-Launcher-API-Contract');

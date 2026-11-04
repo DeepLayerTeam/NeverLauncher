@@ -72,7 +72,7 @@ def configure(args):
         finally:os.close(directory_fd)
     finally:
         if os.path.exists(tmp):os.unlink(tmp)
-    # Do not echo webhook URL (it may contain a sensitive path).
+    # Не выводите URL вебхука: в его пути могут быть секретные данные.
     print('Alertmanager configuration written. Ensure container group can read it:',target)
     print('LAUNCHER_MONITOR_GID=',os.getgid(),sep='')
 
@@ -113,7 +113,8 @@ def sanitize_logs(raw):
     safe_route_groups={'api','health','ready','metrics','admin','storage','other'}
     for line in raw.splitlines():
         if len(clean)>=1500:break
-        # Compose may add a service prefix. Accept ONLY verified log shapes.
+        # Compose может добавлять префикс службы. Принимайте ТОЛЬКО проверенные
+        # форматы журналов.
         pos=line.find('{')
         if pos<0:continue
         try: entry=json.loads(line[pos:])
@@ -215,7 +216,7 @@ def main():
             if not re.fullmatch(r'[1-9][0-9]?[mhd]',args.since):raise OperatorError('since must be short relative duration (15m)')
             incident(args)
     except OperatorError as err:
-        # Error detail deliberately contains no command stdout or secrets.
+        # Детали ошибки намеренно не содержат stdout команды и секретов.
         print('ERROR:',err,file=sys.stderr)
         return 2
     return 0

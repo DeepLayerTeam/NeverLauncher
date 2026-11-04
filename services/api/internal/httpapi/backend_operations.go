@@ -16,8 +16,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// BackendLifecycle0289 is a one-way request to the process owner. HTTP never
-// executes commands, sends signals to arbitrary PIDs, or starts a shell.
+// BackendLifecycle0289 отправляет односторонний запрос владельцу процесса. HTTP
+// никогда не запускает команды, не посылает сигналы произвольным PID и не
+// открывает оболочку.
 type BackendLifecycle0289 struct {
 	InstanceID string
 	StartedAt  time.Time
@@ -42,8 +43,8 @@ func (l *BackendLifecycle0289) ScheduleRestart() bool {
 		return false
 	}
 	l.requested = true
-	// Delay avoids closing the HTTP connection before the 202 response has been
-	// flushed. Graceful HTTP shutdown in main waits for in-flight requests.
+	// Задержка не позволяет закрыть HTTP-соединение до отправки ответа 202.
+	// Корректное завершение HTTP в main дожидается выполняющихся запросов.
 	go func() { time.Sleep(350 * time.Millisecond); l.shutdown <- struct{}{} }()
 	return true
 }
@@ -53,8 +54,9 @@ func (l *BackendLifecycle0289) IsDraining() bool {
 	return l.requested
 }
 
-// Only nonsecret configuration reloads without restarting. Deployment secrets,
-// signing keys, HTTP listen address and DB connection need a supervised restart.
+// Без перезапуска обновляется только конфигурация без секретов. Секреты
+// развёртывания, ключи подписи, адрес прослушивания HTTP и подключение к БД требуют
+// контролируемого перезапуска.
 func (s Server) backendConfigReload0289(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.OperationalConfigStore)
 	if !ok {
@@ -175,7 +177,8 @@ type backendRestartRequest0289 struct {
 
 func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 	l := s.State.BackendLifecycle0289
-	// Never let a server which isn't managed by an explicit restarting service die.
+	// Нельзя завершать сервер, если его работу не контролирует явно настроенная служба
+	// перезапуска.
 	if l == nil || !l.Enabled {
 		writeError(w, 503, "restart requires an explicitly configured external process supervisor")
 		return
@@ -230,7 +233,8 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, claims.Email, "backend:restart:accepted", rec.ID)
 	if !l.ScheduleRestart() {
-		// Already persisted as accepted, but not executed. Never report success.
+		// Запрос уже сохранён как принятый, но ещё не выполнен. Никогда не сообщайте
+		// об успешном завершении.
 		writeJSON(w, 202, map[string]any{"operation": rec, "state": "indeterminate", "note": "restart already in progress; check supervisor and instance identity"})
 		return
 	}
@@ -241,8 +245,8 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// These are user-targeted, persisted notifications consumed by authenticated API
-// clients. They are NOT ServerBridge broadcasts or host commands.
+// Это сохраняемые уведомления для конкретных пользователей, которые получают
+// авторизованные API-клиенты. Это НЕ рассылки ServerBridge и не команды хосту.
 type backendNoticeWrite0289 struct {
 	UserID  string `json:"userId"`
 	Message string `json:"message"`

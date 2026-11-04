@@ -11,8 +11,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Explicitly bound to current installation identity, never an arbitrary extension ID.
-// JVM handlers receive only the authenticated actor, not caller-supplied identity.
+// Привязка выполняется только к текущей идентичности установки, но не к произвольному ID
+// расширения. Обработчики JVM получают аутентифицированного субъекта, а не заданную
+// вызывающим идентичность.
 func (s Server) invokeJavaUI0489(r *http.Request, install model.ExtensionInstall, method string, raw json.RawMessage, actorID, actorEmail string) (json.RawMessage, error) {
 	if s.ExtensionHost == nil {
 		return nil, errors.New("Java extension host unavailable")

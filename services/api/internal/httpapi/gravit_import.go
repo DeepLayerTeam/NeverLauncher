@@ -22,9 +22,9 @@ type gravitImportRequest02210 struct {
 	Version      string          `json:"version,omitempty"`
 }
 
-// The preview does not mutate the repo. The commit repeats conversion on the
-// original source bytes, requires a matching digest, then creates an exclusive
-// profile and a private Build Workspace pinned to revision 1.
+// Предпросмотр не изменяет репозиторий. Фиксация повторяет преобразование исходных
+// байтов, требует совпадающего хеша, затем создаёт эксклюзивный профиль и закрытое
+// Build Workspace с ревизией 1.
 func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 	var req gravitImportRequest02210
 	if err := readJSON0226(w, r, 1<<20+4096, &req); err != nil {
@@ -41,7 +41,8 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "invalid route")
 		return
 	}
-	// Preview is read-only and includes the source hash and per-field decisions.
+	// Предпросмотр доступен только для чтения и включает хеш источника и решения по
+	// каждому полю.
 	if strings.HasSuffix(r.URL.Path, "/inspect-gravit") {
 		writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": result})
 		return
@@ -82,7 +83,8 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 	if !s.authorizeProjectAction(w, r, claims, "release:prepare", project, "project", project) {
 		return
 	}
-	// Use actual server version, not untrusted source's claimed tooling.
+	// Используйте фактическую версию сервера, а не сведения об инструментарии из
+	// недоверенного источника.
 	settings := repository.BuildSettings{Minecraft: result.Settings.Minecraft, Runtime: result.Settings.Runtime, Directories: result.Settings.Directories, FileRules: result.Settings.FileRules, ToolVersions: map[string]string{"launcher-api": s.Version, "gravit-static-import": "0.22.10"}}
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {

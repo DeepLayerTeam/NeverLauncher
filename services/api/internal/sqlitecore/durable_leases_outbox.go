@@ -96,10 +96,10 @@ func (r *Repository) ReleaseDurableScopeLease(ctx context.Context, scope, token 
 	})
 }
 
-// CommitFencedJob runs a trusted SQLite mutation and produces events in the
-// *same transaction* as successful completion. A caller cannot commit any
-// mutation after either the job lease or the scope fencing lease expires.
-// Side effects outside this SQLite DB MUST NOT occur inside apply; use outbox.
+// CommitFencedJob выполняет доверенное изменение SQLite и создаёт события В ТОЙ ЖЕ
+// транзакции, что успешное завершение. После истечения аренды задачи или области
+// ограждения вызывающий не может фиксировать изменения. Внешние побочные эффекты
+// НЕЛЬЗЯ выполнять внутри apply; используйте outbox.
 func (r *Repository) CommitFencedJob(ctx context.Context, jobID, jobToken, scope, scopeToken string, fence int64, result []byte, apply func(sqlitedurable.Executor) error, events []model.DurableOutboxEvent) (out model.DurableJob, err error) {
 	if len(result) == 0 {
 		result = []byte(`{}`)

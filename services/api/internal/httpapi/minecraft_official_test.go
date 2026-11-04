@@ -50,8 +50,9 @@ func TestOfficialPollRate0257(t *testing.T) {
 	}
 }
 
-// 0.26.4: a redeemed Microsoft device grant must be resumable after an Xbox or
-// Minecraft transient error, without leaking either bearer in the flow ticket.
+// В версии 0.26.4 погашенный Microsoft-допуск устройства должен допускать
+// продолжение после временной ошибки Xbox/Minecraft без утечки любого bearer в
+// билете потока.
 func TestRedeemedDeviceFlowPreservesMicrosoftGrant0264(t *testing.T) {
 	secret := "a-long-independent-server-secret-at-least-32-bytes"
 	state := officialState0257{

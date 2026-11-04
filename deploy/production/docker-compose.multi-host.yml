@@ -1,8 +1,9 @@
-# NeverLauncher 0.51.2. Deploy this *same file* independently on each Docker
-# host. DO NOT combine with docker-compose.yml: that file launches single-host
-# PostgreSQL/Redis and is not a valid multi-host overlay.
-# A separate, health-checking external load balancer MUST route HTTPS to both
-# ingress hosts. Both hosts MUST share independently operated PG, Redis and S3.
+# NeverLauncher 0.51.2. Разверните ЭТОТ ЖЕ файл независимо на каждом хосте Docker.
+# НЕ объединяйте его с docker-compose.yml: тот файл запускает однохостовые
+# PostgreSQL/Redis и не подходит для многохостового оверлея. Отдельный внешний
+# балансировщик нагрузки с проверкой здоровья ОБЯЗАТЕЛЬНО должен направлять HTTPS на
+# оба входных хоста. Оба хоста ОБЯЗАТЕЛЬНО должны использовать общие независимо
+# обслуживаемые PostgreSQL, Redis и S3.
 name: ${LAUNCHER_COMPOSE_PROJECT:-launcher}
 
 x-backend-env: &backend-env

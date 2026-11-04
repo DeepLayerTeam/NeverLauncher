@@ -202,8 +202,8 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// Persist the actual selected Minecraft/loader metadata into the release,
-	// not only into the wizard draft. It will be covered by the Ed25519 signature.
+	// Сохраняйте реально выбранные метаданные Minecraft/загрузчика в релизе, а не
+	// только в черновике мастера. Они будут покрыты подписью Ed25519.
 	if strings.TrimSpace(req.MinecraftVersion) != "" || strings.TrimSpace(req.Loader) != "" {
 		manifest := release.Manifest
 		if strings.TrimSpace(req.MinecraftVersion) != "" {
@@ -256,8 +256,9 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlock()
-	// A package produced by the Build Workspace is sealed to its pinned,
-	// hashed source set. The legacy direct upload path must not mutate it.
+	// Пакет Build Workspace запечатан относительно закреплённого и
+	// захешированного набора исходников. Устаревший прямой путь загрузки не
+	// должен его менять.
 	if locator, ok := s.Repo.(repository.BuildPackageLocator0384); ok {
 		immutable, lookupErr := locator.MaterializedBuildForPackage0384(r.Context(), lookup.Release.ID)
 		if lookupErr != nil {
@@ -294,9 +295,9 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "не удалось прочитать файл")
 		return
 	}
-	// The caller-supplied SHA refers to the bytes that were uploaded. A
-	// selected content provider may deterministically transform them before
-	// storing; the core computes a NEW final SHA for signing and delivery.
+	// SHA, переданный вызывающим, относится к загруженным байтам. Выбранный
+	// провайдер содержимого может детерминированно изменить их до сохранения;
+	// ядро вычисляет НОВЫЙ окончательный SHA для подписи и доставки.
 	uploadSum := sha256.Sum256(payload)
 	uploadSHA := hex.EncodeToString(uploadSum[:])
 	if expected := strings.TrimSpace(r.FormValue("sha256")); expected != "" && !strings.EqualFold(expected, uploadSHA) {
@@ -360,8 +361,9 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "file": saved, "storageDriver": s.Storage.Driver(), "checksumVerified": true, "status": "uploaded", "javaContentExtensionId": contentExtensionID, "uploadedSHA256": uploadSHA}})
 }
 
-// storageBackedCandidate0526 makes the same exact uploaded file set visible
-// to validation and signing. Never mutate a shared underlying Files slice.
+// storageBackedCandidate0526 предоставляет валидатору и подписи один и тот же
+// точный набор загруженных файлов. Никогда не изменяйте общий лежащий в основе
+// срез Files.
 func storageBackedCandidate0526(lookup packageLookup) model.Manifest {
 	manifest := lookup.Release.Manifest
 	manifest.Files = make([]model.ManifestFile, 0, len(lookup.Files))
@@ -391,9 +393,10 @@ func (s Server) packageValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
-	// Validate the *actual storage-backed candidate* before reporting a valid
-	// package. Checking SHA-256 alone cannot certify a broken optional-component
-	// graph or a manifest whose declared files differ from its uploaded files.
+	// Проверяйте РЕАЛЬНЫЙ кандидат из хранилища до объявления пакета корректным.
+	// Одной проверки SHA-256 недостаточно для подтверждения повреждённого графа
+	// необязательных компонентов или манифеста с расхождением объявленных и
+	// загруженных файлов.
 	if err := validatePackageCandidate0526(lookup); err != nil {
 		checks = append(checks, map[string]any{
 			"id": "manifest.candidate", "status": "failed",
@@ -450,8 +453,8 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlock()
-	// Serialize generation assignment for ALL packages in the same channel,
-	// not merely updates to this package ID.
+	// Сериализуйте назначение поколения для ВСЕХ пакетов одного канала, а не
+	// только обновлений данного ID пакета.
 	generationUnlock, generationLockErr := s.lockPackageMutation(r.Context(), "game-generation:"+lookup.Release.ProjectID+":"+lookup.Release.ProfileID+":"+lookup.Release.Channel)
 	if generationLockErr != nil {
 		writeError(w, http.StatusConflict, generationLockErr.Error())

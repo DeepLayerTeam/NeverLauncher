@@ -22,8 +22,8 @@ from cryptography.exceptions import InvalidSignature
 import independent_accept_04514 as operational
 
 ROOT = Path(__file__).resolve().parents[2]
-# Stable 0.46-series signature domain and evidence filenames. Version is signed inside
-# the document; retaining the domain preserves verification of historical 0.46.0.
+# Стабильный домен подписи серии 0.46 и имена файлов доказательств. Версия подписана внутри
+# документа; сохранение домена позволяет проверять исторический выпуск 0.46.0.
 DOMAIN = b'neverlauncher.operations-ga.0460.v1\x00'
 NAMES = ('install-standard', 'upgrade-standard', 'restore-standard', 'failover-network-ha')
 SHA = re.compile(r'^[0-9a-f]{64}$')
@@ -81,7 +81,7 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
         ('darwin', 'arm64', f'launcher-desktop-{version}-macos-arm64.zip')):
         targets[f'{os_name}-{arch}'] = {'name': filename, 'sha256': package_hash(directory / filename)}
     spec = ROOT / 'schemas/openapi.yaml'
-    # The v1 checker must pass before an operator signs the freeze candidate.
+    # Проверка v1 должна пройти до подписания оператором кандидата заморозки.
     import subprocess
     proc = subprocess.run([sys.executable, str(ROOT / 'scripts/contracts/compatibility_04512.py')],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
@@ -218,7 +218,8 @@ def main():
         raw = (json.dumps(approved, sort_keys=True, separators=(',', ':'), ensure_ascii=False) + '\n').encode()
         sig = private.sign(DOMAIN + raw)
         import base64
-        # Never place private key, credentials or raw receipts inside the release bundle.
+        # Никогда не помещайте закрытый ключ, учётные данные или необработанные квитанции в
+        # пакет выпуска.
         target = args.output_dir / 'OPERATIONS_GA_0460.json'
         atomic_private(target, raw)
         try:

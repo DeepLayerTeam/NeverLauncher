@@ -248,16 +248,16 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "пользователь недоступен")
 		return
 	}
-	// Evaluate the authoritative policy again after refresh rotation. A ban,
-	// role mutation or device revocation may have happened between preview
-	// and the final token issuance (possibly on another API replica).
+	// Повторно оцените авторитетную политику после ротации refresh. Блокировка,
+	// смена роли или отзыв устройства могли произойти между предпросмотром и
+	// выдачей конечного токена, в том числе на другой реплике API.
 	if !s.enforceProtection0298(w, r, protection.AfterAuth, user.ID, session.ID, session.TrustedDeviceID, session.RoleID) {
 		s.State.AuthSessions.revoke(session.ID, "protection-after-refresh")
 		return
 	}
-	// A binding/epoch transition after the refresh transaction must not
-	// return a token stamped with stale device authority. That token would be
-	// rejected on its next use; fail this refresh instead of reporting success.
+	// Переход привязки или эпохи после транзакции refresh не должен возвращать токен
+	// с устаревшими полномочиями устройства. При следующем использовании такой токен
+	// всё равно отклонится; лучше отклонить сам refresh, а не сообщать об успехе.
 	currentBinding, live := s.State.AuthSessions.get(session.ID, session.UserID)
 	if !live || !sameDeviceBinding0432(currentBinding, session) {
 		writeError(w, http.StatusUnauthorized, "device binding changed during refresh")

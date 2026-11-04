@@ -85,16 +85,17 @@ jobs:
         continue-on-error: true
         uses: actions/setup-java@v5
         with:
-          # Only for Gradle/tooling; actual-client Java remains the pinned JDK.
-          # Hosted runners primarily pre-cache Temurin, avoiding the ARM64
-          # Microsoft ZIP / PowerShell CLR extraction crash when possible.
+          # Только для Gradle и инструментов; Java игрового клиента остаётся
+          # закреплённой версией JDK. На размещённых раннерах обычно предварительно
+          # кэширован Temurin, что по возможности исключает сбой распаковки Microsoft
+          # ZIP через PowerShell CLR на ARM64.
           distribution: temurin
           java-version: '21'
           check-latest: false
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
-      # Hosted Windows ARM64 occasionally crashes inside PowerShell's CLR
-      # while extracting a valid JDK 21 ZIP. Retry the actual setup action;
-      # continue the client certification without a working JDK.
+      # На размещённом Windows ARM64 иногда аварийно завершается PowerShell CLR при
+      # распаковке корректного ZIP с JDK 21. Повторите настоящее действие
+      # установки; не продолжайте сертификацию клиента без рабочего JDK.
       - name: Повторная установка инструментов Java 21 после временного сбоя распаковки
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
         uses: actions/setup-java@v5
@@ -155,15 +156,17 @@ jobs:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
-          # Operator-provisioned independently SHA-256 pinned matching server ZIPs.
-          # Missing distributions intentionally BLOCK required multiplayer targets.
+          # Оператор должен отдельно предоставить соответствующие серверные ZIP с
+          # закреплёнными SHA-256. Отсутствующие дистрибутивы намеренно БЛОКИРУЮТ
+          # обязательные многопользовательские платформы.
           LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
           LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
-          # CI runners have no physical audio device; force OpenAL Soft's
-          # genuine null backend rather than failing to open the default one.
-          # This only affects certification runners, not launcher releases.
+          # На раннерах CI нет физического аудиоустройства; принудительно используйте
+          # настоящий нулевой backend OpenAL Soft вместо ошибки открытия устройства по
+          # умолчанию. Это касается только раннеров сертификации, а не выпусков
+          # лаунчера.
           ALSOFT_DRIVERS: "null"
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
@@ -298,16 +301,17 @@ jobs:
         continue-on-error: true
         uses: actions/setup-java@v5
         with:
-          # Only for Gradle/tooling; actual-client Java remains the pinned JDK.
-          # Hosted runners primarily pre-cache Temurin, avoiding the ARM64
-          # Microsoft ZIP / PowerShell CLR extraction crash when possible.
+          # Только для Gradle и инструментов; Java игрового клиента остаётся
+          # закреплённой версией JDK. На размещённых раннерах обычно предварительно
+          # кэширован Temurin, что по возможности исключает сбой распаковки Microsoft
+          # ZIP через PowerShell CLR на ARM64.
           distribution: temurin
           java-version: '21'
           check-latest: false
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
-      # Hosted Windows ARM64 occasionally crashes inside PowerShell's CLR
-      # while extracting a valid JDK 21 ZIP. Retry the actual setup action;
-      # continue the client certification without a working JDK.
+      # На размещённом Windows ARM64 иногда аварийно завершается PowerShell CLR при
+      # распаковке корректного ZIP с JDK 21. Повторите настоящее действие
+      # установки; не продолжайте сертификацию клиента без рабочего JDK.
       - name: Повторная установка инструментов Java 21 после временного сбоя распаковки
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
         uses: actions/setup-java@v5
@@ -368,15 +372,17 @@ jobs:
           LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
-          # Operator-provisioned independently SHA-256 pinned matching server ZIPs.
-          # Missing distributions intentionally BLOCK required multiplayer targets.
+          # Оператор должен отдельно предоставить соответствующие серверные ZIP с
+          # закреплёнными SHA-256. Отсутствующие дистрибутивы намеренно БЛОКИРУЮТ
+          # обязательные многопользовательские платформы.
           LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
           LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
-          # CI runners have no physical audio device; force OpenAL Soft's
-          # genuine null backend rather than failing to open the default one.
-          # This only affects certification runners, not launcher releases.
+          # На раннерах CI нет физического аудиоустройства; принудительно используйте
+          # настоящий нулевой backend OpenAL Soft вместо ошибки открытия устройства по
+          # умолчанию. Это касается только раннеров сертификации, а не выпусков
+          # лаунчера.
           ALSOFT_DRIVERS: "null"
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh

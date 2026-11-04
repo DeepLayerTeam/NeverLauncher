@@ -33,8 +33,9 @@ func (r *SQLRepository) GetMigrationInventory0333(ctx context.Context, id string
 	return report, nil
 }
 
-// SaveMigrationInventory0333 serializes against all existing run transitions.
-// It rejects inconsistent compatibility input; replays never duplicate events.
+// SaveMigrationInventory0333 сериализуется со всеми существующими переходами
+// запуска. Несогласованные данные совместимости отклоняются; повторы не дублируют
+// события.
 func (r *SQLRepository) SaveMigrationInventory0333(ctx context.Context, id string, report inv.Inventory) (inv.Inventory, error) {
 	if e := r.check(); e != nil {
 		return inv.Inventory{}, e

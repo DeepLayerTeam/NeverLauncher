@@ -42,8 +42,9 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("SQL connector %q open database: %w", cfg.ID, err)
 	}
-	// Fail at activation when the live SQL schema doesn't match the declared
-	// mapping; do not leave a provider healthy until its first real login.
+	// Отказывайте уже при активации, если действующая схема SQL не совпадает с
+	// объявленным сопоставлением; не показывайте провайдера исправным до первого
+	// настоящего входа.
 	if _, err := InspectMapping(ctx, db, cfg); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("SQL connector %q mapping validation failed: %w", cfg.ID, err)
@@ -463,7 +464,7 @@ var _ authconnector.IdentityResolver = (*Connector)(nil)
 var _ authconnector.ProfileResolver = (*Connector)(nil)
 var _ authconnector.Connector = (*Connector)(nil)
 
-// MappingPreview executes the same read-only schema inspection used for activation.
+// MappingPreview выполняет ту же проверку схемы только для чтения, что и активация.
 func (c *Connector) MappingPreview(ctx context.Context) ([]MappedColumn, error) {
 	return InspectMapping(ctx, c.db, c.cfg)
 }

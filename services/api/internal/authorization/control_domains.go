@@ -1,8 +1,8 @@
 package authorization
 
-// ControlDomain names the privilege boundary for an operational command.
-// Game commands are project-scoped. Backend and host actions are instance-scoped
-// and must NEVER be authorized with project memberships or a game permission.
+// ControlDomain определяет границу привилегий операционной команды. Игровые команды
+// ограничены проектом. Действия Backend и хоста ограничены экземпляром и НИКОГДА не
+// должны авторизоваться по членству в проекте или игровому разрешению.
 type ControlDomain string
 
 const (
@@ -23,8 +23,8 @@ const (
 	HostExec       = "host:exec"
 )
 
-// GameCommandPermission is a closed dispatch table. Unknown commands, including
-// backend/host/shell commands, have NO authority in ServerBridge control API.
+// GameCommandPermission — закрытая таблица диспетчеризации. Неизвестные команды,
+// включая backend/host/shell, НЕ имеют полномочий в API управления ServerBridge.
 func GameCommandPermission(kind string) (string, bool) {
 	switch kind {
 	case "message.broadcast":

@@ -12,8 +12,9 @@ import (
 	"time"
 )
 
-// Exercises the actual PostgreSQL schema, live player linkage and correlated
-// ServerBridge kick queue. It is not satisfied by in-memory/repository mocks.
+// Проверяет настоящую схему PostgreSQL, активную привязку игрока и очередь
+// связанных команд отключения ServerBridge. Mock-репозиториев в памяти
+// недостаточно.
 func TestServerBoundGuardPostgres0507(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -48,9 +49,9 @@ func TestServerBoundGuardPostgres0507(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// The database admission trigger verifies a live authenticated parent
-	// session. Create the deferred auth-session/refresh-family FK pair exactly
-	// as production admission does; never bypass the trigger for a test.
+	// Триггер допуска БД проверяет действующий аутентифицированный родительский
+	// сеанс. Создавайте пару отложенных внешних ключей auth-session/refresh-family
+	// точно как при промышленном допуске; не обходите триггер ради теста.
 	family := "gb-family-" + suffix
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

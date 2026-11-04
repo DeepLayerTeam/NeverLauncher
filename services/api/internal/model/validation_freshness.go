@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// ValidationChallenge0346 is a one-use, backend-issued authorization to attest
-// one immutable staged snapshot under one explicitly configured target matrix.
+// ValidationChallenge0346 — одноразовое разрешение Backend на аттестацию одного
+// неизменяемого staging-снимка по одной явно настроенной матрице целей.
 type ValidationChallenge0346 struct {
 	RunID              string    `json:"runId"`
 	Nonce              string    `json:"nonce"`

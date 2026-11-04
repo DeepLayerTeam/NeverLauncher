@@ -16,7 +16,7 @@ func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 		SQLiteCoordinatorPath:      "/var/lib/launcher/coord/state.db", RateLimitEnabled: true, RateLimitFailClosed: true,
 		RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
 	}
-	// Explicit SQLite coordination does not require Redis when HA is disabled.
+	// Явная координация SQLite не требует Redis при отключённом HA.
 	if e := ValidateProduction(cfg); e != nil {
 		t.Fatalf("single-node validation: %v", e)
 	}

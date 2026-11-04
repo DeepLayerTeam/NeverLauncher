@@ -51,9 +51,9 @@ jobs:
       - name: Reject incomplete, stale, forged or mocked GA coverage
         run: python3 scripts/ga/test_runtime_acceptance_0350.py
   live-backend-acceptance:
-    # The protected environment authorizes only a read-only Backend API token.
-    # Neither the attestation signing key nor production release key is present.
-    # The actual stable commit still re-evaluates evidence in PostgreSQL.
+    # Защищённое окружение разрешает только доступ к Backend API по токену на чтение.
+    # Здесь нет ни ключа подписи аттестации, ни ключа промышленного выпуска.
+    # Фактический стабильный коммит повторно оценивает доказательства в PostgreSQL.
     name: Require actual independently signed all-target live evidence
     needs: [security-regression]
     runs-on: ubuntu-24.04

@@ -28,14 +28,14 @@ public final class RuntimeApiTests {
             try {
                 if(!"Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization"))){respond(x,401,Map.of("error","unauthorized"));return;}
                 String path=x.getRequestURI().getPath();
-                // Use a single read of the request body for all paths.
-                // Input is reparsed below by dedicated route handler for clarity.
+                // Читайте тело запроса один раз для всех путей. Ниже выделенный обработчик
+                // маршрута повторно разбирает данные для ясности.
                 if(path.equals("/v1/hello")){respond(x,200,Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","run-1","heartbeatTimeoutSeconds",6,"capabilities",List.of("runtime.config.get","runtime.config.put","runtime.config.delete","runtime.storage.get","runtime.storage.put","runtime.storage.delete","secret.get"),"eventProtocolVersion","1.0","events",List.of("release.published","project.saved","release.before-publish")));return;}
                 if(path.equals("/v1/heartbeat")){respond(x,200,Map.of("ok",true));return;}
                 respond(x,404,Map.of("error","not found"));
             }catch(Exception ex){respond(x,500,Map.of("error",ex.toString()));}
         });
-        // More specific contexts take priority over /v1/.
+        // Более конкретные контексты имеют приоритет перед /v1/.
         fake.createContext("/v1/capabilities/",x->{
             try {
                 check("Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization")),"broker authorized");
@@ -97,8 +97,8 @@ public final class RuntimeApiTests {
                 check(callback(client,callbacks.url()+"/v1/rpc",Json.encode(Map.of("protocolVersion","1.0","requestId","abc-123","method","command.invoke","deadlineMs",1500L,
                     "params",Map.of("command","empty","payload",Map.of()))),"callback-token")==200,
                     "null command results succeed through versioned JVM RPC");
-                // A real event envelope can exceed 64 KiB even when its payload is
-                // well inside the server's permitted 1 MiB durable event size.
+                // Настоящий конверт события может превышать 64 КиБ, даже если полезная
+                // нагрузка намного меньше разрешённых сервером 1 МиБ устойчивого события.
                 AtomicInteger largeDelivered=new AtomicInteger();
                 services.events().subscribe("project.saved","async",null,Json::object,incoming->{
                     check(((String)incoming.payload().get("data")).length()==150000,"large event payload intact");
@@ -111,7 +111,8 @@ public final class RuntimeApiTests {
                 check(largeEvent.length()>65536,"large event exceeds RPC limit");
                 check(callback(client,callbacks.url()+"/v1/events",largeEvent,"callback-token")==200 && largeDelivered.get()==1,
                     "durable-size event delivered through real HTTP callback");
-                // A noncooperative callback must not be able to bypass request bounds.
+                // Обратный вызов, не взаимодействующий с системой, не должен обходить
+                // ограничения запроса.
                 check(callback(client,callbacks.url()+"/v1/events"," ".repeat(2*1024*1024+1),"callback-token")==413,
                     "oversized event rejected");
                 check(callback(client,callbacks.url()+"/v1/rpc"," ".repeat(65537),"callback-token")==413,

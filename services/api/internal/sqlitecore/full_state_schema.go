@@ -1,7 +1,7 @@
 package sqlitecore
 
-// Migration 326. No ephemeral authority or implicit success is possible:
-// runtime state, command delivery and extension activation live in one WAL DB.
+// Миграция 326. Никакой эфемерной авторизации или неявного успеха: состояние
+// Runtime, доставка команд и активация расширений находятся в одной WAL-БД.
 var fullStateDDL = []string{
 	`CREATE TABLE bridge_runtime (
  node_id TEXT PRIMARY KEY REFERENCES bridge_nodes(id) ON DELETE RESTRICT,

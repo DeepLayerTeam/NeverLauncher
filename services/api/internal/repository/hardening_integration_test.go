@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Two independently opened pgx connections emulate separate API replicas/tabs.
-// This is a real PostgreSQL test; it must not silently downgrade to memory.
+// Два независимо открытых соединения pgx имитируют отдельные реплики API или
+// вкладки. Это настоящий тест PostgreSQL; скрытый переход на память запрещён.
 func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
@@ -85,7 +85,7 @@ func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
 	if after.Settings.AuditLookbackDays != 40 && after.Settings.AuditLookbackDays != 41 {
 		t.Fatalf("unexpected persisted settings: %+v", after.Settings)
 	}
-	// Restore uses a NEW revision and does not destroy the previous history.
+	// Восстановление использует НОВУЮ ревизию и не уничтожает прежнюю историю.
 	restored, err := a.SaveOperationalConfig(ctx, after.Revision, OperationalConfig{}, "e2e-admin", "restore after CAS", &initial.Revision)
 	if err != nil || restored.Revision != after.Revision+1 || restored.Settings != initial.Settings {
 		t.Fatalf("restore: %+v %v", restored, err)

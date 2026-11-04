@@ -14,9 +14,10 @@ import (
 	"strings"
 )
 
-// Gravit conversion never downloads files, executes actions or trusts a foreign
-// classloader. Output settings are intended for a NEW Never build workspace;
-// the normal stage/validate/sign/publish pipeline remains mandatory.
+// Преобразование Gravit никогда не скачивает файлы, не выполняет действия и не
+// доверяет чужому classloader. Выходные настройки предназначены для НОВОГО рабочего
+// пространства Never; обычный цикл подготовки, проверки, подписи и публикации
+// остаётся обязательным.
 var gravitJavaClass02210 = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)+$`)
 
 type GravitFieldResult02210 struct {
@@ -49,10 +50,10 @@ type GravitImportResult02210 struct {
 	Summary      map[string]int           `json:"summary"`
 }
 
-// ConvertGravitProfile02210 consumes a single JSON ClientProfile. JSONC must
-// first be converted to valid JSON by the operator: stripping comments inside
-// string literals without a parser would be unsafe. Empty/unknown fields never
-// disappear silently. SourceSHA256 identifies the exact input bytes analyzed.
+// ConvertGravitProfile02210 принимает один JSON ClientProfile. Оператор должен
+// заранее преобразовать JSONC в корректный JSON: удалять комментарии внутри
+// строковых литералов без парсера небезопасно. Пустые и неизвестные поля никогда не
+// исчезают молча. SourceSHA256 определяет точные проанализированные входные байты.
 func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName, loaderHint string) (GravitImportResult02210, error) {
 	if len(source) == 0 || len(source) > 1<<20 {
 		return GravitImportResult02210{}, errors.New("Gravit ClientProfile must be 1 byte to 1 MiB")
@@ -358,8 +359,8 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 			}
 		}
 	}
-	// File policy conversion is conservative: verify never authorizes removal of
-	// files absent from the manifest, even for Gravit `update` directories.
+	// Политика файлов преобразуется консервативно: verify никогда не разрешает
+	// удаление отсутствующих в манифесте файлов, даже для каталогов Gravit update.
 	policy := map[string]FileRule{}
 	for _, key := range []string{"update", "updateVerify", "updateExclusions"} {
 		v, ok := listField(key)
@@ -520,8 +521,9 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 			report(k, "blocked", "", "unknown Gravit field: no silent omission of potential launch/security behavior")
 		}
 	}
-	// A preview may contain classpath paths not yet present in its file list.
-	// Validate the rest with the same production validator used by publication.
+	// Предпросмотр может содержать пути classpath, ещё отсутствующие в его перечне
+	// файлов. Проверяйте остальное тем же промышленным валидатором, что и при
+	// публикации.
 	runtimeProbe := out.Settings.Runtime
 	runtimeProbe.Launch.ClasspathEntries = nil
 	check := Manifest{SchemaVersion: ManifestSchemaV2, Runtime: runtimeProbe, Minecraft: out.Settings.Minecraft}

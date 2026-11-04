@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// This is executed on a real AArch64 kernel with user namespaces and a
-// delegated cgroup v2. Its probe is a genuine untrusted guest ELF, not the
-// sandbox's policy evaluator. Do not certify this capability from a mock or
-// successful cross compilation alone.
+// Выполняется на настоящем ядре AArch64 с пространствами имён пользователя и
+// делегированной cgroup v2. Проверочный объект — настоящий недоверенный ELF, а
+// не оценщик политики песочницы. Нельзя сертифицировать возможность по mock или
+// одной успешной кросс-компиляции.
 func TestARM64NativeKernelBoundary0439(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_LINUX_SANDBOX") != "1" {
 		t.Skip("native AArch64 cgroup-delegated sandbox host required")
@@ -29,8 +29,9 @@ func TestARM64NativeKernelBoundary0439(t *testing.T) {
 	opt.Policy.MaxCPUPercent = 50
 	probe := filepath.Join(opt.PayloadRoot, "arm64-probe")
 	src := filepath.Join(t.TempDir(), "probe.go")
-	// Use the real runtime's syscall entrypoints from inside the jailed
-	// extension. Check actual kernel errors, not merely configured policy.
+	// Вызывайте реальные точки входа системных вызовов Runtime внутри
+	// изолированного расширения. Проверяйте фактические ошибки ядра, а не только
+	// настройки политики.
 	code := `package main
 import("fmt"; "os"; "strings"; "syscall")
 func main() {

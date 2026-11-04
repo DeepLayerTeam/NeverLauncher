@@ -14,12 +14,14 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// checkRollbackPayload0305 ensures a local Java backup still equals the original
-// immutable, signature-verified Registry artifact. Backup bytes alone are not trusted.
+// checkRollbackPayload0305 гарантирует, что локальная резервная копия Java по-прежнему
+// точно соответствует исходному неизменяемому артефакту Registry с проверенной подписью.
+// Одним байтам копии не доверяют.
 func (m *Manager) checkRollbackPayload0305(ctx context.Context, scope Scope, id, version, identity, staged string, manifest model.ExtensionManifest) error {
-	// Every signed target (Java, Go, UI, CLI, Desktop) must restore exactly
-	// the original package bytes, not merely a valid manifest/version. Legacy
-	// local backups without a signed identity are handled by the caller.
+	// Каждая подписанная цель (Java, Go, UI, CLI, Desktop) должна восстанавливать
+	// точно исходные байты пакета, а не просто корректный манифест/версию. Старые
+	// локальные резервные копии без подписанной идентичности обрабатываются
+	// вызывающей стороной.
 	if identity == "" {
 		return nil
 	}

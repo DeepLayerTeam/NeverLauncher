@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// Roots are provisioned by the backend operator, never by a device or extension.
-// An AK issuer root is not interchangeable with an EK certificate issuer root:
-// operators must only enroll CAs that certify TPM-backed attestation keys.
+// Корневые ключи предоставляет оператор Backend, никогда устройство или расширение.
+// Корень издателя AK не взаимозаменяем с корнем сертификата EK: операторы должны
+// регистрировать только CA, выдающие сертификаты ключам аттестации на TPM.
 type Root struct {
 	ID             string    `json:"id"`
 	CertificatePEM string    `json:"certificatePem"`
@@ -43,9 +43,9 @@ type Store struct {
 
 const rootSchema = "launcher/tpm-ak-trust-roots/v1"
 
-// Load reads a fresh snapshot on each verification and status check. Replacing
-// the file atomically allows root overlap/rotation and immediate revocation;
-// failures are fail-closed. The file must be controlled by the backend operator.
+// Load читает свежий снимок при каждой проверке и запросе статуса. Атомарная замена
+// файла позволяет перекрытие/ротацию корней и немедленный отзыв; ошибки приводят к
+// отказу. Файл должен контролировать оператор Backend.
 func Load(path string, now time.Time) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, errors.New("tpm-ak-trust-roots-not-configured")

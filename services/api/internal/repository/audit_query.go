@@ -69,7 +69,7 @@ func (r *SQLRepository) QueryAudit(ctx context.Context, q AuditQuery) (AuditQuer
 	if err := r.check(); err != nil {
 		return AuditQueryResult{}, err
 	}
-	// WHERE is parameterized; search input never enters SQL syntax.
+	// WHERE параметризован; поисковый ввод никогда не попадает в SQL-синтаксис.
 	where := ` WHERE ($1='' OR actor ILIKE '%'||$1||'%') AND ($2='' OR action ILIKE '%'||$2||'%') AND ($3='' OR target ILIKE '%'||$3||'%') AND ($4='' OR correlation_id ILIKE '%'||$4||'%') AND ($5='' OR reason_code ILIKE '%'||$5||'%') AND ($6='' OR job_id ILIKE '%'||$6||'%') AND ($7::timestamptz IS NULL OR created_at >= $7) AND ($8::timestamptz IS NULL OR created_at <= $8) AND ($9='' OR concat_ws(' ',id,actor,action,target,correlation_id,reason_code,job_id) ILIKE '%'||$9||'%')`
 	var from, to any
 	if !q.From.IsZero() {

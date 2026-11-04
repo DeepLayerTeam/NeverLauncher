@@ -73,9 +73,9 @@ jobs:
           go test -race -count=1 -timeout=12m ./internal/httpapi \
             -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
   live-external-providers:
-    # External Microsoft identity and SQL/OIDC secrets must be provisioned by
-    # an independent operator, never stored in Actions logs or unit fixtures.
-    # A missing proof remains BLOCKED; this is not an automatic GA approval.
+    # Учётную запись Microsoft и секреты SQL/OIDC должен предоставлять независимый
+    # оператор. Их нельзя хранить в журналах Actions или тестовых фикстурах.
+    # Отсутствие подтверждения означает BLOCKED, а не автоматическое одобрение GA.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, auth-identity-live]
     environment: auth-identity-physical-acceptance

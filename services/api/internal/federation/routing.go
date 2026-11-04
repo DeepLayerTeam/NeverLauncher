@@ -18,9 +18,9 @@ var (
 	ErrLinkingDisabled = errors.New("account linking disabled for provider")
 )
 
-// RoutingRule determines the sole eligible password provider for an exact email
-// domain. Strict rules also reject manually supplied alternative providers.
-// They never retry credentials with another backend.
+// RoutingRule определяет единственного допустимого парольного провайдера для точного
+// домена email. Строгие правила также отклоняют вручную переданные альтернативные
+// провайдеры. Они никогда не повторяют учётные данные против другого Backend.
 type RoutingRule struct {
 	EmailDomain string `json:"emailDomain"`
 	ProviderID  string `json:"providerId"`
@@ -32,16 +32,16 @@ type RoutingConfig struct {
 	DefaultProvider         string        `json:"defaultProvider,omitempty"`
 	RequireExplicitProvider bool          `json:"requireExplicitProvider,omitempty"`
 	Rules                   []RoutingRule `json:"rules,omitempty"`
-	// When specified, only these providers may be explicitly linked to an
-	// existing, authenticated Never account after fresh provider proof.
+	// Если указано, только этих провайдеров можно явно привязать к существующему
+	// аутентифицированному аккаунту Never после нового подтверждения провайдером.
 	LinkingAllowProviders []string `json:"linkingAllowProviders,omitempty"`
 	DisableLinking        bool     `json:"disableLinking,omitempty"`
 }
 
 var validRouteDomain0293 = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$`)
 
-// LoadRoutingConfig limits configuration size and rejects unknown fields and
-// trailing JSON objects. Empty configuration preserves the 0.29.2 local default.
+// LoadRoutingConfig ограничивает размер конфигурации и отклоняет неизвестные поля и
+// лишние JSON-объекты. Пустая конфигурация сохраняет локальное поведение 0.29.2.
 func LoadRoutingConfig(jsonValue, filePath string) (RoutingConfig, error) {
 	if strings.TrimSpace(jsonValue) != "" && strings.TrimSpace(filePath) != "" {
 		return RoutingConfig{}, errors.New("configure only one of LAUNCHER_AUTH_ROUTING_JSON or LAUNCHER_AUTH_ROUTING_FILE")
@@ -82,8 +82,9 @@ func LoadRoutingConfig(jsonValue, filePath string) (RoutingConfig, error) {
 	return cfg, nil
 }
 
-// rejectDuplicateRoutingKeys0293 recursively checks every object, including
-// nested rules. Repeating a key must not silently override a strict route.
+// rejectDuplicateRoutingKeys0293 рекурсивно проверяет каждый объект, включая
+// вложенные правила. Повтор ключа не должен незаметно переопределять строгий
+// маршрут.
 func rejectDuplicateRoutingKeys0293(dec *json.Decoder) error {
 	tok, err := dec.Token()
 	if err != nil {
@@ -126,8 +127,9 @@ func rejectDuplicateRoutingKeys0293(dec *json.Decoder) error {
 	return err
 }
 
-// ConfigureRouting validates all providers and atomically installs immutable
-// routing decisions. A mistyped or missing provider prevents API startup.
+// ConfigureRouting проверяет всех провайдеров и атомарно устанавливает
+// неизменяемые правила маршрутизации. Ошибочный или отсутствующий провайдер
+// блокирует запуск API.
 func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 	if cfg.Version != 1 {
 		return fmt.Errorf("unsupported auth routing version %d", cfg.Version)
@@ -194,7 +196,7 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 	return nil
 }
 
-// Routing returns a defensive copy of the live runtime configuration.
+// Routing возвращает защищённую копию активной конфигурации Runtime.
 func (c *Core) Routing() RoutingConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -219,8 +221,9 @@ func routeEmailDomain0293(identifier string) string {
 	return strings.TrimSuffix(strings.ToLower(identifier[at+1:]), ".")
 }
 
-// RoutePasswordProvider performs selection once. The caller must authenticate
-// solely with the returned connector, propagating any failure unchanged.
+// RoutePasswordProvider выбирает провайдера один раз. Вызывающая сторона должна
+// аутентифицировать только через возвращённый коннектор и передавать любую ошибку
+// без изменений.
 func (c *Core) RoutePasswordProvider(requested, identifier string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	cfg := c.Routing()
@@ -253,8 +256,8 @@ func (c *Core) RoutePasswordProvider(requested, identifier string) (string, erro
 	return requested, nil
 }
 
-// EnsureLinkAllowed applies the configured provider allowlist for both browser
-// and password linking, without using unverified email claims for linkage.
+// EnsureLinkAllowed применяет настроенный список разрешённых провайдеров для
+// браузерной и парольной привязки, не используя непроверенные email-утверждения.
 func (c *Core) EnsureLinkAllowed(providerID string) error {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	c.mu.RLock()

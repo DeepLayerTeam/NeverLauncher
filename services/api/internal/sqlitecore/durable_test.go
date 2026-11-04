@@ -71,8 +71,8 @@ func TestDurableJobIdempotencyConcurrentLeaseAndCrash(t *testing.T) {
 	if e != nil || state.Status != "running" || state.LeaseToken != leased.LeaseToken {
 		t.Fatalf("lost lease after restart: %+v %v", state, e)
 	}
-	// Worker becomes stale after lease expiration, which must prevent it from
-	// completing even if it remained alive during a real process crash.
+	// После истечения аренды воркер становится устаревшим и не должен завершать
+	// работу, даже если оставался живым во время реального сбоя процесса.
 	time.Sleep(1100 * time.Millisecond)
 	next, e := r.LeaseDurableJob(ctx, j.ID, "worker-recover", time.Second)
 	if e != nil || next.LeaseFence != 2 || next.AttemptCount != 2 {
@@ -140,7 +140,8 @@ func TestScopeFencingAndAtomicOutbox(t *testing.T) {
 	if _, e = r.AcquireDurableScopeLease(ctx, "release:r1", "intruder", time.Second); !errors.Is(e, ErrDurableLeaseBusy) {
 		t.Fatalf("lease stolen: %v", e)
 	}
-	// Invalid event must rollback the entire business mutation and job update.
+	// Некорректное событие должно откатывать всю бизнес-операцию и обновление
+	// задачи.
 	eBad := newDurableEvent("bad")
 	eBad.Payload = []byte(`{bad json`)
 	_, e = r.CommitFencedJob(ctx, j.ID, worker.LeaseToken, lease.ScopeKey, lease.LeaseToken, lease.FencingToken, nil, func(q sqlitedurable.Executor) error {
@@ -244,8 +245,8 @@ func TestSQLiteUpgrade324To325WithoutLosingPriorCore(t *testing.T) {
 	ctx := context.Background()
 	project(t, r)
 	profile(t, r)
-	// Construct an exact prior-schema layout (tables added in 325 absent),
-	// preserving already written core rows while changing user_version.
+	// Создайте точную прежнюю схему без таблиц миграции 325, сохраняя
+	// существующие строки ядра и изменяя user_version.
 	e := r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		for _, table := range []string{"durable_job_attempts", "durable_jobs", "durable_outbox", "durable_scope_leases"} {
 			if _, er := q.ExecContext(ctx, "DROP TABLE "+table); er != nil {

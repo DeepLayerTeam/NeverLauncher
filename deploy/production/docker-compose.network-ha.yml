@@ -1,6 +1,6 @@
-# 0.45.5: two independently addressed APIs and two independent durable workers.
-# Apply with: docker compose -f docker-compose.yml -f docker-compose.network-ha.yml --profile network-ha up -d --build
-# PostgreSQL, Redis and S3 MUST be durable services, independently backed up.
+# 0.45.5: два API с независимыми адресами и два независимых устойчивых обработчика. Запуск: docker compose -f
+# docker-compose.yml -f docker-compose.network-ha.yml --profile network-ha up -d --build. PostgreSQL, Redis и S3
+# ОБЯЗАТЕЛЬНО должны быть устойчивыми службами с независимым резервным копированием.
 services:
   ha-volume-init:
     image: alpine:3.20
@@ -91,10 +91,12 @@ services:
       - ha_d_coordinator:/var/lib/launcher/coordinator
 
   nginx:
-    # 1.28 stable includes upstream dynamic DNS resolution (introduced 1.27.3).
+    # В стабильной ветке 1.28 есть встроенное динамическое разрешение DNS (добавлено
+    # в 1.27.3).
     image: nginx:1.28-alpine
-    # The HA-only config resolves both A records through Docker DNS and
-    # retries only safe/non-idempotent-uncommitted requests.
+    # Конфигурация только для HA разрешает обе A-записи через Docker DNS и
+    # повторяет исключительно безопасные запросы либо запросы без побочных
+    # эффектов, ещё не зафиксированных сервером.
     volumes:
       - ./nginx.network-ha.conf:/etc/nginx/conf.d/default.conf:ro
 

@@ -1,5 +1,6 @@
-// Package gravitmodules statically inspects source-pinned Gravit modules and
-// ServerWrapper settings. It NEVER loads, links or executes untrusted code.
+// Package gravitmodules статически проверяет закреплённые исходником модули
+// Gravit и настройки ServerWrapper. Он НИКОГДА не загружает, не связывает и не
+// выполняет недоверенный код.
 package gravitmodules
 
 import (
@@ -147,8 +148,9 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 				}
 			}
 		}
-		// Scan actual class constant pools and service descriptors (never execute them).
-		// Conservative substring matching can over-block; it cannot declare a module safe.
+		// Сканируйте настоящие пулы констант классов и дескрипторы служб, никогда не исполняя
+		// их. Консервативный поиск подстрок может излишне блокировать, но не способен объявить
+		// модуль безопасным.
 		if strings.HasSuffix(lower, ".class") || strings.HasPrefix(lower, "meta-inf/services/") {
 			if f.UncompressedSize64 > 4<<20 {
 				return "", false, false, errors.New("oversized class/service descriptor")
@@ -242,8 +244,8 @@ func wrapperFile(p string) bool {
 	return base == "serverwrapper.json" || base == "serverwrapperconfig.json" || (strings.Contains(s, "serverwrapper/") && base == "config.json") || base == "serverwrapper.env" || base == ".env"
 }
 
-// Analyze checks archive identity and every candidate's digests against MIG03.
-// It does not persist bytes or untrusted strings such as password/token values.
+// Analyze сверяет идентичность архива и дайджесты каждого кандидата с MIG03. Байты и
+// недоверенные строки вроде паролей/токенов не сохраняются.
 func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inventory) (Report, error) {
 	result := Report{Format: Format, SourceSHA256: inventory.SourceSHA256, InventorySHA256: inventory.ManifestSHA256, Modules: []Module{}, Wrappers: []Wrapper{}, Blockers: []string{}}
 	if _, e := inventory.Manifest(); e != nil {
@@ -255,7 +257,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 	if size < 1 || size > inv.MaxSourceBytes {
 		return Report{}, errors.New("source size outside MIG03 bounds")
 	}
-	// An internal caller is not allowed to bypass whole-archive pinning.
+	// Внутренний вызывающий код тоже не может обойти закрепление целого архива.
 	check := sha256.New()
 	section := io.NewSectionReader(file, 0, size)
 	buf := make([]byte, 128<<10)
@@ -289,8 +291,8 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 	moduleArtifacts := map[string]bool{}
 	for _, f := range z.File {
 		if moduleJar(f.Name) && !legacyWrapperJar(f.Name) {
-			// The presence of a JAR is only evidence of a matching artifact.
-			// Never load it and never infer functional compatibility by name.
+			// Наличие JAR доказывает лишь совпадение артефакта. Никогда не загружайте его
+			// и не выводите функциональную совместимость из имени.
 			moduleArtifacts[strings.ToLower(strings.TrimSuffix(path.Base(f.Name), path.Ext(f.Name)))] = true
 		}
 
@@ -329,10 +331,10 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			return Report{}, fmt.Errorf("source changed since inventory: %s", p)
 		}
 		if isConfig && !moduleJar(p) {
-			// Module configuration is executable behavior input, including auth
-			// and launch hooks. Silently skipping orphaned configs produced false
-			// clean migration reports. Verify JSON and correlate its artifact;
-			// never retain raw configuration or secrets in the report.
+			// Конфигурация модуля влияет на исполняемое поведение, включая хуки входа и
+			// запуска. Незаметный пропуск осиротевших конфигураций приводил к ложным
+			// отчётам о чистой миграции. Проверяйте JSON и соотносите его с артефактом;
+			// не сохраняйте в отчёте необработанную конфигурацию или секреты.
 			base := strings.ToLower(p)
 			i := strings.Index(base, "modules-config/")
 			moduleName := ""
@@ -362,7 +364,8 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		if moduleJar(p) {
 			m := Module{Path: p, SHA256: sha, Name: path.Base(p), Implementation: "blocker", Status: "blocked"}
 			n, auth, launch, er := jarEvidence(ctx, b)
-			// Do not persist JAR-supplied manifest text: it is untrusted and may contain secrets.
+			// Не сохраняйте предоставленный JAR текст манифеста: он недоверенный и может содержать
+			// секреты.
 			_ = n
 			m.AuthHook = auth
 			m.LaunchHook = launch
@@ -376,8 +379,8 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			if er != nil {
 				m.Reason = "unsafe or invalid JAR: " + er.Error()
 			} else if legacyWrapperJar(p) {
-				// These old binaries are never imported. Name indicates only
-				// the replacement role, NOT vendor authenticity or trust.
+				// Эти старые бинарники никогда не импортируются. Имя указывает лишь роль
+				// замены, а НЕ подлинность поставщика или доверие.
 				m.Implementation = "built_in_equivalent"
 				m.Status = "manual"
 				m.Reason = "legacy wrapper/authlib binary must be removed, not executed; replace with Never ServerBridge and independently test login/join"
@@ -395,7 +398,8 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			}
 		} else {
 			w := parseWrapper(b, p, sha)
-			// Generic .env is only a wrapper when its keys actually refer to it.
+			// Общий .env считается обёрткой только если его ключи действительно на неё
+			// указывают.
 			if (path.Base(strings.ToLower(p)) == ".env" || strings.HasSuffix(strings.ToLower(p), ".env")) && !w.LegacyAddressPresent && !w.LegacyTokenPresent && w.Mode != "inline" {
 				continue
 			}
@@ -409,8 +413,8 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 	return result, nil
 }
 
-// Module configs are secrets-bearing input, not generic JSON documents.
-// Check for duplicate object keys instead of silently accepting the last one.
+// Конфигурации модулей содержат секреты и не являются обычными JSON-документами.
+// Проверяйте повторяющиеся ключи объектов вместо неявного принятия последнего.
 func validModuleConfig0446(raw []byte) bool {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	var obj map[string]json.RawMessage
@@ -421,8 +425,9 @@ func validModuleConfig0446(raw []byte) bool {
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		return false
 	}
-	// Top-level keys must be unique even under Unicode case-folding. Never
-	// persist values, which may contain provider passwords and tokens.
+	// Ключи верхнего уровня должны быть уникальны даже при Unicode case-folding.
+	// Никогда не сохраняйте значения: они могут содержать пароли и токены
+	// провайдера.
 	seen := map[string]bool{}
 	decoder = json.NewDecoder(bytes.NewReader(raw))
 	start, err := decoder.Token()

@@ -51,9 +51,9 @@ def architecture(content: bytes, target: str) -> None:
         require(
             actual == {"x64": 0x8664, "arm64": 0xAA64}[arch], "wrong PE architecture"
         )
-        # IMAGE_DIRECTORY_ENTRY_SECURITY contains the Authenticode certificate table.
-        # Its presence is NOT a chain-of-trust verification: the native Windows
-        # signer/OS checks this and signs its result in the independent GA traces.
+        # IMAGE_DIRECTORY_ENTRY_SECURITY содержит таблицу сертификатов Authenticode. Само
+        # её наличие НЕ подтверждает цепочку доверия: нативная проверка подписи Windows/ОС
+        # делает это и подписывает результат в независимых трассах GA.
         opt = offset + 24
         magic = struct.unpack_from("<H", content, opt)[0]
         require(magic == 0x20B and opt + 144 <= len(content), "PE32+ required")
@@ -293,10 +293,10 @@ def verify_update_payload_0410(
 
     check_rows(update.get("components"), expected_roles, "components")
     check_rows(update.get("supportFiles"), expected_support, "support files")
-    # Signatures are verified by the updater's pinned trust policy, not by
-    # trusting public keys transported inside the package. Require the sidecar
-    # to bind exactly the same bytes that are installed, without treating this
-    # hash consistency check as independent signature verification.
+    # Подписи проверяются закреплённой политикой доверия обновлятора, а не
+    # открытыми ключами, переданными внутри пакета. Сопутствующий файл должен
+    # связывать именно устанавливаемые байты; проверка согласованности хеша сама по
+    # себе не заменяет независимую проверку подписи.
     signature_path = (
         prefix
         + ("Contents/Resources/" if system == "darwin" else "")
@@ -338,8 +338,8 @@ def verify_update_payload_0410(
         trust_policy in members and 0 < len(members[trust_policy]) <= 128 * 1024,
         "missing installed delegated component trust policy",
     )
-    # Verify both Ed25519 signatures using trust roots provided independently
-    # by the release operator. Never take a public trust key from the ZIP.
+    # Проверяйте обе подписи Ed25519 по корневым ключам доверия, предоставленным
+    # отдельно оператором выпуска. Никогда не берите открытый ключ доверия из ZIP.
     component_root = os.environ.get(
         "LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", ""
     ).strip()
@@ -468,10 +468,11 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
         inner in members and member in members,
         target + ": missing packaged desktop/manifest",
     )
-    # On macOS the .app's embedded manifest is sealed by codesign before the
-    # final notarized bytes are copied back to the root manifest. Therefore
-    # compare its identity but use the finalized top-level hash manifest to
-    # verify the exact ZIP payload, never demand equal pre-/post-sign hashes.
+    # На macOS встроенный манифест .app запечатывается codesign до копирования
+    # окончательных нотариально заверенных байтов обратно в корневой манифест.
+    # Поэтому сравнивайте идентичность, но точный ZIP проверяйте по окончательному
+    # верхнеуровневому хеш-манифесту, не требуя совпадения хешей до и после
+    # подписи.
     if system == "darwin":
         embedded = json.loads(members[inner], object_pairs_hook=_no_dupes)
         require(
@@ -684,7 +685,8 @@ def dry_run(
         set(expected) == {p.name for p in files} - {"SHA256SUMS", "SHA256SUMS.sig"},
         "missing/unsigned/extra final release file",
     )
-    # Never use a shared/production trust-state as writable dry-run state.
+    # Никогда не используйте общее или промышленное состояние доверия как
+    # записываемое состояние пробного прогона.
     independent_trust_state = stage.parent / (stage.name + "-trust-state.json")
     if trust_state.is_file():
         shutil.copy2(trust_state, independent_trust_state)

@@ -16,18 +16,18 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// sqliteRuntimeBackend0373 binds HTTP-only stores to the same WAL database and
-// exclusive ownership as the application's primary repository.
+// sqliteRuntimeBackend0373 привязывает HTTP-хранилища к той же WAL-БД и
+// эксклюзивному владению, что и основной репозиторий приложения.
 type sqliteRuntimeBackend0373 interface {
 	ReadRuntimeComponent0373(context.Context, string) ([]byte, bool, error)
 	WriteRuntimeComponent0373(context.Context, string, []byte) error
 }
 
-// All existing memory-store operations protect their data with mu. Persisting
-// under that lock ensures a consumed recovery code/refresh token/Bridge nonce
-// cannot be used by another request before the commit has completed.
-// An I/O failure poisons the component and aborts the active operation rather
-// than returning an authentication success based only on volatile state.
+// Все существующие операции хранилища в памяти защищены mu. Сохранение под этой
+// блокировкой гарантирует, что использованный код восстановления, refresh-токен
+// или nonce Bridge не будет повторно принят другим запросом до фиксации. Ошибка
+// ввода-вывода переводит компонент в аварийное состояние и отменяет активную
+// операцию вместо ложного успеха авторизации только по нестойкому состоянию.
 type sqliteRuntimeMutex0373 struct {
 	mu       sync.Mutex
 	onUnlock func() error
@@ -52,8 +52,8 @@ func (m *sqliteRuntimeMutex0373) Unlock() {
 	}
 }
 
-// JSON envelopes explicitly preserve secret/hash fields intentionally omitted
-// from public API JSON. The entire envelope is encrypted before reaching WAL.
+// Оболочки JSON намеренно сохраняют секретные поля и хеши, исключённые из
+// публичного API JSON. Перед попаданием в WAL вся оболочка шифруется.
 type sqliteSessionRecord0373 struct {
 	Record      authSessionRecord `json:"record"`
 	RefreshHash string            `json:"refreshHash"`
@@ -122,9 +122,9 @@ type sqliteBridge0373 struct {
 	Sequence     int64                                        `json:"sequence"`
 }
 
-// ConfigureSQLiteRuntime0373 restores all supported state BEFORE the HTTP
-// listener is started. It refuses to silently reinitialize unreadable stores.
-// The secret must remain stable over restarts and must be backed up securely.
+// ConfigureSQLiteRuntime0373 восстанавливает все поддерживаемые данные ДО запуска
+// HTTP-слушателя. Нечитаемые хранилища не инициализируются заново молча. Секрет
+// должен сохраняться между перезапусками и надёжно резервироваться.
 func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backend any, secret string) error {
 	if state == nil || state.AuthSessions == nil || state.Security == nil || state.Passkeys == nil || state.ServerBridge == nil {
 		return errors.New("SQLite runtime state missing")
@@ -136,8 +136,9 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 	if len(secret) < 32 {
 		return errors.New("SQLite runtime requires at least 32 bytes of stable LAUNCHER_AUTH_TOKEN_SECRET")
 	}
-	// Load everything before binding mutation hooks. This rejects wrong keys,
-	// corrupt ciphertext and incompatible component formats at startup.
+	// Загрузите всё до привязки обработчиков изменений. Так при запуске
+	// отклоняются неправильные ключи, повреждённый шифртекст и несовместимые
+	// форматы компонентов.
 	var sessions sqliteSessions0373
 	if err := sqliteRead0373(ctx, store, "sessions", secret, &sessions); err != nil {
 		return err
@@ -254,7 +255,8 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		state.ServerBridge.controlIdempotency = bridge.Idempotency
 		state.ServerBridge.controlSequence = bridge.Sequence
 	}
-	// Maps must exist even when an older state omitted an optional category.
+	// Карты должны существовать даже тогда, когда старое состояние не содержало
+	// необязательную категорию.
 	state.AuthSessions.ensureMemoryMapsLocked111()
 	if state.Security.mfa == nil {
 		state.Security.mfa = map[string]mfaRecord{}

@@ -156,8 +156,9 @@ def resolved_compose(directory, project, *, env_file=None):
     for name in ("api", "worker"):
         if not services[name].get("healthcheck"):
             raise DeploymentError("missing readiness healthcheck for " + name)
-    # Check the TLS key/cert on the host via parsed Docker volumes, not an
-    # untrusted interpolation of env-file contents or a log of Docker config.
+    # Проверяйте ключ и сертификат TLS на хосте по разобранным томам Docker, а не
+    # через недоверенную подстановку содержимого env-файла или журналирование
+    # конфигурации Docker.
     tls_targets = ("/etc/launcher/tls/fullchain.pem", "/etc/launcher/tls/privkey.pem")
     tls_volumes = [v for v in services["ingress"].get("volumes", []) if v.get("target") in tls_targets]
     if sorted(v["target"] for v in tls_volumes) != sorted(tls_targets):
@@ -191,8 +192,9 @@ def resolved_compose(directory, project, *, env_file=None):
 
 def live_observe(directory, project, *, growth=True):
     expected = resolved_compose(directory, project)
-    # Full executable state inspection: containers, actual process-role env,
-    # app/worker /ready, Redis lease, PG transaction and S3 object round trip.
+    # Проверяйте полное исполняемое состояние: контейнеры, фактические роли
+    # процессов из окружения, /ready приложения и рабочих процессов, аренду Redis,
+    # транзакцию PostgreSQL и круговую запись/чтение объекта S3.
     node = inventory.node_inventory(project, 3, growth=growth, source_root=directory.parents[1])
     actual = {item["service"]: item for item in node["containers"]}
     issues = list(node["observations"])
@@ -211,8 +213,9 @@ def live_observe(directory, project, *, growth=True):
     for name in ("postgres", "redis"):
         if name in actual:
             issues.append("embedded " + name + " must not be running in the multi-host project")
-    # A container's immutable image *reference* must match the deployment,
-    # not merely its image ID, which is a different object in Docker inspect.
+    # Неизменяемая ссылка на образ контейнера должна соответствовать
+    # развёртыванию, а не только его ID образа — это разные сущности в Docker
+    # inspect.
     running_refs = {}
     for container in inventory.docker_inspect(inventory.docker_ids(project)):
         cfg = container.get("Config") or {}
@@ -275,7 +278,7 @@ def local_compat_observe_0516(directory, project):
             data.get("rollingUpgrade") is not True or
             not data.get("activeSigningKeyFingerprint")):
         raise DeploymentError("live signed ServerBridge capability negotiation incompatible")
-    # Compare real response contracts, not version-dependent strings.
+    # Сравнивайте настоящие контракты ответов, а не строки, зависящие от версии.
     protocols = {key: data.get(key) for key in (
         "schemaVersion", "preferredProtocolVersion", "minimumProtocolVersion",
         "supportedProtocolVersions", "requiredFeatures", "protocolV3FeatureDigest",
@@ -294,8 +297,9 @@ def local_compat_observe_0516(directory, project):
 
 def local_up(directory, project):
     expected = resolved_compose(directory, project)
-    # Production images are always fetched by digest. Never build independently
-    # on two hosts and hope their tags resolve to the same executable bytes.
+    # Промышленные образы всегда загружаются по дайджесту. Не собирайте их
+    # независимо на двух хостах в надежде, что теги будут означать одинаковые
+    # исполняемые байты.
     run(compose_command(directory, project, "pull", "--policy", "always"), cwd=directory, timeout=240)
     run(compose_command(directory, project, "up", "-d", "--no-build", "--wait", "--wait-timeout", "180"),
         cwd=directory, timeout=230)
@@ -387,7 +391,8 @@ def validate_edge_url(url):
 
 
 def edge_ready(url, count=3):
-    # The public DNS/LB path, not an endpoint tied to the still-alive host.
+    # Используйте публичный путь DNS/балансировщика нагрузки, а не точку доступа,
+    # привязанную к ещё работающему хосту.
     validate_edge_url(url)
     result = inventory.probe_public_edge(url, count)
     return result["success"] == count, result
@@ -433,8 +438,8 @@ def outage_drill(nodes, script, directory, project, edge_url, failed_node):
     restore_error = None
     observations = []
     try:
-        # Executed only after explicit --allow-disruption. This removes ALL
-        # ingress/API/worker/Admin containers on the selected Docker host.
+        # Выполняется только после явного --allow-disruption. Удаляет ВСЕ контейнеры
+        # входного шлюза, API, рабочих процессов и Admin на выбранном хосте Docker.
         remote_stop_start(nodes[failed_node], script, directory, project, "stop")
         stopped = True
         for attempt in range(15):
@@ -454,7 +459,8 @@ def outage_drill(nodes, script, directory, project, edge_url, failed_node):
         success = False
         failure = str(exc)
     finally:
-        # Attempt restoration even if SSH command failed partway through.
+        # Пытайтесь восстановить работу, даже если SSH-команда частично завершилась с
+        # ошибкой.
         try:
             remote_stop_start(nodes[failed_node], script, directory, project, "start")
         except DeploymentError as exc:
@@ -510,8 +516,8 @@ def main(argv=None):
             elif args.mode in ("local-stop", "local-start"):
                 resolved_compose(directory, args.project)
                 action = "stop" if args.mode == "local-stop" else "start"
-                # In a drill stop order excludes workers from starting new
-                # operations; up restarts the complete pinned deployment.
+                # В учебном сценарии порядок остановки не даёт рабочим процессам начинать
+                # новые операции; up перезапускает всё закреплённое развёртывание.
                 if action == "stop":
                     run(compose_command(directory, args.project, "stop", "-t", "15", *SERVICES), cwd=directory, timeout=95)
                 else:

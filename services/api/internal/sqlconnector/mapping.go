@@ -8,18 +8,18 @@ import (
 	"strings"
 )
 
-// MappedColumn describes an actual, mapped DB column without returning any row
-// content (especially password hashes). It is safe to expose as a diagnostics preview.
+// MappedColumn описывает реальную сопоставленную колонку БД без возврата содержимого строк,
+// особенно хешей паролей. Её безопасно показывать в диагностическом предпросмотре.
 type MappedColumn struct {
 	Field        string `json:"field"`
 	Column       string `json:"column"`
 	DatabaseType string `json:"databaseType,omitempty"`
 }
 
-// InspectMapping validates the live SQL source before accepting any logins.
-// The query is read-only, fetches no rows and selects only explicitly mapped
-// columns, so scoped DB credentials need not have SELECT * permission.
-// Config must come from Normalize (identifiers have already been validated).
+// InspectMapping проверяет действующий SQL-источник до допуска входов. Запрос
+// только для чтения, не получает строки и выбирает лишь явно сопоставленные
+// колонки; поэтому ограниченным учётным данным БД не требуется SELECT *.
+// Конфигурация должна поступать из Normalize после проверки идентификаторов.
 func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]MappedColumn, error) {
 	if db == nil {
 		return nil, errors.New("SQL mapping: database handle is nil")
@@ -64,7 +64,8 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 		return nil, fmt.Errorf("SQL schema inspection transaction: %w", err)
 	}
 	defer tx.Rollback()
-	// Placeholder-free, entirely identifier-validated SQL: safe on all drivers.
+	// SQL без плейсхолдеров, с полностью проверенными идентификаторами: безопасен
+	// для всех драйверов.
 	query := "SELECT " + strings.Join(projection, ", ") + " FROM " + quote(cfg.Table) + " WHERE 1 = 0"
 	rows, err := tx.QueryContext(inspectCtx, query)
 	if err != nil {
@@ -82,8 +83,8 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 	for i, col := range types {
 		selected[i].DatabaseType = strings.ToUpper(col.DatabaseTypeName())
 		if selected[i].Field == "password" || selected[i].Field == "minecraftUuid" {
-			// Binary digests require a dedicated explicit encoding; implicit
-			// database CAST(blob AS text) differs between PG and MySQL.
+			// Двоичные хеши требуют отдельного явного кодирования; неявный CAST(blob AS
+			// text) БД отличается в PG и MySQL.
 			name := selected[i].DatabaseType
 			if strings.Contains(name, "BINARY") || strings.Contains(name, "BLOB") || name == "BYTEA" || name == "VARBINARY" {
 				rows.Close()

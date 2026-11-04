@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// TextureAssignment0251 is a revisioned selection, not the underlying PNG blob.
-// UUID belongs to MinecraftProfile; project and launcher-profile identifiers are distinct.
+// TextureAssignment0251 — выбор с ревизией, а не лежащий в основе PNG-объект. UUID принадлежит
+// MinecraftProfile; идентификаторы проекта и профиля лаунчера различаются.
 type TextureAssignment0251 struct {
 	ID                int64     `json:"id"`
 	Realm             string    `json:"realm"`

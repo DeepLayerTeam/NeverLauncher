@@ -1,6 +1,7 @@
-// texture-compat-02512 verifies a running local Yggdrasil/authlib-injector
-// deployment, not a mock contract. It retrieves, verifies and decodes real
-// signed profile and content-addressed texture bytes from the configured API.
+// texture-compat-02512 проверяет работающее локальное развёртывание
+// Yggdrasil/authlib-injector, а не имитацию контракта. Оно получает, проверяет и
+// декодирует настоящие подписанные профили и байты текстур с адресацией по
+// содержимому из настроенного API.
 package main
 
 import (
@@ -182,8 +183,9 @@ func checkTexture02512(ctx context.Context, c *http.Client, raw string, kind, mo
 	if hex.EncodeToString(sum[:]) != digest {
 		return errors.New("texture SHA-256 does not match public URL")
 	}
-	// Use the same full parser and geometry restrictions as production uploads:
-	// CRCs, animation, trailing bytes, pixel limits and actual decompression.
+	// Используйте тот же полный парсер и ограничения геометрии, что и при
+	// промышленной загрузке: CRC, анимация, хвостовые байты, ограничения пикселей и
+	// настоящее распаковывание.
 	if _, err := texturepng.Process(bytes.NewReader(content), kind, model); err != nil {
 		return fmt.Errorf("invalid managed %s PNG: %w", kind, err)
 	}

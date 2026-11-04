@@ -11,9 +11,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Java backend services reuse the authenticated extension capability route. They
-// never introduce direct repository access, a second token, or an HTTP bypass.
-// All lookups are restricted to a single explicit project and are read-only.
+// Java-службы Backend повторно используют аутентифицированный маршрут возможностей
+// расширений. Они не создают прямой доступ к репозиторию, второй токен или обход
+// HTTP. Все обращения ограничены одним явным проектом и работают только на чтение.
 func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processState, name string, req capabilityRequest) capabilityResult0205 {
 	denied := func(status int, text string) capabilityResult0205 {
 		return capabilityResult0205{status: status, err: errors.New(text)}
@@ -25,8 +25,9 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	if strings.HasPrefix(name, "channel.") || strings.HasPrefix(name, "release.") {
 		permission = "release:read"
 	}
-	// Project lists are only available for an explicitly globally granted
-	// project:read permission; per-project grants must not enumerate tenants.
+	// Списки проектов доступны только при явно выданном глобальном праве
+	// project:read; права отдельных проектов не должны позволять перечислять
+	// арендаторов.
 	projectID := ""
 	if name != "project.list" {
 		var err error
@@ -54,7 +55,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	}
 	switch name {
 	case "project.list":
-		// Global grants are validated above, prior to enumerating project IDs.
+		// Глобальные разрешения проверяются выше до перечисления ID проектов.
 		projects := s.repo.ListProjects()
 		sort.Slice(projects, func(i, j int) bool { return projects[i].ID < projects[j].ID })
 		return pagedBackend0484(projects, req)
@@ -63,7 +64,8 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		if e != nil {
 			return denied(http.StatusInternalServerError, "profile repository unavailable")
 		}
-		// Defense in depth against an incorrect/mixed-tenant repository adapter.
+		// Дополнительная защита от некорректного адаптера репозитория, смешивающего
+		// арендаторов.
 		scoped := make([]model.Profile, 0, len(profiles))
 		for _, p := range profiles {
 			if p.ProjectID == projectID {
@@ -112,8 +114,8 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		if e != nil {
 			return denied(http.StatusInternalServerError, "release repository unavailable")
 		}
-		// A list never transports the possibly large signed manifest for each
-		// entry. Retrieve one complete manifest with release.get instead.
+		// Список не передаёт потенциально крупный подписанный манифест каждого
+		// элемента. Полный манифест одной записи запрашивайте через release.get.
 		scoped := make([]map[string]any, 0, len(releases))
 		for _, v := range releases {
 			if v.ProjectID == projectID {
@@ -149,8 +151,9 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 			return denied(http.StatusServiceUnavailable, "durable jobs unavailable")
 		}
 		job, e := durable.GetDurableJob(ctx, req.Name)
-		// No cross-project existence oracle. Never return payload, result,
-		// lease token, actor identity, error text or operation secrets.
+		// Никакого оракула существования других проектов. Никогда не возвращайте
+		// полезную нагрузку, результат, токен аренды, идентичность исполнителя, текст
+		// ошибки или секреты операции.
 		if e != nil || job.ProjectID != projectID {
 			return denied(http.StatusNotFound, "job not found")
 		}
@@ -162,8 +165,8 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 	return denied(http.StatusNotFound, "backend capability not supported")
 }
 
-// Deterministic bounded pages prevent a single extension from requesting an
-// unbounded HTTP response. Empty nextOffset means the final page.
+// Детерминированные ограниченные страницы не дают одному расширению запросить
+// неограниченный HTTP-ответ. Пустой nextOffset означает последнюю страницу.
 func pagedBackend0484[T any](items []T, req capabilityRequest) capabilityResult0205 {
 	if req.Offset < 0 || req.Offset > 1_000_000 || req.Limit < 0 || req.Limit > 50 {
 		return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("invalid page offset or limit")}

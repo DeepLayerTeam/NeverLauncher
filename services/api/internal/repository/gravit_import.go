@@ -11,8 +11,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// GravitImportWriter02210 persists the newly converted profile AND its initial
-// pinned workspace as one unit. No source secrets/permissions are copied.
+// GravitImportWriter02210 сохраняет новый преобразованный профиль И его начальное
+// закреплённое рабочее пространство одной операцией. Секреты и права источника не
+// копируются.
 type GravitImportWriter02210 interface {
 	CreateGravitProfileWorkspace02210(context.Context, model.Profile, BuildWorkspace) (model.Profile, BuildWorkspace, error)
 }

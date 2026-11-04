@@ -10,10 +10,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
-// RefreshLinkedIdentity updates claims of an identity that was linked before
-// this operation. It is NOT account linking, so a policy disabling *new*
-// linking must not break the normal refresh lifecycle of existing credentials.
-// expectedID pins the operation to the exact persisted issuer-scoped identity.
+// RefreshLinkedIdentity обновляет утверждения ранее привязанной идентичности. Это
+// НЕ привязка аккаунта, поэтому политика запрета НОВЫХ привязок не должна нарушать
+// обычное обновление существующих учётных данных. expectedID закрепляет операцию за
+// проверенным субъектом.
 func (c *Core) RefreshLinkedIdentity(userID, providerID, expectedID string, authentication authconnector.Authentication) (model.AuthIdentity, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	if _, ok := c.Connector(providerID); !ok {

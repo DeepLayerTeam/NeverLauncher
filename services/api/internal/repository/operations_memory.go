@@ -71,8 +71,8 @@ func (r *MemoryRepository) RetryOperationJob(_ context.Context, id string) (mode
 	return j, nil
 }
 
-// Called with durableMu already held: the status transition and journal update
-// share the same critical section as the durable job state itself.
+// Вызывается с уже удерживаемой durableMu: переход статуса и обновление журнала
+// разделяют ту же критическую секцию с состоянием устойчивой задачи.
 func (r *MemoryRepository) finishMemoryOperationAttempt0217(id, status, reason string) {
 	rows := r.durableOpAttempts[id]
 	for i := len(rows) - 1; i >= 0; i-- {

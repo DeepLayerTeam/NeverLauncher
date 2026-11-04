@@ -57,7 +57,7 @@ jobs:
           assert result['status']=='LOCAL_REGRESSIONS_NOT_GA'
           assert result['gaCertified'] is False and len(result['checks']) == 8
           PY
-      # The local report has hashes only; it is NOT published as a GA pass.
+      # Локальный отчёт содержит только хеши и НЕ публикуется как подтверждение GA.
   independent-live:
     needs: production-regression
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
@@ -101,5 +101,5 @@ jobs:
           python3 scripts/acceptance/java_sdk_migration_0528.py live \
             --config "$NL0528_CONFIG" \
             --report "$RUNNER_TEMP/nl0528-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-0528.json"
-      # Private migration reports, player UUIDs, source archives and Host tokens
-      # remain on the controlled runner. Independent review/signature is separate.
+      # Закрытые отчёты миграции, UUID игроков, исходные архивы и токены Host остаются
+      # на контролируемом раннере. Независимая проверка и подпись выполняются отдельно.

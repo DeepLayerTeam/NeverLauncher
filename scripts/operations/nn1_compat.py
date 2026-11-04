@@ -24,9 +24,9 @@ import ha_inventory_0511 as inventory
 import multi_host_0512 as multi
 
 PAIR = frozenset(("0.51.5", "0.51.6"))
-# Locked against the exact PostgreSQL migration catalog of supplied 0.51.5.
-# Changing even an additive migration requires a separately tested N-1 route;
-# 0.51.5's migration checker would reject an unknown row on every /ready.
+# Зафиксировано под точный каталог миграций PostgreSQL поставленной версии 0.51.5.
+# Изменение даже добавочной миграции требует отдельно проверенного пути N-1:
+# проверка миграций 0.51.5 отклонит неизвестную строку при каждом /ready.
 CATALOG_SHA256_0515 = "12247e5cb196efb8a77d52c64dd55e4b4956703100a928c65d8be0c978c723ce"
 SCHEMA = "neverlauncher.nn1-live-compat.0.51.6"
 ROOT = Path(__file__).resolve().parents[2]
@@ -54,7 +54,8 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
         require(name not in versions, "duplicate migration name")
         digest.update(item.name.encode("ascii") + b"\0" + checksum.encode("ascii") + b"\n")
         versions[name] = checksum
-    # No new migration can be deployed while a 0.51.5 instance is active.
+    # Пока активен хотя бы один экземпляр 0.51.5, новые миграции развёртывать
+    # нельзя.
     require(digest.hexdigest() == CATALOG_SHA256_0515, "0.51.5 catalog changed; mixed version schema safety not established")
     return versions, digest.hexdigest()
 
@@ -72,7 +73,8 @@ def dsn_environment(path):
     require(set(query) <= {"sslmode", "sslrootcert", "sslcert", "sslkey", "connect_timeout"}
             and all(len(v) == 1 for v in query.values()) and query.get("sslmode") == ["verify-full"],
             "PostgreSQL URL must enforce TLS hostname validation (verify-full)")
-    # Explicit environment wins over ambient libpq config; never log DSN.
+    # Явное окружение имеет приоритет над внешней конфигурацией libpq; никогда не
+    # записывайте DSN в журнал.
     env = {k: v for k, v in os.environ.items() if not k.startswith("PG")}
     env.update(PGHOST=parsed.hostname, PGPORT=str(parsed.port or 5432),
                PGUSER=unquote(parsed.username), PGPASSWORD=unquote(parsed.password),
@@ -86,8 +88,9 @@ def dsn_environment(path):
 
 def live_pg_migrations(path):
     env = dsn_environment(path)
-    # The recorded migrations alone do not detect a manual DROP COLUMN.
-    # Check the actual columns that carry fenced jobs/outbox/Bridge control.
+    # Записанные миграции сами по себе не обнаруживают ручной DROP COLUMN.
+    # Проверяйте реальные столбцы, обеспечивающие разграничение заданий, outbox и
+    # управления Bridge.
     expected = (
         ("durable_jobs", "lease_fence"), ("durable_jobs", "lease_token"),
         ("durable_jobs", "lease_expires_at"), ("event_outbox", "lease_fence"),
@@ -112,7 +115,8 @@ def live_pg_migrations(path):
                               input=sql, text=True, capture_output=True, env=env, timeout=20, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise CompatibilityError("live PostgreSQL schema probe could not execute") from exc
-    # stderr might contain connection strings, credentials or internal data.
+    # stderr может содержать строки подключения, учётные данные или внутренние
+    # сведения.
     require(proc.returncode == 0 and len(proc.stdout) <= 200_000, "live PostgreSQL schema probe failed")
     rows = [s.strip() for s in proc.stdout.splitlines() if s.strip()]
     require(rows and rows[0] == "primary", "PostgreSQL DSN does not resolve to a writable primary")
@@ -197,7 +201,8 @@ def verify(args):
     catalog, digest = migration_catalog()
     nodes = multi.parse_nodes(args.node)
     multi.validate_edge_url(args.edge_url)
-    # Run SSH live observes on the *actual hosts*, not locally cached manifests.
+    # Запускайте живые наблюдения SSH на ФАКТИЧЕСКИХ хостах, а не по локально
+    # кэшированным манифестам.
     reports = {label: multi.remote_call(target, args.remote_script, args.directory, args.project,
                                         "local-compat-observe", growth=True, timeout=180)
                for label, target in nodes.items()}

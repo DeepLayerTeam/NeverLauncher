@@ -18,10 +18,10 @@ import (
 var ErrLeaseBusy = errors.New("durable scope lease busy")
 var ErrLeaseLost = errors.New("durable lease lost")
 
-// PostgreSQL is the sole time authority for distributed leases. Replica wall
-// clocks can be skewed (or jump) during partitions and failover; comparing or
-// extending a database lease using time.Now on an API host permits early
-// takeover or acceptance of a stale writer.
+// PostgreSQL — единственный источник времени для распределённых аренд. Часы реплик
+// могут расходиться или скакать во время разделения сети и failover; сравнение или
+// продление аренды БД через time.Now API-хоста позволяет преждевременно захватить
+// работу или принять устаревшего писателя.
 func durableDBClock0514(ctx context.Context, tx *sql.Tx) (time.Time, error) {
 	var now time.Time
 	err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&now)
@@ -269,8 +269,8 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 	current.LeaseOwner = worker
 	current.LeaseToken = token
 	current.UpdatedAt = now
-	// Compute expiry *inside* PostgreSQL and return the actual DB timestamp.
-	// Never derive an authoritative TTL from the worker's local clock.
+	// Вычисляйте истечение ВНУТРИ PostgreSQL и возвращайте фактическое время БД.
+	// Никогда не выводите авторитетный TTL из локальных часов воркера.
 	err = tx.QueryRowContext(ctx, `UPDATE durable_jobs SET status='running',lease_owner=$2,lease_token=$3,lease_fence=$4,lease_expires_at=clock_timestamp()+($5 * interval '1 second'),attempt_count=$6,updated_at=clock_timestamp(),last_error='' WHERE id=$1 RETURNING lease_expires_at`, current.ID, worker, token, current.LeaseFence, ttl.Seconds(), current.AttemptCount).Scan(&current.LeaseExpiresAt)
 	if err != nil {
 		return model.DurableJob{}, err
@@ -296,8 +296,8 @@ func (r *SQLRepository) LeaseDurableJob(ctx context.Context, id, worker string, 
 	defer tx.Rollback()
 	j, err := r.leaseDurableJobTx0213(ctx, tx, strings.TrimSpace(id), strings.TrimSpace(worker), ttl)
 	if err != nil {
-		// Persist an exhausted job's terminal transition; a transaction
-		// rollback would otherwise leave it running forever after expiry.
+		// Сохраняйте терминальный переход задачи, исчерпавшей попытки; откат
+		// транзакции иначе оставит её выполняющейся навечно после истечения срока.
 		if errors.Is(err, ErrImmutable) && j.Status == model.DurableJobStatusDead {
 			if commitErr := tx.Commit(); commitErr != nil {
 				return model.DurableJob{}, commitErr
@@ -329,8 +329,9 @@ func (r *SQLRepository) LeaseDurableJobs(ctx context.Context, kind, worker strin
 		return nil, err
 	}
 	defer tx.Rollback()
-	// Retire orphaned, attempt-exhausted jobs even though no worker will
-	// claim them again. Keep final attempt and job in the same transaction.
+	// Завершайте осиротевшие задачи с исчерпанными попытками, даже если воркер
+	// больше их не возьмёт. Последняя попытка и задача должны фиксироваться одной
+	// транзакцией.
 	_, err = tx.ExecContext(ctx, `WITH expired AS MATERIALIZED (
   SELECT id FROM durable_jobs
   WHERE kind=$1 AND status='running' AND attempt_count>=max_attempts
@@ -601,8 +602,8 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		if len(commit.StableGateToken03411) != 64 {
 			return model.ReleaseVersion{}, ErrStableRuntimeGate0341
 		}
-		// SET LOCAL is limited to this transaction. PostgreSQL validates the
-		// one-use token, linked evidence and live revocation inside the head trigger.
+		// SET LOCAL ограничен данной транзакцией. Триггер head PostgreSQL проверяет
+		// одноразовый токен, связанные свидетельства и действующий отзыв.
 		if _, e := tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, commit.StableGateToken03411); e != nil {
 			return model.ReleaseVersion{}, e
 		}
@@ -636,15 +637,16 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		return model.ReleaseVersion{}, ErrConflict
 	}
 
-	// Lock the channel's head row. The project lock serializes first publish
-	// when the head row has not been created yet (READ COMMITTED insert race).
+	// Блокируйте строку head канала. Блокировка проекта сериализует первую
+	// публикацию, пока строка head ещё не создана: возможна гонка вставки при READ
+	// COMMITTED.
 	var projectLock string
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, rel.ProjectID).Scan(&projectLock); err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	// A stable head must never be bootstrapped from an unvalidated legacy
-	// release. For a first stable publish the certified target is inserted
-	// below; other channels preserve their historical head recovery.
+	// Stable head никогда не должен инициализироваться из непроверенного старого
+	// релиза. Для первой публикации stable сертифицированная цель вставляется
+	// ниже; прочие каналы сохраняют историческое восстановление head.
 	if !IsStableChannel0341(rel.Channel) {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest)
  SELECT $1,$2,$3,1,id,version,'' FROM release_versions WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND status='published' ORDER BY published_at DESC,id DESC LIMIT 1
@@ -674,7 +676,8 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 	if _, err := tx.ExecContext(ctx, `INSERT INTO release_channels(id,project_id,name,description,protected) VALUES($1,$2,$1,'Канал релиза',$3) ON CONFLICT(project_id,id) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,protected=EXCLUDED.protected`, rel.Channel, rel.ProjectID, rel.Channel == "stable"); err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	// Advancing the pointer and publishing the immutable release are a single commit.
+	// Продвижение указателя и публикация неизменяемого релиза фиксируются одной
+	// транзакцией.
 	if currentHead == 0 {
 		_, err = tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest,updated_at) VALUES($1,$2,$3,1,$4,$5,$6,$7)`, rel.ProjectID, rel.ProfileID, rel.Channel, rel.ID, rel.Version, commit.ExpectedManifestDigest, now)
 	} else {

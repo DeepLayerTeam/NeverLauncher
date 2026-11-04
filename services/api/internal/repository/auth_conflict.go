@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-// authIdentityConflict0293 converts a concurrent PostgreSQL uniqueness conflict
-// into an explicit linkage collision. It avoids relying on driver-specific
-// imports and preserves all other database failures unchanged.
+// authIdentityConflict0293 преобразует параллельный конфликт уникальности PostgreSQL
+// в явную коллизию привязки. Не зависит от импортов конкретного драйвера, сохраняя
+// остальные ошибки БД без изменений.
 func authIdentityConflict0293(err error) error {
 	if err == nil {
 		return nil

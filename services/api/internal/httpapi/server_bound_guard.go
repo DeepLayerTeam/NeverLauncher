@@ -26,9 +26,10 @@ func (s Server) guardBoundStore0507() (repository.GuardBoundSessionStore0507, er
 	return store, nil
 }
 
-// No unverified request field is allowed into a persisted Guard binding. The
-// caller must first consume both the device-signed continuous attestation and
-// the one-time device-signed exact component-plan challenge.
+// Непроверенные поля запроса нельзя записывать в сохраняемую привязку Guard.
+// Сначала вызывающий обязан погасить непрерывную аттестацию, подписанную
+// устройством, и одноразовый подписанный устройством challenge точного плана
+// компонентов.
 func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPlanEvidence02412, verified model.DeviceChallenge) (repository.GuardBoundSession0507, error) {
 	if verifiedPlan == nil || verified.ID == "" || join.SessionCorrelationID == "" {
 		return repository.GuardBoundSession0507{}, errors.New("verified build and Guard evidence required")
@@ -91,9 +92,9 @@ func equalGuardBinding0507(a, b string) bool {
 	return a != "" && b != "" && subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
-// Validate on the authoritative ServerBridge redemption path BEFORE the
-// one-time ticket is consumed. Handoffs may target a different node; the
-// correlation, identity, project and signed ORIGINAL plan must still match.
+// Проверяйте на авторитетном пути погашения ServerBridge ДО использования
+// одноразового билета. Передача может вести на другой узел, но корреляция,
+// личность, проект и подписанный ИСХОДНЫЙ план должны совпасть.
 func (s Server) requireGuardBoundJoin0507(r *http.Request, join bridgeJoinRecord, handoff bool) error {
 	if !planPolicyRequired02412() {
 		return nil
@@ -113,9 +114,9 @@ func (s Server) requireGuardBoundJoin0507(r *http.Request, join bridgeJoinRecord
 		(!handoff && (b.JoinID != join.ID || b.ServerID != join.ServerID)) {
 		return errors.New("Guard Session account/server/build binding mismatch")
 	}
-	// A proxy handoff changes the destination server but must not widen the
-	// signed build's allowed server set. Require the exact same plan to be
-	// explicitly admitted for the new target, not merely the old target.
+	// Передача через прокси меняет целевой сервер, но не должна расширять
+	// разрешённое множество серверов подписанной сборки. Требуйте явного допуска
+	// строго того же плана для новой цели, а не только для прежней.
 	if handoff && join.ServerID != b.ServerID {
 		policy, err := loadPlanPolicy02412(time.Now().UTC())
 		if err != nil || !planMatches02412(policy, join.ServerID, b.ProjectID, b.ProfileID, b.Channel, b.ReleaseSignature, b.CatalogSHA256, b.PlanSHA256) {
@@ -125,11 +126,11 @@ func (s Server) requireGuardBoundJoin0507(r *http.Request, join bridgeJoinRecord
 	return s.verifyGuardBoundState0507(r, b)
 }
 
-// Uses current authoritative state (device, active session, signed release and
-// signed exact plan); never interprets a heartbeat from a game server as fresh
-// proof of client memory or instrumentation.
-// Compare the row read from live PostgreSQL session authority with the exact
-// one-time signed admission. Mismatch must be revoked, not filtered from SELECT.
+// Используйте текущее авторитетное состояние: устройство, активный сеанс, подписанный
+// релиз и точный подписанный план. Никогда не считайте heartbeat игрового сервера
+// новым доказательством памяти клиента или инструментирования. Сравнивайте строку из
+// действующего авторитетного PostgreSQL-хранилища сеансов с точным одноразовым
+// подписанным допуском. Несовпадение требует отзыва, а не фильтрации из SELECT.
 func guardBoundLiveMatches0507(b repository.GuardBoundSession0507) bool {
 	return b.LiveUserID == b.UserID && b.LiveSessionID == b.SessionID &&
 		b.LiveMinecraftSessionID == b.MinecraftSessionID && b.LiveTrustedDeviceID == b.TrustedDeviceID &&
@@ -221,9 +222,9 @@ func (s Server) verifyGuardBoundState0507(r *http.Request, b repository.GuardBou
 	return nil
 }
 
-// This is called by the authenticated, replay-protected ServerBridge heartbeat
-// (not by a user-supplied HTTP request). A failed check atomically invalidates
-// the correlated player session and queues runtime-bound kick commands.
+// Вызывается аутентифицированным ServerBridge heartbeat с защитой от повторов, а не
+// HTTP-запросом пользователя. Неуспешная проверка атомарно аннулирует связанный
+// сеанс игрока и ставит в очередь команды отключения с привязкой к Runtime.
 func (s Server) recheckServerBoundGuard0507(r *http.Request, nodeID string) (int, int, error) {
 	if !planPolicyRequired02412() {
 		return 0, 0, nil
@@ -233,8 +234,8 @@ func (s Server) recheckServerBoundGuard0507(r *http.Request, nodeID string) (int
 		return 0, 0, err
 	}
 	now := time.Now().UTC()
-	// When Guard enforcement is enabled, revoke pre-policy player sessions
-	// with no signed binding instead of relying on a fresh login to do it.
+	// При включённом контроле Guard отзывайте сеансы игроков, созданные до
+	// политики и не имеющие подписанной привязки, а не ожидайте нового входа.
 	revoked := 0
 	if planPolicyRequired02412() {
 		unbound, err := store.ListUnboundGuardPlayerSessions0507(r.Context(), nodeID, guardSessionBatchSize0507)
@@ -294,7 +295,7 @@ func (s Server) recheckServerBoundGuard0507(r *http.Request, nodeID string) (int
 	return checked, revoked, nil
 }
 
-// For internal inspection without exposing Guard digests or correlation tokens.
+// Для внутренней проверки без раскрытия хешей Guard и корреляционных токенов.
 func guardBoundStatus0507(checked, revoked int) map[string]any {
 	return map[string]any{"required": true, "checked": checked, "revoked": revoked, "batchLimit": guardSessionBatchSize0507, "verification": "server-authoritative-recheck"}
 }

@@ -12,9 +12,9 @@ import (
 	"testing"
 )
 
-// The shared filesystem broker operates on directory FDs. Concurrent renames,
-// symlinks and hardlinks must never turn an approved relative path into an
-// operation on a private inode outside its configured root.
+// Брокер общей файловой системы использует дескрипторы каталогов. Параллельные
+// переименования, символьные и жёсткие ссылки никогда не должны превращать
+// разрешённый относительный путь в действие над закрытым inode за пределами корня.
 func TestAdversarialBrokerPathBoundary03114(t *testing.T) {
 	root := t.TempDir()
 	private := t.TempDir()
@@ -89,8 +89,8 @@ func TestAdversarialBrokerAtomicConcurrentWriters03114(t *testing.T) {
 				}
 				raw, err := Read(root, "shared")
 				if err != nil {
-					// The file can be atomically replaced between openat and fstat;
-					// treating a now-unlinked descriptor as denied is secure.
+					// Файл может быть атомарно заменён между openat и fstat; отказ от доступа к
+					// дескриптору, уже не связанному с именем, безопасен.
 					if !errors.Is(err, ErrDenied) {
 						failures <- err
 					}

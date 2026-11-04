@@ -7,8 +7,9 @@ import (
 	"testing"
 )
 
-// A SQLite HTTP repository must not silently start with an ephemeral limiter,
-// an unmanaged Redis lease, or a second writer to the same SQLite file.
+// HTTP-репозиторий SQLite не должен незаметно запускаться с эфемерным
+// ограничителем, неконтролируемой арендой Redis или вторым писателем в тот же
+// SQLite-файл.
 func TestSQLiteCoordinatorFailClosed0374(t *testing.T) {
 	state := NewRuntimeState()
 	cfg := config.Config{RepositoryDriver: "sqlite", DatabaseDSN: filepath.Join(t.TempDir(), "http.db")}

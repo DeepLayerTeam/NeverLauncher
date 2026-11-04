@@ -15,8 +15,9 @@ func TestV12ForgedExpiredUnsignedManualCertification03412(t *testing.T) {
 	if err := verifyValidation0345(signed, trusted); err != nil {
 		t.Fatal(err)
 	}
-	// Forged signatures, missing proof, malicious JSON and stale evidence cannot
-	// be promoted by uploading a status flag or copying an old run.
+	// Поддельные подписи, отсутствие доказательств, вредоносный JSON и устаревшие
+	// свидетельства нельзя продвинуть загрузкой флага статуса или копированием
+	// старого запуска.
 	signed.Signature = ""
 	if verifyValidation0345(signed, trusted) == nil {
 		t.Fatal("unsigned runner accepted")

@@ -1,7 +1,8 @@
 //go:build linux
 
-// Package extensionbroker implements host-side, scoped filesystem and network
-// gates for OS-isolated Extensions. It does not expose host paths or FDs.
+// Package extensionbroker реализует на стороне хоста ограниченные файловые и
+// сетевые шлюзы для изолированных ОС расширений. Пути и файловые дескрипторы хоста
+// не раскрываются.
 package extensionbroker
 
 import (
@@ -21,9 +22,10 @@ import (
 
 var resource = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)
 
-// Roots are trusted operator configuration, NOT values from an extension.
-// Each name is the target of a signed shared:<name> grant. Every path
-// component must be a real directory, not a symlink.
+// Корневые каталоги — доверенная конфигурация оператора, а НЕ значения от
+// расширения. Каждое имя является целью подписанного разрешения shared:<name>.
+// Каждый компонент пути должен быть настоящим каталогом, не символьной
+// ссылкой.
 func ParseRoots(raw string) (map[string]string, error) {
 	if strings.TrimSpace(raw) == "" {
 		return map[string]string{}, nil
@@ -54,8 +56,9 @@ func ParseRoots(raw string) (map[string]string, error) {
 	return roots, nil
 }
 
-// OpenDirectory walks from / using O_NOFOLLOW on every component. This
-// excludes symlinked root parents, unlike os.Open(path) + filepath.EvalSymlinks.
+// OpenDirectory обходит путь от / с O_NOFOLLOW на каждом компоненте. Это исключает
+// символьные ссылки в родительских каталогах корня, в отличие от os.Open(path) +
+// filepath.EvalSymlinks.
 func openDirectory(path string) (*os.File, error) {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return nil, ErrDenied
@@ -143,9 +146,10 @@ func Read(root, rel string) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
-// Write uses a fresh, unguessable inode and renameat against the opened parent
-// directory. It cannot follow the destination symlink or mutate hardlinked
-// inodes. No mkdir, device writes, arbitrary absolute paths or host mounts.
+// Write использует новый непредсказуемый inode и renameat по открытому
+// родительскому каталогу. Нельзя перейти по целевой символьной ссылке или изменить
+// inode с жёсткими ссылками. Запрещены mkdir, запись в устройства, произвольные
+// абсолютные пути и монтирования хоста.
 func Write(root, rel, encoded string) error {
 	if len(encoded) > base64.StdEncoding.EncodedLen(MaxFileBytes) {
 		return ErrDenied

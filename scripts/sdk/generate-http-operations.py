@@ -24,9 +24,10 @@ def outputs():
     for n,(name,method,path) in enumerate(OPS):
         go.append(f'    {json.dumps(name)}: {{Method: {json.dumps(method)}, Path: {json.dumps(path)}}},')
         ts.append(f'  {json.dumps(name)}: {{ method: {json.dumps(method)}, path: {json.dumps(path)} }},')
-        # Split the generated registry into small methods: a 450+ argument
-        # Map.ofEntries expression can stall javac's type inference for minutes.
-        # Ordinary put statements compile in bounded, predictable time on 17/21.
+        # Разделяйте сгенерированный реестр на небольшие методы: выражение
+        # Map.ofEntries более чем с 450 аргументами может на минуты остановить вывод
+        # типов javac. Обычные вызовы put компилируются за ограниченное предсказуемое
+        # время на Java 17/21.
         java.append(f'    result.put({json.dumps(name)},new Operation({json.dumps(method)},{json.dumps(path)}));')
     go += ['}', '']; ts += ['} as const;', 'export type OperationId = keyof typeof OPERATIONS;', '']
     java += ['    if (result.size() != '+str(len(OPS))+') throw new IllegalStateException("duplicate OpenAPI operation ID");',

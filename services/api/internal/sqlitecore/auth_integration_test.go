@@ -71,7 +71,7 @@ func TestAuthRotateReplayAndRestart(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer r.Close()
-	// A new reader must observe the durable family compromise.
+	// Новый читатель должен наблюдать устойчивую компрометацию семейства.
 	key := a.key[:]
 	a, e = r.Auth(key)
 	if e != nil {
@@ -162,7 +162,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 	if _, e = a.SaveMinecraftIdentity(ctx, p, "owner"); !errors.Is(e, ErrImmutable) {
 		t.Fatalf("uuid changed: %v", e)
 	}
-	// Simulate a changed password/role from the existing 0.32.2 repository.
+	// Имитируйте смену пароля или роли в существующем репозитории 0.32.2.
 	if e = r.UpdatePassword(ctx, "owner", "new-password-hash", "owner"); e != nil {
 		t.Fatal(e)
 	}
@@ -223,8 +223,8 @@ func TestRefreshConcurrentReplayIsFailClosed(t *testing.T) {
 	}
 }
 func TestTOTPReplayAndRFC6238(t *testing.T) {
-	// RFC6238 shared secret and first expected 8-digit value 94287082.
-	// Our 6-digit version is its last six decimal digits.
+	// Общий секрет RFC6238 и первое ожидаемое восьмизначное значение 94287082.
+	// Шестизначная версия берёт последние шесть десятичных цифр.
 	secret := []byte("12345678901234567890")
 	if got := totpCode(secret, 59/30); got != "287082" {
 		t.Fatalf("TOTP vector: %s", got)
@@ -242,7 +242,8 @@ func TestSQLiteSchemaUpgrade322To323(t *testing.T) {
 	if e := r.Close(); e != nil {
 		t.Fatal(e)
 	}
-	// Simulate an existing 0.32.2 DB, preserving the core user/project data.
+	// Имитируйте существующую БД 0.32.2 с сохранением основных данных
+	// пользователей и проектов.
 	s, e := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if e != nil {
 		t.Fatal(e)

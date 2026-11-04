@@ -6,8 +6,9 @@ import (
 	"testing"
 )
 
-// Simulates an independent API replica revoking the durable device first.
-// The old access token must fail even before local session cleanup runs.
+// Имитирует независимую реплику API, которая первой отзывает устройство в
+// устойчивом хранилище. Старый access-токен должен отклоняться ещё до
+// локальной очистки сеанса.
 func TestDirectDeviceRevocationDeniesStaleAccessAndRefresh0434(t *testing.T) {
 	handler, repo := deviceTrustFixture0432(t)
 	unbound, refresh := deviceTrustLogin0121(t, handler, "revocation-race")

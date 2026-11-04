@@ -18,9 +18,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Executes the production transaction on a disposable PostgreSQL database.
-// In particular, 0.43.4's SQL tombstone trigger must allow setting only the
-// replacement link without ever permitting reactivation of the revoked key.
+// Выполняет производственную транзакцию на одноразовой БД PostgreSQL. В
+// частности, SQL-триггер tombstone 0.43.4 должен разрешать только установку
+// ссылки замены и никогда не допускать повторную активацию отозванного ключа.
 func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -74,7 +74,7 @@ func TestRevokedDeviceRecoveryTransactionPostgres0435(t *testing.T) {
 	}
 	nextHash := sha256.Sum256(nextPublic)
 	next := model.TrustedDevice{ID: "recovery-new-" + suffix, UserID: userID, Name: "New key", Status: "active", TrustState: "verified", KeyAlgorithm: "ed25519", PublicKey: base64.RawURLEncoding.EncodeToString(nextPublic), KeyFingerprint: hex.EncodeToString(nextHash[:])}
-	// A pre-revocation passkey grant cannot be carried into recovery.
+	// Разрешение passkey, выданное до отзыва, нельзя переносить в восстановление.
 	if _, err := repo.db.ExecContext(ctx, `UPDATE auth_sessions SET auth_time=now()-interval '1 hour' WHERE id=$1`, sessionID); err != nil {
 		t.Fatal(err)
 	}

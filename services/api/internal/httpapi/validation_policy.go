@@ -21,11 +21,11 @@ import (
 const validationAudience0346 = "launcher-api/validation-evidence/0.34.7"
 const validationPurpose0346 = "staged-package-runtime-verification"
 
-// This is a pinned, operator-managed set of REQUIRED execution targets. There
-// are no globs, optional defaults, or wildcard SHA values. It is not supplied
-// by the runner and cannot be edited by changing a submitted evidence JSON.
-// A target may be updated only by updating the Backend configuration; changes
-// invalidate all earlier signatures through the matrix digest.
+// Это закреплённый и управляемый оператором набор ОБЯЗАТЕЛЬНЫХ целей выполнения.
+// Запрещены glob-шаблоны, необязательные значения по умолчанию и подстановочные
+// SHA. Набор не предоставляется раннером и не изменяется через отправленный JSON
+// свидетельств. Цели меняются только конфигурацией Backend; изменение хеша матрицы
+// аннулирует все прежние подписи.
 type validationTarget0346 struct {
 	ID                   string `json:"id"`
 	ProjectID            string `json:"projectId"`
@@ -181,8 +181,8 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 	return nil
 }
 
-// Emergency revocation is durable and monotonic. The private signing key is
-// not returned, and a revoked fingerprint cannot be unrevoked by this API.
+// Экстренный отзыв устойчив и монотонен. Закрытый ключ подписи не возвращается;
+// отозванный отпечаток нельзя восстановить через API.
 func (s Server) validationKeyRevoke0346(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationFreshnessStore0346)
 	if !ok {

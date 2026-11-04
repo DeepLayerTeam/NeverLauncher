@@ -1,7 +1,7 @@
-// Package sqlitecore provides transactional SQLite persistence for DEP01 core
-// entities. It deliberately does not implement the whole Backend Repository:
-// device attestation and coordinator state remain PostgreSQL-
-// only until their durable SQLite implementations exist. No memory fallback.
+// Пакет sqlitecore обеспечивает транзакционное сохранение базовых объектов DEP01 в
+// SQLite. Он намеренно не реализует весь Backend Repository: аттестация устройств
+// и состояние координатора остаются только в PostgreSQL до появления их устойчивых
+// реализаций SQLite. Без резервного перехода в память.
 package sqlitecore
 
 import (
@@ -48,8 +48,9 @@ func Open(ctx context.Context, options sqlitedurable.Options) (*Repository, erro
 	return repo, nil
 }
 
-// OpenExisting creates or migrates a core schema; for inspection and
-// startup readiness checks. The caller must first ensure the DB file exists.
+// OpenExisting создаёт или мигрирует схему ядра для инспекции и проверок
+// готовности запуска. Вызывающий сначала обязан убедиться, что файл БД
+// существует.
 func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Repository, error) {
 	if st, err := os.Lstat(options.Path); err != nil {
 		return nil, fmt.Errorf("sqlite core existing database: %w", err)
@@ -70,9 +71,9 @@ func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Reposito
 
 func (r *Repository) Close() error { return r.store.Close() }
 
-// ensureMigrationBackup makes a verified, restorable snapshot mandatory before
-// modifying any existing SQLite schema. New installations do not need a backup.
-// A failed backup blocks the migration; there is no unsafe override.
+// ensureMigrationBackup требует проверенный восстанавливаемый снимок до изменения
+// любой существующей схемы SQLite. Новым установкам резервная копия не нужна.
+// Неудачное копирование блокирует миграцию; небезопасного обхода нет.
 func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) error {
 	var old int
 	if err := r.store.Read(ctx, func(q sqlitedurable.Executor) error { return q.QueryRowContext(ctx, "PRAGMA user_version").Scan(&old) }); err != nil {
@@ -81,7 +82,8 @@ func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) err
 	if old == 0 || old == SchemaVersion {
 		return nil
 	}
-	// Do not perform backups for unsupported/future versions or migrate them.
+	// Не создавайте резервные копии неподдерживаемых или будущих версий и не
+	// мигрируйте их.
 	if old != 322 && old != 323 && old != 324 && old != 325 && old != 326 {
 		return fmt.Errorf("SQLite schema %d unsupported; refusing migration", old)
 	}
@@ -92,8 +94,8 @@ func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) err
 	return err
 }
 
-// Schema changes and built-in role seeding are committed atomically. An
-// unrecognised schema version fails closed, including databases from the future.
+// Изменения схемы и заполнение встроенных ролей фиксируются атомарно. Неизвестная
+// версия схемы отклоняется по умолчанию, включая будущие версии.
 func (r *Repository) migrate(ctx context.Context) error {
 	return r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var version int
@@ -104,8 +106,8 @@ func (r *Repository) migrate(ctx context.Context) error {
 			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
 		}
 		if version == 0 {
-			// user_version=0 can mean a fresh file OR an unrelated/legacy DB.
-			// Only a completely empty schema is safe to bootstrap as new.
+			// user_version=0 может обозначать новый файл ИЛИ постороннюю/старую БД.
+			// Только полностью пустую схему безопасно инициализировать как новую.
 			var existing int
 			if err := q.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type IN ('table','index','trigger','view')`).Scan(&existing); err != nil {
 				return err
@@ -174,15 +176,15 @@ func (r *Repository) migrate(ctx context.Context) error {
 				return err
 			}
 		}
-		// After all DDL, validate the core persisted graph before COMMIT.
-		// A failure rolls the entire upgrade back to the verified backup state.
+		// После всех DDL проверяйте сохранённый граф ядра до COMMIT. Ошибка
+		// откатывает всё обновление к состоянию проверенной резервной копии.
 		return coreRecordPreflight0472(ctx, q)
 	})
 }
 
-// Check verifies actual persisted data, not just the DB handle. It detects
-// corrupted profile history, dangling channel pointers, invalid roles and
-// broken manifest digest references prior to exposing the repository.
+// Check проверяет реальные сохранённые данные, а не только дескриптор БД.
+// Выявляет повреждённую историю профилей, висячие указатели каналов, неверные
+// роли и повреждённые связи хешей манифестов до предоставления репозитория.
 func (r *Repository) Check(ctx context.Context) error {
 	return r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		var v int
@@ -241,8 +243,8 @@ func (r *Repository) Check(ctx context.Context) error {
 				return fmt.Errorf("sqlite core inconsistent records (%d): %s", n, stmt)
 			}
 		}
-		// Detect wrong immutable profile payloads and tampered channel heads
-		// even when SQLite pages and foreign keys are structurally valid.
+		// Выявляйте подменённые неизменяемые данные профиля и head каналов даже при
+		// структурно корректных страницах SQLite и внешних ключах.
 		profiles, e := q.QueryContext(ctx, "SELECT "+"id,project_id,name,description,loader,preset,is_default,created_at,updated_at,revision,digest"+" FROM profiles")
 		if e != nil {
 			return e
@@ -276,7 +278,7 @@ func (r *Repository) Check(ctx context.Context) error {
 		if e = errors.Join(heads.Err(), heads.Close()); e != nil {
 			return e
 		}
-		// Detect payload tampering not visible to PRAGMA integrity_check.
+		// Выявляйте подмены полезной нагрузки, невидимые PRAGMA integrity_check.
 		for _, table := range []string{"durable_jobs", "durable_outbox"} {
 			items, er := q.QueryContext(ctx, "SELECT payload,payload_digest FROM "+table)
 			if er != nil {

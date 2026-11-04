@@ -26,7 +26,8 @@ for bad in (event("TestA", "skip"), event("TestOther", "pass"), event("TestA", "
         raise AssertionError("unsafe GA evidence accepted")
 print("GA evidence validation: PASS (skipped/missing/failed tests rejected)")
 
-# A later PASS must never erase a prior FAIL or SKIP for the same test.
+# Последующий PASS никогда не должен стирать предыдущий FAIL или SKIP для
+# того же теста.
 for bad in (event('TestA', 'fail')+'\n'+event('TestA','pass'),
             event('TestA','skip')+'\n'+event('TestA','pass')):
     try:

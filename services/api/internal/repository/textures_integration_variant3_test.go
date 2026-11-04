@@ -80,7 +80,7 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	if _, err = repo.UploadTexture0252(ctx, owner, makeUpload("second verified normalized png", 1)); !errors.Is(err, ErrTextureUploadLimit0252) {
 		t.Fatalf("expected count quota rejection, got %v", err)
 	}
-	// Identical digest is deduplicated, not charged twice even when replaced.
+	// Одинаковый хеш дедуплицируется, двойного списания квоты нет даже при замене.
 	a.ExpectedRevision = 1
 	if _, err = repo.UploadTexture0252(ctx, owner, a); err != nil {
 		t.Fatalf("deduped upload: %v", err)
@@ -89,7 +89,8 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blob_owners WHERE user_id='owner'`).Scan(&ownerCount); err != nil || ownerCount != 1 {
 		t.Fatalf("quota owner rows %d %v", ownerCount, err)
 	}
-	// A second owner gets an independent ownership/quota record for the same content.
+	// Второй владелец получает независимую запись владения и квоты для того же
+	// содержимого.
 	other := model.MinecraftProfile{UUID: "99999999-2222-4333-8444-555555555555", UserID: "other", Name: "Alex", Realm: "local", Issuer: "launcher"}
 	a.ExpectedRevision = 0
 	if err = repo.StageTextureUpload0253(ctx, other, a); err != nil {
@@ -102,7 +103,8 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blobs`).Scan(&blobCount); err != nil || blobCount != 1 {
 		t.Fatalf("expected physical dedup %d %v", blobCount, err)
 	}
-	// Referenced blobs cannot be GC candidates regardless of object age.
+	// Объекты со ссылками не могут становиться кандидатами на очистку независимо
+	// от возраста.
 	if _, err = db.ExecContext(ctx, `UPDATE texture_blobs SET created_at=now()-interval '30 days', last_upload_at=now()-interval '30 days'`); err != nil {
 		t.Fatal(err)
 	}

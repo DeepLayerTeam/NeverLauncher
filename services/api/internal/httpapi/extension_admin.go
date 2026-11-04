@@ -205,9 +205,9 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 }
 
 func hardenAdminHTML0208(raw string) string {
-	// The sandboxed frame has an opaque origin, but its inline scripts need a
-	// narrow CSP. Put CSP before every byte of untrusted markup. Looking for
-	// <head> is unsafe: malformed HTML may execute scripts before that tag.
+	// Изолированный фрейм имеет непрозрачный origin, но его встроенным скриптам
+	// нужна узкая CSP. Размещайте CSP до любого байта недоверенной разметки. Поиск
+	// <head> небезопасен: некорректный HTML может выполнить скрипты до этого тега.
 	const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'">`
 	return "<!doctype html><html><head>" + csp + "</head><body>" + raw + "</body></html>"
 }
@@ -311,8 +311,9 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	}
 	switch method {
 	case "java.action.invoke", "java.settings.get", "java.settings.put":
-		// UI actions and settings changes are privileged; a read-only admin
-		// session must not turn extension capabilities into user privileges.
+		// Действия интерфейса и изменения настроек привилегированны; административный
+		// сеанс только для чтения не должен превращать возможности расширения в
+		// пользовательские привилегии.
 		if !s.authorizeClaims(r, claims, "extension:manage", "", "extension", install.ExtensionID).Allowed {
 			respond(nil, errors.New("user extension:manage denied"))
 			return

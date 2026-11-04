@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-// Uses the real pgx PostgreSQL driver under CI, including transaction fencing.
+// В CI используется настоящий pgx-драйвер PostgreSQL, включая транзакционное
+// ограждение.
 func TestLiveManagedProviderCAS02910(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN")
 	if dsn == "" {

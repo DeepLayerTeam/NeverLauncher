@@ -31,6 +31,6 @@ func TestOwnerProfileConfigurationAndRevision0382(t *testing.T) {
 	call(http.MethodGet, "/api/v1/projects/owner-profile-0382/profiles/fabric/revisions", "", 200, `"revision":1`)
 	call(http.MethodGet, "/api/v1/projects/owner-profile-0382/profiles/fabric/revisions", "", 200, `"revision":2`)
 	call(http.MethodPost, project+"/profiles/fabric/clone", `{"id":"fabric-copy","name":"Fabric copy","sourceRevision":1}`, 201, `"isDefault":false`)
-	// Direct package-create must not bypass the configured profile version.
+	// Прямое создание пакета не должно обходить настроенную версию профиля.
 	call(http.MethodPost, "/api/v1/packages", `{"projectId":"owner-profile-0382","profileId":"fabric","channel":"stable","version":"0.1","minecraftVersion":"1.19.4","loader":"fabric"}`, 409, "profile launch mismatch")
 }

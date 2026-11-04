@@ -81,15 +81,17 @@ func (s Server) manifest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) file(w http.ResponseWriter, r *http.Request) {
-	// Workspace source blobs must never be served through public package file
-	// delivery, even on local-storage development installations.
+	// Исходные объекты рабочего пространства никогда не должны раздаваться через
+	// публичную доставку файлов пакета, даже в локальных установках для
+	// разработки.
 	if strings.HasPrefix(r.PathValue("version"), "ws-") {
 		writeError(w, http.StatusNotFound, "file not found")
 		return
 	}
-	// A staged package is not public content. Previously the generic file
-	// route bypassed staging permissions by accepting a storage key directly.
-	// Only published release identities may use the public delivery route.
+	// Подготовленный пакет не является публичным содержимым. Раньше общий файловый
+	// маршрут обходил права подготовки, напрямую принимая ключ хранилища.
+	// Публичный маршрут доставки доступен только для опубликованных идентичностей
+	// релизов.
 	published := false
 	releases, releaseErr := s.Repo.ListVersions(r.PathValue("projectId"))
 	if releaseErr != nil {

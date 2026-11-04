@@ -1,5 +1,6 @@
-// Package extensionpolicy validates the signed sandbox policy and enforces
-// version-scoped consent for every privilege-policy change.
+// Package extensionpolicy проверяет подписанную политику песочницы и
+// обеспечивает согласие в рамках версии при каждом изменении политики
+// привилегий.
 package extensionpolicy
 
 import (
@@ -123,8 +124,8 @@ func LaunchAllowed(m model.ExtensionManifest) error {
 	return nil
 }
 
-// ApprovalDigest binds reviewer acknowledgement to precisely the signed
-// permissions and sandbox policy of the target version (including its ID).
+// ApprovalDigest связывает подтверждение проверяющего точно с подписанными
+// правами и политикой песочницы целевой версии, включая её ID.
 func ApprovalDigest(m model.ExtensionManifest) (string, error) {
 	normalized, err := Validate(m.Sandbox)
 	if err != nil {
@@ -145,8 +146,9 @@ func ApprovalDigest(m model.ExtensionManifest) (string, error) {
 	return "sha256:" + hex.EncodeToString(hash[:]), nil
 }
 
-// ChangesRequireApproval compares the exact security-relevant policy. Even a
-// narrowing or reordering that changes meaning is reviewed, never inferred.
+// ChangesRequireApproval сравнивает точную политику, влияющую на безопасность.
+// Даже сужение или перестановка, меняющие смысл, требуют рассмотрения, а не
+// предполагаются безопасными.
 func ChangesRequireApproval(before, after model.ExtensionManifest) (bool, error) {
 	if before.ID == "" || after.ID == "" || before.ID != after.ID {
 		return true, errors.New("sandbox policy transition must preserve extension identity")
@@ -177,8 +179,9 @@ func ChangesRequireApproval(before, after model.ExtensionManifest) (bool, error)
 }
 
 func RequireReview(before, after model.ExtensionManifest, submittedDigest string) error {
-	// A security review always belongs to a single signed extension identity.
-	// Never treat an ID switch with otherwise identical grants as a safe update.
+	// Проверка безопасности всегда относится к одной подписанной идентичности
+	// расширения. Никогда не считайте смену ID при тех же разрешениях безопасным
+	// обновлением.
 	if before.ID == "" || after.ID == "" || before.ID != after.ID {
 		return errors.New("sandbox approval cannot cross extension identities")
 	}

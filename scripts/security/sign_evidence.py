@@ -42,7 +42,8 @@ def main():
     if not isinstance(private, Ed25519PrivateKey):
         raise SystemExit("only Ed25519 signing keys accepted")
     raw = args.evidence.read_bytes()
-    # Sign the exact approved bytes. Do not alter formatting after signing.
+    # Подписывайте точно одобренные байты. Не меняйте форматирование после
+    # подписи.
     sig_path = Path(str(args.evidence) + ".sig")
     if sig_path.exists() or sig_path.is_symlink():
         raise SystemExit("signature already exists; remove explicitly after re-review")

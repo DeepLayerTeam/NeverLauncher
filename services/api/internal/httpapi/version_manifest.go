@@ -150,8 +150,8 @@ func validateCompatibilityManifest(manifest model.Manifest) error {
 		if err := model.ValidatePublishFileOwnership0224(manifest); err != nil {
 			return err
 		}
-		// Drafts may be incomplete, but no package reaches publish with a
-		// missing runtime or an invalid effective command line.
+		// Черновики могут быть неполными, но ни один пакет не дойдёт до публикации
+		// без Runtime или с некорректной эффективной командной строкой.
 		if manifest.Runtime.Java.MajorVersion <= 0 {
 			return errors.New("v2 publish requires runtime.java.majorVersion")
 		}

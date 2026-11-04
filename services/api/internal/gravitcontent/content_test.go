@@ -115,8 +115,8 @@ func TestContentSafeTargets0337(t *testing.T) {
 	}
 }
 
-// 0.44.3: the source install directory is the profile's explicit `dir`, not
-// the JSON filename. Each imported byte is authenticated by the MIG03 digest.
+// 0.44.3: исходный каталог установки — явное поле `dir` профиля, а не имя
+// JSON-файла. Каждый импортированный байт аутентифицируется дайджестом MIG03.
 func TestContentExplicitClientDirectory0443(t *testing.T) {
 	profile := strings.Replace(profileFixture, `"limited":false`, `"dir":"production-pack","limited":false`, 1)
 	raw, saved := testZip(t, map[string]string{
@@ -252,8 +252,9 @@ func TestContentEmptyUpdateDoesNotStageUnmanaged0443(t *testing.T) {
 	}
 }
 
-// 0.44.5: Gravit's file action accepts both an empty destination and an
-// identity destination. Both must import the same authenticated optional bytes.
+// 0.44.5: файловое действие Gravit допускает пустое назначение или назначение
+// идентичности. Оба варианта должны импортировать одни и те же аутентифицированные
+// необязательные байты.
 func TestContentOptionalIdentityDestination0445(t *testing.T) {
 	profile := strings.Replace(profileFixture, `"limited":false`, `"limited":false,"updateOptional":[{"name":"NEI","mark":true,"actions":[{"type":"file","files":{"mods/nei.jar":"mods/nei.jar"}}]}]`, 1)
 	raw, saved := testZip(t, map[string]string{
@@ -292,7 +293,8 @@ func TestContentNullableOptionalCollection0445(t *testing.T) {
 	}
 }
 
-// Reject relocation rather than staging a file under the wrong signed name.
+// Отклоняйте перемещение вместо подготовки файла под неверным подписанным
+// именем.
 func TestContentOptionalRelocationRequiresManualResolution0445(t *testing.T) {
 	profile := strings.Replace(profileFixture, `"limited":false`, `"limited":false,"updateOptional":[{"name":"bad","actions":[{"type":"file","files":{"mods/nei.jar":"mods/renamed.jar"}}]}]`, 1)
 	raw, saved := testZip(t, map[string]string{"profiles/demo.json": profile, "updates/demo/minecraft.jar": "jar", "updates/demo/mods/nei.jar": "mod"})
@@ -302,9 +304,10 @@ func TestContentOptionalRelocationRequiresManualResolution0445(t *testing.T) {
 	}
 }
 
-// A modded import must pin the exact loader build in both the versioned
-// Profile v2 snapshot and the workspace's Minecraft launch metadata. The
-// source ZIP is never allowed to guess a loader build from arbitrary JAR names.
+// Импорт модифицированного клиента должен закрепить точную сборку загрузчика и в
+// версионированном снимке Profile v2, и в метаданных запуска Minecraft рабочего
+// пространства. Исходному ZIP запрещено угадывать сборку загрузчика по произвольным
+// именам JAR.
 func TestContentModdedLaunchAndOptionalMaterialization0493(t *testing.T) {
 	profile := strings.Replace(profileFixture, `"update":["minecraft.jar"]`, `"update":["minecraft.jar","mods"]`, 1)
 	profile = strings.Replace(profile, `"classPath":["minecraft.jar"]`, `"classPath":["minecraft.jar","libraries/forge-loader.jar"]`, 1)

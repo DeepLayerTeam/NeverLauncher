@@ -14,15 +14,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Loopback-only, authenticated and bounded callback/RPC server, running inside the JVM. */
 public final class RuntimeCallbackServer implements AutoCloseable {
     private static final int MAX_BODY=65536;
-    // EventBus persists 1 MiB of canonical JSON payload. Its delivery envelope
-    // adds metadata and JSON escapes, so callbacks need a separate bounded cap.
-    // Command and health RPC requests remain restricted to 64 KiB.
+    // EventBus сохраняет до 1 МиБ канонической JSON-нагрузки. Конверт доставки
+    // добавляет метаданные и экранирование JSON, поэтому обратным вызовам нужен
+    // отдельный ограниченный предел. Запросы команд и проверки здоровья RPC остаются
+    // в пределах 64 КиБ.
     private static final int MAX_EVENT_BODY=2*1024*1024;
     private final HttpServer server;
     private final String token;
     private final RuntimeServices services;
     private final Supplier<String> lifecycleState;
-    // Revocation and JVM teardown must stop accepting work *before* resources close.
+    // Отзыв доступа и завершение JVM должны прекращать приём работы ДО закрытия ресурсов.
     private final AtomicBoolean accepting=new AtomicBoolean(true);
     private final Set<Future<?>> pending=ConcurrentHashMap.newKeySet();
     private final ThreadPoolExecutor workers=pool("neverext-rpc-http",8,16);
@@ -66,8 +67,9 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 String id=Json.string(data,"requestId",true);
                 if(id.length()>64||!id.matches("[a-zA-Z0-9_-]+")){respond(exchange,400,Map.of("error","invalid RPC request id"));return;}
             }
-            // A callback arriving after STOPPING must never commit new mutations.
-            // Health remains readable so the supervisor can diagnose a draining process.
+            // Обратный вызов, пришедший после STOPPING, не должен фиксировать новые
+            // изменения. Проверка здоровья остаётся доступной, чтобы супервизор мог
+            // диагностировать завершающийся процесс.
             String method=kind.equals("rpc")?Json.string(data,"method",true):"";
             if(!"health".equals(method) && !"RUNNING".equals(lifecycleState.get())){
                 respond(exchange,503,Map.of("error","extension is not running"));return;
@@ -128,7 +130,8 @@ public final class RuntimeCallbackServer implements AutoCloseable {
         }
         return Map.of("protocolVersion","1.0","requestId",id,"ok",true,"result",result);
     }
-    // JSON null is a valid command result, unlike Map.of() values.
+    // JSON null является допустимым результатом команды, в отличие от значений
+    // Map.of().
     private static Map<String,Object> nullableResult(String key,Object value){
         Map<String,Object> out=new LinkedHashMap<>();out.put(key,value);return out;
     }

@@ -143,8 +143,9 @@ type Manifest struct {
 	Signature             *SignatureInfo           `json:"signature,omitempty"`
 }
 
-// GameRollbackSource02311 binds a newly authorized release generation to the
-// historical *signed* manifest whose content is intentionally being restored.
+// GameRollbackSource02311 связывает новое разрешённое поколение релиза с
+// историческим ПОДПИСАННЫМ манифестом, содержимое которого намеренно
+// восстанавливается.
 type GameRollbackSource02311 struct {
 	Version               string `json:"version"`
 	ManifestSHA256        string `json:"manifestSha256"`
@@ -310,8 +311,8 @@ type TrustedDevice struct {
 	TrustAssessment          TrustAssessment `json:"trustAssessment"`
 }
 
-// DeviceHardwareEvidence is persisted only after successful TPM Certify verification.
-// A legacy client-provided provenance field is never authoritative.
+// DeviceHardwareEvidence сохраняется только после успешной проверки TPM Certify. Поле
+// provenance, предоставленное устаревшим клиентом, никогда не является авторитетным.
 type DeviceHardwareEvidence struct {
 	UserID          string    `json:"-"`
 	DeviceID        string    `json:"deviceId"`
@@ -326,8 +327,8 @@ type DeviceHardwareEvidence struct {
 	ExpiresAt       time.Time `json:"expiresAt"`
 }
 
-// MeasuredBootEvidence0315 is ONLY evidence of approved TPM PCR measurements.
-// It does not authenticate the running JVM or raise Guard assurance.
+// MeasuredBootEvidence0315 — ТОЛЬКО свидетельство одобренных измерений TPM PCR.
+// Оно не аутентифицирует работающую JVM и не повышает гарантии Guard.
 type MeasuredBootEvidence0315 struct {
 	UserID          string    `json:"-"`
 	DeviceID        string    `json:"deviceId"`
@@ -815,8 +816,8 @@ type ServerBridgeTopologyEdge struct {
 	CreatedAt            time.Time `json:"createdAt"`
 }
 
-// ServerBridgeNetworkState carries a signed node observation alongside the independent
-// PostgreSQL operator admission ceiling. A server may report ready while policy denies admissions.
+// ServerBridgeNetworkState передаёт подписанное наблюдение узла вместе с независимым лимитом допуска
+// оператора PostgreSQL. Сервер может сообщать ready, тогда как политика запрещает подключения.
 type ServerBridgeNetworkState struct {
 	NodeID                   string     `json:"nodeId"`
 	RuntimeID                string     `json:"runtimeId"`

@@ -38,8 +38,8 @@ func TestMeasuredSuccessAndFailures(t *testing.T) {
 	}
 }
 
-// Release-candidate regression: a login wall, redirect, or 4xx was previously
-// incorrectly classified as sufficient capacity, despite zero successful GETs.
+// Регрессия кандидата выпуска: ранее экран входа, редирект или 4xx ошибочно
+// считались достаточной пропускной способностью при полном отсутствии успешных GET.
 func TestProductionRCRejectsEveryUnexpectedResponse(t *testing.T) {
 	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusFound, http.StatusNotFound, http.StatusTooManyRequests, http.StatusServiceUnavailable} {
 		t.Run(http.StatusText(status), func(t *testing.T) {

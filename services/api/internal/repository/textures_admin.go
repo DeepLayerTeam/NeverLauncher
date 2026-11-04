@@ -126,8 +126,9 @@ func validatedDigest0259(ctx context.Context, tx *sql.Tx, project, kind, digest 
 	if !validTextureDigest0255(digest) {
 		return ErrTexturePolicyInvalid0259
 	}
-	// Admin cannot expose private player assets as a public project default.
-	// Only already-public, currently-active, verified PNGs of this kind may become defaults.
+	// Admin не должен раскрывать закрытые текстуры игрока как публичные значения проекта по
+	// умолчанию. Такими значениями могут стать только уже публичные, активные и проверенные PNG
+	// данного типа.
 	var ok bool
 	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_blobs b JOIN texture_assignments a ON a.blob_digest=b.digest
  WHERE b.digest=$1 AND b.status='verified' AND a.kind=$2 AND a.realm='local-project'
@@ -157,7 +158,7 @@ func (r *SQLRepository) SaveTexturePolicy0259(ctx context.Context, project strin
 	if err = validProject0259(ctx, tx, project); err != nil {
 		return zero, err
 	}
-	// Serialize initial creation and policy changes for the same project.
+	// Сериализуйте первичное создание и изменение политик одного проекта.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(259,hashtext($1))`, project); err != nil {
 		return zero, err
 	}
@@ -326,8 +327,8 @@ func (r *SQLRepository) ListTextureDefaultOptions0259(ctx context.Context, proje
 
 var _ TextureAdminRepository0259 = (*SQLRepository)(nil)
 
-// TexturePlayerChange0259 is a history entry for an actual player skin/cape
-// assignment. It is distinct from administrator policy/exception history.
+// TexturePlayerChange0259 — запись истории настоящего выбора игроком
+// скина/плаща. Она отличается от истории административных политик и исключений.
 type TexturePlayerChange0259 struct {
 	ProfileUUID string          `json:"profileUuid"`
 	Kind        string          `json:"kind"`

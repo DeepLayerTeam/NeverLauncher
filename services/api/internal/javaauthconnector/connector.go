@@ -1,6 +1,7 @@
-// Package javaauthconnector connects explicitly approved JVM identity providers to
-// the existing federation. No Java-supplied canonical user, role or session token
-// is accepted; federation remains responsible for MFA, linking and token issuance.
+// Пакет javaauthconnector подключает явно разрешённых провайдеров идентичности JVM к
+// существующей федерации. Канонический пользователь, роль или токен сеанса,
+// предоставленные Java, не принимаются; MFA, привязка и выдача токенов остаются
+// ответственностью федерации.
 package javaauthconnector
 
 import (
@@ -175,8 +176,8 @@ func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.Resol
 	return parsed, nil
 }
 
-// VerifyProviderSession is provider-token introspection, NOT NeverLauncher JWT
-// verification, entitlement validation, or issuance of a new login session.
+// VerifyProviderSession проверяет токен провайдера, а НЕ JWT NeverLauncher, наличие
+// прав или выдачу нового сеанса входа.
 func (c *Connector) VerifyProviderSession(ctx context.Context, token string) (authconnector.Authentication, error) {
 	if token == "" || len(token) > 16384 {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid provider token")

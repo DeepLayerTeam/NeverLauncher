@@ -85,8 +85,8 @@ func TestMigrationRehearsal03310(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	// Insert durable prerequisite receipts used by MIG03–MIG08. This fixture
-	// tests the independent MIG10 relational checks, not an import implementation.
+	// Вставляйте устойчивые квитанции предпосылок MIG03–MIG08. Эта фикстура проверяет
+	// независимые реляционные условия MIG10, а не реализацию импорта.
 	q := func(sql string, args ...any) {
 		t.Helper()
 		if _, e := r.db.ExecContext(ctx, sql, args...); e != nil {

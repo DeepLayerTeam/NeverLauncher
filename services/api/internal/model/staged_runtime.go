@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// StagedRuntimeRun0342 stores observational execution telemetry. In 0.34.2 it
-// deliberately does not confer release certification or stable eligibility.
+// StagedRuntimeRun0342 хранит наблюдательную телеметрию исполнения. В версии
+// 0.34.2 она намеренно не даёт сертификацию релиза или допуск stable.
 type StagedRuntimeRun0342 struct {
 	RunID          string          `json:"runId"`
 	PackageID      string          `json:"packageId"`
@@ -19,8 +19,8 @@ type StagedRuntimeRun0342 struct {
 	ReceivedAt     time.Time       `json:"receivedAt"`
 }
 
-// ValidationAttestation0345 is an immutable result issued by an independent
-// trusted execution attestor; it is NOT stable certification until V05/V11 GA.
+// ValidationAttestation0345 — неизменяемый результат независимого доверенного
+// аттестатора исполнения; это НЕ сертификация stable до V05/V11 GA.
 type ValidationAttestation0345 struct {
 	RunID          string          `json:"runId"`
 	PackageID      string          `json:"packageId"`

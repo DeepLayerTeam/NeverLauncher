@@ -78,7 +78,8 @@ func TestDeviceTrustInflightProofCannotSwapAlreadyBoundSession0432(t *testing.T)
 	h, _ := deviceTrustFixture0432(t)
 	firstAccess, _ := deviceTrustLogin0121(t, h, "first-device")
 	_, deviceA, privateA := registerDevice0432(t, h, firstAccess, "Device A")
-	// Obtain a valid session-binding challenge while the second session is unbound.
+	// Получите действительный challenge привязки сеанса, пока второй сеанс ещё не
+	// привязан.
 	fresh, _ := deviceTrustLogin0121(t, h, "still-unbound")
 	code, beginResponse := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceA+"/verify/begin", fresh, map[string]any{})
 	if code != http.StatusOK {
@@ -86,8 +87,8 @@ func TestDeviceTrustInflightProofCannotSwapAlreadyBoundSession0432(t *testing.T)
 	}
 	begin := deviceTrustData0121(t, beginResponse)
 	bound, deviceB, _ := registerDevice0432(t, h, fresh, "Device B")
-	// The old challenge is authentic and signed with A's real key. Only the
-	// atomic session transition prevents a switch away from B.
+	// Старый challenge подлинный и подписан настоящим ключом A. Только атомарный
+	// переход сеанса предотвращает переключение с B.
 	proof := base64.RawURLEncoding.EncodeToString(ed25519.Sign(privateA, []byte(begin["signingPayload"].(string))))
 	code, rejected := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceA+"/verify/complete", bound, map[string]any{
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "signature": proof,
@@ -146,8 +147,9 @@ func TestDeviceTrustBindingCASAndRefreshEpoch0432(t *testing.T) {
 	if _, _, err := sessions.rotateExpected0432(refresh, &preview, req); !errors.Is(err, errSessionBindingChanged0432) {
 		t.Fatalf("stale preview rotated bound refresh token: %v", err)
 	}
-	// Epoch rejection must not consume refresh token. The legitimate caller
-	// can retry with an updated device-bound snapshot and a real key proof.
+	// Отказ из-за эпохи не должен погашать refresh-токен. Законный клиент может
+	// повторить запрос с обновлённым снимком привязанного устройства и настоящим
+	// доказательством владения ключом.
 	if refreshed, err := sessions.previewRefresh0126(refresh); err != nil || !sameDeviceBinding0432(current, refreshed) {
 		t.Fatalf("CAS failure consumed refresh token: %v %#v", err, refreshed)
 	}
@@ -198,8 +200,8 @@ func TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432(t
 	if code != http.StatusOK || deviceTrustData0121(t, status)["trustedDeviceId"] != first["deviceId"] {
 		t.Fatalf("first binding no longer authoritative: %d %#v", code, status)
 	}
-	// A losing registration may persist its candidate before the CAS, but the
-	// API must leave it permanently revoked, not as another active key.
+	// Проигравшая регистрация может сохранить кандидата до CAS, но API обязан
+	// навсегда оставить его отозванным, а не ещё одним активным ключом.
 	firstDevice := first["deviceId"].(string)
 	secondDevice := second["deviceId"].(string)
 	code, listed := deviceTrustRequest0121(t, h, http.MethodGet, "/api/v1/auth/devices?status=active", bound, nil)

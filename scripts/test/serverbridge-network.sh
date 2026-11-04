@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Execute the real host/JVM/fault tests and complete 14-target Minecraft E2E.
-# Fails closed: Docker/JAR/Go/Java prerequisites cannot be replaced by stubs.
+# Выполняйте настоящие тесты хоста/JVM/отказов и полный Minecraft E2E для 14
+# целей. Принцип fail-closed: отсутствие Docker/JAR/Go/Java нельзя компенсировать
+# заглушками.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)}"
@@ -8,7 +9,7 @@ SOURCE_COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true
   echo '0.42.0: exact source commit required' >&2; exit 2;
 }
 [[ "$(cat "$ROOT/VERSION")" == 0.42.0 ]] || { echo 'wrong source version' >&2; exit 2; }
-# The E2E runner wipes runtime; run fault tests AFTER it, not before.
+# Раннер E2E очищает Runtime; запускайте тесты отказов ПОСЛЕ него, а не до.
 GITHUB_SHA="$SOURCE_COMMIT" LAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 mkdir -p "$ROOT/e2e/runtime"
 (

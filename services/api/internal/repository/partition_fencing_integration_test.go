@@ -12,9 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Executed with two independent SQL pools against a real PostgreSQL instance.
-// Directly expiring rows simulates a partition/reconnect without depending on
-// wall-clock sleeps or trusting the worker's clock.
+// Выполняется через два независимых SQL-пула на настоящем PostgreSQL. Прямое
+// завершение срока строк имитирует разделение сети и переподключение без ожиданий
+// по настенным часам и доверия к часам воркера.
 func TestPostgresPartitionFencing0514(t *testing.T) {
 	a, b, ctx := openDurablePostgres0213(t)
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())

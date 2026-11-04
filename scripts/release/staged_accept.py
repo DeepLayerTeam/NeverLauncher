@@ -94,14 +94,14 @@ def run_verify(cli: Path, bundle: Path, public: Path, policy: Path, operator: Pa
 def accept(local: Path,base_url: str,cli: Path,public: Path,policy: Path,operator: Path,report: Path) -> dict:
     source=verify_bundle(local,True)
     version=source['version']
-    # Verify source BEFORE downloading; the local bundle must already have been
-    # sealed with the operator's pinned release trust root.
+    # Проверяйте источник ДО скачивания: локальный пакет уже должен быть запечатан
+    # закреплённым корневым ключом доверия оператора.
     run_verify(cli,local,public,policy,operator)
     with tempfile.TemporaryDirectory(prefix='nl462-stage-') as td:
         remote=Path(td)
         files=compare_downloaded(local,base_url,remote,version)
         verify_bundle(remote,True)
-        # Verify downloaded signature and production distribution independently.
+        # Независимо проверьте скачанную подпись и промышленный дистрибутив.
         run_verify(cli,remote,public,policy,operator)
     result={'schema':'neverlauncher.remote-acceptance.v1','version':version,
             'status':'verified-staged-final-bytes','origin':base_url,

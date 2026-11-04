@@ -26,10 +26,10 @@ type hwidResolveRequest0299 struct {
 	Decision string `json:"decision"`
 }
 
-// The desktop transmits an *already locally hashed* machine continuity hint.
-// HMAC prevents correlation between Never users and makes a database leak
-// insufficient for offline matching against known machine IDs. The secret must
-// be consistent across all API replicas (the validated AuthTokenSecret).
+// Desktop передаёт подсказку непрерывности устройства, хешированную ЛОКАЛЬНО. HMAC
+// предотвращает корреляцию между пользователями Never и делает утечку БД
+// недостаточной для автономного сопоставления с известными машинными ID. Секрет
+// должен совпадать на всех репликах API (проверенный AuthTokenSecret).
 func hwidAccountDigest0299(secret, userID, signal string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte("Launcher HWID risk v1\x00"))
@@ -48,8 +48,8 @@ func (s Server) currentHWIDDevice0299(r *http.Request) (authClaims, string, repo
 	if !ok {
 		return authClaims{}, "", nil, http.StatusServiceUnavailable
 	}
-	// An observed signal can only modify the current verified device; never a
-	// supplied arbitrary device id or a different user's HWID.
+	// Наблюдаемый сигнал может менять только текущее проверенное устройство;
+	// никогда — произвольный device id из запроса или HWID другого пользователя.
 	rec, valid := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
 	if !valid || rec.TrustedDeviceID == "" || rec.DeviceTrustState != "verified" {
 		return authClaims{}, "", nil, http.StatusPreconditionRequired
@@ -107,8 +107,9 @@ func (s Server) authHWIDConfirm0299(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, "требуется действующая сессия на подтверждённом устройстве")
 		return
 	}
-	// Re-baselining a changed machine requires independent local proof. This
-	// never converts a HWID hint into proof of identity or unbans an account.
+	// Повторное построение базовой линии изменившегося устройства требует
+	// независимого локального доказательства. Это не превращает HWID-подсказку в
+	// доказательство личности и не снимает блокировку учётной записи.
 	if !freshAuth117(claims, "phishing-resistant", 5*time.Minute) {
 		writeStepUpRequired117(w, "phishing-resistant")
 		return
@@ -126,8 +127,9 @@ func (s Server) authHWIDConfirm0299(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "нет актуального изменения оборудования")
 		return
 	}
-	// A passkey used before detecting the hardware change cannot confirm it.
-	// Re-authentication must be completed after the risk event was recorded.
+	// Passkey, использованный до обнаружения аппаратного изменения, не может его
+	// подтвердить. Повторная аутентификация должна завершиться после регистрации
+	// события риска.
 	if claims.AuthTime <= current.UpdatedAt.Unix() {
 		writeStepUpRequired117(w, "phishing-resistant")
 		return

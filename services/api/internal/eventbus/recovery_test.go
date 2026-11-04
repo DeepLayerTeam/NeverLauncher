@@ -8,8 +8,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Pending deliveries and subscriptions belong to the repository, not to a
-// particular Bus worker. A new worker must resume them after a graceful stop.
+// Ожидающие доставки и подписки принадлежат репозиторию, а не конкретному worker
+// Bus. Новый worker должен возобновлять их после штатной остановки.
 func TestBusWorkerRestartResumesDurableDelivery0423(t *testing.T) {
 	repo, first := eventRepo0206(t)
 	ctx := context.Background()
@@ -78,9 +78,9 @@ func (d *blockingDispatch0423) DeliverExtensionHook(context.Context, model.Exten
 	return model.ExtensionHookResult{OK: true}, nil
 }
 
-// A worker must not pre-lease future events while handling another callback.
-// Otherwise a slow first callback can exhaust the remaining leases before
-// execution begins, making duplicate delivery possible on a second API node.
+// Worker не должен заранее арендовать будущие события, пока обрабатывает другой
+// обратный вызов. Иначе медленный первый вызов исчерпает сроки следующих аренд
+// ещё до их исполнения и допустит повторную доставку на втором узле API.
 func TestEventBatchLeasesAtDispatchTime0423(t *testing.T) {
 	repo, bus := eventRepo0206(t)
 	ctx := context.Background()
@@ -108,8 +108,8 @@ func TestEventBatchLeasesAtDispatchTime0423(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("first callback never started")
 	}
-	// Other workers must be able to claim the independent second ordering key:
-	// it has not been preleased by our blocked callback worker.
+	// Другой worker должен иметь возможность захватить независимый второй ключ
+	// порядка: наш заблокированный worker ещё не арендовал его.
 	pending, err := repo.LeaseExtensionEventDeliveries(ctx, 1, time.Now().Add(time.Second))
 	if err != nil || len(pending) != 1 || pending[0].Event.AggregateID != "p2" {
 		close(dispatcher.release)

@@ -587,8 +587,9 @@ func (m *Manager) Update(ctx context.Context, item model.ExtensionRegistryVersio
 	return m.UpdateWithSandboxApproval0318(ctx, item, scope, "")
 }
 
-// UpdateWithSandboxApproval0318 requires the owner-reviewed digest of the exact
-// target version. Only the authenticated administrative update route supplies it.
+// UpdateWithSandboxApproval0318 требует одобренный владельцем дайджест точно целевой
+// версии. Его предоставляет только аутентифицированный административный маршрут
+// обновления.
 func (m *Manager) UpdateWithSandboxApproval0318(ctx context.Context, item model.ExtensionRegistryVersion, scope Scope, approvalDigest string) (model.ExtensionInstall, error) {
 	scope, err := normalizeScope0204(scope)
 	if err != nil {
@@ -661,11 +662,10 @@ func (m *Manager) UpdateWithSandboxApproval0318(ctx context.Context, item model.
 	return m.commitWithLockfile0204(ctx, before, tr, rollbackFS)
 }
 
-// requireActiveTrust0424 re-evaluates the CURRENT installed artifact at the
-// time an operator enables it. A valid old signature is not sufficient after
-// its publisher key is revoked or its package is placed in quarantine.
-// Local legacy installations without a registry identity remain subject to
-// their explicit emergency kill-switch and the existing launch policy.
+// requireActiveTrust0424 повторно оценивает ТЕКУЩИЙ установленный артефакт, когда
+// оператор его включает. Прежняя действительная подпись недостаточна после отзыва
+// ключа издателя или помещения пакета в карантин. Старые локальные установки без
+// зарегистрированной идентичности проверяются отдельно.
 func (m *Manager) requireActiveTrust0424(ctx context.Context, install model.ExtensionInstall) error {
 	if install.CurrentPackageIdentity != "" {
 		quarantined, err := m.Repo.IsExtensionPackageQuarantined(ctx, install.CurrentPackageIdentity)
@@ -840,9 +840,10 @@ func (m *Manager) Rollback(ctx context.Context, id string, scope Scope) (model.E
 	if e != nil {
 		return model.ExtensionInstall{}, fmt.Errorf("rollback manifest: %w", e)
 	}
-	// Rolling back to the immediately preceding, previously activated signed
-	// package restores an already-owner-approved policy (including on failed
-	// update transactions). Older arbitrary backups must still be reviewed.
+	// Откат к непосредственно предшествующему ранее активированному подписанному
+	// пакету восстанавливает уже одобренную владельцем политику, в том числе
+	// после неудачной транзакции обновления. Более старые произвольные резервные
+	// копии всё ещё требуют рассмотрения.
 	restoringPrior := target.FromVersion == before.PreviousVersion && target.FromPackageIdentity == before.PreviousPackageIdentity && before.PreviousVersion != ""
 	if before.CurrentVersion != "" && !restoringPrior {
 		previous, e := m.Repo.GetExtensionVersion(ctx, id, before.CurrentVersion)
@@ -853,8 +854,8 @@ func (m *Manager) Rollback(ctx context.Context, id string, scope Scope) (model.E
 			return model.ExtensionInstall{}, fmt.Errorf("rollback requires explicit security-policy review: %w", e)
 		}
 	}
-	// A previously signed installation cannot be downgraded to an
-	// unidentifiable backup. The trust decision also covers non-Java targets.
+	// Ранее подписанную установку нельзя понизить до неидентифицируемой резервной
+	// копии. Решение о доверии охватывает и цели вне Java.
 	if before.CurrentPackageIdentity != "" && target.FromPackageIdentity == "" {
 		return model.ExtensionInstall{}, errors.New("cannot roll back a signed installation to an unsigned backup")
 	}

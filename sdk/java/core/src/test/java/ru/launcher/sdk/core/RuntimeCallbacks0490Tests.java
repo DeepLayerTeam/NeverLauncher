@@ -64,7 +64,8 @@ public final class RuntimeCallbacks0490Tests {
             }finally{release.countDown();pool.shutdownNow();}
         }
         state.set("RUNNING");
-        // Restarting a new callback server must not reuse old tokens or old handlers.
+        // Новый сервер обратных вызовов при перезапуске не должен повторно использовать
+        // старые токены и обработчики.
         try(var host=HostSession.fromEnvironment(env,manifest);
             var runtime=new RuntimeServices(host,Set.of(),Map.of("admin",Set.of("refresh")));
             var restarted=new RuntimeCallbackServer("fresh-token",runtime,state::get)){

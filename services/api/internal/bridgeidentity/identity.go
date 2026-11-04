@@ -1,7 +1,7 @@
-// Package bridgeidentity checks that a Minecraft runtime's observed UUID is
-// consistent with the identity authorised by the one-time ServerBridge ticket.
-// Empty observed UUIDs are permitted for pre-login proxy gates, which have not
-// yet completed Mojang/authlib authentication and cannot assert a UUID.
+// Пакет bridgeidentity проверяет соответствие наблюдаемого Minecraft Runtime UUID
+// идентичности, авторизованной одноразовым билетом ServerBridge. Пустой наблюдаемый
+// UUID допускается на прокси до входа, где аутентификация Mojang/authlib ещё не
+// завершена и UUID нельзя утверждать.
 package bridgeidentity
 
 import (
@@ -15,9 +15,9 @@ var (
 	ErrIdentityMismatch      = errors.New("serverbridge_player_uuid_mismatch")
 )
 
-// CanonicalUUID accepts only the wire UUID formats supported by Minecraft:
-// 32 hex digits or the canonical 8-4-4-4-12 form. Do not accept arbitrary
-// punctuation-stripped strings or UUID prefixes.
+// CanonicalUUID принимает только форматы UUID Minecraft: 32 шестнадцатеричные
+// цифры или канонический формат 8-4-4-4-12. Произвольные строки после удаления
+// знаков и префиксы UUID недопустимы.
 func CanonicalUUID(raw string) (string, bool) {
 	raw = strings.TrimSpace(raw)
 	if len(raw) == 36 {
@@ -39,10 +39,10 @@ func CanonicalUUID(raw string) (string, bool) {
 	return strings.ToLower(raw), true
 }
 
-// Validate returns a stable error code for denial. Never derive the authorised
-// player UUID from an untrusted runtime request. A missing pre-login UUID does
-// not prove the player's identity: the platform MUST authenticate the game
-// handshake independently before admitting the connection.
+// Validate возвращает стабильный код отказа. Никогда не выводите авторизованный
+// UUID игрока из недоверенного запроса Runtime. Отсутствующий UUID до входа не
+// доказывает личность игрока: платформа ОБЯЗАНА самостоятельно аутентифицировать
+// игровое рукопожатие до допуска соединения.
 func Validate(observed, authorized string) error {
 	expected, valid := CanonicalUUID(authorized)
 	if !valid {
@@ -61,9 +61,10 @@ func Validate(observed, authorized string) error {
 	return nil
 }
 
-// ValidateVerified is used only after a trusted Minecraft online-mode node
-// has reported that the observed profile belongs to its authenticated login.
-// Unlike the pre-login bridge path, an empty UUID cannot prove that identity.
+// ValidateVerified используется только после сообщения доверенного узла Minecraft
+// в онлайн-режиме о том, что наблюдаемый профиль относится к аутентифицированному
+// входу. В отличие от прокси-пути до входа, пустой UUID не подтверждает
+// идентичность.
 func ValidateVerified(observed, authorized string) error {
 	if strings.TrimSpace(observed) == "" {
 		return ErrInvalidObservedUUID

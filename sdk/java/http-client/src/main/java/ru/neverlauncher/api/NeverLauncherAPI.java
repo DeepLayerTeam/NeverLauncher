@@ -130,7 +130,7 @@ public final class NeverLauncherAPI {
         var response = http.send(builder.method(method, publisher).build(), HttpResponse.BodyHandlers.ofInputStream());
         try (InputStream stream = response.body()) {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                // Bound error parsing separately from the successful stream limit.
+                // Ограничивайте разбор ошибок отдельно от предела успешного потока.
                 byte[] raw = stream.readNBytes(MAX_RESPONSE + 1);
                 if (raw.length > MAX_RESPONSE) throw new IOException("API error response exceeds 8 MiB");
                 Object data = null;

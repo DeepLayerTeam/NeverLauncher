@@ -14,8 +14,9 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// PostgreSQL integration covers actual row locks, stable snapshot replay,
-// target identity collision detection and re-verification across transactions.
+// Интеграция PostgreSQL покрывает настоящие блокировки строк, повтор стабильного
+// снимка, обнаружение коллизий целевых идентичностей и повторную проверку между
+// транзакциями.
 func TestMigrationIdentityTransactional0334(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -102,7 +103,8 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	if e != nil || latest.Revision != r2.Revision+1 {
 		t.Fatalf("verification event revision: %+v %v", latest, e)
 	}
-	// Existing name with a foreign UUID must block, never merge by nickname.
+	// Существующее имя с чужим UUID должно блокироваться, а не объединяться по
+	// нику.
 	second := []gi.Account{{Provider: "sql", SourceID: "id-2", Username: "Alice334", UUID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", SourcePath: "sql-export/users.csv"}}
 	run2, e := repo.CreateMigration0331(ctx, project, "gravit", "second-identity-key-0334")
 	if e != nil {

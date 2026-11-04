@@ -1,6 +1,6 @@
-// Package gravitidentity extracts identity records from real Gravit FileAuthSystem
-// Database.json and explicit SQL CSV snapshots without executing modules or
-// importing credentials. It never derives UUIDs from names.
+// Package gravitidentity извлекает записи идентичности из настоящего Gravit
+// FileAuthSystem Database.json и явных снимков SQL CSV без исполнения модулей или
+// импорта учётных данных. Он никогда не выводит UUID из имён.
 package gravitidentity
 
 import (
@@ -71,8 +71,8 @@ func normalized(a Account) (Account, error) {
 	return a, e
 }
 
-// StrictRootMap rejects duplicate JSON keys at the root, a common source of
-// silent account overwrites in Java/Gson-style databases.
+// StrictRootMap отклоняет повторяющиеся JSON-ключи в корне — частую причину
+// незаметной перезаписи аккаунтов в базах Java/Gson.
 func strictRootMap(b []byte) (map[string]json.RawMessage, error) {
 	d := json.NewDecoder(bytes.NewReader(b))
 	t, e := d.Token()
@@ -108,8 +108,9 @@ func strictRootMap(b []byte) (map[string]json.RawMessage, error) {
 	return out, nil
 }
 
-// Reject duplicate fields inside each user object: encoding/json otherwise
-// silently accepts the last username/UUID, masking contradictory identities.
+// Отклоняйте дублирующиеся поля в каждом объекте пользователя: иначе
+// encoding/json незаметно примет последнее имя или UUID, скрывая противоречивые
+// идентичности.
 func uniqueUserFields(raw []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	tok, err := dec.Token()
@@ -126,9 +127,9 @@ func uniqueUserFields(raw []byte) error {
 		if !ok {
 			return errors.New("invalid FileAuth user key")
 		}
-		// encoding/json matches struct fields case-insensitively. Reject
-		// aliases such as username/USERNAME instead of silently trusting
-		// the last value and changing the identity being imported.
+		// encoding/json сопоставляет поля структур без учёта регистра. Отклоняйте
+		// псевдонимы вроде username/USERNAME вместо неявного доверия последнему
+		// значению, меняющему импортируемую идентичность.
 		folded := strings.ToLower(key)
 		if seen[folded] {
 			return fmt.Errorf("duplicate FileAuth user field %q", key)
@@ -203,8 +204,8 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 		}
 		cols[c] = i
 	}
-	// Gravit 5.7 documented SQL users columns are configurable; SQL export is
-	// normalized by the operator to id,username,uuid rather than guessed from SQL.
+	// Столбцы SQL users в документации Gravit 5.7 настраиваются; SQL-экспорт
+	// нормализуется оператором до id,username,uuid, а не угадывается по SQL.
 	for _, c := range []string{"id", "username", "uuid"} {
 		if _, ok := cols[c]; !ok {
 			return nil, fmt.Errorf("SQL CSV missing %s column", c)
@@ -234,9 +235,9 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 	return out, nil
 }
 
-// Extract consumes a complete source archive and only reads recognized account
-// locations. Passwords, tokens, permissions and session fields are discarded.
-// The exact zip bytes must already be bound to the durable 0.33.3 inventory.
+// Extract читает полный исходный архив и только распознанные местоположения
+// аккаунтов. Пароли, токены, права и поля сессий отбрасываются. Точные байты ZIP
+// должны быть уже связаны с устойчивой инвентаризацией 0.33.3.
 func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inventory) ([]Account, error) {
 	checked, e := inv.Inspect(ctx, src, size, snapshot.SourceSHA256)
 	if e != nil {
@@ -325,8 +326,9 @@ type Target struct {
 	Source   string
 }
 
-// Reconcile detects duplicate source identities and collisions across the
-// complete Never identity namespace. A name alone is NEVER linking evidence.
+// Reconcile обнаруживает дубли идентичностей источника и конфликты во всём
+// пространстве идентичностей Never. Одно имя НИКОГДА не является доказательством
+// привязки.
 func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int) {
 	byUUID := map[string][]Target{}
 	byName := map[string][]Target{}
@@ -337,8 +339,9 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 			continue
 		}
 		t.UUID = u
-		// A verified official link can mirror the same local Minecraft profile.
-		// Only identical ownership+name is de-duplicated, never conflicting claims.
+		// Проверенная официальная привязка может отражать тот же локальный профиль
+		// Minecraft. Объединяются только записи с одинаковыми владением и именем,
+		// никогда противоречивые утверждения.
 		key := u + "\x00" + t.UserID + "\x00" + strings.ToLower(t.Username)
 		if dedup[key] {
 			continue

@@ -67,5 +67,6 @@ jobs:
           go-version-file: services/api/go.mod
       - run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
       - run: go build ./...
-    # Actual AppContainer child/ACL/Job bypass checks require separately
-    # provisioned E2E runners; compilation is not proof of OS confinement.
+    # Проверка обхода ограничений дочернего процесса AppContainer, ACL и Job
+    # требует отдельно подготовленных раннеров E2E; успешная компиляция не
+    # доказывает изоляцию средствами ОС.

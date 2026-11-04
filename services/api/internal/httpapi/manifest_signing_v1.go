@@ -41,8 +41,9 @@ func (s Server) signManifest(manifest model.Manifest) (model.Manifest, error) {
 	if err := model.ValidateManifestSchema(manifest); err != nil {
 		return model.Manifest{}, err
 	}
-	// Publication must not bypass the Admin graph preflight through the legacy
-	// manifest update route. Reject statically impossible signed v5 presets.
+	// Публикация не должна обходить предварительную проверку графа Admin через
+	// устаревший маршрут обновления манифеста. Отклоняйте статически невозможные
+	// подписанные пресеты v5.
 	if cat := manifest.ComponentCatalog; cat != nil && cat.SchemaVersion == model.ComponentCatalogSchema0245 {
 		names := append([]string{""}, presetIDs0248(*cat)...)
 		for _, name := range names {

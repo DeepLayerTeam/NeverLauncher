@@ -10,8 +10,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// An RPC probe, memory monitor and heartbeat timeout can race. A later
-// completion must never overwrite the first actionable termination reason.
+// RPC-проба, монитор памяти и тайм-аут heartbeat могут состязаться. Позднее
+// завершение никогда не должно перезаписывать первую действенную причину
+// остановки.
 func TestSupervisorConcurrentTerminalFailure03012(t *testing.T) {
 	s := New(Config{}, repository.NewMemoryRepository("http://localhost"), nil)
 	st := &processState{state: "running"}
@@ -40,9 +41,9 @@ func TestSupervisorStopCannotBeOverriddenByLateProbe03012(t *testing.T) {
 	}
 }
 
-// The existing fixture exercises the genuine Go supervisor, live Java JAR,
-// RPC token and independent health probes. On a crashed JVM the status must
-// retain the RPC failure, not a platform-specific kill/signal message.
+// Существующая фикстура проверяет настоящий супервизор Go, живой JAR Java, токен
+// RPC и независимые проверки здоровья. При сбое JVM статус должен сохранять
+// ошибку RPC, а не платформенный текст kill/signal.
 func TestSupervisorPreservesJvmHangCause03012(t *testing.T) {
 	host, install, key := javaHostFixture0304(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

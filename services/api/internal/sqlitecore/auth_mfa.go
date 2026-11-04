@@ -20,9 +20,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// TOTP follows RFC6238 (HMAC-SHA1, 6 digits, 30s, +/- one time step).
-// Plaintext seed is returned only during enrollment, stored exclusively as
-// AES-256-GCM ciphertext with independent operator-owned key.
+// TOTP соответствует RFC6238: HMAC-SHA1, 6 цифр, 30 секунд и допуск ± один
+// интервал. Открытый seed возвращается только при подключении MFA и хранится
+// исключительно как шифртекст AES-256-GCM с независимым ключом оператора.
 func (a *Auth) seal(secret []byte) ([]byte, error) {
 	block, e := aes.NewCipher(a.key[:])
 	if e != nil {
@@ -141,8 +141,9 @@ func (a *Auth) StartTOTP(ctx context.Context, userID, password string) (string, 
 	return encoded, nil
 }
 
-// ConfirmTOTP atomically enrolls MFA, issues recovery codes once and revokes
-// all existing sessions. It returns codes only after a confirmed WAL commit.
+// ConfirmTOTP атомарно подключает MFA, один раз выдаёт коды восстановления и
+// отзывает все существующие сеансы. Коды возвращаются только после подтверждённой
+// фиксации WAL.
 func (a *Auth) ConfirmTOTP(ctx context.Context, userID, password, code string) ([]string, error) {
 	codes := make([]string, 8)
 	hashes := make([]string, 8)
@@ -186,7 +187,7 @@ func (a *Auth) ConfirmTOTP(ctx context.Context, userID, password, code string) (
 				return e
 			}
 		}
-		// MFA enrollment upgrades authentication requirements immediately.
+		// Подключение MFA немедленно усиливает требования к аутентификации.
 		if _, e = q.ExecContext(ctx, `UPDATE users SET auth_epoch=auth_epoch+1,updated_at=? WHERE id=?`, now, userID); e != nil {
 			return e
 		}
@@ -201,8 +202,9 @@ func (a *Auth) ConfirmTOTP(ctx context.Context, userID, password, code string) (
 	return codes, nil
 }
 
-// checkSecondFactorTx consumes a single-use recovery code or a unique TOTP
-// time step, within the same transaction that creates the next auth session.
+// checkSecondFactorTx погашает одноразовый код восстановления или уникальный
+// временной интервал TOTP в той же транзакции, что создаёт следующий сеанс
+// авторизации.
 func (a *Auth) checkSecondFactorTx(ctx context.Context, q sqlitedurable.Executor, userID string, cipher []byte, raw string, last int64) (bool, error) {
 	raw = strings.TrimSpace(raw)
 	if len(raw) == 6 {
@@ -223,7 +225,8 @@ func (a *Auth) checkSecondFactorTx(ctx context.Context, q sqlitedurable.Executor
 			return n == 1, e
 		}
 	}
-	// Recovery codes use 80 bits of entropy, SHA256 at rest, and one atomic use.
+	// Коды восстановления содержат 80 бит энтропии, хранятся по SHA256 и используются
+	// атомарно один раз.
 	if len(raw) != 16 {
 		return false, nil
 	}
@@ -238,8 +241,8 @@ func (a *Auth) checkSecondFactorTx(ctx context.Context, q sqlitedurable.Executor
 	return n == 1, e
 }
 
-// DisableTOTP requires both a current password and a valid second factor.
-// Revocation is committed alongside removal of MFA, deferred.
+// DisableTOTP требует текущий пароль и действительный второй фактор. Отзыв
+// фиксируется совместно с отложенным отключением MFA.
 func (a *Auth) DisableTOTP(ctx context.Context, userID, password, secondFactor string) error {
 	return a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		if e := a.checkedPasswordTx(ctx, q, userID, password); e != nil {
@@ -278,7 +281,8 @@ func (a *Auth) DisableTOTP(ctx context.Context, userID, password, secondFactor s
 	})
 }
 
-// RecoveryRemaining counts unused recovery codes without exposing their hashes.
+// RecoveryRemaining считает неиспользованные коды восстановления, не раскрывая их
+// хеши.
 func (a *Auth) RecoveryRemaining(ctx context.Context, userID string) (int, error) {
 	var n int
 	e := a.repo.store.Read(ctx, func(q sqlitedurable.Executor) error {
@@ -287,7 +291,7 @@ func (a *Auth) RecoveryRemaining(ctx context.Context, userID string) (int, error
 	return n, e
 }
 
-// ChallengeTOTP exposes a testable pure implementation without storing seeds.
+// ChallengeTOTP предоставляет тестируемую чистую реализацию без хранения seed.
 func totpAt(secretBase32 string, t time.Time) (string, error) {
 	seed, e := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.ToUpper(strings.TrimSpace(secretBase32)))
 	if e != nil {

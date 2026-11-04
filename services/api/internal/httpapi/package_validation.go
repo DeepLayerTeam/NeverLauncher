@@ -392,8 +392,9 @@ func (s Server) validatePublishEvidence0212(r *http.Request, lookup packageLooku
 }
 
 func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup packageLookup) error {
-	// Legacy v1 submissions never satisfy the trusted v4 evidence matrix.
-	// Stable always requires a fresh, complete independently verified run.
+	// Устаревшие отправки v1 никогда не удовлетворяют доверенной матрице
+	// свидетельств v4. Для stable всегда требуется новая полная независимо
+	// подтверждённая проверка.
 	if repository.IsStableChannel0341(lookup.Release.Channel) {
 		coverage := s.evaluateStableRelease03411(ctx, lookup)
 		if !coverage.Eligible {

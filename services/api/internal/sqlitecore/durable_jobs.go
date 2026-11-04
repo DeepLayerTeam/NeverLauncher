@@ -37,7 +37,8 @@ func durableHash(raw []byte) (string, error) {
 	if len(raw) > 1024*1024 || !json.Valid(raw) {
 		return "", errors.New("durable payload must be valid JSON <=1MiB")
 	}
-	// Preserve exact JSON bytes: retries must supply the exact original payload.
+	// Сохраняйте точные байты JSON: повтор обязан передавать идентичную исходную
+	// полезную нагрузку.
 	h := sha256.Sum256(raw)
 	return hex.EncodeToString(h[:]), nil
 }
@@ -141,8 +142,9 @@ func (r *Repository) EnqueueDurableJob(ctx context.Context, j model.DurableJob, 
 	return
 }
 
-// claimJob is called with the sole SQLite writer transaction. Each attempt
-// increments its permanent fencing epoch and writes an append-only attempt.
+// claimJob вызывается внутри единственной транзакции писателя SQLite. Каждая
+// попытка увеличивает постоянную эпоху ограждения и добавляет неизменяемую
+// запись попытки.
 func claimJob(ctx context.Context, q sqlitedurable.Executor, id, worker string, ttl time.Duration, now int64) (model.DurableJob, bool, error) {
 	j, e := readJob(ctx, q, id)
 	if e != nil {
@@ -281,8 +283,8 @@ func (r *Repository) CompleteOperationJob(ctx context.Context, id, token string,
 	return r.CompleteJobWithOutbox(ctx, id, token, result, nil)
 }
 
-// CompleteJobWithOutbox commits both the job transition and events in one WAL
-// transaction. Crash before commit -> neither visible; after commit -> both.
+// CompleteJobWithOutbox фиксирует переход задачи и события одной WAL-транзакцией.
+// Сбой до фиксации означает невидимость обоих, после фиксации — видимость обоих.
 func (r *Repository) CompleteJobWithOutbox(ctx context.Context, id, token string, result []byte, events []model.DurableOutboxEvent) (out model.DurableJob, err error) {
 	if len(result) == 0 {
 		result = []byte(`{}`)

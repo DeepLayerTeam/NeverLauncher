@@ -74,22 +74,25 @@ func runBackupAction(args []string) int {
 			output["rollbackFile"] = old
 		}
 	case "pre-upgrade":
-		// A pre-upgrade check must include the complete restore path: copy, SQLite
-		// integrity, foreign keys and repository-level semantic invariants.
+		// Предварительная проверка обновления должна включать полный путь
+		// восстановления: копию, целостность SQLite, внешние ключи и семантические
+		// инварианты репозитория.
 		var m sqlitedurable.BackupManifest
 		m, err = sqlitedurable.OnlineBackup(ctx, *db, *backup)
 		if err == nil {
 			_, err = sqlitedurable.VerifyBackup(ctx, *backup)
 		}
 		if err == nil {
-			// Restore into a fresh private directory on the SAME supported local FS.
+			// Восстанавливайте в новый закрытый каталог на ТОЙ ЖЕ поддерживаемой
+			// локальной файловой системе.
 			base := filepath.Dir(*backup)
 			dir, e := os.MkdirTemp(base, ".launcher-pre-upgrade-restore-*")
 			if e != nil {
 				err = e
 			} else {
 				defer os.RemoveAll(dir)
-				// MkdirTemp always creates 0700. Never reuses a live DB.
+				// MkdirTemp всегда создаёт каталог с правами 0700. Никогда не использует
+				// живую БД повторно.
 				target := filepath.Join(dir, "restored.db")
 				_, err = sqlitedurable.RestoreBackup(ctx, *backup, target, false)
 				if err == nil {

@@ -19,8 +19,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Java extensions use the existing durable ServerBridge v3 repository. There is
-// deliberately no direct node token, raw console, shell or alternate transport.
+// Java-расширения используют существующий устойчивый репозиторий ServerBridge v3.
+// Намеренно отсутствуют прямой токен узла, необработанная консоль, shell и
+// альтернативный транспорт.
 type javaBridgeRepository0488 interface {
 	ListServerBridgeNodes(context.Context) ([]model.ServerBridgeNode, error)
 	GetServerBridgeNode(context.Context, string) (model.ServerBridgeNode, error)
@@ -29,9 +30,9 @@ type javaBridgeRepository0488 interface {
 	GetServerBridgeControlCommand(context.Context, string, string) (model.ServerBridgeControlCommand, error)
 }
 
-// Closed command list, with the actual ServerBridge adapter capability required
-// to execute the operation. Destructive shutdown and console are NOT exposed to
-// the Java broker; the administrator-only ServerBridge control API retains them.
+// Закрытый список команд с обязательной возможностью адаптера ServerBridge для
+// выполнения. Разрушающие shutdown и console НЕ доступны Java-брокеру; они остаются в
+// API управления ServerBridge только для администратора.
 var bridgeJavaControls0488 = map[string]string{
 	"message.broadcast": "adapter.control.broadcast",
 	"player.kick":       "adapter.control.kick",
@@ -125,8 +126,9 @@ func bridgeRuntimeControl0488(node model.ServerBridgeNode, kind string, now time
 	if node.RuntimeLastSeenAt.Before(now.Add(-90*time.Second)) || node.RuntimeLastSeenAt.After(now.Add(2*time.Minute)) {
 		return false
 	}
-	// Mirror the ServerBridge adapter-family restrictions. A signed claim is
-	// necessary but cannot grant a command unsupported by the platform family.
+	// Повторяйте ограничения семейства адаптеров ServerBridge. Подписанное
+	// утверждение необходимо, но не может разрешить команду, которую семейство
+	// платформ не поддерживает.
 	platform := strings.ToLower(strings.TrimSpace(node.Kind))
 	switch platform {
 	case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla":
@@ -154,7 +156,8 @@ func bridgeRuntimeControl0488(node model.ServerBridgeNode, kind string, now time
 	return false
 }
 func bridgeCommandView0488(c model.ServerBridgeControlCommand) map[string]any {
-	// Never expose lease credentials, actor, raw arguments or node identity.
+	// Никогда не раскрывайте учётные данные аренды, исполнителя, необработанные
+	// аргументы или идентичность узла.
 	return map[string]any{"id": c.ID, "serverId": c.ServerID, "type": c.Type, "status": c.Status,
 		"attempt": c.Attempt, "runtimeEpoch": c.RuntimeEpoch, "createdAt": c.CreatedAt,
 		"updatedAt": c.UpdatedAt, "expiresAt": c.ExpiresAt, "completedAt": c.CompletedAt}
@@ -244,8 +247,8 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 	case "bridge.server":
 		return capabilityResult0205{status: http.StatusOK, value: map[string]any{"server": bridgeNodeView0488(node)}}
 	case "bridge.access.ticket":
-		// Advisory check only: this is NOT an admission decision, and it never
-		// consumes the one-time ticket or replaces official Minecraft hasJoined.
+		// Только рекомендательная проверка: это НЕ решение о допуске. Она никогда не
+		// расходует одноразовый билет и не заменяет официальный Minecraft hasJoined.
 		if status, err := s.bridgeAuthorization0488(ctx, st, projectID, "project:read"); err != nil {
 			return denied(status, err)
 		}
@@ -304,8 +307,8 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 		if ctx.Err() != nil {
 			return denied(http.StatusGatewayTimeout, ctx.Err())
 		}
-		// A last policy check before the durable side effect closes the common
-		// permission-revocation race; the DB enforces runtime epoch atomically.
+		// Последняя проверка политики перед устойчивым побочным эффектом закрывает
+		// обычную гонку отзыва разрешения; БД атомарно обеспечивает эпоху Runtime.
 		if status, err := s.bridgeAuthorization0488(ctx, st, projectID, permission); err != nil {
 			return denied(status, err)
 		}
@@ -332,8 +335,9 @@ func (s *Supervisor) executeBridge0488(ctx context.Context, st *processState, na
 	}
 }
 
-// The final authorization gate runs after lookup but before a response escapes
-// the authenticated broker. Command reads must also recheck the command domain.
+// Окончательный барьер авторизации срабатывает после чтения, но до выхода ответа из
+// аутентифицированного брокера. Чтение команд также требует повторной проверки
+// домена команды.
 func (s *Supervisor) revalidateBridge0488(ctx context.Context, st *processState, name string, req capabilityRequest) error {
 	projectID, err := s.scopedProject(st, req.ProjectID)
 	if err != nil {

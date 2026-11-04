@@ -12,9 +12,10 @@ import (
 	"time"
 )
 
-// Run with TEST_PG_DSN_0259 set to an isolated PostgreSQL 17+ instance.
-// This exercises the real migrations, row locking, CAS, default-delivery,
-// per-user deny/allow precedence, privacy and immutable audit rows.
+// Запускайте с TEST_PG_DSN_0259, направленным на изолированный PostgreSQL 17+.
+// Проверяются реальные миграции, блокировки строк, CAS, доставка по умолчанию,
+// приоритет персональных запретов и разрешений, конфиденциальность и
+// неизменяемый аудит.
 func TestTextureAdminEndToEndPostgres0259(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0259")
 	if dsn == "" {
@@ -94,8 +95,8 @@ func TestTextureAdminEndToEndPostgres0259(t *testing.T) {
 	if _, err = repo.SaveTexturePolicy0259(ctx, "", change, "admin"); !errors.Is(err, ErrTexturePolicyConflict0259) {
 		t.Fatalf("stale CAS allowed: %v", err)
 	}
-	// Admin fallback is returned for both a policy-blocked uploader and a player
-	// who uploaded their own skin.
+	// Административная резервная текстура возвращается и для заблокированного
+	// политикой загрузчика, и для игрока, загрузившего собственный скин.
 	for _, uuid := range []string{"11111111-2222-4333-8444-555555555555", "99999999-aaaa-4bbb-8ccc-dddddddddddd"} {
 		texture, found, e := repo.ReadTextureProfile0251(ctx, uuid)
 		expectedModel := "slim"
@@ -128,7 +129,7 @@ func TestTextureAdminEndToEndPostgres0259(t *testing.T) {
 	if err = db.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259('','alice','skin')`).Scan(&allowed); err != nil || allowed {
 		t.Fatalf("inherit failed: %v %v", allowed, err)
 	}
-	// A legacy cape grant is superseded by an explicit individual deny.
+	// Явный персональный запрет имеет приоритет над устаревшим разрешением плаща.
 	if _, err = db.ExecContext(ctx, `INSERT INTO texture_cape_grants(project_id,user_id,granted,actor_user_id) VALUES('','alice',true,'admin')`); err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +147,8 @@ func TestTextureAdminEndToEndPostgres0259(t *testing.T) {
 	if err != nil || len(exceptions) != 4 {
 		t.Fatalf("exception history: %+v %v", exceptions, err)
 	}
-	// A private texture cannot be silently turned into a public default.
+	// Закрытая текстура не должна незаметно становиться публичной текстурой по
+	// умолчанию.
 	if _, err = db.ExecContext(ctx, `UPDATE texture_assignments SET visibility='private' WHERE profile_uuid='11111111-2222-4333-8444-555555555555'`); err != nil {
 		t.Fatal(err)
 	}

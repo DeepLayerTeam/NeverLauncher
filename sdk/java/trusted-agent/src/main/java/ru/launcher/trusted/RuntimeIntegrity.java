@@ -125,16 +125,17 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         }, "launcher-runtime-integrity-0505");
         watcher.setDaemon(true);
         watcher.start();
-        // A second observer detects a crashed/interrupted integrity watcher.
-        // Guard must not silently continue a running game without scans.
+        // Второй наблюдатель обнаруживает сбой или прерывание проверяющего
+        // целостность процесса. Guard не должен незаметно продолжать запущенную игру
+        // без сканирования.
         Thread watchdog = new Thread(new Runnable() {
             @Override public void run() {
                 for (;;) {
                     try { Thread.sleep(1000); }
                     catch (InterruptedException e) { reject("integrity watchdog interrupted"); }
                     if (!watcher.isAlive()) reject("integrity watcher stopped while JVM running");
-                    // Permit slow disks and large mod packs, but fail closed on
-                    // a permanently stalled scan (monotonic clock; not wall time).
+                    // Допускайте медленные диски и большие модпаки, но отклоняйте постоянно
+                    // зависшее сканирование по монотонным часам, а не по настенному времени.
                     if (System.nanoTime() - lastVerifiedNanos > 90_000_000_000L)
                         reject("integrity watcher deadline exceeded");
                 }
@@ -165,9 +166,9 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         for (Path path : externalModules.keySet()) checkExternal(path);
         checkTree(root.resolve("mods"),true);
         checkTree(root.resolve("natives"),false);
-        // Linux: verify actual native modules mapped by this JVM, not only files on disk.
-        // Windows uses the separate continuously armed native Module Guard; macOS
-        // has no portable equivalent at this stage and does not claim coverage.
+        // Linux: проверяйте настоящие нативные модули, отображённые этой JVM, а не только
+        // файлы на диске. В Windows используется отдельный постоянно активный нативный Module
+        // Guard; для macOS на этом этапе нет переносимого эквивалента, и охват не заявляется.
         if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("linux")) {
             if (linuxProcessRequired) LinuxProcessGuard0508.verify();
             scanLinuxMaps();
@@ -216,9 +217,9 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                     continue;
                 }
                 Path p = new File(pathname).toPath().normalize();
-                // The selected Java distribution is independently revalidated
-                // by Managed Java before spawning. Do not confuse JVM-owned
-                // system images with Minecraft's own native executable tree.
+                // Выбранный дистрибутив Java независимо повторно проверяется Managed Java
+                // перед запуском. Не путайте системные образы, принадлежащие JVM, с
+                // собственным деревом нативных исполняемых файлов Minecraft.
                 Path javaHome=new File(System.getProperty("java.home", "/__invalid_java_home__")).toPath().toAbsolutePath().normalize();
                 if (p.startsWith(javaHome) && !p.startsWith(root.resolve("mods")) && !p.startsWith(root.resolve("natives"))) continue;
                 if (p.startsWith(root) && isNative(p)) {
@@ -237,8 +238,9 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         String name=path.toString();
         if (!(name.startsWith("/usr/lib/") || name.startsWith("/usr/lib64/") ||
               name.startsWith("/lib/") || name.startsWith("/lib64/"))) return false;
-        // A system library is trusted only under a root-owned, non-writable
-        // directory chain. Home-directory Vulkan layers must be explicitly pinned.
+        // Системной библиотеке доверяют только при цепочке каталогов, принадлежащих
+        // root и недоступных для записи. Слои Vulkan в домашнем каталоге должны быть
+        // закреплены явно.
         try {
             Path real=path.toRealPath();
             if (!real.toString().startsWith("/usr/lib/") && !real.toString().startsWith("/usr/lib64/")) return false;
@@ -277,8 +279,8 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             Path path=new File(url.toURI()).toPath().toAbsolutePath().normalize();
             if (!path.startsWith(root)) return null;
             if (!"code".equals(kinds.get(path))) reject("unapproved class origin: "+name+" from "+path);
-            // Verify at definition, not just once at premain: detect a replaced mod/JAR
-            // even if it is changed between periodic filesystem scans.
+            // Проверяйте при определении класса, а не только один раз в premain: это
+            // выявляет замену мода/JAR между периодическими проверками ФС.
             synchronized (verifiedOrigins) {
                 if (!verifiedOrigins.contains(path)) {check(path);verifiedOrigins.add(path);}
             }

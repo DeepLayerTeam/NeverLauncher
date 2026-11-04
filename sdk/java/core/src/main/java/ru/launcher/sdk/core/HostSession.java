@@ -74,8 +74,8 @@ public final class HostSession implements AutoCloseable {
             throw new CompatibilityError("HOST_CAPABILITY_UNAVAILABLE","host does not grant required capabilities: "+missing);
         }
         Object version=response.get("eventProtocolVersion");
-        // 0.42.0 already advertises the event protocol; the independent
-        // version must be validated whenever it is present.
+        // Версия 0.42.0 уже объявляет протокол событий; при его наличии независимую
+        // версию обязательно проверять.
         if(version!=null && !"1.0".equals(version))throw new CompatibilityError("HOST_EVENT_PROTOCOL_MISMATCH","unsupported event protocol: "+version);
         Set<String> supportedEvents=parseNames(response.get("events"),"events");
         Object hb=response.get("heartbeatTimeoutSeconds");if(!(hb instanceof Number n)||n.longValue()<2||n.longValue()>3600||n.doubleValue()!=n.longValue())throw new IOException("invalid heartbeat interval");
@@ -139,8 +139,8 @@ public final class HostSession implements AutoCloseable {
         String body=payload==null?"":Json.encode(payload);
         HttpRequest.Builder builder=HttpRequest.newBuilder(origin.resolve(path)).timeout(timeout).header("Authorization","Bearer "+token).header("Content-Type","application/json");
         HttpRequest request=builder.method(method,payload==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body,StandardCharsets.UTF_8)).build();
-        // A streaming BodySubscriber enforces the limit before buffering beyond
-        // 1 MiB; unlike ofInputStream(), the request deadline covers body I/O.
+        // Потоковый BodySubscriber применяет предел до буферизации сверх 1 МиБ; в
+        // отличие от ofInputStream() срок запроса охватывает и ввод-вывод тела.
         HttpResponse<byte[]> response=http.send(request,info->new BoundedBody(1_048_576));
         String responseBody=new String(response.body(),StandardCharsets.UTF_8);
         if(response.statusCode()!=status){

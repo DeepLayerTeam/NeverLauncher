@@ -469,7 +469,7 @@ func sanitizedEnvironment(extra map[string]string) []string {
 	return env
 }
 
-// StartInstallation launches an explicitly enabled extension.
+// StartInstallation запускает явно включённое расширение.
 func (s *Supervisor) StartInstallation(ctx context.Context, install model.ExtensionInstall) error {
 	return s.startInstallation0422(ctx, install, nil)
 }
@@ -665,8 +665,8 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		return s.abortUnstarted0422(st, errRecoveryRevoked0422)
 	}
 	// Повторно проверяйте непосредственно перед exec, закрывая окно между установкой и запуском
-	// window if the operator quarantined or disabled the package during JVM
-	// command/sandbox preparation.
+	// Окно гонки, если оператор поместил пакет в карантин или отключил его во
+	// время подготовки команды JVM/песочницы.
 	if trustErr := s.enforceLiveTrust04210(ctx, st); trustErr != nil {
 		if isolatedHandle != nil {
 			isolatedHandle.Close()
@@ -740,8 +740,8 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 }
 
 // abortUnstarted0422 прекращает попытку запуска до появления горутины Wait.
-// Without this transition a failed java lookup/exec keeps the key permanently
-// in 'starting', making a repaired runtime impossible to launch without restart.
+// Без этого перехода неудачный поиск Java или exec навсегда оставляет ключ в
+// состоянии starting, и исправленный Runtime невозможно запустить без перезапуска.
 func (s *Supervisor) abortUnstarted0422(st *processState, cause error) error {
 	st.mu.Lock()
 	if st.expectedStop {
@@ -919,9 +919,9 @@ func (s *Supervisor) waitProcess(st *processState) {
 }
 
 // registerCrashAndRestart используется и при авариях, и при неуспешном запуске восстановления.
-// Each attempt is bounded by CrashLimit, checks durable enabled state, and
-// verifies the failed instance still owns the slot. Stops/updates invalidate
-// scheduled retries through recoveryEpoch.
+// Каждая попытка ограничена CrashLimit, проверяет устойчивое состояние enabled и
+// то, что прежний неудачный экземпляр всё ещё владеет слотом. Остановки и
+// обновления аннулируют запланированные повторы через recoveryEpoch.
 func (s *Supervisor) registerCrashAndRestart(st *processState) {
 	k := st.key.String()
 	now := time.Now().UTC()
@@ -1005,7 +1005,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		}
 		// Повторная попытка может завершиться до exec либо после создания процесса ОС,
 		// у которого истёк тайм-аут подтверждения готовности. Дождитесь очистки старой JVM
-		// before scheduling another attempt so generations cannot overlap.
+		// До планирования новой попытки, чтобы поколения не пересекались.
 		select {
 		case <-failed.doneCh:
 		case <-s.ctx.Done():
@@ -1394,7 +1394,8 @@ func loopbackRequest(r *http.Request) bool {
 }
 func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*processState, bool) {
 	// Слушатель IPC Windows не использует TCP. Только точный именованный канал экземпляра
-	// pipe may authenticate a sandboxed extension; regular TCP stays loopback.
+	// Канал pipe может аутентифицировать изолированное расширение; обычный TCP
+	// остаётся только на loopback.
 	tcpLoopback := loopbackRequest(r)
 	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\Launcher-Extension-`)
 	macRequest := strings.HasPrefix(r.RemoteAddr, "nlmac:")
@@ -1462,8 +1463,8 @@ type helloRequest struct {
 	CallbackURL         string `json:"callbackUrl,omitempty"`
 }
 
-// The SDK 1.0 compatibility failures are machine-readable. Older clients
-// still understand the HTTP status; no existing hello field is removed.
+// Ошибки совместимости SDK 1.0 доступны в машинно-читаемом виде. Старые
+// клиенты понимают HTTP-статус; ни одно прежнее поле hello не удаляется.
 func helloConflict0421(w http.ResponseWriter, code string) {
 	jsonResponse(w, http.StatusConflict, map[string]string{"error": "host hello rejected", "code": code})
 }
@@ -1535,8 +1536,8 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, map[string]any{"protocolVersion": ProtocolVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "instanceId": st.instanceID, "heartbeatTimeoutSeconds": int(s.cfg.HeartbeatTimeout.Seconds()), "capabilities": s.allowedCapabilities(st), "events": eventbus.KnownEventTypes(), "eventProtocolVersion": eventbus.ProtocolVersion})
 }
 
-// The JVM bootstraps from the authoritative, installed package manifest.
-// We never trust a second manifest shipped alongside the JAR.
+// JVM загружается из авторитетного манифеста установленного пакета. Мы
+// никогда не доверяем второму манифесту рядом с JAR.
 func (s *Supervisor) handleJavaManifest0304(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.authenticate(w, r)
 	if !ok {
@@ -1636,8 +1637,8 @@ func (s *Supervisor) permissionAllowed0207(ctx context.Context, st *processState
 		}
 	}
 	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
-		// Do not let a previously authenticated process keep using its bearer
-		// token after a persistent disable, quarantine or publisher revocation.
+		// Не позволяйте ранее аутентифицированному процессу продолжать использовать
+		// Bearer-токен после устойчивого отключения, карантина или отзыва издателя.
 		s.denyRevokedHost04210(st, err)
 		return false, err
 	}
@@ -1682,8 +1683,9 @@ func (s *Supervisor) allowedCapabilities(st *processState) []string {
 			caps = append(caps, item.capability)
 		}
 	}
-	// The command capability is negotiated when any allowed game-domain grant
-	// exists. Per-command authorization is still mandatory on every request.
+	// Возможность команд согласуется при наличии любого разрешённого гранта
+	// игрового домена. Для каждого запроса по-прежнему обязательна авторизация
+	// конкретной команды.
 	if ok, err := s.permissionAllowed0207(context.Background(), st, "serverbridge:read", projectID); err == nil && ok {
 		for _, permission := range []string{"gameserver:broadcast", "gameserver:moderate", "gameserver:save", "gameserver:traffic"} {
 			if granted, e := s.permissionAllowed0207(context.Background(), st, permission, projectID); e == nil && granted {
@@ -1832,9 +1834,10 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		return capabilityResult0205{value: map[string]any{"size": len(data), "contentBase64": base64.StdEncoding.EncodeToString(data)}, status: http.StatusOK}
 	case "secret.get":
-		// Until authenticated reverse RPC is available inside an enforced OS
-		// sandbox, Java can read host files / open sockets as its service user.
-		// Never return raw secret material to this unconfined JVM.
+		// Пока в обеспеченной песочнице ОС нет аутентифицированного обратного RPC,
+		// Java может читать файлы хоста и открывать сокеты как служебный
+		// пользователь. Никогда не возвращайте такой неограниченной JVM
+		// необработанные секреты.
 		if st.javaHost {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("raw secrets are unavailable to Java Host without OS isolation")}
 		}
@@ -1981,8 +1984,8 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// A broker deadline must cancel the operation itself, not only the HTTP
-	// response. The repository/storage/HTTP implementations receive this context.
+	// Крайний срок брокера должен отменять саму операцию, а не только HTTP-ответ.
+	// Реализации репозитория, хранилища и HTTP получают этот контекст.
 	capCtx, capCancel := context.WithTimeout(r.Context(), s.cfg.CapabilityTimeout)
 	defer capCancel()
 	resultCh := make(chan capabilityResult0205, 1)
@@ -1990,9 +1993,9 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 	select {
 	case result := <-resultCh:
 		privileged := capName != "host.health" && capName != "extension.self"
-		// A capability may finish after its permission or publisher key was
-		// revoked. Never release a completed secret/data response using the
-		// pre-revocation authorization snapshot.
+		// Операция может закончиться уже после отзыва разрешения или ключа издателя.
+		// Никогда не выдавайте готовый секрет/данные на основании снимка авторизации
+		// до отзыва.
 		if result.err == nil {
 			if err := s.revalidateCapability04312(capCtx, st, capName, req); err != nil {
 				if privileged {
@@ -2277,7 +2280,8 @@ func (s *Supervisor) DeliverExtensionEvent(ctx context.Context, sub model.Extens
 	if !acknowledgement.Accepted {
 		return errors.New("event callback did not accept delivery")
 	}
-	// Never ACK an event using authority that was revoked during user code.
+	// Никогда не подтверждайте событие ACK полномочиями, отозванными во время
+	// пользовательского кода.
 	st, err := s.processForSubscription0206(sub)
 	if err != nil {
 		return err

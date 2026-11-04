@@ -101,15 +101,16 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
     modules = {x.get('moduleId') for x in report['moduleChecks'] if type(x) is dict}
     require(classes == set(ga.CLASSES) and modules == set(ga.MODULE_IDS),
             'incorrect final migration project or module coverage')
-    # Independent signed approval must cover the *actual* final bytes, including
-    # the signed installable release and each module's unredacted private proof.
+    # Независимое подписанное одобрение должно покрывать РЕАЛЬНЫЕ финальные байты,
+    # включая подписанный устанавливаемый выпуск и исходные незамаскированные
+    # закрытые доказательства каждого модуля.
     signed_review = verify_approval(evidence_root, approval, signature, key, report)
     signed = evidence_root / 'signed'
     delivery = verify_bundle(signed, release_manifest=True)
     require(delivery.get('releaseManifestMatchesAssets') is True and delivery.get('version') == VERSION,
             '0.50.0 signed delivery assets did not pass real manifest/signature checks')
-    # Compare independent review identity with reviewers on the three signed
-    # Migration GA certificates; self-review of one's own GA receipt is banned.
+    # Сравнивайте идентичность независимого проверяющего с авторами трёх подписанных
+    # сертификатов Migration GA; самопроверка собственной квитанции GA запрещена.
     refs = config.get('references')
     require(type(refs) is dict and set(refs) == set(ga.CLASSES), 'missing real live GA plan/receipt references')
     for cls in ga.CLASSES:
@@ -118,8 +119,9 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
                 'independent approver must not be the original migration operator')
     require(report['commitSha'] == signed_review['commitSha'],
             'release commit mismatch')
-    # Verify the original 36 proof sources and live Backend again after external
-    # review. A rollback/revocation during review blocks final promotion.
+    # Повторно проверьте исходные 36 источников свидетельств и живой Backend после
+    # внешней проверки. Откат или отзыв во время проверки блокирует окончательное
+    # продвижение.
     ga.live_certificate_verification(config, refs)
     return {'version': VERSION, 'commitSha': report['commitSha'], 'targetReleaseSha256': report['targetReleaseSha256'],
             'independentlyApproved': True, 'signedDeliveryVerified': True,

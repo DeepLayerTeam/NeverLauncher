@@ -8,9 +8,10 @@ import (
 	"strings"
 )
 
-// prepareJavaScratch04811 creates private writable Java user state and appends
-// VM properties before -jar. The caller must remove this directory after the
-// child has been reaped. It does not claim kernel filesystem isolation.
+// prepareJavaScratch04811 создаёт закрытое записываемое состояние пользователя Java
+// и добавляет свойства VM перед -jar. Вызывающая сторона обязана удалить каталог
+// после завершения дочернего процесса. Это не свидетельство файловой изоляции
+// ядром.
 func prepareJavaScratch04811(cmd *exec.Cmd) (string, error) {
 	if cmd == nil || len(cmd.Args) < 3 {
 		return "", errors.New("missing Java command")
@@ -58,8 +59,8 @@ func prepareJavaScratch04811(cmd *exec.Cmd) (string, error) {
 
 func redactHostCredentials04811(input string, tokens ...string) string {
 	for _, token := range tokens {
-		// Empty credentials cannot be replaced (strings.ReplaceAll would
-		// interpolate a replacement at every byte).
+		// Пустые учётные данные заменять нельзя: strings.ReplaceAll вставит замену в
+		// каждую позицию байта.
 		if len(token) >= 16 {
 			input = strings.ReplaceAll(input, token, "[REDACTED]")
 		}

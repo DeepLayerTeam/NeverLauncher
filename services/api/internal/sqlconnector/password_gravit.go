@@ -45,8 +45,9 @@ func verifyGravitDigest(secret, encoded string, cfg PasswordConfig) (bool, error
 	if err != nil {
 		return false, err
 	}
-	// Reject salt prefixes, mixed encodings, prefixes such as "sha256:", and
-	// non-canonical digests. A malformed row must stop login, not downgrade.
+	// Отклоняйте префиксы соли, смешанные кодировки, префиксы вроде sha256: и
+	// неканонические хеши. Повреждённая строка должна прерывать вход, а не
+	// снижать защиту.
 	var expected []byte
 	switch cfg.DigestEncoding {
 	case "hex":
@@ -81,9 +82,9 @@ func verifyGravitDigest(secret, encoded string, cfg PasswordConfig) (bool, error
 
 const phpassAlphabet = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
-// verifyPHPass supports the portable $P$/$H$ MD5 hashes used by WordPress and
-// Gravit AdditionalHash. Blowfish ($2y$) hashes use the explicit bcrypt verifier.
-// Very high cost settings are rejected before doing any work (DoS protection).
+// verifyPHPass поддерживает переносимые MD5-хеши $P$/$H$, используемые WordPress и
+// Gravit AdditionalHash. Хеши Blowfish ($2y$) проверяются явным bcrypt-валидатором.
+// Чрезмерная стоимость отклоняется до выполнения работы для защиты от DoS.
 func verifyPHPass(secret, encoded string) (bool, error) {
 	if len(encoded) != 34 || !(strings.HasPrefix(encoded, "$P$") || strings.HasPrefix(encoded, "$H$")) {
 		return false, errors.New("invalid PHPass portable hash format")

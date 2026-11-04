@@ -12,9 +12,10 @@ const MaxFileBytes = 256 << 10
 
 var ErrDenied = errors.New("scoped broker: access denied")
 
-// AllowedDestination matches the EXACT origin in the signed manifest. Only
-// HTTPS is supported, including explicit :443; no URL userinfo, IP redirects,
-// wildcard hostnames, noncanonical ports or implicit subdomain privileges.
+// AllowedDestination должен совпадать с ТОЧНЫМ origin в подписанном манифесте.
+// Поддерживается только HTTPS, включая явный :443; запрещены userinfo в URL,
+// редиректы на IP, wildcard-хосты, неканонические порты и неявные права на
+// поддомены.
 func AllowedDestination(rawURL string, grants []string) bool {
 	u, err := url.Parse(rawURL)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Fragment != "" || u.Opaque != "" {

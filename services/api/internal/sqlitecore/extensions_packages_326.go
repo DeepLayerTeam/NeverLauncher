@@ -154,8 +154,8 @@ func (r *Repository) SetExtensionPublisherActive(ctx context.Context, id, actor 
 			return ErrNotFound
 		}
 		if !active {
-			// Revoke installed active packages immediately, and preserve history.
-			// For every active installation of this publisher, create a generation-bumped disabled revision.
+			// Немедленно отзывайте установленные активные пакеты и сохраняйте историю. Для каждой активной
+			// установки данного издателя создавайте отключённую ревизию с увеличенным поколением.
 			items, e := q.QueryContext(ctx, `SELECT i.extension_id,i.scope,i.scope_id,i.generation,i.version,i.package_digest
    FROM extension_installs i JOIN extension_packages p ON p.extension_id=i.extension_id AND p.version=i.version AND p.digest=i.package_digest
    WHERE p.publisher=? AND i.state='enabled'`, id)
@@ -299,8 +299,8 @@ func (r *Repository) GetExtensionInstall326(ctx context.Context, id, scope, scop
 	return
 }
 
-// Compare-and-swap install with immutable generations; revocation disables active installs.
-// It only persists verified package selection; actual extension execution is a separate stage.
+// Установка через compare-and-swap с неизменяемыми поколениями; отзыв отключает активные установки.
+// Сохраняется только проверенный выбор пакета, а исполнение расширения — отдельный этап.
 func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExtensionInstall, expected int64) (out SQLiteExtensionInstall, err error) {
 	if !durableFieldsNonempty(v.ExtensionID, v.Actor) || (v.Scope != "global" && v.Scope != "project") || (v.Scope == "project" && v.ScopeID == "") || expected < 0 || !map[string]bool{"enabled": true, "disabled": true, "absent": true, "error": true}[v.State] {
 		return out, errors.New("invalid extension install operation")
@@ -352,8 +352,8 @@ func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExten
 	return
 }
 
-// PutExtensionState326 is atomic CAS on the same persistent database. Secrets
-// MUST NOT be stored as plaintext here: use a cryptographic secret store instead.
+// PutExtensionState326 — атомарный CAS в той же постоянной БД. Секреты НЕЛЬЗЯ хранить
+// здесь открыто: используйте криптографическое хранилище секретов.
 func (r *Repository) PutExtensionState326(ctx context.Context, v SQLiteExtensionState, expected int64, actor string) (out SQLiteExtensionState, err error) {
 	if !durableFieldsNonempty(v.ExtensionID, v.Key) || len(v.Key) > 128 || v.Scope != "global" && v.Scope != "project" || v.Scope == "project" && v.ScopeID == "" || len(v.Value) == 0 || len(v.Value) > 65536 || expected < 0 {
 		return out, errors.New("invalid extension state key/value")

@@ -21,8 +21,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// The token itself is written to SQLite or to a durable job. Consuming
-// this row and advancing the release/head/job/outbox share ONE SQLite commit.
+// Сам токен записывается в SQLite либо устойчивую задачу. Погашение этой строки и
+// продвижение релиза, head, задачи и outbox выполняются ОДНОЙ фиксацией SQLite.
 const sqliteStablePermitDDL0374 = `CREATE TABLE IF NOT EXISTS http_stable_permits_0374 (
     token_sha256 TEXT PRIMARY KEY CHECK(length(token_sha256)=64),
     package_id TEXT NOT NULL, project_id TEXT NOT NULL,
@@ -35,9 +35,10 @@ const sqliteStablePermitDDL0374 = `CREATE TABLE IF NOT EXISTS http_stable_permit
 );
 CREATE INDEX IF NOT EXISTS http_stable_permits_package_0374 ON http_stable_permits_0374(package_id,expires_at);`
 
-// The struct order matches the v4 signed attestation payload exactly. It is
-// not a loose map: json.Marshal of this typed value reconstructs the canonical
-// Ed25519 message that the independent attestor signed.
+// Порядок полей структуры точно совпадает с полезной нагрузкой подписанной
+// аттестации v4. Это не свободная map: json.Marshal этого типизированного значения
+// восстанавливает каноническое сообщение Ed25519, подписанное независимым
+// аттестатором.
 type sqliteSignedEvidence0374 struct {
 	SchemaVersion        string            `json:"schemaVersion"`
 	RunNonce             string            `json:"runNonce"`
@@ -164,10 +165,10 @@ func parseStableTargets0374(raw json.RawMessage, runs map[string]string, project
 	return targets, nil
 }
 
-// IssueStableRuntimePermit03411 is invoked exclusively after the API verifies
-// signatures, the configured platform matrix and observed execution. SQLite
-// stores a hashed, short-lived grant and rechecks immutable recorded evidence,
-// live revocation and the full required matrix at the final write boundary.
+// IssueStableRuntimePermit03411 вызывается только после проверки API подписей,
+// настроенной матрицы платформ и наблюдаемого выполнения. SQLite хранит
+// хешированный краткоживущий допуск и при окончательной записи перепроверяет
+// неизменяемые свидетельства, действующий отзыв и полную обязательную матрицу.
 func (r *SQLiteHTTPRepository0372) IssueStableRuntimePermit03411(ctx context.Context, p StableRuntimePermit03411) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -215,8 +216,8 @@ func (r *SQLiteHTTPRepository0372) IssueStableRuntimePermit03411(ctx context.Con
 	return token, nil
 }
 
-// The caller holds r.mu; no other SQLite repository mutation, revocation,
-// permit creation or job transition may interleave before its WAL commit.
+// Вызывающий удерживает r.mu; до фиксации WAL не могут чередоваться другие
+// изменения репозитория SQLite, отзыв, создание допусков или переходы задач.
 func (r *SQLiteHTTPRepository0372) validateStablePermit0374(q sqlitedurable.Executor, ctx context.Context, token string, rel model.ReleaseVersion, manifest, artifact string) error {
 	if !stableHex0374(token) {
 		return ErrStableRuntimeGate0341
@@ -312,8 +313,8 @@ func (r *SQLiteHTTPRepository0372) validateStablePermit0374(q sqlitedurable.Exec
 		if !found {
 			return ErrStableRuntimeGate0341
 		}
-		// Preserve the independent execution report binding; this prevents a
-		// signed attestation from being assigned to a different stored run.
+		// Сохраняйте независимую привязку отчёта выполнения; она не позволяет
+		// присвоить подписанную аттестацию другому сохранённому запуску.
 		reportFound := false
 		for _, run := range r.mem.stagedRuntimeRuns0342 {
 			if run.RunID != runID || run.PackageID != packageID || run.ProjectID != project || run.ManifestSHA256 != md || run.ArtifactSHA256 != ad {
@@ -371,7 +372,7 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 	if r.failed != nil {
 		return out, r.failed
 	}
-	// All errors are non-mutating until the durable job is actually committed.
+	// До фактической фиксации устойчивой задачи все ошибки не изменяют состояние.
 	job, exists := r.mem.durableJobs[commit.JobID]
 	if !exists {
 		return out, ErrNotFound
@@ -401,12 +402,12 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 		}
 		return out, nil
 	}
-	// For stable the permit is verified AGAIN within the same write transaction
-	// that consumes it, including fresh revocation and every target stage.
+	// Для stable допуск повторно проверяется В ТОЙ ЖЕ транзакции записи, которая его
+	// погашает, включая свежий отзыв и все этапы каждой цели.
 	mutated := false
 	var committedDigest string
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
-		// Check the job snapshot before attempting a grant lookup.
+		// Проверяйте снимок задачи до попытки поиска допуска.
 		canonical, e := json.Marshal(rel.Manifest)
 		if e != nil {
 			return e

@@ -42,7 +42,7 @@ func TestIssuerScopedIdentityMemory0291(t *testing.T) {
 	if _, err := r.SaveAuthIdentity(model.AuthIdentity{UserID: bob.ID, Provider: "oidc", Issuer: "https://two.example", Subject: "another"}); err == nil {
 		t.Fatal("issuer subject rewrite accepted")
 	}
-	// JIT is idempotent and scoped too.
+	// JIT тоже идемпотентен и ограничен областью доступа.
 	u, identity, err := r.SaveFederatedUser(context.Background(), model.User{ID: "other", Email: "other@identity.invalid", RoleID: "player"}, model.AuthIdentity{Provider: "oidc", Issuer: "https://third.example", Subject: "same"})
 	if err != nil || identity.UserID != u.ID {
 		t.Fatalf("JIT failed %+v / %v", identity, err)

@@ -128,8 +128,9 @@ type providerProbe02611 struct {
 	Detail     string `json:"detail"`
 }
 
-// Probe only hard-coded provider hosts. HTTP 401/403/405 shows an endpoint is
-// reachable, NOT that this app is approved or the user owns Minecraft Java.
+// Проверяйте только жёстко заданные хосты провайдеров. HTTP 401/403/405
+// подтверждает достижимость точки входа, но НЕ одобрение приложения и НЕ владение
+// Minecraft Java пользователем.
 func probeOfficialProvider02611(ctx context.Context, client *http.Client, service, url string) providerProbe02611 {
 	result := providerProbe02611{Service: service, Detail: "network_failure"}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

@@ -56,8 +56,9 @@ jobs:
           assert data['status']=='blocked' and not data['gaCertified']
           PY
   isolated-standard-physical:
-    # Destructive: intentionally opt in on an isolated, protected self-hosted
-    # machine with a dedicated real Minecraft JVM and trusted public TLS.
+    # Разрушающая операция: включайте её сознательно только на изолированной
+    # защищённой собственной машине с настоящей выделенной JVM Minecraft и
+    # доверенным публичным TLS.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, neverlauncher-0523-dedicated]
     environment: owner-admin-physical-acceptance

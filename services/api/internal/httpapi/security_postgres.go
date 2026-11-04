@@ -9,11 +9,11 @@ import (
 	"time"
 )
 
-// consumeImportedTOTP0474 enforces SQLite Core's one-use, monotonic TOTP
-// counter on MFA methods imported by sqlitepg. PostgreSQL row locking prevents
-// concurrent logins from accepting the same time step. Unmigrated users keep
-// the preexisting securityPostgres111 path, including databases that have not
-// received the optional Core migration columns.
+// consumeImportedTOTP0474 обеспечивает однократное использование и монотонность
+// счётчика TOTP SQLite Core для MFA-методов, импортированных через sqlitepg.
+// Блокировки строк PostgreSQL не позволяют параллельным входам принять один
+// временной интервал. Пользователи без миграции продолжают использовать прежний
+// путь securityPostgres111, включая БД без необязательных колонок миграции Core.
 func (p *securityPostgres111) consumeImportedTOTP0474(userID, code, secret string) (handled, ok bool) {
 	if len(code) != 6 || secret == "" {
 		return false, false
@@ -26,8 +26,8 @@ func (p *securityPostgres111) consumeImportedTOTP0474(userID, code, secret strin
 	}
 	defer tx.Rollback()
 	var original, stepText, status string
-	// to_jsonb works on both migrated and unmigrated schemas; missing properties
-	// produce empty strings, so ordinary installations are not changed.
+	// to_jsonb работает как с мигрированной, так и с исходной схемой; отсутствующие
+	// свойства дают пустые строки, поэтому обычные установки не меняются.
 	err = tx.QueryRowContext(ctx, `SELECT status,COALESCE(to_jsonb(m)->>'core_original_status_0474',''),
  COALESCE(to_jsonb(m)->>'core_last_step_0474','-1') FROM mfa_methods m
  WHERE m.user_id=$1 AND m.method_type='totp' FOR UPDATE`, userID).Scan(&status, &original, &stepText)

@@ -21,9 +21,9 @@ import (
 const validationSchema0345 = "launcher.validation-evidence.v4"
 const validationDomain0345 = "Launcher/validation-evidence/v4\x00"
 
-// The order of these fields is part of the signed canonical JSON serialization.
-// All scalar metadata must be ASCII with no HTML metacharacters; JSON maps sort
-// their keys in Go and in the attestor's canonical implementation.
+// Порядок полей является частью подписанной канонической сериализации JSON. Все
+// скалярные метаданные должны быть ASCII без метасимволов HTML; карты JSON сортируют
+// ключи в Go и канонической реализации аттестатора.
 type validationPayload0345 struct {
 	SchemaVersion        string            `json:"schemaVersion"`
 	RunNonce             string            `json:"runNonce"`
@@ -119,9 +119,10 @@ func validatePayload0345(p validationPayload0345) error {
 			return fmt.Errorf("required artifact missing: %s", name)
 		}
 	}
-	// From 0.43.14 onward gameplay acceptance must bind the *separate*
-	// adversarial run's raw bytes to this independently signed observation.
-	// A prior nine-stage PASS cannot be replayed as a newer game certificate.
+	// Начиная с 0.43.14 приёмка игрового процесса должна связывать исходные байты
+	// ОТДЕЛЬНОГО adversarial-запуска с этим независимо подписанным наблюдением.
+	// Прежний PASS девяти этапов нельзя повторно использовать как новый игровой
+	// сертификат.
 	var major, minor, patch int
 	if count, _ := fmt.Sscanf(p.PackageVersion, "%d.%d.%d", &major, &minor, &patch); count == 3 &&
 		(major > 0 || minor > 43 || (minor == 43 && patch >= 14)) {
@@ -224,8 +225,8 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	deny := func(err error) {
-		// Persist rejection using a digest and bounded reason code, never the
-		// operator's submitted JSON, account identifiers or raw diagnostics.
+		// Сохраняйте отказ в виде хеша и ограниченного кода причины, а не переданного
+		// оператором JSON, ID учётных записей или сырых диагностических данных.
 		auditErr := s.saveValidationDecision03412(r.Context(), r.PathValue("packageId"), signed.Evidence.RunID,
 			"attestation", "rejected", validationDecisionReason03412(err), safeValidationDecisionDigest03412(signed))
 		if auditErr != nil {
@@ -291,8 +292,9 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		deny(errors.New("not an integrity-passed staged package"))
 		return
 	}
-	// The validation key must NEVER be the project's release/manifest signing
-	// key. Even a correctly signed CI report cannot inherit release trust.
+	// Ключ проверки НИКОГДА не должен быть ключом подписи релиза или манифеста
+	// проекта. Даже корректно подписанный отчёт CI не может наследовать доверие к
+	// релизу.
 	if lookup.Release.Manifest.Signature != nil {
 		attestorKey, errAttestor := base64.RawURLEncoding.DecodeString(s.Config.ValidationAttestationPublicKey0345)
 		manifestKey, errManifest := hex.DecodeString(lookup.Release.Manifest.Signature.PublicKey)
@@ -344,9 +346,9 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		deny(errors.New("no persisted execution run for attestation"))
 		return
 	}
-	// Re-evaluate current target policy and key revocation after the expensive
-	// run/storage checks, immediately before immutable evidence insertion. This
-	// does not permit stable promotion: the database stable trigger stays active.
+	// Повторно проверьте текущую целевую политику и отзыв ключа после дорогих проверок
+	// запуска и хранилища — непосредственно до вставки неизменяемого свидетельства.
+	// Это не разрешает продвижение stable: триггер stable БД остаётся активным.
 	if e = validateFreshness0346(r.Context(), freshStore, p, time.Now().UTC(), true); e != nil {
 		deny(e)
 		return

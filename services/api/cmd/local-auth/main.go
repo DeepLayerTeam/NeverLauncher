@@ -1,6 +1,7 @@
-// launcher-local-auth is a production operator CLI. Import runs offline
-// against PostgreSQL; all ordinary account changes use the running API so
-// session revocation, RBAC, MFA and audit remain server-authoritative.
+// launcher-local-auth — промышленный CLI оператора. Импорт выполняется
+// автономно в PostgreSQL; обычные изменения учётных записей проходят через
+// работающий API, чтобы отзыв сессий, RBAC, MFA и аудит оставались под
+// авторитетом сервера.
 package main
 
 import (
@@ -187,7 +188,8 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("API rejected %s with HTTP %d (details in server audit)", command, resp.StatusCode)
 	}
-	// Prevent a future API field from accidentally exporting credentials.
+	// Не допускайте, чтобы будущее поле API случайно экспортировало учётные
+	// данные.
 	var result struct {
 		Items []model.User `json:"items"`
 		User  model.User   `json:"user"`

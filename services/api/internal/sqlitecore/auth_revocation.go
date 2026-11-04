@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// Every revocation is applied to sessions, token families, access tokens,
-// refresh tokens and Minecraft sessions in one durable transaction.
+// Каждый отзыв применяется к сеансам, семействам токенов, access-токенам,
+// refresh-токенам и Minecraft-сеансам одной устойчивой транзакцией.
 func (a *Auth) revokeSessionTx(ctx context.Context, q sqlitedurable.Executor, id, reason string, now int64) error {
 	var userID string
 	if e := q.QueryRowContext(ctx, `SELECT user_id FROM auth_sessions WHERE id=?`, id).Scan(&userID); e != nil {
@@ -58,8 +58,9 @@ func (a *Auth) RevokeSession(ctx context.Context, userID, sessionID, reason stri
 	})
 }
 
-// RevokeUserSessions is for logout-all, password reset and security response.
-// Authorization to revoke another user's sessions belongs to the caller.
+// RevokeUserSessions используется для выхода со всех устройств, сброса пароля и
+// реагирования на инциденты. Право отзывать чужие сеансы обеспечивает вызывающий
+// код.
 func (a *Auth) RevokeUserSessions(ctx context.Context, userID, reason string) (int, error) {
 	if userID == "" || strings.TrimSpace(reason) == "" {
 		return 0, errors.New("user and reason required")

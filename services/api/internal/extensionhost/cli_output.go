@@ -7,10 +7,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Both CLI stdout and stderr share one instance-wide signed output budget.
-// The underlying boundedBuffer0209 still caps retained memory. A child that
-// exceeds the aggregate quota is terminated, not merely allowed to flood a
-// bounded in-memory buffer indefinitely.
+// stdout и stderr CLI разделяют один подписанный лимит вывода на экземпляр.
+// Базовый boundedBuffer0209 по-прежнему ограничивает память. Дочерний процесс,
+// превышающий совокупную квоту, завершается, а не продолжает бесконечно
+// заполнять ограниченный буфер.
 type cliOutputWriter03113 struct {
 	st     *processState
 	target io.Writer

@@ -434,11 +434,11 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
 	}
-	// A browser/password provider may have returned an upstream refresh token
-	// before the Never WebAuthn challenge. The MFA transaction contains only
-	// its AEAD ciphertext. Commit it after a successful passkey assertion and
-	// session creation, never before local MFA. A failed commit revokes the
-	// just-created session and never returns tokens to the client.
+	// Провайдер входа через браузер или пароль мог вернуть внешний refresh-токен
+	// до challenge Never WebAuthn. Транзакция MFA содержит только его шифртекст
+	// AEAD. Фиксируйте его после успешного подтверждения passkey и создания
+	// сеанса, никогда до локальной MFA. Неудачная фиксация отзывает только что
+	// созданный сеанс и не возвращает клиенту токены.
 	if len(pendingCredential) != 0 && pendingCredential[0] != "" {
 		if err := s.commitPendingProviderCredential0296(user, provider, identityID, pendingCredential[0]); err != nil {
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")

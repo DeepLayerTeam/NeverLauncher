@@ -66,6 +66,6 @@ jobs:
           name: deep-java-${{ matrix.java }}-local-runtime
           path: deep-java-0490-report.json
           if-no-files-found: warn
-  # Production GA is NOT inferred from this workflow. A real signed deployment,
-  # update/rollback, Go Broker/PG storage, native sandbox and six-platform
-  # release attestation are mandatory independent requirements.
+  # Из этого workflow НЕ следует промышленная приёмка GA. Отдельно обязательны
+  # настоящее подписанное развёртывание, обновление и откат, брокер Go и хранилище
+  # PostgreSQL, нативная песочница и аттестация выпуска на шести платформах.

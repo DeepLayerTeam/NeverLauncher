@@ -10,7 +10,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// These requests go through the real mux, auth middleware and RBAC decision.
+// Эти запросы проходят через настоящий mux, middleware авторизации и решение
+// RBAC.
 func TestHardening02112NegativeRBAC(t *testing.T) {
 	h := testServer(t)
 	admin := loginAdmin(t, h)
@@ -48,7 +49,8 @@ func TestHardening02112NegativeRBAC(t *testing.T) {
 			t.Errorf("%s %s: status %d want %d: %s", tc.method, tc.path, rr.Code, tc.want, rr.Body.String())
 		}
 	}
-	// ServerBridge and settings require authentication before any data leaks.
+	// ServerBridge и настройки требуют аутентификации до раскрытия каких-либо
+	// данных.
 	for _, path := range []string{"/api/v1/server-bridge/projects/demo-project/overview", "/api/v1/admin/config", "/api/v1/operations/jobs?projectId=demo-project"} {
 		rr := request0211(t, h, "GET", path, "", "")
 		if rr.Code != http.StatusUnauthorized {
@@ -73,7 +75,8 @@ func TestHardening02112AttemptJournalOmitsInternalLeaseData(t *testing.T) {
 	}
 }
 
-// Concurrent tabs submit the same revision. Exactly one mutation can win.
+// Параллельные вкладки отправляют одинаковую ревизию. Успешным может быть
+// только одно изменение.
 func TestHardening02112TwoTabConfigCAS(t *testing.T) {
 	h := testServer(t)
 	token := loginAdmin(t, h)

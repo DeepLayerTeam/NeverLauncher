@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Shared host files are deliberately disabled on non-Linux: a preflight path
-// check is not a security boundary against Windows reparse-point races.
+// Общие файлы хоста намеренно отключены вне Linux: предварительная проверка пути
+// не является границей безопасности против гонок с reparse points Windows.
 func ParseRoots(raw string) (map[string]string, error) {
 	if strings.TrimSpace(raw) == "" {
 		return map[string]string{}, nil

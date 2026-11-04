@@ -190,7 +190,8 @@ def local_consent(directory, project, approval):
 
 
 def local_isolate(directory, project, approval):
-    # On an uncertain partial disconnect the journal remains so healing is possible.
+    # При неопределённом частичном разрыве связи журнал сохраняется для последующего
+    # восстановления.
     with lock_for(directory):
         local_consent(directory, project, approval)
         path = directory / '.multi-host-partition-05110.json'
@@ -235,7 +236,7 @@ def local_heal(directory, project):
             role, ident, network = item['role'], item['container'], item['network']
             require(role in ROLES and re.fullmatch(r'[0-9a-f]{12,64}', ident) and
                     network == project + '_launcher', 'unsafe recovery journal')
-            # Container may have been recreated; never attach an arbitrary ID.
+            # Контейнер мог быть пересоздан; никогда не подключайтесь к произвольному ID.
             try:
                 current, expected_net = local_compose_id(directory, project, role, allow_detached=True)
                 require(current == ident and expected_net == network, 'container identity changed during partition')
@@ -301,7 +302,8 @@ def edge_survivor_probe(nodes, victim, remote_script, directory, project, edge, 
             break
         time.sleep(interval)
     require(healthy_streak >= 3, 'public ingress failed to recover via surviving host')
-    # A recovered load balancer that instantly flaps must not pass a drill.
+    # Восстановленный балансировщик, сразу переходящий между состояниями, не
+    # должен проходить проверку.
     for _ in range(5):
         time.sleep(interval)
         ok, sample = multi.edge_ready(edge, 1)
@@ -363,7 +365,8 @@ def run_fault(args, nodes):
     require(15 <= args.timeout <= 300, 'timeout must be 15..300 seconds')
     require(30 <= args.alert_timeout <= 300, 'alert wait must be 30..300 seconds')
     edge = endpoint_url(args.edge_url)
-    # Baseline proof precedes any saved disruption intent or remote mutation.
+    # Подтверждение исходного состояния должно предшествовать любой записи
+    # намерения отключения или удалённому изменению.
     assert_baseline(nodes, args.multi_host_script, args.directory, args.project, edge)
     intent = {'schema': SCHEMA, 'phase': 'intent', 'fault': args.fault, 'project': args.project,
               'failedNode': args.failed_node, 'createdUtc': utc(), 'nodes': nodes,
@@ -416,7 +419,8 @@ def run_fault(args, nodes):
             result['status'] = 'FAIL'
             result['failure'] = 'fault verification failed; inspect controlled operator logs'
         finally:
-            # Always attempt recovery, even if the original SSH call timed out.
+            # Всегда пытайтесь восстановить систему, даже если первоначальная SSH-команда
+            # превысила время ожидания.
             intent['phase'] = 'restoring'
             replace_private(state_path, intent)
             try:
@@ -444,8 +448,8 @@ def run_fault(args, nodes):
             fsync_dir(state_path.parent)
         return result
     except BaseException:
-        # A process killed during an unsafe interval leaves the durable journal
-        # for explicit 'recover'. No green report is generated in this path.
+        # Процесс, завершённый в небезопасном промежутке, оставляет устойчивый журнал
+        # для явной операции recover. Успешный отчёт на этом пути не формируется.
         raise
 
 
@@ -487,7 +491,8 @@ def render_monitor(args):
     targets = validate_node_urls(args.node_url)
     endpoint = endpoint_url(args.edge_url)
     edge = endpoint if endpoint.endswith('/ready') else endpoint + '/ready'
-    # JSON is accepted YAML and prevents accidental interpretation of untrusted URLs.
+    # JSON является допустимым YAML и предотвращает случайную интерпретацию недоверенных
+    # URL.
     rules = {'groups': [{'name': 'neverlauncher-multi-host-05110', 'rules': [
         {'alert': 'NeverLauncherHostIngressDown',
          'expr': 'probe_success{job="neverlauncher-host-ready-05110"} == 0 or up{job="neverlauncher-host-ready-05110"} == 0',
@@ -636,7 +641,8 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get('status') not in ('FAIL', 'FAILED') and result.get('healed') is not False else 2
     except (ChaosError, multi.DeploymentError, multi.inventory.InventoryError, OSError, ValueError, KeyError, TypeError) as exc:
-        # Secrets, raw Docker/SSH output, URL and environment never go to stderr.
+        # Секреты, необработанный вывод Docker/SSH, URL и окружение никогда не
+        # отправляются в stderr.
         print(json.dumps({'status': 'FAILED', 'reason': str(exc)[:160]}), file=sys.stderr)
         return 2
 

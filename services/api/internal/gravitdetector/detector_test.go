@@ -166,8 +166,9 @@ func TestAmbiguousLaunchServer0332(t *testing.T) {
 	}
 }
 
-// A real modpack may exceed the old 64 MiB compatibility cap. The request
-// path must scan it without loading all source bytes into process memory.
+// Настоящий модпак может превышать старый предел совместимости 64 МиБ. Путь
+// запроса должен сканировать его без загрузки всех исходных байтов в память
+// процесса.
 func TestReaderLargeSource0441(t *testing.T) {
 	file, err := os.CreateTemp(t.TempDir(), "source-*.zip")
 	if err != nil {

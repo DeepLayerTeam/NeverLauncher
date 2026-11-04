@@ -95,7 +95,7 @@ func TestCloseFlushesAcceptedEvents(t *testing.T) {
 			t.Errorf("lost queued event %s", msg)
 		}
 	}
-	// A close is idempotent and later events cannot be accepted.
+	// Закрытие идемпотентно, поздние события больше не принимаются.
 	r.Capture("errors", "backend", "late")
 	r.Close()
 }

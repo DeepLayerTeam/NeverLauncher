@@ -9,8 +9,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// checkJavaUI0489 is repeated on both sides of a JVM callback so a concurrent
-// permission revocation, disable or package replacement fails closed.
+// checkJavaUI0489 повторяется по обе стороны JVM callback, чтобы параллельный
+// отзыв разрешения, отключение или замена пакета приводили к отказу.
 func (s *Supervisor) checkJavaUI0489(ctx context.Context, st *processState, method string, raw json.RawMessage) error {
 	var params struct {
 		Surface  string `json:"surface"`

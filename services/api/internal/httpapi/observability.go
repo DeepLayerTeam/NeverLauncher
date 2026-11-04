@@ -118,8 +118,8 @@ func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "метрики отключены")
 		return
 	}
-	// Capacity collector samples SQL out of band; metrics must never fan out
-	// into full-table ORM reads on a request path.
+	// Сборщик ёмкости опрашивает SQL отдельно; сбор метрик никогда не должен
+	// разветвляться в чтения полных таблиц через ORM на пути запроса.
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	_, _ = fmt.Fprintf(w, "# HELP launcher_info Backend identity\n# TYPE launcher_info gauge\nlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
 	if s.Capacity != nil {

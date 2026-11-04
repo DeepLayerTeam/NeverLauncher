@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The scoped overview is a server-side security boundary, not just an Admin filter.
+// Обзор в рамках области — серверная граница безопасности, а не только фильтр Admin.
 func TestServerBridgeOperations0219ProjectIsolation(t *testing.T) {
 	h := testServer(t)
 	owner := loginAdmin(t, h)

@@ -19,8 +19,8 @@ import (
 
 const durableRollbackKind0217 = "channel-rollback"
 
-// Only implemented executable operation kinds are registered. An operation is
-// authorized against a real resource both at intake AND at worker execution.
+// Регистрируются только реализованные исполняемые виды операций. Доступ к
+// реальному ресурсу проверяется как при приёме, так и при выполнении воркером.
 type operationSpec0217 struct {
 	Kind         string `json:"kind"`
 	Action       string `json:"action"`
@@ -50,7 +50,8 @@ type rollbackPayload0217 struct {
 	TargetID             string `json:"targetId"`
 	TargetManifestDigest string `json:"targetManifestDigest"`
 	TargetArtifactDigest string `json:"targetArtifactDigest"`
-	// Frozen at enqueue time; every worker/retry must target this exact head.
+	// Цель фиксируется при постановке в очередь; каждый воркер и повтор должен
+	// обращаться строго к этому head.
 	ExpectedHeadRevision *int64 `json:"expectedHeadRevision"`
 }
 
@@ -118,8 +119,8 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		if lookup.Release.ProjectID != req.ProjectID {
 			return spec, nil, nil, repository.ErrNotFound
 		}
-		// A preview must never validate one channel while the durable job
-		// publishes to another channel stored on the package.
+		// Предпросмотр не должен проверять один канал, пока устойчивая задача
+		// публикует в другой канал, записанный в пакете.
 		if (req.ProfileID != "" && lookup.Release.ProfileID != req.ProfileID) || (req.Channel != "" && lookup.Release.Channel != req.Channel) {
 			return spec, nil, nil, fmt.Errorf("package profile/channel differs from requested channel: %w", repository.ErrConflict)
 		}
@@ -224,7 +225,8 @@ func (s Server) operationValidate0217(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"kind": spec.Kind, "permission": spec.Action, "dangerous": spec.Dangerous, "valid": true, "effect": effect}})
 }
 
-// Operation errors have stable machine codes and recovery advice shared by Admin/CLI.
+// Ошибки операций имеют стабильные машинные коды и рекомендации по восстановлению, общие
+// для Admin и CLI.
 func writeOperationError0217(w http.ResponseWriter, err error) {
 	code, status, advice := "validation-failed", http.StatusBadRequest, "Correct the invalid fields and validate again"
 	var refused publishBlocked0385
@@ -269,8 +271,8 @@ func operationKey0217(r *http.Request, req operationRequest0217, actor string, r
 	return "auto:" + hex.EncodeToString(sum[:])
 }
 func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req operationRequest0217) (model.DurableJob, bool, error) {
-	// Replay is resolved BEFORE revalidation: published releases are immutable,
-	// but a successful request must still return its original durable job.
+	// Повтор разрешается ДО повторной валидации: опубликованные релизы неизменяемы,
+	// но успешный запрос обязан вернуть исходную устойчивую задачу.
 	cp, err := s.durableControlPlane0213()
 	if err != nil {
 		return model.DurableJob{}, false, err
@@ -337,9 +339,9 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 	return cp.EnqueueDurableJob(r.Context(), job, 30*24*time.Hour)
 }
 
-// Public representation intentionally excludes internal lease tokens, worker
-// identity, replay keys and frozen payloads. Neither Admin nor CLI need those
-// secrets to inspect or recover an operation.
+// Публичное представление намеренно исключает внутренние токены аренды, личность
+// воркера, ключи повторов и зафиксированную полезную нагрузку. Admin и CLI не
+// нужны эти секреты для просмотра и восстановления операций.
 func publicOperation0217(j model.DurableJob) map[string]any {
 	return map[string]any{
 		"id": j.ID, "correlationId": j.ID, "kind": j.Kind,
@@ -401,7 +403,7 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 		writeError(w, 404, "operation not found")
 		return model.DurableJob{}, false
 	}
-	// Owner access is still bound to the original project's current authorization.
+	// Доступ владельца по-прежнему ограничен текущими правами исходного проекта.
 	if !s.authorizeClaims(r, claims, job.Action, job.ProjectID, job.ResourceType, job.ResourceID).Allowed && claims.Sub == job.ActorID && !s.authorizeClaims(r, claims, "project:read", job.ProjectID, "project", job.ProjectID).Allowed {
 		writeError(w, 404, "operation not found")
 		return model.DurableJob{}, false
@@ -410,9 +412,9 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 	return job, true
 }
 
-// A lost execute response must be recoverable after login/session rotation
-// without reissuing the mutation or requiring a new MFA assertion for a READ.
-// The journal is actor-scoped; current project permission is checked again.
+// Потерянный ответ execute должен восстанавливаться после смены входа или сеанса
+// без повторной мутации и новой MFA-проверки для ЧТЕНИЯ. Журнал привязан к
+// субъекту, действующие права проекта проверяются повторно.
 func (s Server) operationRecover0388(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.adminClaims(r)
 	if err != nil {
@@ -458,7 +460,8 @@ func (s Server) operationStatus0217(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": publicOperation0217(job)})
 }
 
-// Public journal deliberately omits internal worker/fencing/lease data.
+// Публичный журнал намеренно не раскрывает внутренние данные воркеров,
+// ограждения и аренды.
 func publicOperationAttempts02112(attempts []model.DurableJobAttempt) []map[string]any {
 	out := make([]map[string]any, 0, len(attempts))
 	for _, a := range attempts {
@@ -486,8 +489,8 @@ func (s Server) operationAttempts0217(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
-	// Never expose worker identities, fencing tokens, or internal attempt IDs to
-	// browser/API consumers. They are part of the durable execution boundary.
+	// Никогда не раскрывайте потребителям браузера/API личности воркеров, токены
+	// ограждения или внутренние ID попыток. Это часть границы устойчивого выполнения.
 	publicAttempts := publicOperationAttempts02112(attempts)
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"correlationId": job.ID, "attempts": publicAttempts}})
 }

@@ -12,8 +12,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// These tests run a real, packed Java 17+ extension JAR, not a mocked host.
-// The Java host fixture has a bounded startup/stop timeout and closes itself on cleanup.
+// Эти тесты выполняют настоящий упакованный JAR-расширение Java 17+, а не имитацию хоста.
+// Тестовый Java-хост имеет ограниченные сроки запуска и остановки и закрывается при очистке.
 func persistJavaInstall0422(t *testing.T, host *Supervisor, install model.ExtensionInstall) model.ExtensionInstall {
 	t.Helper()
 	ctx := context.Background()
@@ -173,9 +173,9 @@ func TestJavaStopCancelsScheduledRestart0422(t *testing.T) {
 	}
 }
 
-// A missing Java executable after a crash must not permanently strand an
-// enabled extension. The supervisor retries failed OS launches and eventually
-// starts the actual JAR when the Java executable becomes available again.
+// Отсутствующий исполняемый файл Java после сбоя не должен навсегда блокировать
+// включённое расширение. Супервизор повторяет неудачные запуски ОС и в итоге
+// запускает настоящий JAR, когда Java снова становится доступна.
 func TestJavaAutoRecoveryAfterRuntimeRestored0422(t *testing.T) {
 	host, install, key := javaHostFixture0304(t)
 	install = persistJavaInstall0422(t, host, install)

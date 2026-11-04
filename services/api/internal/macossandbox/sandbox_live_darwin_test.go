@@ -12,9 +12,9 @@ import (
 	"time"
 )
 
-// This test is deliberately opt-in. It requires a real Developer-ID-signed
-// helper, both kernel App Sandbox and native macOS execution. Cross-compilation
-// or a locally mocked codesign binary cannot satisfy it.
+// Этот тест намеренно запускается по явному запросу. Нужны настоящий вспомогательный
+// бинарник с подписью Developer ID, ядровая App Sandbox и нативное исполнение macOS.
+// Кросс-компиляция или локальный mock codesign не подходят.
 func TestSignedSandboxNativeLive04311(t *testing.T) {
 	if os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE") != "1" {
 		t.Skip("live signing and native macOS runner required")
@@ -48,7 +48,7 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 			startedErr := h.Started()
 			if startedErr != nil {
 				_ = h.Cmd.Wait()
-				// Fork can be denied at the kernel boundary and immediately exit.
+				// Fork может быть запрещён границей ядра и сразу завершиться.
 				if !scenario.allowed {
 					return
 				}
@@ -72,15 +72,17 @@ func TestSignedSandboxNativeLive04311(t *testing.T) {
 			}
 		})
 	}
-	// It is unsafe to translate a multi-process resource policy to this
-	// unprivileged platform: reject it rather than claiming enforcement.
+	// Переносить политику ресурсов нескольких процессов на эту
+	// непривилегированную платформу небезопасно: отклоняйте её, а не утверждайте
+	// наличие контроля.
 	_, err := Prepare(Options{Policy: Policy{MaxProcesses: 2, MaxCPUPercent: 100, MaxMemoryBytes: 512 << 20, TimeoutSeconds: 5}, HostURL: "http://127.0.0.1:19090", HostHandler: http.NotFoundHandler()})
 	if err == nil || !strings.Contains(err.Error(), "resource-policy") {
 		t.Fatalf("multi-process mode must fail closed: %v", err)
 	}
 }
 
-// Test the backend-liveness close path against an actual running helper.
+// Проверяйте путь закрытия канала живости Backend на реально работающем
+// вспомогательном процессе.
 func TestSignedSandboxLiveShutdown04311(t *testing.T) {
 	if os.Getenv("LAUNCHER_MACOS_SANDBOX_LIVE") != "1" {
 		t.Skip("native macOS only")
@@ -97,8 +99,8 @@ func TestSignedSandboxLiveShutdown04311(t *testing.T) {
 		_ = h.Cmd.Wait()
 		t.Fatal(err)
 	}
-	// Simulate abrupt backend death: the supervisor liveness writer disappears
-	// without explicitly sending a process-group kill.
+	// Имитируйте резкое завершение Backend: процесс-писатель канала живости
+	// Supervisor исчезает без явной команды завершить группу процессов.
 	if err := h.liveWrite.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +115,7 @@ func TestSignedSandboxLiveShutdown04311(t *testing.T) {
 		h.Close()
 		t.Fatal("child not terminated after supervisor liveness FD closed")
 	}
-	// A subsequent independent signed helper is required for another launch;
-	// the closed helper can never be revived by reopening the same IPC.
+	// Для другого запуска нужен отдельный независимо подписанный вспомогательный
+	// процесс; закрытый нельзя оживить повторным открытием того же IPC.
 	_ = exec.ErrNotFound
 }

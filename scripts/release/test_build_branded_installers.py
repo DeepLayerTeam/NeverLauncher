@@ -137,15 +137,15 @@ class NativePackageTests(unittest.TestCase):
             self.assertIn("Icon=launcher-project", desktop)
             bundle = extracted / "usr/lib/launcher/bundle"
             subprocess.run([str(bundle / "neverinstaller"), "verify", "--bundle", str(bundle)], check=True, stdout=subprocess.PIPE)
-            # A signed-but-invalid image must also be refused by the real Go
-            # branding validator, not only by the signature verifier.
+            # Подписанный, но недопустимый образ должен отклоняться также настоящим
+            # Go-валидатором оформления, а не только проверкой подписи.
             invalid = json.loads(json.dumps(config))
             invalid["branding"]["iconPng"] = base64.b64encode(b"not png").decode()
             payload_bad = json.dumps(invalid, separators=(",", ":")).encode()
             cfgpath.write_text(json.dumps({"schemaVersion": "1.0", "payload": base64.b64encode(payload_bad).decode(), "signature": key.sign(payload_bad).hex()}))
             p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.assertNotEqual(p.returncode, 0, "signed invalid PNG was packaged")
-            # Resume with valid fixture for the signature tampering check.
+            # Возобновите с корректной фикстурой для проверки подмены подписи.
             cfgpath.write_text(json.dumps(envelope))
             config["branding"]["displayName"] = "Tampered"
             payload = json.dumps(config, separators=(",", ":")).encode()

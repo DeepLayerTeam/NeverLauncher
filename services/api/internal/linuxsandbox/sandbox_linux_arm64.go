@@ -2,5 +2,5 @@
 
 package linuxsandbox
 
-// Linux AArch64 generic syscall ABI (SYS_memfd_create).
+// Универсальный ABI системных вызовов Linux AArch64 (SYS_memfd_create).
 const sandboxMemfdCreateSyscall uintptr = 279

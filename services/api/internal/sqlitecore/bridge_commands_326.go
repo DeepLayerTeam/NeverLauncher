@@ -18,8 +18,8 @@ import (
 
 var ErrBridgeUncertain = errors.New("bridge delivery outcome is indeterminate; manual reconciliation required")
 
-// BridgeRuntimeHeartbeat is authenticated with the enrolled node's Ed25519 key.
-// A different JVM runtime must advance epoch, not silently reuse it.
+// BridgeRuntimeHeartbeat аутентифицируется Ed25519-ключом зарегистрированного узла.
+// Другой JVM Runtime должен увеличить эпоху, а не незаметно использовать прежнюю.
 type BridgeRuntimeHeartbeat struct {
 	Proof     NodeProof `json:"proof"`
 	RuntimeID string    `json:"runtimeId"`
@@ -68,7 +68,8 @@ func (r *Repository) HeartbeatBridgeRuntime(ctx context.Context, b BridgeRuntime
 			return ErrNodeProof
 		}
 		if e == nil && b.Epoch > epoch {
-			// If the node restarted while commands were in flight, delivery cannot be assumed absent.
+			// Если узел перезапустился во время выполнения команд, нельзя предполагать, что доставка не
+			// состоялась.
 			if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='indeterminate',completed_at=?,updated_at=?,failure='runtime superseded without acknowledgement' WHERE node_id=? AND status='leased'`, ns(now), ns(now), b.Proof.NodeID); e != nil {
 				return e
 			}
@@ -158,8 +159,9 @@ func bridgePayload(payload map[string]string) (string, string, error) {
 	return string(raw), hex.EncodeToString(sum[:]), nil
 }
 
-// CreateBridgeCommand verifies the scoped operator and current signed runtime,
-// commits an immutable idempotency tombstone and audit in one IMMEDIATE transaction.
+// CreateBridgeCommand проверяет оператора в нужной области и текущий подписанный Runtime,
+// затем фиксирует неизменяемую tombstone-запись идемпотентности и аудит одной
+// IMMEDIATE-транзакцией.
 func (r *Repository) CreateBridgeCommand(ctx context.Context, c model.ServerBridgeControlCommand) (out model.ServerBridgeControlCommand, created bool, err error) {
 	if c.ID == "" {
 		c.ID, err = newID("bc_")
@@ -255,7 +257,7 @@ func (r *Repository) LeaseBridgeCommand(ctx context.Context, proof NodeProof, ru
 		}
 		e = q.QueryRowContext(ctx, `SELECT id FROM bridge_commands WHERE node_id=? AND runtime_id=? AND runtime_epoch=? AND status='pending' AND expires_at>? ORDER BY created_at,id LIMIT 1`, node, runtime, epoch, now).Scan(&id)
 		if isNoRows(e) {
-			// Commit expiry reconciliation even if no pending command remains.
+			// Фиксируйте сверку по истечении срока, даже если ожидающих команд уже нет.
 			noCommand = true
 			return nil
 		}
@@ -348,8 +350,8 @@ func (r *Repository) CompleteBridgeCommand(ctx context.Context, proof NodeProof,
 
 func isNoRows(err error) bool { return errors.Is(err, sql.ErrNoRows) }
 
-// Invalidate pending and leased commands atomically on key rotation or disable.
-// An already delivered command cannot be retried because its outcome is unknown.
+// При смене ключа или отключении атомарно аннулируйте ожидающие и арендованные
+// команды. Уже доставленную команду нельзя повторять, поскольку исход неизвестен.
 func invalidateBridgeRuntimeTx(ctx context.Context, q sqlitedurable.Executor, node, reason string, now int64) error {
 	if _, e := q.ExecContext(ctx, `UPDATE bridge_commands SET status='indeterminate',failure=?,updated_at=?,completed_at=? WHERE node_id=? AND status='leased'`, reason, now, now, node); e != nil {
 		return e
@@ -361,7 +363,8 @@ func invalidateBridgeRuntimeTx(ctx context.Context, q sqlitedurable.Executor, no
 	return e
 }
 
-// The signed payload binds every dispatch/ACK parameter to the enrolled node key.
+// Подписанная полезная нагрузка связывает каждый параметр доставки и ACK с
+// зарегистрированным ключом узла.
 func bridgeLeasePayload(runtime string, epoch int64, worker string, after int64, ttl time.Duration) []byte {
 	return []byte(fmt.Sprintf("Launcher/bridge-lease/0.32.6\n%s\n%d\n%s\n%d\n%d\n", runtime, epoch, worker, after, int64(ttl)))
 }

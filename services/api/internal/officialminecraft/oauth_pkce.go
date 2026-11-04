@@ -14,8 +14,8 @@ import (
 
 var publicClientID = regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`)
 
-// ValidateClientID ensures the POC cannot silently fall back to another
-// launcher's public app registration. It must be provided explicitly.
+// ValidateClientID не допускает незаметного перехода POC на публичную
+// регистрацию другого лаунчера. Client ID необходимо указывать явно.
 func ValidateClientID(clientID string) error {
 	if !publicClientID.MatchString(clientID) || strings.EqualFold(clientID, "00000000-0000-0000-0000-000000000000") {
 		return errors.New("a real application (client) ID UUID is required")
@@ -23,8 +23,8 @@ func ValidateClientID(clientID string) error {
 	return nil
 }
 
-// ValidateLoopbackRedirect restricts authorization codes to a loopback-only
-// receiver. The caller MUST validate OAuth state before exchanging the code.
+// ValidateLoopbackRedirect разрешает коды авторизации только получателю loopback.
+// Вызывающий ОБЯЗАН проверить OAuth state до обмена кода.
 func ValidateLoopbackRedirect(redirect string) error {
 	u, err := url.Parse(redirect)
 	if err != nil || u.Scheme != "http" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" || u.Port() == "" || u.Path != "/minecraft-poc/callback" {
@@ -98,9 +98,9 @@ func (c *Client) ExchangeAuthorizationCode(ctx context.Context, clientID, redire
 	return result, nil
 }
 
-// EntitlementCount returns the number of entitlements visible to Minecraft
-// Services, not a purchase-ownership assertion. Java/Game Pass accounts can
-// have an accessible live profile even with zero mcstore entitlement items.
+// EntitlementCount возвращает число прав доступа, видимых Minecraft Services, а
+// не утверждение о покупке. Для учётных записей Java/Game Pass живой профиль
+// может быть доступен даже при нуле элементов mcstore.
 func (c *Client) EntitlementCount(ctx context.Context, token string) (int, error) {
 	var reply struct {
 		Items []struct {

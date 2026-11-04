@@ -86,7 +86,8 @@ func TestSQLiteHTTPDevicesJobsExtensionsRestart0373(t *testing.T) {
 	if err != nil || item.Status != "revoked" {
 		t.Fatalf("revocation lost: %+v %v", item, err)
 	}
-	// Invalid component names may not read/write arbitrary SQLite tables.
+	// Некорректные имена компонентов не должны читать или изменять произвольные
+	// таблицы SQLite.
 	if err := db.WriteRuntimeComponent0373(ctx, "../sessions", []byte("x")); err == nil {
 		t.Fatal("unrestricted runtime component")
 	}

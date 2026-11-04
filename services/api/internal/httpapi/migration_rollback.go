@@ -20,8 +20,9 @@ type rollbackStore03312 interface {
 	MigrationRollback03312(context.Context, string, string, string) (rb.Result, error)
 }
 
-// MIG12 carries up to two full 20k-player snapshots; MIG01's 16KiB
-// control-message decoder is intentionally too small. Keep an explicit cap.
+// MIG12 передаёт до двух полных снимков по 20 тысяч игроков; декодер управляющих
+// сообщений MIG01 с лимитом 16 КиБ заведомо слишком мал. Сохраняйте явное
+// ограничение.
 func migrationReadRollback03312[T any](w http.ResponseWriter, r *http.Request) (T, bool) {
 	var v T
 	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, 18<<20))

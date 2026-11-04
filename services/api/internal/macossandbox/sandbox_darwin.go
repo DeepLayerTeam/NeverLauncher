@@ -89,9 +89,10 @@ func (h *Handle) Close() {
 		pid = h.Cmd.Process.Pid
 	}
 	h.mu.Unlock()
-	// Closing the liveness pipe first lets the helper kill its child and
-	// discovered descendants (including children that changed process group).
-	// Allow a short cooperative cleanup interval before the unconditional kill.
+	// Сначала закрывайте канал проверки живости: тогда вспомогательный процесс
+	// завершит дочерний процесс и найденных потомков, включая сменивших группу
+	// процессов. Дайте короткий интервал добровольной очистки перед безусловным
+	// завершением.
 	if h.liveWrite != nil {
 		_ = h.liveWrite.Close()
 	}
@@ -141,9 +142,10 @@ func helperPath() (string, error) {
 	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0o022 != 0 {
 		return "", errors.New("sandbox-macos-helper-not-regular-or-is-group-writable")
 	}
-	// A signed binary in an attacker-writable directory can be replaced between
-	// verification and exec. Refuse symlinks and untrusted ancestors, not only
-	// writable executable files.
+	// Подписанный бинарник в каталоге, доступном злоумышленнику на запись, можно
+	// заменить между проверкой и exec. Запрещайте символические ссылки и
+	// недоверенные родительские каталоги, а не только записываемые исполняемые
+	// файлы.
 	for dir := filepath.Dir(p); ; dir = filepath.Dir(dir) {
 		info, e := os.Lstat(dir)
 		if e != nil {
@@ -224,10 +226,11 @@ func Available() error {
 	return nil // Signed, specifically identified App Sandbox helper is installed.
 }
 func Prepare(o Options) (_ *Handle, err error) {
-	// macOS does not provide an unprivileged cgroup/Job Object equivalent.
-	// Supported mode is ONE child, with inherited sandbox, finite RLIMITs,
-	// live descendant detection and a parent-liveness watchdog. Never silently
-	// accept a multi-process policy with unverified aggregate limits.
+	// macOS не предоставляет непривилегированного аналога cgroup/Job Object.
+	// Поддерживается ОДИН дочерний процесс с унаследованной песочницей, конечными
+	// RLIMIT, обнаружением живых потомков и watchdog живости родителя. Никогда не
+	// принимайте молча политику нескольких процессов с непроверенными
+	// агрегированными лимитами.
 	if err := Available(); err != nil {
 		return nil, err
 	}

@@ -70,7 +70,8 @@ func TestDuplicateCaseInsensitiveName0295(t *testing.T) {
 	}
 }
 func TestPHPassVectorsAndUnknownFormat0295(t *testing.T) {
-	// WordPress/Gravit compatible portable PHPass fixed-cost test vector.
+	// Тестовый вектор portable PHPass с фиксированной стоимостью, совместимый с
+	// WordPress/Gravit.
 	hash := "$P$712345678o0hL6WBuvF/R0TpeZunPm0"
 	if !validPHPass(hash) {
 		t.Fatal("vector failed validation")

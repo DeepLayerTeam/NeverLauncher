@@ -24,9 +24,9 @@ import (
 // new state and its integrity digest commit atomically. This design is intended
 // for a small, single-node installation, not network HA or large data sets.
 //
-// Stable publication uses SQLite-bound, signed attestation verification and
-// one-use transactional permits (0.37.4), while the 0.37.5 minimal deployment accepts one local Linux instance;
-// online backup and bidirectional migration remain separate milestones.
+// Публикация stable использует проверку подписанной аттестации с привязкой к SQLite и одноразовые транзакционные
+// допуски 0.37.4; минимальное развёртывание 0.37.5 поддерживает один локальный экземпляр Linux. Онлайн-бэкапы и
+// двусторонняя миграция остаются отдельными этапами.
 type SQLiteHTTPRepository0372 struct {
 	mu        sync.Mutex
 	store     *sqlitedurable.Store
@@ -72,9 +72,9 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	r.mem.audit = nil
 	r.mem.channelHeads = make(map[string]model.ChannelHead)
 	r.mem.validationPolicies = make(map[string]model.ProjectValidationPolicy)
-	// Never initialize an unrelated/nonempty SQLite database as a fresh
-	// installation. A missing snapshot in an existing database is corruption,
-	// not permission to wipe the project silently.
+	// Никогда не инициализируйте постороннюю или непустую SQLite-БД как новую
+	// установку. Отсутствующий снимок в существующей БД — повреждение, а не
+	// разрешение незаметно стереть проект.
 	existing := false
 	err = store.Read(ctx, func(q sqlitedurable.Executor) error {
 		rows, e := q.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
@@ -181,9 +181,9 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	return r, nil
 }
 
-// persist is called with the repository operation lock held, except during
-// initial Open. A commit error makes the instance unusable to prevent the
-// uncommitted in-process cache from ever being served as durable state.
+// persist вызывается с удерживаемой блокировкой операции репозитория, кроме
+// начального Open. Ошибка фиксации делает экземпляр непригодным, чтобы
+// незафиксированный кэш процесса никогда не выдавался за устойчивое состояние.
 func (r *SQLiteHTTPRepository0372) persist(ctx context.Context) error {
 	raw, err := json.Marshal(snapshotSQLiteHTTP0372(r.mem))
 	if err != nil {
@@ -217,10 +217,10 @@ func (r *SQLiteHTTPRepository0372) persist(ctx context.Context) error {
 	return nil
 }
 
-// decodeSQLiteHTTPDocument0471 validates the stored envelope without losing
-// unknown or missing fields. encoding/json.Unmarshal alone accepts both, so a
-// JSON document from an incompatible version could otherwise load as empty
-// collections while still carrying a valid document checksum.
+// decodeSQLiteHTTPDocument0471 проверяет сохранённую оболочку без потери
+// неизвестных или отсутствующих полей. Одного encoding/json.Unmarshal
+// недостаточно: иначе JSON несовместимой версии может загрузиться как пустые
+// коллекции, хотя контрольная сумма документа верна.
 func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 	var state sqliteHTTPState0372
 	expected := make(map[string]struct{})
@@ -290,8 +290,8 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 	return state, nil
 }
 
-// Private arrays hold password verifiers, refresh tokens and device keys.
-// Missing/duplicate fields must not be silently interpreted as empty secrets.
+// Закрытые массивы содержат проверяющие пароли, refresh-токены и ключи устройств.
+// Отсутствующие или дублирующиеся поля нельзя молча толковать как пустые секреты.
 func validateSQLitePrivateFields0471(raw []byte) error {
 	expected := make(map[string]struct{})
 	typ := reflect.TypeOf(sqliteHTTPPrivate0373{})
@@ -394,7 +394,8 @@ func (r *SQLiteHTTPRepository0372) Close() error {
 	return err
 }
 
-// The last active owner cannot be removed through normal account operations.
+// Последнего активного владельца нельзя удалить обычными операциями с учётными
+// записями.
 func sqliteHTTPOtherActiveOwner0372(users []model.User, exceptID string) bool {
 	for _, u := range users {
 		if u.ID != exceptID && u.RoleID == "owner" && u.Status == "active" {
@@ -404,8 +405,9 @@ func sqliteHTTPOtherActiveOwner0372(users []model.User, exceptID string) bool {
 	return false
 }
 
-// Audit hooks run only after a successful durable commit and after releasing
-// the state lock, so event-bus callbacks may safely call this repository.
+// Обработчики аудита запускаются только после успешной устойчивой фиксации и
+// освобождения блокировки состояния, чтобы callbacks шины событий могли безопасно
+// обращаться к репозиторию.
 func (r *SQLiteHTTPRepository0372) unlockAndPublishAudit0372(start int) {
 	var emitted []model.AuditEvent
 	sink := r.auditSink

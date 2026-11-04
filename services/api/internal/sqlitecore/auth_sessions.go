@@ -172,7 +172,7 @@ func (a *Auth) LoginLocal(ctx context.Context, email, password, factor, device s
 		if _, e = q.ExecContext(ctx, `INSERT INTO access_tokens(token_hash,session_id,issued_at,expires_at) VALUES(?,?,?,?)`, accessHash, sid, now, accessExpiry); e != nil {
 			return e
 		}
-		// Oldest sessions are explicitly revoked before the new session is exposed.
+		// Старейшие сеансы явно отзываются до предоставления нового сеанса.
 		rows, e := q.QueryContext(ctx, `SELECT id FROM auth_sessions WHERE user_id=? AND status='active' ORDER BY created_at DESC,id DESC LIMIT -1 OFFSET ?`, u.ID, maxUserSessions)
 		if e != nil {
 			return e
@@ -206,8 +206,8 @@ func (a *Auth) LoginLocal(ctx context.Context, email, password, factor, device s
 	return result, err
 }
 
-// ValidateAccess does a DB read for every decision. JWT-style stateless
-// validation would miss revocation and is intentionally not offered here.
+// ValidateAccess читает БД для каждого решения. Проверка JWT без состояния
+// пропускала бы отзывы, поэтому намеренно не предлагается.
 func (a *Auth) ValidateAccess(ctx context.Context, token string) (Principal, error) {
 	if !validBearer(token, "nla_") {
 		return Principal{}, ErrAuthentication
@@ -236,9 +236,9 @@ func (a *Auth) ValidateAccess(ctx context.Context, token string) (Principal, err
 	return p, nil
 }
 
-// RotateRefresh is an atomic single-writer CAS. A consumed token triggers
-// durable family compromise and dependent Minecraft token revocation even
-// when the caller receives ErrRefreshReuse.
+// RotateRefresh — атомарный CAS одного писателя. Повторное использование
+// погашенного токена вызывает устойчивую компрометацию семейства и отзыв
+// зависимых Minecraft-токенов, даже если вызывающий получает ErrRefreshReuse.
 func (a *Auth) RotateRefresh(ctx context.Context, raw string) (Tokens, error) {
 	if !validBearer(raw, "nlr_") {
 		return Tokens{}, ErrAuthentication

@@ -34,9 +34,9 @@ TIERS = {
     "hardware-live",
     "compatibility-live",
 }
-# The first four tiers must contain actual named Go test results. Human/live
-# signoffs must contain individually identified successful procedures, not a
-# single unqualified PASS string.
+# Первые четыре уровня должны содержать настоящие результаты именованных тестов
+# Go. Ручные и живые подтверждения должны перечислять индивидуально успешные
+# процедуры, а не одну неквалифицированную строку PASS.
 REQUIRED = {
     "offline": {
         "./internal/linuxsandbox",

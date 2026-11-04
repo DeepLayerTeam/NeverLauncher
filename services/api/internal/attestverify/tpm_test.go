@@ -233,8 +233,9 @@ func TestLinuxHardwareEnclaveECDSAKeyScheme0314(t *testing.T) {
 		t.Fatalf("real Linux TPM key template rejected: %v", err)
 	}
 	orig, _ := base64.RawURLEncoding.DecodeString(ev.TPM2BPublic)
-	// TPMT_PUBLIC offsets: type[2], nameAlg[2], attrs[4], authPolicy[2],
-	// symmetric[2], scheme[2], schemeHash[2]. Reject SHA-1 and unknown.
+	// Смещения TPMT_PUBLIC: type[2], nameAlg[2], attrs[4], authPolicy[2],
+	// symmetric[2], scheme[2], schemeHash[2]. Отклоняйте SHA-1 и неизвестные
+	// варианты.
 	for _, tc := range []struct {
 		name   string
 		offset int
@@ -250,5 +251,6 @@ func TestLinuxHardwareEnclaveECDSAKeyScheme0314(t *testing.T) {
 			}
 		})
 	}
-	// The root, AK and signed cert still do not establish Guard/PCR trust.
+	// Корень, AK и подписанный сертификат всё ещё не устанавливают доверие
+	// Guard/PCR.
 }

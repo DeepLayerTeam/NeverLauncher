@@ -16,9 +16,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-# These runtimes are exercised by run-minecraft-e2e.sh in full mode. Other
-# required target IDs remain non-certified until a real server/proxy integration
-# runner emits equally strong evidence. Do NOT equate API-compatible with live.
+# Эти Runtime выполняются скриптом run-minecraft-e2e.sh в полном режиме. Остальные
+# обязательные ID платформ не сертифицированы до выдачи столь же убедительных
+# доказательств настоящим интеграционным раннером сервера/прокси. НЕ приравнивайте
+# совместимость API к живому тесту.
 CORE = {
     "velocity": ("velocity-e2e-p3", 25570),
     "bungeecord": ("bungeecord-e2e-p3", 25575),
@@ -151,8 +152,9 @@ def verify_runtime(
             or "probe host=" not in actual_probe
         ):
             raise ValueError(f"{kind}: wrong network probe")
-    # Native log/health/probes corroborate each other. A status field alone is
-    # *never* accepted as proof of a real JVM/platform run.
+    # Нативные журналы, проверки здоровья и пробы взаимно подтверждают друг друга.
+    # Одного поля status НИКОГДА недостаточно как доказательства настоящего запуска
+    # JVM/платформы.
     return {
         "status": "passed",
         "kind": "real-jvm-and-game-protocol",

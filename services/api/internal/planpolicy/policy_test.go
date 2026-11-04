@@ -56,7 +56,8 @@ func TestSignedPolicyAndAdversarialMutations02412(t *testing.T) {
 	if _, err = Load(now.Add(2 * time.Hour)); err == nil {
 		t.Fatal("expired policy accepted")
 	}
-	// Mutation of a valid signed payload cannot retain its signature.
+	// Изменение корректной подписанной полезной нагрузки не должно сохранять
+	// действительность подписи.
 	mod := p
 	mod.AllowedPlans[0].PlanSHA256 = strings.Repeat("d", 64)
 	v, _ := json.Marshal(mod)

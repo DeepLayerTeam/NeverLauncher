@@ -223,7 +223,8 @@ func (s Server) issueLoginSessionWithAuth(user model.User, r *http.Request, devi
 	if err != nil {
 		return "", "", authSessionRecord{}, err
 	}
-	// Recheck after session creation: revocation may have raced with a ban.
+	// Повторно проверяйте после создания сессии: отзыв мог совпасть по времени с
+	// блокировкой.
 	decision = s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.AfterAuth, UserID: user.ID, SessionID: session.ID, DeviceID: deviceID, RoleID: user.RoleID})
 	if !decision.Allowed() {
 		s.State.AuthSessions.revoke(session.ID, "protection:"+decision.Reason)
@@ -232,8 +233,8 @@ func (s Server) issueLoginSessionWithAuth(user model.User, r *http.Request, devi
 	_ = s.flushPersistenceState950("auth-session-create")
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
-		// A signing/configuration failure must not leave behind a usable
-		// refresh family with no access token delivered to the client.
+		// Ошибка подписи или конфигурации не должна оставить пригодное семейство
+		// refresh-токенов, если клиент не получил access-токен.
 		s.State.AuthSessions.revoke(session.ID, "access-token-issuance-failed")
 		_ = s.flushPersistenceState950("auth-session-issuance-failed")
 		return "", "", authSessionRecord{}, err
@@ -276,7 +277,8 @@ func (s Server) issueAccessTokenForSession(user model.User, session authSessionR
 	if !session.RiskUpdatedAt.IsZero() {
 		claims.RiskUpdatedAt = session.RiskUpdatedAt.Unix()
 	}
-	// Authentication proves possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance.
+	// Аутентификация подтверждает владение и свежесть зарегистрированного ключа, а не происхождение из TPM/Secure
+	// Enclave производителя.
 	// keyBinding/provider остаются информационными: аттестация вызов–ответ подтверждает
 	// владение зарегистрированным ключом и его актуальность, а не происхождение от TPM
 	// или Secure Enclave. Диагностические свойства устройства не повышают силу RBAC/MFA.

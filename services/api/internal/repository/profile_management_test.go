@@ -35,7 +35,7 @@ func TestExclusiveProfileCreationAndHistory0225(t *testing.T) {
 	if _, err := r.CreateProfileExclusive0225(model.Profile{ProjectID: "missing", ID: "other", Name: "Test", Loader: "vanilla"}); err == nil {
 		t.Fatal("unknown project accepted")
 	}
-	// A clone is standalone; modifying the original cannot rewrite its first snapshot.
+	// Клон автономен; изменения оригинала не переписывают его первый снимок.
 	original, err := r.ListProfiles("demo-project")
 	if err != nil {
 		t.Fatal(err)

@@ -67,7 +67,8 @@ func TestBuildWorkspaceDirectoryStageAndMaterialize0226(t *testing.T) {
 	upload("mods/client.jar", "jar-test", ws.Data.Revision, 201)
 	upload("assets/indexes/demo.json", "{}", ws.Data.Revision, 201)
 	upload("mods/stale.jar", "old", 1, 409) // CAS stale write cannot overwrite
-	// Delete is a real revision-checked metadata mutation, not a UI-only toggle.
+	// Удаление действительно изменяет метаданные с проверкой ревизии, а не просто
+	// переключает флаг интерфейса.
 	rr = call("DELETE", "/api/v1/build-workspaces/"+id+"/files", []byte(`{"revision":1,"path":"mods/client.jar"}`), "application/json")
 	if rr.Code != 409 {
 		t.Fatalf("stale remove: %d %s", rr.Code, rr.Body.String())
@@ -124,7 +125,7 @@ func TestBuildWorkspaceDirectoryStageAndMaterialize0226(t *testing.T) {
 		t.Fatalf("build %d %s", rr.Code, rr.Body.String())
 	}
 	_ = json.Unmarshal(rr.Body.Bytes(), &ws)
-	// Source objects cannot be fetched over the public package-file route.
+	// Исходные объекты нельзя получить через публичный маршрут файлов пакета.
 	rr = call("GET", "/api/v1/files/demo-project/"+id+"/objects/"+validation.Data.BuildDigest, nil, "")
 	if rr.Code != 404 {
 		t.Fatalf("workspace source publicly served: %d %s", rr.Code, rr.Body.String())

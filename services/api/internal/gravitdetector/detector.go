@@ -1,5 +1,5 @@
-// Package gravitdetector analyzes an untrusted Gravit installation ZIP without
-// extracting to disk, interpreting class files, executing JARs or emitting secrets.
+// Package gravitdetector анализирует недоверенный ZIP установки Gravit без распаковки на
+// диск, интерпретации class-файлов, выполнения JAR или вывода секретов.
 package gravitdetector
 
 import (
@@ -76,16 +76,17 @@ func recognizedVersion(v string) bool {
 	return e == nil && p[0] == "5" && p[1] == "7" && patch <= 13
 }
 
-// Assess is retained for in-process callers with an already buffered archive.
-// Production HTTP uploads use AssessReader to avoid buffering large modpacks.
+// Assess сохранён для внутрипроцессных вызовов с уже буферизованным архивом.
+// Промышленные HTTP-загрузки используют AssessReader, чтобы не буферизовать
+// большие модпаки.
 func Assess(source []byte, claimedVersion string) (Report, error) {
 	hash := sha256.Sum256(source)
 	return AssessReader(context.Background(), bytes.NewReader(source), int64(len(source)), hex.EncodeToString(hash[:]), claimedVersion)
 }
 
-// AssessReader analyzes the same ZIP format and limits as the full source
-// inventory. It verifies the caller's SHA-256, all member CRCs and paths before
-// interpreting configurations, and never executes the supplied JARs.
+// AssessReader проверяет тот же формат ZIP и ограничения, что и полная
+// инвентаризация источника. Он сверяет SHA-256 вызывающей стороны, CRC и пути всех
+// элементов до разбора конфигураций и никогда не выполняет переданные JAR.
 func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, claimedVersion string) (Report, error) {
 	if len(claimedVersion) > 40 || strings.ContainsAny(claimedVersion, "\n\r\t") {
 		return Report{}, errors.New("invalid claimed Gravit version")
@@ -239,9 +240,9 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 	if !foundRuntime {
 		r.finding("RUNTIME_MISSING", "manual", "runtime", "", "no LaunchServerRuntime.json found; inspect runtime settings separately")
 	}
-	// Content and identity are independently required for a real migration.
-	// Absence is not inferred as success: external auth and remote vanilla
-	// assets may be legitimate, but need explicit operator resolution.
+	// Для настоящей миграции отдельно обязательны содержимое и идентичность.
+	// Отсутствие не считается успехом: внешняя авторизация и удалённые
+	// Vanilla-ресурсы могут быть законными, но требуют явного решения оператора.
 	if snapshot.Categories["client"] == 0 {
 		r.finding("CLIENT_FILES_NOT_IN_SOURCE", "manual", "client", "", "no clients/updates files in archive; external client content must be accounted for")
 	}
@@ -294,8 +295,8 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 			r.Status = "blocked"
 		}
 	}
-	// This scanner NEVER issues permission to cut over: identity, world and module
-	// parity are certified by separate migration stages in later releases.
+	// Этот сканер НИКОГДА не разрешает переключение: эквивалентность идентичностей,
+	// мира и модулей сертифицируют отдельные этапы миграции в последующих выпусках.
 	r.CutoverAllowed = false
 	return r, nil
 }
@@ -467,9 +468,9 @@ func (r *Report) inspectWrapper(p string, obj map[string]json.RawMessage) {
 	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "ServerWrapper credentials and trust anchors must be replaced by Never ServerBridge")
 }
 
-// jarManifestVersionFile spools a bounded inner JAR to private disk. The
-// source ZIP may contain a 100+ MiB server JAR, and buffering it in the HTTP
-// worker would amplify memory usage across concurrent uploads.
+// jarManifestVersionFile сбрасывает ограниченный вложенный JAR в закрытый файл на
+// диске. Исходный ZIP может содержать серверный JAR более 100 МиБ, и буферизация
+// внутри HTTP-worker усилила бы расход памяти при параллельных загрузках.
 func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool, error) {
 	if entry.UncompressedSize64 > maxJarBytes {
 		return "", false, errors.New("JAR too large")
@@ -561,8 +562,9 @@ func parseJarManifest(data []byte) (string, bool, error) {
 	return m[1], true, nil
 }
 
-// inspectOptional recognizes known actions but does not assume that the referenced
-// assets exist in Never. Unknown actions are hard blockers, not warnings.
+// inspectOptional распознаёт известные действия, но не предполагает существование
+// указанных ресурсов в Never. Неизвестные действия — жёсткие блокирующие условия, не
+// предупреждения.
 func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 	var options []json.RawMessage
 	if err := json.Unmarshal(raw, &options); err != nil || options == nil {
@@ -604,8 +606,9 @@ func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 	}
 }
 
-// rejectDuplicateJSON0332 traverses nested objects before decoding them into
-// maps, since encoding/json ordinarily accepts duplicate keys (last wins).
+// rejectDuplicateJSON0332 обходит вложенные объекты до их декодирования в карты,
+// так как encoding/json обычно допускает повторяющиеся ключи с правилом
+// «последний побеждает».
 func rejectDuplicateJSON0332(d *json.Decoder) error {
 	token, err := d.Token()
 	if err != nil {

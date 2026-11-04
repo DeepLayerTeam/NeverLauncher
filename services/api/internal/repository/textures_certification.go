@@ -7,11 +7,12 @@ import (
 	"fmt"
 )
 
-// DeleteTextureWithLease02512 keeps the PostgreSQL blob row locked throughout
-// the physical delete. All assignments, saved items, defaults and backup pins
-// refer to this row through foreign keys, so a concurrent reference cannot be
-// committed between the final eligibility check and removal from storage.
-// This avoids the check/delete/finish race of the legacy maintenance command.
+// DeleteTextureWithLease02512 удерживает блокировку строки объекта PostgreSQL на
+// протяжении физического удаления. Назначения, сохранённые элементы, значения по
+// умолчанию и закрепления бэкапов ссылаются на эту строку внешними ключами,
+// поэтому параллельная ссылка не может зафиксироваться между последней проверкой
+// пригодности и удалением из хранилища. Так исключается гонка проверки, удаления и
+// завершения старой команды обслуживания.
 func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candidate TextureGCLease02511, remove func(context.Context, string) error) error {
 	if err := r.check(); err != nil {
 		return err
@@ -33,9 +34,9 @@ func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candida
 		return err
 	}
 	defer tx.Rollback()
-	// Lock the blob row before checking references. Foreign-key writers acquiring
-	// KEY SHARE on this row cannot proceed until commit; existing references are
-	// seen by the following SELECT under READ COMMITTED.
+	// Блокируйте строку объекта до проверки ссылок. Писатели внешних ключей с KEY
+	// SHARE не пройдут до commit; существующие ссылки видны последующему SELECT в READ
+	// COMMITTED.
 	var digest string
 	err = tx.QueryRowContext(ctx, `SELECT digest FROM texture_blobs
   WHERE digest=$1 AND storage_driver=$2 AND object_key=$3
@@ -61,9 +62,9 @@ func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candida
 	if inUse {
 		return fmt.Errorf("texture acquired a reference during GC: %s", digest)
 	}
-	// The callback operates on immutable content and must fail closed if the
-	// digest, ETag or storage object has changed. No destructive DB operation is
-	// committed when the physical delete fails.
+	// Callback работает с неизменяемым содержимым и обязан отказать по умолчанию,
+	// если поменялся хеш, ETag или объект хранилища. При неудаче физического удаления
+	// разрушительные операции БД не фиксируются.
 	if err := remove(ctx, digest); err != nil {
 		return err
 	}

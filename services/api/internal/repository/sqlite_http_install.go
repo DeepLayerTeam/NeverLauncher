@@ -29,8 +29,8 @@ func minimalTokenDigest0375(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// InitializeMinimalInstallation0375 stores the bootstrap verifier before the
-// listener starts. An existing verifier cannot be replaced by reconfiguring env.
+// InitializeMinimalInstallation0375 сохраняет проверяющий bootstrap-секрет до запуска
+// слушателя. Существующий проверяющий нельзя заменить перенастройкой окружения.
 func (r *SQLiteHTTPRepository0372) InitializeMinimalInstallation0375(ctx context.Context, token string, require bool) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -87,9 +87,9 @@ func (r *SQLiteHTTPRepository0372) MinimalInstallationStatus0375(ctx context.Con
 	return hash, used.Valid, completed.Valid, err
 }
 
-// BootstrapMinimalAdmin0375 couples token use, owner+identity, audit and HTTP
-// domain snapshot in exactly one WAL transaction. No other request may observe
-// the owner before the commit. An unknown commit outcome poisons the repository.
+// BootstrapMinimalAdmin0375 связывает использование токена, владельца и идентичность,
+// аудит и снимок HTTP-домена ровно в одной WAL-транзакции. До фиксации ни один запрос
+// не видит владельца. Неизвестный результат фиксации делает репозиторий непригодным.
 func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context, user model.User, identity model.AuthIdentity, token, actor string) (model.User, error) {
 	r.mu.Lock()
 	start := len(r.mem.audit)
@@ -104,8 +104,8 @@ func (r *SQLiteHTTPRepository0372) BootstrapMinimalAdmin0375(ctx context.Context
 	if token == "" {
 		return model.User{}, errors.New("bootstrap token required")
 	}
-	// Verify the token before mutating the cache. Recheck under the WRITE
-	// transaction to prevent a future separate consumer from racing us.
+	// Проверяйте токен до изменения кэша. Повторяйте проверку внутри
+	// WRITE-транзакции, исключая гонку с будущим отдельным потребителем.
 	var stored string
 	var used, completed sql.NullInt64
 	if err := r.store.Read(ctx, func(q sqlitedurable.Executor) error {

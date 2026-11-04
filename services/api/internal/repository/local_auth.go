@@ -11,8 +11,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
 )
 
-// PasswordCAS0295 is required for safe password upgrade after a successful
-// password proof. Compare-and-swap rejects concurrent password resets.
+// PasswordCAS0295 обязателен для безопасного обновления пароля после успешной
+// проверки. Compare-and-swap отклоняет параллельный сброс.
 type PasswordCAS0295 interface {
 	ReplacePasswordIfMatch0295(context.Context, string, string, string) (bool, error)
 }
@@ -51,8 +51,8 @@ func (r *SQLRepository) ReplacePasswordIfMatch0295(ctx context.Context, userID, 
 	return changed == 1, err
 }
 
-// FileAuthImporter0295 performs the complete migration of accounts, local
-// identity rows and immutable Minecraft UUIDs in ONE PostgreSQL transaction.
+// FileAuthImporter0295 полностью мигрирует учётные записи, локальные строки
+// идентичностей и неизменяемые Minecraft UUID в ОДНОЙ транзакции PostgreSQL.
 type FileAuthImporter0295 interface {
 	ImportFileAuth0295(context.Context, []fileauth.Account, bool) (int, error)
 }
@@ -69,7 +69,7 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 		return 0, err
 	}
 	defer tx.Rollback()
-	// Serialize simultaneous import invocations, not concurrent authentications.
+	// Сериализуйте одновременные вызовы импорта, но не параллельную аутентификацию.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(2945,1)`); err != nil {
 		return 0, err
 	}
@@ -78,8 +78,8 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 			return 0, fmt.Errorf("invalid FileAuth account %q: %w", a.Username, err)
 		}
 		id := "gravit-fileauth-" + strings.ReplaceAll(a.UUID, "-", "")
-		// Never update or merge an existing Never account based on nickname,
-		// UUID, or email. Any collision rolls back the WHOLE batch.
+		// Никогда не обновляйте и не объединяйте существующую учётную запись Never на
+		// основе ника, UUID или email. Любая коллизия откатывает ВСЮ партию.
 		var exists bool
 		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 OR lower(email)=lower($2))`, id, a.Email).Scan(&exists); err != nil {
 			return 0, err
@@ -105,7 +105,7 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
             VALUES($1,$2,$3,'launcher','local',$2,'legacy-fileauth-v1',now(),now())`, id, a.UUID, a.Username); err != nil {
 			return 0, fmt.Errorf("import Minecraft UUID %q: %w", a.Username, err)
 		}
-		// Only the username/UUID are recorded in audit; never the source hash.
+		// В аудит записываются только имя пользователя и UUID, но не хеш источника.
 		if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,created_at) VALUES($1,'local-import','auth:fileauth:import',$2,now())`, "fileauth-import-"+id, id); err != nil {
 			return 0, fmt.Errorf("import audit %q: %w", a.Username, err)
 		}

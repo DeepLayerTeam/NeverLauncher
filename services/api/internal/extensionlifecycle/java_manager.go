@@ -16,7 +16,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// JavaCheck0305 is returned to operators; no secrets, tokens, or private paths appear.
+// JavaCheck0305 возвращается операторам; в нём нет секретов, токенов или закрытых путей.
 type JavaCheck0305 struct {
 	Target        string `json:"target"`
 	Class         string `json:"class"`
@@ -39,8 +39,8 @@ func isJavaTarget0305(target model.ExtensionTarget) bool {
 	return (target.Kind == "backend" || target.Kind == "cli") && strings.EqualFold(filepath.Ext(target.Entrypoint), ".jar")
 }
 
-// inspectPayload0305 runs against extracted/staged bytes before any filesystem activation.
-// The publisher signature and package digest have already been verified by prepareArtifact0204.
+// inspectPayload0305 выполняется на распакованных/подготовленных байтах до активации ФС. Подпись
+// издателя и дайджест пакета уже проверены в prepareArtifact0204.
 func (m *Manager) inspectPayload0305(ctx context.Context, root string, manifest model.ExtensionManifest) ([]JavaCheck0305, error) {
 	var checks []JavaCheck0305
 	for _, target := range manifest.Targets {
@@ -127,8 +127,9 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 			return fmt.Errorf("conflict with %s@%s", conflict.ID, current.CurrentVersion)
 		}
 	}
-	// Do not silently break installed dependents by updating/rolling back an API provider.
-	// Global modifications cover projects, except where a project shadows this package ID.
+	// Не ломайте незаметно установленные зависимости при обновлении или откате поставщика API.
+	// Глобальные изменения затрагивают проекты, кроме тех, где пакет с этим ID перекрыт
+	// локальным.
 	for _, dependent := range installs {
 		if dependent.ExtensionID == manifest.ID || dependent.CurrentState == model.ExtensionInstallStateAbsent {
 			continue
@@ -163,7 +164,8 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 			}
 		}
 	}
-	// Detect cycles involving the candidate, including transitive installed dependencies.
+	// Обнаруживайте циклы с участием кандидата, включая транзитивные установленные
+	// зависимости.
 	active := map[string]bool{}
 	done := map[string]bool{}
 	var visit func(model.ExtensionManifest) error
@@ -204,8 +206,8 @@ func (m *Manager) checkGraph0305(ctx context.Context, manifest model.ExtensionMa
 	return visit(manifest)
 }
 
-// ValidateCandidate0305 is used by direct installs, update transactions, enable and rollback.
-// It validates the graph, JAR structure and real JVM before any new Java payload is activated.
+// ValidateCandidate0305 используется при прямых установках, транзакциях обновления, включении и
+// откате. Он проверяет граф, структуру JAR и настоящую JVM до активации новых байтов Java.
 func (m *Manager) ValidateCandidate0305(ctx context.Context, root string, manifest model.ExtensionManifest, scope Scope, requireEnabled bool) error {
 	if err := m.checkGraph0305(ctx, manifest, scope, requireEnabled); err != nil {
 		return err
@@ -214,7 +216,7 @@ func (m *Manager) ValidateCandidate0305(ctx context.Context, root string, manife
 	return err
 }
 
-// DiagnoseJava0305 verifies active bytes and live JVM, without executing plugin code.
+// DiagnoseJava0305 проверяет активные байты и живую JVM, не исполняя код плагина.
 func (m *Manager) DiagnoseJava0305(ctx context.Context, id string, scope Scope) (JavaDiagnostic0305, error) {
 	scope, err := normalizeScope0204(scope)
 	if err != nil {

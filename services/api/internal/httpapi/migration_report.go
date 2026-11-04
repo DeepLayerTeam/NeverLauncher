@@ -92,7 +92,8 @@ func (s Server) migrationReportReview03313(w http.ResponseWriter, r *http.Reques
 		migrationHTTPError0331(w, e)
 		return
 	}
-	// A human review is deliberately NOT a GA compatibility/cutover certificate.
+	// Проверка человеком намеренно НЕ является сертификатом совместимости GA или
+	// переключения.
 	s.audit(r, s.adminActor(r), "migration:rc-reviewed", id+":"+input.ReportSHA256)
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"data": out})

@@ -135,7 +135,8 @@ def read_journal(directory):
 @contextmanager
 def host_lock(directory):
     path = directory / LOCK
-    # Stable lock inode; never replace it. Cannot be symlinked/hardlinked.
+    # Стабильный inode файла блокировки; никогда не заменяйте его. Символьные и
+    # жёсткие ссылки запрещены.
     fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         st = os.fstat(fd)
@@ -184,8 +185,9 @@ def validate_stage(directory, project):
             all(refs_a[x] == refs_b[x] for x in ("admin", "ingress", "volume-init")),
             "only the API/worker image digest may change")
     a, b = rendered(directory, project, current_file), rendered(directory, project, target_file)
-    # Prevent secret rotations, updates of other services, and changes to
-    # volumes, environment, ingress, healthchecks or dependency endpoints.
+    # Предотвращайте ротацию секретов, обновление других служб и изменение томов,
+    # окружения, входного шлюза, проверок здоровья или точек подключения
+    # зависимостей.
     changed = []
     for svc in ("api", "worker"):
         if a["services"][svc]["image"] != b["services"][svc]["image"]:
@@ -218,8 +220,8 @@ def apply_host(directory, project):
         live_local(directory, project, SOURCE)
         previous = secure(directory / ".env")
         target = secure(directory / STAGE)
-        # Pull and inspect target by immutable reference BEFORE stopping
-        # source. Do not ever pull a floating tag in production.
+        # Скачивайте и проверяйте цель по неизменяемой ссылке ДО остановки исходной
+        # версии. Никогда не загружайте плавающий тег в промышленной среде.
         compose(directory, project, "pull", "--policy", "always", "api", "worker",
                 timeout=420, env_file=directory / STAGE)
         for image in (plan["sourceImage"], plan["targetImage"]):
@@ -407,8 +409,9 @@ def observe(nodes, script, directory, project):
 
 
 def assert_image_cohorts(reports, versions):
-    # Old/target releases may differ in backend digest but each cohort must
-    # use *one* immutable image; non-backend services remain identical.
+    # Дайджест backend может различаться у старого и целевого выпуска, но каждая
+    # группа должна использовать ОДИН неизменяемый образ; службы, отличные от
+    # backend, остаются одинаковыми.
     for svc in ("admin", "ingress", "volume-init"):
         require(len({r["imageDigestRefs"].get(svc) for r in reports.values()}) == 1,
                 "hosts do not agree on pinned " + svc + " image")
@@ -439,9 +442,9 @@ def rollout(args):
                                            args.project, args.edge_url, catalog)
         event["initialVersions"] = versions.copy()
         require(set(versions.values()) <= PAIR, "unsupported starting cluster version")
-        # Preflight EVERY staged target before touching a single host. A
-        # mismatched digest or unprepared peer must not be discovered after
-        # the first node has already been modified.
+        # До изменения первого хоста выполните предварительную проверку КАЖДОЙ
+        # подготовленной цели. Несовпадающий дайджест или неподготовленный узел
+        # нельзя обнаруживать уже после изменения первой ноды.
         expected_targets = set()
         initial_plans = {}
         for label, target in nodes.items():
@@ -474,8 +477,8 @@ def rollout(args):
                     result = remote(target, args.rolling_script, args.directory, args.project,
                                     "local-apply", timeout=600)
                 except Exception as error:
-                    # Local agent attempts rollback on failure. A killed SSH
-                    # session may leave a journal requiring explicit recovery.
+                    # Локальный агент пытается выполнить откат при сбое. Прерванная SSH-сессия
+                    # может оставить журнал, требующий явного восстановления.
                     raise RollingError("node deployment did not complete; inspect its local journal") from error
             try:
                 require(result["nodeId"] == planned["nodeId"] and

@@ -40,8 +40,9 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 	}
 	user, err := c.repo.GetUserByEmail(identifier)
 	if err != nil {
-		// Only a Minecraft-safe name can resolve an imported FileAuth account.
-		// No fallback is attempted for emails or other auth providers.
+		// Только имя, допустимое в Minecraft, может определять импортированную
+		// учётную запись FileAuth. Для email или других поставщиков аутентификации
+		// резервный поиск не выполняется.
 		if alias, ok := fileauth.UsernameEmail(req.Identifier); ok {
 			candidate, lookupErr := c.repo.GetUserByEmail(alias)
 			if lookupErr == nil && (strings.HasPrefix(candidate.ID, "gravit-fileauth-") || strings.HasPrefix(candidate.ID, "gravit-sql-")) && candidate.DisplayName == req.Identifier {
@@ -56,8 +57,8 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "local identity disabled")
 	}
 	if localpassword.NeedsRehash(user.PasswordHash) {
-		// Rehash only a password that has just passed its explicitly configured verifier.
-		// A concurrent reset must win over the old credential, not be overwritten.
+		// Пересчитывайте хеш только пароля, прошедшего явно настроенную проверку. Параллельный
+		// сброс должен иметь приоритет над старым секретом, а не перезаписываться им.
 		replacement, hashErr := localpassword.Hash(req.Secret)
 		if hashErr != nil {
 			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local password upgrade failed")

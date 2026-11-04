@@ -78,9 +78,9 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 	}
 }
 
-// Exercises the actual Yggdrasil route, not only a standalone hash verifier.
-// An imported player must keep their original Gravit Minecraft UUID when
-// authenticating through an unchanged Minecraft authlib client.
+// Проверяет настоящий маршрут Yggdrasil, а не только отдельную проверку хеша.
+// Импортированный игрок обязан сохранить исходный Minecraft UUID Gravit при входе
+// через неизменённый клиент Minecraft authlib.
 func TestImportedFileAuthYggdrasilLoginPreservesUUID0295(t *testing.T) {
 	r := repository.NewMemoryRepository("http://localhost")
 	const uuid = "8af62031-2333-4333-8333-000000000041"

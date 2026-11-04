@@ -1,5 +1,5 @@
-// Package embeddedadmin provides the minimal same-origin production Admin and
-// first-run wizard without requiring a separately deployed web server.
+// Package embeddedadmin предоставляет минимальный промышленный Admin того же
+// origin и мастер первого запуска без отдельного веб-сервера.
 package embeddedadmin
 
 import (
@@ -37,7 +37,8 @@ func Handler() http.Handler {
 		w.Header().Set("Cache-Control", "no-store, max-age=0")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
-		// No inline scripts, external network resources, frames or form forwarding.
+		// Никаких встроенных скриптов, внешних сетевых ресурсов, фреймов или пересылки
+		// форм.
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
 		if strings.HasSuffix(name, ".html") {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")

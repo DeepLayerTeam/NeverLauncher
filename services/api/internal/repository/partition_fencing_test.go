@@ -9,9 +9,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Covers the production-compatible in-memory semantics used by SQLite's
-// serialized control plane. A stale token may not finalize, fail or release
-// ownership after the lease has expired, even if nobody has reclaimed it yet.
+// Покрывает совместимую с production семантику памяти, используемую
+// сериализованной плоскостью управления SQLite. Устаревший токен не может
+// завершить, провалить или освободить владение после истечения аренды, даже если
+// его ещё никто не перехватил.
 func TestExpiredMutationAndJobFences0514(t *testing.T) {
 	ctx := context.Background()
 	r := NewMemoryRepository("http://127.0.0.1")

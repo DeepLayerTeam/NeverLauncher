@@ -174,8 +174,9 @@ func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (auth
 	return s.rotateExpected0432(refreshToken, nil, r...)
 }
 
-// A caller that has checked device proof passes the exact session snapshot.
-// The condition is rechecked under the same lock that rotates the refresh token.
+// Вызывающий код после проверки доказательства устройства передаёт точный снимок
+// сеанса. Условие повторно проверяется под той же блокировкой, которая обновляет
+// refresh-токен.
 func (s *authSessionStore) rotateExpected0432(refreshToken string, expected *authSessionRecord, r ...*http.Request) (authSessionRecord, string, error) {
 	if s.persistent != nil {
 		record, token, err := s.persistent.rotateExpected0432(refreshToken, expected)
@@ -544,9 +545,10 @@ func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID stri
 	return sanitizeSessionRecord(rec), nil
 }
 
-// replaceDeviceBinding0432 is intentionally separate from first-time enrollment.
-// Only a verified dual-key rotation or phishing-resistant recovery may call it.
-// Comparing the pre-proof epoch under the session lock rejects concurrent rebinding.
+// replaceDeviceBinding0432 намеренно отделён от первичной регистрации. Вызывать его можно
+// только после подтверждённой смены двух ключей или восстановления, устойчивого к
+// фишингу. Сравнение эпохи до проверки под блокировкой сеанса отклоняет параллельную
+// смену привязки.
 func (s *authSessionStore) replaceDeviceBinding0432(sessionID, userID, previousDeviceID string, previousEpoch int64, newDeviceID string, verifiedAt time.Time) (authSessionRecord, error) {
 	if s.persistent != nil {
 		return authSessionRecord{}, errSessionBindingChanged0432 // SQL replacement is handled in one repository transaction.
@@ -565,7 +567,8 @@ func (s *authSessionStore) replaceDeviceBinding0432(sessionID, userID, previousD
 	rec.DeviceVerifiedAt = verifiedAt.UTC()
 	rec.BindingEpoch++
 	rec.LastSeenAt = time.Now().UTC()
-	// Recovery from a compromised device does not inherit old risk decisions.
+	// Восстановление после компрометации устройства не наследует прежние решения
+	// об уровне риска.
 	rec.RiskReasons = removeRiskReasons0126(rec.RiskReasons, "trusted-device-missing", "trusted-device-revoked", "trusted-device-invalid", "device-attestation-stale")
 	recomputeSessionRisk0126(&rec, verifiedAt)
 	s.sessions[sessionID] = rec

@@ -31,9 +31,9 @@ func TestServerBridgeControlValidation0195(t *testing.T) {
 	}
 }
 
-// Session-bound kicks are delivered by Backend's revocation transaction. They
-// must remain distinct from name-only moderator kicks and cannot accept an
-// untrusted/ambiguous correlation identifier.
+// Отключения с привязкой к сеансу доставляются транзакцией отзыва Backend. Они
+// должны отличаться от модераторских отключений только по имени и не могут
+// принимать недоверенный или неоднозначный корреляционный ID.
 func TestSessionBoundKickPayload0418(t *testing.T) {
 	correlation := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 	payload, err := validateServerBridgeControlRequest0195("player.kick", map[string]string{

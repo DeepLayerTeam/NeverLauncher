@@ -23,8 +23,9 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	}
 	s.TrustedProxies = trusted
 	s.ServerBridgeHARequired = cfg.ServerBridgeHARequired
-	// A SQLite HTTP repository must never silently use an in-memory or Redis
-	// coordinator: fencing, rate limits and command leases must survive restart.
+	// HTTP-репозиторий SQLite никогда не должен незаметно использовать координатор в
+	// памяти или Redis: ограждение, лимиты запросов и аренды команд должны переживать
+	// перезапуск.
 	if strings.EqualFold(strings.TrimSpace(cfg.RepositoryDriver), "sqlite") {
 		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" {
 			return fmt.Errorf("SQLite HTTP backend requires durable SQLite coordinator path")
@@ -46,8 +47,9 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		s.ServerBridgeReplicaID = fmt.Sprintf("%s-%d", hostname, os.Getpid())
 	}
 
-	// Explicit SQLite single-node path: both coordination and rate limiting
-	// share one durable writer. No Redis fallback, no in-memory success path.
+	// Явный путь SQLite для одного узла: координация и ограничение частоты
+	// используют одного устойчивого писателя. Без резервного Redis и без ложного
+	// успеха через память.
 	if path := strings.TrimSpace(cfg.SQLiteCoordinatorPath); path != "" {
 		if cfg.ServerBridgeHARequired {
 			return fmt.Errorf("SQLite single-node cannot satisfy distributed ServerBridge HA")

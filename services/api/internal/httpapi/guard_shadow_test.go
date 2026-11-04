@@ -122,8 +122,8 @@ func TestGuardShadow05012RejectsWeakKeyPermissionsAndBadResults(t *testing.T) {
 	}
 }
 
-// An observation written by the running API, not a historic release constant,
-// must remain independently verifiable after each version upgrade.
+// Наблюдение, записанное работающим API, а не историческая константа релиза,
+// должно оставаться независимо проверяемым после каждого обновления версии.
 func TestGuardShadow05012RejectsInvalidVersion(t *testing.T) {
 	dir, keyFile := shadowKeyFixture05012(t)
 	for _, version := range []string{"", "0.50.12\nforged", "../../etc/passwd", "0.52"} {
@@ -133,8 +133,8 @@ func TestGuardShadow05012RejectsInvalidVersion(t *testing.T) {
 	}
 }
 
-// Cross-language wire fixture emitted by the PRODUCTION journal implementation.
-// It is never accepted as a real shadow pilot or player-hour certificate.
+// Межъязыковая wire-фикстура, созданная ПРОИЗВОДСТВЕННОЙ реализацией журнала. Её
+// никогда не принимают за настоящий теневой пилот или сертификат player-hour.
 func TestGuardShadow0529WireFixture(t *testing.T) {
 	output := os.Getenv("NL0529_SHADOW_TEST_OUTPUT")
 	if output == "" {

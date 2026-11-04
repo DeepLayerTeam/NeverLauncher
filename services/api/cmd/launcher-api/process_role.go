@@ -19,8 +19,9 @@ type processRole0455 struct {
 	api, workers bool
 }
 
-// Network HA must explicitly assign roles: otherwise every API accidentally
-// runs background consumers and a misconfigured worker may serve public routes.
+// В Network HA роли нужно назначать явно: иначе каждый API случайно запускает
+// фоновых потребителей, а неправильно настроенный worker может открывать публичные
+// маршруты.
 func parseProcessRole0455(raw, deployment string) (processRole0455, error) {
 	role := strings.ToLower(strings.TrimSpace(raw))
 	if role == "" {
@@ -45,9 +46,10 @@ func parseProcessRole0455(raw, deployment string) (processRole0455, error) {
 	return r, nil
 }
 
-// The worker-only process has no externally bound HTTP listener. Docker's
-// healthcheck can reach localhost /ready. Readiness expires when durable
-// PostgreSQL polling stops succeeding; process existence is not enough.
+// Процесс только для рабочих задач не имеет HTTP-слушателя на внешнем
+// интерфейсе. Проверка здоровья Docker может обращаться к localhost /ready.
+// Готовность теряется, если перестаёт успешно выполняться устойчивый опрос
+// PostgreSQL; одного существования процесса недостаточно.
 func workerReady0455(last *atomic.Int64, now time.Time) bool {
 	n := last.Load()
 	return n > 0 && now.Sub(time.Unix(0, n)) >= 0 && now.Sub(time.Unix(0, n)) < 15*time.Second
@@ -60,7 +62,8 @@ func workerProbeHandler0455(last *atomic.Int64, backend http.Handler) http.Handl
 		_, _ = w.Write([]byte("alive\n"))
 	})
 	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, r *http.Request) {
-		// Loopback-only worker telemetry for authorized local incident tooling.
+		// Телеметрия рабочего процесса только на loopback для авторизованных
+		// локальных инструментов расследования инцидентов.
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		if workerReady0455(last, time.Now()) {
 			_, _ = fmt.Fprint(w, "# HELP launcher_worker_poll_fresh Last durable PostgreSQL poll was recent\n# TYPE launcher_worker_poll_fresh gauge\nlauncher_worker_poll_fresh 1\n")
@@ -74,8 +77,8 @@ func workerProbeHandler0455(last *atomic.Int64, backend http.Handler) http.Handl
 			return
 		}
 		if backend != nil {
-			// Do not report a live worker as ready when Redis/S3, federation
-			// or PostgreSQL are unavailable: reuse the real backend readiness.
+			// Не объявляйте работающий worker готовым, когда недоступны Redis/S3,
+			// федерация или PostgreSQL: используйте реальную проверку готовности Backend.
 			backend.ServeHTTP(w, r)
 			return
 		}
@@ -90,7 +93,7 @@ func runWorkerProbe0455(addr string, last *atomic.Int64, backend http.Handler) e
 	if err != nil {
 		return fmt.Errorf("invalid LAUNCHER_HTTP_ADDR: %w", err)
 	}
-	// Always restrict listener to loopback, even if HTTP_ADDR is 0.0.0.0.
+	// Всегда ограничивайте слушатель loopback, даже если HTTP_ADDR равно 0.0.0.0.
 	listener, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", port))
 	if err != nil {
 		return err

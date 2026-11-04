@@ -24,8 +24,9 @@ func certificationWorkspace0230(id string) BuildWorkspace {
 	}
 }
 
-// Covers the actual store transitions used by upload, stage and materialize.
-// Package metadata must remain pinned across retries and concurrent requests.
+// Покрывает настоящие переходы хранилища при загрузке, подготовке и
+// материализации. Метаданные пакета остаются закреплёнными при повторах и
+// параллельных запросах.
 func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 	ctx := context.Background()
 	r := NewMemoryRepository("https://launcher.test")

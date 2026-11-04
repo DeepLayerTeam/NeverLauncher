@@ -81,8 +81,8 @@ type guardRemoteAttestationV201810 struct {
 	AttestationSHA256  string                       `json:"attestationSha256"`
 }
 
-// A runtime witness can authorize a Minecraft session only when its one-time
-// challenge was explicitly bound to that session before collecting evidence.
+// Свидетельство Runtime допускает Minecraft-сеанс только тогда, когда одноразовый
+// challenge явно привязан к этому сеансу до сбора свидетельств.
 type guardAttestationV2BeginRequest0317 struct {
 	LauncherVersion      string `json:"launcherVersion"`
 	MinecraftAccessToken string `json:"minecraftAccessToken,omitempty"`
@@ -438,8 +438,9 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
-	// Evaluate the exact release/platform runtime allowlist AFTER consuming the
-	// challenge, so its state cannot be replayed across a policy update.
+	// Проверяйте точный runtime allowlist выпуска/платформы ПОСЛЕ погашения
+	// challenge, чтобы его состояние нельзя было повторно использовать при
+	// обновлении политики.
 	runtimePolicyDigest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, req.Attestation.ContinuousEvidence)
 	if err != nil {
 		writeError(w, http.StatusPreconditionFailed, "Guard runtime denied: "+err.Error())
@@ -506,8 +507,9 @@ func (s Server) consumeGuardContinuousJoinTicket01810(r *http.Request, claims au
 	if runtimePID, err := strconv.ParseUint(metadataString0121(ticket.Metadata, "runtimePid"), 10, 32); err != nil || runtimePID == 0 {
 		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket runtime binding malformed")
 	}
-	// A ticket is not authoritative indefinitely. Recheck the device, session
-	// eligibility and CURRENT release/runtime allowlists before allowing join.
+	// Билет не остаётся авторитетным бесконечно. Перед допуском к подключению
+	// повторно проверяйте устройство, пригодность сеанса и ТЕКУЩИЕ списки
+	// разрешённых выпусков/Runtime.
 	if err := s.recheckContinuousGuardTicket0317(claims, ticket, now); err != nil {
 		return model.DeviceChallenge{}, err
 	}

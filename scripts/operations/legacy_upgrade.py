@@ -476,8 +476,9 @@ def rollback_host(args):
         require(phase in ('verified', 'manual-reconciliation-required'),
                 'upgrade has not reached a recoverable phase')
         result = journal.get('result')
-        # If cutover did not record a completed binary switch, independently
-        # read the pinned old digest from the original retained backup file.
+        # Если переключение не зарегистрировало завершённую смену бинарника,
+        # независимо считайте закреплённый старый дайджест из исходного сохранённого
+        # файла резервной копии.
         sha = result.get('oldBinarySha256') if isinstance(result, dict) else None
         require(sha and re.fullmatch('[a-f0-9]{64}', sha),
                 'no verified prior binary SHA in committed receipt; use native forensic recovery')
@@ -510,7 +511,8 @@ def execute(args):
     with exclusive(backup.parent):
         require(not backup.exists(), 'backup already exists; do not replay or overwrite an attempted upgrade')
         source = determine_source(args.mode, root, args)
-        # Explicit custom paths extend, never silently replace, standard user locations.
+        # Явно заданные пользовательские пути дополняют стандартные каталоги, а не незаметно
+        # заменяют их.
         paths = list(dict.fromkeys([name for name in DEFAULT_DATA if (root / name).exists()] + (args.data or [])))
         original = enumerate_data(root, paths)
         create_backup(root, backup, original, source, args.mode, paths)
@@ -539,8 +541,9 @@ def execute(args):
             return {'status': 'upgraded', 'sourceVersion': source, 'targetVersion': TARGET,
                     'mode': args.mode, 'protectedEntries': len(original), 'backup': str(backup), **result}
         except Exception:
-            # Never rerun a partially committed native transaction. It must be
-            # recovered with the native updater/installer and the private backup.
+            # Никогда не повторяйте частично зафиксированную нативную транзакцию. Её
+            # нужно восстанавливать нативным обновлятором/установщиком и закрытой
+            # резервной копией.
             state['phase'] = 'manual-reconciliation-required'
             atomic_json(journal, state)
             raise

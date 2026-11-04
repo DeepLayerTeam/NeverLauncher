@@ -55,7 +55,8 @@ func TestV3CatalogReferenceDigestIdentityAndImmutability0241(t *testing.T) {
     next.ComponentCatalog.Components=[]CatalogComponent0241{decoded.ComponentCatalog.Components[0],decoded.ComponentCatalog.Components[0]}
     next.ComponentCatalog.Digest=ComponentCatalogDigest0241(next.ComponentCatalog.Components)
     if err=ValidateManifestSchema(next);err==nil {t.Fatal("duplicate stable ID accepted")}
-    // Profile revision remains pinned across draft catalog edits.
+    // Ревизия профиля остаётся закреплённой при редактировании каталога
+    // черновика.
     next=decoded
     newer:=NewComponentCatalog0241(decoded.ComponentCatalog.Components,2)
     next.ComponentCatalog=&newer

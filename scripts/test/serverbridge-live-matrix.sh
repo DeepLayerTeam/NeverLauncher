@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Live ServerBridge JVM/proxy/game compatibility. Does NOT accept fake server JARs.
+# Живая совместимость JVM/прокси/игры ServerBridge. Поддельные серверные JAR не
+# допускаются.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCOPE="${1:---all}"
@@ -10,10 +11,11 @@ for executable in docker java gradle go cargo jq psql mvn; do
   }
 done
 docker info >/dev/null 2>&1 || { echo '[0.41.13] Docker daemon unavailable: live certification impossible' >&2; exit 1; }
-# Existing E2E creates real containers from upstream Minecraft/Proxy images,
-# builds production bridge JARs, sends network join/revoke requests, and runs
-# a real Mojang client JVM for Paper. The 0.41.13 extension records process,
-# image and independently hashed network/log evidence as each service runs.
+# Существующий E2E создаёт настоящие контейнеры из upstream-образов
+# Minecraft/Proxy, собирает промышленные JAR Bridge, отправляет сетевые запросы
+# join/revoke и запускает настоящую клиентскую JVM Mojang для Paper. Расширение
+# 0.41.13 записывает процесс, образ и независимо хешированные сетевые/журнальные
+# доказательства по мере работы каждой службы.
 LAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 python3 "$ROOT/serverbridge/live_matrix_04113.py" --root "$ROOT" \
   --runtime "$ROOT/e2e/runtime" --scope "$target" \

@@ -756,7 +756,8 @@ func TestDependencyConflictMigrationGuard0243(t *testing.T) {
 	}
 }
 
-// 0.25.11 maintenance must be deployed only with the database lease fencing.
+// Обслуживание 0.25.11 развёртывается только вместе с разграничением по арендам в
+// БД.
 func TestTextureLifecycleMigration02511(t *testing.T) {
 	b, err := os.ReadFile("sql/0074_texture_lifecycle_recovery_02511.sql")
 	if err != nil {
@@ -769,8 +770,8 @@ func TestTextureLifecycleMigration02511(t *testing.T) {
 	}
 }
 
-// The current release deliberately adds no DDL. An unknown migration applied
-// during a mixed 0.51.5/0.51.6 deployment would make the old /ready fail.
+// Текущий выпуск намеренно не добавляет DDL. Неизвестная миграция в смешанном
+// развёртывании 0.51.5/0.51.6 привела бы к ошибке прежнего /ready.
 func TestNN1MigrationCatalogFrozen0516(t *testing.T) {
 	ms, err := Catalog()
 	if err != nil {

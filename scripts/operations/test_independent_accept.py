@@ -146,7 +146,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
                   s3_endpoint='http://127.0.0.1:19000', s3_bucket='nl-dr-test', timeout=30))()
         with patch.object(ia, 'checked_env'), patch.object(ia, 'invoke', return_value={'status': 'passed'}):
             with self.assertRaises(Exception): ia.accept_failover(args)
-        # A healthy return from the child process alone must not grant PASS.
+        # Один успешный возврат дочернего процесса не должен означать PASS.
 
     def test_versioned_updater_rejects_env_drift(self):
         import component_upgrade_0458 as comp

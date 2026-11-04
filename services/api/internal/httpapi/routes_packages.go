@@ -58,8 +58,9 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/admin/config/validate", s.requirePermission("settings:manage", s.operationalConfigValidate02111))
 	mux.Handle("PUT /api/v1/admin/config", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.operationalConfigSave02111))
 	mux.Handle("POST /api/v1/admin/config/restore", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.operationalConfigRestore02111))
-	// Administrative texture policies require global settings authority. All writes
-	// require recent MFA and are checked again against PostgreSQL ownership/policy.
+	// Административные политики текстур требуют глобальных полномочий настроек. Все
+	// записи требуют недавней MFA и повторно проверяются по владению и политике
+	// PostgreSQL.
 	mux.Handle("GET /api/v1/admin/textures/policy", s.requirePermission("settings:manage", s.adminTexturePolicyGet0259))
 	mux.Handle("PUT /api/v1/admin/textures/policy", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.adminTexturePolicyPut0259))
 	mux.Handle("GET /api/v1/admin/textures/policy/history", s.requirePermission("settings:manage", s.adminTexturePolicyHistory0259))

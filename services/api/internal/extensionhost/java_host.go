@@ -335,18 +335,20 @@ func (s *Supervisor) probeJava0304(st *processState) {
 	}
 }
 
-// Package-level check to keep the Java JAR verifier independent of OS process setup.
+// Проверка уровня пакета сохраняет независимость Java JAR-верификатора от запуска
+// процессов ОС.
 func sameHostJar0304(path string) bool { return strings.EqualFold(filepath.Ext(path), ".jar") }
 
-// MigrateExtensionState04810 invokes the new, already authenticated JVM's
-// registered migration graph. The update manager owns durable checkpoints,
-// restarts and compensation; this method never bypasses live trust or grants.
+// MigrateExtensionState04810 вызывает зарегистрированный граф миграций новой уже
+// аутентифицированной JVM. Менеджер обновлений управляет устойчивыми контрольными
+// точками, перезапусками и компенсациями; метод никогда не обходит живое доверие и
+// разрешения.
 func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install model.ExtensionInstall, fromVersion string) error {
 	if fromVersion == "" || fromVersion == install.CurrentVersion {
 		return nil
 	}
-	// Non-Java extensions have no Java callback. Their state is preserved
-	// unchanged by the same durable checkpoint/rollback path.
+	// Расширения вне Java не имеют Java-обратных вызовов. Их состояние без
+	// изменений сохраняет тот же путь устойчивых контрольных точек и отката.
 	version, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
 		return err
@@ -398,7 +400,7 @@ func (s *Supervisor) MigrateExtensionState04810(ctx context.Context, install mod
 	return nil
 }
 
-// Keep arithmetic independent of Go's generic min and the package's minInt.
+// Сохраняйте арифметику независимой от универсального min в Go и minInt пакета.
 func minInt64_04811(a, b int64) int64 {
 	if a < b {
 		return a

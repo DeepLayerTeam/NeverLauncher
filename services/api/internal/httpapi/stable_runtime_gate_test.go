@@ -36,15 +36,15 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 			t.Fatalf("stable must be blocked, got %d %s", rr.Code, rr.Body.String())
 		}
 	}
-	// Explicit project integrity policy is deliberately ineffective for stable.
+	// Явная политика целостности проекта намеренно не действует для stable.
 	rr := send(http.MethodPut, "/api/v1/projects/demo-project/validation-policy", `{"requiredLevel":"integrity"}`)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("set integrity: %d %s", rr.Code, rr.Body.String())
 	}
 	publish()
 
-	// Even v1 evidence that passes its legacy signature checks is not
-	// attestation of a real staged client and a matching server.
+	// Даже свидетельство v1, проходящее устаревшие проверки подписи, не аттестует
+	// настоящий подготовленный клиент и соответствующий сервер.
 	now := time.Now().UTC().Add(-time.Minute).Truncate(time.Second)
 	evidence := runtimeValidationEvidence0212{
 		SchemaVersion: runtimeValidationSchema0212, PackageID: packageID,
@@ -69,7 +69,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	}
 	publish()
 
-	// Even switching project-wide policy to runtime does not open stable.
+	// Даже переключение общепроектной политики на runtime не открывает stable.
 	rr = send(http.MethodPut, "/api/v1/projects/demo-project/validation-policy", `{"requiredLevel":"runtime","requireServerJoin":true}`)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("set runtime: %d %s", rr.Code, rr.Body.String())

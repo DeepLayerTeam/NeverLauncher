@@ -120,7 +120,8 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	if _, err = r.UpdateTextureSelection0251(ctx, alice, "skin", 3, "slim", "public", true); !errors.Is(err, ErrTextureNotSelected0255) {
 		t.Fatalf("reactivated tombstone: %v", err)
 	}
-	// Returning to the saved texture needs no re-upload, but does need the new CAS.
+	// Возврат к сохранённой текстуре не требует повторной загрузки, но требует нового
+	// CAS.
 	again, err := r.SelectSavedTexture0255(ctx, alice, "skin", digest, 3, "classic", "public")
 	if err != nil || again.Revision != 4 {
 		t.Fatalf("reselect: %+v %v", again, err)
@@ -146,7 +147,8 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM texture_blob_owners WHERE user_id='alice'`).Scan(&owners); err != nil || owners != 0 {
 		t.Fatalf("quota not released %d %v", owners, err)
 	}
-	// Previously cleared assets remain in other users' libraries, not GC victims.
+	// Ранее очищенные ресурсы остаются в библиотеках других пользователей и не должны
+	// удаляться GC.
 	input.ExpectedRevision = 0
 	if _, err = r.UploadTexture0252(ctx, bob, input); err != nil {
 		t.Fatal(err)
@@ -164,7 +166,8 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 	if err != nil || len(garbage) != 0 {
 		t.Fatalf("saved-but-inactive asset claimed by GC: %+v %v", garbage, err)
 	}
-	// A cape saved in a library cannot bypass per-user policy.
+	// Плащ из сохранённой библиотеки не может обходить персональную политику
+	// пользователя.
 	if _, err = db.ExecContext(ctx, `INSERT INTO texture_saved_items(user_id,digest,kind,model,source) VALUES('bob',$1,'cape','classic','managed-upload')`, digest); err != nil {
 		t.Fatal(err)
 	}

@@ -26,7 +26,7 @@ def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path
         raise ValueError('unsupported target')
     if not mapping:
         raise ValueError('empty unsigned payload')
-    # Use the exact filenames from the current, validated release contract.
+    # Используйте точные имена файлов из текущего проверенного контракта выпуска.
     version=(Path(__file__).resolve().parents[2]/'VERSION').read_text(encoding='utf-8').strip()
     if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version):
         raise ValueError('unsafe product version')
@@ -42,7 +42,8 @@ def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path
         paths.add(arc)
         if not path.is_file() or path.is_symlink() or path.stat().st_size==0:
             raise ValueError('missing/unsafe compiled input: '+str(path))
-        # Check all actual members for symlinked intermediate components.
+        # Проверяйте все настоящие элементы на наличие символьных ссылок в
+        # промежуточных компонентах пути.
         current=path.absolute()
         for parent in (current,*current.parents):
             if parent.is_symlink():
@@ -52,19 +53,22 @@ def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path
                        'darwin':('Launcher.app/Contents/MacOS/launcher-desktop','Launcher.app/Contents/Helpers/guard','Launcher.app/Contents/Helpers/runtime','Launcher.app/Contents/Helpers/launcher-cli')}
     if not set(expected_binaries['darwin' if platform=='macos' else platform]).issubset(mapping):
         raise ValueError('one or more compiled native components missing')
-    # For native platforms, archive names intentionally match the FINAL package;
-    # unsigned packages must reside under a different, immutable staging root.
+    # Для нативных платформ имена архивов намеренно соответствуют ОКОНЧАТЕЛЬНОМУ
+    # пакету; неподписанные пакеты должны храниться в другом неизменяемом корне
+    # staging.
     out_dir.mkdir(parents=True,exist_ok=True)
     out=out_dir/expected
     if out.exists():
         raise ValueError('refusing to overwrite immutable unsigned artifact: '+str(out))
-    # Inspect all actual binaries, not just the selected main executable.
+    # Проверяйте все настоящие бинарники, а не только выбранный основной
+    # исполняемый файл.
     for name in expected_binaries['darwin' if platform=='macos' else platform]:
         with mapping[name].open('rb') as fh:
             inspect_exe(fh.read(65536), 'darwin' if platform=='macos' else platform, arch)
     if platform in ('windows','macos'):
-        # canonical_zip expects a common root; linked sources cannot be smuggled
-        # in as member paths: copy their bytes into a private staging directory.
+        # canonical_zip ожидает общий корень. Нельзя внедрять связанные исходники как
+        # пути элементов архива: скопируйте их байты в закрытый промежуточный
+        # каталог.
         import tempfile
         with tempfile.TemporaryDirectory(prefix='launcher-unsigned-') as tmp:
             root=Path(tmp)

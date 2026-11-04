@@ -11,9 +11,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// A publish refusal is a set of observed, actionable problems, not a manually
-// assigned certification status. The final publish transaction still rechecks
-// every trust gate and the exact bytes: this preview never issues a permit.
+// Отказ публикации — это перечень наблюдаемых проблем, по которым можно
+// действовать, а не вручную установленный статус сертификации. Финальная
+// транзакция публикации повторно проверяет все границы доверия и точные байты;
+// предпросмотр никогда не выдаёт допуск.
 type publishBlocker0385 struct {
 	ReasonCode string `json:"reasonCode"`
 	Resource   string `json:"resource"`
@@ -96,8 +97,8 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 	return result
 }
 
-// Convert concrete filesystem checks into a machine-readable refusal without
-// treating a plain HTTP 200 validate result as a successful validation.
+// Преобразуйте конкретные проверки файловой системы в машинно-читаемый отказ, не
+// считая простой HTTP 200 от validate успешной валидацией.
 func fileCheckBlockers0385(checks []map[string]any) []publishBlocker0385 {
 	blockers := make([]publishBlocker0385, 0)
 	for _, check := range checks {
@@ -113,8 +114,9 @@ func fileCheckBlockers0385(checks []map[string]any) []publishBlocker0385 {
 	return blockers
 }
 
-// Legacy synchronous publication gets the same detailed refusal as durable
-// operation preview, while preserving the original message for old clients.
+// Устаревшая синхронная публикация получает тот же подробный отказ, что
+// предпросмотр устойчивой операции, сохраняя исходное сообщение для старых
+// клиентов.
 func (s Server) writePublishRefusal0385(w http.ResponseWriter, r *http.Request, lookup packageLookup, message string) {
 	readiness := s.evaluatePublishReadiness0385(r.Context(), lookup)
 	writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": message, "blockers": readiness.Blockers, "action": "Resolve the listed blockers and validate again"}})

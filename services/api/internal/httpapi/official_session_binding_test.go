@@ -12,8 +12,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// A real authenticated HTTP handler must return its verified JWT SID, not
-// an attacker-controlled session identifier supplied by the Desktop renderer.
+// Настоящий авторизованный HTTP-обработчик должен возвращать проверенный SID JWT,
+// а не заданный злоумышленником идентификатор сеанса из renderer Desktop.
 func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 	cfg := config.Config{
 		PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local",

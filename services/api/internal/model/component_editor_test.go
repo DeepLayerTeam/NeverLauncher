@@ -15,8 +15,8 @@ func TestAdminComponentGraphPreview0248(t *testing.T) {
 	invalid.Components = append([]CatalogComponent0241(nil), invalid.Components...)
 	invalid.Components[2].Conflicts = []ComponentRequirement0243{{ID: "core"}}
 	invalid = NewComponentCatalog0245(invalid, invalid.Revision+1)
-	// The static preview must refuse a conflicting preset even though conditional
-	// catalogs defer environment-specific selection to native runtime.
+	// Статический предпросмотр должен отклонять конфликтующий пресет, даже если
+	// условные каталоги откладывают выбор под конкретную среду до нативного Runtime.
 	if _, err = PreviewCatalogGraph0248(invalid, "quality"); err == nil || !strings.Contains(err.Error(), "conflict") {
 		t.Fatalf("conflict was not explained: %v", err)
 	}

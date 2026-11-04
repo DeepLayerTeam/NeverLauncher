@@ -14,8 +14,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// TextureRepository0251 is an operational CAS store. It is intentionally separate
-// from the pre-0.25.1 ServerBridge URL repository: writes overwrite legacy data.
+// TextureRepository0251 — рабочее CAS-хранилище. Оно намеренно отделено от старого
+// хранилища URL ServerBridge до 0.25.1; операции записи перезаписывают старые данные.
 type TextureRepository0251 interface {
 	ReadTextureProfile0251(context.Context, string) (model.ServerBridgeTexture, bool, error)
 	ListTextureAssignments0251(context.Context, model.MinecraftProfile) ([]model.TextureAssignment0251, error)
@@ -34,7 +34,7 @@ func scanTextureAssignment0251(row interface{ Scan(...any) error }) (model.Textu
 	return a, err
 }
 
-// canonicalUUID0251 accepts Mojang hyphenated or compact UUIDs and no other keys.
+// canonicalUUID0251 принимает только UUID Mojang с дефисами или без них.
 func canonicalUUID0251(raw string) (string, error) {
 	s := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(raw), "-", ""))
 	if len(s) != 32 {
@@ -73,7 +73,8 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 		return model.ServerBridgeTexture{}, false, err
 	}
 	t.Model = "classic"
-	// Only global public active selections are exposed to the Yggdrasil/ServerBridge path.
+	// Маршруту Yggdrasil/ServerBridge доступны только глобально публичные активные выбранные
+	// текстуры.
 	rows, err := r.db.QueryContext(ctx, `SELECT kind,external_url,COALESCE(blob_digest,''),model FROM texture_assignments
       WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND active=true AND visibility='public' AND texture_permission_allowed_0259(project_id,user_id,kind) AND (blob_digest IS NULL OR EXISTS (SELECT 1 FROM texture_blobs b WHERE b.digest=blob_digest AND b.status='verified'))`, t.UUID, userID)
 	if err != nil {
@@ -101,9 +102,10 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 	if err := rows.Close(); err != nil {
 		return model.ServerBridgeTexture{}, false, err
 	}
-	// Global defaults apply when a player has no public selection. A separate
-	// fallback applies if a selected texture becomes unavailable or disallowed.
-	// Both paths are restricted to verified local managed objects.
+	// Глобальные значения по умолчанию действуют, когда у игрока нет публичного
+	// выбора. Отдельная резервная подстановка применяется, если выбранная текстура
+	// недоступна или запрещена. Оба пути допускают только проверенные локальные
+	// управляемые объекты.
 	if (t.SkinURL == "" || t.CapeURL == "") && r.publicURL != "" {
 		var activeSkin, activeCape bool
 		err = r.db.QueryRowContext(ctx, `SELECT
@@ -182,8 +184,8 @@ func validateTextureSelection0251(kind, skinModel, visibility string) error {
 	return nil
 }
 
-// UpdateTextureSelection0251 serializes competing writers per assignment and
-// records the complete new state in the SAME transaction as its revision bump.
+// UpdateTextureSelection0251 сериализует конкурирующих писателей по назначению и
+// записывает полное новое состояние ТОЙ ЖЕ транзакцией, что увеличение ревизии.
 func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile model.MinecraftProfile, kind string, expected int64, skinModel, visibility string, active bool) (model.TextureAssignment0251, error) {
 	if err := r.check(); err != nil {
 		return model.TextureAssignment0251{}, err
@@ -239,8 +241,8 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 	}
 	if kind == "cape" && active {
 		var permitted bool
-		// Existing legacy CAPE URLs can be read for compatibility, but a user
-		// cannot newly activate or re-publish them without a project grant.
+		// Устаревшие URL плащей можно читать для совместимости, но пользователь не
+		// может заново активировать или публиковать их без разрешения проекта.
 		err = tx.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259($1,$2,'cape')`, a.ProjectID, a.UserID).Scan(&permitted)
 		if err != nil {
 			return model.TextureAssignment0251{}, err
@@ -310,9 +312,10 @@ func (r *SQLRepository) ListTextureRevisions0251(ctx context.Context, profile mo
 	return out, rows.Err()
 }
 
-// EnsureTextureIdentity0251 atomically binds legacy user-derived URLs to an
-// already-proven canonical profile. Called when a profile is loaded/created,
-// including accounts that had URL records but no Minecraft profile at migration.
+// EnsureTextureIdentity0251 атомарно связывает устаревшие URL, полученные от
+// пользователя, с уже доказанным каноническим профилем. Вызывается при загрузке или
+// создании профиля, в том числе для аккаунтов с URL-записями, но без
+// Minecraft-профиля при миграции.
 func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile model.MinecraftProfile) error {
 	if err := r.check(); err != nil {
 		return err
@@ -325,7 +328,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 		return err
 	}
 	defer tx.Rollback()
-	// Serializes lazy imports and protects revision 1 against concurrent calls.
+	// Сериализует ленивый импорт и защищает ревизию 1 от параллельных вызовов.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(251,hashtext($1))`, profile.UUID); err != nil {
 		return err
 	}

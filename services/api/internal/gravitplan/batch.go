@@ -17,9 +17,9 @@ import (
 	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
 )
 
-// Batch is calculated from a single immutable, byte-verified Gravit ZIP and
-// live target snapshot. No mutation, permission grant or foreign JAR execution
-// happens here. It is not a cutover authorization.
+// Batch рассчитывается из одного неизменяемого проверенного по байтам ZIP Gravit и
+// живого целевого снимка. Здесь не выполняются изменения, выдача прав или
+// исполнение чужих JAR. Это не авторизация переключения.
 const BatchFormat0492 = "launcher.gravit-multi-profile-dry-run.v1"
 const MaxProfiles0492 = 32
 
@@ -76,10 +76,10 @@ func VerifyBatch0492(b Batch0492) error {
 	return nil
 }
 
-// BuildBatch0492 requires the caller to pin/archive-verify *once* with Inspect,
-// and then pass its immutable spool. The same real content converter and plan
-// builder as single-profile import are used for every profile; no success is
-// synthesized for an invalid source or an unresolved dependency.
+// BuildBatch0492 требует один раз закрепить и проверить архив через Inspect и затем
+// передать неизменяемый spool. Для каждого профиля применяются тот же реальный
+// конвертер содержимого и сборщик плана, что при одиночном импорте; недопустимый
+// источник или неразрешённая зависимость не получают синтетический успех.
 func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, project, target string, existing map[string]bool, inventory inv.Inventory, compatibility gd.Report, modules gm.Report, identities IdentityPreview, destinations []Destination) (Batch0492, error) {
 	out := Batch0492{Format: BatchFormat0492, RunID: run, ProjectID: project, SourceSHA256: inventory.SourceSHA256, InventorySHA256: inventory.ManifestSHA256, TargetSHA256: target, Profiles: []ProfileResult0492{}, Blockers: []string{}, Status: "manual"}
 	if len(destinations) == 0 || len(destinations) > MaxProfiles0492 || run == "" || project == "" || len(target) != 64 || size != inventory.SourceBytes || compatibility.SourceSHA256 != inventory.SourceSHA256 || modules.SourceSHA256 != inventory.SourceSHA256 || modules.InventorySHA256 != inventory.ManifestSHA256 {
@@ -121,8 +121,8 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		} else {
 			row.SourceDirectory, row.FilesSHA256, row.FileCount = content.SourceDirectory, content.FilesSHA256, len(content.Files)
 			folded := strings.ToLower(content.SourceDirectory)
-			// Exact OR nested roots overlap: a and a/modpack share files.
-			// Flag every affected profile, not only the later one.
+			// Совпадают полные или вложенные корни: a и a/modpack имеют общие файлы.
+			// Помечайте каждый затронутый профиль, не только последний.
 			for priorDir, prior := range dirs {
 				if folded == priorDir || strings.HasPrefix(folded, priorDir+"/") || strings.HasPrefix(priorDir, folded+"/") {
 					row.Blockers = append(row.Blockers, "client directory overlaps with "+prior)
@@ -135,8 +135,8 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 				}
 			}
 			dirs[folded] = d.ProfilePath
-			// Classpath dependencies are resolved by the same production
-			// converter; missing libraries appear in content.Blockers.
+			// Зависимости classpath разрешает тот же промышленный конвертер;
+			// отсутствующие библиотеки попадают в content.Blockers.
 			for _, entry := range content.Profile.Settings.Runtime.Launch.ClasspathEntries {
 				row.Dependencies = append(row.Dependencies, Dependency0492{Component: d.ProfileID, Requires: entry, Kind: "classpath"})
 			}
@@ -152,7 +152,8 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 						row.Dependencies = append(row.Dependencies, Dependency0492{Component: component.ID, Requires: conflict.ID, Kind: "conflict"})
 					}
 				}
-				// Cyclic optional selection is not safe to auto-import.
+				// Циклический необязательный выбор нельзя безопасно импортировать
+				// автоматически.
 				state := make(map[string]int)
 				var visit func(string) bool
 				visit = func(node string) bool {

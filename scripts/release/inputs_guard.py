@@ -71,14 +71,16 @@ def inputs() -> list[str]:
                for x in path.relative_to(ROOT).parts):
             continue
         if path.is_symlink():
-            # External dependencies may not be smuggled into versioned inputs.
+            # Внешние зависимости нельзя незаметно добавлять к входным данным с привязкой
+            # к версии.
             if path.name in SUFFIXES:
                 raise ValueError('symlink in release inputs: '+str(path))
             continue
         if path.is_file() and path.name in SUFFIXES:
             result.add(path.relative_to(ROOT).as_posix())
-    # Release tools and both embedded migration chains affect what is shipped.
-    # Pin the full executable tool set and migration bytes, not only lockfiles.
+    # Инструменты выпуска и обе встроенные цепочки миграции влияют на поставляемый
+    # результат. Закрепляйте полный набор исполняемых инструментов и байты миграций,
+    # а не только lock-файлы.
     for folder, pattern in (
         ('scripts/release', '*.py'),
         ('scripts/release', '*.sh'),

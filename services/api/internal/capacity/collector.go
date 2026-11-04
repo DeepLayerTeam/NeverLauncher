@@ -8,8 +8,9 @@ import (
 	"time"
 )
 
-// Collector samples at bounded frequency; /metrics never executes SQL or a
-// potentially blocking network probe in a request handler.
+// Collector снимает показатели с ограниченной частотой; /metrics никогда не
+// выполняет SQL или потенциально блокирующую сетевую проверку внутри
+// обработчика запроса.
 type Collector struct {
 	Opt     Options
 	HTTP    *HTTPMetrics
@@ -75,8 +76,9 @@ func (c *Collector) Prometheus(w io.Writer) {
 	fmt.Fprintf(w, "# TYPE launcher_capacity_go_heap_bytes gauge\nlauncher_capacity_go_heap_bytes %d\n", r.GoHeapBytes)
 	fmt.Fprintf(w, "# TYPE launcher_capacity_goroutines gauge\nlauncher_capacity_goroutines %d\n", r.Goroutines)
 	if r.PostgreSQL != nil {
-		// Backwards-compatible legacy inventory counters, now from the cached
-		// SQL aggregate instead of materializing entire repository tables.
+		// Совместимые с прежними версиями счётчики инвентаризации теперь берутся из
+		// кэшированного SQL-агрегата, а не через материализацию всех таблиц
+		// репозитория.
 		fmt.Fprintf(w, "# TYPE launcher_projects_total gauge\nlauncher_projects_total %d\n", r.PostgreSQL.Projects)
 		fmt.Fprintf(w, "# TYPE launcher_users_total gauge\nlauncher_users_total %d\n", r.PostgreSQL.Users)
 		fmt.Fprintf(w, "# TYPE launcher_roles_total gauge\nlauncher_roles_total %d\n", r.PostgreSQL.Roles)
@@ -91,7 +93,7 @@ func (c *Collector) Prometheus(w io.Writer) {
 		fmt.Fprintf(w, "# TYPE launcher_capacity_outbox_pending gauge\nlauncher_capacity_outbox_pending %d\n", r.PostgreSQL.PendingOutbox)
 	}
 	for _, d := range r.Disks {
-		// All names come from a closed set, never from request paths.
+		// Все имена берутся из закрытого набора, никогда из путей запросов.
 		fmt.Fprintf(w, "launcher_capacity_disk_available_bytes{volume=%q} %d\n", d.Name, d.AvailableBytes)
 		fmt.Fprintf(w, "launcher_capacity_disk_available_ratio{volume=%q} %.6f\n", d.Name, d.AvailableFraction)
 	}

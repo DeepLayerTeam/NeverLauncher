@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// A trusted operator signs the exact policy bytes offline. Neither the caller nor
-// the ServerBridge node can supply the signing key or relax the allowlist.
+// Доверенный оператор подписывает точные байты политики автономно. Ни вызывающий, ни
+// узел ServerBridge не могут задавать ключ подписи или ослаблять allowlist.
 const Domain = "Launcher-ServerBridge-Plan-Policy-v1\n"
 
 type Envelope struct {
@@ -54,8 +54,9 @@ func Matches(policy Policy, server, project, profile, channel, release, catalog,
 	return false
 }
 
-// Configuration deliberately defaults to legacy behavior; operators must set
-// REQUIRE_PLAN_POLICY=1 before using the guarded join mode in production.
+// Конфигурация по умолчанию намеренно использует устаревшее поведение; перед
+// включением защищённого режима входа в production оператор должен задать
+// REQUIRE_PLAN_POLICY=1.
 func Required() bool {
 	return os.Getenv("LAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY") == "1" || os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE") != "" || os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY") != ""
 }

@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// ProtectionBan is independent from a user's disabled status. An unban must
-// re-enable an account that was independently disabled.
+// ProtectionBan не зависит от признака отключённого пользователя. Разблокировка
+// не должна включать аккаунт, отключённый по независимой причине.
 type ProtectionBan struct {
 	UserID    string     `json:"userId"`
 	Reason    string     `json:"reason"`
@@ -47,7 +47,8 @@ func (r *SQLRepository) SetProtectionBan(ctx context.Context, b ProtectionBan) e
 	}
 	defer tx.Rollback()
 	var id string
-	// Serialize creation of fresh sessions and account-wide bans on one user row.
+	// Сериализуйте создание новых сеансов и глобальные блокировки учётной записи
+	// блокировкой одной пользовательской строки.
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE id=$1 FOR UPDATE`, b.UserID).Scan(&id); err != nil {
 		return err
 	}

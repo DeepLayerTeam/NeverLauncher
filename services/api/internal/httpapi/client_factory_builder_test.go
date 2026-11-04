@@ -76,8 +76,8 @@ func TestFactoryBuilderWorkerExecution02710(t *testing.T) {
 	if err = os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	// This is a real subprocess fixture for the bridge. It is not a Minecraft
-	// run; real CLI and upstream integration are covered by separate CI.
+	// Это реальная фикстура подпроцесса для моста, но не запуск Minecraft;
+	// настоящий CLI и внешние интеграции проверяются отдельным CI.
 	script := filepath.Join(root, "fixture-cli")
 	body := `#!/bin/sh
 set -eu

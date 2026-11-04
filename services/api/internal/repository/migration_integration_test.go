@@ -14,8 +14,9 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// Uses disposable PostgreSQL, with two independent connections to exercise
-// real atomic fencing, checkpoints, resume, and idempotent creation.
+// Используется одноразовая PostgreSQL с двумя независимыми соединениями для
+// проверки атомарного ограждения, контрольных точек, возобновления и
+// идемпотентного создания.
 func TestMigrationDurability0331(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {

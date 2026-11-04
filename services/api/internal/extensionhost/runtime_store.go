@@ -15,10 +15,10 @@ import (
 	"strings"
 )
 
-// Extension-owned, durable JSON documents. Data lives outside signed package payloads,
-// survives host restarts and extension upgrades, and is partitioned by extension+scope.
-// Authorization is always checked in the broker; possession of a host token alone is
-// insufficient to read/write state. Never persist secrets through this interface.
+// Устойчивые JSON-документы, принадлежащие расширению. Данные хранятся отдельно от
+// подписанного пакета, переживают перезапуск хоста и обновление расширения и разделяются по
+// расширению и области. Авторизация всегда проверяется брокером; одного токена хоста
+// недостаточно для чтения или записи. Не сохраняйте через этот интерфейс секреты.
 const runtimeValueLimit0303 = 128 << 10
 const runtimeTotalLimit0303 = 4 << 20
 const runtimeKeyLimit0303 = 256
@@ -31,8 +31,9 @@ func runtimeDir0303(root string, key Key) string {
 }
 
 func secureDirectory0303(dir string) error {
-	// Reject symlinks at each existing component; a malicious extension must not
-	// redirect broker writes through a pre-planted symlink.
+	// Отклоняйте символьные ссылки на каждом существующем компоненте пути;
+	// вредоносное расширение не должно перенаправить запись брокера через заранее
+	// установленную ссылку.
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return err
@@ -131,14 +132,15 @@ func runtimeWrite0303(ctx context.Context, dir, path string, body json.RawMessag
 	if err := os.Rename(tmp, path); err != nil {
 		return err
 	}
-	// Best-effort directory sync for crash consistency on filesystems that support it.
+	// Синхронизация каталога для сохранности при сбое по возможности, если файловая система
+	// её поддерживает.
 	syncRuntimeDirectory0303(dir)
 	return nil
 }
 
-// Directory syncing makes both rename and unlink durable on filesystems that
-// support it. Platforms without directory fsync retain the prior best-effort
-// behavior rather than making every document mutation fail.
+// Синхронизация каталогов делает и rename, и unlink устойчивыми на поддерживающих
+// ФС. На платформах без fsync каталога сохраняется прежний режим best-effort, а
+// не ошибка любой операции с документом.
 func syncRuntimeDirectory0303(dir string) {
 	if d, err := os.Open(dir); err == nil {
 		_ = d.Sync()

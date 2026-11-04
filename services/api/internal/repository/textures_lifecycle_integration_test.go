@@ -14,8 +14,9 @@ import (
 	"time"
 )
 
-// Against a disposable PostgreSQL 17+ database, exercises real row locks,
-// pinned backups, lease fencing, stale workers and quarantine lifecycle.
+// На одноразовой PostgreSQL 17+ проверяются настоящие блокировки строк,
+// закреплённые резервные копии, ограждение аренд, устаревшие воркеры и
+// жизненный цикл карантина.
 func TestTextureLifecyclePostgres02511(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_02511")
 	if dsn == "" {
@@ -40,7 +41,7 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.ExecContext(context.Background(), `DROP SCHEMA IF EXISTS `+schema+` CASCADE`)
-	// One connection serializes the migration and test and preserves search_path.
+	// Одно соединение сериализует миграцию и тест, сохраняя search_path.
 	db.SetMaxOpenConns(1)
 	if _, err := db.ExecContext(ctx, `SET search_path TO `+schema); err != nil {
 		t.Fatal(err)
@@ -141,7 +142,8 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 	if _, err := r.PruneTextureSnapshotPins02511(ctx); err != nil {
 		t.Fatal(err)
 	}
-	// 0.25.12: a simulated storage failure must leave the GC record intact.
+	// Версия 0.25.12: имитация ошибки хранилища должна сохранять запись GC без
+	// изменений.
 	third := digest("third")
 	key := "texture-blobs/sha256/" + third[:2] + "/" + third + ".png"
 	if _, err = db.ExecContext(ctx, `INSERT INTO texture_blobs(digest,byte_size,width,height,media_type,storage_driver,object_key,status,verified_at,created_at,last_upload_at)
@@ -174,9 +176,8 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		if digest != third {
 			return fmt.Errorf("wrong digest")
 		}
-		// A second PostgreSQL session must be unable to insert an FK
-		// reference while the physical deletion is in progress. The
-		// callback is deliberately invoked while the blob row is locked.
+		// Второй сеанс PostgreSQL не должен вставить FK-ссылку во время физического
+		// удаления. Callback намеренно вызывается при блокировке строки объекта.
 		secondDB, err := sql.Open("pgx", dsn)
 		if err != nil {
 			return err

@@ -134,9 +134,9 @@ func TestGrowthLivePostgresRedis03212(t *testing.T) {
 	}
 }
 
-// TestProductionRCLiveS3Growth checks the real configured object store, not
-// the in-memory HTTP double used for unit tests. The RC runner requires its
-// environment and rejects a skipped test as a release failure.
+// TestProductionRCLiveS3Growth проверяет настоящее настроенное объектное
+// хранилище, а не HTTP-имитацию в памяти из модульных тестов. Раннер RC требует
+// окружение и считает пропущенный тест ошибкой выпуска.
 func TestProductionRCLiveS3Growth(t *testing.T) {
 	keys := []string{
 		"LAUNCHER_RC_S3_ENDPOINT", "LAUNCHER_RC_S3_BUCKET",

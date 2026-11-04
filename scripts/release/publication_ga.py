@@ -37,9 +37,10 @@ def verify(approval:Path, signature:Path, verifier_public:Path, verifier_pin:str
     original=ga.rehearsal.package_set(packages,index,index_pin,source_commit,project)
     need(original==report['finalPackages'] and len(original)==8,
          'actual final signed installer bytes differ from verified GA')
-    # A separate signed-release bundle is *not* the approved installer. Don't
-    # silently publish other executable packages just because their source is
-    # the same. Exact six final-byte assets must enter the signed bundle.
+    # Отдельный подписанный пакет выпуска — ещё не одобренный установщик. Не
+    # публикуйте незаметно другие исполняемые пакеты только потому, что у них
+    # одинаковые исходники. В подписанный пакет должны войти точно шесть
+    # артефактов с окончательными байтами.
     need(bundle.is_absolute() and bundle.is_dir() and not bundle.is_symlink(),
          'real signed publication bundle missing')
     present={p.name for p in bundle.iterdir() if p.is_file() and not p.is_symlink()}
@@ -49,8 +50,9 @@ def verify(approval:Path, signature:Path, verifier_public:Path, verifier_pin:str
         file=ga.rehearsal.safe(bundle/name,ga.rehearsal.native.MAX_PACKAGE)
         need(file.stat().st_size==row['size'] and ga.rehearsal.sha(file)==row['sha256'],
              'publication attempts to replace approved signed package '+name)
-    # Existing publisher verifies that these files are covered by SHA256SUMS,
-    # RELEASE_MANIFEST and release-root signature; this guard is complementary.
+    # Существующий публикующий процесс проверяет, что эти файлы покрываются
+    # SHA256SUMS, RELEASE_MANIFEST и подписью корня выпуска; эта защита
+    # дополнительная.
     return {'version':ga.VERSION,'commit':source_commit,'status':'PASS',
             'authorizedPackages':len(original),
             'gaApprovalSha256':ga.rehearsal.sha(approval)}

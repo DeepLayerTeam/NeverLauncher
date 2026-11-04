@@ -96,9 +96,9 @@ func (s *Service) Authorize(_ context.Context, actor Actor, action string, scope
 	roles := roleIndex(s.repo.ListRoles())
 	decision.PolicyRevision = policyRevision(user, roles)
 
-	// Even a project-scoped owner/wildcard is not an instance-wide host or
-	// backend administrator. Deny before checking the global role as well:
-	// privileged callers must explicitly request GLOBAL scope.
+	// Даже владелец проекта или его wildcard не является администратором
+	// хоста/Backend всего экземпляра. Отклоняйте запрос и до проверки глобальной
+	// роли: привилегированный вызов должен явно запрашивать область GLOBAL.
 	if domain, ok := ControlActionDomain(action); ok && domain != DomainGame && scope.Kind != ScopeGlobal {
 		decision.ReasonCode = "instance-scope-required"
 		return decision
@@ -138,9 +138,9 @@ func (s *Service) Authorize(_ context.Context, actor Actor, action string, scope
 	return decision
 }
 
-// ProjectActionCatalog returns project-capable actions without instance-wide
-// permissions. Use it when projecting a project owner's '*' to UI claims:
-// never project the literal wildcard into projectPermissions.
+// ProjectActionCatalog возвращает действия уровня проекта без прав всего
+// экземпляра. При отображении '*' владельца проекта в утверждения UI никогда не
+// передавайте буквальный wildcard в projectPermissions.
 func ProjectActionCatalog() []string {
 	return []string{
 		"project:read", "project:write", "release:prepare", "release:publish", "file:write",
@@ -154,8 +154,9 @@ func ProjectActionCatalog() []string {
 // отдельного проекта. Добавление сюда глобального административного
 // права меняет безопасность и проверяется фиксированной проверкой 0.21.1.
 func IsProjectAction(action string) bool {
-	// Catalog-specific component grants belong to a project, never an instance.
-	// Only explicit, syntactically valid component.* role permissions qualify.
+	// Разрешения компонентов конкретного каталога относятся к проекту, а не
+	// экземпляру. Допустимы только явные синтаксически корректные полномочия роли
+	// component.*.
 	if len(action) > len("component.") && len(action) <= 128 && strings.HasPrefix(action, "component.") {
 		valid := true
 		for _, r := range action[len("component."):] {

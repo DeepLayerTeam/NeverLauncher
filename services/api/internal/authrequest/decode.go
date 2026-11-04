@@ -1,6 +1,6 @@
-// Package authrequest parses security-sensitive authentication requests.
-// An authentication endpoint must not interpret ambiguous JSON, accept
-// unbounded passwords, or accidentally ignore a second JSON document.
+// Пакет authrequest разбирает критичные для безопасности запросы авторизации.
+// Точка входа не должна неоднозначно трактовать JSON, принимать
+// неограниченные пароли или случайно игнорировать второй JSON-документ.
 package authrequest
 
 import (
@@ -16,9 +16,10 @@ const MaxBytes = 16 * 1024
 
 var ErrTooLarge = errors.New("authentication request exceeds 16 KiB")
 
-// Decode accepts exactly one JSON object, rejects duplicate keys (including
-// case variants and nested objects), unknown properties and trailing data.
-// The byte limit is applied before any JSON allocation or upstream call.
+// Decode принимает строго один объект JSON, отклоняет повторяющиеся ключи
+// (включая варианты регистра и вложенные объекты), неизвестные свойства и лишние
+// данные после объекта. Ограничение байтов применяется до любого выделения
+// памяти под JSON или вызова внешнего сервиса.
 func Decode(src io.Reader, destination any) error {
 	if src == nil {
 		return errors.New("authentication request body is missing")
@@ -70,8 +71,8 @@ func consumeObject(dec *json.Decoder) error {
 		if !ok {
 			return errors.New("invalid authentication JSON key")
 		}
-		// encoding/json resolves struct fields without case sensitivity. Apply
-		// the same equivalence so a request cannot set one field twice.
+		// encoding/json разрешает поля структур без учёта регистра. Применяйте такую
+		// же эквивалентность, чтобы запрос не мог дважды присвоить одно поле.
 		key = strings.ToLower(key)
 		if _, duplicate := seen[key]; duplicate {
 			return errors.New("duplicate authentication JSON key")

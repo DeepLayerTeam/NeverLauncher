@@ -1,8 +1,8 @@
 package sqlitecore
 
-// These tables extend the existing core schema. They are not a parallel
-// in-memory auth store: session validation always consults the same WAL DB as
-// users and their monotonically increasing auth_epoch.
+// Эти таблицы расширяют существующую схему ядра. Это не параллельное хранилище
+// авторизации в памяти: проверка сеанса всегда обращается к той же WAL-БД, что
+// пользователи и их монотонно возрастающий auth_epoch.
 var authDDL = []string{
 	`CREATE TABLE auth_sessions (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,

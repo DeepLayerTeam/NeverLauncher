@@ -152,10 +152,10 @@ func (r *RedisCoordinator) ReleaseCommandLease(ctx context.Context, serverID, co
 	return err
 }
 
-// Pre-0.51.4 key normalization silently discarded '/', ':', whitespace etc.
-// Two distinct untrusted identifiers could therefore acquire the same Redis
-// key. Reject lossy normalization instead of changing valid keys (which would
-// allow an old and new process to acquire separate locks during rollout).
+// До версии 0.51.4 нормализация ключей молча удаляла '/', ':', пробелы и другие
+// символы. Два разных недоверенных идентификатора могли получить один Redis-ключ.
+// Отклоняйте нормализацию с потерями, не меняя корректные ключи: иначе старый и
+// новый процессы смогут захватить разные блокировки при развёртывании.
 func validateCommandLeaseIdentity0514(parts ...string) error {
 	for _, part := range parts {
 		if part == "" || len(part) > 256 || safePart(part) != part {

@@ -362,8 +362,8 @@ def main() -> int:
         if sums.get(item["file"]) != item["sha256"]:
             die(f"{item['id']}: SHA256SUMS mismatch")
 
-    # Verify the actual bridge-common Java policy at the same commit before
-    # certifying an artifact cohort. This is NOT a live Minecraft server test.
+    # Перед сертификацией группы артефактов проверьте настоящую Java-политику
+    # bridge-common для того же коммита. Это НЕ тест живого сервера Minecraft.
     suite = ROOT / "e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh"
     try:
         result = subprocess.run(

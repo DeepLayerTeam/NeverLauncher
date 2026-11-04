@@ -10,7 +10,8 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// Limits concurrent temporary ZIP staging to protect a production API host.
+// Ограничивайте число параллельных временных подготовок ZIP для защиты
+// промышленного API-хоста.
 var gravitinventorySlots0333 = make(chan struct{}, 2)
 
 type migrationInventoryStore0333 interface {
@@ -45,8 +46,9 @@ func (s Server) migrationInventoryGet0333(w http.ResponseWriter, r *http.Request
 	writeJSON(w, 200, map[string]any{"data": v})
 }
 
-// Source is not kept server-side; spool only for the duration of the request.
-// No local paths, credentials or source content enter logs/database.
+// Источник не хранится на сервере; временное хранение действует только на
+// протяжении запроса. Локальные пути, учётные данные и содержимое источника не
+// попадают в журналы и БД.
 func (s Server) migrationInventoryUpload0333(w http.ResponseWriter, r *http.Request, export bool) {
 	store, ok := s.migrationInventoryStore0333(w)
 	if !ok {
@@ -112,8 +114,9 @@ func (s Server) migrationInventoryUpload0333(w http.ResponseWriter, r *http.Requ
 		migrationHTTPError0331(w, mw.ErrConflict)
 		return
 	}
-	// Preflight checks completed before writing the response. The exported ZIP
-	// may be large: stream with backpressure, never buffer it in memory.
+	// Предварительные проверки завершаются до отправки ответа. Экспортируемый ZIP
+	// может быть крупным: передавайте его потоком с обратным давлением, не
+	// буферизуя целиком в памяти.
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", `attachment; filename="gravit-source-verified.zip"`)
 	w.Header().Set("Cache-Control", "no-store, private")
@@ -121,8 +124,8 @@ func (s Server) migrationInventoryUpload0333(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("X-Migration-Manifest-SHA256", saved.ManifestSHA256)
 	w.WriteHeader(http.StatusOK)
 	if err := inv.Export(r.Context(), w, src, n, saved); err != nil {
-		// The client must treat an interrupted/truncated download as failure.
-		// No second HTTP status can be sent once streaming has started.
+		// Клиент обязан считать прерванную или обрезанную загрузку ошибкой. После
+		// начала потоковой передачи второй HTTP-статус отправить невозможно.
 		return
 	}
 	s.audit(r, s.adminActor(r), "migration:gravit-source-export", run.ProjectID)

@@ -20,7 +20,8 @@ public final class GravitCompatTests {
         rejected(()->new Version(-1,2,3,4,Version.Type.LTS));
         rejected(()->new LauncherModuleInfoBuilder().setName("bad spaces").createLauncherModuleInfo());
         Mod mod=new Mod();verify(mod.getInitStatus()==LauncherModule.InitStatus.CREATED);
-        // Only a ported extension bootstrap can provide a real host manager/context.
+        // Только начальная загрузка перенесённого расширения может предоставить настоящий
+        // менеджер/контекст хоста.
         rejected(()->mod.initialize(null,null));
         verify(mod.getInitStatus()==LauncherModule.InitStatus.CREATED);
         rejected(()->new LauncherModule.Event().cancel());

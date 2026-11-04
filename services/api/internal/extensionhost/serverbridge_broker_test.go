@@ -16,9 +16,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// Production code is exercised through the authenticated HTTP broker. The
-// ServerBridge store adapter below deterministically simulates V3 queue ACKs;
-// PostgreSQL locking/idempotency are separately tested by the repository suite.
+// Промышленный код проверяется через аутентифицированный HTTP-брокер. Адаптер
+// хранилища ServerBridge ниже детерминированно имитирует ACK очереди V3; блокировки
+// и идемпотентность PostgreSQL отдельно проверяются тестами репозитория.
 type javaBridgeStoreTest0488 struct {
 	repository.Repository
 	mu       sync.Mutex

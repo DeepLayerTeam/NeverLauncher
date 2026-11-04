@@ -14,8 +14,9 @@ import (
 )
 
 func migrationIdentityTargets0334(ctx context.Context, tx *sql.Tx) ([]gi.Target, error) {
-	// Inspect both Never's local/remote Minecraft identity and verified official
-	// identities; contradictory claims are deliberately not silently de-duped.
+	// Проверяйте как локальную/удалённую идентичность Minecraft Never, так и
+	// подтверждённые официальные идентичности; противоречащие заявления намеренно не
+	// объединяются молча.
 	rows, e := tx.QueryContext(ctx, `SELECT uuid,name,user_id,'minecraft_profiles' FROM minecraft_profiles UNION ALL
  SELECT minecraft_uuid,minecraft_name,user_id,'official_link' FROM official_identity_links_0268`)
 	if e != nil {
@@ -60,8 +61,8 @@ func saveIdentityRows0334(ctx context.Context, tx *sql.Tx, id string, rows []gi.
 	if _, e := tx.ExecContext(ctx, `DELETE FROM migration_identity_rows_0334 WHERE run_id=$1`, id); e != nil {
 		return e
 	}
-	// Batch inserts keep network and PostgreSQL statement overhead bounded even
-	// for large FileAuth/SQL snapshots (<=200000 players).
+	// Пакетные вставки ограничивают сетевые и PostgreSQL-накладные расходы даже для
+	// больших снимков FileAuth/SQL до 200000 игроков.
 	for start := 0; start < len(rows); start += 250 {
 		end := start + 250
 		if end > len(rows) {
@@ -167,10 +168,12 @@ func (r *SQLRepository) SaveMigrationIdentities0334(ctx context.Context, id stri
 	if _, e = tx.ExecContext(ctx, `UPDATE migration_identity_snapshots_0334 SET verified_at=now() WHERE run_id=$1`, id); e != nil {
 		return gi.Report{}, e
 	}
-	// Same source and unchanged target must not manufacture replay revisions.
+	// Один и тот же источник при неизменной цели не должен порождать новые ревизии
+	// при повторе.
 	var previousSignature string
 	if prevDigest != "" { // always reverify targets; journal is only appended on first snapshot or changed resolution
-		// Last recorded signature comes from independently stored event detail.
+		// Последняя записанная подпись берётся из независимо сохранённых деталей
+		// события.
 		_ = tx.QueryRowContext(ctx, `SELECT detail->>'mappingSha256' FROM migration_events_0331 WHERE run_id=$1 AND kind='gravit_identity_mapped' ORDER BY seq DESC LIMIT 1`, id).Scan(&previousSignature)
 	}
 	signature := digestMappings0334(mapped)
@@ -203,7 +206,8 @@ func (r *SQLRepository) GetMigrationIdentities0334(ctx context.Context, id strin
 	if e := r.check(); e != nil {
 		return gi.Report{}, e
 	}
-	// Read snapshot and its mapping rows in one consistent PostgreSQL snapshot.
+	// Читайте снимок и строки его сопоставлений в одном согласованном снимке
+	// PostgreSQL.
 	tx, e := r.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
 	if e != nil {
 		return gi.Report{}, e
@@ -246,8 +250,9 @@ func (r *SQLRepository) VerifyMigrationIdentities0334(ctx context.Context, id st
 	if e := r.check(); e != nil {
 		return gi.Report{}, e
 	}
-	// Load a stable snapshot, then delegate to Save which serializes the run
-	// and rechecks the source checksum and current target ownership atomically.
+	// Загрузите стабильный снимок, затем передайте Save, который сериализует запуск
+	// и атомарно повторно проверяет контрольную сумму источника и текущее владение
+	// целью.
 	report, e := r.GetMigrationIdentities0334(ctx, id)
 	if e != nil {
 		return gi.Report{}, e

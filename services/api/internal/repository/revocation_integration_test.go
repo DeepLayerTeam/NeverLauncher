@@ -19,8 +19,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// A second API connection must observe revoked credentials without replica
-// cache refresh, and SQL itself must reject attempts to restore tombstones.
+// Второе соединение API должно видеть отозванные учётные данные без обновления
+// кэша реплики, а SQL сам обязан отклонять попытки восстановить
+// tombstone-записи.
 func TestRevocationTerminalPostgres0434(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {

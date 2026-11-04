@@ -41,7 +41,8 @@ func TestV12SQLAuditImmutableAndNoManualCertification03412(t *testing.T) {
 			t.Fatalf("SQL audit mutation succeeded: %s: %v", q, err)
 		}
 	}
-	// No manual certification column or authority is created by V12 migration.
+	// Миграция V12 не создаёт столбец ручной сертификации или орган выдачи
+	// полномочий.
 	var manual bool
 	err = r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='validation_attempt_events_03412' AND column_name='certified')`).Scan(&manual)
 	if err != nil || manual {

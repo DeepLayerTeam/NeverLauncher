@@ -59,7 +59,8 @@ func TestStreamRejectsRedirectAndInvalidOptions0463(t *testing.T) {
 	}))
 	defer server.Close()
 	c, _ := New(server.URL, "secret")
-	// Custom redirect-following HTTP client must not weaken this SDK API.
+	// Пользовательский HTTP-клиент с поддержкой редиректов не должен ослаблять
+	// этот API SDK.
 	c.HTTP = &http.Client{}
 	var out bytes.Buffer
 	_, err := c.RequestStream(context.Background(), "GET", "/api/v1/redirect", nil, nil, "", &out, 1024, "")

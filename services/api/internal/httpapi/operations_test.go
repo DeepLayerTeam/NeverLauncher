@@ -10,9 +10,10 @@ import (
 	"testing"
 )
 
-// Regression: old rollback route and the new execution lifecycle MUST converge
-// on the same immutable release for repeated requests, even without a client
-// idempotency key. The request's job id is also the audit correlation id.
+// Регрессия: старый маршрут отката и новый жизненный цикл выполнения ОБЯЗАНЫ
+// приводить к одному неизменяемому релизу при повторных запросах, даже без
+// клиентского ключа идемпотентности. ID задачи запроса также служит корреляционным
+// ID аудита.
 func TestRollbackOperationIdempotency0217(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)
@@ -21,7 +22,8 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 	}
-	// Construct a real published source package with integrity evidence.
+	// Создайте настоящий опубликованный исходный пакет со свидетельствами
+	// целостности.
 	req := httptest.NewRequest("POST", "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"dev","version":"0.21.7-idem"}`))
 	auth(req)
 	rr := httptest.NewRecorder()
@@ -38,7 +40,8 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := created.Data.PackageID
-	// Upload genuine bytes and use the production validation/signing pipeline.
+	// Загрузите подлинные байты и используйте производственный конвейер проверки и
+	// подписи.
 	var upload bytes.Buffer
 	writer := multipart.NewWriter(&upload)
 	_ = writer.WriteField("path", "mods/rollback.jar")
@@ -104,8 +107,8 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	if first.Data.Status != "rolled-back-as-new-validated-immutable-release" || jobID == "" {
 		t.Fatalf("rollback not published: %+v correlation=%s", first, jobID)
 	}
-	// A successful durable rollback MUST actually advance the channel head
-	// and replaying the same job must not advance it again.
+	// Успешный устойчивый откат ОБЯЗАН действительно продвинуть head канала;
+	// повтор той же задачи не должен продвигать его снова.
 	req = httptest.NewRequest("GET", "/api/v1/projects/demo-project/profiles/vanilla/channels/dev/head", nil)
 	auth(req)
 	rr = httptest.NewRecorder()
@@ -152,9 +155,9 @@ func TestOperationRoutesRequireAuthentication0217(t *testing.T) {
 	}
 }
 
-// An operator must not preview a signed package under an unrelated selected
-// profile/channel. The actual backend package, not the submitted UI context,
-// defines the resource that would be published.
+// Оператор не должен просматривать подписанный пакет под несвязанным выбранным
+// профилем или каналом. Ресурс будущей публикации определяется настоящим пакетом
+// Backend, а не переданным контекстом интерфейса.
 func TestPublishPreviewRejectsWrongChannel0386(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)

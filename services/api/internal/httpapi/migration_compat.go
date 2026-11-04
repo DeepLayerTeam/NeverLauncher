@@ -60,14 +60,15 @@ func (s Server) migrationCompatibilityAssess0332(w http.ResponseWriter, r *http.
 		migrationHTTPError0331(w, mw.ErrBusy)
 		return
 	}
-	// application/zip binary request, not a path on the backend host; prevents
-	// arbitrary file reads and extraction. No uploaded bytes are persisted.
+	// Двоичный запрос application/zip, а не путь на хосте Backend; исключает
+	// произвольное чтение и распаковку файлов. Загруженные байты не сохраняются.
 	if t := r.Header.Get("Content-Type"); !strings.EqualFold(strings.TrimSpace(strings.Split(t, ";")[0]), "application/zip") {
 		writeError(w, 415, "upload a ZIP as application/zip")
 		return
 	}
-	// The same two-slot bounded staging and ZIP validation as inventory.
-	// Do not buffer an entire 512 MiB modpack into the API process.
+	// Те же ограниченные двумя слотами подготовка и проверка ZIP, что и для
+	// инвентаризации. Не загружайте весь модпак объёмом 512 МиБ в память процесса
+	// API.
 	select {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()

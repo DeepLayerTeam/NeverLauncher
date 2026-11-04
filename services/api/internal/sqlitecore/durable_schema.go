@@ -1,8 +1,8 @@
 package sqlitecore
 
-// durableDDL is migration 325. A tombstone for every idempotency key and the
-// monotonically increasing lease fence are retained permanently (no TTL GC).
-// All mutation SQL is executed under sqlitedurable.Store.Write/BEGIN IMMEDIATE.
+// durableDDL — миграция 325. Tombstone-запись для каждого ключа идемпотентности и
+// монотонное ограждение аренды сохраняются постоянно без TTL GC. Все изменяющие
+// SQL-команды выполняются через sqlitedurable.Store.Write/BEGIN IMMEDIATE.
 var durableDDL = []string{
 	`CREATE TABLE durable_jobs (
  id TEXT PRIMARY KEY, kind TEXT NOT NULL, actor_type TEXT NOT NULL, actor_id TEXT NOT NULL,

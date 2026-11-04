@@ -57,8 +57,9 @@ public final class Agent {
             }
         }
         if (guardPolicyActive) {
-            // Install the observer before Minecraft's own loader initializes.
-            // Authorized loader classes must originate in pinned runtime JARs.
+            // Устанавливайте наблюдатель до инициализации собственного загрузчика
+            // Minecraft. Разрешённые классы загрузчика должны происходить из закреплённых
+            // JAR Runtime.
             instrumentation.addTransformer(LoaderGuard0504.from(config), false);
             if ("true".equals(config.getProperty("integrity.required"))) {
                 RuntimeIntegrity0505 integrity = RuntimeIntegrity0505.from(config);

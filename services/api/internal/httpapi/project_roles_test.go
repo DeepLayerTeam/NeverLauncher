@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// Exercises the real HTTP mux, the live authorization service and session
-// revocation instead of assuming that hiding a button is sufficient.
+// Проверяет настоящий HTTP mux, действующую службу авторизации и отзыв сеанса,
+// вместо предположения, что достаточно скрыть кнопку.
 func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	h := testServer(t)
 	owner := loginAdmin(t, h)
@@ -61,7 +61,7 @@ func TestProjectMembership0387IsScopedAuditedAndRevocable(t *testing.T) {
 	if wildcard.Code != http.StatusBadRequest {
 		t.Fatalf("wildcard project: %d %s", wildcard.Code, wildcard.Body.String())
 	}
-	// The original token is revoked on membership changes, requiring a fresh login.
+	// Исходный токен отзывается при изменении членства, что требует нового входа.
 	blocked := request0211(t, h, http.MethodPatch, "/api/v1/admin/projects/demo-project", actor, `{"description":"should-not-change"}`)
 	if blocked.Code == http.StatusOK {
 		t.Fatal("old token unexpectedly changed project")

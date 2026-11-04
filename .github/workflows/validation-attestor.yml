@@ -57,6 +57,7 @@ jobs:
         run: |
           cd services/api
           go test ./internal/httpapi ./internal/repository -run 'TestV05|TestV08|TestV11|TestV12|TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
-  # CI builds and tests NEVER hold the host attestation signing key.
-  # The sealed/pinned OCI image is built and approved through a separate
-  # operator-controlled pipeline; only that image digest can be attested.
+  # Сборки и тесты CI НИКОГДА не имеют ключа подписи аттестации хоста.
+  # Запечатанный и закреплённый OCI-образ собирается и одобряется отдельным
+  # процессом под контролем оператора; аттестации подлежит только дайджест
+  # этого образа.

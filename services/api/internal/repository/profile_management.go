@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// CreateProfileExclusive0225 is the required storage primitive for clone/import
-// and presets. Existing identities MUST be rejected, even with matching content.
+// CreateProfileExclusive0225 — обязательная операция хранилища для клонирования,
+// импорта и пресетов. Существующие идентичности ДОЛЖНЫ отклоняться даже при
+// совпадающем содержимом.
 func (r *MemoryRepository) CreateProfileExclusive0225(p model.Profile) (model.Profile, error) {
 	if _, err := r.GetProject(p.ProjectID); err != nil {
 		return model.Profile{}, err

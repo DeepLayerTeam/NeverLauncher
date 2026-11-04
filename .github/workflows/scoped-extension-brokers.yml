@@ -32,4 +32,5 @@ jobs:
       - name: Build API with production PostgreSQL driver
         working-directory: services/api
         run: go build ./cmd/launcher-api
-# Live namespace/cgroup test requires a dedicated preconfigured non-root host.
+# Живой тест пространств имён и cgroup требует отдельного заранее настроенного
+# непривилегированного хоста.

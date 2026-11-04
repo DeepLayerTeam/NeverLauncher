@@ -115,8 +115,8 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	if err != nil || replay.Status != "succeeded" {
 		t.Fatalf("cross-replica idempotent ACK: %+v err=%v", replay, err)
 	}
-	// A retried FAILED acknowledgement with an oversized reason must resolve
-	// to the same normalized persisted response across backend replicas.
+	// Повторный FAILED ACK с чрезмерно длинной причиной должен возвращать
+	// одинаковый нормализованный сохранённый ответ на всех репликах Backend.
 	failedCommand := cmd
 	failedCommand.ID = "ctl_ha01911_long_failure"
 	failedCommand.IdempotencyKey = "ha01911-idem-long-failure"
@@ -144,9 +144,9 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 		t.Fatalf("idempotent failed acknowledgement across replicas: %+v err=%v", replayed, replayErr)
 	}
 
-	// Durable failover: a delivered external side effect with lost ACK cannot
-	// be retried merely because its lease expired. Both API replicas must
-	// observe the SAME indeterminate row, including its original lease fence.
+	// Устойчивый failover: доставленный внешний побочный эффект с потерянным ACK
+	// нельзя повторять только из-за истечения аренды. Обе реплики API должны
+	// видеть ОДНУ и ту же неопределённую строку с исходным ограждением аренды.
 	unknown := cmd
 	unknown.ID = "ctl_ha01911_uncertain_0285"
 	unknown.IdempotencyKey = "ha01911-uncertain-0285"
@@ -161,8 +161,8 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	if err != nil || first.Status != "leased" {
 		t.Fatalf("first uncertain lease: %+v %v", first, err)
 	}
-	// Simulate expiry at the database (the old test shifted API wall time,
-	// which 0.51.5 intentionally ignores to prevent cross-host clock skew).
+	// Имитируйте истечение в БД; старый тест сдвигал время API, которое 0.51.5
+	// намеренно игнорирует для защиты от расхождения часов хостов.
 	if _, err = a.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1`, first.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -181,13 +181,13 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	if _, err = b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, "dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef", first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second)); !errors.Is(err, ErrConflict) {
 		t.Fatalf("new owner must not claim expired delivery: %v", err)
 	}
-	// An original, authenticated durable ACK can reconcile a lost HTTP reply
-	// without re-dispatching the side effect.
+	// Исходный аутентифицированный устойчивый ACK может согласовать потерянный
+	// HTTP-ответ без повторной отправки побочного эффекта.
 	late, err := b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, first.LeaseOwner, first.LeaseToken, first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second))
 	if err != nil || late.Status != "succeeded" {
 		t.Fatalf("original late ACK must reconcile safely: %+v %v", late, err)
 	}
-	// A pre-0.28.5 replica must be fenced by PostgreSQL itself, not just Go.
+	// Реплика до 0.28.5 должна ограждаться самим PostgreSQL, а не только Go.
 	if _, err = b.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased', lease_token='stale' WHERE id=$1`, first.ID); err == nil {
 		t.Fatal("database trigger permitted old replica redelivery")
 	}

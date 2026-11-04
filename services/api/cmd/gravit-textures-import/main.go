@@ -1,5 +1,6 @@
-// Standalone, operator-only Gravit TextureProvider migration. No HTTP endpoint,
-// no user-supplied auth credentials and no remote file_url fetches.
+// Автономная миграция Gravit TextureProvider только для оператора. Нет
+// HTTP-маршрута, учётных данных авторизации из пользовательского ввода и удалённых
+// обращений по file_url.
 package main
 
 import (
@@ -171,9 +172,10 @@ func run() error {
 		source = texturegravit.LocalSource{Root: *sourceRoot}
 	}
 	runner := texturegravit.Runner{Database: repo, Source: source, Destination: dst, SourceID: *sourceID, ObjectTemplate: *sourceTemplate, Mapping: mapping, Replace: *replace, DryRun: true}
-	// Always run a fresh read-only byte/UUID check before any live writes.
-	// This guarantees that all source images and target identities are usable
-	// before the first selection is changed. A changed plan requires reapproval.
+	// Всегда выполняйте новую проверку байтов/UUID только на чтение до любых живых
+	// записей. Она гарантирует пригодность всех исходных изображений и целевых
+	// идентичностей до изменения первого выбора. При изменении плана нужно повторное
+	// одобрение.
 	report, runErr := runner.Run(ctx, sourceRows)
 	if runErr == nil && !*dryRun {
 		if !isApprovedTexturePlan0445(*approved) || report.PlanSHA256 != *approved {
@@ -185,12 +187,13 @@ func run() error {
 			report, runErr = runner.Run(ctx, sourceRows)
 		}
 	}
-	// Retain the preflight reason in the 0600 report even when the operator
-	// supplied a stale approval or the source changed before live import.
+	// Сохраняйте причину неудачной предварительной проверки в отчёте 0600, даже
+	// если оператор предоставил устаревшее одобрение или источник изменился до
+	// живого импорта.
 	if runErr != nil && report.FatalError == "" {
 		report.FatalError = runErr.Error()
 	}
-	// Write the report even if context cancellation aborted the import.
+	// Записывайте отчёт, даже если отмена контекста прервала импорт.
 	encoded, e := json.MarshalIndent(report, "", "  ")
 	if e != nil {
 		return e

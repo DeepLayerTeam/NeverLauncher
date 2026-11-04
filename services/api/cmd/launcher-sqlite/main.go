@@ -1,6 +1,6 @@
-// launcher-sqlite is the DEP00 physical SQLite WAL preflight/verification
-// executable. It is intentionally NOT a substitute for the future DEP01 app
-// schema or DEP03 Redis-less coordinator.
+// launcher-sqlite — исполняемый файл физической предварительной
+// проверки/верификации SQLite WAL DEP00. Он намеренно НЕ заменяет будущую схему
+// приложения DEP01 или координатор DEP03 без Redis.
 package main
 
 import (
@@ -78,7 +78,7 @@ func run(args []string) int {
 		if args[0] == "core-init" {
 			repo, err = sqlitecore.Open(ctx, opts)
 		} else {
-			// core-status must never create a previously nonexistent file.
+			// core-status никогда не должен создавать ранее не существовавший файл.
 			if _, statErr := os.Stat(*path); statErr != nil {
 				err = statErr
 			} else {

@@ -19,9 +19,9 @@ import (
 	"sync/atomic"
 )
 
-// This test talks to an actual PostgreSQL 16 server and two independent API
-// listeners, repositories, session DB connections and Federation cores. No
-// in-memory state is shared between replicas. CI must set the DSN explicitly.
+// Этот тест использует настоящий сервер PostgreSQL 16, два независимых слушателя
+// API, репозитории, соединения БД сеансов и ядра Federation. Состояние в памяти
+// между репликами не разделяется. CI должен явно задать DSN.
 func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	if dsn == "" {
@@ -31,7 +31,7 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 	defer cancel()
 	firstRepo := repository.NewSQLRepository("pgx", dsn, "https://api.example.test")
 	secondRepo := repository.NewSQLRepository("pgx", dsn, "https://api.example.test")
-	// The canonical catalogue must be applied through the production repository.
+	// Канонический каталог необходимо применять через производственный репозиторий.
 	if r, ok := firstRepo.(*repository.SQLRepository); ok {
 		if _, err := r.ApplyMigrations(ctx); err != nil {
 			t.Fatal(err)

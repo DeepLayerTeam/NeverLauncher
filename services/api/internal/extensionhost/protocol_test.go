@@ -12,8 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// Real authenticated HTTP handler tests; the request uses precisely the
-// 0.42.0 SDK hello envelope so older built clients remain wire-compatible.
+// Тесты настоящего аутентифицированного HTTP-обработчика: запрос использует
+// точно конверт hello SDK 0.42.0 для совместимости со старыми собранными
+// клиентами.
 func TestHostHelloSDKCompatibility0421(t *testing.T) {
 	for _, tc := range []struct {
 		name, manifestAPI, wireProtocol, wireAPI, code string

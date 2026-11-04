@@ -223,7 +223,8 @@ func (s Server) serveTextureBlob0252(w http.ResponseWriter, r *http.Request, dig
 	s.serveVerifiedTexture0255(w, r, digest, meta, owner)
 }
 
-// Shared integrity-checked writer for active textures and saved-library previews.
+// Общий проверенный на целостность механизм записи для активных текстур и
+// предпросмотров сохранённой библиотеки.
 func (s Server) serveVerifiedTexture0255(w http.ResponseWriter, r *http.Request, digest string, meta repository.TextureBlob0252, owner bool) {
 	if meta.StorageDriver != s.Storage.Driver() {
 		writeError(w, http.StatusServiceUnavailable, "texture storage driver mismatch")

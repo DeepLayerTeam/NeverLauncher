@@ -307,7 +307,8 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
                   "durationSeconds": round(monotonic() - start, 3), "events": outcomes,
                   "limits": ["single Docker-host lab; no host-loss test", "no real Minecraft sessions or job fencing proof",
                              "canary-only RPO; unacknowledged changes not measured"]}
-        # Atomic publish. No success report if writing or any fault fails.
+        # Атомарная публикация. Не сообщайте об успехе, если запись или любая
+        # операция внедрения отказа завершилась ошибкой.
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=report.parent,
                                          prefix=".chaos-0456-", suffix=".tmp", delete=False) as handle:
             staging = Path(handle.name)
@@ -326,7 +327,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
             try:
                 s3_delete(s3_url, bucket, key)
             except (dr.DrillError, OSError, subprocess.TimeoutExpired):
-                # Never hide the primary error; leave exact key for operator cleanup.
+                # Не скрывайте основную ошибку; оставьте точный ключ для очистки оператором.
                 print("Warning: S3 canary cleanup failed; key: " + key, file=sys.stderr)
 
 

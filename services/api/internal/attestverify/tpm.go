@@ -108,8 +108,8 @@ func decode(s string, limit int) ([]byte, error) {
 	return b, nil
 }
 
-// ExpectedExtraData is a domain-separated hash of the entire challenge and
-// active session/device binding. TPM2_Commit/Certify extraData has bounded size.
+// ExpectedExtraData — хеш с разделением доменов от всего запроса и привязки активной
+// сессии/устройства. Поле TPM2_Commit/Certify extraData ограничено размером.
 func ExpectedExtraData(b Binding) [32]byte {
 	p := fmt.Sprintf("Launcher TPM Certify v1\nuser=%s\ndevice=%s\nsession=%s\nbinding-epoch=%d\nchallenge-id=%s\nchallenge=%s\nissued-at=%s\nexpires-at=%s\n", b.UserID, b.DeviceID, b.SessionID, b.BindingEpoch, b.ChallengeID, b.Challenge, b.IssuedAt.UTC().Format(time.RFC3339Nano), b.ExpiresAt.UTC().Format(time.RFC3339Nano))
 	return sha256.Sum256([]byte(p))
@@ -136,7 +136,8 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	// FixedTPM, FixedParent, SensitiveDataOrigin, Sign; RSA or exotic ECC is intentionally excluded.
+	// FixedTPM, FixedParent, SensitiveDataOrigin, Sign; RSA и экзотические варианты ECC намеренно
+	// исключены.
 	if typ != tpmECC || hash != tpmSHA256 || attrs&(1<<1|1<<4|1<<5|1<<18) != (1<<1|1<<4|1<<5|1<<18) {
 		return nil, nil, errors.New("TPM key must be a fixed TPM-origin signing ECC P-256 key")
 	}
@@ -153,10 +154,11 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	// Linux hardware-enclave 0.2.10 generates unrestricted P-256 signing
-	// children with TPMT_ECC_SCHEME=ECDSA(SHA-256). Windows PCP may encode
-	// NULL. Both are valid; accepting ECDSA must consume its mandatory
-	// hash parameter, never misinterpret it as the curve identifier.
+	// Linux hardware-enclave 0.2.10 создаёт неограниченные дочерние ключи подписи
+	// P-256 со схемой TPMT_ECC_SCHEME=ECDSA(SHA-256). Windows PCP может
+	// кодировать NULL. Оба варианта допустимы; при принятии ECDSA нужно прочитать
+	// обязательный параметр хеша и не принять его ошибочно за идентификатор
+	// кривой.
 	if scheme == tpmECDSA {
 		schemeHash, err := p.u16()
 		if err != nil || schemeHash != tpmSHA256 {
@@ -202,9 +204,10 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	return name, point, nil
 }
 
-// verifyTPMClockInfo validates the signed TPMS_CLOCK_INFO (17 bytes),
-// followed by firmwareVersion (8 bytes). The TPM marks safe=0 after clock
-// uncertainty; such evidence cannot establish fresh platform assurance.
+// verifyTPMClockInfo проверяет подписанный TPMS_CLOCK_INFO (17 байт) и
+// следующий firmwareVersion (8 байт). После неопределённости часов TPM
+// выставляет safe=0; такие данные не доказывают актуальную надёжность
+// платформы.
 func verifyTPMClockInfo(c *cursor) error {
 	info, err := c.take(17)
 	if err != nil {
@@ -278,7 +281,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 	if h != tpmSHA256 {
 		return errors.New("TPM signature must use SHA-256")
 	}
-	// TPM signs the TPMS_ATTEST body, excluding the outer TPM2B length.
+	// TPM подписывает тело TPMS_ATTEST без внешнего поля длины TPM2B.
 	if len(attest) < 2 {
 		return errors.New("empty TPM attest")
 	}
@@ -326,9 +329,10 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 	return nil
 }
 
-// Verify authenticates a real TPM2 Certify output from a CA-issued AK and
-// binds the certified fixedTPM signing key to the exact registered device key.
-// It does not verify measured boot or the integrity of a running user process.
+// Verify аутентифицирует настоящий результат TPM2 Certify от AK, выпущенного CA, и
+// связывает сертифицированный ключ подписи fixedTPM с точно зарегистрированным
+// ключом устройства. Это не проверка измеренной загрузки или целостности
+// работающего пользовательского процесса.
 func Verify(e Evidence, b Binding, store *Store, now time.Time) (Result, error) {
 	fail := func(msg string) (Result, error) { return Result{}, errors.New(msg) }
 	if store == nil {

@@ -78,7 +78,7 @@ public class WorldLifecycle {
     )
     store = Path(tmp) / "backup"
     dest = Path(tmp) / "restored"
-    # A crashed maintenance process must fail closed, including on first JVM spawn.
+    # Сбой процесса обслуживания должен приводить к отказу, включая первый запуск JVM.
     gate = root / ".launcher/server-bridge/host/world-maintenance.gate"
     gate.mkdir()
     denied = run(

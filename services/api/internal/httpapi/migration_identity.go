@@ -89,7 +89,8 @@ func (s Server) migrationIdentityMap0334(w http.ResponseWriter, r *http.Request)
 		writeError(w, 413, "source exceeds previously inventoried ZIP")
 		return
 	}
-	// The spool and inspection share the bounded, streaming, untrusted ZIP reader.
+	// Промежуточное хранение и проверка используют общий ограниченный потоковый
+	// считыватель недоверенных ZIP.
 	src, size, digest, e := spoolIdentity0334(w, r)
 	if e != nil {
 		writeError(w, 413, "unable to read source identity ZIP")

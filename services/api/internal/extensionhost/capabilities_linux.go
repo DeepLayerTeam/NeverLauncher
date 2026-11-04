@@ -36,8 +36,9 @@ func probePlatformIsolation0311(d *IsolationDiagnostics0311) {
 	d.Seccomp = capabilityFromFile0311("/proc/sys/kernel/seccomp/actions_avail")
 	d.Landlock = capabilityFromFile0311("/sys/kernel/security/landlock")
 	d.CgroupsV2 = capabilityFromFile0311("/sys/fs/cgroup/cgroup.controllers")
-	// Seeing cgroup.controllers alone does not mean the service can delegate
-	// subtrees: inability to write cgroup.subtree_control blocks delegation.
+	// Одного cgroup.controllers недостаточно, чтобы утверждать возможность
+	// делегирования поддеревьев: отсутствие права записать cgroup.subtree_control
+	// блокирует делегирование.
 	if d.CgroupsV2.State == "detected" {
 		if f, err := os.OpenFile("/sys/fs/cgroup/cgroup.subtree_control", os.O_WRONLY, 0); err == nil {
 			_ = f.Close()

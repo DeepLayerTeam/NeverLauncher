@@ -213,9 +213,10 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// The existing signed node heartbeat is the live server-side Guard timer.
-	// It must process durable player bindings and queue correlated kicks for
-	// revoked sessions before acknowledging this heartbeat as healthy.
+	// Существующий подписанный heartbeat узла служит активным серверным таймером
+	// Guard. До подтверждения его исправности необходимо обработать устойчивые
+	// привязки игроков и поставить в очередь связанные отключения отозванных
+	// сеансов.
 	guardChecked, guardRevoked, guardErr := s.recheckServerBoundGuard0507(r, serverID)
 	if guardErr != nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-session-recheck-unavailable"), Actor: server.ID, Action: "guard:session:recheck-unavailable", Target: serverID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -318,13 +319,14 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "launcher_session_or_handoff_missing_or_expired", req, bridgeJoinRecord{}))
 		return
 	}
-	// The runtime-supplied UUID is an observation, NEVER an authority.
-	// Verify it before redeeming the one-time ticket/handoff; an offline-mode
-	// UUID or a different Mojang/project UUID must not silently replace it.
-	// Official online-mode proof is not meaningful without a UUID observed
-	// from the authenticated game handshake. A verified proxy handoff may
-	// arrive on an offline backend without its own online-mode observation;
-	// in that case the trusted source proof is checked separately below.
+	// UUID, предоставленный Runtime, является наблюдением, а НЕ источником
+	// доверия. Проверяйте его до погашения одноразового билета или передачи
+	// сеанса; UUID автономного режима или другой UUID Mojang/проекта не должен
+	// незаметно его заменять. Подтверждение официального online-mode бессмысленно
+	// без UUID, наблюдавшегося при аутентифицированном игровом рукопожатии.
+	// Подтверждённая передача через прокси может поступить на offline-бэкенд без
+	// собственного online-mode-наблюдения; тогда доверенное доказательство
+	// источника отдельно проверяется ниже.
 	identityCheck := bridgeidentity.Validate
 	if join.IdentityRealm == "official" && req.OnlineModeVerified {
 		identityCheck = bridgeidentity.ValidateVerified
@@ -397,8 +399,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, payload)
 		return
 	}
-	// A signed build/Guard binding must survive proxy handoffs. Recheck current
-	// policy and account/device state before consuming a one-time admission.
+	// Подписанная привязка сборки и Guard должна сохраняться при передаче через
+	// прокси. Перед использованием одноразового допуска повторно проверьте
+	// действующую политику и состояние учётной записи и устройства.
 	if err := s.requireGuardBoundJoin0507(r, join, fromHandoff); err != nil {
 		s.State.ServerBridge.invalidateSession(join.SessionID, "")
 		_ = s.flushPersistenceState950("server-bridge-guard-binding-denied")

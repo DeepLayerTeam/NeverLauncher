@@ -24,9 +24,9 @@ func digestValidationAttempt03412(payload []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Deliberately no free-form reason or detail in the immutable audit. All
-// secret-bearing data stays out of this table. A failed insert is visible to
-// the caller; stable certification fails closed when auditing is unavailable.
+// В неизменяемом аудите намеренно нет свободного текста причин и деталей. Все
+// данные, способные содержать секреты, исключены из таблицы. Ошибка вставки видна
+// вызывающему; при недоступном аудите сертификация stable отказывает по умолчанию.
 func (s Server) saveValidationDecision03412(ctx context.Context, pkg, run, kind, outcome, reason, digest string) error {
 	store, ok := s.Repo.(validationAuditStore03412)
 	if !ok {
@@ -172,8 +172,8 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 			summary.TargetID = payload.TargetID
 			summary.SchemaVersion = payload.SchemaVersion
 			summary.ExpiresAt = payload.ExpiresAt
-			// The recent-runs list is bounded; fetch exact historical runs
-			// when independently checking older signed attestations.
+			// Список последних запусков ограничен; при независимой проверке старых
+			// подписанных аттестаций запрашивайте точные исторические запуски.
 			if _, found := byRun[payload.RunID]; !found && canLoadRun {
 				if prior, e := runHistory.GetValidationRun03412(r.Context(), pkg, payload.RunID); e == nil {
 					byRun[payload.RunID] = prior
@@ -210,8 +210,9 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 			policyLevel = policy.RequiredLevel
 		}
 	}
-	// Audit entries provide a replayable chronology, never an eligibility flag.
-	// The only stable eligibility source is the live Backend runtime evaluator.
+	// Записи аудита дают воспроизводимую хронологию, но никогда не флаг пригодности.
+	// Единственный источник пригодности для stable — действующий оценщик Runtime
+	// Backend.
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"data": map[string]any{
 		"packageId": pkg, "policy": map[string]any{"requiredLevel": policyLevel},

@@ -1,9 +1,9 @@
 name: Интеграция и совместимость с официальным Minecraft 0.26.12
 
-# This workflow runs actual native builds and offline fault-injection tests on
-# all target operating systems. LIVE provider sign-in and real game-join checks
-# require an operator-owned account and servers; the workflow MUST NOT label
-# those external gates successful simply because these jobs pass.
+# Этот workflow выполняет настоящие нативные сборки и автономные тесты с внедрением
+# отказов на всех целевых ОС. Живой вход к провайдеру и реальное подключение к игре
+# требуют учётную запись и серверы под контролем оператора; успешные задачи здесь НЕ
+# ДОЛЖНЫ помечать внешние этапы как пройденные.
 on:
   pull_request:
     paths:

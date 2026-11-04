@@ -1,8 +1,9 @@
 package sqliteacceptance
 
-// Crash the entire service process with three open SQLite stores. The next
-// process must recover committed WAL frames instead of treating them as stale
-// sidecars or silently creating empty project/coordinator state.
+// Аварийно завершите весь процесс сервиса с тремя открытыми SQLite-хранилищами.
+// Следующий процесс обязан восстановить зафиксированные WAL-кадры, а не считать их
+// устаревшими sidecar-файлами или молча создавать пустое состояние проекта и
+// координатора.
 
 import (
 	"context"
@@ -111,6 +112,6 @@ func TestThreeDatabaseChild0471(t *testing.T) {
 	if err != nil || !allowed.Allowed {
 		t.Fatalf("first grant: %+v %v", allowed, err)
 	}
-	// No Close, WAL checkpoint, or process-level cleanup.
+	// Без Close, WAL-checkpoint и очистки уровня процесса.
 	os.Exit(71)
 }

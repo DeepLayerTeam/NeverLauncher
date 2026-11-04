@@ -42,7 +42,8 @@ def must(test, message):
 
 
 def run(args, *, timeout=600, env=None):
-    # Never echo argv or subprocess stdout/stderr: credentials may be present.
+    # Никогда не выводите argv или stdout/stderr подпроцесса: в них могут быть
+    # учётные данные.
     result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             check=False, timeout=timeout, env=env)
     if result.returncode:
@@ -81,8 +82,8 @@ def assert_same_config(before, after, *, source_version=SOURCE, target_version=T
     must(version == source_version and target == target_version and version != target,
          'source/target versions do not match pinned upgrade intent')
     must(new.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false', 'automatic DDL is forbidden during component upgrade')
-    # Do not let the cutover simultaneously rotate credentials, change storage,
-    # DNS, keys or signing policy; those require separate audited operations.
+    # При переключении не меняйте одновременно учётные данные, хранилище, DNS, ключи
+    # или политику подписи; для них нужны отдельные аудируемые операции.
     allowed = {'LAUNCHER_IMAGE_TAG', 'LAUNCHER_DATABASE_AUTO_MIGRATE'}
     must(all(old.get(key, '') == new.get(key, '') for key in set(old) | set(new) if key not in allowed),
          'source and target environment differ beyond image version and auto-migrate')
@@ -120,7 +121,8 @@ def check_nginx(project, env):
 
 
 def restore_service_set(project, env, original, *, expected):
-    # Always bring Admin/API up first. Do not expose unverified target via Nginx.
+    # Сначала обязательно поднимайте Admin/API. Не открывайте непроверенную целевую
+    # версию через Nginx.
     for svc in ('admin', 'api'):
         if svc in original:
             dr.compose(project, env, 'up', '-d', '--no-build', '--force-recreate', svc)
@@ -153,17 +155,18 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
             must(states.get(svc, 'exited') not in ('paused', 'restarting'), 'unhealthy source service: ' + svc)
         original = [svc for svc in ('api', 'admin', 'nginx') if states.get(svc) == 'running']
         dr.check_restored_backend(project, source, version=source_version, storage='local')
-        # Build and identify actual replacement images BEFORE taking the live application down.
+        # Создайте и определите настоящие заменяющие образы ДО остановки работающего приложения.
         dr.compose(project, target, 'build', 'api', 'admin', timeout=2400)
         target_images = {svc: image_id('launcher-' + svc + ':' + target_version) for svc in ('api', 'admin')}
         source_images = {svc: image_id('launcher-' + svc + ':' + source_version) for svc in ('api', 'admin')}
         must(all(source_images[s] != target_images[s] for s in source_images), 'replacement image equals old image')
-        # On failure snapshot() resumes originally running services itself.
+        # При ошибке snapshot() самостоятельно возобновляет ранее работавшие службы.
         dr.snapshot(project, source, snapshot, confirm, production=production,
                     approved=approved, resume_after=False, source_version=source_version)
         try:
             receipt = dr.verify_snapshot(snapshot)
-            # Detect an external write even if that session disconnected quickly.
+            # Обнаруживайте внешнюю запись, даже если соответствующая сессия быстро
+            # отключилась.
             must(dr.assert_quiescent(project, source) == receipt['postgresWalLsn'],
                  'PostgreSQL WAL advanced since component backup')
             must(all(image_id('launcher-' + svc + ':' + target_version) == target_images[svc]
@@ -173,15 +176,16 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
                     'components': ['api', 'admin'], 'backup': str(snapshot),
                     'images': target_images, 'backendVerified': True}
         except Exception as problem:
-            # Stop all potential new writers before considering a rollback.
+            # Остановите всех потенциальных новых записывающих клиентов, прежде чем
+            # рассматривать откат.
             for svc in ('nginx', 'admin', 'api'):
                 try:
                     dr.compose(project, target, 'stop', '-t', '30', svc)
                 except Exception:
                     pass
             try:
-                # Component cutover does not migrate the schema. Do not silently
-                # restore an older database and discard acknowledged post-snapshot writes.
+                # Переключение компонентов не переносит схему. Не восстанавливайте незаметно
+                # старую базу данных с потерей подтверждённых записей, сделанных после снимка.
                 must(all(image_id('launcher-' + svc + ':' + source_version) == source_images[svc]
                          for svc in source_images), 'source image digest changed; rollback unsafe')
                 restore_service_set(project, source, original, expected=source_version)
@@ -206,8 +210,9 @@ def network_overlay():
 
 
 def restore_ha_roles(project, env, *, expected):
-    # Redis persisted state is retained for an in-place component-only cutover,
-    # unlike disaster restore. Existing backend/Bridge fencing still applies.
+    # Сохранённое состояние Redis остаётся при переключении только компонентов на
+    # месте, в отличие от аварийного восстановления. Существующее разграничение
+    # доступа Backend/Bridge продолжает действовать.
     dr.compose(project, env, 'up', '-d', '--no-build', 'redis')
     for svc in ('api', 'api-b', 'worker-a', 'worker-b', 'admin'):
         dr.compose(project, env, 'up', '-d', '--no-build', '--force-recreate', svc)
@@ -317,7 +322,7 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
     must(component != 'api' or old_active, 'managed API must be running for verified cutover')
     backup = install.with_name(install.name + '.previous-' + backup_tag)
     with database.lock(install.parent):
-        # Not possible to mix a runtime process with a partially copied file.
+        # Нельзя сочетать работающий процесс Runtime с частично скопированным файлом.
         if old_active:
             run(['systemctl', 'stop', service], timeout=90)
         os.replace(install, backup)
@@ -415,8 +420,9 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
                     'restoredSha256': expected_previous_sha, 'failedExecutable': str(failed) if have_current else None,
                     'serviceVerified': was_active}
         except Exception as problem:
-            # The previous executable remains on disk for explicit operator recovery;
-            # never silently start the unverified 0.45.8 executable again.
+            # Предыдущий исполняемый файл остаётся на диске для явного восстановления
+            # оператором; никогда незаметно не запускайте снова непроверенную версию
+            # 0.45.8.
             if service:
                 try:
                     run(['systemctl', 'stop', service], timeout=60)
@@ -440,8 +446,9 @@ def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Pat
         raise ComponentError('native updater did not return JSON report') from exc
     must(isinstance(report, dict) and report.get('status') == 'committed'
          and report.get('toVersion') == target_version, 'native updater did not commit required version')
-    # Existing update package validator checks per-file digests, signature,
-    # trust epoch, platform identity and rollback journal. We do not override it.
+    # Существующая проверка пакета обновления проверяет хеши каждого файла, подпись,
+    # эпоху доверия, идентичность платформы и журнал отката. Эти проверки здесь не
+    # переопределяются.
     return {'status': 'upgraded', 'nativeReport': report}
 
 

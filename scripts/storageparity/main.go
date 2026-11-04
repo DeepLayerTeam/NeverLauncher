@@ -1,7 +1,8 @@
-// Command storageparity inventories the actual PostgreSQL coupling and SQLite
-// method surface directly from source. The checked-in snapshot is a regression
-// gate: any added/removed dependency must be reviewed, not silently overlooked.
-// It deliberately does not claim semantic parity from matching method names.
+// Command storageparity составляет реестр фактической связи с PostgreSQL и
+// поверхности методов SQLite непосредственно из исходников. Зафиксированный снимок
+// служит барьером регрессии: добавление или удаление зависимости требует
+// рассмотрения, а не незаметного пропуска. Совпадение имён методов намеренно не
+// объявляется семантической совместимостью.
 package main
 
 import (
@@ -275,8 +276,8 @@ func scanText(root, rel string) (File, error) {
 			kinds = append(kinds, "postgresql-config-or-literal")
 		}
 		if strings.HasSuffix(rel, ".sql") && len(strings.TrimSpace(line)) > 0 && i == 0 {
-			// Only migration catalogues wired to the PostgreSQL migrate package
-			// are positively classified. Other SQL files remain candidates.
+			// Положительно классифицируются только каталоги миграций, подключённые к
+			// пакету migrate PostgreSQL. Остальные SQL-файлы остаются кандидатами.
 			if strings.Contains(rel, "/dbmigrate/sql/") {
 				kinds = append(kinds, "postgresql-migration-file")
 			} else {

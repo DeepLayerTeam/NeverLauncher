@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// HostOperation0413 is a durable Backend-to-RemoteControl-to-Supervisor record.
-// A newly inserted record is indeterminate BEFORE the network side-effect:
-// callers may inspect or reconcile but cannot automatically redispatch it.
+// HostOperation0413 — устойчивая запись Backend → RemoteControl → Supervisor. Новая
+// запись неопределённа ДО сетевого побочного эффекта: её можно просматривать и
+// сверять, но не отправлять автоматически повторно.
 type HostOperation0413 struct {
 	ID                   string          `json:"id"`
 	ServerID             string          `json:"serverId"`
@@ -85,9 +85,9 @@ func (r *SQLRepository) GetHostOperationByKey0413(ctx context.Context, serverID,
 	return op, err
 }
 
-// ListHostOperations04111 returns the durable recent history for a single
-// authorized node. Reconstruct operation state from Browser state or
-// audit summaries; the PostgreSQL journal is authoritative.
+// ListHostOperations04111 возвращает устойчивую недавнюю историю одного
+// авторизованного узла. Восстанавливайте состояние операции по состоянию
+// браузера или сводкам аудита; авторитетен журнал PostgreSQL.
 func (r *SQLRepository) ListHostOperations04111(ctx context.Context, serverID string, limit int) ([]HostOperation0413, error) {
 	if err := r.check(); err != nil {
 		return nil, err
@@ -125,7 +125,8 @@ func (r *SQLRepository) FinishHostOperation0413(ctx context.Context, op HostOper
 	if err := r.check(); err != nil {
 		return HostOperation0413{}, err
 	}
-	// Immutable terminal receipt. A stale Backend replica cannot overwrite result.
+	// Неизменяемая окончательная квитанция. Устаревшая реплика Backend не может
+	// перезаписать результат.
 	res, err := r.db.ExecContext(ctx, `UPDATE server_bridge_host_operations_0413 SET status=$3,host_after=$4::jsonb,remote_receipt=$5::jsonb,error=$6,updated_at=now() WHERE id=$1 AND server_id=$2 AND status=$7`, op.ID, op.ServerID, op.State, rawJSON0413(op.HostAfter), rawJSON0413(op.RemoteReceipt), op.Error, allowedState)
 	if err != nil {
 		return HostOperation0413{}, err

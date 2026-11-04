@@ -6,16 +6,17 @@ import (
 	"fmt"
 )
 
-// TextureGarbage0253 is leased to one GC worker for up to 15 minutes.
-// Only unreferenced blobs past the backup grace window can be leased.
+// TextureGarbage0253 сдаётся одному GC-воркеру на срок до 15 минут.
+// Допускаются только объекты без ссылок после окна резервного копирования.
 type TextureGarbage0253 struct {
 	Digest    string
 	Driver    string
 	ObjectKey string
 }
 
-// ClaimTextureGarbage0253 isolates candidates from public reads before deletion.
-// A 7-day grace period preserves recent replacement history and allows backups.
+// ClaimTextureGarbage0253 изолирует кандидатов от публичного чтения до удаления.
+// Льготный период семь дней сохраняет недавнюю историю замен и позволяет делать
+// резервные копии.
 func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver string, limit int) ([]TextureGarbage0253, error) {
 	if err := r.check(); err != nil {
 		return nil, err
@@ -81,7 +82,8 @@ func (r *SQLRepository) FinishTextureGarbage0253(ctx context.Context, digest str
 	return nil
 }
 
-// TextureBackupRow0253 is a consistent ordered metadata view for snapshots.
+// TextureBackupRow0253 — согласованное упорядоченное представление метаданных
+// для снимков.
 type TextureBackupRow0253 struct {
 	Digest            string
 	ByteSize          int64

@@ -51,7 +51,8 @@ def _artifact_redirect_request(
         for suffix in ARTIFACT_REDIRECT_SUFFIXES
     ):
         raise RuntimeError(f"artifact redirect host is not trusted: {host}")
-    # Never forward the GitHub bearer token to signed artifact redirect hosts.
+    # Никогда не пересылайте токен GitHub Bearer на хосты перенаправлений
+    # подписанных артефактов.
     # Никогда не передавайте bearer-токен GitHub на подписанный источник артефакта. URL
     # перенаправления уже содержит собственные краткосрочные параметры авторизации.
     return urllib.request.Request(
@@ -263,8 +264,9 @@ def fetch_matrix(
             f"{label} exact-commit workflow run {run_id} concluded {conclusion!r}, refusing release fallback"
         )
     if fresh_required(version):
-        # Exact SHA alone is not freshness: the newest completed execution may
-        # have occurred weeks earlier. Only a newly executed run is usable.
+        # Одного точного SHA недостаточно для актуальности: самый новый завершённый
+        # прогон мог состояться недели назад. Использовать можно только недавно
+        # выполненный прогон.
         started = str(run.get("run_started_at", ""))
         try:
             stamp = datetime.fromisoformat(started.replace("Z", "+00:00"))

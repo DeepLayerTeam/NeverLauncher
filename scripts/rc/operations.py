@@ -77,7 +77,8 @@ def check_args(
 
 
 def actual(*args: str, timeout: int = 3600) -> dict:
-    # No shell or secrets in process output / saved evidence.
+    # Никаких команд оболочки или секретов в выводе процесса и сохранённых
+    # доказательствах.
     try:
         proc = subprocess.run(
             [sys.executable, str(DR), *map(str, args)],

@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// Addresses that are globally unicast according to net.IP can still belong
-// to carrier NAT, benchmark, documentation or protocol-translation ranges.
-// Do not allow an extension to reach host services via special-use routing.
+// Адреса, считающиеся глобально одноадресными по net.IP, могут относиться к NAT
+// оператора, тестовым, документационным или трансляционным диапазонам. Не
+// позволяйте расширению достигать служб хоста через специальную маршрутизацию.
 var blockedOutboundPrefixes04210 = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/8"), netip.MustParsePrefix("100.64.0.0/10"),
 	netip.MustParsePrefix("192.0.0.0/24"), netip.MustParsePrefix("192.0.2.0/24"),
@@ -48,15 +48,16 @@ func forbiddenOutboundIP0207(ip net.IP) bool {
 	return false
 }
 
-// Disallow transport/framing headers that could alter the request the broker
-// validated, or conflict with the pinned HTTPS connection's destination.
+// Запрещайте заголовки транспорта и обрамления, которые могут изменить уже
+// проверенный брокером запрос или конфликтовать с адресатом закреплённого
+// HTTPS-соединения.
 func outboundHeaderAllowed04210(name string) bool {
 	if name == "" || name == "Host" || name == "Connection" || name == "Transfer-Encoding" ||
 		name == "Upgrade" || name == "Trailer" || name == "Te" || name == "Content-Length" ||
 		strings.HasPrefix(name, "Proxy-") {
 		return false
 	}
-	// Only RFC 7230 token characters can name a forwarded HTTP field.
+	// Имя передаваемого HTTP-поля может содержать только символы токена RFC 7230.
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' ||

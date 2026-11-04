@@ -50,8 +50,9 @@ func readBounded0482(file *zip.File, max int64) ([]byte, error) {
 	return data, nil
 }
 
-// inspectLibraries0482 validates the actual bytes inside the signed host JAR.
-// A lock is mandatory for every bundled JAR; external Class-Path is never accepted.
+// inspectLibraries0482 проверяет настоящие байты внутри подписанного JAR хоста. Для
+// каждого встроенного JAR обязательна блокировка; внешний Class-Path никогда не
+// принимается.
 func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]LibraryInfo0482, int, int, error) {
 	entries := map[string]*zip.File{}
 	for _, f := range zr.File {

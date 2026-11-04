@@ -105,8 +105,9 @@ public class Game {
 
     def test_wrong_initial_hash(self):
         proc=self.invoke(args=['wait'])
-        # Premain loads configuration before main. Denial after pin file tamper is
-        # covered by the live test below. An invalid pin is tested separately.
+        # Premain загружает конфигурацию до main. Отказ после подмены файла
+        # закреплённых ключей проверяется живым тестом ниже. Некорректный закреплённый
+        # ключ проверяется отдельно.
         proc.kill();proc.communicate()
         self.config.write_text(self.config.read_text().replace(digest(self.game),'0'*64))
         cmd=['java','-javaagent:'+str(self.agent)+'='+str(self.config),'-cp',str(self.game),
@@ -134,8 +135,9 @@ public class Game {
     @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'),'Linux /proc/maps+gcc required')
     def test_live_unapproved_mapped_native(self):
         lib=self.root/'libunlisted.so';shutil.copy2(self.native,lib)
-        # A native library outside the managed /natives tree is not seen on
-        # disk inventory alone; the live /proc/self/maps check must catch it.
+        # Нативную библиотеку вне управляемого дерева /natives нельзя увидеть только
+        # в дисковой инвентаризации; живая проверка /proc/self/maps обязана её
+        # обнаружить.
         proc=self.invoke(args=[lib])
         rc,out,err=self.finish(proc,timeout=16)
         self.assertNotEqual(rc,0);self.assertIn('unapproved mapped native module',err)

@@ -207,9 +207,9 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
 	}
-	// Never credentials must not be persisted before the local MFA policy
-	// finishes. On storage failure, revoke the just-created session rather
-	// than returning a partially authenticated browser login.
+	// Учётные данные Never нельзя сохранять до завершения локальной политики MFA.
+	// При ошибке хранилища отзовите только что созданный сеанс, а не возвращайте
+	// частично аутентифицированный вход браузера.
 	if strings.TrimSpace(result.ProviderToken) != "" {
 		if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")

@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-// FileRule is a signed v2 policy. Include permits managed files in a constrained
-// directory to be quarantined if they are not in the current manifest. Exclude
-// makes a path user-owned, and verify checks listed files without authorizing
-// cleanup. The policy is declarative only after validation and is enforced by
-// the native runtime and the CLI updater.
+// FileRule — подписанная политика v2. Include разрешает помещать в карантин
+// управляемые файлы из ограниченного каталога, если их нет в текущем манифесте.
+// Exclude обозначает пользовательский путь; verify проверяет перечисленные файлы, не
+// разрешая очистку. После валидации политика остаётся декларативной и исполняется
+// нативным Runtime и CLI-обновлятором.
 type FileRule struct {
 	Pattern   string `json:"pattern"`
 	Action    string `json:"action"`
@@ -80,8 +80,8 @@ func patternsOverlap0224(a, b string) bool {
 	return patternMatch0224(a, strings.TrimSuffix(b, "/**")) || patternMatch0224(b, strings.TrimSuffix(a, "/**"))
 }
 
-// ValidateFileOwnership0224 is invoked before signing and publishing v2.
-// Legacy v1 signed manifests retain their wire format and interpretation.
+// ValidateFileOwnership0224 вызывается до подписи и публикации v2. Устаревшие
+// подписанные манифесты v1 сохраняют свой wire-формат и интерпретацию.
 func ValidateFileOwnership0224(m Manifest) error {
 	if m.SchemaVersion != ManifestSchemaV2 && m.SchemaVersion != ManifestSchemaV3 {
 		return nil
@@ -149,8 +149,9 @@ func ValidateFileOwnership0224(m Manifest) error {
 	return nil
 }
 
-// ValidatePublishFileOwnership0224 rejects unresolved managed payloads at the
-// final publication boundary. Drafts may have paths before uploads complete.
+// ValidatePublishFileOwnership0224 отклоняет неразрешённые управляемые данные на
+// окончательной границе публикации. Черновики могут содержать пути до завершения
+// загрузки.
 func ValidatePublishFileOwnership0224(m Manifest) error {
 	if err := ValidateFileOwnership0224(m); err != nil {
 		return err

@@ -48,7 +48,8 @@ func TestFullStatePackagesSignaturesCASRestartAndRevocation(t *testing.T) {
 	if _, e = r.PublishExtensionPackage(ctx, bad, "owner"); !errors.Is(e, ErrAuthentication) {
 		t.Fatalf("signature replay accepted: %v", e)
 	}
-	// A single CAS writer wins. Every generation preserves append-only provenance.
+	// Побеждает один CAS-писатель. Каждое поколение сохраняет историю происхождения
+	// только с добавлением.
 	inst := SQLiteExtensionInstall{ExtensionID: in.ExtensionID, Scope: "global", Version: in.Version, PackageDigest: pkg.Digest, State: "enabled", Actor: "owner"}
 	installed, e := r.ApplyExtensionInstall326(ctx, inst, 0)
 	if e != nil || installed.Generation != 1 {
@@ -143,7 +144,8 @@ func TestFullStateBridgeSignedRuntimeNoRedelivery(t *testing.T) {
 	if e != nil || !yes {
 		t.Fatalf("enqueue: %+v %v", created, e)
 	}
-	// Lost network response can replay the idempotency key; the original request must be exactly identical.
+	// После потерянного сетевого ответа можно повторить ключ идемпотентности; исходный запрос обязан полностью
+	// совпадать.
 	same, yes, e := r.CreateBridgeCommand(ctx, c)
 	if e != nil || yes || same.ID != created.ID {
 		t.Fatalf("enqueue replay: %+v %v", same, e)

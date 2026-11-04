@@ -115,10 +115,10 @@ func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"host": item}})
 }
 
-// extensionHostProbe0491 executes an actual authenticated health RPC inside the
-// installed Java Host, not merely an in-memory supervisor heartbeat check.
-// The extension:manage permission is enforced by the route; Java trust and
-// revocation are rechecked by CallJavaRPC0304 before returning a result.
+// extensionHostProbe0491 выполняет настоящий аутентифицированный health RPC внутри
+// установленного Java Host, а не просто проверяет heartbeat супервизора в памяти.
+// Маршрут требует право extension:manage; CallJavaRPC0304 повторно проверяет доверие
+// и отзыв Java перед возвратом результата.
 func (s Server) extensionHostProbe0491(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil || s.ExtensionSafeMode {
 		writeError(w, http.StatusServiceUnavailable, "extension host unavailable")

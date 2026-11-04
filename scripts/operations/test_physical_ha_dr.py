@@ -168,8 +168,8 @@ class PhysicalTests(unittest.TestCase):
             physical.game_restore(self.args)
 
     def test_restores_actual_world_bytes_before_live_game_protocol(self):
-        # The filesystem restore uses the production DR algorithm; only the
-        # external Minecraft socket is mocked (no fake native GA evidence).
+        # Файловое восстановление использует промышленный алгоритм DR; имитируется
+        # только внешний сокет Minecraft (без поддельных нативных свидетельств GA).
         from test_network_ha_recovery_0454 import make_world
         backup = make_world(self.home / 'backup')
         dest = self.home / 'restored-game'

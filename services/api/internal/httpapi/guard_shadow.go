@@ -1,9 +1,9 @@
 package httpapi
 
-// Server-side Guard shadow evidence: produced only by an authenticated
-// ServerBridge heartbeat after the authoritative session check. This journal
-// observes the existing enforcement decision; it never grants admission,
-// suppresses a revocation or treats a heartbeat as fresh client attestation.
+// Теневые свидетельства Guard на сервере создаются только аутентифицированным
+// heartbeat ServerBridge после авторитетной проверки сеанса. Журнал наблюдает
+// существующее решение контроля доступа, но никогда не выдаёт допуск, не
+// подавляет отзыв и не считает heartbeat свежей аттестацией клиента.
 
 import (
 	"crypto/hmac"
@@ -104,8 +104,9 @@ func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason s
 	if j.f == nil {
 		return errors.New("Guard shadow journal closed")
 	}
-	// Names, UUIDs, device identifiers, addresses and tokens are never logged.
-	// The session pseudonym is stable only for this secret, not globally.
+	// Имена, UUID, идентификаторы устройств, адреса и токены никогда не
+	// записываются в журнал. Псевдоним сеанса стабилен только для данного секрета,
+	// а не глобально.
 	record := map[string]any{
 		"schema":      "neverlauncher.guard-shadow/v1",
 		"version":     j.version,

@@ -34,7 +34,7 @@ func rollbackTx03312(ctx context.Context, r *SQLRepository, run string) (*sql.Tx
 		tx.Rollback()
 		return nil, "", e
 	}
-	// Shared lock order with MIG11 and ordinary publication.
+	// Порядок блокировок общий с MIG11 и обычной публикацией.
 	var locked string
 	if e = tx.QueryRowContext(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, project).Scan(&locked); e != nil {
 		tx.Rollback()
@@ -66,9 +66,10 @@ func rollbackHead03312(ctx context.Context, tx *sql.Tx, v co.Route) error {
 	return nil
 }
 
-// PlanMigrationRollback03312 evaluates ACTUAL structured world/player snapshots
-// against the MIG10 baseline, not a user-supplied "ready" boolean. A nonempty
-// diff blocks automatic rollback; no world or plugin DB is ever overwritten.
+// PlanMigrationRollback03312 проверяет РЕАЛЬНЫЕ структурированные снимки мира и
+// игроков относительно исходной линии MIG10, а не переданный пользователем флаг
+// ready. Непустая разница блокирует автоматический откат; БД мира и плагинов никогда
+// не перезаписываются.
 func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run string, input rb.PlanInput) (rb.Result, error) {
 	if e := rb.ValidatePlan(input); e != nil {
 		return rb.Result{}, e
@@ -96,7 +97,7 @@ func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run stri
 	if e != nil {
 		return rb.Result{}, e
 	}
-	// Record a blocked attempt in migration audit, without authorizing a route change.
+	// Записывайте заблокированную попытку в аудит миграции без разрешения смены маршрута.
 	if !result.Ready {
 		if e = eventRollback03312(ctx, tx, run, "gravit_rollback_blocked", result); e != nil {
 			return rb.Result{}, e
@@ -113,10 +114,10 @@ func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run stri
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return rb.Result{}, err
 	}
-	// A plan is a short-lived compare-and-swap approval. It must be possible to
-	// replace an expired plan with a newly exported snapshot: the original MIG12
-	// implementation made rollback permanently impossible after ten minutes.
-	// Replanning does NOT move the channel head and invalidates the old digest.
+	// План — краткоживущее одобрение compare-and-swap. Истёкший план можно заменить
+	// новым экспортированным снимком: исходная реализация MIG12 делала откат навсегда
+	// невозможным через десять минут. Повторное планирование НЕ сдвигает head канала
+	// и аннулирует прежний хеш.
 	if err == nil {
 		if existingState != "planned" || json.Unmarshal(raw, &stored) != nil || stored.RouteRevision != v.Revision {
 			return rb.Result{}, mw.ErrConflict
@@ -145,8 +146,8 @@ func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run stri
 	return result, nil
 }
 
-// CommitMigrationRollback03312 modifies only the actual Never delivery pointer.
-// The source system remains externally fenced and is never resumed by this call.
+// CommitMigrationRollback03312 меняет только фактический указатель доставки Never.
+// Исходная система остаётся ограждённой извне и не возобновляется этим вызовом.
 func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run string, input rb.CommitInput, trusted ed25519.PublicKey) (rb.Result, error) {
 	if e := rb.ValidateCommit(input); e != nil {
 		return rb.Result{}, e
@@ -187,7 +188,7 @@ func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run st
 	if e != nil || freshDigest != result.CurrentSnapshotSHA256 || input.CurrentEvidenceSHA256 != result.EvidenceSHA256 {
 		return rb.Result{}, mw.ErrConflict
 	}
-	// Reconciliation receipts are only usable while BOTH sides still match.
+	// Квитанции сверки пригодны только пока совпадают ОБЕ стороны.
 	if result.Mode == "reconciled" {
 		if input.ReconciledSource == nil || input.ReconciliationEvidenceSHA256 != result.ReconciliationEvidenceSHA256 {
 			return rb.Result{}, mw.ErrConflict
@@ -205,7 +206,8 @@ func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run st
 	if e = rollbackHead03312(ctx, tx, v); e != nil {
 		return rb.Result{}, e
 	}
-	// Always verify that baseline points to the same unchanged published release.
+	// Всегда проверяйте, что исходная линия указывает на тот же неизменённый
+	// опубликованный релиз.
 	if v.BaselineRevision > 0 {
 		var releaseVersion, status string
 		var baselineRaw []byte

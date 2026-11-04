@@ -68,8 +68,9 @@ func TestJavaRPCLimitAndMethodWhitelist0304(t *testing.T) {
 	}
 }
 
-// Requires a prebuilt, actual example fat JAR. The CI workflow provides its absolute path.
-// Exercises Go supervisor -> Java subprocess -> authenticated hello/ready -> Go->JVM RPC -> CLI.
+// Нужен предварительно собранный настоящий example fat JAR. Workflow CI передаёт абсолютный путь.
+// Проверяется цепочка супервизор Go → подпроцесс Java → аутентифицированный hello/ready → RPC Go→JVM →
+// CLI.
 func javaHostFixture0304(t *testing.T) (*Supervisor, model.ExtensionInstall, Key) {
 	t.Helper()
 	if runtime.GOOS != "linux" {

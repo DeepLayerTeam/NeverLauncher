@@ -11,9 +11,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// The direct Go->JVM path must enforce the same durable revocation decision
-// as capability HTTP requests. The fake loopback callback counts attempted
-// deliveries; revoked calls must never reach it, even with a live callback.
+// Прямой путь Go→JVM обязан применять то же устойчивое решение об отзыве, что и
+// HTTP-запросы возможностей. Фиктивный callback на loopback считает попытки
+// доставки; отозванные вызовы никогда не должны доходить до него даже при живом
+// callback.
 func TestJavaDirectRPCRejectsRevokedExtension04212(t *testing.T) {
 	ctx := context.Background()
 	host, repo, st := liveTrustFixture04210(t)
@@ -32,8 +33,8 @@ func TestJavaDirectRPCRejectsRevokedExtension04212(t *testing.T) {
 	st.callbackToken = "callback-secret"
 	host.processes[st.key.String()] = st
 
-	// Before the revocation the callback is reached (its deliberately wrong
-	// request ID makes the RPC fail after delivery).
+	// До отзыва вызывается callback; умышленно неправильный request ID вызывает
+	// ошибку RPC после доставки.
 	_, _ = host.CallJavaRPC0304(ctx, st.key, "health", nil)
 	if attempts != 1 {
 		t.Fatalf("active host callback not reached: %d", attempts)

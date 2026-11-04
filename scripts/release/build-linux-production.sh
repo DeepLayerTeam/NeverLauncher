@@ -32,8 +32,9 @@ if [[ -n "${EXPECTED_ARCH}" && "${EXPECTED_ARCH}" != "${ARCH}" ]]; then
   exit 2
 fi
 
-# Rust embeds the production verification key. An empty build-time key is
-# never allowed to create binaries later advertised as production-ready.
+# Rust встраивает промышленный ключ проверки. Пустой ключ на этапе сборки
+# никогда не должен позволять выпускать бинарники, которые позже объявят
+# готовыми к промышленному использованию.
 [[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
   echo "Linux production Guard requires LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY before Cargo compilation" >&2; exit 2;
 }
@@ -69,9 +70,10 @@ chmod 0755 \
   "${OUT_DIR}/launcher-cli-linux-${ARCH}" \
   "${OUT_DIR}/launcher-api-linux-${ARCH}"
 
-# Preserve actual unsigned executables before Linux package manifests and
-# delegated signatures are applied. Reproducible tar/gzip is independent of
-# filesystem timestamps, UID, current username or output directory.
+# Сохраните настоящие неподписанные исполняемые файлы до применения манифестов
+# Linux-пакетов и делегированных подписей. Воспроизводимый tar/gzip не зависит
+# от временных меток ФС, UID, имени текущего пользователя или выходного
+# каталога.
 if [[ "${VERSION}" == "0.47.0" || "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
   UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
   python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \

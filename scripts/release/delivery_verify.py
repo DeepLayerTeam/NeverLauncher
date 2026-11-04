@@ -48,7 +48,8 @@ def exe_arch(data: bytes, platform: str, arch: str) -> None:
         optional=off+24
         if len(data) < optional+120 or struct.unpack_from('<H',data,optional)[0] != 0x20b:
             raise ValueError('missing PE32+ optional header')
-        # PE data directory 4 holds the Authenticode certificate (not its trust).
+        # Каталог данных PE номер 4 содержит сертификат Authenticode, но не
+        # доказательство доверия ему.
         cert_off,cert_size=struct.unpack_from('<II',data,optional+112+4*8)
         if cert_off <= 0 or cert_size < 8 or cert_off+cert_size > len(data):
             raise ValueError('no Authenticode certificate table')
@@ -149,9 +150,9 @@ def verify_target(bundle: Path, target: str, name: str, version: str) -> dict:
             if (row.get('sha256')!=digest(data) or row.get('size')!=len(data)):
                 raise ValueError(f'{name}: wrong component hash/size {key}')
     else:
-        # The final signed macOS app carries sealed resources, while the
-        # root manifest was finalized after codesign/notarization. Validate
-        # the latter against the exact executable bytes in the archive.
+        # Финальное подписанное приложение macOS содержит запечатанные ресурсы, а
+        # корневой манифест окончательно оформлен после codesign/notarization.
+        # Проверяйте его по точным исполняемым байтам в архиве.
         root=bundle/manifest_name
         if not root.is_file() or root.is_symlink():raise ValueError(f'{name}: missing finalized macOS package manifest')
         manifest=json.loads(root.read_bytes())
@@ -189,8 +190,8 @@ def verify_bundle(bundle: Path, release_manifest: bool=False) -> dict:
             entry=byname.get(row['file'])
             if not entry or entry.get('status')!='present' or entry.get('required') is not True or entry.get('sha256','').lower()!=row['sha256'] or entry.get('size',entry.get('bytes'))!=row['bytes']:
                 raise ValueError(f'{target}: actual package missing/mismatched in RELEASE_MANIFEST')
-        # The verified six-package inventory is mandatory release payload,
-        # and must itself describe the same measured final bytes.
+        # Проверенный реестр шести пакетов является обязательной частью выпуска и сам
+        # должен описывать те же измеренные финальные байты.
         ledger_path=bundle/'DELIVERY_VERIFIED_0462.json'
         if not ledger_path.is_file() or ledger_path.is_symlink():
             raise ValueError('missing delivery integrity inventory')

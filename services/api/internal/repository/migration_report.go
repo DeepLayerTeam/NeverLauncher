@@ -17,8 +17,8 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// migrationEvidence03313 is deliberately a read-only, REPEATABLE READ
-// transaction. It does not trust caller-provided source data or report fields.
+// migrationEvidence03313 намеренно работает в транзакции REPEATABLE READ только для
+// чтения. Данные источника и поля отчёта из запроса не считаются доверенными.
 func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Report, error) {
 	v := rr.Report{RunID: run, Items: []rr.Item{}, Identities: []rr.Identity{}, Evidence: []rr.Evidence{}, Decisions: []rr.Decision{}, Blockers: []string{}}
 	var kind string
@@ -93,8 +93,9 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		}
 		add("inventory", "verified", v.InventorySHA256, fmt.Sprintf("files=%d bytes=%d", len(i.Files), i.TotalBytes))
 	}
-	// The inventory lists every source object once; later verified transfers
-	// replace their manual entry rather than inflating the manual count.
+	// Инвентаризация перечисляет каждый исходный объект один раз; последующие
+	// подтверждённые передачи заменяют ручную запись, а не увеличивают их
+	// количество.
 	inventoryItemCount := len(v.Items)
 	coveredSources := map[string]bool{}
 	var idsHash, idsSource, idsInv string
@@ -403,15 +404,16 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 	if qe != nil {
 		return v, qe
 	}
-	// RC review is an audit side-effect, not a migration input change.
-	// Exclude that self-referential event and its run revision from the hash.
+	// Проверка RC — побочный эффект аудита, а не изменение входа миграции.
+	// Исключайте само событие и его ревизию запуска из хеша, чтобы избежать
+	// циклической ссылки.
 	if len(v.Decisions) > 0 {
 		v.RunRevision = v.Decisions[len(v.Decisions)-1].Revision
 	}
 	if len(v.Decisions) > 10000 {
 		v.Blockers = append(v.Blockers, "audit event limit exceeded; export and verify complete history")
 	}
-	// The replacement entries carry the actual target mapping and status.
+	// Записи замены содержат фактическое целевое сопоставление и состояние.
 	filtered := make([]rr.Item, 0, len(v.Items))
 	for i, item := range v.Items {
 		if i < inventoryItemCount && coveredSources[item.Source] {
@@ -451,8 +453,8 @@ type MigrationReview03313 struct {
 	Status            string    `json:"status"`
 }
 
-// Review seals the exact read snapshot and does not pronounce a deployment
-// certified. Digest races are detected under the run lock before the commit.
+// Проверка запечатывает точный снимок чтения и не объявляет развёртывание
+// сертифицированным. Гонки хеша выявляются под блокировкой запуска до фиксации.
 func (r *SQLRepository) ReviewMigrationReport03313(ctx context.Context, run, expected, actor, reference, evidence string) (MigrationReview03313, error) {
 	if e := r.check(); e != nil {
 		return MigrationReview03313{}, e
@@ -469,8 +471,8 @@ func (r *SQLRepository) ReviewMigrationReport03313(ctx context.Context, run, exp
 	if e = tx.QueryRowContext(ctx, `SELECT id FROM migration_runs_0331 WHERE id=$1 FOR UPDATE`, run).Scan(&locked); e != nil {
 		return MigrationReview03313{}, e
 	}
-	// Check the immutable receipt FIRST. The review event changes the run
-	// revision, so a replay cannot compare against a freshly changed snapshot.
+	// СНАЧАЛА проверяйте неизменяемую квитанцию. Событие проверки меняет ревизию
+	// запуска, поэтому повтор нельзя сравнивать со свежим изменённым снимком.
 	var priorDigest, priorActor, priorEvidence, priorRef, priorAt string
 	var priorRaw []byte
 	e = tx.QueryRowContext(ctx, `SELECT report_sha256,reviewed_by,evidence_sha256,evidence_reference,reviewed_at::text,report FROM migration_reports_03313 WHERE run_id=$1`, run).Scan(&priorDigest, &priorActor, &priorEvidence, &priorRef, &priorAt, &priorRaw)
@@ -514,7 +516,7 @@ func (r *SQLRepository) ReviewMigrationReport03313(ctx context.Context, run, exp
 	if e != nil {
 		return MigrationReview03313{}, e
 	}
-	// Audit records a hash and the reviewer's decision, never the raw evidence.
+	// Аудит хранит хеш и решение проверяющего, но не исходные свидетельства.
 	var revision int64
 	if e = tx.QueryRowContext(ctx, `UPDATE migration_runs_0331 SET revision=revision+1,updated_at=now() WHERE id=$1 RETURNING revision`, run).Scan(&revision); e != nil {
 		return MigrationReview03313{}, e

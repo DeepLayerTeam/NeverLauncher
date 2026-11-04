@@ -284,10 +284,10 @@ func (b *Bus) worker(ctx context.Context) {
 	}
 }
 
-// Claim one delivery at a time. Pre-leasing a complete batch allows the last
-// item to expire while earlier callbacks are still running: another API node
-// can then execute the same callback concurrently. A fresh lease for each
-// item makes the lease deadline correspond to its actual dispatch window.
+// Захватывайте по одной доставке. Предварительная аренда всего пакета позволяет
+// последнему элементу истечь во время длительных ранних обратных вызовов: второй
+// узел API тогда может одновременно исполнить тот же вызов. Новая аренда для
+// каждого элемента синхронизирует срок с фактическим началом работы.
 func (b *Bus) processBatch(ctx context.Context) {
 	d := b.dispatcherValue()
 	if d == nil {
@@ -306,8 +306,9 @@ func (b *Bus) processBatch(ctx context.Context) {
 			return
 		}
 		env := items[0]
-		// Leave time for ACK/retry after the callback deadline. This also
-		// bounds remote calls when several workers share one SQL repository.
+		// Оставляйте время на ACK и повтор после крайнего срока обратного вызова. Это
+		// также ограничивает удалённые вызовы, когда несколько worker используют один
+		// SQL-репозиторий.
 		budget := b.cfg.LeaseDuration * 9 / 10
 		if budget <= 0 {
 			budget = b.cfg.LeaseDuration
@@ -438,9 +439,9 @@ func (b *Bus) BeforeProjectSave(ctx context.Context, actor, action string, p mod
 	return b.DispatchSync(ctx, PublishInput{Type: "project.before-save", ProjectID: p.ID, AggregateType: "project", AggregateID: p.ID, OrderingKey: "project:" + p.ID, IdempotencyKey: "hook:" + action + ":" + p.ID + ":" + fmt.Sprint(time.Now().UTC().UnixNano()), Source: "httpapi", Payload: ProjectPayload{Action: action, Actor: actor, Project: p}})
 }
 
-// BeforeProfileSave enforces Java policy before writing the proposed profile.
-// Hooks receive the proposed complete profile, not the untrusted request fragment.
-// A veto, timeout or unavailable subscribed host rejects the mutation.
+// BeforeProfileSave применяет Java-политику до записи предлагаемого профиля. Хуки
+// получают полный предложенный профиль, а не недоверенный фрагмент запроса. Запрет,
+// тайм-аут или недоступность подписанного хоста отклоняют изменение.
 func (b *Bus) BeforeProfileSave(ctx context.Context, actor, action string, p model.Profile) error {
 	return b.DispatchSync(ctx, PublishInput{
 		Type: "profile.before-save", ProjectID: p.ProjectID,

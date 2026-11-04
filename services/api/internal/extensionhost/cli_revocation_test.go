@@ -19,9 +19,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
-// The actual Go test executable is the native CLI fixture. Running the same
-// test executable avoids Python/shebang skips on Windows and exercises the
-// host protocol and real process termination on every target OS/architecture.
+// Фактический тестовый исполняемый файл Go выступает нативной фикстурой CLI.
+// Запуск того же бинарника исключает пропуски Python/shebang в Windows и проверяет
+// Host Protocol и настоящее завершение процесса на каждой ОС/архитектуре.
 func TestNativeCLIHelper04312(t *testing.T) {
 	if os.Getenv("LAUNCHER_EXTENSION_TARGET") != "cli" || os.Getenv("LAUNCHER_EXTENSION_INSTANCE_ID") == "" {
 		return
@@ -92,8 +92,8 @@ func TestNativeCLIRevocationStopsRunningProcess04312(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(payload, "cli"), 0755); err != nil {
 				t.Fatal(err)
 			}
-			// Copy the signed-by-CI test executable instead of relying on an
-			// externally installed interpreter or architecture emulation.
+			// Копируйте тестовый исполняемый файл, подписанный CI, вместо зависимости от
+			// внешнего интерпретатора или эмуляции архитектуры.
 			executable, err := os.Executable()
 			if err != nil {
 				t.Fatal(err)
@@ -196,11 +196,11 @@ func TestCLIAuthorityPreflightRejectsRevocation04312(t *testing.T) {
 	if _, err := repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: st.key.ExtensionID, Scope: "global", Permission: "cli:contribute", GrantedBy: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	// Change the version's requested policy to include cli:contribute.
+	// Добавьте cli:contribute в запрошенную политику версии.
 	st.install.CurrentVersion = "1.0.0"
 	st.manifest.Permissions = append(st.manifest.Permissions, "cli:contribute")
-	// The immutable repository manifest still lacks CLI permission: extra
-	// grants alone must never authorize code execution.
+	// В неизменяемом манифесте репозитория всё ещё нет разрешения CLI: одни
+	// дополнительные гранты никогда не разрешают исполнение кода.
 	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "revoked") {
 		t.Fatalf("unrequested CLI privilege was granted: %v", err)
 	}

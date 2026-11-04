@@ -58,7 +58,7 @@ jobs:
           LAUNCHER_STORAGE_S3_SECRET_KEY=ci-secret
           LAUNCHER_REPLICA_ID=api-ci
           EOF
-          # The compose CLI validates resolved service definitions, not application secrets.
+          # CLI Compose проверяет разрешённые определения служб, но не секреты приложения.
           docker compose --project-name launcher --env-file /tmp/launcher-dep09.env \
             -f deploy/production/docker-compose.yml config --quiet
           docker compose --project-name launcher --env-file /tmp/launcher-dep09.env \

@@ -147,8 +147,9 @@ byId("project-form").addEventListener("submit", async (event) => {
 });
 readiness();
 
-// 0.33.2 uses the same secured Admin API as the CLI. The operator supplies
-// the target project and sees the persisted state/events, never a fake success.
+// Версия 0.33.2 использует тот же защищённый Admin API, что и CLI. Оператор
+// указывает целевой проект и видит сохранённые состояние и события, а не выдуманный
+// успех.
 const migrationId = () => byId("migration-run-id").value.trim();
 async function migrationView() {
   const id = migrationId();
@@ -261,7 +262,7 @@ byId("migration-assess").addEventListener("submit", async (event) => {
   }
 });
 
-// 0.33.3: source files are uploaded on demand and never persisted by Backend.
+// 0.33.3: исходные файлы загружаются по требованию и не сохраняются в Backend.
 for (const action of ["inventory", "export"]) {
   byId("migration-" + action).addEventListener("click", async (e) => {
     const id = migrationId(),
@@ -323,7 +324,7 @@ for (const action of ["inventory", "export"]) {
   });
 }
 
-// MIG04: identity snapshots are persisted only after the 0.33.3 inventory.
+// MIG04: снимки идентичности сохраняются только после инвентаризации 0.33.3.
 for (const action of ["map-identities", "verify-identities"]) {
   byId("migration-" + action).addEventListener("click", async (event) => {
     const id = migrationId(),
@@ -373,8 +374,9 @@ for (const action of ["map-identities", "verify-identities"]) {
   });
 }
 
-// 0.33.5 auth migration: require the same verified ZIP and explicit operator
-// acknowledgement; secrets never enter logs, reports, URLs or local storage.
+// Миграция авторизации 0.33.5: нужен тот же проверенный ZIP и явное подтверждение
+// оператора; секреты никогда не попадают в журналы, отчёты, URL или локальное
+// хранилище.
 let credentialPreview335 = null;
 for (const action of ["preview", "import"]) {
   byId("migration-" + action + "-credentials").addEventListener(
@@ -439,8 +441,9 @@ for (const action of ["preview", "import"]) {
   );
 }
 
-// MIG06: server derives subjects strictly from the durable auth receipt;
-// the browser must never send old tokens, imported keys or device fingerprints.
+// MIG06: сервер выводит субъектов строго из устойчивой квитанции авторизации;
+// браузер никогда не отправляет старые токены, импортированные ключи или отпечатки
+// устройств.
 for (const action of ["preview", "activate", "verify"]) {
   byId("migration-" + action + "-security").addEventListener(
     "click",
@@ -502,7 +505,7 @@ for (const action of ["preview", "activate", "verify"]) {
   );
 }
 
-// MIG07: no source ZIP or sensitive file bytes are persisted in the browser.
+// MIG07: исходный ZIP и байты чувствительных файлов не сохраняются в браузере.
 let migrationContentPreview337 = null;
 for (const action of ["preview", "status", "import", "optionals"]) {
   byId("migration-content-" + action).addEventListener("click", async (ev) => {
@@ -587,7 +590,8 @@ for (const action of ["preview", "status", "import", "optionals"]) {
   });
 }
 
-// MIG08: JARs are inspected server-side and are never executed or installed.
+// MIG08: JAR проверяются на стороне сервера, но никогда не выполняются и не
+// устанавливаются.
 for (const action of ["analyze", "get", "enroll"]) {
   byId("migration-modules-" + action).addEventListener("click", async (ev) => {
     const id = migrationId();
@@ -666,8 +670,8 @@ for (const action of ["analyze", "get", "enroll"]) {
   });
 }
 
-// MIG10 reports are read-only in Embedded Admin: arbitrary staging programs
-// can only be executed by the operator's local CLI in an isolated environment.
+// Отчёты MIG10 в Embedded Admin доступны только на чтение: произвольные программы
+// staging может запускать лишь локальный CLI оператора в изолированной среде.
 byId("migration-rehearsal-get").addEventListener("click", async (e) => {
   const id = migrationId();
   if (!id) {
@@ -696,7 +700,7 @@ byId("migration-rehearsal-get").addEventListener("click", async (e) => {
   }
 });
 
-// MIG11: same server-side CAS and PostgreSQL trigger as React Admin and CLI.
+// MIG11: те же серверный CAS и триггер PostgreSQL, что в React Admin и CLI.
 for (const op of ["list", "stage", "activate", "cancel"]) {
   byId("migration-cutover-" + op).addEventListener("click", async (event) => {
     const id = migrationId();
@@ -782,8 +786,9 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
   });
 }
 
-// MIG12: operator-supplied exported snapshot is checked on Backend against
-// MIG10. Never/UI cannot attest the external source/game writer state.
+// MIG12: предоставленный оператором экспорт снимка сверяется на Backend с
+// MIG10. Never/UI не может аттестовать состояние записывающих процессов
+// внешнего источника и игры.
 for (const operation of ["plan", "commit", "status"]) {
   byId("migration-rollback-" + operation).addEventListener(
     "click",
@@ -905,8 +910,8 @@ for (const operation of ["plan", "commit", "status"]) {
   );
 }
 
-// MIG13 is generated from the authoritative database, not a browser-supplied
-// report. Review is an immutable operator acknowledgment, NOT GA certification.
+// MIG13 формируется из авторитетной БД, а не из отчёта браузера. Рассмотрение —
+// неизменяемое подтверждение оператора, НЕ сертификация GA.
 for (const action of ["report", "status", "review"]) {
   byId("migration-rc-" + action).addEventListener("click", async (event) => {
     const run = migrationId();

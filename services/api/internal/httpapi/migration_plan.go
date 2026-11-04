@@ -245,7 +245,8 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 422, "cannot calculate migration plan: "+e.Error())
 		return
 	}
-	// Reject a target that changed during a potentially long source analysis.
+	// Отклоняйте целевой объект, изменившийся во время потенциально длительного
+	// анализа источника.
 	latest, _, e := s.migrationTargetSnapshot0442(run.ProjectID)
 	if e != nil || latest != target {
 		migrationHTTPError0331(w, mw.ErrConflict)
@@ -283,8 +284,8 @@ func (s Server) migrationCheckContentPlan0442(ctx context.Context, runID, expect
 		return e
 	}
 	if current != p.TargetSHA256 {
-		// After a successful import the new profile changes the target hash.
-		// Allow only an idempotent retry of exactly the same imported content.
+		// После успешного импорта новый профиль меняет целевой хеш. Разрешайте только
+		// идемпотентный повтор импорта строго того же содержимого.
 		contentStore, ok := s.Repo.(migrationContentStore0337)
 		if !ok {
 			return mw.ErrConflict

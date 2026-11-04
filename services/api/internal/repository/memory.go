@@ -19,8 +19,8 @@ var ErrNotFound = errors.New("запись не найдена")
 var ErrImmutable = errors.New("published release immutable")
 var ErrConflict = errors.New("repository conflict")
 
-// ErrStableRuntimeGate0341 is a non-overridable release protection boundary.
-// 0.34.1 has no attested runtime executor; signed legacy JSON is not sufficient.
+// ErrStableRuntimeGate0341 — непреодолимая граница защиты релиза. В 0.34.1 нет
+// аттестованного исполнителя Runtime; старого подписанного JSON недостаточно.
 var ErrStableRuntimeGate0341 = errors.New("stable_runtime_gate_0341: trusted staged-client/server execution is not yet available; stable publication denied")
 
 func IsStableChannel0341(channel string) bool {
@@ -31,9 +31,9 @@ func IsStableChannel0341(channel string) bool {
 // идентичность доверенного устройства вместе с текущей привязкой сеанса авторизации
 // и каскадом отзыва. PostgreSQL поддерживает это непосредственно; репозиторий
 // разработки в памяти использует транзакционный запасной механизм уровня HTTP.
-// RevokedDeviceRecoveryRepository0435 atomically claims an existing tombstone
-// and stores its new identity for memory/SQLite backends. The auth session is
-// subsequently rebound by the session CAS, or the new key is revoked.
+// RevokedDeviceRecoveryRepository0435 атомарно захватывает имеющуюся
+// tombstone-запись и сохраняет новую идентичность для памяти/SQLite. Затем сеанс
+// авторизации перепривязывается через CAS или новый ключ отзывается.
 type RevokedDeviceRecoveryRepository0435 interface {
 	RecoverRevokedTrustedDeviceKey0435(ctx context.Context, userID, oldDeviceID string, replacement model.TrustedDevice, now time.Time) (model.TrustedDevice, model.TrustedDevice, error)
 	ReleaseFailedRevokedDeviceRecovery0435(ctx context.Context, userID, oldDeviceID, replacementID string) error
@@ -246,9 +246,9 @@ type MemoryRepository struct {
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
 	now := time.Now().UTC()
-	// The demo's published v2 manifest must pin the same immutable revision
-	// as the initial vanilla profile. Do not try to read a repository before
-	// its constructor has finished.
+	// Публикуемый манифест v2 демонстрации должен закреплять ту же неизменяемую
+	// ревизию, что исходный vanilla-профиль. Не пытайтесь читать репозиторий до
+	// завершения его конструктора.
 	snapshot := model.SnapshotProfile(model.Profile{
 		SchemaVersion: model.ProfileSchemaV2, Revision: 1,
 		ID: "vanilla", ProjectID: "demo-project", Name: "Vanilla",
@@ -927,8 +927,9 @@ func (r *MemoryRepository) GetManifest(projectID, profileID, channel string) (mo
 	return model.Manifest{}, ErrNotFound
 }
 
-// PublishVersion only commits a previously signed draft. It does not regenerate
-// timestamps or an unsigned manifest (which would invalidate Ed25519 signatures).
+// PublishVersion фиксирует только ранее подписанный черновик. Он не пересоздаёт
+// временные метки или неподписанный манифест, поскольку это сделало бы подписи Ed25519
+// недействительными.
 func (r *MemoryRepository) PublishVersion(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
 	for _, release := range r.releases {
 		if release.ProjectID == projectID && release.ProfileID == profileID && release.Channel == channel && release.Version == version {
@@ -1046,8 +1047,9 @@ func (r *MemoryRepository) CreateVersion(projectID, profileID, channel, version 
 	return cloneRelease0222(release), nil
 }
 
-// CreateVersionV3 creates an unsigned v3 draft with a content-addressed
-// empty catalog. Existing v2 drafts/releases are never converted in place.
+// CreateVersionV3 создаёт неподписанный черновик v3 с пустым каталогом,
+// адресуемым по содержимому. Существующие черновики и релизы v2 не
+// преобразуются на месте.
 func (r *MemoryRepository) CreateVersionV3(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
 	release, err := r.CreateVersion(projectID, profileID, channel, version)
 	if err != nil {
@@ -1069,7 +1071,7 @@ func (r *MemoryRepository) UpdateVersionStatus(projectID, versionID, status stri
 	if status == "" {
 		return model.ReleaseVersion{}, errors.New("status обязателен")
 	}
-	// Status mutation is not a substitute for the transactional publish path.
+	// Изменение статуса не заменяет транзакционный путь публикации.
 	for i := range r.releases {
 		if r.releases[i].ProjectID == projectID && r.releases[i].ID == versionID {
 			if strings.EqualFold(status, "published") {

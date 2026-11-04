@@ -14,9 +14,9 @@ type gravitOptionalPreviewRequest02411 struct {
 	Source           json.RawMessage `json:"source"`
 }
 
-// This is a dry-run transformation of untrusted Gravit data. The output can
-// only be committed through the existing component-catalog PUT transaction,
-// which recomputes the digest, validates all presets and checks CAS revision.
+// Это пробное преобразование недоверенных данных Gravit. Результат можно сохранить
+// только через существующую транзакцию PUT каталога компонентов, повторно
+// вычисляющую хеш, проверяющую все пресеты и ревизию CAS.
 func (s Server) componentCatalogGravitPreview02411(w http.ResponseWriter, r *http.Request) {
 	lookup, err := editorLookup0248(s, r.PathValue("packageId"))
 	if err != nil {
@@ -71,7 +71,8 @@ func (s Server) componentCatalogGravitPreview02411(w http.ResponseWriter, r *htt
 		}
 		result.Ready = false
 	}
-	// Explicitly prohibit silently merging unsupported semantics with a valid
-	// candidate. Admin must review and resolve every issue before normal save.
+	// Явно запрещайте незаметное объединение неподдерживаемой семантики с
+	// допустимым кандидатом. Перед обычным сохранением администратор обязан
+	// рассмотреть и устранить каждую проблему.
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"migration": result, "preview": preview, "canApply": result.Ready && preview.Valid, "warning": strings.Join(preview.Errors, "; ")}})
 }

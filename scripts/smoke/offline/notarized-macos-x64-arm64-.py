@@ -91,7 +91,8 @@ if min(helper_sign, manifest_build, app_sign) < 0 or not (
     )
 
 packager = read("scripts/release/macos-package.py")
-# Read the real CPU mapping as Python literals, regardless of formatting.
+# Читайте настоящую карту CPU как литералы Python независимо от
+# форматирования.
 tree = ast.parse(packager)
 arches = None
 for node in tree.body:

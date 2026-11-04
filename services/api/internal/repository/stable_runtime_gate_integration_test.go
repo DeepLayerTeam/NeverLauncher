@@ -46,7 +46,7 @@ func TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341(t *testing.T) {
 			t.Errorf("%s bypass: %v", label, e)
 		}
 	}
-	// The guard does not affect a different channel.
+	// Защита не затрагивает другой канал.
 	if _, err := repo.db.ExecContext(ctx, `UPDATE release_versions SET channel='dev' WHERE id=$1`, releaseID); err == nil {
 		t.Fatal("release identity was unexpectedly mutable")
 	}

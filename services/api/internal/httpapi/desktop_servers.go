@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// Desktop receives only discoverable server metadata. The authoritative
-// ServerBridge join endpoint must still enforce the authenticated identity,
-// project, profile, channel, device and attestation checks.
+// Desktop получает только метаданные доступных для обнаружения серверов.
+// Авторитетная точка входа ServerBridge обязана дополнительно проверить
+// аутентифицированную личность, проект, профиль, канал, устройство и аттестацию.
 type desktopServer0229 struct {
 	ID               string    `json:"id"`
 	Name             string    `json:"name"`
@@ -23,7 +23,8 @@ type desktopServer0229 struct {
 
 func (s Server) desktopProfileServers0229(w http.ResponseWriter, r *http.Request) {
 	projectID, profileID := r.PathValue("projectId"), r.PathValue("profileId")
-	// Fail closed for unknown project/profile: never enumerate other projects.
+	// Для неизвестного проекта или профиля отказывайте по умолчанию: не
+	// перечисляйте чужие проекты.
 	profiles, err := s.Repo.ListProfiles(projectID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "project not found")
@@ -47,7 +48,8 @@ func (s Server) desktopProfileServers0229(w http.ResponseWriter, r *http.Request
 				continue
 			}
 			item := desktopServer0229{ID: node.ID, Name: node.Name, Kind: node.Kind, Status: node.Status, MinecraftVersion: node.MinecraftVersion, LastHeartbeatAt: node.LastHeartbeatAt}
-			// Unverified/stale telemetry is never represented as live server status.
+			// Непроверенная или устаревшая телеметрия никогда не показывается как текущий
+			// статус сервера.
 			item.Health = "unknown"
 			if node.Telemetry != nil {
 				item.Health = "telemetry-unverified"

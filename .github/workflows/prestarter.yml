@@ -46,6 +46,7 @@ jobs:
           cache-dependency-path: prestarter/go.mod
       - name: Verify all six OS and architecture builds
         env:
-          # Test-only public key. Never publish these as trusted production release binaries.
+          # Открытый ключ только для тестов. Никогда не публикуйте эти бинарники как доверенные
+          # промышленные выпуски.
           LAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         run: bash scripts/release/build-prestarter.sh

@@ -2,9 +2,10 @@ package model
 
 import "fmt"
 
-// ValidateProfileLaunch0382 checks actual build inputs against the immutable
-// snapshot. Legacy profiles without launch defaults remain compatible.
-// checkJava=false is only for package-create, which has no runtime Java input.
+// ValidateProfileLaunch0382 сверяет реальные входные данные сборки с неизменяемым
+// снимком. Устаревшие профили без стартовых значений по умолчанию сохраняют
+// совместимость. checkJava=false применим только к package-create без входного Java
+// Runtime.
 func ValidateProfileLaunch0382(spec ProfileSpec, game MinecraftInfo, javaMajor int, checkJava bool) error {
 	if spec.MinecraftVersion == "" {
 		return nil

@@ -123,8 +123,8 @@ func (r *Repository) ListUsers(ctx context.Context) (out []model.User, err error
 	return
 }
 
-// AuthEpoch must be checked by DEP01 sessions when session parity is enabled.
-// It monotonically increases on role, password, status, project binding edits.
+// AuthEpoch должен проверяться сеансами DEP01 при включённом соответствии сеансов.
+// Он монотонно растёт при изменении роли, пароля, статуса и привязок проекта.
 func (r *Repository) AuthEpoch(ctx context.Context, userID string) (epoch int64, err error) {
 	err = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		return notFound(q.QueryRowContext(ctx, `SELECT auth_epoch FROM users WHERE id=?`, userID).Scan(&epoch))
@@ -132,9 +132,9 @@ func (r *Repository) AuthEpoch(ctx context.Context, userID string) (epoch int64,
 	return
 }
 
-// SaveUser applies a partially committed role binding: user record,
-// normalized per-project roles, generation bump and audit commit together.
-// Actor is mandatory because user-management changes are security events.
+// SaveUser атомарно сохраняет запись пользователя, нормализованные роли по
+// проектам, увеличение поколения и аудит. Actor обязателен, поскольку
+// управление пользователями — событие безопасности.
 func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (model.User, error) {
 	if strings.TrimSpace(actor) == "" {
 		return model.User{}, errors.New("security actor required")
@@ -180,7 +180,8 @@ func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (
 				return e
 			}
 		}
-		// New databases must bootstrap an active owner, not an implicit admin.
+		// Новые БД должны инициализировать активного владельца, а не неявного
+		// администратора.
 		if newUser {
 			var count int
 			if e = q.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&count); e != nil {
@@ -224,7 +225,7 @@ func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (
 				}
 			}
 		}
-		// Canonical assignment inserts only changed rows.
+		// Каноническое назначение вставляет только изменённые строки.
 		projects := make([]string, 0, len(u.ProjectRoles))
 		for p := range u.ProjectRoles {
 			projects = append(projects, p)
@@ -269,8 +270,8 @@ func sameBindings(a, b map[string]string) bool {
 	return true
 }
 
-// UpdatePassword and DisableUser are explicit security mutations and preserve
-// all unrelated fields (including per-project bindings) without overwriting.
+// UpdatePassword и DisableUser — явные изменения безопасности, сохраняющие все
+// несвязанные поля, включая роли в проектах, без перезаписи.
 func (r *Repository) UpdatePassword(ctx context.Context, id, hash, actor string) error {
 	if actor == "" || id == "" {
 		return errors.New("actor/user required")
@@ -361,8 +362,8 @@ func (r *Repository) ListAudit(ctx context.Context, limit int) (out []model.Audi
 	return
 }
 
-// Count is an operational diagnostic: failed queries return an error rather
-// than silently emitting an empty list as some legacy interfaces do.
+// Count — эксплуатационная диагностика: ошибки запросов возвращаются как ошибки,
+// а не скрываются пустым списком, как в некоторых старых интерфейсах.
 func (r *Repository) Count(ctx context.Context) (map[string]int64, error) {
 	names := []string{"projects", "profiles", "profile_revisions", "channels", "releases", "channel_heads", "users", "project_user_roles", "roles", "audit_events", "auth_sessions", "refresh_families", "refresh_tokens", "access_tokens", "mfa_totp", "mfa_recovery", "minecraft_profiles", "minecraft_sessions", "auth_revocation_events", "bridge_nodes", "bridge_nonces", "bridge_join_tickets", "durable_jobs", "durable_job_attempts", "durable_scope_leases", "durable_outbox", "bridge_runtime", "bridge_runtime_nonces", "bridge_commands", "package_blobs", "extension_publishers", "extension_packages", "extension_installs", "extension_install_history", "extension_kv", "extension_kv_history"}
 	values := map[string]int64{}

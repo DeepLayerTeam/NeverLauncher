@@ -252,7 +252,7 @@ def public_key(path: Path) -> Ed25519PublicKey:
 def signed_json(path: Path, signature: Path, trusted_key: Path) -> dict:
     raw=path.read_bytes()
     obj=load_json(path)
-    # Require canonical serialization; prevents discrepancies among JSON parsers.
+    # Требуйте каноническую сериализацию во избежание различий между JSON-парсерами.
     if raw != canonical(obj):
         raise ValueError('noncanonical signed JSON: '+str(path))
     if signature.is_symlink() or not signature.is_file() or signature.stat().st_size != 64:
@@ -305,8 +305,9 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
     expected=approval.get('targets')
     if not isinstance(expected,dict) or set(expected)!=TARGETS:
         raise ValueError('native approval must cover all six actual signed targets')
-    # Existing production validator inspects real executable headers, embedded
-    # package manifests and exact SHA256 of the released signed packages.
+    # Существующий промышленный верификатор проверяет настоящие заголовки
+    # исполняемых файлов, встроенные манифесты пакетов и точные SHA-256 выпущенных
+    # подписанных пакетов.
     signed=verify_bundle(signed_bundle, release_manifest=True)
     if approval.get('releaseSignatureVerified') is not True or approval.get('releaseManifestSha256')!=sha256_file(signed_bundle/'RELEASE_MANIFEST.json'):
         raise ValueError('no verified final release-signature binding')
@@ -323,8 +324,8 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
             raise ValueError('missing macOS OS-native signature validation: '+target)
         if kind=='linux' and row.get('nativeCheck')!='release-ed25519-and-digest-verified':
             raise ValueError('missing Linux release signature validation: '+target)
-        # Native receipt is produced by executing OS validators against the
-        # exact final package (not by asserting a string in approval JSON).
+        # Нативная квитанция создаётся реальным выполнением проверок ОС для точного
+        # окончательного пакета, а не утверждением строки в JSON одобрения.
         native_path=native_reports_dir/(target+'.json')
         native=signed_json(native_path,native_reports_dir/(target+'.sig'),approval_key)
         if (row.get('nativeReceiptSha256')!=sha256_file(native_path)

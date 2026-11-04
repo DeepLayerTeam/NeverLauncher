@@ -1,5 +1,5 @@
-// Offline operator tool: signs exact ServerBridge policy JSON bytes. Never put
-// the private key in the API or the repository.
+// Автономный инструмент оператора подписывает точные JSON-байты политики
+// ServerBridge. Никогда не помещайте закрытый ключ в API или репозиторий.
 package main
 
 import (

@@ -129,8 +129,8 @@ def sync(version: str, *, check_only: bool) -> list[str]:
         changed.append(rel)
         if not check_only:
             path.write_text(desired, encoding="utf-8")
-    # Rebuild/read-only-verify the two canonical binary resource bundles.
-    # Version bump changes env.production.example, so it also changes the CLI bundle.
+    # Повторно собирайте или проверяйте только на чтение два канонических бинарных пакета
+    # ресурсов. Повышение версии изменяет env.production.example, а значит и пакет CLI.
     bundle = subprocess.run(
         [sys.executable, str(ROOT / "scripts/build/embedded_cli_assets.py"),
          "--check" if check_only else "--write"],

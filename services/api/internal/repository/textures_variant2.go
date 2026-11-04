@@ -12,8 +12,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// VerifiedTexture0252 is constructed only from a fully decoded and normalized
-// PNG and from the successful storage write performed by the HTTP service.
+// VerifiedTexture0252 создаётся только из полностью декодированного и
+// нормализованного PNG после успешной записи HTTP-сервисом в хранилище.
 type VerifiedTexture0252 struct {
 	Digest                  string
 	Width, Height           int
@@ -89,8 +89,8 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		return zero, err
 	}
 	defer tx.Rollback()
-	// Every upload is authorized against the server-side Minecraft profile row.
-	// A transaction-scoped lock serializes the create-only path as well as CAS.
+	// Каждая загрузка авторизуется по серверной строке Minecraft-профиля. Блокировка
+	// транзакции сериализует путь только создания и CAS.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(252,hashtext($1))`, profile.UUID); err != nil {
 		return zero, err
 	}
@@ -128,9 +128,10 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	if input.Size > maxBytes {
 		return zero, ErrTextureUploadLimit0252
 	}
-	// Serialize ALL profile uploads of this user (including different kinds)
-	// before quota accounting. The unique owner relation prevents double charge
-	// for reusing the same digest, even when many users share the blob.
+	// Сериализуйте ВСЕ загрузки профилей этого пользователя, в том числе разных
+	// типов, до учёта квоты. Уникальная связь владения исключает двойное списание
+	// при повторном использовании хеша даже при общем объекте нескольких
+	// пользователей.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(253,hashtext($1))`, profile.UserID); err != nil {
 		return zero, err
 	}
@@ -160,7 +161,8 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		input.Digest, input.Size, input.Driver, input.ObjectKey); err != nil {
 		return zero, err
 	}
-	// Do not silently attach an existing digest with inconsistent storage metadata.
+	// Никогда не прикрепляйте существующий хеш незаметно при несовпадающих метаданных
+	// хранилища.
 	var existing TextureBlob0252
 	if err = tx.QueryRowContext(ctx, `SELECT digest,byte_size,storage_driver,object_key FROM texture_blobs WHERE digest=$1 AND status='verified'`, input.Digest).Scan(&existing.Digest, &existing.ByteSize, &existing.StorageDriver, &existing.ObjectKey); err != nil {
 		return zero, err
@@ -201,8 +203,9 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 			return zero, err
 		}
 	}
-	// Upload and URL import make the normalized PNG reusable immediately. Keep
-	// saved library membership in the SAME transaction as assignment and CAS.
+	// Загрузка и импорт URL сразу делают нормализованный PNG повторно используемым.
+	// Сохраняйте принадлежность библиотеке в ТОЙ ЖЕ транзакции, что назначение и
+	// CAS.
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_saved_items(user_id,digest,kind,model,source,last_selected_at)
       VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_id,digest,kind)
       DO UPDATE SET model=EXCLUDED.model,source=EXCLUDED.source,last_selected_at=EXCLUDED.last_selected_at`,
@@ -241,8 +244,9 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	return assignment, nil
 }
 
-// ReadTextureBlob0252 exposes only an active public selection or an explicitly
-// authenticated owner. No arbitrary digest disclosure to unauthenticated users.
+// ReadTextureBlob0252 раскрывает только активный публичный выбор или ресурс
+// аутентифицированному владельцу. Произвольные хеши не раскрываются неавторизованным
+// пользователям.
 func (r *SQLRepository) ReadTextureBlob0252(ctx context.Context, digest string, profile model.MinecraftProfile, owner bool) (TextureBlob0252, bool, error) {
 	var b TextureBlob0252
 	if err := r.check(); err != nil {

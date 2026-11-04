@@ -67,8 +67,9 @@ jobs:
           python3 scripts/version/manage.py check
 
   real-linux-enospc-and-network-isolation:
-    # This job consumes GB of real tmpfs blocks and executes signed installers.
-    # Only a dedicated, privileged, disposable machine is suitable.
+    # Эта задача использует гигабайты реальных блоков tmpfs и запускает подписанные
+    # установщики. Для неё подходит только выделенная привилегированная одноразовая
+    # машина.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, neverlauncher-0527-isolated]
     environment: installer-physical-acceptance

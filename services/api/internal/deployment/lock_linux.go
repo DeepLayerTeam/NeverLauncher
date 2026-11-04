@@ -11,9 +11,10 @@ import (
 	"syscall"
 )
 
-// InstanceLock owns a filesystem-level flock until all HTTP/workers have stopped.
-// Lockfiles are intentionally NEVER unlinked: removing a held inode would allow
-// another process to create and lock a different inode at the same pathname.
+// InstanceLock удерживает flock файловой системы до остановки всех HTTP/рабочих
+// процессов. Файлы блокировок намеренно НИКОГДА не удаляются: удаление
+// заблокированного inode позволило бы другому процессу создать и заблокировать новый
+// inode по тому же пути.
 type InstanceLock struct{ file *os.File }
 
 func Acquire(plan Plan) (*InstanceLock, error) {
@@ -25,8 +26,8 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 		return nil, errors.New("instance lock requires an absolute clean path")
 	}
 	parent := filepath.Dir(path)
-	// Never traverse symlinked segments: otherwise two names can resolve to
-	// the same storage or the lock could point outside the intended volume.
+	// Никогда не проходите через сегменты-символьные ссылки: иначе два имени
+	// могут вести к одному хранилищу или блокировка — за пределы заданного тома.
 	current := string(filepath.Separator)
 	if parent != "/" {
 		parts := splitPath(parent)
@@ -71,7 +72,8 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 			return nil, errors.New("instance lock filesystem is read-only")
 		}
 	}
-	// O_NOFOLLOW and O_CLOEXEC prevent symlink substitution and child inheritance.
+	// O_NOFOLLOW и O_CLOEXEC предотвращают подмену символьной ссылки и наследование
+	// дескриптора дочерним процессом.
 	fd, err := syscall.Open(path, syscall.O_RDWR|syscall.O_CREAT|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("instance lock open: %w", err)
@@ -89,7 +91,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 	if err := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		return fail(fmt.Errorf("instance already running, lock %s: %w", path, err))
 	}
-	// Detect pathname replacement between open and lock.
+	// Обнаруживайте подмену пути между открытием и получением блокировки.
 	pathInfo, err := os.Lstat(path)
 	if err != nil || !os.SameFile(info, pathInfo) {
 		return fail(errors.New("instance lock pathname changed during acquisition"))

@@ -25,9 +25,10 @@ public final class BundledLibraries implements AutoCloseable {
     private static final class ExtensionClassLoader extends URLClassLoader {
         ExtensionClassLoader(URL[] urls,ClassLoader parent){super(urls,parent);}
         @Override protected synchronized Class<?> loadClass(String name,boolean resolve)throws ClassNotFoundException {
-            // The SDK, host and JDK remain singletons in the parent; extension-owned
-            // classes use child-first lookup so their symbolic references can resolve
-            // bundled libraries without leaking those libraries to the core JVM.
+            // SDK, хост и JDK остаются одиночными объектами в родительском загрузчике;
+            // классы расширений ищутся сначала дочерним загрузчиком, чтобы их символьные
+            // ссылки разрешали встроенные библиотеки, не раскрывая эти библиотеки ядру
+            // JVM.
             boolean protectedName=name.startsWith("java.")||name.startsWith("javax.")||name.startsWith("jdk.")||
                 name.startsWith("sun.")||name.startsWith("com.sun.")||name.startsWith("org.w3c.")||name.startsWith("org.xml.")||name.startsWith("ru.launcher.sdk.")||name.startsWith("pro.gravit.");
             Class<?> found=findLoadedClass(name);

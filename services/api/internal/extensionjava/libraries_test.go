@@ -103,7 +103,8 @@ func TestConflictingDependencyLibrariesRejected0482(t *testing.T) {
 	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "class conflict") {
 		t.Fatalf("duplicate third-party class accepted: %v", err)
 	}
-	// Distinct dependency IDs may coexist, but two versions of the same coordinate cannot.
+	// Разные ID зависимостей могут сосуществовать, но две версии одних и тех же координат —
+	// нет.
 	index = strings.Replace(index, "org.example:beta", "org.example:alpha", 1)
 	host = zip0482(t, map[string][]byte{
 		"META-INF/MANIFEST.MF":                         []byte("Manifest-Version: 1.0\r\nMain-Class: " + HostMain + "\r\nLauncher-Extension-Class: example.Plugin\r\n\r\n"),
@@ -171,7 +172,8 @@ func TestUnsafeAndLockedDependencyRejected0482(t *testing.T) {
 	if err := os.WriteFile(badHash, zip0482(t, parts), 0600); err != nil {
 		t.Fatal(err)
 	}
-	// Invalid checksums and unexpected index content are always fail-closed.
+	// Некорректные контрольные суммы и неожиданное содержимое индекса всегда
+	// вызывают отказ.
 	if _, err := Inspect(badHash); err == nil {
 		t.Fatal("accepted altered lock")
 	}

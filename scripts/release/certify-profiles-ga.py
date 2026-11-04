@@ -136,7 +136,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="dist/ga-certification/profiles-0230.json")
     args = parser.parse_args()
-    # Invalidate the old success before preflight as well as before test execution.
+    # Аннулируйте прежний успех до предварительной проверки, а также до выполнения
+    # тестов.
     initial_output = Path(args.output)
     if not initial_output.is_absolute():
         initial_output = ROOT / initial_output
@@ -185,8 +186,8 @@ def main() -> int:
         s["status"] == "passed" for s in report["suites"]
     ):
         report["status"] = "passed"
-    # Evidence ties to this commit; it is not a signing certificate and never
-    # contains database passwords, signing material, or full command output.
+    # Доказательства связаны с этим коммитом; это не сертификат подписи. Они не
+    # содержат пароли БД, материалы подписи или полный вывод команд.
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

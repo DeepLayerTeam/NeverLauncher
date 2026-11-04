@@ -20,7 +20,7 @@ func TestServerBridgeRegistration0383RejectsForeignOrUnknownProfile(t *testing.T
 			t.Fatalf("unexpected registration acceptance for %s/%s: %d %s", tc.project, tc.profile, res.Code, res.Body.String())
 		}
 	}
-	// The server must not have been registered as a side effect of rejection.
+	// Отклонение не должно приводить к регистрации сервера как побочному эффекту.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/server-bridge/projects/demo-project/overview", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	res := httptest.NewRecorder()

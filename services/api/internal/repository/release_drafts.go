@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// ReleaseDraft is an editable, user-owned workflow record. It does not confer
-// release permissions; callers must authorize every read and mutation.
+// ReleaseDraft — редактируемая запись процесса, принадлежащая пользователю. Она не
+// выдаёт прав релиза; вызывающие должны авторизовать каждое чтение и изменение.
 type ReleaseDraft struct {
 	ID               string    `json:"id"`
 	ProjectID        string    `json:"projectId"`

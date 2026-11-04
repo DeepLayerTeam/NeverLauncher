@@ -27,9 +27,9 @@ type IsolationDiagnostics0311 struct {
 	EffectiveRestrictions []string       `json:"effectiveRestrictions"`
 }
 
-// Host isolation is not yet implemented. Never infer sandbox enforcement from
-// kernel feature detection or a package signature; this report is computed
-// from read-only checks on the real host at request time.
+// Изоляция хоста ещё не реализована. Нельзя выводить соблюдение песочницы из
+// наличия функций ядра или подписи пакета; отчёт строится по проверкам
+// фактического хоста только на чтение в момент запроса.
 func DiagnoseIsolation0311() IsolationDiagnostics0311 {
 	u := Capability0311{"unsupported", "not-applicable"}
 	d := IsolationDiagnostics0311{

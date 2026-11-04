@@ -65,10 +65,10 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	if wrongIPV.Code != http.StatusNoContent {
 		t.Fatalf("hasJoined must reject mismatched optional ip: %d %s", wrongIPV.Code, wrongIPV.Body.String())
 	}
-	// The PostgreSQL repository consumes with a single conditional UPDATE; the
-	// in-memory repository uses the same atomic consume-once contract under a lock.
-	// Exercise competing HTTP requests, not just a sequential replay, so a
-	// regression in the read/consume ordering becomes observable.
+	// Репозиторий PostgreSQL погашает билет одним условным UPDATE; репозиторий в памяти
+	// выполняет тот же атомарный контракт однократного использования под блокировкой.
+	// Проверяйте конкурирующие HTTP-запросы, а не только последовательный повтор, чтобы
+	// обнаруживать регрессию порядка чтения и погашения.
 	const concurrentJoins = 12
 	start := make(chan struct{})
 	var joined sync.WaitGroup

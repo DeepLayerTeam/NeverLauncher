@@ -101,8 +101,9 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 		(raw.PlayersOnline != nil && (*raw.PlayersOnline < 0 || *raw.PlayersOnline > 1_000_000 || *raw.PlayersMax < 0 || *raw.PlayersMax > 1_000_000 || (*raw.PlayersMax > 0 && *raw.PlayersOnline > *raw.PlayersMax))) {
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_players_invalid")
 	}
-	// A stale platform sample may leave JVM statistics available, but it cannot
-	// assert healthy ticks or fabricate zero connected players.
+	// Устаревший образец платформы может оставлять статистику JVM доступной, но не
+	// должен утверждать исправность тиков или подделывать нулевое количество
+	// подключённых игроков.
 	if raw.TPS == nil && raw.MSPT == nil && health != "unavailable" {
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_health_without_ticks")
 	}
@@ -133,8 +134,9 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_game_counter_invalid")
 	}
 
-	// Bind a signed telemetry sample to the very same OS process described by
-	// the signed runtime identity. Do not trust uncorrelated host/process counters.
+	// Привязывайте подписанный образец телеметрии к тому же процессу ОС, что указан в
+	// подписанной идентичности Runtime. Не доверяйте несвязанным счётчикам хоста и
+	// процесса.
 	if raw.ProcessID != nil && (*raw.ProcessID <= 0 || *raw.ProcessID != runtime.ProcessID) {
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_process_mismatch")
 	}

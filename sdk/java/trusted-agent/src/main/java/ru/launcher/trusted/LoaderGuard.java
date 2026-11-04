@@ -58,13 +58,14 @@ final class LoaderGuard0504 implements ClassFileTransformer {
                 throw new SecurityException("Guard loader source must be an installed regular JAR");
             String canonical=file.getCanonicalPath();
             if(sources.put(canonical,sha)!=null) throw new SecurityException("Guard duplicate loader source");
-            // Validate eagerly, before loader code runs, even if no marker class is loaded.
+            // Проверяйте заранее, до исполнения кода загрузчика, даже если маркерный класс не
+            // загружен.
             if(!sha.equals(digest(file))) throw new SecurityException("Guard loader JAR digest changed: "+file.getName());
         }
-        // Optional operator-pinned class bytes observed by this JVM transformer
-        // after the loader has supplied its definition bytes and before Trusted
-        // Java plugin hooks run. These are exact signed hashes, not class names
-        // that receive blanket permission to be rewritten.
+        // Необязательные байты классов, закреплённые оператором, наблюдаются
+        // трансформером JVM после получения определения от загрузчика, но до хуков
+        // доверенных Java-плагинов. Это точные подписанные хеши, а не имена классов с
+        // безусловным разрешением переписывания.
         int classes;
         try { classes=Integer.parseInt(config.getProperty("loader.class.count", "0")); }
         catch(NumberFormatException ex) { throw new SecurityException("Guard loader class count invalid",ex); }
@@ -146,7 +147,8 @@ final class LoaderGuard0504 implements ClassFileTransformer {
     }
     private static void reject(String message) {
         System.err.println("[Launcher Guard 0.50.4] "+message);
-        // JVM instrumentation can suppress transformer exceptions. Fail closed.
+        // Инструментирование JVM может подавлять исключения трансформера. При ошибке
+        // доступ должен отклоняться.
         Runtime.getRuntime().halt(79);
         throw new SecurityException(message);
     }

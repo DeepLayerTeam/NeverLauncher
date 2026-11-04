@@ -86,8 +86,9 @@ def pass_native(result: tuple[int, dict | None], status: str = "ready"):
 
 def reject_native(result: tuple[int, dict | None], message: str):
     code, response = result
-    # Native errors may be nonzero or a structured status=invalid; both must
-    # explicitly reject the request. A nonzero with ready is never acceptable.
+    # Нативная ошибка может возвращать ненулевой код или структурированный
+    # status=invalid; в обоих случаях запрос должен явно отклоняться. Ненулевой код
+    # с ready недопустим.
     require(
         not (isinstance(response, dict) and response.get("status") == "ready"), message
     )
@@ -217,7 +218,7 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                 "identical installed release triggered another download",
             )
             checks.append("warm-update-without-network-download")
-            # Damage an installed file without touching its signed manifest.
+            # Повредите установленный файл, не изменяя его подписанный манифест.
             with file.open("r+b") as handle:
                 handle.seek(0)
                 handle.write(b"TAMPERED-03514")

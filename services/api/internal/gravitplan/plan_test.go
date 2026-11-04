@@ -92,7 +92,7 @@ func TestPlanDeterminismAndNoSecret0442(t *testing.T) {
 			t.Fatal("legacy key scheduled for transfer")
 		}
 	}
-	// The plan must not leak file contents or legacy secret material.
+	// План не должен раскрывать содержимое файлов или старые секреты.
 	if strings.Contains(strings.Join(p.Blockers, "|"), "SECRET_KEY_NOT_TO_TRANSFER") {
 		t.Fatal("source contents leaked")
 	}
@@ -128,8 +128,9 @@ func TestMissingIdentityAndChangedDestination0442(t *testing.T) {
 	}
 }
 
-// A client-owned file in a verified ZIP is explicitly excluded from the
-// approved plan; it must not accidentally become a future automatic copy.
+// Файл, принадлежащий клиенту, в проверенном ZIP явно исключается из
+// одобренного плана; он не должен случайно стать источником будущей
+// автоматической копии.
 func TestPlanExcludesPlayerFiles0443(t *testing.T) {
 	p, _, _, _, content, _ := preview0442(t)
 	if len(content.SkippedFiles) != 1 {

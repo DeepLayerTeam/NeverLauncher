@@ -164,7 +164,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	if _, e = r.CancelMigrationCutover03311(ctx, runID, profile, channel, active.Revision); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("post-cutover cancel accepted: %v", e)
 	}
-	// MIG12 must fence the *active* route as well (and guard DELETE).
+	// MIG12 должен ограждать также АКТИВНЫЙ маршрут и защищать DELETE.
 	if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET version='unapproved' WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
 		t.Fatal("active head accepted another publisher")
 	}
@@ -198,7 +198,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, wrongEvidence, pub); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("different export evidence accepted: %v", e)
 	}
-	// A fresh plan must replace a previous approval and invalidate its hash.
+	// Новый план должен заменять прежнее одобрение и аннулировать его хеш.
 	renewed := planInput
 	renewed.EvidenceReference = "runbooks/fresh-export-0002"
 	renewed.EvidenceSHA256 = strings.Repeat("d", 64)

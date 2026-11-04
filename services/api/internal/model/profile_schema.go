@@ -11,8 +11,8 @@ import (
 const ProfileSchemaV2 = "2.0"
 const ManifestSchemaV2 = "2.0"
 
-// ProfileSpec is the immutable launch-profile metadata covered by a revision digest.
-// User-facing/volatile createdAt and updatedAt are intentionally excluded.
+// ProfileSpec — неизменяемые метаданные стартового профиля, покрытые хешем ревизии.
+// Пользовательские и изменяемые createdAt/updatedAt намеренно исключены.
 type ProfileSpec struct {
 	ProjectID        string `json:"projectId"`
 	ID               string `json:"id"`
@@ -26,8 +26,8 @@ type ProfileSpec struct {
 	IsDefault        bool   `json:"isDefault"`
 }
 
-// ProfileSnapshot is copied into a new v2 release when it is created.
-// It MUST NOT change when the mutable profile is edited later.
+// ProfileSnapshot копируется в новый релиз v2 при создании и НЕ ДОЛЖЕН
+// изменяться после редактирования изменяемого профиля.
 type ProfileSnapshot struct {
 	SchemaVersion string      `json:"schemaVersion"`
 	Revision      int64       `json:"revision"`
@@ -39,12 +39,12 @@ func ProfileSpecOf(p Profile) ProfileSpec {
 	return ProfileSpec{ProjectID: p.ProjectID, ID: p.ID, Name: p.Name, Description: p.Description, Loader: p.Loader, MinecraftVersion: p.MinecraftVersion, LoaderVersion: p.LoaderVersion, JavaMajor: p.JavaMajor, Preset: p.Preset, IsDefault: p.IsDefault}
 }
 
-// ProfileDigest has the same binary representation in Go and PostgreSQL migration 0056.
-// NUL separators make combinations of fields unambiguous; NUL is not valid in PostgreSQL text.
+// ProfileDigest имеет одинаковое двоичное представление в Go и миграции PostgreSQL 0056. Разделители
+// NUL исключают неоднозначные комбинации полей; NUL недопустим в тексте PostgreSQL.
 func ProfileDigest(s ProfileSpec) string {
 	fields := []string{s.ProjectID, s.ID, s.Name, s.Description, s.Loader, s.Preset, fmt.Sprint(s.IsDefault)}
-	// Existing v2 profile/release digests remain byte-for-byte stable. Only
-	// explicitly configured launch metadata extends the domain.
+	// Существующие хеши профилей/релизов v2 должны оставаться побайтово
+	// стабильными. Только явно настроенные метаданные запуска расширяют домен.
 	if s.MinecraftVersion != "" || s.LoaderVersion != "" || s.JavaMajor != 0 {
 		fields = append(fields, "launch-0382", s.MinecraftVersion, s.LoaderVersion, fmt.Sprint(s.JavaMajor))
 	}
@@ -146,9 +146,10 @@ func NormalizeProfileV2(p Profile) (Profile, error) {
 	return p, nil
 }
 
-// ValidateReleaseManifestTransition enforces the snapshot pinned when the draft
-// was created. Never derive it from the current mutable profile on update/publish.
-// A v1 draft can only remain v1; upgrading requires a new release identity.
+// ValidateReleaseManifestTransition обеспечивает закреплённый при создании черновика
+// снимок. Никогда не получайте его из текущего изменяемого профиля при обновлении или
+// публикации. Черновик v1 остаётся только v1; обновление требует новой идентичности
+// релиза.
 func ValidateReleaseManifestTransition(existing, candidate Manifest) error {
 	if err := ValidateManifestSchema(existing); err != nil {
 		return fmt.Errorf("stored release manifest is invalid: %w", err)

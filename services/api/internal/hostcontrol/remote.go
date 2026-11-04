@@ -1,7 +1,7 @@
 package hostcontrol
 
-// The Backend operates ONLY explicitly provisioned RemoteControl nodes. It
-// never accepts a destination or credentials from an HTTP request.
+// Backend работает ТОЛЬКО с явно настроенными узлами RemoteControl. Он не
+// принимает цель или учётные данные из HTTP-запроса.
 import (
 	"bytes"
 	"context"
@@ -209,8 +209,8 @@ func (c *Client) Execute(ctx context.Context, action, key string) (Receipt, erro
 	return r, nil
 }
 
-// ReadReceipt04112 retrieves only the *already durable* RemoteControl ACK.
-// It does not send a new action, even when the original POST timed out.
+// ReadReceipt04112 получает лишь УЖЕ устойчивый ACK RemoteControl. Новое
+// действие не отправляется, даже при тайм-ауте исходного POST.
 var ErrReceiptNotFound04112 = errors.New("remote host receipt not found")
 
 func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Receipt, error) {
@@ -242,8 +242,8 @@ func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Rece
 	return receipt, nil
 }
 
-// Success is based on observed host state, not merely a successful HTTP POST.
-// A restart must change the Host Supervisor session when a prior session existed.
+// Успех определяется наблюдаемым состоянием хоста, а не только успешным HTTP POST.
+// Перезапуск обязан изменить сессию Host Supervisor, если она была до этого.
 func Verified(action string, before, after Status, receipt Receipt) bool {
 	if receipt.State != "succeeded" || before.NodeID == "" || before.NodeID != after.NodeID {
 		return false

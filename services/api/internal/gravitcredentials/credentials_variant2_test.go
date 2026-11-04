@@ -55,9 +55,9 @@ func TestFileAuthCanonicalUUIDDuplicateRefused0444(t *testing.T) {
 	}
 }
 
-// Large Gravit FileAuth installations must not be rejected by the unrelated
-// legacy 16 MiB / 20,000-account quick-import limits. This exercises the full
-// ZIP -> independently hashed MIG04 identities -> credential verification path.
+// Крупные установки Gravit FileAuth не должны отклоняться из-за не связанных с ними
+// старых ограничений быстрого импорта 16 МиБ/20 тысяч аккаунтов. Проверяется полный
+// путь ZIP → независимо хешированные идентичности MIG04 → проверка учётных данных.
 func TestLargeFileAuthBeyondLegacyImporterLimit0444(t *testing.T) {
 	if testing.Short() {
 		t.Skip("large real-source extraction")

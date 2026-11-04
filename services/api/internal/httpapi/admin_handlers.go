@@ -108,8 +108,8 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
 	}
-	// The Admin password endpoint must preserve provider credentials with the
-	// same encrypted-storage and session rollback contract as Desktop login.
+	// Точка пароля Admin должна сохранять учётные данные провайдера с тем же
+	// контрактом зашифрованного хранения и отката сессии, что и вход Desktop.
 	if strings.TrimSpace(result.ProviderToken) != "" {
 		if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
@@ -140,8 +140,8 @@ func (s Server) adminMe(w http.ResponseWriter, r *http.Request) {
 		projectScoped := make([]string, 0, len(permissions))
 		for _, permission := range permissions {
 			if permission == "*" {
-				// A project owner gets all PROJECT actions, never host/backend
-				// privileges and never an unbounded wildcard in Admin identity.
+				// Владелец проекта получает все действия ПРОЕКТА, но не полномочия
+				// хоста/Backend и не неограниченный wildcard в идентичности Admin.
 				projectScoped = authorization.ProjectActionCatalog()
 				break
 			}
@@ -168,9 +168,9 @@ func (s Server) adminLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "logged-out", "sessionId": claims.SessionID, "message": "серверная сессия отозвана; удалите access/refresh token на клиенте"})
 }
 
-// validateProjectMemberships0387 prevents a project role from referencing an
-// unknown tenant, an unknown role or a wildcard project. Both SQL and SQLite
-// repositories are protected by the same HTTP boundary.
+// validateProjectMemberships0387 запрещает роли проекта ссылаться на неизвестного
+// арендатора, неизвестную роль или wildcard-проект. Одна HTTP-граница защищает
+// репозитории SQL и SQLite.
 func (s Server) validateProjectMemberships0387(roles map[string]string) error {
 	available := map[string]bool{}
 	for _, role := range s.Repo.ListRoles() {
@@ -190,8 +190,9 @@ func (s Server) validateProjectMemberships0387(roles map[string]string) error {
 	return nil
 }
 
-// Log membership changes individually, to retain who granted or revoked
-// access even if a later update changes the same user's membership map.
+// Логируйте каждое изменение членства отдельно, чтобы сохранять того, кто
+// выдал или отозвал доступ, даже если последующее обновление меняет карту
+// того же пользователя.
 func (s Server) auditProjectRoleChanges0387(r *http.Request, userID string, before, after map[string]string) {
 	for projectID, oldRole := range before {
 		nextRole, exists := after[projectID]
@@ -230,9 +231,10 @@ func (s Server) adminUserCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// A global users:manage token without recent passkey authentication may
-	// provision a basic player/viewer, but may not mint privileged accounts or
-	// assign project access. No alternate create path may bypass the step-up.
+	// Глобальный токен users:manage без недавней аутентификации passkey может
+	// создать обычного игрока или наблюдателя, но не привилегированный аккаунт и не
+	// доступ к проекту. Альтернативный путь создания не должен обходить повышение
+	// проверки.
 	if len(req.ProjectRoles) > 0 || (req.RoleID != "player" && req.RoleID != "viewer") {
 		if !s.freshAuthAllowed117(w, r, "phishing-resistant", 5*time.Minute) {
 			return
@@ -291,8 +293,8 @@ func (s Server) adminUserUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if previousRole != saved.RoleID || !maps.Equal(previousProjectRoles, saved.ProjectRoles) {
-		// MemoryRepository needs an explicit cascade; PostgreSQL also enforces
-		// this atomically through nl_user_security_change_0297.
+		// MemoryRepository требует явного каскада; PostgreSQL дополнительно
+		// обеспечивает это атомарно через nl_user_security_change_0297.
 		s.State.AuthSessions.revokeUser(saved.ID, "permissions-changed")
 		_ = s.flushPersistenceState950("user-permissions-revoked")
 	}

@@ -245,7 +245,7 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
         }
         // Метаданные возобновления привязаны к точному URL. При переключении
         // зеркала безопасно отбрасывается частичный файл с валидатором другого сервера
-        // (HTTP Resume v0.23.2).
+        // Возобновление HTTP-загрузки версии 0.23.2.
         let mut requested = job.file.clone();
         requested.url = source.url.clone();
         for attempt in 0..network_resilience::MAX_ATTEMPTS {

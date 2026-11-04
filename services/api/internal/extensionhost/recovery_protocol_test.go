@@ -11,8 +11,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// If Stop races Java's hello, the old bearer token must not turn a stopped
-// instance back into RUNNING or register a callback endpoint.
+// Если Stop состязается с hello Java, старый Bearer-токен не должен возвращать
+// остановленный экземпляр в RUNNING или регистрировать callback.
 func TestJavaLateHelloCannotUndoOperatorStop0422(t *testing.T) {
 	host := New(Config{}, repository.NewMemoryRepository("http://localhost"), nil)
 	st := &processState{

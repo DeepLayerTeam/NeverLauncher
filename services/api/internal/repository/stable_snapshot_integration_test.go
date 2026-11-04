@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// This test executes actual PostgreSQL triggers and assertions; it does not
-// substitute mocks for the protected release tables.
+// Тест исполняет настоящие триггеры и проверки PostgreSQL, не подменяя
+// защищённые таблицы релизов mock.
 func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -80,8 +80,8 @@ func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 			}
 		})
 	}
-	// A less strict policy on dev remains available; stable freeze must not
-	// globally make normal development files read-only.
+	// Менее строгая политика dev остаётся доступной; заморозка stable не должна
+	// глобально делать обычные файлы разработки только для чтения.
 	if _, err = tx.ExecContext(ctx, `UPDATE release_versions SET manifest='{"test":true}'::jsonb WHERE id=$1`, dev); err != nil {
 		t.Fatalf("dev unexpectedly frozen: %v", err)
 	}

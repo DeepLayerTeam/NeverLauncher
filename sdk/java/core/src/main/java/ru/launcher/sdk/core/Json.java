@@ -6,8 +6,9 @@ import java.util.*;
 public final class Json {
     private Json() {}
     public static Object parse(String input) { return parse(input, 1_048_576); }
-    // Only the authenticated event/hook transport needs the larger bound. RPC,
-    // host responses and extension manifest parsing retain the original 1 MiB cap.
+    // Более высокий предел нужен только аутентифицированному транспорту событий и
+    // хуков. RPC, ответы хоста и разбор манифеста расширения сохраняют исходный предел
+    // 1 МиБ.
     static Object parse(String input, int maxChars) {
         if (maxChars < 1 || maxChars > 2_097_152) throw new IllegalArgumentException("invalid JSON parser limit");
         if (input == null || input.length() > maxChars) throw new IllegalArgumentException("JSON input exceeds transport limit");

@@ -54,7 +54,7 @@ def policy(version: str) -> Policy:
             "GA_TARGET_APPROVAL_0360.sig",
         )
     if number > (0, 36, 0):
-        # Prerelease candidates must not impersonate a stable GA release.
+        # Предварительные кандидаты не должны выдавать себя за стабильный выпуск GA.
         if prerelease is not None:
             raise ValueError("GA release policy refuses prerelease: " + version)
         return Policy(

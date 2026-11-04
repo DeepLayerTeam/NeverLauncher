@@ -20,8 +20,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
-// A real HTTP fixture with two issuers sharing both subject and email. The
-// upstream returns a refresh secret which must NEVER appear in a Never token.
+// Реальная HTTP-фикстура с двумя issuer, использующими одинаковые subject и email.
+// Внешний сервис возвращает refresh-секрет, который НИКОГДА не должен появляться в
+// токене Never.
 type dualIssuerConnector02912 struct{ calls *atomic.Int64 }
 
 func (dualIssuerConnector02912) Metadata() authconnector.Metadata {

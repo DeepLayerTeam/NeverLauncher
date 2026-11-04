@@ -12,10 +12,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitepg"
 )
 
-// This intentionally does NOT change the existing quarantine-only command.
-// The live import is explicit, offline and only allowed on an empty, fully
-// migrated SQLRepository database. A failed live phase leaves staging intact
-// so the operator can repair the cause and retry --from-staging safely.
+// Существующая команда только для карантина намеренно НЕ изменяется. Живой импорт
+// выполняется явно, автономно и только в пустую полностью мигрированную БД
+// SQLRepository. Неудачный живой этап оставляет staging без изменений, чтобы
+// оператор исправил причину и безопасно повторил --from-staging.
 func runPGLive0473(args []string) int {
 	flags := flag.NewFlagSet("sqlite-to-postgres-live", flag.ContinueOnError)
 	backup := flags.String("backup", "", "verified immutable SQLite Core backup and manifest")
@@ -44,8 +44,9 @@ func runPGLive0473(args []string) int {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	if !*fromStaging {
-		// Keeps the original verification, cryptographic table receipts, and
-		// immutable source backup. No destructive staging overwrite allowed.
+		// Сохраняются исходная проверка, криптографические квитанции таблиц и
+		// неизменяемая резервная копия источника. Разрушающая перезапись staging
+		// запрещена.
 		if _, err := sqlitepg.Import(ctx, *backup, dsn); err != nil {
 			fmt.Fprintf(os.Stderr, "immutable staging failed; no SQLRepository changes: %v\n", err)
 			return 1

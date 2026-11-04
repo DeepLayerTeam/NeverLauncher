@@ -29,8 +29,8 @@ if version_tuple(version) < (0, 18, 11):
     raise SystemExit(f"Windows Adversarial CI gate requires >=0.18.11, got {version}")
 
 runner = read("scripts/guard_ci/windows_adversarial.py")
-# Scenario declarations are multiline in the production runner; keep the exact
-# IDs, classes and Java/Cargo requirement without comparing whitespace.
+# Объявления сценариев многострочные в промышленном раннере: сохраняйте точные ID,
+# классы и требования Java/Cargo, не сравнивая пробелы.
 required_scenarios = (
     ("sensor-early-load", "compatibility"),
     ("trusted-module-lifecycle", "compatibility"),

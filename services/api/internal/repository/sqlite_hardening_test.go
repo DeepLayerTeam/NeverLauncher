@@ -50,7 +50,7 @@ func TestSQLiteHTTP0471StrictSnapshot(t *testing.T) {
 }
 
 func fieldsOrPrivatePrefix(raw []byte) []byte {
-	// Extract exactly the initial private0373 value, including any nested arrays.
+	// Извлекайте точное исходное значение private0373, включая вложенные массивы.
 	var fields map[string]json.RawMessage
 	_ = json.Unmarshal(raw, &fields)
 	return append([]byte(`"private0373":`), fields["private0373"]...)
@@ -93,7 +93,8 @@ func TestSQLiteHTTP0471HealthVerifiesDocumentAndCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer repo.Close()
-	// A valid checksum on an incompatible document must still be rejected.
+	// Документ с корректной контрольной суммой, но несовместимым форматом всё
+	// равно нужно отклонить.
 	corrupt := []byte(`{"private0373":{}}`)
 	sum := sha256.Sum256(corrupt)
 	err = repo.store.Write(ctx, func(q sqlitedurable.Executor) error {

@@ -8,7 +8,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// ChannelHeadReader makes CAS revisions observable without exposing draft releases.
+// ChannelHeadReader делает CAS-ревизии наблюдаемыми без раскрытия черновиков релизов.
 type ChannelHeadReader interface {
 	GetChannelHead(ctx context.Context, projectID, profileID, channel string) (model.ChannelHead, error)
 }

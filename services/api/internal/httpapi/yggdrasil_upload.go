@@ -16,9 +16,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
-// The native authlib-injector skin upload protocol uses Minecraft access tokens,
-// not Launcher admin tokens. Ownership and project permissions are checked
-// again in the transactional repository, independently of supplied path UUID.
+// Нативный протокол загрузки скинов authlib-injector использует Minecraft
+// access-токены, а не административные токены Launcher. Владение и права проекта
+// повторно проверяются транзакционным репозиторием независимо от UUID из пути.
 func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request) {
 	raw := strings.TrimSpace(r.Header.Get("Authorization"))
 	if !strings.HasPrefix(raw, "Bearer ") {
@@ -197,7 +197,8 @@ func writeYggdrasilTextureError0256(w http.ResponseWriter, err error) {
 	writeYggdrasilError119(w, status, http.StatusText(status))
 }
 
-// Batch profile lookup is bounded and never returns private user information.
+// Пакетный поиск профилей ограничен и никогда не возвращает закрытые сведения о
+// пользователях.
 func (s Server) yggdrasilBatchProfiles0256(w http.ResponseWriter, r *http.Request) {
 	repo, err := s.minecraftRepo119()
 	if err != nil {

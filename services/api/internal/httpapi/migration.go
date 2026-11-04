@@ -15,8 +15,8 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// The 0.33.1 executable workers only collect target-state baseline information.
-// In particular, 'prepared' does not authorize import, cutover, or rollback.
+// Исполняемые воркеры 0.33.1 только собирают исходные сведения о целевом состоянии.
+// В частности, prepared не разрешает импорт, переключение или откат.
 func (s Server) registerMigrationRoutes0331(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/admin/migration-runs", s.requirePermission("settings:manage", s.migrationCreate0331))
 	mux.Handle("GET /api/v1/admin/migration-runs", s.requirePermission("settings:manage", s.migrationList0331))
@@ -44,7 +44,7 @@ func migrationRead0331[T any](w http.ResponseWriter, r *http.Request) (T, bool) 
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		// io.EOF is the only acceptable second decode result.
+		// Единственный допустимый результат второго декодирования — io.EOF.
 		writeError(w, 400, "trailing migration request JSON")
 		return v, false
 	}
@@ -174,7 +174,8 @@ func (s Server) migrationBaseline0331(ctx context.Context, run mw.Run) (json.Raw
 		if err != nil {
 			return nil, err
 		}
-		// Do not include secrets, authentication credentials or user account information.
+		// Не включайте секреты, учётные данные аутентификации или сведения об учётных записях
+		// пользователей.
 		inventory := map[string]any{"projectId": run.ProjectID, "profiles": len(profiles), "channels": len(channels), "releases": len(versions), "kind": "target-inventory", "sourceCompatibility": "not-assessed"}
 		raw, err := json.Marshal(inventory)
 		if err != nil {
@@ -192,8 +193,9 @@ func (s Server) migrationExecute0331(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PathValue("runId")
-	// Each request executes at most two short, read-only steps; no background
-	// goroutine or best-effort job is started after the HTTP response.
+	// Каждый запрос выполняет не более двух коротких шагов только для чтения;
+	// после HTTP-ответа не запускается ни фоновая goroutine, ни задание по
+	// принципу best-effort.
 	var run mw.Run
 	for i := 0; i < 2; i++ {
 		owner, err := migrationOwner0331()

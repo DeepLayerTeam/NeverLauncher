@@ -106,7 +106,8 @@ public final class BackendServices {
         for(Object item:items) {
             Map<String,Object> map=Json.object(item);
             T value=decoder.apply(map);
-            // Prevent a malformed or downgraded broker from mixing project data.
+            // Не допускайте, чтобы повреждённый или устаревший брокер смешивал данные
+            // проектов.
             Object expected=base.get("projectId");
             if(expected!=null && !Objects.equals(expected,map.get("projectId")))
                 throw new SecurityException("cross-project backend response");

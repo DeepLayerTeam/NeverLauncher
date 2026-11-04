@@ -1,5 +1,6 @@
-// texture-maintenance-0253 runs offline, operator-invoked backup, restore, and
-// GC against the same local/S3 store configured for the API. It exposes no HTTP.
+// texture-maintenance-0253 выполняет автономное резервное копирование, восстановление
+// и GC по команде оператора в том же локальном/S3-хранилище, которое настроено для
+// API. HTTP не предоставляется.
 package main
 
 import (
@@ -148,8 +149,9 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		// Aborted batches must not strand other claimed rows until lease expiry.
-		// Successful rows are already deleted, so their release is a no-op.
+		// Прерванные пакеты не должны оставлять другие захваченные строки до
+		// истечения аренды. Успешные строки уже удалены, поэтому их освобождение
+		// ничего не делает.
 		defer func() {
 			cleanCtx, stop := context.WithTimeout(context.Background(), 10*time.Second)
 			defer stop()
@@ -158,7 +160,7 @@ func run() error {
 			}
 		}()
 		for _, candidate := range candidates {
-			// Validate object metadata before destructive operations.
+			// Проверяйте метаданные объектов до разрушительных операций.
 			if len(candidate.Digest) != 64 || candidate.Driver != driver || candidate.ObjectKey != "texture-blobs/sha256/"+candidate.Digest[:2]+"/"+candidate.Digest+".png" {
 				return errors.New("invalid GC object key")
 			}

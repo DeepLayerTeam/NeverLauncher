@@ -1,11 +1,11 @@
 package repository
 
-// These fields are deliberately excluded from public JSON responses. The
-// generic SQLite HTTP snapshot must preserve them nevertheless: losing a
-// password verifier, device public key, refresh-token ciphertext or extension
-// secret across restart would break authentication and extension execution.
-// The parallel arrays follow the exact order of the corresponding snapshot
-// slices; their size is checked before restoration and a mismatch fails closed.
+// Эти поля намеренно исключены из публичного JSON. Однако общий снимок SQLite HTTP
+// обязан их сохранять: потеря проверяющего пароля, публичного ключа устройства,
+// шифртекста refresh-токена или секрета расширения при перезапуске сломает
+// аутентификацию и работу расширений. Параллельные массивы имеют тот же порядок, что
+// соответствующие срезы снимка; размер проверяется до восстановления, расхождение
+// вызывает отказ по умолчанию.
 type sqliteHTTPPrivate0373 struct {
 	PasswordHashes          []string                           `json:"passwordHashes"`
 	ProviderRefresh         []string                           `json:"providerRefresh"`

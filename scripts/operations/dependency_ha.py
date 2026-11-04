@@ -62,7 +62,7 @@ def load_env(path):
         key, sep, value = line.partition('=')
         if not sep or not re.fullmatch(r'[A-Z][A-Z0-9_]*', key) or key in config or '\x00' in value:
             raise HAError('invalid or duplicate environment setting')
-        # Never evaluate .env as a shell program.
+        # Никогда не исполняйте .env как программу оболочки.
         config[key] = value
     return config
 
@@ -94,7 +94,8 @@ def hostname(value, label):
 
 
 def backends(env, key, count):
-    # NAME@IPv4:PORT, comma-delimited, never forwarded through the shell.
+    # Формат NAME@IPv4:PORT, разделитель — запятая; никогда не передавать через
+    # командную оболочку.
     result = []
     for entry in env.get(key, '').split(','):
         match = re.fullmatch(r'([a-zA-Z][a-zA-Z0-9-]{0,30})@([^:,]+):([0-9]{1,5})', entry.strip())
@@ -135,7 +136,8 @@ def validate(env):
     ca_path = Path(env.get('HA_CA_BUNDLE', '/etc/ssl/certs/ca-certificates.crt'))
     if not ca_path.is_absolute():
         raise HAError('CA bundle path must be absolute')
-    # No characters with special meaning to the HAProxy config parser.
+    # Запрещены символы со специальным значением для парсера конфигурации
+    # HAProxy.
     if not re.fullmatch(r'/[A-Za-z0-9_./-]+', str(ca_path)):
         raise HAError('invalid CA bundle pathname')
     health_path = env.get('HA_S3_HEALTH_PATH', '/minio/health/cluster')
@@ -249,8 +251,8 @@ def generate_haproxy(cfg):
 
 
 def generate_keepalived(cfg):
-    # No secrets in this file. VRRP is limited to an explicitly private, trusted
-    # same-L2 control network; split-brain protection is outside VRRP's scope.
+    # В файле нет секретов. VRRP ограничен явно выделенной частной доверенной сетью
+    # управления одного уровня L2; защита от split-brain выходит за рамки VRRP.
     return f'''# NeverLauncher 0.51.3 ingress/dependency VIP. VRRP is NOT a quorum DCS.
 global_defs {{
     enable_script_security
@@ -285,7 +287,8 @@ vrrp_instance LAUNCHER_HA {{
 
 
 def new_file(path, content, mode):
-    # Never clobber a deployed proxy configuration or follow a path symlink.
+    # Никогда не перезаписывайте развёрнутую конфигурацию прокси и не следуйте по
+    # символьной ссылке в пути.
     fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, 'O_NOFOLLOW', 0), mode)
     try:
         with os.fdopen(fd, 'wb') as handle:
@@ -325,7 +328,8 @@ def check_config(path):
 
 
 def stats(socket_path):
-    # Read actual HAProxy runtime health, not TCP-connect guesses.
+    # Читайте фактическое состояние работоспособности из Runtime HAProxy, а не
+    # предположения по установлению TCP-соединения.
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
         s.settimeout(4)
         s.connect(str(socket_path))
@@ -405,7 +409,8 @@ def systemd_ssh(host, service, verb):
         raise HAError('invalid SSH target')
     if service not in ('patroni', 'redis-server', 'minio', 'haproxy') or verb not in ('stop', 'start'):
         raise HAError('invalid disruption unit')
-    # No interpolation, pin SSH host keys and forbid any password prompts.
+    # Никаких подстановок; закрепляйте ключи SSH хостов и запрещайте запросы
+    # паролей.
     multi.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
                '-o', 'ConnectTimeout=8', '-o', 'NumberOfPasswordPrompts=0', host,
                'sudo -n systemctl ' + verb + ' ' + service], timeout=35)
@@ -423,21 +428,24 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
         raise HAError('application and data baseline must be healthy before disruption')
     if initial[category].get(server) != 'UP':
         raise HAError('requested backend server is not currently UP; no meaningful failover test')
-    # A replica outage is not a primary failover. Require the exact service
-    # whose authority is being tested to own the active leader role first.
+    # Отключение реплики ещё не означает переключения первичного узла. Сначала
+    # требуйте, чтобы именно проверяемая авторитетная служба владела ролью
+    # активного лидера.
     before_active = health(initial, redundant=True)['backends'][category]['active']
     if service in ('patroni', 'redis-server') and before_active != [server]:
         raise HAError('database/Redis failover must disrupt the actual active primary')
-    # Prevent silently disrupting an unrelated SSH host. SSH hostnames must
-    # resolve to the configured backend address, never rely on user assertion.
+    # Не допускайте незаметного нарушения работы постороннего SSH-хоста. Имя
+    # SSH-хоста должно разрешаться в настроенный адрес backend, нельзя доверять
+    # одному утверждению пользователя.
     configured = cfg['postgres' if service == 'patroni' else
                      'redis' if service == 'redis-server' else 's3'] if cfg else []
     address = next((ip for name, ip, _ in configured if name == server), None)
     if address is None:
         raise HAError('backend identity absent from actual HA configuration')
-    # Management SSH commonly uses a separate out-of-band address. Verify
-    # *on the remote OS* that it actually owns the configured data-plane IP.
-    # DNS equality is both incorrect for OOB management and spoofable by aliases.
+    # Для управляющего SSH часто используется отдельный внеполосный адрес. Проверяйте
+    # НА УДАЛЁННОЙ ОС, что ей действительно принадлежит настроенный IP плоскости
+    # данных. Равенство DNS некорректно для внеполосного управления и может
+    # подделываться псевдонимами.
     try:
         raw = multi.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
                          '-o', 'ConnectTimeout=8', '-o', 'NumberOfPasswordPrompts=0',
@@ -450,8 +458,8 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
         raise HAError('cannot independently inspect backend interface identities') from exc
     if address not in observed:
         raise HAError('SSH target is not the configured backend physical host')
-    # Requires operator's verified mapping from backend name to SSH host.
-    # Never choose a random remote machine based only on a string in a report.
+    # Нужно проверенное оператором соответствие имени backend и SSH-хоста. Никогда
+    # не выбирайте случайную удалённую машину только по строке отчёта.
     stopped, checks, restored, outcome = False, [], False, False
     try:
         systemd_ssh(target, service, 'stop')
@@ -464,8 +472,8 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
                 excluded = server not in selected['backends'][category]['active']
                 checks.append({'healthy': observation['healthy'], 'stoppedBackendExcluded': excluded,
                                'active': selected['backends'][category]['active']})
-                # An observed leader change is mandatory for stateful leader
-                # services, not just a load balancer excluding a stopped node.
+                # Для служб с состоянием обязательна наблюдаемая смена лидера, а не просто
+                # исключение остановленного узла балансировщиком.
                 promoted = (service not in ('patroni', 'redis-server') or
                             (len(selected['backends'][category]['active']) == 1 and
                              selected['backends'][category]['active'][0] != server))
@@ -572,7 +580,8 @@ class PinnedHTTPS(http.client.HTTPSConnection):
 
 
 def s3_request(cfg, creds, gateway, method, key, payload=b''):
-    # Non-secret evidence never embeds bucket/object names or response bodies.
+    # Доказательства без секретов никогда не включают имена бакетов и объектов или
+    # тела ответов.
     name, address, port_number = gateway
     path = '/' + creds['bucket'] + '/' + key
     headers = aws_sigv4(method, path, cfg['s3_name'], payload, creds)
@@ -612,8 +621,9 @@ def s3_object_probe(cfg, creds, gateways):
             out.append(source[0])
         return {'passed': True, 'gateways': out, 'crossGatewayReadBack': len(gateways) > 1}
     finally:
-        # A failed write/read may still have committed; delete from every live
-        # gateway. Never turn an unsuccessful delete into an implicit PASS.
+        # Неудачное чтение или запись всё же могли зафиксироваться; удаляйте объект
+        # из каждого работающего шлюза. Не превращайте неудачное удаление в неявный
+        # PASS.
         errors = []
         for gateway in gateways:
             try:
@@ -757,7 +767,8 @@ def main(argv=None):
             raise HAError('--output required for private result report')
         return 0 if report.get('healthy', report.get('testPassed', report.get('configured', report.get('haproxySyntaxValid', False)))) else 3
     except (HAError, multi.DeploymentError, inventory.InventoryError, OSError, ValueError) as exc:
-        # Deliberately avoid printing raw config or private credentials.
+        # Намеренно не выводите необработанную конфигурацию и закрытые учётные
+        # данные.
         print('dependency HA operation unavailable: ' + type(exc).__name__, file=sys.stderr)
         return 2
 

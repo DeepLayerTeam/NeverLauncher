@@ -29,12 +29,13 @@ type Columns struct {
 type PasswordConfig struct {
 	Algorithm         string `json:"algorithm"`
 	AllowLegacySHA256 bool   `json:"allowLegacySha256,omitempty"`
-	// Legacy verifiers must be opted into explicitly. No automatic algorithm detection.
+	// Устаревшие проверяющие алгоритмы нужно включать явно. Автоматического распознавания
+	// алгоритма нет.
 	AllowLegacyHashes bool   `json:"allowLegacyHashes,omitempty"`
 	DigestAlgorithm   string `json:"digestAlgorithm,omitempty"`
 	DigestEncoding    string `json:"digestEncoding,omitempty"`
-	// Gravit doubleDigest: hash the lowercase hex representation of the first digest
-	// (true), or its binary bytes (false).
+	// Gravit doubleDigest: хешируйте hex-представление первого хеша в нижнем регистре при
+	// true либо его двоичные байты при false.
 	DoubleDigestHex     bool `json:"doubleDigestHex,omitempty"`
 	PBKDF2MinIterations int  `json:"pbkdf2MinIterations,omitempty"`
 }
@@ -257,8 +258,8 @@ func validateTableIdentifier(value string) error {
 		return fmt.Errorf("table %q must be table or schema.table", value)
 	}
 	for _, part := range parts {
-		// PostgreSQL silently truncates identifiers above 63 bytes. Reject
-		// before building any SQL instead of accidentally selecting another field.
+		// PostgreSQL молча обрезает идентификаторы длиннее 63 байтов. Отклоняйте их до
+		// формирования SQL, чтобы случайно не выбрать другое поле.
 		if len(part) > 63 {
 			return fmt.Errorf("SQL identifier %q exceeds 63 bytes", part)
 		}

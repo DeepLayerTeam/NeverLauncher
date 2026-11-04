@@ -12,8 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitepg"
 )
 
-// A strict, offline, read-only acceptance check. Never promotes a staging
-// receipt into permission to start the production PostgreSQL backend.
+// Строгая автономная приёмочная проверка только на чтение. Она никогда не
+// превращает квитанцию staging в разрешение запустить промышленный PostgreSQL
+// Backend.
 func runPGCutoverCheck0475(args []string) int {
 	fs := flag.NewFlagSet("sqlite-to-postgres-cutover-check", flag.ContinueOnError)
 	sha := fs.String("source-sha256", "", "SHA-256 of the verified SQLite Core backup")

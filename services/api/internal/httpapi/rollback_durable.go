@@ -14,8 +14,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// rollbackVersion0217 is bound to the persisted operation id, never to wall-clock
-// time. All replays/recovered workers converge on the same release and storage key.
+// rollbackVersion0217 привязан к сохранённому ID операции, а не к системному времени.
+// Повторы и восстановленные воркеры сходятся на одном релизе и ключе хранилища.
 func rollbackVersion0217(p rollbackPayload0217, jobID string) string {
 	return p.ToVersion + "-rollback-" + strings.TrimPrefix(jobID, "job_")
 }
@@ -26,8 +26,8 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	if err := s.workerAuthorized0217(ctx, job); err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
 	}
-	// Serialize even different rollback requests for the same channel, while
-	// retaining a separate release-specific package mutation lock.
+	// Сериализуйте даже разные запросы отката для одного канала, сохраняя
+	// отдельную блокировку изменения пакета для конкретного релиза.
 	unlockChannel, err := s.lockPackageMutation(ctx, "rollback-channel:"+p.ProjectID+":"+p.ProfileID+":"+p.Channel)
 	if err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
@@ -35,9 +35,10 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	defer unlockChannel()
 	version := rollbackVersion0217(p, job.ID)
 	releaseID := p.ProjectID + "-" + p.ProfileID + "-" + version
-	// Refuse stale rollback before allocating/copying an immutable release.
-	// A recovered worker may observe its OWN release already committed; allow
-	// this one exact idempotent state, never an unrelated subsequent head.
+	// Отклоняйте устаревший откат до выделения или копирования неизменяемого
+	// релиза. Восстановленный воркер может увидеть уже зафиксированный СВОЙ релиз:
+	// допускайте только это точное идемпотентное состояние, но не посторонний
+	// более новый head.
 	head, err := s.channelHead0228(ctx, p.ProjectID, p.ProfileID, p.Channel)
 	if err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
@@ -110,8 +111,9 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	for _, f := range files {
 		byPath[f.Path] = f
 	}
-	// An interruption during copying is recovered by copying missing files only;
-	// a mismatching existing entry is a conflict, never silently overwritten.
+	// Прерывание копирования восстанавливается копированием только отсутствующих
+	// файлов; несовпадающая существующая запись считается конфликтом и никогда не
+	// перезаписывается молча.
 	for _, source := range sourceFiles {
 		if existing, ok := byPath[source.Path]; ok {
 			if existing.Size != source.Size || existing.SHA256 != source.SHA256 {
@@ -152,16 +154,16 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	if err = s.workerAuthorized0217(ctx, job); err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
 	}
-	// Once signed, preserve that exact manifest on every retry; otherwise the
-	// publish job would legitimately reject a changed payload digest.
+	// После подписи сохраняйте точно тот же манифест при каждом повторе, иначе
+	// задача публикации правомерно отклонит изменённый хеш полезной нагрузки.
 	if created.Status == "draft" || s.verifyManifestSignature(created.Manifest) != nil {
 		manifest := target.Manifest
-		// Keep the NEW release's immutable profile snapshot even if the
-		// historical profile was subsequently edited by an administrator.
+		// Сохраняйте неизменяемый снимок профиля НОВОГО релиза, даже если
+		// администратор позже отредактировал исторический профиль.
 		manifest.ProfileSnapshot = created.Manifest.ProfileSnapshot
 		manifest.Version = version
 		manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		// Re-publish the old object bytes under a *new* signed generation.
+		// Повторно публикуйте прежние байты объекта под НОВЫМ подписанным поколением.
 		generationUnlock, lockErr := s.lockPackageMutation(ctx, "game-generation:"+p.ProjectID+":"+p.ProfileID+":"+p.Channel)
 		if lockErr != nil {
 			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, lockErr
@@ -201,8 +203,8 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 		created = &updated
 	}
 	lookup := packageLookup{Release: *created, Files: files}
-	// The check writes durable validation evidence and rechecks every file; a
-	// recovered job must not assume that an earlier successful check is still fresh.
+	// Проверка записывает устойчивые свидетельства валидации и перепроверяет каждый файл;
+	// восстановленная задача не должна считать прежнюю успешную проверку всё ещё свежей.
 	request, _ := http.NewRequestWithContext(ctx, http.MethodPost, "http://localhost/internal/rollback-integrity", nil)
 	check, err := s.runPackageIntegrityCheck0212(request, lookup)
 	if err != nil || check.Result != "passed" {
@@ -218,9 +220,9 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	return updated.Release, check, nil
 }
 
-// A completed rollback operation means either an immutable release has been
-// published, or a runtime-validation-required release has been staged. It must
-// never claim publication if the project's runtime policy prevents it.
+// Завершённый откат означает либо публикацию неизменяемого релиза, либо подготовку
+// релиза, требующего проверки Runtime. Нельзя заявлять о публикации, если политика
+// Runtime проекта её запрещает.
 func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableControlPlane, job model.DurableJob, worker string) (map[string]any, error) {
 	var p rollbackPayload0217
 	if err := json.Unmarshal(job.Payload, &p); err != nil {
@@ -233,8 +235,8 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusRevoked, err.Error())
 			return nil, err
 		}
-		// Recoverable storage/DB/lease errors are retried with backoff; the target
-		// digest and permissions are checked again before any new side effect.
+		// Восстановимые ошибки хранилища, БД и аренды повторяются с задержкой; целевой
+		// хеш и права проверяются заново перед любым новым побочным эффектом.
 		_, _ = cp.FailDurableJob(ctx, job.ID, job.LeaseToken, err.Error(), 2*time.Second)
 		return nil, err
 	}
@@ -311,8 +313,9 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	if err != nil {
 		return nil, err
 	}
-	// The nested job can succeed while another release advances the channel.
-	// Do not report a successful rollback unless the head still identifies us.
+	// Вложенная задача может завершиться успешно, пока другой релиз продвинул
+	// канал. Не сообщайте об успешном откате, если head уже не указывает на наш
+	// релиз.
 	actualHead, err := s.channelHead0228(ctx, p.ProjectID, p.ProfileID, p.Channel)
 	if err != nil {
 		return nil, err

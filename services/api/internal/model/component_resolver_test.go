@@ -46,7 +46,7 @@ func TestComponentResolverOperational0243(t *testing.T) {
 	if _, err := ResolveCatalogPreset0242(*m.ComponentCatalog, "missing"); err == nil {
 		t.Fatal("unknown preset accepted")
 	}
-	// Catalog v3 is a signed superset of v2 topology, not a mutable selection.
+	// Каталог v3 — подписанное надмножество топологии v2, а не изменяемый выбор.
 	raw, _ := json.Marshal(m)
 	var decoded Manifest
 	if err := json.Unmarshal(raw, &decoded); err != nil {
@@ -143,8 +143,8 @@ func TestResolutionErrorTyped0243(t *testing.T) {
 }
 
 func TestGoSignedDependencyFixture0243(t *testing.T) {
-	// Verify the actual Go publisher's encoding/json + crypto/ed25519 bytes,
-	// also consumed by the native Rust cross-language fixture test.
+	// Проверяйте настоящие байты encoding/json и crypto/ed25519 издателя Go; их
+	// также использует межъязыковой тест фикстуры нативного Rust.
 	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_dependency_0243_go_signed.json")
 	if err != nil {
 		t.Fatal(err)

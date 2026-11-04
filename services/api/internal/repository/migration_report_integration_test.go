@@ -63,8 +63,8 @@ func TestMigrationReportPostgres03313(t *testing.T) {
 	if _, e = r.GetReviewedMigrationReport03313(ctx, run.ID); !errors.Is(e, mw.ErrNotFound) {
 		t.Fatalf("missing receipt was not missing: %v", e)
 	}
-	// SQL immutability is checked even against a privileged update in the same
-	// transaction; no test fixture survives a rollback.
+	// Неизменяемость SQL проверяется даже привилегированным UPDATE в той же
+	// транзакции; после отката тестовые данные не остаются.
 	tx, e := r.db.BeginTx(ctx, nil)
 	if e != nil {
 		t.Fatal(e)

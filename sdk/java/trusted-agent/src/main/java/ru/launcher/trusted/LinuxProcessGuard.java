@@ -30,7 +30,7 @@ final class LinuxProcessGuard0508 {
         if (end < 0) throw new SecurityException("Guard Linux JVM stat unavailable");
         String[] fields = stat.substring(end + 2).trim().split("\\s+");
         if (fields.length < 3) throw new SecurityException("Guard Linux JVM stat incomplete");
-        // fields after comm: state, ppid, pgrp. Runtime sets pgrp == pid.
+        // Поля после comm: state, ppid, pgrp. Runtime задаёт pgrp == pid.
         String pid = stat.substring(0, stat.indexOf(' '));
         if (!pid.equals(fields[2])) throw new SecurityException("Guard Linux JVM process group changed");
         if ("1".equals(fields[1])) throw new SecurityException("Guard Linux JVM launcher exited");

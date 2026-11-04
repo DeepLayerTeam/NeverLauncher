@@ -92,9 +92,9 @@ def signed_set(
             {"component": "sensor", "protocol": "sensor-ipc", "minimum": 3}
         )
         rows.append({"component": "sensor", "provides": {"sensor-ipc": 3}})
-    # Preserve 1.0 for the upgrade from the 0.23.9 external updater,
-    # which is already pinned by package SHA-256. New updaters enforce
-    # the signed component-set sidecar and the protocol matrix.
+    # Сохраните 1.0 для обновления со старого внешнего обновлятора 0.23.9, уже
+    # закреплённого по SHA-256 пакета. Новые обновляторы обеспечивают проверку
+    # подписи сопутствующего набора компонентов и матрицы протоколов.
     manifest["schemaVersion"] = "1.0"
     manifest["componentSet"] = {"schemaVersion": "1.0", "protocols": rows}
     raw = (

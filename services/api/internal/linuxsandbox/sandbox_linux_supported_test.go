@@ -153,8 +153,8 @@ func TestBrokerGrantsAcceptedInPrivateNamespace03110(t *testing.T) {
 	}
 }
 
-// Checks the live architecture's syscall policy; this does not substitute
-// for executing the kernel boundary on the target hardware.
+// Проверяет политику системных вызовов текущей архитектуры; не заменяет запуск
+// границы безопасности ядра на целевом оборудовании.
 func containsDeniedSyscall0439(n uint32) bool {
 	for _, denied := range sandboxDeniedSyscalls {
 		if denied == n {

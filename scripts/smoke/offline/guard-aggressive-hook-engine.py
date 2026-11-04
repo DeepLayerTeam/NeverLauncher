@@ -60,9 +60,9 @@ def main() -> int:
         ],
         "real bounded IAT interception/self-integrity backend",
     )
-    # JVMs may import native ntdll memory APIs directly. These must be observed
-    # through precisely typed, current-process-only wrappers; a failed NTSTATUS
-    # must never grant executable-page provenance.
+    # JVM может напрямую импортировать нативные API памяти ntdll. Наблюдать их нужно
+    # через точно типизированные обёртки только текущего процесса; ошибочный
+    # NTSTATUS никогда не даёт подтверждённого происхождения исполняемой страницы.
     require(
         engine,
         [

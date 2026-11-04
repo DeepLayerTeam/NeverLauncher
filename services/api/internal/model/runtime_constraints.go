@@ -12,13 +12,13 @@ var runtimeEnvironmentName0223 = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var javaModuleName0223 = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.]*(/[A-Za-z_$][A-Za-z0-9_.$]*)?$`)
 var heapSize0223 = regexp.MustCompile(`(?i)^-Xm([sx])([1-9][0-9]*)([kmg]?)$`)
 
-// ValidateRuntimeConstraints0223 validates executable behavior, not just field shape.
-// Legacy v1 manifests are deliberately exempt: their existing signatures and
-// runtime behavior must not be changed by a release upgrade.
+// ValidateRuntimeConstraints0223 проверяет исполняемое поведение, а не только форму полей.
+// Устаревшие манифесты v1 намеренно освобождены от проверки: их подписи и поведение
+// Runtime нельзя менять обновлением.
 func ValidateRuntimeConstraints0223(m Manifest) error {
 	java := m.Runtime.Java
 	if java.MajorVersion == 0 && java.Distribution == "" && len(m.Runtime.JVMArgs) == 0 && m.Runtime.Memory == (MemoryInfo{}) && len(m.Runtime.Launch.ClasspathEntries) == 0 && len(m.Runtime.Launch.ModulepathEntries) == 0 && m.Runtime.Launch.MainClass == "" && m.Runtime.Launch.ClasspathStrategy == "" && len(m.Runtime.Launch.EnvironmentAllowlist) == 0 && m.Runtime.Launch.MainModule == "" {
-		// An incomplete draft has no runnable runtime; publishing validates it separately.
+		// У неполного черновика нет запускаемого Runtime; публикация проверяет его отдельно.
 		return nil
 	}
 	if java.MajorVersion < 1 || java.MajorVersion > 255 {

@@ -35,8 +35,9 @@ class OperationsGATests(unittest.TestCase):
         for os,arch,name in [('windows','x64','windows-x64.zip'),('windows','arm64','windows-arm64.zip'),
                               ('linux','x64','linux-x64.tar.gz'),('linux','arm64','linux-arm64.tar.gz'),
                               ('darwin','x64','macos-x64.zip'),('darwin','arm64','macos-arm64.zip')]:
-            # Actual names required by the release contract, bytes supplied by
-            # caller; test fixtures are not platform-certified installers.
+            # Настоящие имена требуются контрактом выпуска, а байты задаёт вызывающая
+            # сторона; тестовые фикстуры не являются сертифицированными установщиками для
+            # платформ.
             if os=='linux': filename=f'launcher-linux-{arch}-0.46.3.tar.gz'
             elif os=='windows':filename=f'launcher-desktop-0.46.3-windows-{arch}.zip'
             else:filename=f'launcher-desktop-0.46.3-macos-{arch}.zip'
@@ -127,15 +128,15 @@ class OperationsGATests(unittest.TestCase):
         release_pub.write_bytes(Ed25519PrivateKey.generate().public_key().public_bytes(
             serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
         self.assertEqual(ga.verify_public(self.bundle,operator_pub,release_pub)['status'],'verified')
-        # Tampering with final installer bytes must be a hard rejection.
+        # Подмена окончательных байтов установщика должна безусловно отклоняться.
         pkg=self.bundle/'launcher-desktop-0.46.3-windows-x64.zip'
         pkg.write_bytes(b'different')
         with self.assertRaisesRegex(ValueError,'not independently approved'):
             ga.verify_public(self.bundle,operator_pub,release_pub)
         pkg.write_bytes(b'windowsx64')
         self.assertEqual(json.loads(raw)['operator'],'operator2')
-        # Signed bytes must be non-replaceable; the operator must issue a
-        # distinct new approval for changed platform packages.
+        # Подписанные байты нельзя подменять; при изменении платформенных пакетов
+        # оператор обязан оформить отдельное новое одобрение.
         with patch.object(sys,'argv',args),patch.object(ga.operational,'actor',return_value='operator2'):
             self.assertNotEqual(ga.main(),0)
 
@@ -159,5 +160,5 @@ class OperationsGATests(unittest.TestCase):
 
 if __name__=='__main__':unittest.main()
 
-# A real private-key signing operation is required, not a synthetic PASS file.
-# Exercise the same CLI entrypoint that the independent operator will use.
+# Требуется настоящая операция подписи закрытым ключом, а не синтетический файл
+# PASS. Используйте ту же точку входа CLI, которую применит независимый оператор.

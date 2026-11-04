@@ -1,5 +1,6 @@
-// Package gravitcutover contains the strict inputs for MIG11 route changes.
-// Source-side writer fencing is external; a local database claim never proves it.
+// Package gravitcutover задаёт строгие входные данные для смены маршрутов MIG11.
+// Разграничение записывающих процессов исходника выполняется извне; локальное
+// утверждение БД ничего не доказывает.
 package gravitcutover
 
 import (
@@ -29,17 +30,18 @@ type Activate struct {
 	ProfileID        string `json:"profileId"`
 	Channel          string `json:"channel"`
 	ExpectedRevision int64  `json:"expectedRevision"`
-	// A reference and SHA-256 for separately retained operational evidence that
-	// the old Gravit writer was actually stopped/fenced. Not a Never assertion.
+	// Ссылка и SHA-256 на отдельно сохраняемые эксплуатационные доказательства того,
+	// что старый записывающий процесс Gravit действительно остановлен или
+	// заблокирован. Это не утверждение Never.
 	SourceFenceReference        string                  `json:"sourceFenceReference"`
 	SourceFenceEvidenceSHA256   string                  `json:"sourceFenceEvidenceSha256"`
 	CurrentSourceSnapshotSHA256 string                  `json:"currentSourceSnapshotSha256"`
 	SourceFenceReceipt          *SourceFenceReceipt0448 `json:"sourceFenceReceipt"`
 }
 
-// SourceFenceReceipt0448 is a deterministic result of the on-source systemd
-// stop/mask + fresh snapshot verification. It is operator evidence, NOT a
-// hardware attestation and it cannot prove unrelated services are stopped.
+// SourceFenceReceipt0448 — детерминированный результат остановки/mask через
+// systemd на источнике и проверки свежего снимка. Это свидетельство оператора,
+// НЕ аппаратная аттестация; оно не доказывает остановку посторонних служб.
 type SourceFenceReceipt0448 struct {
 	Format             string    `json:"format"`
 	RunID              string    `json:"runId"`
@@ -112,8 +114,8 @@ func ValidateActivation(a Activate) error {
 	return nil
 }
 
-// VerifyRelease checks actual Ed25519 bytes and the CURRENT Never signing
-// root; a self-signed legacy Gravit manifest cannot be selected as a target.
+// VerifyRelease проверяет настоящие байты Ed25519 и ТЕКУЩИЙ корень подписи Never;
+// самоподписанный старый манифест Gravit нельзя выбирать целью.
 func VerifyRelease(m model.Manifest, trusted ed25519.PublicKey) (string, error) {
 	if err := model.ValidateManifestSchema(m); err != nil {
 		return "", err

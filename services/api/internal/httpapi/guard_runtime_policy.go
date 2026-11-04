@@ -14,9 +14,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// The policy is operator-controlled server configuration, not a client manifest.
-// ModuleSetSHA256 is an exact approved module set; JavaMajor pins the runtime
-// family. Optional code/hook hashes can further narrow a deployment.
+// Политика задаётся оператором на сервере, а не манифестом клиента. ModuleSetSHA256
+// закрепляет точный разрешённый набор модулей; JavaMajor — семейство Runtime.
+// Необязательные хеши кода/хуков могут дополнительно ограничивать развёртывание.
 type guardRuntimeProfile0317 struct {
 	JavaMajor       uint32 `json:"javaMajor"`
 	ModuleSetSHA256 string `json:"moduleSetSha256"`
@@ -27,8 +27,9 @@ type guardRuntimeProfile0317 struct {
 var guardSemver0317 = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 
 func guardRuntimePolicyRequired0317(version string) bool {
-	// A malformed version must not pass as a different signed release. The
-	// caller validates malformed release names during policy loading as well.
+	// Некорректная версия не должна проходить как иной подписанный релиз.
+	// Вызывающий также проверяет неправильные имена выпусков при загрузке
+	// политики.
 	matches := guardSemver0317.FindStringSubmatch(version)
 	if matches == nil {
 		return true // malformed releases cannot disable Guard enforcement
@@ -76,8 +77,8 @@ func normalizeGuardRuntimeProfiles0317(input []guardRuntimeProfile0317) ([]guard
 	return out, nil
 }
 
-// Hashes all effective profiles in their declared order. A policy replacement
-// (even under the same release version) revokes already issued join tickets.
+// Хешируйте все действующие профили в объявленном порядке. Замена политики даже
+// при той же версии релиза отзывает ранее выданные билеты на вход.
 func guardRuntimePolicyDigest0317(profiles []guardRuntimeProfile0317) string {
 	if len(profiles) == 0 {
 		return ""
@@ -138,9 +139,10 @@ func validGuardProcessID0317(value string) bool {
 	return true
 }
 
-// Revalidated after atomic one-time ticket consumption; evidence cannot survive
-// root/device/key/session/policy revocation. A user-mode device signature is
-// evidence of possession, NOT independently measured runtime integrity.
+// После атомарного погашения одноразового билета выполняется повторная проверка;
+// свидетельства не переживают отзыв корня, устройства, ключа, сеанса или политики.
+// Подпись устройства в user-mode доказывает владение, но НЕ независимо измеренную
+// целостность Runtime.
 func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model.DeviceChallenge, now time.Time) error {
 	if !validGuardProcessID0317(metadataString0121(ticket.Metadata, "processId")) ||
 		!isSHA256Hex0134(metadataString0121(ticket.Metadata, "moduleSetSha256")) ||
@@ -161,7 +163,8 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	if state != "verified" {
 		return errors.New("Continuous Guard device attestation expired")
 	}
-	// Prevent stale or previously verified device keys from surviving recovery.
+	// Не допускайте, чтобы устаревшие или ранее проверенные ключи устройств
+	// переживали восстановление.
 	if metadataString0121(ticket.Metadata, "deviceKeyFingerprint") != device.KeyFingerprint || device.KeyFingerprint == "" {
 		return errors.New("Continuous Guard device key rotated or revoked")
 	}
@@ -191,8 +194,8 @@ func (s Server) recheckContinuousGuardTicket0317(claims authClaims, ticket model
 	if digest == "" || !hmac.Equal([]byte(digest), []byte(metadataString0121(ticket.Metadata, "runtimePolicySha256"))) {
 		return errors.New("Continuous Guard runtime policy changed after attestation")
 	}
-	// Repository-backed ticket TTL is authoritative; no process assurance is
-	// extended by client time or by an older hardware root assessment.
+	// TTL билета в репозитории является авторитетным; часы клиента и прежняя
+	// оценка аппаратного корня не продлевают гарантии процесса.
 	if ticket.CreatedAt.After(now.Add(guardAttestationClockSkew0134)) || !ticket.ExpiresAt.After(now) {
 		return errors.New("Continuous Guard ticket expired or from the future")
 	}

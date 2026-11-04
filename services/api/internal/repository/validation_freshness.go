@@ -9,8 +9,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Staged challenges are authoritative: a fabricated or replayed grant cannot
-// create a matching persisted run challenge. Keys are revoked monotonically.
+// Challenge подготовки авторитетны: поддельный или повторно использованный допуск
+// не создаст соответствующий сохранённый challenge запуска. Ключи отзываются
+// монотонно.
 func (r *MemoryRepository) SaveValidationChallenge0346(_ context.Context, c model.ValidationChallenge0346) error {
 	if c.RunID == "" || c.Nonce == "" || c.PackageID == "" || c.ExpiresAt.Before(c.IssuedAt) || len(c.TargetMatrixSHA256) != 64 {
 		return errors.New("invalid validation challenge")

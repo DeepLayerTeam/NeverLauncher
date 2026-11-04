@@ -50,8 +50,9 @@ func TestUntrustedHelperFileRejectedBeforeCodesign(t *testing.T) {
 }
 
 func TestUnsupportedMacOSResourcePolicyRefusedBeforeExecution04311(t *testing.T) {
-	// A valid signature cannot turn a multi-process policy into OS-enforced
-	// cgroup-like isolation. Unsupported resource models are always rejected.
+	// Действительная подпись не превращает политику нескольких процессов в
+	// изоляцию уровня cgroup, обеспеченную ОС. Неподдерживаемые модели ресурсов
+	// всегда отклоняются.
 	t.Setenv("LAUNCHER_MACOS_SANDBOX_HELPER", "")
 	_, err := Prepare(Options{Policy: Policy{MaxMemoryBytes: 256 << 20, MaxProcesses: 4, MaxCPUPercent: 50, TimeoutSeconds: 60}, HostHandler: http.NotFoundHandler(), HostURL: "http://127.0.0.1:3000"})
 	if err == nil {

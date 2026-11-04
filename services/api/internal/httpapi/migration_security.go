@@ -19,9 +19,9 @@ type migrationSecurityStore0336 interface {
 	GetMigrationSecurity0336(context.Context, string) (repository.MigrationSecurityReport0336, error)
 }
 
-// Require explicit, independently-provisioned Never runtime signers. This is
-// NOT a claim that key separation can be proven by comparing names or KIDs:
-// the operator must provision fresh secrets and confirm that separately.
+// Требуйте явно выделенных независимых подписантов Never Runtime. Это НЕ
+// означает, что разделение ключей доказуемо сравнением имён или KID: оператор
+// должен самостоятельно подготовить новые секреты и отдельно подтвердить это.
 func migrationSigner0336(cfg config.Config) (string, string, error) {
 	kid := strings.TrimSpace(cfg.AuthTokenActiveKID)
 	if kid == "" || len(kid) > 96 {
@@ -82,8 +82,9 @@ func (s Server) migrationSecurityApply0336(w http.ResponseWriter, r *http.Reques
 		writeError(w, 503, "migration security requires PostgreSQL")
 		return
 	}
-	// No client-supplied users, session IDs, key material, old trust anchors or
-	// account mapping. Operation derives targets from the committed MIG05 receipt.
+	// Клиент не может предоставлять пользователей, ID сеансов, ключевой материал,
+	// старые доверенные корни или сопоставления учётных записей. Цели операции
+	// выводятся из зафиксированной квитанции MIG05.
 	if r.ContentLength > 0 {
 		writeError(w, 400, "security reset does not accept a request body")
 		return

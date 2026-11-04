@@ -13,9 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// A successful signature check must not allow storing a hardware grant against
-// a revoked or re-bound session. Uses a second PostgreSQL connection to model
-// an attestation request in flight while another API replica revokes trust.
+// Успешная проверка подписи не должна позволять записать аппаратный допуск для
+// отозванного или перепривязанного сеанса. Второе соединение PostgreSQL имитирует
+// продолжающуюся аттестацию, пока другая реплика API отзывает доверие.
 func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {

@@ -66,8 +66,8 @@ func TestLiveEmergencyDisableAndQuarantine04210(t *testing.T) {
 				if _, err := repo.SaveExtensionQuarantine(ctx, model.ExtensionQuarantineEntry{ID: "q-live-04210", ExtensionID: st.key.ExtensionID, Version: "1.0.0", PackageIdentity: st.install.CurrentPackageIdentity, ArtifactSHA256: strings.Repeat("a", 64), Reason: "incident"}); err != nil {
 					t.Fatal(err)
 				}
-				// Deliberately no persisted change to the installation: the new
-				// quarantine alone must be sufficient to revoke the live token.
+				// Намеренно не меняем сохранённое состояние установки: одного нового
+				// карантина должно быть достаточно для отзыва живого токена.
 			}
 			if ok, err := host.permissionAllowed0207(ctx, st, "storage:read", ""); ok || err == nil {
 				t.Fatalf("revoked live authority accepted: ok=%v err=%v", ok, err)
@@ -107,8 +107,9 @@ func TestMonitorTerminatesRevokedProcess04210(t *testing.T) {
 	}
 }
 
-// The actual HTTP capability endpoint must reject a valid pre-revocation
-// bearer token, not merely expose a revoked flag through management APIs.
+// Настоящая HTTP-точка возможностей должна отклонять действительный
+// Bearer-токен, выданный до отзыва, а не только показывать флаг revoked в
+// административном API.
 func TestRevokedHostTokenCannotUseBroker04210(t *testing.T) {
 	ctx := context.Background()
 	host, repo, st := liveTrustFixture04210(t)
@@ -124,8 +125,8 @@ func TestRevokedHostTokenCannotUseBroker04210(t *testing.T) {
 		host.handleCapability(rec, req)
 		return rec.Code
 	}
-	// Before revocation the broker reaches document storage. Missing state
-	// must NOT be classified as revoked or unavailable.
+	// До отзыва брокер достигает хранилища документов. Отсутствующее состояние
+	// НЕЛЬЗЯ классифицировать как отзыв или недоступность.
 	if code := invoke(); code != http.StatusNotFound {
 		t.Fatalf("initial capability failed: %d", code)
 	}

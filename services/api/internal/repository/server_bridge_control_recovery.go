@@ -2,9 +2,9 @@ package repository
 
 import "gitflic.ru/skif4er/launcher/services/api/internal/model"
 
-// An indeterminate result reported by an agent is FINAL. Only an indeterminate
-// result synthesized because a delivery lease expired may be replaced with a
-// matching, delayed durable receipt from the ORIGINAL leased execution.
+// Неопределённый результат от агента ОКОНЧАТЕЛЕН. Заменить совпадающей запоздалой
+// устойчивой квитанцией ИСХОДНОГО арендуемого выполнения можно только
+// неопределённый результат, созданный искусственно из-за истечения аренды доставки.
 func recoverableServerBridgeLease0412(c model.ServerBridgeControlCommand) bool {
 	if c.Status != "indeterminate" || len(c.Result) != 0 || c.LeaseToken == "" || c.LeaseOwner == "" {
 		return false

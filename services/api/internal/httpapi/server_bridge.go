@@ -278,8 +278,8 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		s.writeGameplayTrustRequirement0127(w, trust)
 		return
 	}
-	// Do not exchange a Mojang bearer for a local Yggdrasil session. The
-	// official token is validated by Minecraft Services and remains transient.
+	// Не обменивайте Mojang bearer на локальный сеанс Yggdrasil. Официальный токен
+	// проверяется Minecraft Services и остаётся временным.
 	official := req.OfficialMinecraftAccessToken != ""
 	if official && (req.MinecraftAccessToken != "" || req.Username == "") {
 		writeError(w, http.StatusBadRequest, "mixed_or_incomplete_minecraft_identity")
@@ -411,8 +411,8 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if planPolicyRequired02412() {
-		// Durable, insert-only binding is mandatory before returning a ticket.
-		// A failure must not leave a redeemable unbound Guard join.
+		// До возврата билета обязательна сохраняемая привязка, допускающая только
+		// вставку. Ошибка не должна оставлять используемый билет Guard без привязки.
 		if err := s.storeGuardBoundJoin0507(r, join, req.PlanEvidence, verifiedGuardTicket); err != nil {
 			s.State.ServerBridge.invalidateJoin(join.Username, join.ServerID)
 			_ = s.flushPersistenceState950("server-bridge-guard-session-issue-failed")
@@ -991,7 +991,8 @@ func (b *serverBridgeStore) textureFor(uuid, username string) bridgeTextureRecor
 			if t, found, err := textures.ReadTextureProfile0251(ctx, uuid); err == nil && found {
 				return bridgeTextureFromModelV2(t)
 			}
-			// Unmatched legacy aliases are quarantined; do not serve them by UUID.
+			// Несопоставленные устаревшие псевдонимы помещаются в карантин; не отдавайте
+			// их по UUID.
 			return bridgeTextureRecord{UUID: uuid, Username: username, Model: "classic"}
 		}
 
@@ -1044,15 +1045,16 @@ func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
 	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "identityRealm": firstNonEmpty(join.IdentityRealm, "local"), "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "sessionCorrelationId": join.SessionCorrelationID, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
-// playerUUID910 is the legacy 0.25.0 alias algorithm only; never issue this as a new Minecraft UUID.
+// playerUUID910 — только устаревший алгоритм псевдонимов 0.25.0; никогда не выдавайте его как новый
+// Minecraft UUID.
 func playerUUID910(seed string) string {
 	sum := sha256.Sum256([]byte("launcher-player:" + seed))
 	hexed := hex.EncodeToString(sum[:16])
 	return hexed[0:8] + "-" + hexed[8:12] + "-" + hexed[12:16] + "-" + hexed[16:20] + "-" + hexed[20:32]
 }
 
-// Yggdrasil texture JSON is deliberately separate from the project's manifest
-// and from its internal Ed25519/ServerBridge wire format.
+// JSON текстур Yggdrasil намеренно отделён от манифеста проекта и внутреннего
+// формата Ed25519/ServerBridge.
 func textureProfile910(texture bridgeTextureRecord) map[string]any {
 	textures := map[string]any{}
 	if texture.SkinURL != "" {

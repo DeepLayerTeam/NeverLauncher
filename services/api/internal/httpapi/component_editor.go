@@ -12,9 +12,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// ComponentEditor mutations are serialized using the same package lock as
-// upload/sign. CAS on revision prevents one administrator overwriting another.
-// The Backend is the authoritative validator and computes the signed digest.
+// Изменения ComponentEditor сериализуются той же блокировкой пакета, что загрузка и
+// подпись. CAS по ревизии не позволяет одному администратору перезаписать действия
+// другого. Backend выполняет авторитетную проверку и вычисляет подписанный хеш.
 type componentEditorRequest0248 struct {
 	ExpectedRevision uint64                     `json:"expectedRevision"`
 	Catalog          model.ComponentCatalog0241 `json:"catalog"`
@@ -33,8 +33,8 @@ type componentPreview0248 struct {
 }
 
 func editorLookup0248(s Server, packageID string) (packageLookup, error) {
-	// Only the canonical package identity is acceptable: version-only aliases
-	// are ambiguous across projects and must not select a different release.
+	// Допустима только каноническая идентичность пакета: псевдонимы по одной
+	// версии неоднозначны между проектами и не должны выбирать другой выпуск.
 	lookup, err := s.lookupPackage(packageID)
 	if err != nil {
 		return packageLookup{}, err
@@ -89,9 +89,9 @@ func previewCatalog0248(release model.ReleaseVersion, req componentEditorRequest
 	} else if err := model.ValidateManifestSchema(candidate); err != nil {
 		report.Errors = append(report.Errors, err.Error())
 	}
-	// Check topology in all explicit presets with the real deterministic graph
-	// resolver (not a frontend approximation). Conditions are separately
-	// checked at launch against trusted environment/entitlements.
+	// Проверяйте топологию всех явных пресетов настоящим детерминированным
+	// разрешителем графа, а не приближённой проверкой интерфейса. Условия отдельно
+	// проверяются при запуске по доверенной среде и правам доступа.
 	if len(report.Errors) == 0 {
 		for _, name := range append([]string{""}, presetIDs0248(cat)...) {
 			entry := componentPreviewEntry0248{Preset: name}
@@ -140,7 +140,8 @@ func (s Server) componentCatalogPreview0248(w http.ResponseWriter, r *http.Reque
 }
 
 func (s Server) componentCatalogSave0248(w http.ResponseWriter, r *http.Request) {
-	// Serialize with package sign, upload and other component changes.
+	// Сериализуйте операции с подписью и загрузкой пакета, а также другими
+	// изменениями компонентов.
 	lookup, unlock, err := s.lockPackageLookupMutation(r.Context(), r.PathValue("packageId"))
 	if err != nil {
 		writeError(w, http.StatusConflict, "package is busy or missing")

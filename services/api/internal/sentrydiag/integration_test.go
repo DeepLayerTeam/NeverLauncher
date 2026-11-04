@@ -10,8 +10,9 @@ import (
 	"time"
 )
 
-// The Sentry ingest authorization header must never reach an origin chosen
-// by a server-side redirect, even if the attacker redirects to HTTPS.
+// Заголовок авторизации приёма Sentry никогда не должен достигать origin,
+// выбранного серверным редиректом, даже если злоумышленник перенаправляет на
+// HTTPS.
 func TestSentryIngestDoesNotFollowRedirect0498(t *testing.T) {
 	var forwarded atomic.Int64
 	attacker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

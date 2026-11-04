@@ -59,7 +59,8 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 	}
 	endpoint := "/api/v1/auth/oidc/oidc-fixture/complete"
 	payload := map[string]any{"code": "fixture-code", "state": state, "transaction": tx}
-	// Unverified device substitution must NOT consume the sealed transaction.
+	// Непроверенная подмена устройства НЕ ДОЛЖНА расходовать запечатанную
+	// транзакцию.
 	wrongDevice := map[string]any{"code": "fixture-code", "state": state, "transaction": tx, "deviceId": "device-b"}
 	if result := call(a, endpoint, wrongDevice); result.Code != 401 {
 		t.Fatalf("device swap HTTP %d", result.Code)
@@ -74,7 +75,8 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Different AEAD nonce / ciphertext with same browser state must not bypass.
+	// Другой nonce AEAD или шифротекст при том же браузерном state не должен
+	// обеспечивать обход.
 	secondSeal, err := srvA.sealOIDCTransaction115(opened)
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +84,7 @@ func TestBrowserReplayAcrossAPIReplicas0525(t *testing.T) {
 	if result := call(a, endpoint, map[string]any{"code": "fixture-code", "state": state, "transaction": secondSeal}); result.Code != 401 {
 		t.Fatalf("resealed replay HTTP %d", result.Code)
 	}
-	// A fresh browser transaction remains usable after the replay incident.
+	// Свежая браузерная транзакция остаётся пригодной после инцидента повтора.
 	fresh := call(b, "/api/v1/auth/oidc/oidc-fixture/begin", map[string]any{"deviceId": "device-a"})
 	if fresh.Code != 200 {
 		t.Fatal("fresh begin failed")
@@ -134,7 +136,7 @@ func TestBrowserLinkReplayAndLoginSeparation0525(t *testing.T) {
 	if err := json.Unmarshal(begin.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	// A link transaction cannot be used to log in without the Never owner token.
+	// Транзакцию привязки нельзя использовать для входа без токена владельца Never.
 	login := call(handler, "/api/v1/auth/oidc/ms-fixture/complete", map[string]any{"code": "microsoft-code", "state": response.Data.State, "transaction": response.Data.Transaction}, "")
 	if login.Code != 401 {
 		t.Fatalf("link-to-login substitution HTTP %d", login.Code)
@@ -148,7 +150,7 @@ func TestBrowserLinkReplayAndLoginSeparation0525(t *testing.T) {
 	if second.Code != 401 {
 		t.Fatalf("link replay HTTP %d", second.Code)
 	}
-	// Wrong state may not consume a new valid transaction.
+	// Неверный state не должен расходовать новую действительную транзакцию.
 	begin = call(handler, "/api/v1/auth/microsoft/ms-fixture/link/begin", map[string]any{}, access)
 	if begin.Code != 200 {
 		t.Fatal("new Microsoft link transaction failed")

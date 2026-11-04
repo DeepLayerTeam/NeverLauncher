@@ -1,4 +1,5 @@
-# Observational cross-platform execution. NEVER holds an attestation signing key.
+# Только наблюдательное исполнение на разных платформах. НИКОГДА не содержит ключ
+# подписи аттестации.
 name: V10 — подготовленный нативный Runtime (Windows Linux macOS)
 on:
   workflow_call:
@@ -32,7 +33,8 @@ permissions:
   contents: read
 jobs:
   native-observation:
-    # Explicit capability labels; a generic hosted VM is not assumed GUI-capable.
+    # Возможности обозначены явно; обычная размещённая VM не считается способной
+    # запускать GUI.
     runs-on: ${{ fromJSON(format('["self-hosted","nl-validation","nl-{0}","nl-{1}","nl-{2}"]', inputs.os, inputs.arch, inputs.mode)) }}
     timeout-minutes: 180
     environment: runtime-validation-staging
@@ -57,8 +59,8 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check 'psutil>=6,<9' 'Pillow>=11,<13' 'glfw>=2.7,<3' 'PyOpenGL>=3.1,<4' 'pynput>=1.7,<2'
           if [[ '${{ inputs.os }}' == macos ]]; then python -m pip install 'pyobjc-framework-Quartz>=10,<14'; fi
-          # Linux GUI runners require pre-provisioned xwininfo, xprop,
-          # scrot, identify, tesseract, glxinfo, xdotool and a working DISPLAY.
+          # Для Linux GUI необходимы заранее установленные xwininfo, xprop, scrot,
+          # identify, tesseract, glxinfo, xdotool и рабочая переменная DISPLAY.
           python e2e/scripts/test_runtime_capabilities_03410.py
           python e2e/scripts/test_staged_readiness_0343.py
           python e2e/scripts/test_staged_matching_0344.py

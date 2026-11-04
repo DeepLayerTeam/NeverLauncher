@@ -9,8 +9,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// A stale writer with the original, legitimately enrolled key must not undo
-// explicit revocation. An attempted in-place key swap is also rejected.
+// Устаревший писатель с исходным законно зарегистрированным ключом не может
+// отменить явный отзыв. Попытка заменить ключ на месте также отклоняется.
 func TestRevokedDeviceKeyCannotBeResurrected0434(t *testing.T) {
 	ctx := context.Background()
 	repo := NewMemoryRepository("https://api.example.test")

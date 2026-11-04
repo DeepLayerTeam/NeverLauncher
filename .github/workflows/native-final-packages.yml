@@ -31,8 +31,9 @@ concurrency:
 jobs:
   native-package:
     name: Real signed installer on ${{ matrix.platform }}-${{ matrix.arch }}
-    # These hosted runners are disposable. This test runs real system installers,
-    # including sudo dpkg and Apple Installer, and MUST NOT run on user machines.
+    # Эти размещённые раннеры одноразовые. Тест выполняет настоящие системные
+    # установщики, включая sudo dpkg и Apple Installer, поэтому НЕ ДОЛЖЕН запускаться
+    # на пользовательских машинах.
     strategy:
       fail-fast: false
       matrix:

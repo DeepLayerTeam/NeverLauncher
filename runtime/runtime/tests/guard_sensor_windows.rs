@@ -92,9 +92,9 @@ fn compile_module_probe(javac: &Path, directory: &Path) {
     public static void main(String[] args) throws Exception {
         if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
         System.load(args[0]);
-        // Hook Engine's full integrity pass runs every two seconds. The
-        // Java 17 Windows CI runner needs time for two authenticated passes
-        // even when the initial DLL/module sweep is slow.
+        // Полная проверка целостности Hook Engine запускается каждые две секунды.
+        // Раннер Java 17 Windows CI должен успеть выполнить две аутентифицированные
+        // проверки, даже если первоначальный обход DLL/модулей медленный.
         Thread.sleep(10000L);
     }
 }

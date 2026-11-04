@@ -33,9 +33,10 @@ DOMAIN = ('neverlauncher.full-real-user-acceptance.'+VERSION+'\x00').encode()
 FINAL_SCHEMA = 'neverlauncher.independent-full-ga/' + VERSION
 FINAL_DOMAIN = ('neverlauncher.independent-full-ga.'+VERSION+'\x00').encode()
 
-# Not a substitute for the 280+six+soak/repro verifier: these are additional
-# real owner/identity/modpacks/migration/Guard/HA scenarios required by 0.53.
-# The scripts below are existing production executors, not user-supplied paths.
+# Это не замена верификатора 280+шесть+длительные испытания/воспроизводимость, а
+# дополнительные реальные сценарии владельца, идентичности, модпаков, миграции,
+# Guard и HA, обязательные для 0.53. Скрипты ниже — существующие промышленные
+# исполнители, а не пути из ввода пользователя.
 SCENARIOS = {
  'minimal': ('scripts/acceptance/minimal_live_e2e_0378.py', (), 'report'),
  'standard': ('scripts/acceptance/owner_admin_real_0523.py', (), 'report'),
@@ -53,8 +54,9 @@ SCENARIOS = {
  'ha-world': ('scripts/operations/physical_ha_dr_05210.py', ('world',), 'report'),
 }
 
-# Full E2E-01..18 coverage: a group cannot be counted from a single self-reported
-# PASS. Cross-cutting groups use the signed full sweep and real native packages.
+# Полный охват E2E-01..18: группу нельзя считать пройденной по единственному
+# самостоятельно заявленному PASS. Сквозные группы используют подписанный полный
+# прогон и настоящие нативные пакеты.
 GROUPS = {
  'E2E-01': ('minimal','standard'), 'E2E-02': ('standard',),
  'E2E-03': ('full-sweep',), 'E2E-04': ('modpacks',),
@@ -104,8 +106,9 @@ def strict_plan(doc, commit, pin):
              '--output' not in args and '--report' not in args,
              'unsafe/fake output or mode in '+name)
         tail=args[len(prefix):]
-        # Explicit narrow grammar, not shell or arbitrary runner programs.
-        # Each non-switch flag must have exactly one argument.
+        # Явно ограниченная грамматика, а не произвольные команды оболочки или
+        # программы раннера. Каждый флаг без значения-переключателя должен иметь
+        # ровно один аргумент.
         singles={'--isolated-destructive-acceptance','--destructive-isolated-run',
                  '--source-fenced'}
         need(all(t.startswith('--') or i>0 and tail[i-1].startswith('--') for i,t in enumerate(tail)),
@@ -226,7 +229,8 @@ def execute(plan, work, commit, pin):
         outfile=datadir/(name+'.json')
         argv=[sys.executable,str(ROOT/script),*data['scenarios'][name],
               '--'+outputflag,str(outfile)]
-        # Native physical outages can take hours, but never run without bounds.
+        # Нативные физические отказы могут длиться часами, но выполнение всегда
+        # должно быть ограничено.
         proc=subprocess.run(argv,cwd=ROOT,stdin=subprocess.DEVNULL,
                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=7200,
                             env={**os.environ,'PYTHONUNBUFFERED':'1'})
@@ -279,8 +283,9 @@ def group_coverage(sweep_result, original):
     return covered
 
 def inputs(p):
-    # Reuse the independently audited 0.52.12 freeze/rehearsal parser and
-    # deep replay, now bound to the 0.53.0 version and exact final bytes.
+    # Повторно используйте независимо проверенный парсер заморозки/репетиции
+    # 0.52.12 и глубокий повторный прогон с привязкой к версии 0.53.0 и точным
+    # финальным байтам.
     return dict(freeze_path=p.freeze,freeze_sig=p.freeze_sig,release_key=p.release_key,
       release_pin=p.release_pin,commit=p.commit,project=p.project,
       packages=p.packages,index=p.index,index_sha=p.index_sha,
@@ -293,8 +298,9 @@ def live_review(p, *, rerun):
     rehearsal.require(p.release_pin not in (p.issues_pin,p.qa_pin,p.verifier_pin) and
              len({p.release_pin,p.issues_pin,p.qa_pin,p.verifier_pin})==4,
              'release, issue, QA and verifier must be four independent authorities')
-    # The existing replay executes source regressions AND verifies all original
-    # final signed install / real Minecraft / 1h soak / independent build files.
+    # Существующий повторный прогон выполняет исходные регрессии И проверяет все
+    # исходные файлы окончательной подписанной установки, настоящего Minecraft,
+    # часовой нагрузки и независимой сборки.
     former=rehearsal.rehearse(**inputs(p),replay=rerun)
     need(former['status']=='REHEARSED_NOT_GA', 'full previous GA prerequisites not verified')
     a=rehearsal.full_args(p.config,p.commit)

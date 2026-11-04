@@ -89,8 +89,8 @@ jobs:
           npm run build
 
   desktop:
-    # Package/install testing across all supported OS is distinct from the
-    # signed *real user transition* checks required below.
+    # Тестирование пакетов и установки на всех поддерживаемых ОС отличается от
+    # обязательных ниже подписанных проверок настоящего перехода пользователей.
     strategy:
       fail-fast: false
       matrix:
@@ -122,9 +122,9 @@ jobs:
           cargo check --locked
 
   isolated-gravit-e2e:
-    # This job MUST NOT be replaced with fixtures that simply return passed.
-    # Real Gravit 5.7.x projects, Minecraft worlds/servers and all three
-    # Desktop platforms are provided by a segregated operator-owned runner.
+    # Эту задачу НЕЛЬЗЯ заменять фикстурами, просто возвращающими passed.
+    # Настоящие проекты Gravit 5.7.x, миры и серверы Minecraft, а также все три
+    # платформы Desktop предоставляет отдельный раннер под контролем оператора.
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     needs: [migrate-api, admin, desktop]
     runs-on: [self-hosted, linux, x64, migration-ga-isolated]
@@ -163,8 +163,8 @@ jobs:
           printf '%s' "$MIGRATION_GA_NETWORK_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/proxy-network.plan.json"
           printf '%s' "$MIGRATION_GA_SIGNING_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/signer.pem"
           printf '%s' "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/trusted.pem"
-          # Evidence is retained on the protected self-hosted runner, not
-          # published with a potentially public CI artifact.
+          # Доказательства остаются на защищённом собственном раннере и не публикуются
+          # вместе с потенциально общедоступным артефактом CI.
           base="$(mktemp -d "$MIGRATION_GA_EVIDENCE_ROOT/run-XXXXXXXX")"
           printf '%s\n' "$base" > "$RUNNER_TEMP/migration-ga/evidence-location"
       - name: Execute mandatory positive and negative E2E checks for all three classes
@@ -210,5 +210,5 @@ jobs:
         run: |
           rm -f "$RUNNER_TEMP/migration-ga/signer.pem" "$RUNNER_TEMP/migration-ga/"*.plan.json
           rm -f "$RUNNER_TEMP/migration-ga/evidence-location"
-          # The private evidence archive is not deleted automatically: independent
-          # reviewers need its complete receipts and raw check outputs.
+          # Закрытый архив доказательств не удаляется автоматически: независимым
+          # проверяющим нужны все квитанции и исходные результаты проверок.

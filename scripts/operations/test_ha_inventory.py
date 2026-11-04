@@ -181,8 +181,8 @@ class LiveHAInventory(unittest.TestCase):
         self.assertEqual(result["nodeStatus"], "RISK")
 
     def test_real_subprocess_cli_with_docker_protocol_simulator(self):
-        # Integration test drives the actual CLI through real subprocesses;
-        # only Docker is simulated. It is NOT a live HA certificate.
+        # Интеграционный тест запускает настоящий CLI через реальные подпроцессы;
+        # имитируется только Docker. Это НЕ сертификат живого HA.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             shim = root / "docker"

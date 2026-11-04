@@ -7,8 +7,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Persisting only the first of two concatenated JSON documents would silently
-// change a signed/eventually-hashed event payload before durable publication.
+// Сохранение только первого из двух сцепленных JSON-документов незаметно изменит
+// подписанную или впоследствии хешируемую полезную нагрузку события до устойчивой
+// публикации.
 func TestExtensionEventRejectsTrailingJSON0423(t *testing.T) {
 	in := model.ExtensionEvent{
 		ID: "evt_0423", Type: "project.saved", AggregateType: "project", AggregateID: "p1",

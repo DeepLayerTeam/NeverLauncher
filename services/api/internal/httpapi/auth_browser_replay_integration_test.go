@@ -13,8 +13,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Must use two independent PostgreSQL connections; a process-local cache is
-// not valid protection against simultaneous OAuth callbacks on HA API replicas.
+// Обязательны два независимых соединения PostgreSQL; локальный кэш процесса не
+// защищает от одновременных OAuth-callback на HA-репликах API.
 func TestBrowserNonceAcrossPostgresReplicas0525(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	if dsn == "" {

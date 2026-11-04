@@ -68,7 +68,8 @@ func TestSupportReportSubmitRequiresLoginAndConsent03510(t *testing.T) {
 	}
 
 	id := returned["id"].(string)
-	// No unauthenticated operator enumeration, even when a support ID is known.
+	// Перечисление операторов без авторизации запрещено, даже при известном ID
+	// обращения.
 	anonymous := httptest.NewRecorder()
 	handler.ServeHTTP(anonymous, httptest.NewRequest(http.MethodGet, "/api/v1/operations/support-reports", nil))
 	if anonymous.Code == http.StatusOK {

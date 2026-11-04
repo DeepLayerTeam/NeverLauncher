@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// Uses two distinct connections to prove live cross-replica visibility and the
-// PostgreSQL 0.29.7 session cascade on a real protection ban.
+// Два отдельных соединения подтверждают видимость между репликами и CASCADE сеансов
+// PostgreSQL 0.29.7 при реальной защитной блокировке.
 func TestProtectionBanPostgres0298(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {

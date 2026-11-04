@@ -52,7 +52,8 @@ func TestWorkerProbe0455(t *testing.T) {
 	check("/ready", http.StatusServiceUnavailable)
 	last.Store(time.Now().UnixNano())
 	check("/ready", http.StatusOK)
-	// Actual production backend readiness must also fail closed.
+	// Настоящая проверка готовности промышленного Backend также должна отказывать
+	// при ошибках.
 	unhealthy := workerProbeHandler0455(&last, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/ready" {
 			http.Error(w, "Redis not ready", http.StatusServiceUnavailable)

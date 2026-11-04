@@ -1,5 +1,6 @@
-// launcher-capacity-bench is an opt-in, bounded, read-only HTTP load probe.
-// It measures only the SELECTED endpoint and is not a claim of global capacity.
+// launcher-capacity-bench — включаемая явно ограниченная HTTP-проба нагрузки только
+// на чтение. Она измеряет только ВЫБРАННУЮ точку и не утверждает глобальную
+// пропускную способность.
 package main
 
 import (
@@ -62,7 +63,8 @@ func safeURL(s string, remote bool) (string, error) {
 	return u.String(), nil
 }
 
-// Fixed histogram avoids unbounded memory usage at high request rates.
+// Фиксированная гистограмма предотвращает неограниченный расход памяти при
+// высокой частоте запросов.
 var latencyBounds = [...]time.Duration{time.Millisecond, 2 * time.Millisecond, 5 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 50 * time.Millisecond, 100 * time.Millisecond, 200 * time.Millisecond, 500 * time.Millisecond, time.Second, 2 * time.Second, 5 * time.Second, 10 * time.Second}
 
 func bucketLatency(d time.Duration) int {
@@ -158,9 +160,9 @@ func run(ctx context.Context, client *http.Client, endpoint string, concurrency 
 	}
 	r.P95Milliseconds = histogramQuantile(hist, r.Requests, 95)
 	r.P99Milliseconds = histogramQuantile(hist, r.Requests, 99)
-	// Operation-oriented SLO. Passed only after at least 10 observations.
-	// A 401/403/302 or any other non-2xx must never count as healthy capacity.
-	// A partial 2xx success rate is equally unacceptable for this read-only probe.
+	// SLO отдельных операций. PASS допускается только после как минимум 10 наблюдений.
+	// Ответ 401/403/302 или любой другой не-2xx никогда не считается здоровой ёмкостью.
+	// Неполная доля успешных 2xx также недопустима для этой пробы только на чтение.
 	r.Passed = r.Requests >= 10 && r.Successful == r.Requests && r.P95Milliseconds <= 1000
 	return r
 }

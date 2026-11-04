@@ -7,8 +7,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// A provider-only credential operation is ambiguous if the user linked more
-// than one issuer. Callers must explicitly select the exact stored issuer.
+// Операция учётных данных только по провайдеру неоднозначна, если пользователь
+// привязал более одного издателя. Вызывающий код должен выбрать точного
+// сохранённого издателя.
 func selectedAuthIdentity0291(repo repository.Repository, userID, providerID, requestedIssuer string) (model.AuthIdentity, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	requestedIssuer = strings.TrimSpace(requestedIssuer)

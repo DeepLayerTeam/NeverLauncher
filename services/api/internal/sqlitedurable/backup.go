@@ -1,9 +1,10 @@
 package sqlitedurable
 
-// SQLite physical backups use VACUUM INTO on a separate read-only source
-// connection. Unlike copying a live .db file, it includes committed WAL pages
-// and produces a consistent snapshot without holding the application's writer.
-// Restore is deliberately offline and rejects leftover WAL sidecars.
+// Физические резервные копии SQLite используют VACUUM INTO через отдельное
+// соединение источника только для чтения. В отличие от копирования живого файла
+// .db, это включает зафиксированные страницы WAL и даёт согласованный снимок без
+// блокировки писателя приложения. Восстановление выполняется только автономно и
+// отклоняет оставшиеся WAL-sidecar-файлы.
 
 import (
 	"context"
@@ -59,8 +60,8 @@ func isSafeRegular(p string) error {
 	return nil
 }
 func openSnapshotReader(ctx context.Context, path string) (*sql.DB, error) {
-	// mode=ro prevents any mutation of the source. query_only=ON is deliberately
-	// omitted: SQLite rejects VACUUM INTO under query_only even when mode=ro.
+	// mode=ro предотвращает изменение источника. query_only=ON намеренно не
+	// установлен: SQLite запрещает VACUUM INTO при query_only, даже если mode=ro.
 	dsn := (&url.URL{Scheme: "file", Path: path}).String() + "?mode=ro&_pragma=busy_timeout(15000)&_pragma=foreign_keys(1)&_pragma=trusted_schema(OFF)"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -174,7 +175,7 @@ func writeManifest(path string, m BackupManifest) error {
 	if err != nil {
 		return err
 	}
-	// Expose a truncated manifest, and overwrite a previous one.
+	// Показывайте усечённый манифест и перезаписывайте предыдущий.
 	return os.Link(stage, path)
 }
 func requireNewBackupPath(source, dest string) (string, string, error) {
@@ -211,10 +212,10 @@ func requireNewBackupPath(source, dest string) (string, string, error) {
 	return src, dst, nil
 }
 
-// OnlineBackup works while the Launcher API owns the source database.
-// It acquires the source owner lock, checkpoints/truncates the WAL,
-// and replaces a previous backup. The .json sidecar is a checksum and
-// metadata (not an authentication signature). Backups contain sensitive data.
+// OnlineBackup работает, пока API Launcher владеет исходной БД. Он захватывает
+// блокировку владельца, выполняет checkpoint с усечением WAL и заменяет предыдущую
+// копию. Файл .json рядом — контрольная сумма и метаданные, а не подпись
+// аутентичности. Копии содержат чувствительные данные.
 func OnlineBackup(ctx context.Context, source, destination string) (m BackupManifest, err error) {
 	src, dst, err := requireNewBackupPath(source, destination)
 	if err != nil {
@@ -266,9 +267,9 @@ func OnlineBackup(ctx context.Context, source, destination string) (m BackupMani
 		return m, errors.New("empty SQLite backup")
 	}
 	m = BackupManifest{Format: BackupFormat, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), SHA256: digest, Bytes: size, SchemaVersion: v, SQLiteVersion: EngineVersion}
-	// Publish the immutable database and manifest; incomplete backup publication
-	// is rejected by VerifyBackup and cleaned on reported errors.
-	// Hardlink publishing is atomic and fails if a competing backup already exists.
+	// Публикуйте неизменяемые БД и манифест; неполная публикация копии отклоняется
+	// VerifyBackup и очищается при зарегистрированной ошибке. Публикация через hardlink
+	// атомарна и завершается ошибкой, если конкурирующая копия уже существует.
 	if err = os.Link(temp, dst); err != nil {
 		return m, err
 	}

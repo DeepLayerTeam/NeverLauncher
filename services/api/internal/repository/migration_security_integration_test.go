@@ -17,8 +17,8 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// Exercises the PostgreSQL revocation CASCADE from 0.29.7, checkpointed
-// receipts, preview rollback, re-enrollment and exact replay (not mocks).
+// Проверяются реальные CASCADE-отзывы PostgreSQL 0.29.7, квитанции контрольных
+// точек, откат предпросмотра, повторная регистрация и точный повтор без mock.
 func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -83,8 +83,8 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	}
 	sid := "trust-session-" + suffix
 	did := "trust-device-" + suffix
-	// Create a real previously trusted Never device and Never session; reset
-	// must revoke both and any dependent families/refresh tokens.
+	// Создайте реальное ранее доверенное устройство Never и сеанс Never; сброс
+	// должен отозвать их и зависимые семейства/refresh-токены.
 	_, err = repo.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint) VALUES($1,$2,'pre-migration','active','verified','proof-of-possession','ed25519','test-public-key',$3)`, did, userID, fmt.Sprintf("%064x", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatal(err)
@@ -125,8 +125,9 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	if _, err = repo.ResetMigrationTrust0336(ctx, run.ID, "different-kid", manifestHash, false); !errors.Is(err, mw.ErrConflict) {
 		t.Fatalf("changed signer accepted %v", err)
 	}
-	// A new, independent key enrolled after reset is owned and must not
-	// be revoked by a repeated request after an uncertain response.
+	// Новый независимый ключ, зарегистрированный после сброса, принадлежит
+	// владельцу и не должен отзываться повторным запросом после неопределённого
+	// ответа.
 	newDevice := "new-device-" + suffix
 	_, err = repo.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint) VALUES($1,$2,'fresh enrollment','active','verified','proof-of-possession','ed25519','new-public-key',$3)`, newDevice, userID, fmt.Sprintf("%064x", time.Now().UnixNano()+1))
 	if err != nil {

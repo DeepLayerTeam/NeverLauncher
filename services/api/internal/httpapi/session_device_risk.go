@@ -93,8 +93,9 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 			network = true
 		}
 	}
-	// HWID may request a step-up but must never independently turn a session
-	// into a compromised/ban decision or push another weak signal over 100.
+	// HWID может запросить усиленное подтверждение, но никогда самостоятельно не
+	// должен считать сеанс скомпрометированным, принимать решение о блокировке
+	// или усиливать другой слабый сигнал сверх 100.
 	if hwidChanged && !compromise {
 		network = true
 		if score < 100 {
@@ -165,16 +166,16 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 		} else if device.Status != "active" || device.TrustState != "verified" || rec.DeviceTrustState != "verified" {
 			reasons = mergeRiskReasons118(reasons, "trusted-device-revoked")
 		} else {
-			// Optional HWID observation is not attestation. Storage failure
-			// does not trigger mass revocation or an automatic ban.
+			// Необязательное наблюдение HWID — не аттестация. Сбой хранилища не вызывает
+			// массовый отзыв или автоматическую блокировку.
 			if store, ok := s.Repo.(repository.HWIDStore0299); ok {
 				observation, hwidErr := store.GetHWID0299(r.Context(), rec.UserID, rec.TrustedDeviceID, now)
 				if hwidErr == nil && observation.State == "changed" {
 					reasons = mergeRiskReasons118(reasons, "hwid-signal-changed")
 				} else if hwidErr == nil && observation.State == "recognized" {
-					// Only an explicit verified re-baseline removes an existing
-					// session risk. Forget, retention expiry and store outages
-					// must not become security-policy bypasses.
+					// Только явная подтверждённая повторная базовая линия снимает существующий
+					// риск сеанса. Удаление данных, истечение срока хранения и сбои хранилища не
+					// должны обходить политику безопасности.
 					reasons = removeRiskReasons0126(reasons, "hwid-signal-changed")
 				}
 			}

@@ -32,8 +32,9 @@ type deviceKeyReplacementComplete0128 struct {
 	NewSignature string `json:"newSignature"`
 }
 
-// Revoked device tombstones are valid recovery sources once, but never
-// rotation sources. A replacement link is terminal and prevents replay.
+// Записи об отозванных устройствах один раз допустимы как источники
+// восстановления, но никогда как источники ротации. Ссылка замены
+// окончательна и предотвращает повторное использование.
 func eligibleSourceDevice0435(device model.TrustedDevice, mode string) bool {
 	if device.ReplacedByDeviceID != "" {
 		return false
@@ -252,9 +253,9 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		writeError(w, http.StatusInternalServerError, "replacement public key metadata повреждена")
 		return
 	}
-	// A previously revoked fingerprint cannot be reintroduced by a stale
-	// replacement challenge, including when a different active device is
-	// substituted between begin and complete.
+	// Ранее отозванный отпечаток нельзя повторно зарегистрировать через
+	// устаревшую процедуру замены, даже если между началом и завершением
+	// подставили другое активное устройство.
 	if oldDevice.KeyFingerprint == newFingerprint || newDeviceID == oldDeviceID || oldFingerprint != oldDevice.KeyFingerprint {
 		writeError(w, http.StatusConflict, "device identity или replacement binding изменились")
 		return

@@ -13,8 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Current profile is resolved from the authenticated Never account, never from
-// a supplied UUID. Official identities are deliberately not writable here.
+// Текущий профиль определяется по аутентифицированной учётной записи Never, никогда
+// по предоставленному UUID. Официальные идентичности здесь намеренно недоступны для
+// записи.
 func (s Server) ownedTextureProfile0251(r *http.Request) (model.MinecraftProfile, model.User, error) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {

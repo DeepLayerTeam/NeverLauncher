@@ -27,7 +27,8 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 			t.Fatalf("ambiguous OIDC request: %s => %d %s", tt.path, res.Code, res.Body)
 		}
 	}
-	// Provider linking requires exact password proof even for a signed-in user.
+	// Для привязки провайдера требуется точное подтверждение паролем даже у
+	// вошедшего пользователя.
 	for _, body := range []string{
 		`{"identifier":"external@example.test","Identifier":"other@example.test","password":"some-secret"}`,
 		`{"identifier":"external@example.test","password":"some-secret"} {"password":"other"}`,
@@ -61,7 +62,7 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	if oversized.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("unbounded revocation body: %d", oversized.Code)
 	}
-	// Both destructive Admin mutations must reject duplicates before touching data.
+	// Обе разрушающие операции Admin должны отвергать дубликаты до изменения данных.
 	for _, body := range []string{
 		`{"userId":"first","userId":"second"}`,
 		`{"userId":"first","UserID":"second"}`,
@@ -76,7 +77,8 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	if created.Code != http.StatusCreated {
 		t.Fatalf("could not create test account: %d %s", created.Code, created.Body)
 	}
-	// Server replies with user ID; all data comes from real Admin user creation.
+	// Сервер отвечает ID пользователя; все данные взяты из настоящего создания
+	// пользователя Admin.
 	var user model.User
 	if err := json.Unmarshal(created.Body.Bytes(), &user); err != nil || user.ID == "" {
 		t.Fatalf("created user: %v %s", err, created.Body)
@@ -95,7 +97,8 @@ func TestAuthPlatformRejectsAmbiguousMutations0300(t *testing.T) {
 	if fresh.Code != http.StatusOK {
 		t.Fatalf("ambiguous ban mutated account: %d %s", fresh.Code, fresh.Body)
 	}
-	// Valid ban and revocation remain functional after malformed requests.
+	// Корректные блокировка и отзыв продолжают работать после некорректных
+	// запросов.
 	good := request0211(t, api, http.MethodPost, "/api/v1/admin/protection/users/"+user.ID+"/ban", admin, `{"reason":"verified confirmed account compromise"}`)
 	if good.Code != http.StatusOK {
 		t.Fatalf("valid protection ban failed: %d %s", good.Code, good.Body)

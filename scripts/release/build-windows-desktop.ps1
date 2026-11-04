@@ -265,8 +265,9 @@ try {
         Assert-PEArchitecture $SensorPackagePath $Target.Machine $Arch
         Assert-PEArchitecture $CliRootPath $Target.Machine $Arch
 
-        # Capture real compiled PE bytes BEFORE Authenticode changes them.
-        # Each independent builder writes into its own unsigned artifact root.
+        # Сохраните реальные скомпилированные байты PE ДО изменения их Authenticode.
+        # Каждый независимый сборщик пишет в отдельный корень неподписанных
+        # артефактов.
         if (($Version -eq "0.47.0") -or $UnsignedOnly) {
             $UnsignedRoot = [Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_OUTPUT_DIR")
             if ([string]::IsNullOrWhiteSpace($UnsignedRoot)) { $UnsignedRoot = Join-Path $Root "dist\unsigned-$Version" }

@@ -62,5 +62,5 @@ func TestV05PostgresDurableChallengeAndKeyRevocation0346(t *testing.T) {
 	if err != nil || !revoked {
 		t.Fatal("revocation not visible to SQL reader", err)
 	}
-	// Key revocations are global and permanent; no DELETE/restore endpoint exists.
+	// Отзывы ключей глобальны и постоянны; точек DELETE или восстановления нет.
 }

@@ -13,9 +13,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Requires a disposable real PostgreSQL database with migration privileges.
-// Exercises issuer isolation, credential persistence, and UUID protections on
-// the production SQL path rather than against a mock SQL driver.
+// Требуется одноразовая настоящая БД PostgreSQL с правами миграции. Проверяются
+// изоляция issuer, сохранение учётных данных и защита UUID по промышленному
+// SQL-пути, а не mock-драйверу.
 func TestCanonicalIssuerPostgres0291(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {

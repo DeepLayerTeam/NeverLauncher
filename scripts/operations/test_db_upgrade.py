@@ -50,7 +50,8 @@ class SQLiteUpgradeTests(unittest.TestCase):
             u.schema_check_sqlite(root)
             mb.backup(root, copy)
             self.assertEqual(mb.verify(copy)['sourceRoot'], str(root))
-            # Simulate an interrupted real SQLite schema upgrade (DDL was committed).
+            # Имитируйте прерванное настоящее обновление схемы SQLite (DDL уже
+            # зафиксирован).
             with sqlite3.connect(root / 'db/http.sqlite') as db:
                 db.execute('ALTER TABLE marker ADD COLUMN changed INTEGER')
                 db.execute('PRAGMA user_version=327')

@@ -1,5 +1,6 @@
-// Package fileauth reads the real GravitLauncher FileAuthSystem Database.json.
-// Sessions.json (OAuth and Minecraft tokens) is intentionally never consumed.
+// Package fileauth читает настоящую базу GravitLauncher FileAuthSystem
+// Database.json. Sessions.json с токенами OAuth и Minecraft намеренно никогда не
+// используется.
 package fileauth
 
 import (
@@ -24,8 +25,9 @@ const credentialPrefix = "$gravit$v1$"
 var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 var uuidPattern = regexp.MustCompile(`^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$`)
 
-// Account represents only the fields required to migrate a FileAuthSystem user.
-// Gravit permission and role fields are deliberately NOT trusted for Never RBAC.
+// Account представляет лишь поля, необходимые для миграции пользователя
+// FileAuthSystem. Поля прав и ролей Gravit намеренно НЕ считаются доверенными для
+// RBAC Never.
 type Account struct {
 	UUID         string
 	Username     string
@@ -39,8 +41,9 @@ type rawUser struct {
 	Password string `json:"password"`
 }
 
-// Parse reads Gravit's UUID-keyed Map<UUID, UserEntity> JSON. No passwords are
-// validated by guessing an algorithm: format is a mandatory operator choice.
+// Parse читает JSON Gravit в формате Map<UUID, UserEntity> с ключами UUID. Пароли
+// никогда не проверяются угадыванием алгоритма: формат обязательно выбирает
+// оператор.
 func Parse(r io.Reader, format string) ([]Account, error) {
 	if !SupportedFormat(format) {
 		return nil, errors.New("unsupported or missing Gravit password format")
@@ -123,8 +126,8 @@ func SupportedFormat(format string) bool {
 	}
 }
 
-// EncodeCredential stores the original verifier deterministically; it NEVER
-// has the plaintext password and does not attempt to rehash unknown passwords.
+// EncodeCredential детерминированно сохраняет исходный верификатор; открытого
+// пароля у него НИКОГДА нет, и неизвестные пароли он не пытается перехешировать.
 func EncodeCredential(format, hash string) (string, error) {
 	if !SupportedFormat(format) || len(hash) == 0 || len(hash) > 1024 {
 		return "", errors.New("unknown password format or invalid hash length")
@@ -201,8 +204,9 @@ func DecodeCredential(encoded string) (format, hash string, ok bool) {
 	return values[0], original, true
 }
 
-// UsernameEmail only derives an email for an explicitly validated Gravit name;
-// arbitrary email-like identifiers are not rewritten to another account.
+// UsernameEmail выводит email только из явно проверенного имени Gravit;
+// произвольные идентификаторы, похожие на email, не переписываются для другого
+// аккаунта.
 func UsernameEmail(identifier string) (string, bool) {
 	if !usernamePattern.MatchString(identifier) {
 		return "", false
@@ -210,8 +214,8 @@ func UsernameEmail(identifier string) (string, bool) {
 	return strings.ToLower(identifier) + "@" + EmailDomain, true
 }
 
-// ValidateArgon2id validates the complete PHC string before importing a row.
-// The cost limits prevent a malicious import from consuming excessive RAM at login.
+// ValidateArgon2id проверяет полную строку PHC до импорта записи. Ограничения стоимости
+// предотвращают чрезмерный расход RAM на входе при вредоносном импорте.
 func ValidateArgon2id(stored string) bool {
 	parts := strings.Split(stored, "$")
 	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != "v=19" {
@@ -245,7 +249,7 @@ func ValidateArgon2id(stored string) bool {
 	return true
 }
 
-// ValidateAccount protects direct repository callers as well as the CLI parser.
+// ValidateAccount защищает прямые вызовы репозитория, а также парсер CLI.
 func ValidateAccount(a Account) error {
 	if !uuidPattern.MatchString(a.UUID) || !usernamePattern.MatchString(a.Username) {
 		return errors.New("invalid FileAuth UUID/username")

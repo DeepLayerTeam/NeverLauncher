@@ -26,14 +26,14 @@ func TestGameControlLostACKIsIndeterminateAndNeverRedispatched0285(t *testing.T)
 	if err != nil || lease.Status != "leased" {
 		t.Fatalf("lease=%+v err=%v", lease, err)
 	}
-	// Same channel reconnecting before expiry resumes the *same* delivery,
-	// never allocates a second lease/fencing identity.
+	// Повторное подключение того же канала до истечения срока возобновляет ТУ ЖЕ
+	// доставку и не выделяет вторую идентичность аренды или ограждения.
 	resume, err := store.leaseControl0195("survival", 3, runtimeID, lease.LeaseOwner, "other_lease_1234567890123456", 0, now.Add(2*time.Second), 10*time.Second)
 	if err != nil || resume.LeaseToken != lease.LeaseToken || resume.Attempt != 1 {
 		t.Fatalf("resume=%+v err=%v", resume, err)
 	}
-	// The original game process might have executed the save, even though ACK
-	// disappeared. A different channel MUST NOT obtain a second execution.
+	// Исходный игровой процесс мог выполнить сохранение, хотя ACK пропал. Другой
+	// канал НЕ ДОЛЖЕН получить второе выполнение.
 	_, err = store.leaseControl0195("survival", 3, runtimeID, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "second_lease_1234567890123456", 0, now.Add(11*time.Second), 10*time.Second)
 	if !errors.Is(err, repository.ErrNotFound) {
 		t.Fatalf("expired delivery was redelivered: %v", err)

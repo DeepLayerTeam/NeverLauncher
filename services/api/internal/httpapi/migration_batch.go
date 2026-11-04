@@ -17,9 +17,10 @@ import (
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
-// The batch preview deliberately does not overwrite the existing single-
-// profile durable migration plan. Each staged import must still use the normal
-// single-profile plan+CAS path before signing and publishing a client.
+// Пакетный предпросмотр намеренно не перезаписывает существующий устойчивый план
+// миграции одного профиля. Каждый подготовленный импорт всё равно должен пройти
+// обычную последовательность планирования и CAS для одного профиля до подписи и
+// публикации клиента.
 func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.Repo.(migrationPlanStore0442); !ok {
 		writeError(w, 503, "migration requires PostgreSQL")
@@ -73,7 +74,8 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid profile mapping")
 		return
 	}
-	// Reject unknown fields as well: a typo must not silently switch target settings.
+	// Отклоняйте также неизвестные поля: опечатка не должна незаметно изменить целевые
+	// настройки.
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&destinations) != nil {

@@ -105,7 +105,7 @@ for arch in x64 arm64; do
 EOF_PLIST
 
   # Export the exact built, unsigned thin Mach-O binaries before codesign.
-  # This package has a stable ordering/timestamp and is independently compared.
+  # Этот пакет имеет стабильный порядок и временные метки и сравнивается независимо.
   if [[ "${VERSION}" == "0.47.0" || "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
     UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
     python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \

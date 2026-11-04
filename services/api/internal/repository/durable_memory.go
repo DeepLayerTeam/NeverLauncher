@@ -249,8 +249,8 @@ func (r *MemoryRepository) CommitDurablePublish(ctx context.Context, commit mode
 	return r.commitDurablePublish0213(ctx, commit, false)
 }
 
-// Only the SQLite implementation calls this with a true verified grant; the
-// exported memory route deliberately never has permission to publish stable.
+// Только реализация SQLite вызывает это с подлинным проверенным допуском;
+// экспортируемый маршрут памяти намеренно не имеет права публиковать stable.
 func (r *MemoryRepository) commitDurablePublish0213(_ context.Context, commit model.DurablePublishCommit, verifiedStable bool) (model.ReleaseVersion, error) {
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()
