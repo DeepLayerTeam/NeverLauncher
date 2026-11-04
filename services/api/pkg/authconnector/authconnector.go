@@ -36,8 +36,8 @@ type Metadata struct {
 }
 
 type Identity struct {
-	// Issuer is the verified issuer of the authenticated identity. It must
-	// come from the validated protocol, not an untrusted client request.
+	// Issuer — проверенный издатель аутентифицированной идентичности. Он обязан
+	// поступать из проверенного протокола, а не из недоверенного запроса клиента.
 	Issuer      string         `json:"issuer,omitempty"`
 	Subject     string         `json:"subject"`
 	Email       string         `json:"email,omitempty"`

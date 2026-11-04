@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Bounded, dependency-free JSON reader for the Extensions control plane. */
+/** JSON-парсер без зависимостей с ограничениями ресурсов для управления Extensions. */
 public final class Json {
     private Json() {}
     public static Object parse(String input) { return parse(input, 1_048_576); }

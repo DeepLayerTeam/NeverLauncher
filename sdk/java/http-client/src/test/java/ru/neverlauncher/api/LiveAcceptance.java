@@ -8,7 +8,7 @@ import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
 
-/** Genuine installed HTTPS API exercised through the published Java SDK. */
+/** Подлинный установленный HTTPS API, проверяемый опубликованным Java SDK. */
 public final class LiveAcceptance {
     private static String required(String name) {
         var v = System.getenv(name);

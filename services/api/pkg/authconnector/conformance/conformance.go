@@ -1,5 +1,5 @@
-// Package conformance executes structural and live-fixture tests against the
-// same interfaces the Launcher federation uses in production.
+// Пакет conformance запускает структурные и интеграционные тесты с реальными фикстурами для
+// тех же интерфейсов, которые федерация Launcher использует в production.
 package conformance
 
 import (
@@ -26,14 +26,14 @@ type Report struct {
 
 type BrowserFixture struct {
 	Start authconnector.BrowserAuthRequest
-	// Complete must complete the test IdP's actual authorization transaction.
-	// No interactive browser, user passwords or refresh tokens are logged.
+	// Complete должен завершить реальную транзакцию авторизации тестового IdP.
+	// Не журналировать интерактивный браузер, пароли пользователей или refresh-токены.
 	Complete func(context.Context, authconnector.BrowserAuthStart) (authconnector.BrowserAuthCallback, error)
 }
 
-// Fixture MUST refer to a disposable or otherwise explicitly dedicated test
-// account. Revocation is destructive and can be enabled only explicitly.
-// Missing fixtures for advertised capabilities fail behavioral conformance.
+// Fixture ДОЛЖНА ссылаться на одноразовую или явно выделенную тестовую
+// учётную запись. Отзыв разрушителен и может включаться только явно.
+// Отсутствие фикстур для заявленных возможностей означает провал проверки поведения.
 type Fixture struct {
 	Password     *authconnector.PasswordRequest
 	Browser      *BrowserFixture
@@ -42,8 +42,8 @@ type Fixture struct {
 	RefreshToken string
 	RevokeToken  string
 	AllowRevoke  bool
-	// The provider may support linking, but the federation owns the
-	// canonical account link and requires fresh proof (tested separately).
+	// Провайдер может поддерживать привязку, но федерация владеет
+	// канонической привязкой аккаунтов и требует нового доказательства (тестируется отдельно).
 	VerifyRevokedToken bool
 }
 
@@ -51,8 +51,8 @@ func (r *Report) add(name string, err error) {
 	c := Check{Name: name, Passed: err == nil}
 	if err != nil {
 		r.Passed = false
-		// Do not embed provider errors or their wrapped causes: third-party
-		// errors may contain secrets, signed URLs, access tokens or PII.
+		// Не включать ошибки провайдера или их обёрнутые причины: сторонний
+		// ошибки могут содержать секреты, подписанные URL, токены доступа или PII.
 		var e *authconnector.Error
 		if errors.As(err, &e) && e.Code != "" {
 			c.Message = "provider error: " + string(e.Code)
@@ -63,8 +63,8 @@ func (r *Report) add(name string, err error) {
 	r.Checks = append(r.Checks, c)
 }
 
-// Run performs non-destructive registration/health checks. A passing
-// structural report is NOT a passing behavioral conformance report.
+// Run выполняет недеструктивные проверки регистрации/работоспособности. Успешный
+// структурный отчёт НЕ является успешным отчётом проверки поведения.
 func Run(ctx context.Context, connector authconnector.Connector) Report {
 	r := Report{Mode: "structural", Passed: true}
 	if err := authconnector.ValidateConnector(connector); err != nil {
@@ -80,9 +80,9 @@ func Run(ctx context.Context, connector authconnector.Connector) Report {
 	return r
 }
 
-// RunBehavioral exercises the actual provider methods, tests invariants after
-// every response, and reports no token/credential/identity values. It does not
-// create or link a account; linking proof is tested at federation level.
+// RunBehavioral вызывает реальные методы провайдера, проверяет инварианты после
+// каждого ответа и не раскрывает значения токенов/учётных данных/идентичностей. Он не
+// создаёт и не привязывает аккаунт; доказательство привязки тестируется на уровне федерации.
 func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixture Fixture) Report {
 	r := Run(ctx, connector)
 	r.Mode = "behavioral"
@@ -110,7 +110,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 				haveAuth = true
 				subject = result.Identity.Subject
 			}
-			// Must reject incorrect credentials: no fail-open behavior.
+			// Неправильные учётные данные должны отклоняться: поведение fail-open запрещено.
 			invalid := *fixture.Password
 			invalid.Secret += "-launcher-invalid-proof"
 			_, invalidErr := connector.(authconnector.PasswordAuthenticator).AuthenticatePassword(ctx, invalid)

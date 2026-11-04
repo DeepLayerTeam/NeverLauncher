@@ -653,8 +653,8 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 				if e != nil {
 					return e
 				}
-				// SQLRepository scans published_at into time.Time, not sql.NullTime.
-				// Preserve the Core zero/unpublished state in a readable form.
+				// SQLRepository считывает published_at в time.Time, а не sql.NullTime.
+				// Сохранить нулевое/неопубликованное состояние Core в читаемом виде.
 				if rule.source == "releases" && dst["published_at"] == nil {
 					dst["published_at"] = time.Time{}
 				}
@@ -666,8 +666,8 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 					dst["project_roles"] = "{}"
 				}
 				e = insert0473(ctx, tx, rule.target, dst, append(append([]string(nil), rule.columns...), func() []string {
-					// SQLRepository scans published_at into time.Time, not sql.NullTime.
-					// Preserve the Core zero/unpublished state in a readable form.
+					// SQLRepository считывает published_at в time.Time, а не sql.NullTime.
+					// Сохранить нулевое/неопубликованное состояние Core в читаемом виде.
 					if rule.source == "releases" && dst["published_at"] == nil {
 						dst["published_at"] = time.Time{}
 					}

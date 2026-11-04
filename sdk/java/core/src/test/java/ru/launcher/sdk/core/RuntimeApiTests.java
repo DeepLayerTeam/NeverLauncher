@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Executes actual authenticated HTTP requests and typed loopback callbacks. */
+/** Выполняет настоящие аутентифицированные HTTP-запросы и типизированные loopback-колбэки. */
 public final class RuntimeApiTests {
     private static int checks;
     static void check(boolean condition,String what){checks++;if(!condition)throw new AssertionError(what);}

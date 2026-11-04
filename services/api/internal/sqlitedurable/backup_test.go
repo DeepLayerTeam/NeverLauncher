@@ -34,7 +34,7 @@ func TestOnlineBackupWALAndVerifiedRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 	backup := filepath.Join(targetDir, "snapshot.db")
-	// Concurrent writers stay enabled while VACUUM INTO reads its snapshot.
+	// Конкурирующие писатели остаются включены, пока VACUUM INTO читает снимок.
 	var wg sync.WaitGroup
 	wg.Add(1)
 	errorsChan := make(chan error, 1)
@@ -119,7 +119,7 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 	if err = s.Close(); err != nil {
 		t.Fatal(err)
 	}
-	// Uncheckpointed sidecars must be handled explicitly, silently removed.
+	// Не прошедшие checkpoint побочные файлы нужно обрабатывать явно, а не незаметно удалять.
 	sidecar := opt.Path + "-wal"
 	if err = os.WriteFile(sidecar, []byte("stale"), 0600); err != nil {
 		t.Fatal(err)

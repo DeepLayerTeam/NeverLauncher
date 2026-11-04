@@ -104,7 +104,7 @@ for arch in x64 arm64; do
 </dict></plist>
 EOF_PLIST
 
-  # Export the exact built, unsigned thin Mach-O binaries before codesign.
+  # Экспортировать точно собранные неподписанные тонкие Mach-O-файлы до codesign.
   # Этот пакет имеет стабильный порядок и временные метки и сравнивается независимо.
   if [[ "${VERSION}" == "0.47.0" || "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
     UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"

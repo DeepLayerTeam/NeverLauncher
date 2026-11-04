@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Exercises real authenticated loopback callbacks, typed policy and durable job outcomes. */
+/** Проверяет реальные аутентифицированные loopback-колбэки, типизированные политики и исходы постоянных заданий. */
 public final class AdvancedEvents0487Tests {
     private static int checks;
     private static void check(boolean pass,String message){checks++;if(!pass)throw new AssertionError(message);}

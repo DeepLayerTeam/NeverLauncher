@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.Objects;
 
-/** Authenticated extension scope and bounded lifecycle context for a Java SPI provider. */
+/** Аутентифицированная область расширения и контекст жизненного цикла с ограничениями для Java SPI-провайдера. */
 public record ProviderContext(ExtensionManifest manifest, String serviceId, String providerId,
         Cancellation cancellation, Deadline deadline, RuntimeServices runtime) {
     public ProviderContext {

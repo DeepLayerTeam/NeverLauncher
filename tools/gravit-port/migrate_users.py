@@ -117,7 +117,7 @@ class Backend:
                         raise MigrationError("unexpected Backend response status")
                     raw = resp.read(MAX_RESPONSE + 1)
             except HTTPError as exc:
-                # Do NOT echo a server error body (may contain secrets).
+                # НЕ выводить тело ошибки сервера (может содержать секреты).
                 raise MigrationError("Backend rejected %s %s (HTTP %d)" % (method, path, exc.code)) from None
             except (OSError, URLError) as exc:
                 raise MigrationError("Backend transport error: %s" % type(exc).__name__) from None
@@ -276,7 +276,7 @@ def main(argv=None):
         result = migrate(Backend(args.backend, token), args.run_id, args.source_zip, args.mode, args.password_format, args.allow_manual_resets, args.roles_file, args.texture_mapping_output)
         atomic_receipt(args.receipt, result)
     except (MigrationError, OSError, ValueError, KeyError) as exc:
-        # Never print password hashes, tokens, response bodies or source paths.
+        # Никогда не выводить хеши паролей, токены, тела ответов или исходные пути.
         print("migration failed (%s)" % type(exc).__name__, file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))

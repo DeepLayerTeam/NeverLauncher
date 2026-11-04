@@ -100,7 +100,7 @@ def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) 
     require(isinstance(name, str) and name.startswith("/") and isinstance(digest, str)
             and bool(HEX.fullmatch(digest)), "absolute file and expected SHA-256 required")
     path = Path(name)
-    # Hash an inode-pinned stream; fail if input changed or is linked.
+    # Хешировать поток с закреплённым inode; завершать с ошибкой, если вход изменён или связан ссылкой.
     stream, st = _checked_open(path, limit)
     with stream:
         h = hashlib.sha256()
@@ -185,9 +185,9 @@ def preflight(config: dict, output: Path) -> list[dict]:
         require(pkg != source and delivery != source, "source and update package must differ")
         component = within(root, p.get("installedComponent"))
         regular_bytes(component, 256 << 20)
-        # Tie both Minecraft launch witnesses to the *actual updated executable*.
-        # A stable wrapper could otherwise launch an old client while a different
-        # runtime file was successfully updated, creating false upgrade evidence.
+        # Привязать оба свидетельства запуска Minecraft к *реально обновлённому исполняемому файлу*.
+        # Иначе стабильная обёртка могла бы запустить старый клиент, пока другой
+        # файл Runtime успешно обновлён, создавая ложное свидетельство обновления.
         require(root.is_relative_to(stage) and isinstance(live.get("clientPath"), str),
                 "the real client install must be inside its isolated stage")
         require(within(stage, live["clientPath"]) == component,
@@ -209,7 +209,7 @@ def preflight(config: dict, output: Path) -> list[dict]:
 
 
 def cli(launcher: str, args: list[str], timeout: int = 1800) -> None:
-    # Never put the operator bearer token into process arguments or the report.
+    # Никогда не помещать bearer-токен оператора в аргументы процесса или отчёт.
     env = dict(os.environ)
     with open(os.devnull, "wb") as sink:
         try:

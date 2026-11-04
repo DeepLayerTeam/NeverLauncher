@@ -26,7 +26,7 @@ func verifyLocalPath(path string) error {
 	if err := rejectSymlinkSegments(dir); err != nil {
 		return err
 	}
-	// Existing directory permissions are checked, not silently weakened.
+	// Существующие права каталога проверяются, а не незаметно ослабляются.
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}

@@ -80,7 +80,7 @@ func TestGAProbeHelper(t *testing.T) {
 		os.Exit(9)
 	}
 	epath := os.Getenv("GA_PROBE_EVIDENCE")
-	// The helper updates the receipt during this process invocation.
+	// Помощник обновляет квитанцию во время этого вызова процесса.
 	_ = os.Chtimes(epath, time.Now(), time.Now())
 	name := ""
 	if len(os.Args) >= 2 {
@@ -198,8 +198,8 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 		kv := strings.SplitN(env, "=", 2)
 		t.Setenv(kv[0], kv[1])
 	}
-	// Commands are static per check, so use a wrapper that identifies the check
-	// via a positional environment variable passed to the helper executable.
+	// Команды статичны для каждой проверки, поэтому используйте обёртку, определяющую проверку
+	// по позиционной переменной окружения, переданной исполняемому файлу помощника.
 	for i := range p.Checks {
 		p.Checks[i].Command = append(p.Checks[i].Command, "--", p.Checks[i].Name)
 	}
@@ -225,7 +225,7 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	if e = verifyEvidence(b, evidenceDir); e != nil {
 		t.Fatal(e)
 	}
-	// Signature alone is insufficient: the evidence is required for GA sign-off.
+	// Одной подписи недостаточно: для одобрения GA требуются свидетельства.
 	evidencePath := filepath.Join(evidenceDir, requiredForClass(p.ReferenceClass)[0]+".evidence")
 	if e = os.WriteFile(evidencePath, []byte("tampered"), 0600); e != nil {
 		t.Fatal(e)

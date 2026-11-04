@@ -2,12 +2,12 @@ package authconnector
 
 import "strings"
 
-// SafeUpstreamAuthMethods records the authentication methods claimed by an
-// external provider without promoting those claims to locally verified
-// Launcher MFA. Callers MUST separately verify local TOTP/recovery or a
-// WebAuthn assertion before adding those methods and increasing authStrength.
-// In particular, signed HTTP provider data and validated OIDC amr claims are
-// still upstream statements, not Launcher WebAuthn proofs.
+// SafeUpstreamAuthMethods записывает методы аутентификации, заявленные
+// внешним провайдером, не повышая их до локально подтверждённого
+// Launcher MFA. Перед добавлением таких методов и повышением authStrength вызывающий ОБЯЗАН отдельно проверить
+// локальный TOTP/recovery или утверждение WebAuthn.
+// В частности, подписанные HTTP-данные провайдера и проверенные OIDC amr-claims являются
+// пока остаются заявлениями внешнего провайдера, а не доказательствами Launcher WebAuthn.
 func SafeUpstreamAuthMethods(methods []string) []string {
 	out := make([]string, 0, len(methods))
 	seen := make(map[string]struct{}, len(methods))
@@ -18,12 +18,12 @@ func SafeUpstreamAuthMethods(methods []string) []string {
 		}
 		switch method {
 		case "password", "pwd", "oidc", "microsoft", "oauth", "sql", "http", "local":
-			// These identify an upstream protocol or primary factor only.
+			// Они определяют только вышестоящий протокол или первичный фактор.
 		default:
 			method = "upstream:" + method
 		}
-		// Session token claims must remain within the SDK field limit even
-		// when a provider supplies the maximum permitted 64-byte amr name.
+		// Заявления токена сеанса должны укладываться в лимит полей SDK, даже
+		// если провайдер передал максимально допустимое 64-байтное имя amr.
 		if len(method) > 64 {
 			method = method[:64]
 		}

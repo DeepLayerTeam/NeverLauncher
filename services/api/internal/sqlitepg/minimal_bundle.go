@@ -256,9 +256,9 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 	return m, raw, nil
 }
 
-// ImportMinimalBundle0377 stores a complete offline minimal snapshot in
-// PostgreSQL; includes both SQLite databases, keys, config and project files.
-// It mutates the live PostgreSQL Repository schema.
+// ImportMinimalBundle0377 сохраняет полный минимальный офлайн-снимок в
+// PostgreSQL, включая обе БД SQLite, ключи, конфигурацию и файлы проекта.
+// Она изменяет рабочую схему PostgreSQL Repository.
 func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" {
 		return report, errors.New("PostgreSQL DSN required")
@@ -345,8 +345,8 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 		}
 		report.Bytes += f.Bytes
 	}
-	// Read-only transfer tables prevent accidental change of token revocation,
-	// trust state or project configuration after this committed snapshot.
+	// Таблицы переноса только для чтения предотвращают случайное изменение отзыва токенов,
+	// состояния доверия или конфигурации проекта после фиксации снимка.
 	if _, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(MinimalBundleSchema0377)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher minimal bundle is immutable'; END $$`); err != nil {
 		return report, err
 	}
@@ -362,8 +362,8 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 			}
 		}
 	}
-	// Reverify exact source bytes immediately before commit; use an
-	// unfrozen active directory here. The source must be an offline backup.
+	// Повторно проверить точные байты источника непосредственно перед COMMIT; использовать
+	// незамороженный активный каталог здесь. Источник должен быть офлайн-резервной копией.
 	_, again, err := verifyMinimalBundle0377(ctx, bundle)
 	if err != nil {
 		return report, err
@@ -378,9 +378,9 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 	return report, nil
 }
 
-// ExportMinimalBundle0377 reconstructs a new offline minimal backup bundle.
-// Feed this to minimal_backup.py verify/restore; serve the imported PG
-// schema as a PostgreSQL backend.
+// ExportMinimalBundle0377 восстанавливает новый минимальный офлайн-пакет резервной копии.
+// Передать это в minimal_backup.py verify/restore; не обслуживать импортированную схему PG
+// как рабочий PostgreSQL Backend.
 func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" || target == "" {
 		return report, errors.New("PostgreSQL DSN and target required")
@@ -530,7 +530,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 	if _, _, err = verifyMinimalBundle0377(ctx, stage); err != nil {
 		return report, err
 	}
-	// Target is absent: atomic no-replace directory publication on Linux.
+	// Назначения нет: атомарная публикация каталога без замены существующего в Linux.
 	if err = publishNewDirectory0377(stage, dest); err != nil {
 		return report, err
 	}

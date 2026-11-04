@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Durable at-least-once event jobs and fail-closed policy hooks via the Go EventBus. */
+/** Постоянные задания событий с доставкой как минимум один раз и хуки политик с отказом по умолчанию через Go EventBus. */
 public final class RuntimeEvents implements AutoCloseable {
     @FunctionalInterface public interface Decoder<T>{T decode(Object json)throws Exception;}
     @FunctionalInterface public interface Listener<T>{void onEvent(Envelope<T> event)throws Exception;}
@@ -21,11 +21,11 @@ public final class RuntimeEvents implements AutoCloseable {
         public static HookDecision allow(){return new HookDecision(true,"");}
         public static HookDecision deny(String reason){return new HookDecision(false,reason);}
     }
-    /** A deliberate, non-retryable event rejection. The Go bus moves it to dead-letter. */
+    /** Намеренный отказ от события без повторной попытки. Go-шина переносит его в очередь недоставленных сообщений. */
     public static final class PermanentFailure extends Exception {
         public PermanentFailure(String reason){super(reason);}
     }
-    /** A policy veto. Go aborts the guarded operation; the event cannot be ACKed as accepted. */
+    /** Запрет политики. Go прерывает защищённую операцию; событие нельзя подтвердить ACK как принятое. */
     public static final class HookRejected extends Exception {
         public HookRejected(String reason){super(reason);}
     }
@@ -39,7 +39,7 @@ public final class RuntimeEvents implements AutoCloseable {
         Objects.requireNonNull(listener);
         return subscribeDetailed(eventType,mode,schema,decoder,details->listener.onEvent(details.event()));
     }
-    /** Advanced typed subscription; metadata belongs to the immutable Go event record. */
+    /** Расширенная типизированная подписка; метаданные относятся к неизменяемой записи события Go. */
     public synchronized <T> long subscribeDetailed(String eventType,String mode,JsonSchema schema,Decoder<T> decoder,DetailedListener<T> listener)throws IOException,InterruptedException {
         if(closed)throw new IllegalStateException("runtime events closed");
         if(eventType==null||!eventType.matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(mode))throw new IllegalArgumentException("invalid event subscription");
@@ -53,12 +53,12 @@ public final class RuntimeEvents implements AutoCloseable {
             subscriptions.put(key,number.longValue());return number.longValue();
         }catch(IOException|InterruptedException|RuntimeException e){handlers.remove(key);throw e;}
     }
-    /** An asynchronous job is durably leased, retried and dead-lettered by the Go EventBus. */
+    /** Асинхронное задание получает долговременную аренду, повторные попытки и отправку в dead-letter через Go EventBus. */
     public <T> long subscribeJob(String eventType,JsonSchema schema,Decoder<T> decoder,AsyncJob<T> job)throws IOException,InterruptedException {
         Objects.requireNonNull(job);
         return subscribeDetailed(eventType,"async",schema,decoder,job::execute);
     }
-    /** A synchronous policy hook must explicitly allow a mutation; null and exceptions deny it. */
+    /** Синхронный хук политики обязан явно разрешить изменение; null и исключения означают запрет. */
     public <T> long subscribeHook(String eventType,JsonSchema schema,Decoder<T> decoder,Hook<T> hook)throws IOException,InterruptedException {
         Objects.requireNonNull(hook);
         return subscribeDetailed(eventType,"sync",schema,decoder,event->{
@@ -103,6 +103,6 @@ public final class RuntimeEvents implements AutoCloseable {
         host.unsubscribe(id);
         subscriptions.remove(key);handlers.remove(key);
     }
-    /** Local shutdown never deletes pending work in the persistent Go store. */
+    /** Локальное завершение никогда не удаляет ожидающую работу из постоянного Go-хранилища. */
     @Override public synchronized void close(){closed=true;handlers.clear();subscriptions.clear();}
 }

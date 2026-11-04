@@ -7,7 +7,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import ru.launcher.sdk.core.ExtensionRunner;
 
-/** Executable Java 17+ Extensions host: java -jar backend/extension.jar. */
+/** Исполняемый хост Extensions на Java 17+: java -jar backend/extension.jar. */
 public final class JavaExtensionHost {
     private JavaExtensionHost(){}
     public static void main(String[] args)throws Exception {

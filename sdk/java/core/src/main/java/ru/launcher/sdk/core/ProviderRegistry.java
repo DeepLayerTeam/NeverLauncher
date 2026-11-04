@@ -7,11 +7,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
- * Real per-extension Java SPI registry. Provider instances never enter the launcher's core
- * classpath. Selection drains outstanding calls, stops the old instance, starts the selected
- * instance and fails closed on a startup or compatibility failure. There is no global registry.
- * A hung third-party callback is interrupted at the deadline; the Go JVM process supervisor
- * remains the final boundary for code that ignores interruption.
+ * Настоящий реестр Java SPI для каждого расширения. Экземпляры провайдеров никогда не попадают в основной
+ * classpath лаунчера. При выборе дожидаются завершения текущих вызовов, останавливают старый экземпляр, запускают выбранный
+ * и закрывают доступ при ошибке запуска либо несовместимости. Глобального реестра нет.
+ * Зависший сторонний обратный вызов прерывается по истечении срока; супервизор JVM на Go
+ * остаётся последней границей для кода, игнорирующего прерывание.
  */
 public final class ProviderRegistry implements AutoCloseable {
     private static final AtomicInteger THREAD_IDS = new AtomicInteger();
@@ -82,7 +82,7 @@ public final class ProviderRegistry implements AutoCloseable {
             return Optional.of(new Selection(serviceId, active.descriptor.id(), active.descriptor.version()));
         }
     }
-    /** Selects an already registered provider, with a *total* deadline including drain and callbacks. */
+    /** Выбирает уже зарегистрированного провайдера с *общим* сроком ожидания, включающим завершение вызовов и обработчики. */
     public Selection select(String serviceId, String providerId, Duration timeout) throws Exception {
         checkTimeout(timeout);
         checkNotInsideProvider();
@@ -133,7 +133,7 @@ public final class ProviderRegistry implements AutoCloseable {
             synchronized (gate) { switching = false; gate.notifyAll(); }
         }
     }
-    /** Invoke the selected typed provider. Outstanding invocations drain before replacement. */
+    /** Вызывает выбранного типизированного провайдера. Активные вызовы завершаются до замены. */
     public <T extends JavaProvider, R> R call(ProviderService<T> service, Function<T, R> action) {
         Objects.requireNonNull(service); Objects.requireNonNull(action);
         T selected;
@@ -154,7 +154,7 @@ public final class ProviderRegistry implements AutoCloseable {
             synchronized (gate) { inflight--; gate.notifyAll(); }
         }
     }
-    /** Drains operations and closes providers, even if Extension.stop() has failed. */
+    /** Ожидает завершения операций и закрывает провайдеров даже при ошибке Extension.stop(). */
     public void shutdown(Duration timeout) throws Exception {
         checkTimeout(timeout);
         checkNotInsideProvider();

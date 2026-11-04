@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Authenticated local Extensions Host Protocol 1.0 hello and heartbeat client. */
+/** Аутентифицированный локальный клиент hello/heartbeat протокола Extensions Host 1.0. */
 public final class HostSession implements AutoCloseable {
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).proxy(new ProxySelector(){public List<Proxy> select(URI u){return List.of(Proxy.NO_PROXY);}public void connectFailed(URI u,SocketAddress a,IOException e){}}).build();
     private final URI origin;private final String token,extensionId,instanceId;
@@ -24,7 +24,7 @@ public final class HostSession implements AutoCloseable {
     private volatile boolean connected;
     private volatile String eventProtocol="";
     private HostSession(URI origin,String token,String extensionId,String instanceId){this.origin=origin;this.token=token;this.extensionId=extensionId;this.instanceId=instanceId;}
-    /** Read the exact active manifest from the authenticated Go supervisor, not package payload copies. */
+    /** Читать точный активный манифест из аутентифицированного Go-супервизора, а не из копий содержимого пакета. */
     public static String fetchManifestFromEnvironment(Map<String,String> env)throws IOException,InterruptedException {
         String raw=required(env,"LAUNCHER_EXTENSION_HOST_URL");
         URI origin=validateOrigin(raw);
@@ -52,10 +52,10 @@ public final class HostSession implements AutoCloseable {
     public synchronized void connect() throws IOException,InterruptedException {connect("",Set.of());}
     public synchronized void connect(String callbackUrl) throws IOException,InterruptedException {connect(callbackUrl,Set.of());}
     /**
-     * Require capabilities before Extension.start() is invoked. The v1.0 hello
-     * request is unchanged, so this client also works with the original 0.42.0
-     * Go host. An old host must return its actual capability list; an absent
-     * list never implies permission to perform an operation.
+     * Проверить возможности до вызова Extension.start(). Запрос hello версии v1.0
+     * остаётся неизменным, поэтому этот клиент также работает с исходным Go-хостом 0.42.0.
+     * Старый хост обязан возвращать реальный список возможностей; отсутствие
+     * списка никогда не означает разрешение на выполнение операции.
      */
     public synchronized void connect(String callbackUrl,Set<String> requiredCapabilities) throws IOException,InterruptedException {
         if(closed.get())throw new IllegalStateException("session closed");
@@ -115,7 +115,7 @@ public final class HostSession implements AutoCloseable {
         if(!events.contains(eventType))throw new SecurityException("host event unavailable: "+eventType);
         if(!eventProtocol.isEmpty()&&!"1.0".equals(eventProtocol))throw new SecurityException("event protocol unsupported");
     }
-    /** A Java target is only marked running after Extension.start() completed. */
+    /** Цель Java считается работающей только после завершения Extension.start(). */
     public void ready() throws IOException,InterruptedException {
         requireConnected();
         Map<String,Object> answer=post("/v1/ready",Map.of("protocolVersion","1.0","instanceId",instanceId));

@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Deterministic transitive dependency planning against available versioned manifests (no network or installs). */
+/** Детерминированное транзитивное разрешение зависимостей по доступным версионированным манифестам (без сети и установки). */
 public final class DependencyResolver {
     private DependencyResolver() {}
     public static List<ExtensionManifest> resolve(Collection<ExtensionManifest> available, Collection<ExtensionManifest.Dependency> roots) {

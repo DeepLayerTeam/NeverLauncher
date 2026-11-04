@@ -297,7 +297,7 @@ func TestSQLiteWrongMFAKeyAndRecoveryPersistence(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	// Secret must be persisted in cleartext.
+	// Секрет НЕ должен сохраняться в открытом виде.
 	e = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		var ciphertext []byte
 		if er := q.QueryRowContext(ctx, `SELECT secret_ciphertext FROM mfa_totp WHERE user_id='owner'`).Scan(&ciphertext); er != nil {

@@ -1,3 +1,3 @@
 package pro.gravit.launcher.base.modules;
-/** Marker only, as in the upstream API. Launcher supplies a typed subtype. */
+/** Только маркер, как в исходном API. Лаунчер предоставляет типизированный подтип. */
 public interface LauncherInitContext {}

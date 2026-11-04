@@ -8,9 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Set;
 
-/** Permission-scoped ServerBridge v3 integration over the existing Go Host broker.
- * Read methods never expose node public/private credentials. Operational commands
- * enter the durable ServerBridge queue; an accepted command is not an executed one.
+/** Интеграция ServerBridge v3 через существующий Go Host Broker с ограничениями по разрешениям.
+ * Методы чтения никогда не раскрывают публичные/приватные учётные данные узла. Рабочие команды
+ * попадают в постоянную очередь ServerBridge; принятая команда не означает выполненную.
  */
 public final class ServerBridgeServices {
     private final HostSession host;
@@ -68,14 +68,14 @@ public final class ServerBridgeServices {
     private Map<String,Object> call(String method, Map<String,Object> payload)throws IOException,InterruptedException {
         return host.capability(method,payload);
     }
-    /** Live status; serverbridge:read on this project. */
+    /** Текущее состояние; serverbridge:read для этого проекта. */
     public Server server(String projectId,String serverId)throws IOException,InterruptedException {
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));req.put("serverId",id(serverId,"serverId"));
         Server result=decodeServer(Json.object(call("bridge.server",req).get("server")));
         if(!projectId.equals(result.projectId())||!serverId.equals(result.id()))throw new SecurityException("server scope changed");
         return result;
     }
-    /** Bounded, stable ID-ordered project-scoped list. */
+    /** Ограниченный стабильный список проекта, отсортированный по ID. */
     public Page<Server> servers(String projectId,int offset,int limit)throws IOException,InterruptedException {
         if(offset<0||offset>1_000_000||limit<1||limit>50)throw new IllegalArgumentException("invalid page");
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));req.put("offset",offset);req.put("limit",limit);
@@ -95,9 +95,9 @@ public final class ServerBridgeServices {
         }
         return new Page<>(servers,next);
     }
-    /** Advisory existing join-ticket check, never a Minecraft login/admission authorization.
-     * Official session validation and atomic ticket redemption remain exclusively in ServerBridge.
-     * Requires both serverbridge:read and project:read.
+    /** Рекомендательная проверка существующего join-ticket, но не авторизация входа/допуска Minecraft.
+     * Официальная проверка сеанса и атомарное погашение билета выполняются исключительно ServerBridge.
+     * Требуются одновременно serverbridge:read и project:read.
      */
     public boolean pendingJoinTicket(String projectId,String serverId,String username)throws IOException,InterruptedException {
         if(username==null||!username.matches("[A-Za-z0-9_]{3,16}"))throw new IllegalArgumentException("invalid Minecraft username");
@@ -107,8 +107,8 @@ public final class ServerBridgeServices {
         if(!(pending instanceof Boolean result))throw new IllegalArgumentException("invalid join-ticket response");
         return result;
     }
-    /** Commands are persisted for delivery to the authenticated runtime. They are NOT executed synchronously.
-     * Requires serverbridge:read plus the command's game-server permission. Console/shutdown are not supported.
+    /** Команды сохраняются для доставки аутентифицированному Runtime. Они НЕ выполняются синхронно.
+     * Требуется serverbridge:read и разрешение игрового сервера для команды. Console/shutdown не поддерживаются.
      */
     public Receipt command(String projectId,String serverId,String type,Map<String,String> payload,
                            String idempotencyKey,int expiresInSeconds)throws IOException,InterruptedException {
@@ -130,7 +130,7 @@ public final class ServerBridgeServices {
         if(!(result.get("idempotentReplay") instanceof Boolean replay))throw new IllegalArgumentException("missing replay state");
         return new Receipt(command,replay);
     }
-    /** Recheck a durable command's state; pending/leased is not successful completion. */
+    /** Повторная проверка сохранённого состояния команды; pending/leased не означает успешного завершения. */
     public Command commandStatus(String projectId,String serverId,String commandId)throws IOException,InterruptedException {
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));
         req.put("serverId",id(serverId,"serverId"));req.put("commandId",id(commandId,"commandId"));
@@ -151,8 +151,8 @@ public final class ServerBridgeServices {
         return new ServerEvent(required(m,"serverId"),required(m,"runtimeId"),numeric(event,"sequence"),
                 required(event,"eventId"),required(event,"type"),numeric(event,"occurredAtUnixMillis"),values);
     }
-    /** Existing signed ServerBridge event stream -> durable Go EventBus -> Java callback.
-     * Delivery remains at-least-once, ordered by the event bus aggregate key.
+    /** Существующий подписанный поток событий ServerBridge -> постоянный Go EventBus -> Java-обратный вызов.
+     * Доставка выполняется как минимум один раз с порядком по агрегатному ключу шины событий.
      */
     public long subscribeEvents(RuntimeEvents.DetailedListener<ServerEvent> listener)throws IOException,InterruptedException {
         Objects.requireNonNull(listener);

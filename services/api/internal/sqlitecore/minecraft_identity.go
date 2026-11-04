@@ -15,8 +15,8 @@ import (
 var mcName = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 var mcUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 
-// SaveMinecraftIdentity binds an existing canonical user to one immutable UUID.
-// It derives a new UUID from mutable email, display name or launcher name.
+// SaveMinecraftIdentity связывает существующего канонического пользователя с одним неизменяемым UUID.
+// Он выводит новый UUID из изменяемого email, отображаемого имени или имени лаунчера.
 func (a *Auth) SaveMinecraftIdentity(ctx context.Context, p model.MinecraftProfile, actor string) (model.MinecraftProfile, error) {
 	p.Name = strings.TrimSpace(p.Name)
 	p.UUID = strings.ToLower(strings.TrimSpace(p.UUID))

@@ -93,8 +93,8 @@ def selected_components(manifest, choice):
                 raise ValueError("exclusive component group conflict")
             groups[group] = ident
         for conflict in c.get("conflicts", []):
-            # The pinned native resolver enforces versionRange as well;
-            # the attestor treats a selected conflict as safe by default.
+            # Закреплённый нативный резолвер также применяет versionRange;
+            # аттестатор НЕ считает выбранный конфликт безопасным по умолчанию.
             if conflict["id"] in selected and not conflict.get("versionRange"):
                 raise ValueError("conflicting selected components")
     selected_files = set()

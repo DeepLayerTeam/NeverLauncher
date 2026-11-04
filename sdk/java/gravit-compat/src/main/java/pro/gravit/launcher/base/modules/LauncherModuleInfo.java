@@ -2,7 +2,7 @@ package pro.gravit.launcher.base.modules;
 import java.util.*;
 import pro.gravit.utils.Version;
 
-/** Fixed API subset; not the full Gravit modules manager. */
+/** Фиксированное подмножество API; не полноценный менеджер модулей Gravit. */
 public final class LauncherModuleInfo {
     public final String name;
     public final Version version;

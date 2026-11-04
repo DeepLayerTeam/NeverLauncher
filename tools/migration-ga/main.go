@@ -1,6 +1,6 @@
-// Migration Center GA evidence runner. This binary does not declare a deployment
-// production-ready merely because an administrator reviewed a migration report:
-// it executes the configured independent checks and seals their actual output.
+// Исполнитель свидетельств Migration Center GA. Этот бинарник не объявляет развёртывание
+// готовым к production лишь потому, что администратор рассмотрел отчёт миграции:
+// он выполняет настроенные независимые проверки и заверяет их фактические результаты.
 package main
 
 import (
@@ -49,10 +49,10 @@ func referenceClassValid(s string) bool {
 
 var gravit57 = regexp.MustCompile(`^5\.7\.[0-9]+$`)
 
-// These checks are executable operator probes, not claims of universal loader
-// support. A reference project only exercises the features it actually uses;
-// combined coverage includes FileAuth, SQL, official auth, two loaders,
-// optional files, textures, source-port modules and safe cutover/return.
+// Эти проверки — исполняемые операторские пробы, а не заявления об универсальной поддержке загрузчиков.
+// Референсный проект проверяет только реально используемые возможности;
+// комбинированное покрытие включает FileAuth, SQL, официальную авторизацию, два загрузчика,
+// необязательные файлы, текстуры, перенесённые исходные модули и безопасное переключение/возврат.
 var commonChecks = []string{
 	"uuid-world-plugin-data", "admin-permissions", "desktop-cache-install",
 	"staged-cutover-canary", "operational-rollback-drill",
@@ -114,8 +114,8 @@ type Decision struct {
 	Revision int64  `json:"revision"`
 }
 
-// This mirrors the backend's v1 report wire schema, including Go's canonical
-// struct field order, so a receipt cannot be rebound to an altered report.
+// Это повторяет сетевую схему отчёта v1 Backend, включая канонический
+// порядок полей структуры Go, чтобы квитанцию нельзя было привязать к изменённому отчёту.
 type Report struct {
 	Format          string         `json:"format"`
 	RunID           string         `json:"runId"`
@@ -329,9 +329,9 @@ func getJSON(ctx context.Context, client *http.Client, endpoint, token string, o
 	if e != nil {
 		return e
 	}
-	// All Launcher Admin responses are enveloped as {"data": ...}.
-	// Do not accept a bare or unknown response that only happens to match a
-	// subset of the expected report fields.
+	// Все ответы Launcher Admin упакованы в оболочку {"data": ...}.
+	// Не принимать прямой или неизвестный ответ, который случайно соответствует
+	// лишь части ожидаемых полей отчёта.
 	var envelope struct {
 		Data json.RawMessage `json:"data"`
 	}
@@ -358,9 +358,9 @@ func checkBackendURL(raw string) error {
 	return nil
 }
 
-// sourceJarVersion verifies the actual LaunchServer binary contained in MIG03,
-// not the operator's version claim. This intentionally accepts only manifests
-// carrying an explicit Gravit/LaunchServer product identity.
+// sourceJarVersion проверяет реальный бинарник LaunchServer внутри MIG03,
+// а не заявленную оператором версию. Намеренно принимаются только манифесты
+// с явной идентичностью продукта Gravit/LaunchServer.
 func sourceJarEvidence(archivePath string) (string, string, error) {
 	outer, err := zip.OpenReader(archivePath)
 	if err != nil {
@@ -495,8 +495,8 @@ func validatePlan(p Plan) error {
 	return nil
 }
 
-// boundedOutput aborts checks that try to emit unbounded JSON on stdout.
-// Stderr is intentionally not collected (it can contain access tokens).
+// boundedOutput прерывает проверки, пытающиеся вывести неограниченный JSON в stdout.
+// Stderr намеренно не собирается (может содержать токены доступа).
 type boundedOutput struct {
 	data  bytes.Buffer
 	limit int
@@ -518,7 +518,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	defer cancel()
 	exe := exec.CommandContext(cctx, c.Command[0], c.Command[1:]...)
 	exe.Dir = filepath.Dir(p.SourceArchive)
-	// No backend credentials or signing keys are exposed to test subprocesses.
+	// Тестовым подпроцессам не предоставляются учётные данные Backend или ключи подписи.
 	env := []string{}
 	for _, s := range os.Environ() {
 		if strings.HasPrefix(s, "LAUNCHER_MIGRATION_GA_") || strings.HasPrefix(s, "LAUNCHER_ADMIN_TOKEN=") || strings.HasPrefix(s, "MIGRATION_GA_") {
@@ -529,12 +529,12 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	exe.Env = env
 	stdout := &boundedOutput{limit: 4 << 20}
 	exe.Stdout = stdout
-	// Check stderr can contain credentials; never allow it into CI logs.
+	// Stderr проверки может содержать учётные данные; не допускать его в журналы CI.
 	exe.Stderr = io.Discard
 	started := time.Now()
 	e := exe.Run()
 	out := stdout.data.Bytes()
-	// A replaced test executable cannot contribute to a signed GA result.
+	// Подменённый исполняемый файл теста не может участвовать в подписанном результате GA.
 	if err := verifyExecutable(c); err != nil {
 		return result, fmt.Errorf("%s check executable changed: %w", c.Name, err)
 	}
@@ -676,9 +676,9 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	return nil
 }
 
-// writePrivate publishes a fully fsynced file without ever replacing an
-// existing GA result. Linking the temp file provides an atomic no-overwrite
-// publish operation on the destination filesystem.
+// writePrivate публикует полностью fsync-синхронизированный файл, никогда не заменяя
+// существующий результат GA. Связывание временного файла жёсткой ссылкой обеспечивает атомарную публикацию
+// без перезаписи в целевой файловой системе.
 func writePrivate(path string, data []byte) error {
 	if path == "" {
 		return errors.New("output path is required")
@@ -748,8 +748,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if r.RunID != p.RunID || r.ProjectID != p.ProjectID || r.SourceSHA256 != source {
 		return errors.New("source ZIP, project or run does not match database report")
 	}
-	// Bind the tested release to an actually active cutover, not merely
-	// a release ID or digest invented by the operator's test scripts.
+	// Связать протестированный выпуск с действительно активным переключением, а не просто
+	// ID выпуска или дайджестом, выдуманным скриптами тестирования оператора.
 	foundTarget := false
 	for _, ev := range r.Evidence {
 		if strings.HasPrefix(ev.Stage, "cutover_scope:") && ev.State == "verified" && ev.Details == "active" && ev.SHA256 == p.TargetReleaseSHA256 {
@@ -781,8 +781,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	}
 	sort.Strings(uuids)
 	b := Bundle{Format: format, Version: version, ReferenceClass: p.ReferenceClass, RunID: p.RunID, ProjectID: p.ProjectID, CommitSHA: p.CommitSHA, SourceVersion: p.SourceVersion, TrustedGravitJarSHA256: p.TrustedGravitJarSHA256, TargetReleaseSHA256: p.TargetReleaseSHA256, ReportSHA256: r.ReportSHA256, SourceSHA256: source, ReviewedBy: review.ReviewedBy, ReviewEvidenceSHA256: review.EvidenceSHA256, Checks: []SealedProbe{}}
-	// Create the evidence directory only after the authoritative report and
-	// immutable operator review have been checked. No prior directory is reused.
+	// Создавать каталог свидетельств только после проверки авторитетного отчёта и
+	// неизменяемого рассмотрения оператором. Ранее созданные каталоги не используются повторно.
 	if e = os.Mkdir(evidenceDir, 0700); e != nil {
 		return fmt.Errorf("new evidence directory: %w", e)
 	}
@@ -796,8 +796,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if err := ensureSnapshotStillMatches(p, evidenceDir); err != nil {
 		return fmt.Errorf("snapshots changed during GA execution: %w", err)
 	}
-	// A check must not change its own Gravit source bytes after the initial
-	// source verification while still receiving a signed certificate.
+	// Проверка не должна менять собственные исходные байты Gravit после первоначальной
+	// проверки источника и всё же получать подписанный сертификат.
 	again, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
 		return e
@@ -805,8 +805,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if again != source {
 		return errors.New("source archive changed during GA checks")
 	}
-	// Re-read the backend: a new source receipt, route or identity invalidates
-	// a previously successful check before its certificate can be written.
+	// Повторно прочитать Backend: новая квитанция источника, маршрут или идентичность делают
+	// предыдущую успешную проверку недействительной до записи сертификата.
 	var after Report
 	if e = getJSON(ctx, client, endpoint, token, &after); e != nil {
 		return e
@@ -824,8 +824,8 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	if afterReview.Status != review.Status || afterReview.ReviewedBy != review.ReviewedBy || afterReview.ReviewedAt != review.ReviewedAt || afterReview.EvidenceReference != review.EvidenceReference || afterReview.EvidenceSHA256 != review.EvidenceSHA256 || afterReview.Report.ReportSHA256 != r.ReportSHA256 {
 		return errors.New("migration operator review changed during GA E2E; rerun")
 	}
-	// Access independent audit signing material only after all untrusted
-	// probe commands have exited and the authoritative state was reread.
+	// Доступ к материалам подписи независимого аудита допускается только после завершения всех недоверенных
+	// команд проб и повторного чтения авторитетного состояния.
 	key, e := signingKey(p.SigningKey)
 	if e != nil {
 		return e

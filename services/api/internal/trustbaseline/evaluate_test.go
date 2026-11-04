@@ -84,7 +84,7 @@ func TestExpiredLegacyChallengeCannotBecomeRemoteEvidence0311(t *testing.T) {
 	if !got.EvidenceExpiresAt.IsZero() || !contains0311(got.ReasonCodes, "challenge-response-expired-or-invalid") || got.ProfileDecisions[Strict].Result != Deny {
 		t.Fatalf("expired accepted: %+v", got)
 	}
-	// Loss of TPM must not lock a user out of the standard profile.
+	// Потеря TPM не должна блокировать вход пользователя со стандартным профилем.
 	d.KeyBinding = "software"
 	d.HardwareProvider = ""
 	d.AttestationState = "unattested"

@@ -54,8 +54,8 @@ func TestMissingCoreStateFailsClosed(t *testing.T) {
 	}
 }
 
-// Requires an actual PostgreSQL service and an ext4/XFS/Btrfs local volume.
-// LAUNCHER_PG_TEST_DSN must name an isolated test database.
+// Требуется действующая служба PostgreSQL и локальный том ext4/XFS/Btrfs.
+// LAUNCHER_PG_TEST_DSN должна указывать изолированную тестовую БД.
 func TestPGStagingMigration(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PG_TEST_DSN")
 	if dsn == "" {
@@ -185,8 +185,8 @@ func TestPGStagingMigration(t *testing.T) {
 	if _, err = p.Exec(ctx, "TRUNCATE "+qualified("refresh_tokens")); err == nil {
 		t.Fatal("immutable PG import allowed TRUNCATE, bypassing revocation preservation")
 	}
-	// A complete physical reverse transfer, not just a manifest copy, must
-	// reproduce all SQLite bytes, schema objects, and user data.
+	// Полный физический обратный перенос, а не просто копия манифеста, должен
+	// восстановить все байты SQLite, объекты схемы и пользовательские данные.
 	exported := filepath.Join(dir, "exported.db")
 	reverse, err := Export(ctx, dsn, exported)
 	if err != nil {
@@ -213,7 +213,7 @@ func TestPGStagingMigration(t *testing.T) {
 	if _, err = Export(ctx, dsn, exported); err == nil {
 		t.Fatal("reverse migration overwrote existing backup")
 	}
-	// Real SQLite Core operations still work after a reverse import.
+	// Настоящие операции SQLite Core продолжают работать после обратного импорта.
 	restored := filepath.Join(dir, "restored.db")
 	if _, err = sqlitedurable.RestoreBackup(ctx, exported, restored, false); err != nil {
 		t.Fatal(err)
@@ -228,7 +228,7 @@ func TestPGStagingMigration(t *testing.T) {
 	if _, err = Import(ctx, backup, dsn); err == nil {
 		t.Fatal("rerun overwrote existing import")
 	}
-	// Tampering with the file invalidates the hash-checked sidecar and blocks transfer.
+	// Подмена файла нарушает проверяемый по хешу sidecar и блокирует перенос.
 	f, err := os.OpenFile(backup, os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatal(err)

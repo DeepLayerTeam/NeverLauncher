@@ -58,8 +58,8 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
 	return out, rows.Err()
 }
 
-// FinishTextureGarbage0253 removes the DB record and associated quota entries.
-// It will delete an object that became referenced after its GC lease.
+// FinishTextureGarbage0253 удаляет запись БД и связанные записи квот.
+// Он НЕ удаляет объект, на который снова сослались после получения GC-аренды.
 func (r *SQLRepository) FinishTextureGarbage0253(ctx context.Context, digest string) error {
 	if err := r.check(); err != nil {
 		return err

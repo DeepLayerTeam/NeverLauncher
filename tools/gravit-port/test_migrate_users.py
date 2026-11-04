@@ -49,7 +49,7 @@ class Stub:
         if path.endswith("/security/preview"):
             return {"importedAccounts": 1, "appliedAt": None}
         if path.endswith("/security/activate"):
-            # First actual commit is not marked verified until a later GET.
+            # Первый реальный COMMIT не отмечается проверенным до следующего GET.
             return {"importedAccounts": 1, "appliedAt": "2026-11-02T16:00:00Z", "verified": False}
         if path.endswith("/security"):
             return {"importedAccounts": 1, "verified": True}

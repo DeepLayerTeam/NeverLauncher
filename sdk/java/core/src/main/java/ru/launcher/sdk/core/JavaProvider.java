@@ -1,7 +1,7 @@
 package ru.launcher.sdk.core;
 
-/** Lifecycle contract for a provider running inside one authenticated Java extension JVM.
- * Implementations are ordinary Java services; privileged host operations must use RuntimeServices.
+/** Контракт жизненного цикла провайдера внутри одной аутентифицированной JVM Java-расширения.
+ * Реализации — обычные Java-сервисы; привилегированные операции хоста должны использовать RuntimeServices.
  */
 public interface JavaProvider {
     void start(ProviderContext context) throws Exception;

@@ -2,9 +2,9 @@ package ru.launcher.sdk.core;
 
 import java.util.Map;
 
-/** Selected content adapter. Its output is untrusted until ContentServices validates it.
- * Package transformations run before the core signing/publish pipeline; they cannot
- * publish, alter a signed manifest or mint download authorization themselves. */
+/** Выбранный адаптер контента. Его результат недоверенный, пока ContentServices не проверит его.
+ * Преобразования пакета выполняются до основного конвейера подписи и публикации; они не могут
+ * самостоятельно публиковать, изменять подписанный манифест или выдавать разрешение на скачивание. */
 public interface ContentProvider extends JavaProvider {
     ContentServices.Asset source(String projectId, String logicalPath) throws Exception;
     ContentServices.Asset texture(String projectId, String profileId, String kind) throws Exception;

@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
-/** Genuine SPI selection / lifecycle / shutdown races, no mocked provider registry. */
+/** Настоящие гонки выбора SPI, жизненного цикла и остановки без имитации реестра провайдеров. */
 public final class ProviderRegistry0483Tests {
     private static int assertions;
     private static void ok(boolean yes, String label) { assertions++; if(!yes) throw new AssertionError(label); }

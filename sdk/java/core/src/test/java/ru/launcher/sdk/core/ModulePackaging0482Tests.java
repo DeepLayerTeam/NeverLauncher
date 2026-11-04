@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.zip.*;
 
-/** Load a real third-party bytecode class from a pinned nested JAR. */
+/** Загрузить реальный байткод стороннего класса из закреплённого вложенного JAR. */
 public final class ModulePackaging0482Tests {
     private static int checks;
     private static void check(boolean condition,String label){checks++;if(!condition)throw new AssertionError(label);}

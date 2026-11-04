@@ -78,7 +78,7 @@ func newProfile(name string) (uintptr, string, error) {
 	n := utf16(name)
 	var sid uintptr
 	r, _, _ := createProfile.Call(uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(n)), 0, 0, uintptr(unsafe.Pointer(&sid)))
-	// HRESULT ERROR_ALREADY_EXISTS = 0x800700b7. Only the randomized caller name can reuse an existing profile.
+	// HRESULT ERROR_ALREADY_EXISTS = 0x800700b7. Только случайное имя вызывающего может совпасть с существующим профилем.
 	if r == 0x800700b7 {
 		r, _, _ = deriveSID.Call(uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(&sid)))
 	}
@@ -125,8 +125,8 @@ func closeHandle(h uintptr) {
 	}
 }
 
-// Windows junctions and mount points can be reparse points even when an
-// ordinary file-mode check does not identify a symbolic link.
+// Windows junction и точки монтирования могут быть reparse points, даже если
+// обычная проверка режима файла не выявляет символьную ссылку.
 func rejectReparsePoint(path string) error {
 	if !filepath.IsAbs(path) {
 		return errors.New("sandbox-reparse-check-needs-absolute-path")
@@ -208,9 +208,9 @@ type extendedLimits struct {
 }
 type cpuRate struct{ control, rate uint32 }
 
-// Read back the *effective* kernel Job constraints after assignment. A
-// successful SetInformationJobObject call is not proof that all required
-// limits have remained in place or that the process is contained in that Job.
+// Повторно прочитать *эффективные* ограничения Job ядра после назначения. Сам по себе
+// успешный вызов SetInformationJobObject не доказывает, что все обязательные
+// ограничения сохранились или процесс содержится именно в этом Job.
 func verifyJobContainment(job, process uintptr, p Policy) error {
 	var member int32
 	ok, _, e := isProcessInJob.Call(process, job, uintptr(unsafe.Pointer(&member)))
@@ -250,8 +250,8 @@ func verifyJobContainment(job, process uintptr, p Policy) error {
 	return nil
 }
 
-// AppContainer process creation is verified against the actual primary token,
-// not just a successful UpdateProcThreadAttribute call.
+// Создание процесса AppContainer проверяется по фактическому первичному токену,
+// а не только по успешному UpdateProcThreadAttribute.
 func verifyAppContainerToken(process uintptr, wantSID uintptr) error {
 	var token uintptr
 	ok, _, e := openProcessToken.Call(process, 0x0008, uintptr(unsafe.Pointer(&token))) // TOKEN_QUERY
@@ -283,9 +283,9 @@ func verifyAppContainerToken(process uintptr, wantSID uintptr) error {
 	return nil
 }
 
-// Only three explicitly duplicated standard streams may cross the AppContainer
-// boundary. A generic inheritable Win32 HANDLE (database socket, broker pipe,
-// secret file, service token) must be inherited by the extension.
+// Только три явно дублированных стандартных потока могут пересечь границу AppContainer.
+// границу. Обычный наследуемый Win32 HANDLE (сокет БД, канал брокера,
+// секретный файл, токен сервиса) не должен наследоваться расширением.
 func inheritableStandardHandles() ([3]uintptr, error) {
 	var handles [3]uintptr
 	own, _, _ := getCurrentProcess.Call()
@@ -310,8 +310,8 @@ func inheritableStandardHandles() ([3]uintptr, error) {
 }
 
 func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintptr, uint32, error) {
-	// Request a real AppContainer token through the Windows process attribute.
-	// Windows will return ERROR_NOT_SUPPORTED if it cannot apply it.
+	// Запросить настоящий токен AppContainer через атрибут процесса Windows.
+	// Если Windows не сможет применить его, вернёт ERROR_NOT_SUPPORTED.
 	var size uintptr
 	initAttrs.Call(0, 2, 0, uintptr(unsafe.Pointer(&size)))
 	if size == 0 {
@@ -338,8 +338,8 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 			closeHandle(handle)
 		}
 	}()
-	// bInheritHandles must be TRUE for STARTF_USESTDHANDLES, but it is
-	// restricted to this explicit whitelist (not every inheritable handle).
+	// Для STARTF_USESTDHANDLES bInheritHandles должен быть TRUE, но наследование
+	// ограничивается этим явным белым списком (не всеми наследуемыми дескрипторами).
 	r, _, e = updateAttrs.Call(attrs, 0, procThreadHandleList,
 		uintptr(unsafe.Pointer(&streams[0])), unsafe.Sizeof(streams), 0, 0)
 	if err := winerr("AppContainer inherited-handle allowlist", r, e); err != nil {
@@ -365,7 +365,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	if err := winerr("SetInformationJobObject CPU", r, e); err != nil {
 		return fail(err)
 	}
-	// Both cmd and its environment originate from a signed, validated extension manifest.
+	// И cmd, и окружение происходят из подписанного проверенного манифеста расширения.
 	args := append([]string{c.Entrypoint}, c.Args...)
 	commandLine := syscall.EscapeArg(args[0])
 	for _, a := range args[1:] {
@@ -392,7 +392,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	}
 	envBlock = append(envBlock, 0)
 	si := startupInfoEx{startupInfo: startupInfo{cb: uint32(unsafe.Sizeof(startupInfoEx{})), flags: startfUseStdHandles}, attrList: attrs}
-	// Whitelisted duplicate handles only. The handle-list attribute is mandatory.
+	// Только дубликаты дескрипторов из белого списка. Атрибут handle-list обязателен.
 	si.stdInput = streams[0]
 	si.stdOutput = streams[1]
 	si.stdError = streams[2]
@@ -421,8 +421,8 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 		closeHandle(pi.process)
 		return fail(err)
 	}
-	// The child remains suspended until the parent has recorded its real PID.
-	// The helper retains the suspended thread and Job handles until the parent
-	// confirms readiness over the authenticated per-instance control pipe.
+	// Дочерний процесс остаётся приостановленным, пока родитель не запишет его реальный PID.
+	// Помощник удерживает дескрипторы приостановленного потока и Job, пока родитель
+	// не подтвердит готовность через аутентифицированный управляющий канал экземпляра.
 	return pi.process, pi.thread, job, pi.processId, nil
 }

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// TextureBackupObject0253 binds a verified database row to its immutable bytes.
+// TextureBackupObject0253 связывает проверенную запись БД с её неизменяемыми байтами.
 type TextureBackupObject0253 struct {
 	Digest    string `json:"digest"`
 	ByteSize  int64  `json:"byteSize"`
@@ -64,9 +64,9 @@ func backupBytes0253(store Storage, obj TextureBackupObject0253) ([]byte, error)
 	return payload, nil
 }
 
-// BackupTextures0253 writes a complete fsynced snapshot in a temporary
-// directory and only publishes it after verifying all remote/local objects.
-// The destination must not already exist; backup data are owner-only (0600).
+// BackupTextures0253 записывает полный fsync-синхронизированный снимок во временный
+// каталог и публикует его только после проверки всех удалённых/локальных объектов.
+// Назначение не должно существовать; данные копии доступны только владельцу (0600).
 func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBackupObject0253, destination string) error {
 	if destination == "" {
 		return errors.New("backup path required")
@@ -166,12 +166,12 @@ func syncDirectory0253(path string) error {
 	return f.Sync()
 }
 
-// RestoreTextures0253 requires the current database inventory to authorize
-// each restored digest; metadata is not imported or overwritten from a backup.
-// The caller must restore the matching PostgreSQL snapshot separately.
+// RestoreTextures0253 требует актуального списка объектов БД для разрешения
+// каждого восстановленного дайджеста; метаданные не импортируются и не перезаписываются из копии.
+// Соответствующий снимок PostgreSQL вызывающий должен восстановить отдельно.
 func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, inventory []TextureBackupObject0253) (int, error) {
-	// Read an untrusted manifest without a bound: ReadFile allocates the
-	// entire input before the legacy size check. Reject symlinks and non-files.
+	// Читать недоверенный манифест без ограничения опасно: ReadFile выделяет память под
+	// весь ввод до прежней проверки размера. Отклонять символьные ссылки и не-файлы.
 	manifestPath := filepath.Join(snapshot, "manifest.json")
 	info, err := os.Lstat(manifestPath)
 	if err != nil {
@@ -202,9 +202,9 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 	if man.Format != 1 {
 		return 0, errors.New("unsupported texture backup format")
 	}
-	// This command restores a *complete*, pinned database inventory, not a
-	// best-effort subset that could silently leave live profiles with missing
-	// textures. Incremental/partial recovery needs a separate explicit mode.
+	// Эта команда восстанавливает *полный* закреплённый набор объектов БД, а не
+	// частичный набор best-effort, который может незаметно оставить рабочие профили без
+	// текстур. Инкрементальное/частичное восстановление требует отдельного явного режима.
 	allowed := make(map[string]TextureBackupObject0253, len(inventory))
 	for _, b := range inventory {
 		if err := validateBackupObject0253(store, b); err != nil {
@@ -231,7 +231,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 			return 0, fmt.Errorf("backup object %s not authorized by current database", obj.Digest)
 		}
 	}
-	// Preflight ALL objects before writing any, avoiding partial writes on corrupt backup.
+	// Предварительно проверять ВСЕ объекты до записи, избегая частичной записи при повреждённой копии.
 	for _, obj := range man.Objects {
 		if err := ctx.Err(); err != nil {
 			return 0, err
@@ -256,8 +256,8 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		if key != obj.ObjectKey || n != obj.ByteSize {
 			return restored, errors.New("restored object metadata differs")
 		}
-		// Do not trust the return value of a storage write alone. Read back
-		// through the configured local/S3 path and check the full content.
+		// Не доверять только результату операции записи хранилища. Повторно прочитать
+		// через настроенный локальный/S3 путь и проверить всё содержимое.
 		if verification := VerifyTexture02511(ctx, store, obj); verification.Result != "ok" {
 			return restored, fmt.Errorf("restored texture %s failed readback: %s (%s)", obj.Digest, verification.Result, verification.Detail)
 		}

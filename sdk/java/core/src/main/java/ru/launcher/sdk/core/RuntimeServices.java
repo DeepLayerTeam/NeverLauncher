@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Live runtime services backed by the Go host broker, not a mock or local client-side cache. */
+/** Действующие сервисы Runtime на основе Go Host Broker, а не имитация или локальный клиентский кэш. */
 public final class RuntimeServices implements AutoCloseable {
     private final HostSession host;
     private final RuntimeDocuments config,storage;

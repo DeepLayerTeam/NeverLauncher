@@ -1,7 +1,7 @@
 package ru.launcher.sdk.core;
 
-/** Authenticated external identity provider. Never sessions and Minecraft credentials
- * are exclusively owned by the Go federation and official Minecraft flow. */
+/** Аутентифицированный внешний провайдер идентификации. Сеансы Never и учётные данные Minecraft
+ * находятся исключительно в ведении Go-федерации и официального механизма Minecraft. */
 public interface IdentityProvider extends JavaProvider {
     IdentityProof authenticatePassword(String identifier, String secret) throws IdentityFailure;
     VerifiedIdentity resolveIdentity(String subject) throws IdentityFailure;

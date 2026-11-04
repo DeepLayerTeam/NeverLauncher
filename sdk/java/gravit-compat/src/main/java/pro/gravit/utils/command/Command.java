@@ -1,6 +1,6 @@
 package pro.gravit.utils.command;
 import java.util.*;
-/** Callable Gravit-shaped command; execution delegates to the signed Extensions CLI. */
+/** Команда в формате Gravit; выполнение делегируется подписанному CLI Extensions. */
 public abstract class Command {
     public final Map<String,Command> childCommands=new HashMap<>();
     public abstract String getArgsDescription();

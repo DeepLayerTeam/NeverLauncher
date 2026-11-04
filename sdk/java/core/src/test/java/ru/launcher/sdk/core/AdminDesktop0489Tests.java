@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Actual authenticated Go-broker-style HTTP callbacks, persisted settings and signed actions. */
+/** Реальные аутентифицированные HTTP-колбэки в стиле Go-брокера, сохранённые настройки и подписанные действия. */
 public final class AdminDesktop0489Tests {
     private static int checks;
     private static void ok(boolean value,String why){checks++;if(!value)throw new AssertionError(why);}

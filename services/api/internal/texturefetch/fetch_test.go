@@ -116,8 +116,8 @@ func TestHTTPSVerifiedFetchAndResourceLimits(t *testing.T) {
 		dialAddress = address
 		return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
 	}
-	// httptest TLS uses a certificate for example.com? httptest cert covers example.com
-	// and 127.0.0.1. A custom DNS hostname fails certificate hostname verification.
+	// У httptest TLS сертификат для example.com? Сертификат httptest покрывает example.com
+	// и 127.0.0.1. Произвольное DNS-имя не проходит проверку имени хоста в сертификате.
 	_, err := f.Fetch(context.Background(), "https://textures.example.org/image.png", "skin", "classic")
 	if err == nil || !strings.Contains(err.Error(), "certificate") {
 		t.Fatalf("must verify hostname: %v", err)

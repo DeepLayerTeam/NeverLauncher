@@ -19,11 +19,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Export reconstructs the original verified SQLite Core 326 snapshot from
-// the PostgreSQL import schema. The target is always NEW; no live data is
-// overwritten. The PG relational mirror is checked against the SQLite file
-// row-by-row, including hashes and foreign key constraints, before publishing.
-// This is offline data transport, NOT an automatic HTTP backend cutover.
+// Export восстанавливает исходный проверенный снимок SQLite Core 326 из
+// схемы импорта PostgreSQL. Назначение всегда НОВОЕ; рабочие данные не
+// перезаписываются. Реляционное зеркало PG сравнивается с файлом SQLite
+// построчно, включая хеши и ограничения внешних ключей, до публикации.
+// Это офлайн-перенос данных, а НЕ автоматическое переключение HTTP Backend.
 func Export(ctx context.Context, postgresDSN, target string) (out Report, err error) {
 	out = Report{Format: importVersion, PostgreSQLSchema: Schema, ReadyForBackendCutover: false}
 	if strings.TrimSpace(postgresDSN) == "" || strings.TrimSpace(target) == "" {
@@ -73,8 +73,8 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	if out.Format != importVersion || out.SQLiteSchema != sqlitecore.SchemaVersion || out.PostgreSQLSchema != Schema || out.ReadyForBackendCutover || out.SnapshotSHA256 != receiptID || manifest.SHA256 != receiptID || manifest.SchemaVersion != sqlitecore.SchemaVersion || manifest.Bytes <= 0 {
 		return out, errors.New("unsupported, incomplete or inconsistent PostgreSQL transfer receipt")
 	}
-	// A private temporary backup is not exposed until both PostgreSQL mirrors
-	// and original SQLite application invariants have passed verification.
+	// Закрытая временная резервная копия не публикуется, пока оба зеркала PostgreSQL
+	// и исходные инварианты SQLite-приложения не пройдут проверку.
 	dir, err := os.MkdirTemp(parent, ".launcher-export-*")
 	if err != nil {
 		return out, err
@@ -135,9 +135,9 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	if err != nil {
 		return out, fmt.Errorf("PostgreSQL table parity: %w", err)
 	}
-	// Build a new SQLite backup and JSON metadata without clobbering prior data.
-	// Hardlink is atomic; failures clean up an incomplete pair. Verification by
-	// consumers always requires the pair and therefore fails closed.
+	// Создать новую копию SQLite и JSON-метаданные, не уничтожая прежних данных.
+	// Жёсткая ссылка атомарна; при ошибке неполная пара удаляется. Проверка
+	// потребителей всегда требует оба файла и поэтому закрывает доступ при ошибке.
 	publishedDB, publishedSide := false, false
 	defer func() {
 		if err != nil {

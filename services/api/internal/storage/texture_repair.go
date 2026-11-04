@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-// RestoreTextureObject0253 is deliberately *not* called by HTTP uploads. It
-// repairs a corrupt existing object only during an operator-validated restore.
-// Recovery checks every byte and uses atomic local rename or S3 If-Match CAS.
+// RestoreTextureObject0253 намеренно *не* вызывается HTTP-загрузками. Он
+// исправляет повреждённый существующий объект только при подтверждённом оператором восстановлении.
+// Восстановление проверяет каждый байт и использует атомарное локальное переименование или S3 If-Match CAS.
 func RestoreTextureObject0253(ctx context.Context, store Storage, digest string, png []byte) (string, int64, error) {
 	rel, err := texturePath0252(digest)
 	if err != nil {
@@ -62,9 +62,9 @@ func RestoreTextureObject0253(ctx context.Context, store Storage, digest string,
 	if bytes.Equal(existing, png) {
 		return key, int64(len(png)), nil
 	}
-	// Prepare the verified replacement fully before publishing it. Rename is a
-	// single atomic transition for concurrent readers: a process crash cannot
-	// strand the digest without a readable object between two renames.
+	// Полностью подготовить проверенную замену до публикации. Rename —
+	// единый атомарный переход для параллельных читателей: сбой процесса не может
+	// оставить дайджест без доступного для чтения объекта между двумя переименованиями.
 	tmp, err := os.CreateTemp(filepath.Dir(filePath), ".texture-repair-*")
 	if err != nil {
 		return "", 0, err
@@ -150,7 +150,7 @@ func restoreS3Texture0253(ctx context.Context, s3 *S3Storage, digest, rel string
 	if update.StatusCode < 200 || update.StatusCode >= 300 {
 		return "", 0, fmt.Errorf("S3 conditional recovery HTTP %d", update.StatusCode)
 	}
-	// Verify the full replacement through the object endpoint, not only PUT 200.
+	// Проверить полную замену через конечную точку объекта, а не только PUT 200.
 	blob, sz, err := OpenTexture0252(s3, digest)
 	if err != nil {
 		return "", 0, err

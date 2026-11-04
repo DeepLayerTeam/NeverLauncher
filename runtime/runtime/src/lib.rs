@@ -311,7 +311,7 @@ pub struct RuntimeLaunch {
 
 // Сохраняйте порядок полей подписываемой части Manifest v2, совместимый с Go.
 // Go json.Marshal сортирует ключи map; обход Rust HashMap не должен вносить
-// random signing payloads or intermittent Ed25519 verification failures.
+// произвольные данные подписи или периодические ошибки проверки Ed25519.
 fn serialize_sorted_features_0227<S: serde::Serializer>(value: &HashMap<String, bool>, serializer: S) -> Result<S::Ok, S::Error> {
     let sorted: BTreeMap<&str, &bool> = value.iter().map(|(name, enabled)| (name.as_str(), enabled)).collect();
     sorted.serialize(serializer)
@@ -1037,9 +1037,9 @@ pub async fn certify_vanilla_compatibility(
     // вместо пустого журнала, чтобы ошибки Windows-агента были понятны.
     #[cfg(windows)]
     if exit_code == Some(0xE3) || exit_code == Some(0xC000_0409u32 as i32) {
-        // Windows Rust abort() also yields 0xC0000409. Attach authenticated
+        // Windows Rust abort() тоже даёт 0xC0000409. Прикреплять аутентифицированные
         // Указывайте детали нарушения Guard только при фактическом получении события; не помечайте
-        // an unrelated JVM/graphics fail-fast as a Guard finding.
+        // посторонний сбой JVM/графики при немедленном завершении за обнаружение Guard.
         let guard = _sensor_session.report().module_guard;
         if !guard.last_violation.is_empty() {
             let bounded = guard.last_violation.chars().take(1024).collect::<String>();

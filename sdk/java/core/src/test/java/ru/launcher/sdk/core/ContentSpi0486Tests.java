@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 
-/** Real registered provider, authenticated JVM RPC and permissioned Host storage HTTP. */
+/** Реальный зарегистрированный провайдер, аутентифицированный JVM RPC и HTTP-хранилище Host с проверкой разрешений. */
 public final class ContentSpi0486Tests {
     private static int checks;
     private static void ok(boolean v,String m){checks++;if(!v)throw new AssertionError(m);}

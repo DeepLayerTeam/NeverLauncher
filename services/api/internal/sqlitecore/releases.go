@@ -84,8 +84,8 @@ func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, chan
 		if e != nil {
 			return e
 		}
-		// Match existing behavior: draft creation creates an unprotected channel
-		// only when not already present, changing protected setting.
+		// Повторить существующее поведение: создание черновика создаёт незащищённый канал
+		// только если ещё не существует, изменяя защищённый параметр.
 		if _, e = q.ExecContext(ctx, `INSERT INTO channels(project_id,id,name,description,protected) VALUES(?,?,?,'',0) ON CONFLICT(project_id,id) DO NOTHING`, projectID, channel, channel); e != nil {
 			return conflict(e)
 		}

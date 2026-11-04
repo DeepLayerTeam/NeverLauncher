@@ -27,8 +27,8 @@ import zipfile
 import component_upgrade_0458 as native
 
 TARGET = '0.48.0'
-# A supported version here means an accepted input layout for the native updater,
-# not a promise that every third-party extension is ABI-compatible.
+# Поддерживаемая версия здесь означает допустимый формат входных данных для нативного обновлятора,
+# а не гарантию ABI-совместимости каждого стороннего расширения.
 SUPPORTED = {f'0.47.{n}' for n in range(9)} | {f'0.46.{n}' for n in range(4)} | {'0.45.14'}
 RELEASE_RE = re.compile(r'^0\.(?:45\.14|46\.[0-3]|47\.[0-8])$')
 MAX_FILES = 150_000
@@ -228,7 +228,7 @@ def copy_data(root: Path, snapshot: Path, original: dict):
                 out.flush(); os.fsync(out.fileno())
             dst.chmod(info['mode'])
             require(sha_file(dst) == info['sha256'], 'backup verification failed: ' + name)
-    # Directory metadata is not an application release: byte content and mode are authoritative.
+    # Метаданные каталога не являются выпуском приложения: определяющими являются содержимое байтов и права доступа.
     for d in sorted((p for p in snapshot.rglob('*') if p.is_dir()), key=lambda p: -len(p.parts)):
         fsync_directory(d)
         d.chmod(original[d.relative_to(snapshot).as_posix()]['mode'] if d.relative_to(snapshot).as_posix() in original else 0o700)
@@ -254,7 +254,7 @@ def create_backup(root: Path, backup: Path, original: dict, source: str, operati
 
 
 def run_updater(command: list[str], *, timeout=1800, json_response=False):
-    # No stdout/stderr echo: may contain secrets and path-specific credentials.
+    # Не выводить stdout/stderr: они могут содержать секреты и учётные данные, зависящие от пути.
     p = subprocess.run(command, capture_output=True, timeout=timeout, check=False)
     require(p.returncode == 0, f'updater {Path(command[0]).name} failed with exit {p.returncode}')
     if json_response:
@@ -418,9 +418,9 @@ def determine_source(mode, root, args):
         detected = client_source_version(root)
     elif mode == 'prestarter':
         prestarter_source(root)
-        # Prestarter records have opaque signed release hashes rather than SemVer.
-        # If client state is unavailable, only a pinned operator input plus the
-        # actual native verify-installed can establish an upgrade source.
+        # В записях Prestarter используются непрозрачные хеши подписанных выпусков, а не SemVer.
+        # Если состояние клиента недоступно, только зафиксированные входные данные оператора вместе с
+        # фактической нативной проверкой verify-installed могут подтвердить источник обновления.
         state = root / '.launcher' / 'component-update-state.json'
         if state.exists():
             detected = client_source_version(root)

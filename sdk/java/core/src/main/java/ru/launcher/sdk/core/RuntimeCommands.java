@@ -3,7 +3,7 @@ package ru.launcher.sdk.core;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Typed command registry for Java CLI targets and authenticated callbacks. */
+/** Типизированный реестр команд для Java CLI и аутентифицированных обратных вызовов. */
 public final class RuntimeCommands {
     @FunctionalInterface public interface Decoder<T>{T decode(Object json)throws Exception;}
     @FunctionalInterface public interface Handler<T>{Object execute(T arguments)throws Exception;}

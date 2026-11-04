@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
-/** Real thread scheduling and loopback HTTP regressions for the 0.48.1 SDK/host. */
+/** Реальное планирование потоков и регрессионные проверки loopback HTTP для SDK/хоста 0.48.1. */
 public final class HostStability0481Tests {
     private static int checks;
     private static void check(boolean yes,String message){checks++;if(!yes)throw new AssertionError(message);}

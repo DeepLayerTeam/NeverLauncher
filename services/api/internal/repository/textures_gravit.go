@@ -7,10 +7,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// GravitImportState02510 performs imports for a guessed user identity.
-// It lets an operator distinguish a preexisting selection from a previously
-// completed import before consuming resources, while UploadTexture0252 enforces
-// these constraints again inside its transaction.
+// GravitImportState02510 не выполняет импорт по предполагаемой идентичности пользователя.
+// Она позволяет оператору отличить существовавший ранее выбор от ранее
+// завершённого импорта до расходования ресурсов, тогда как UploadTexture0252 обеспечивает
+// эти ограничения повторно внутри своей транзакции.
 func (r *SQLRepository) GravitImportState02510(ctx context.Context, sourceID, rowID string, p model.MinecraftProfile, kind string) (already bool, revision int64, exists bool, err error) {
 	if err = r.check(); err != nil {
 		return

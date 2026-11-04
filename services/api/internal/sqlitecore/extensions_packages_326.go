@@ -191,8 +191,8 @@ func extensionSignatureMessage(id, version, digest string) []byte {
 	return []byte("Launcher/extension-package/0.32.6\n" + id + "\n" + version + "\n" + digest + "\n")
 }
 
-// PublishExtensionPackage verifies the actual persisted bytes and a trusted
-// Ed25519 signature over the extension ID/version/digest tuple, just a caller manifest.
+// PublishExtensionPackage проверяет реально сохранённые байты и доверенную
+// подпись Ed25519 для кортежа ID/версия/дайджест расширения, а не только манифест вызывающего.
 func (r *Repository) PublishExtensionPackage(ctx context.Context, input ExtensionPackage, actor string) (out ExtensionPackage, err error) {
 	if !durableFieldsNonempty(input.ExtensionID, input.Version, input.Publisher) || !isHex256(input.Digest) {
 		return out, errors.New("invalid extension package tuple")

@@ -193,8 +193,8 @@ def fixture(work):
             "preset": "default",
         },
     )
-    # V09 fixture: independently verifiable previous package and recorded CLI
-    # transaction outputs. Real updater coverage is exercised in the CLI tests.
+    # Фикстура V09: независимо проверяемый предыдущий пакет и записанный CLI
+    # результаты транзакции. Реальное покрытие обновлятора проверяется в тестах CLI.
     prev = {
         "packageId": "prev-package",
         "version": "0.9.0",

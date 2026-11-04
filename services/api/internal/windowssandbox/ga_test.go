@@ -7,8 +7,8 @@ import (
 	"unsafe"
 )
 
-// The only inheritable handles supplied to a sandboxed process must be
-// explicit duplicates of the standard streams, arbitrary process state.
+// Единственные наследуемые дескрипторы для изолированного процесса должны быть
+// явно дублированными стандартными потоками, а не произвольным состоянием процесса.
 func TestGAInheritedHandlesWhitelisted0320(t *testing.T) {
 	streams, err := inheritableStandardHandles()
 	if err != nil {

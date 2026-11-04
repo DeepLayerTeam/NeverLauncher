@@ -158,8 +158,8 @@ func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A disk/connection failure after domain mutation must be reported
-	// as a durable write or served from the unsynced in-process cache.
+	// Ошибка диска/подключения после изменения домена должна сообщаться
+	// как долговременная запись либо обслуживаться из несинхронизированного кэша процесса.
 	if err := r.store.Close(); err != nil {
 		t.Fatal(err)
 	}

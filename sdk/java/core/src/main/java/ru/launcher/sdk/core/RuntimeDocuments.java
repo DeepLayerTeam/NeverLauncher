@@ -3,7 +3,7 @@ package ru.launcher.sdk.core;
 import java.io.IOException;
 import java.util.*;
 
-/** Durable, extension/scope-isolated documents served by the authenticated Go broker. */
+/** Постоянные документы, изолированные по расширению и области действия, обслуживаются аутентифицированным Go-брокером. */
 public final class RuntimeDocuments {
     private final HostSession host;private final String kind;
     RuntimeDocuments(HostSession host,String kind){this.host=host;this.kind=kind;}

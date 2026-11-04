@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-// DEP00 GA filesystem locking/flush verification currently covers Linux
-// ext4/xfs/btrfs only. Refuse other OS rather than claim untested guarantees.
+// Проверки блокировок/сброса на диск DEP00 GA пока охватывают только Linux
+// ext4/xfs/btrfs. Отклонять другие ОС, а не заявлять о непроверенных гарантиях.
 func verifyLocalPath(string) error {
 	return errors.New("SQLite durable filesystem and process fencing not certified on this OS")
 }

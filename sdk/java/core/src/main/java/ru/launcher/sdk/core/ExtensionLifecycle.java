@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Bounded, cancellable extension lifecycle; a stuck callback cannot lock the control thread. */
+/** Ограниченный по времени и отменяемый жизненный цикл расширения; зависший обратный вызов не блокирует управляющий поток. */
 public final class ExtensionLifecycle implements AutoCloseable {
     public enum State { NEW, STARTING, RUNNING, STOPPING, STOPPED, FAILED }
     private static final AtomicInteger IDS=new AtomicInteger();

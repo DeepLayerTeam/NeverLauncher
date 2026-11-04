@@ -17,9 +17,9 @@ import (
 	"strings"
 )
 
-// Evidence is not a substitute for real Minecraft and database checks. It is
-// the exact, durable output they produced, independently re-verifiable after
-// the process that performed certification has exited.
+// Свидетельства не заменяют настоящие проверки Minecraft и БД. Это
+// точный сохранённый результат таких проверок, который можно независимо проверить даже после
+// завершения процесса сертификации.
 func verifyExecutable(c Check) error {
 	info, err := os.Lstat(c.Command[0])
 	if err != nil {
@@ -152,8 +152,8 @@ func verifyEvidence(b Bundle, dir string) error {
 		if err = decodeStrict(raw, &probe); err != nil {
 			return err
 		}
-		// The certificate signs the canonical normalized receipt, not trailing
-		// whitespace or operator-controlled formatting.
+		// Сертификат подписывает каноническую нормализованную квитанцию, а не завершающие
+		// пробелы или форматирование под контролем оператора.
 		canonical, err := json.Marshal(probe)
 		if err != nil {
 			return err
@@ -230,9 +230,9 @@ func readCertificate(filename string) (Bundle, error) {
 	return cert, err
 }
 
-// One operator cannot declare the whole fleet migrated by testing only the
-// easiest server. Each required reference has its own signed receipt and all
-// 13 real checks; projects and source archives must be genuinely distinct.
+// Один оператор не может объявить всю инфраструктуру мигрированной, проверив только
+// самый простой сервер. Для каждой обязательной ссылки нужна собственная подписанная квитанция и все
+// 13 реальных проверок; проекты и исходные архивы должны действительно различаться.
 func verifyCohort(keyFile string, cohort map[string]CohortInput) error {
 	public, err := loadTrustedKey(keyFile)
 	if err != nil {

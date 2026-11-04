@@ -21,9 +21,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-/** Live integrity enforcement for the verified Minecraft process, not a diagnostic-only report.
- * A trusted launch supplies exact digest pins from the verified release/Guard policy.
- * In-process checks cannot protect against fully trusted malicious native/JVM code.
+/** Активное обеспечение целостности проверенного процесса Minecraft, а не только диагностический отчёт.
+ * Доверенный запуск предоставляет точные закреплённые дайджесты из проверенного выпуска/политики Guard.
+ * Внутрипроцессные проверки не защищают от полностью доверенного вредоносного нативного/JVM-кода.
  */
 final class RuntimeIntegrity0505 implements ClassFileTransformer {
     private static final int LIMIT = 8192;

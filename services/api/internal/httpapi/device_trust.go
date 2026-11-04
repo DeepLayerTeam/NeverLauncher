@@ -214,7 +214,7 @@ func sanitizeTrustedDevice0121(d model.TrustedDevice) model.TrustedDevice {
 	// В версии 0.31.1 удалённо проверяемая аттестация TPM/Secure Enclave не
 	// реализована. Понижайте доверие к устаревшим заявлениям, даже если
 	// репозиторий содержит
-	// "verified". This must never cause a privilege increase.
+	// «verified». Это никогда не должно повышать привилегии.
 	d.RemoteHardwareProvenance = "not-verified"
 	d.TrustAssessment = trustbaseline.Evaluate(d, false, time.Now().UTC())
 	d.PublicKey = ""

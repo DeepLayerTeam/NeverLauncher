@@ -58,8 +58,8 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 	}
 	var t model.ServerBridgeTexture
 	var userID string
-	// Use an arbitrary foreign UUID as a texture owner. Legacy aliases
-	// only resolve mappings whose proof was established by the SQL migration.
+	// Не использовать произвольный чужой UUID как владельца текстуры. Устаревшие псевдонимы
+	// разрешают только те сопоставления, которые были доказаны SQL-миграцией.
 	err = r.db.QueryRowContext(ctx, `SELECT i.profile_uuid,i.profile_name,i.user_id FROM texture_identities i
       WHERE i.realm='local-project' AND i.profile_uuid=$1
       UNION ALL
@@ -204,8 +204,8 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 		return model.TextureAssignment0251{}, err
 	}
 	defer tx.Rollback()
-	// Prove UUID and user ownership in PostgreSQL; caller-supplied profile UUID
-	// alone authorizes mutation. New Minecraft profiles sync lazily.
+	// Проверить UUID и принадлежность пользователю в PostgreSQL; переданный вызывающим UUID профиля
+	// сам по себе не разрешает изменения. Новые профили Minecraft синхронизируются лениво.
 	res, err := tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)
       SELECT 'local-project',uuid,user_id,name,'local-profile',uuid FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2
       ON CONFLICT(realm,profile_uuid) DO UPDATE SET profile_name=EXCLUDED.profile_name
@@ -352,7 +352,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 		if err != nil {
 			return err
 		}
-		// A colliding alias must be allowed to reassign another user's texture.
+		// Совпадающему псевдониму нельзя позволять переназначать текстуру другого пользователя.
 		var owner, uuid string
 		if err = tx.QueryRowContext(ctx, `SELECT user_id,profile_uuid FROM texture_legacy_aliases WHERE legacy_uuid=$1`, candidate.key).Scan(&owner, &uuid); err != nil {
 			return err

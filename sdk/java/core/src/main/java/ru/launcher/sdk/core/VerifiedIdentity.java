@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Subject is the provider's immutable user key, never email/display name. */
+/** Субъект — неизменяемый ключ пользователя у провайдера, а не email или отображаемое имя. */
 public record VerifiedIdentity(String issuer, String subject, String email, String username, String displayName) {
     public VerifiedIdentity {
         if (subject == null || subject.isBlank() || subject.length() > 512 || issuer == null || issuer.isBlank() || issuer.length() > 2048)

@@ -1,6 +1,6 @@
-// Package configmigration handles the persisted JSON provider-list format.
-// Legacy (unversioned) provider arrays are upgraded in memory at activation;
-// the original file is overwritten and secret references are untouched.
+// Пакет configmigration обрабатывает формат JSON со списком провайдеров.
+// Устаревшие массивы провайдеров без версии обновляются в памяти при активации;
+// исходный файл НЕ перезаписывается, а ссылки на секреты остаются нетронутыми.
 package configmigration
 
 import (
@@ -19,10 +19,10 @@ type envelope struct {
 	Configs       json.RawMessage `json:"configs,omitempty"`
 }
 
-// Decode reads the live configured provider list. It upgrades legacy arrays
-// and v1 envelopes while rejecting unknown schema versions and ambiguous
-// envelopes, rather than silently selecting a different provider list.
-// The returned version is the effective schema version, not the input version.
+// Decode читает рабочий список настроенных провайдеров. Обновляет устаревшие массивы
+// и конверты v1, отклоняя неизвестные версии схемы и неоднозначные
+// конверты, вместо незаметного выбора другого списка провайдеров.
+// Возвращаемая версия — действующая версия схемы, а не версия входных данных.
 func Decode[T any](raw []byte) ([]T, error) {
 	raw = bytes.TrimSpace(raw)
 	if len(raw) == 0 {

@@ -2,8 +2,8 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** A selected Java SPI provider is called only from an authenticated, bounded Host RPC.
- * Backend authorization, MFA, canonical account linking and token issue are NOT delegated. */
+/** Выбранный Java SPI-провайдер вызывается только через аутентифицированный Host RPC с ограничениями.
+ * Авторизация Backend, MFA, каноническая привязка аккаунтов и выдача токенов НЕ делегируются. */
 public final class IdentityServices {
     public static final ProviderService<IdentityProvider> CONTRACT =
         new ProviderService<>("never.identity",IdentityProvider.class,SemVer.parse("1.0.0"));

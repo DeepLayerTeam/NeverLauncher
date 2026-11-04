@@ -8,7 +8,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Production entrypoint for Extensions backend or short-lived CLI Java targets. */
+/** Точка входа в production для Backend Extensions или краткоживущих Java CLI-целей. */
 public final class ExtensionRunner {
     private ExtensionRunner() {}
     public static void main(String[] args) throws Exception {

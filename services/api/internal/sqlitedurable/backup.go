@@ -288,8 +288,8 @@ func OnlineBackup(ctx context.Context, source, destination string) (m BackupMani
 	return m, nil
 }
 
-// VerifyBackup rejects absent, corrupted, mismatched, tampered, incomplete,
-// incompatible, or logically invalid backups before any restore action.
+// VerifyBackup отклоняет отсутствующие, повреждённые, несовместимые, изменённые и неполные
+// несовместимые или логически некорректные резервные копии до любых действий восстановления.
 func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 	var m BackupManifest
 	if path == "" {
@@ -349,10 +349,10 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 	return m, nil
 }
 
-// RestoreBackup requires a STOPPED backend. It holds the same OS owner lock
-// used by sqlitedurable.Open and refuses WAL/SHM sidecars instead of risking
-// replay of stale pages into the restored DB. The old database is retained via
-// a durable same-filesystem hardlink for operator rollback.
+// RestoreBackup требует ОСТАНОВЛЕННОГО Backend. Удерживает ту же блокировку владельца ОС,
+// что и sqlitedurable.Open, и отклоняет побочные файлы WAL/SHM, не рискуя
+// повторным применением устаревших страниц к восстановленной БД. Старая база сохраняется через
+// долговременную жёсткую ссылку в той же файловой системе для отката оператором.
 func RestoreBackup(ctx context.Context, backup, target string, replace bool) (rollback string, err error) {
 	if backup == "" || target == "" {
 		return "", errors.New("backup and target required")
@@ -379,7 +379,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 		return "", err
 	}
 	defer func() { err = errors.Join(err, releaseLock(lock)) }()
-	// Reverify under lock in case the backup was altered between calls.
+	// Повторно проверить под блокировкой, если резервная копия могла измениться между вызовами.
 	if _, err = VerifyBackup(ctx, src); err != nil {
 		return "", err
 	}
@@ -425,7 +425,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 	if e != nil {
 		return "", e
 	}
-	// Compare copied bytes, not just SQLite page checks.
+	// Сравнивать скопированные байты, а не только страницы SQLite.
 	_, copied, e := fileDigest(temp)
 	if e != nil {
 		return "", e

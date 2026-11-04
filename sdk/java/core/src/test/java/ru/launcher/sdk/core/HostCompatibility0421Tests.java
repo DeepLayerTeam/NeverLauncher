@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Real loopback HTTP compatibility tests, including the 0.42.0 hello envelope. */
+/** Реальные loopback HTTP-тесты совместимости, включая конверт hello версии 0.42.0. */
 public final class HostCompatibility0421Tests {
     private static int assertions;
     private static void check(boolean value,String reason){assertions++;if(!value)throw new AssertionError(reason);}

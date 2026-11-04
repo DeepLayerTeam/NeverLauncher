@@ -82,7 +82,7 @@ func consumePasswordWork(secret string, cfg PasswordConfig) {
 			encoded = base64.StdEncoding.EncodeToString(make([]byte, size))
 		}
 	case "phpass":
-		// Valid fixed-cost dummy hash; inspect or expose account existence.
+		// Допустимый dummy-хеш с фиксированной стоимостью; не проверять и не раскрывать существование аккаунта.
 		encoded = "$P$B12345678QjY5zqJqT433Q3av7QGRM/"
 	case "legacy-sha256":
 		encoded = strings.Repeat("0", sha256.Size*2)

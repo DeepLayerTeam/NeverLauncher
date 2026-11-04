@@ -380,9 +380,9 @@ def bundle_stage(args):
 
 
 def gate(args):
-    # This is intentionally a fail-closed independent verification, NOT a
-    # self-approval button. Signature and physical infrastructure certification
-    # cannot be inferred from Docker network faults and HTTP probes.
+    # Это намеренно независимая проверка с отказом по умолчанию, а НЕ
+    # кнопка самоодобрения. Подпись и физическая сертификация инфраструктуры
+    # нельзя установить по сетевым сбоям Docker и HTTP-проверкам.
     require(COMMIT.fullmatch(args.commit or '') is not None, 'source commit required')
     docs, receipts = validate_stage_receipts([Path(x) for x in args.receipt],
                                             commit=args.commit, publisher=args.publisher)
@@ -396,9 +396,9 @@ def gate(args):
     require(docs['rolling']['details']['edgeFailures'] == 0 and
             docs['recovery']['details']['rtoSeconds'] <= args.maximum_rto,
             'rollback/recovery measurements exceed acceptance limits')
-    # Full GA requires machine-verifiable physical host/network and external
-    # quorum evidence, JVM gameplay and native signatures. The previous stages
-    # cannot prove these and we must not silently turn them into PASS.
+    # Полный GA требует машинно-проверяемых свидетельств физических хостов/сети и внешних
+    # свидетельства кворума, игровой процесс JVM и нативные подписи. Предыдущие этапы
+    # не могут подтвердить их, и мы не должны незаметно превращать их в PASS.
     return {'schema': SCHEMA, 'version': VERSION, 'status': 'BLOCKED',
             'releaseManifestSha256': expected['releaseManifestSha256'],
             'receiptSha256': receipts,
@@ -455,7 +455,7 @@ def main(argv=None):
     except (Blocked, multi.DeploymentError, multi.inventory.InventoryError,
             compat.CompatibilityError, ValueError, OSError, KeyError, TypeError,
             zipfile.BadZipFile, tarfile.TarError) as exc:
-        # Never print raw configuration, subprocess stderr, credentials or DSNs.
+        # Никогда не выводить исходную конфигурацию, stderr подпроцессов, учётные данные или DSN.
         print(json.dumps({'status': 'BLOCKED', 'stage': args.stage,
                           'reason': type(exc).__name__}), file=sys.stderr)
         return 3

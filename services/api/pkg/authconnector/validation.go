@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// ValidateConnector is the single registration gate for the SDK's operational
-// capability claims. Informational claims (email, groups, roles, textures,
-// Minecraft profile) describe available identity data rather than methods.
+// ValidateConnector — единственная точка допуска регистрации рабочего SDK-
+// заявления о возможностях. Информационные сведения (email, группы, роли, текстуры,
+// профиль Minecraft) описывают доступные идентификационные данные, а не методы.
 func ValidateConnector(connector Connector) error {
 	if connector == nil || (reflect.ValueOf(connector).Kind() == reflect.Ptr && reflect.ValueOf(connector).IsNil()) {
 		return fmt.Errorf("auth connector is nil")
@@ -33,8 +33,8 @@ func ValidateConnector(connector Connector) error {
 			return fmt.Errorf("auth connector %q advertises %q without implementation", meta.ID, req.capability)
 		}
 	}
-	// A plugin is not permitted to expose credential-bearing methods that are
-	// missing from metadata: the caller must silently skip enforcement.
+	// Плагину запрещено предоставлять методы с учётными данными, которые
+	// отсутствуют в метаданных: вызывающий не должен молча пропускать проверку.
 	for _, req := range required {
 		if req.implemented && !HasCapability(meta, req.capability) {
 			return fmt.Errorf("auth connector %q implements %q without declaring it", meta.ID, req.capability)
@@ -50,8 +50,8 @@ func implementsRevoke(c Connector) bool   { _, ok := c.(Revoker); return ok }
 func implementsLookup(c Connector) bool   { _, ok := c.(IdentityResolver); return ok }
 func implementsProfile(c Connector) bool  { _, ok := c.(ProfileResolver); return ok }
 
-// ValidateAuthentication enforces the same identity invariant for password,
-// browser and refresh results, before linking or writing provider credentials.
+// ValidateAuthentication применяет одинаковый инвариант идентичности для пароля,
+// браузерных и refresh-результатов до привязки или сохранения учётных данных провайдера.
 func ValidateAuthentication(auth Authentication) error {
 	if err := ValidateIdentity(auth.Identity); err != nil {
 		return err

@@ -233,7 +233,7 @@ func (r *Repository) EnqueueOutboxEvent(ctx context.Context, v model.DurableOutb
 	return
 }
 
-// The transaction is at-least-once delivery, exactly-once external delivery.
+// Транзакция допускает доставку как минимум один раз, но НЕ гарантирует внешнюю доставку ровно один раз.
 func (r *Repository) ClaimOutboxEvents(ctx context.Context, worker string, limit int, ttl time.Duration) (out []model.DurableOutboxEvent, err error) {
 	if !durableFieldsNonempty(worker) || limit < 1 || limit > 100 || !validDurableTTL(ttl) {
 		return nil, errors.New("invalid outbox claim")

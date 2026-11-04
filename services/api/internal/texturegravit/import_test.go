@@ -168,8 +168,8 @@ func TestExportRows02510(t *testing.T) {
 	}
 }
 
-// A migration batch must reject identity conflicts before any write, even
-// when two sources can separately resolve to the same local UUID.
+// Пакет миграции должен отклонять конфликты идентичностей до любой записи, даже
+// когда два источника независимо разрешаются в один локальный UUID.
 func TestGravitTextureMappingCollisionPreventsWrites0445(t *testing.T) {
 	a := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 	b := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"

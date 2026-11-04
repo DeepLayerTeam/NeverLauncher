@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
-/** Real loopback HTTP tests for callback drain, restart and stale lifecycle rejection. */
+/** Реальные loopback HTTP-тесты завершения вызовов, перезапуска и отклонения устаревшего жизненного цикла. */
 public final class RuntimeCallbacks0490Tests {
     private static int checks;
     private static void require(boolean cond, String msg){ checks++; if(!cond)throw new AssertionError(msg); }

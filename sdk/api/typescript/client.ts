@@ -1,4 +1,4 @@
-/** Public NeverLauncher REST v1 client, separate from the extension iframe SDK. */
+/** Публичный клиент NeverLauncher REST v1, отдельный от SDK расширений iframe. */
 import { OPERATIONS, type OperationId } from './operations.generated.js';
 export { OPERATIONS, type OperationId } from './operations.generated.js';
 export const CONTRACT_VERSION = '1.0.0';

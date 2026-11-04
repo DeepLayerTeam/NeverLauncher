@@ -9,8 +9,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.regex.Pattern;
 
-/** Fail-closed opt-in Sentry exception reporting for hosted Java extensions.
- * No exception messages, arguments, secrets, usernames, environment or raw paths are serialized.
+/** Защищённая отчётность об исключениях в Sentry для размещённых Java-расширений, включаемая явно.
+ * Не сериализуются сообщения исключений, аргументы, секреты, имена пользователей, окружение или исходные пути.
  */
 public final class SentryDiagnostics {
     private SentryDiagnostics() {}
@@ -48,7 +48,7 @@ public final class SentryDiagnostics {
             return new Destination(dsn,endpoint,user);
         }
     }
-    /** Can be called by exception boundaries which catch and rethrow failures. */
+    /** Можно вызывать на границах обработки исключений, где ошибки перехватываются и затем выбрасываются повторно. */
     public static void report(Throwable failure,Map<String,String> env) {
         if (!"true".equalsIgnoreCase(env.getOrDefault("LAUNCHER_SENTRY_JVM_ENABLED","false"))) return;
         String dsn=env.get("LAUNCHER_SENTRY_JVM_DSN");if(dsn==null||dsn.isBlank())return;

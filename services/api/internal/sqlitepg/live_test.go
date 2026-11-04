@@ -58,9 +58,9 @@ func TestLiveMapping0473(t *testing.T) {
 	}
 }
 
-// Run ONLY with an isolated, empty PostgreSQL test database owned by CI.
-// The integration test applies actual embedded migrations and reads through
-// SQLRepository, not staging tables or a mock database.
+// Выполнять ТОЛЬКО с изолированной пустой тестовой БД PostgreSQL под управлением CI.
+// Интеграционный тест применяет реальные встроенные миграции и читает через
+// SQLRepository, а не промежуточные таблицы или имитацию БД.
 func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PG_LIVE_TEST_DSN")
 	if dsn == "" {
@@ -116,7 +116,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	if err = core.Close(); err != nil {
 		t.Fatal(err)
 	}
-	// Exercise real transactional state rows, not only projects/profiles.
+	// Проверять настоящие транзакционные строки состояния, а не только проекты/профили.
 	rawDB, er := sql.Open("sqlite", src)
 	if er != nil {
 		t.Fatal(er)

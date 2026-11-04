@@ -153,9 +153,9 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
       VALUES($1,$2,$3,$4,'image/png',$5,$6,'verified',now()) ON CONFLICT(digest) DO NOTHING`, input.Digest, input.Size, input.Width, input.Height, input.Driver, input.ObjectKey); err != nil {
 		return zero, err
 	}
-	// The object is now durably persisted: promote its pre-upload staging row.
-	// This update is bounded by the verified digest metadata and promotes
-	// a GC-quarantined or mismatched object.
+	// Объект теперь долговременно сохранён: повысить его запись предварительной загрузки.
+	// Это обновление ограничено проверенными метаданными дайджеста и переводит
+	// объект, изолированный GC или не совпадающий с ожидаемым.
 	if _, err = tx.ExecContext(ctx, `UPDATE texture_blobs SET status='verified',verified_at=now()
 	    WHERE digest=$1 AND status='staging' AND byte_size=$2 AND storage_driver=$3 AND object_key=$4`,
 		input.Digest, input.Size, input.Driver, input.ObjectKey); err != nil {

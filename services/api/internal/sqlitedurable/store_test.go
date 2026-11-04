@@ -163,7 +163,7 @@ func TestExclusiveOwner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Child tries exactly the same store, not only raw file locks.
+	// Дочерний процесс пытается открыть именно то же хранилище, а не только исходные файловые блокировки.
 	child := exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
 	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=expect-deny")
 	if out, e := child.CombinedOutput(); e != nil {
@@ -210,8 +210,8 @@ func TestOwnerChild(t *testing.T) {
 		}); e != nil {
 			t.Fatal(e)
 		}
-		// The crash scenario below uses BEGIN IMMEDIATE without committing.
-		// Avoid Store.Write: it correctly rolls back on callback error/panic.
+		// Сценарий сбоя ниже использует BEGIN IMMEDIATE без COMMIT.
+		// Избегать Store.Write: он корректно откатывает изменения при ошибке/panic в колбэке.
 		c, e := s.writer.Conn(ctx)
 		if e != nil {
 			t.Fatal(e)
@@ -297,7 +297,7 @@ func TestCanceledTxnRollback(t *testing.T) {
 	if err == nil {
 		t.Fatal("canceled transaction returned success")
 	}
-	// database/sql may discard a canceled connection rather than reuse it.
+	// database/sql может отбросить отменённое подключение вместо повторного использования.
 	checkCtx, stop := context.WithTimeout(ctx, 3*time.Second)
 	defer stop()
 	if err = s.Read(checkCtx, func(q Executor) error {

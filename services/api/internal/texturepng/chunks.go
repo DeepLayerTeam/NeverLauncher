@@ -15,7 +15,7 @@ func validateChunks(png []byte) error {
 			return ErrInvalid
 		}
 		size := uint64(binary.BigEndian.Uint32(png[offset:]))
-		// Integer-safe before slicing, including hostile 0xffffffff lengths.
+		// Проверка целочисленного переполнения перед срезами, включая вредоносные длины 0xffffffff.
 		if size > uint64(len(png)-offset-12) {
 			return ErrInvalid
 		}
@@ -51,7 +51,7 @@ func validateChunks(png []byte) error {
 		case "acTL", "fcTL", "fdAT":
 			return fmt.Errorf("%w: animated PNG is not a Minecraft texture", ErrInvalid)
 		default:
-			// Reject unknown critical chunks (ancillary chunks are stripped).
+			// Отклонять неизвестные критические блоки (вспомогательные удаляются).
 			if chunkType[0] >= 'A' && chunkType[0] <= 'Z' && !bytes.Equal(chunkType, []byte("PLTE")) {
 				return fmt.Errorf("%w: unsupported critical chunk", ErrInvalid)
 			}

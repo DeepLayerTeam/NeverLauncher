@@ -288,8 +288,8 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	if manifest.SchemaVersion != sqlitecore.SchemaVersion {
 		return report, fmt.Errorf("required SQLite schema %d, got %d", sqlitecore.SchemaVersion, manifest.SchemaVersion)
 	}
-	// Verify application-level invariants against an isolated restored copy.
-	// Open the checksum-protected backup in writable/WAL mode.
+	// Проверить инварианты приложения на изолированной восстановленной копии.
+	// Открыть резервную копию с проверкой контрольной суммы в режиме записи/WAL.
 	if err = verifyRestoredCore(ctx, backupPath); err != nil {
 		return report, fmt.Errorf("SQLite application consistency: %w", err)
 	}
@@ -395,8 +395,8 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	if err = storeSnapshot(ctx, tx, backupPath, manifest); err != nil {
 		return report, fmt.Errorf("store SQLite snapshot: %w", err)
 	}
-	// The import schema is deliberately append/UPDATE/DELETE protected. Live
-	// code must start serving auth from this compatibility mirror.
+	// Схема импорта намеренно защищена от append/UPDATE/DELETE. Рабочий
+	// код должен начать обслуживать авторизацию из этого зеркала совместимости.
 	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher verified import is immutable'; END $$`)
 	if err != nil {
 		return report, err

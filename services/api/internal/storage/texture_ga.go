@@ -9,11 +9,11 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
-// VerifyTextureGA0260 checks not only stored bytes/SHA-256, but also that the
-// immutable texture is a fully decodable and canonical Minecraft skin or cape.
-// Historical non-image blobs with a correctly named SHA must not pass the GA
-// integrity gate. The original VerifyTexture02511 remains byte-only for tools
-// that diagnose old data before deciding whether to quarantine/migrate it.
+// VerifyTextureGA0260 проверяет не только сохранённые байты/SHA-256, но и то, что
+// неизменяемая текстура полностью декодируема и канонична для скина/плаща Minecraft.
+// Исторические не-изображения с правильно названным SHA не должны проходить GA-
+// проверку целостности. Исходный VerifyTexture02511 проверяет только байты для инструментов,
+// диагностирующих старые данные до решения об изоляции или миграции.
 func VerifyTextureGA0260(ctx context.Context, store Storage, obj TextureBackupObject0253) TextureVerification02511 {
 	result := VerifyTexture02511(ctx, store, obj)
 	if result.Result != "ok" {
@@ -39,9 +39,9 @@ func VerifyTextureGA0260(ctx context.Context, store Storage, obj TextureBackupOb
 	if len(content) > texturepng.MaxEncodedBytes || (size >= 0 && int64(len(content)) != size) {
 		return TextureVerification02511{Digest: obj.Digest, Result: "corrupt", Detail: "texture exceeds PNG limit or declared byte size"}
 	}
-	// The PNG itself does not encode the classic/slim assignment. Both have
-	// identical valid 64x64 skin geometry. A 64x32 asset may be a legacy skin
-	// or a cape; an accepted match must still roundtrip to the SAME digest.
+	// Сам PNG не кодирует выбор classic/slim. Оба варианта имеют
+	// одинаковую допустимую геометрию скина 64x64. Ресурс 64x32 может быть старым скином
+	// или плащом; подтверждённое соответствие должно возвращать ТОТ ЖЕ дайджест.
 	for _, kind := range []string{"skin", "cape"} {
 		processed, parseErr := texturepng.Process(bytes.NewReader(content), kind, "classic")
 		if parseErr == nil && processed.Digest == obj.Digest && bytes.Equal(processed.PNG, content) {

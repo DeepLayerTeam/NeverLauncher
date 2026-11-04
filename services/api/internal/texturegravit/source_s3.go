@@ -6,8 +6,8 @@ import (
 	"io"
 )
 
-// S3Source reads objects by trusted storage key using the operator-configured
-// source credentials. No public HTTP URL is fetched.
+// S3Source читает объекты по доверенному ключу хранилища с настройками оператора.
+// учётных данных источника. Публичный HTTP URL не загружается.
 type S3Source struct{ Store *storage.S3Storage }
 
 func (s S3Source) Open(ctx context.Context, key string) (io.ReadCloser, error) {

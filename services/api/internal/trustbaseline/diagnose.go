@@ -21,10 +21,10 @@ type DeviceDiagnostics struct {
 	Notes                    []string   `json:"notes"`
 }
 
-// DiagnoseHost makes only unprivileged, non-mutating observations of this
-// machine. Backend host TPM presence is NOT evidence about a remote client.
-// probeTPMNode0311 does not open TPM key material or contact the chip.
-// A file or a symlink masquerading as /dev/tpm* is not a TPM capability.
+// DiagnoseHost выполняет только непривилегированные и не изменяющие состояние наблюдения за
+// этой машиной. TPM на хосте Backend НЕ свидетельствует о TPM удалённого клиента.
+// probeTPMNode0311 не открывает ключевой материал TPM и не обращается к чипу.
+// Файл или символьная ссылка под видом /dev/tpm* не означает наличие TPM.
 func probeTPMNode0311(path string) (present bool, missing bool) {
 	info, err := os.Lstat(path)
 	if err != nil {

@@ -84,11 +84,11 @@ def retain(
         raise ValueError("diagnostic directory must be host-owner-only")
     now = datetime.now(timezone.utc)
     prune(directory, now)
-    # Bound total retained log size to 2 MiB. Read past this limit.
+    # Ограничить общий размер сохраняемого журнала 2 МиБ. Не читать сверх этого предела.
     with worker_log.open("rb") as raw:
         content = raw.read(2 * 1024 * 1024)
     sanitized = redact(content.decode("utf-8", "replace")).encode("utf-8")
-    # Write with O_EXCL+O_NOFOLLOW to avoid replacing existing evidence/logs.
+    # Писать с O_EXCL+O_NOFOLLOW, чтобы не заменять существующие свидетельства/журналы.
     destination = directory / (run_id + ".log")
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(destination, flags, 0o600)

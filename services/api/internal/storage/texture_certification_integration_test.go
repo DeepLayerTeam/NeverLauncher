@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// TestTextureRealS3Lifecycle02512 talks to an actual S3-compatible service
-// (MinIO in CI). The existing httptest cases separately cover ETag races and
-// bad replies; this test verifies real SigV4, conditional PUT, retrieval,
-// backup, deletion and recovery against a live object store.
+// TestTextureRealS3Lifecycle02512 обращается к настоящему S3-совместимому сервису
+// (MinIO в CI). Существующие httptest-тесты отдельно покрывают гонки ETag и
+// ошибочные ответы; этот тест проверяет реальные SigV4, условный PUT, чтение,
+// резервное копирование, удаление и восстановление в работающем объектном хранилище.
 func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	endpoint := os.Getenv("TEST_TEXTURE_S3_ENDPOINT_02512")
 	if endpoint == "" {
@@ -34,8 +34,8 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 	content := []byte("real S3 texture compatibility 0.25.12 " + time.Now().UTC().Format(time.RFC3339Nano))
 	sum := sha256.Sum256(content)
 	digest := hex.EncodeToString(sum[:])
-	// The importer supplies normalized PNG; this storage test independently
-	// checks the actual immutable byte store and its multi-step lifecycle.
+	// Импортёр предоставляет нормализованный PNG; этот тест хранилища независимо
+	// проверяет реальное неизменяемое хранилище байтов и его многоэтапный жизненный цикл.
 	for i := 0; i < 2; i++ {
 		if _, _, err := PutTextureImmutable0253(ctx, store, digest, content); err != nil {
 			t.Fatalf("conditional PUT #%d: %v", i, err)

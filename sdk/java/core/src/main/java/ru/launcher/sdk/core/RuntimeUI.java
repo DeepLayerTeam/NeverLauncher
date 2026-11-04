@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Real Admin/Desktop handlers invoked through the authenticated Go -> JVM broker.
- * Pages remain sandboxed; only signed action IDs reach these Java callbacks.
+/** Реальные обработчики Admin/Desktop, вызываемые через аутентифицированный брокер Go -> JVM.
+ * Страницы остаются изолированными; в эти Java-обработчики поступают только подписанные ID действий.
  */
 public final class RuntimeUI implements AutoCloseable {
     @FunctionalInterface public interface Action { Object invoke(Map<String,Object> actor, Object payload) throws Exception; }
@@ -37,7 +37,7 @@ public final class RuntimeUI implements AutoCloseable {
         if(!declared.getOrDefault(target,Set.of()).contains(actionId))throw new SecurityException("action is not present in signed "+target+" contributions");
         if(actions.putIfAbsent(key,new Binding(schema,Objects.requireNonNull(handler)))!=null)throw new IllegalArgumentException("duplicate UI action");
     }
-    /** Each setting must be explicitly registered in Java, and stored in the existing per-extension config. */
+    /** Каждый параметр должен быть явно зарегистрирован в Java и сохранён в существующей конфигурации расширения. */
     public synchronized void registerSetting(String target,String name,JsonSchema schema,Object fallback){
         active();String key=surface(target)+":"+token(name);
         Objects.requireNonNull(schema,"settings require a schema");

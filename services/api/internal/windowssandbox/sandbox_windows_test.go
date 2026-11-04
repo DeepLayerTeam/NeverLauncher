@@ -131,8 +131,8 @@ func TestRealWindowsAppContainerAndJob03111(t *testing.T) {
 	}
 }
 
-// Shared directories currently have no handle-relative Windows filesystem
-// broker. Accepting them in policy would misrepresent an unenforced grant.
+// Общие каталоги пока не имеют handle-relative файловой системы Windows
+// брокер. Принятие их в политике ложно заявляло бы о неприменяемом разрешении.
 func TestWindowsSandboxRefusesUnimplementedFilesystemGrants04310(t *testing.T) {
 	root := t.TempDir()
 	entry := filepath.Join(root, "worker.exe")
@@ -170,8 +170,8 @@ func TestWindowsSandboxRejectsReparsePackage04310(t *testing.T) {
 	outside := t.TempDir()
 	link := filepath.Join(root, "link")
 	if err := os.Symlink(outside, link); err != nil {
-		// Creating junctions does not need SeCreateSymbolicLinkPrivilege on
-		// ordinary supported Windows hosts; this test must not quietly SKIP.
+		// Создание junction не требует SeCreateSymbolicLinkPrivilege на
+		// обычных поддерживаемых хостах Windows; этот тест нельзя молча ПРОПУСКАТЬ.
 		output, junctionErr := exec.Command("cmd.exe", "/c", "mklink", "/J", link, outside).CombinedOutput()
 		if junctionErr != nil {
 			t.Fatalf("cannot exercise reparse-point rejection (symlink: %v, junction: %v): %s", err, junctionErr, output)
@@ -189,8 +189,8 @@ func TestChildKeepRunningForJobTermination04310(t *testing.T) {
 	time.Sleep(30 * time.Second)
 }
 
-// The supervisor must prove that terminating its helper actually kills the
-// already-resumed isolated child (not merely that the helper exited).
+// Супервизор должен доказать, что остановка помощника действительно завершает
+// уже возобновлённый изолированный дочерний процесс (а не только помощника).
 func TestLiveWindowsJobKillOnClose04310(t *testing.T) {
 	if os.Getenv("NL_RUN_LIVE_WIN_SANDBOX") != "1" {
 		t.Skip("requires a native Windows AppContainer runner")

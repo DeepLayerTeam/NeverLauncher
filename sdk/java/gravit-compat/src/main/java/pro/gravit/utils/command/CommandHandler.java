@@ -1,11 +1,11 @@
 package pro.gravit.utils.command;
 import java.util.*;
 import ru.launcher.sdk.core.RuntimeCommands;
-/** Exposes only commands present in the signed extension CLI manifest. */
+/** Предоставляет только команды, содержащиеся в подписанном манифесте CLI расширения. */
 public final class CommandHandler {
     private static final ThreadLocal<Object> RESPONSE=new ThreadLocal<>();
     private final RuntimeCommands target;
-    /** Optional structured response, emitted by the signed CLI/RPC bridge. */
+    /** Необязательный структурированный ответ, передаваемый через подписанный мост CLI/RPC. */
     public static void respond(Object value){RESPONSE.set(Objects.requireNonNull(value));}
     public CommandHandler(RuntimeCommands target){this.target=Objects.requireNonNull(target);}
     public void registerCommand(String name,Command command){

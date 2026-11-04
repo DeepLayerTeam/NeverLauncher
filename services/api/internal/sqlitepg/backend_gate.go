@@ -9,11 +9,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// RejectUnapprovedBackend0475 prevents the API from silently activating an
-// offline import. No HTTP/Coordinator state parity receipt exists in 0.47.5,
-// so even a verified Core/file receipt is NOT a production cutover approval.
-// This is evaluated before API bootstrap, workers and request listeners.
-// Ordinary PostgreSQL installations with no SQLite import are unaffected.
+// RejectUnapprovedBackend0475 не даёт API незаметно активировать
+// офлайн-импорт. В версии 0.47.5 отсутствует квитанция совпадения состояний HTTP/Coordinator,
+// поэтому даже проверенная квитанция Core/файлов НЕ разрешает производственное переключение.
+// Проверяется до запуска API, воркеров и слушателей запросов.
+// Обычные установки PostgreSQL без импорта SQLite не затрагиваются.
 func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 	if strings.TrimSpace(dsn) == "" {
 		return errors.New("PostgreSQL DSN required")
@@ -32,8 +32,8 @@ func RejectUnapprovedBackend0475(ctx context.Context, dsn string) error {
 			continue
 		}
 		var count int64
-		// Identifiers are fixed by this source file, never interpolated from
-		// an HTTP input or user-controlled PostgreSQL receipt.
+		// Идентификаторы заданы в этом исходном файле и никогда не подставляются из
+		// входных HTTP-данных или управляемой пользователем квитанции PostgreSQL.
 		switch name {
 		case "public.sqlite_live_receipts_0473":
 			err = pg.QueryRow(ctx, `SELECT count(*) FROM public.sqlite_live_receipts_0473`).Scan(&count)

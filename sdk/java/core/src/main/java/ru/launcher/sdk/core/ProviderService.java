@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.Objects;
 
-/** Public SPI contract identity; version is independent of the host wire protocol. */
+/** Идентичность публичного SPI-контракта; версия не зависит от сетевого протокола хоста. */
 public record ProviderService<T extends JavaProvider>(String id, Class<T> type, SemVer version) {
     public ProviderService {
         if (id == null || !id.matches("[a-z][a-z0-9._-]{2,79}"))

@@ -1,5 +1,5 @@
-// Package protection is the runtime policy execution API. A mandatory handler
-// error denies access; extension handlers cannot override an earlier denial.
+// Пакет protection — API выполнения политик Runtime. Ошибка обязательного обработчика
+// запрещает доступ; обработчики расширений не могут отменить более ранний запрет.
 package protection
 
 import (
@@ -121,9 +121,9 @@ func (e *Engine) Evaluate(ctx context.Context, req Request) Decision {
 			return Decision{Action: Deny, Reason: "policy_context_unavailable", Handler: "engine"}
 		}
 		scoped, cancel := context.WithTimeout(ctx, timeout)
-		// Handlers run synchronously: timeout-aware storage/network handlers must
-		// honor the context, without creating unbounded goroutines on timeout.
-		// Untrusted extension panics are failures, successful authorizations.
+		// Обработчики выполняются синхронно: учитывающие тайм-аут операции хранилища/сети обязаны
+		// соблюдать context, не создавая неограниченные горутины при тайм-ауте.
+		// Паники недоверенных расширений — ошибки, а не успешные авторизации.
 		decision, err := evaluateHandlerSafely(scoped, h.handler, req)
 		deadlineErr := scoped.Err()
 		cancel()
@@ -155,7 +155,7 @@ func (e *Engine) Evaluate(ctx context.Context, req Request) Decision {
 func evaluateHandlerSafely(ctx context.Context, handler Handler, req Request) (decision Decision, err error) {
 	defer func() {
 		if recover() != nil {
-			// Do not log/re-emit panic payloads: extensions may panic with secrets.
+			// Не логировать и не переизлучать содержимое panic: расширения могут паниковать с секретами.
 			decision = Decision{}
 			err = errors.New("protection handler panicked")
 		}

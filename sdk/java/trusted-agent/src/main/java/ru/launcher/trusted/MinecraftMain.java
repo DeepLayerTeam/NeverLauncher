@@ -3,8 +3,8 @@ package ru.launcher.trusted;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-/** Wrapper invokes the original Minecraft entrypoint unchanged, surrounded
- *  by trusted hooks. afterMinecraftMain means AFTER main returns, not "world loaded". */
+/** Обёртка без изменений вызывает исходную точку входа Minecraft, окружённую
+ *  доверенными хуками. afterMinecraftMain означает ПОСЛЕ возврата из main, а не «загрузка мира завершена». */
 public final class MinecraftMain {
     private MinecraftMain() { }
     public static void main(String[] args) throws Throwable {

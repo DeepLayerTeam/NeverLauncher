@@ -49,7 +49,7 @@ class ColdRestoreTests(unittest.TestCase):
         with self.assertRaises(cold.co.Blocked): cold.validate_manifest(data,self.run)
 
     def test_recover_after_kill_between_directory_renames(self):
-        # Simulate the on-disk state after target -> old, before staged -> target.
+        # Имитировать состояние диска после target -> old, но до staged -> target.
         old = self.root/('game.before-'+self.run)
         stage = self.root/'.never-restoring-crash'
         stage.mkdir()

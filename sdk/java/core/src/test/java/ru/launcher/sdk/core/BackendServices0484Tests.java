@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Actual authenticated loopback HTTP transport and typed-response regressions. */
+/** Реальный аутентифицированный loopback HTTP-транспорт и регрессионные проверки типизированного ответа. */
 public final class BackendServices0484Tests {
     private static int checks;
     private static void check(boolean value,String message){checks++;if(!value)throw new AssertionError(message);}

@@ -6,7 +6,7 @@ import ru.launcher.sdk.core.RuntimeEvents;
 import ru.launcher.sdk.core.RuntimeServices;
 import ru.launcher.sdk.gravit.HostEvent;
 
-/** Explicitly maps ported module event handlers to real Go EventBus subscriptions. */
+/** Явно сопоставляет обработчики событий перенесённых модулей с настоящими подписками Go EventBus. */
 public final class LauncherModulesManager {
     private record Registration<T extends LauncherModule.Event>(Class<T> type,LauncherModule.EventHandler<T> callback) {}
     private final RuntimeServices runtime;
@@ -25,7 +25,7 @@ public final class LauncherModulesManager {
         pending.computeIfAbsent(annotation.type()+":"+annotation.mode(),x->new ArrayList<>()).add(new Registration<>(type,callback));
         return true;
     }
-    /** Subscribe only after successful init, never during a partially initialized Gravit module. */
+    /** Подписываться только после успешной инициализации, но не в частично инициализированном модуле Gravit. */
     public synchronized void activate() throws Exception {
         if(active)throw new IllegalStateException("already activated");
         for(var item:pending.entrySet()){

@@ -31,6 +31,6 @@ zeroize = "1"
 hardware-enclave = { version = "=0.2.10", default-features = false, features = ["signing", "encryption", "linux-tpm"] }
 p256 = { version = "0.13", features = ["ecdsa"] }
 
-# Native Linux TPM producer: harden TPM blob reads with O_NOFOLLOW and UID checks.
+# Нативный генератор TPM для Linux: защитить чтение блоков TPM проверками O_NOFOLLOW и UID.
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"

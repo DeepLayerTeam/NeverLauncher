@@ -389,8 +389,8 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 	if !found {
 		return out, ErrNotFound
 	}
-	// The non-stable path retains existing behavior, but writes if its
-	// domain preconditions failed (no spurious SQLite sequence increment).
+	// Нестабильный путь сохраняет прежнее поведение, но записывает изменения, если его
+	// доменные предусловия завершились ошибкой (без лишнего увеличения счётчика SQLite).
 	if !IsStableChannel0341(rel.Channel) {
 		out, err = r.mem.commitDurablePublish0213(ctx, commit, false)
 		if err != nil {

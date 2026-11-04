@@ -1,6 +1,6 @@
 package pro.gravit.utils;
 
-/** Source-compatible subset of Gravit's Version value used in LauncherModuleInfo. */
+/** Подмножество значения Version из Gravit, совместимое на уровне исходного кода и используемое LauncherModuleInfo. */
 public final class Version implements Comparable<Version> {
     public enum Type { DEV, ALPHA, BETA, RC, RELEASE, STABLE, LTS }
     public final int major, minor, patch, build;

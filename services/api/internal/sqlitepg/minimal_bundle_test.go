@@ -57,7 +57,7 @@ func fixtureMinimalBundle0377(t *testing.T, base string) string {
 			t.Fatal(err)
 		}
 	}
-	// Store a real-world-shaped env and arbitrary binary file, not only SQLite.
+	// Сохранить реалистичный env и произвольный бинарный файл, не только SQLite.
 	for name, data := range map[string][]byte{"config/backend.env": []byte("LAUNCHER_REPOSITORY_DRIVER=sqlite\nLAUNCHER_DEPLOYMENT_MODE=single-node\n"), "storage/client.bin": {0, 1, 2, 3, 255, 0, 11}} {
 		if err := os.WriteFile(filepath.Join(payload, name), data, 0600); err != nil {
 			t.Fatal(err)
@@ -161,7 +161,7 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 	if _, err = pg.Exec(ctx, "UPDATE "+minimalRef0377("files")+" SET bytes=0"); err == nil {
 		t.Fatal("immutable project manifest could be changed")
 	}
-	// Source tampering must be rejected without modifying the committed copy.
+	// Подмена источника должна отклоняться без изменения зафиксированной копии.
 	f := filepath.Join(input, "payload/storage/client.bin")
 	if err = os.WriteFile(f, []byte("corrupt"), 0600); err != nil {
 		t.Fatal(err)

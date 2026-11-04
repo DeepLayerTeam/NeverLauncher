@@ -2,10 +2,10 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Versioned, synchronous migrations of persisted extension-owned JSON documents.
- * Register during Extension.start(); never mutate another extension's state.
- * The Go update manager checkpoints documents before calling these migrations,
- * and restores the checkpoint if the upgrade or health verification fails.
+/** Версионированные синхронные миграции сохранённых JSON-документов расширения.
+ * Регистрировать при Extension.start(); никогда не изменять состояние другого расширения.
+ * Менеджер обновлений Go создаёт контрольную копию документов перед вызовом этих миграций
+ * и восстанавливает её, если обновление или проверка работоспособности завершатся неудачно.
  */
 public final class RuntimeStateMigrations {
     @FunctionalInterface public interface Migration {
@@ -25,7 +25,7 @@ public final class RuntimeStateMigrations {
         if(steps.putIfAbsent(from,new Step(to,migration))!=null)
             throw new IllegalArgumentException("duplicate migration starting at "+from);
     }
-    /** Invoked exclusively by the authenticated Host during a stopped-old-version update. */
+    /** Вызывается только аутентифицированным хостом при обновлении после остановки старой версии. */
     synchronized Map<String,Object> apply(String fromVersion,String toVersion) throws Exception {
         SemVer from=SemVer.parse(fromVersion),target=SemVer.parse(toVersion);
         if(from.compareTo(target)>=0)throw new IllegalArgumentException("migration requires increasing versions");

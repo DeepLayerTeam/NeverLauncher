@@ -3,7 +3,7 @@ package ru.launcher.sdk.core;
 import java.util.*;
 import java.util.concurrent.CancellationException;
 
-/** Thread-safe cooperative cancellation with exactly-once callbacks and parent linkage. */
+/** Потокобезопасная кооперативная отмена с однократным выполнением обработчиков и связью с родителем. */
 public final class Cancellation implements AutoCloseable {
     private boolean cancelled;
     private final List<Runnable> listeners=new ArrayList<>();

@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// TextureVerification02511 is an operator-visible integrity check of a
-// database-registered immutable object. It does not trust object ETags as hashes.
+// TextureVerification02511 — видимая оператору проверка целостности
+// зарегистрированного в БД неизменяемого объекта. ETag объекта не считается хешем.
 type TextureVerification02511 struct {
 	Digest string `json:"digest"`
 	Result string `json:"result"`
@@ -69,9 +69,9 @@ func (r *contextTextureReader02511) Read(b []byte) (int, error) {
 	return r.reader.Read(b)
 }
 
-// DeleteTextureSafely02511 verifies S3 bytes *and* deletes conditionally using
-// the exact ETag observed on read. This prevents an outdated GC worker from
-// deleting a replacement object after the checksum validation.
+// DeleteTextureSafely02511 проверяет байты S3 *и* удаляет условно, используя
+// точный ETag, полученный при чтении. Это мешает устаревшему GC-воркеру
+// удалить заменяющий объект после проверки контрольной суммы.
 func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string) error {
 	if _, err := texturePath0252(digest); err != nil {
 		return err

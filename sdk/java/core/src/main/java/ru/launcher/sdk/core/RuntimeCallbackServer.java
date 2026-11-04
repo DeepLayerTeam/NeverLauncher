@@ -11,7 +11,7 @@ import java.util.concurrent.*;
 import java.util.function.Supplier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Loopback-only, authenticated and bounded callback/RPC server, running inside the JVM. */
+/** Сервер обратных вызовов/RPC только для loopback, с аутентификацией и ограничениями, работающий внутри JVM. */
 public final class RuntimeCallbackServer implements AutoCloseable {
     private static final int MAX_BODY=65536;
     // EventBus сохраняет до 1 МиБ канонической JSON-нагрузки. Конверт доставки

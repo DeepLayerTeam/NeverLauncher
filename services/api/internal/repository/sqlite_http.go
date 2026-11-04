@@ -18,11 +18,11 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// SQLiteHTTPRepository0372 persists the complete HTTP repository domain state
-// in a single-process, FULL-sync WAL SQLite database. The in-process domain
-// model is a cache, a durable source: a mutation returns only after the
-// new state and its integrity digest commit atomically. This design is intended
-// for a small, single-node installation, not network HA or large data sets.
+// SQLiteHTTPRepository0372 сохраняет полное доменное состояние HTTP-репозитория
+// в однопроцессной базе SQLite с WAL и FULL-sync. Доменная модель в памяти —
+// кэш, а не постоянный источник: изменение возвращается только после того, как
+// новое состояние и его дайджест целостности зафиксированы атомарно. Подход предназначен
+// для небольшой одноузловой установки, но не для сетевого HA и больших объёмов данных.
 //
 // Публикация stable использует проверку подписанной аттестации с привязкой к SQLite и одноразовые транзакционные
 // допуски 0.37.4; минимальное развёртывание 0.37.5 поддерживает один локальный экземпляр Linux. Онлайн-бэкапы и
@@ -47,8 +47,8 @@ const sqliteHTTPDDL0372 = `CREATE TABLE IF NOT EXISTS http_repository_state_0372
     document BLOB NOT NULL
 )`
 
-// OpenSQLiteHTTPRepository0372 owns the database and rejects another process
-// attempting to acquire the same SQLite file. It falls back to memory.
+// OpenSQLiteHTTPRepository0372 владеет базой и отклоняет другой процесс,
+// пытающийся открыть тот же файл SQLite. Резервного переключения на память нет.
 func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (_ *SQLiteHTTPRepository0372, err error) {
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
@@ -60,8 +60,8 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 		}
 	}()
 	r := &SQLiteHTTPRepository0372{store: store, mem: NewMemoryRepository(publicURL)}
-	// Seed the HTTP production repository with the development demo,
-	// default admin credentials, or a pre-published synthetic release.
+	// Заполняет производственный HTTP-репозиторий демонстрационными данными разработки,
+	// учётные данные администратора по умолчанию или заранее опубликованный синтетический выпуск.
 	r.mem.projects = nil
 	r.mem.profiles = nil
 	r.mem.channels = nil

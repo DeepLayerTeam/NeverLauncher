@@ -1067,8 +1067,8 @@ func (r *SQLRepository) CreateVersionV3(projectID, profileID, channel, version s
 		ProfileID: profileID, Channel: channel, Version: version, Status: "draft", Manifest: manifest, PublishedAt: now})
 }
 
-// PublishVersion commits only an existing signed draft. The signing payload is
-// Silently rebuilt from the current profile or release file list.
+// PublishVersion фиксирует только уже существующий подписанный черновик. Полезная нагрузка подписи
+// НЕ пересобирается незаметно по текущему профилю или списку файлов выпуска.
 func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
 	if err := r.check(); err != nil {
 		return model.ReleaseVersion{}, err
@@ -1210,7 +1210,7 @@ func (r *SQLRepository) UpdateVersionStatus(projectID, versionID, status string)
 	if status == "" {
 		return model.ReleaseVersion{}, errors.New("status обязателен")
 	}
-	// Expose a direct admin/status bypass for the publish transaction.
+	// Не открывать прямой обход транзакции публикации через admin/status.
 	if strings.EqualFold(status, "published") {
 		var channel string
 		err := r.db.QueryRow(`SELECT channel FROM release_versions WHERE project_id=$1 AND id=$2`, projectID, versionID).Scan(&channel)

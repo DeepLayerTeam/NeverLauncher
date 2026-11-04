@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// ErrObjectNotFound identifies an HTTP 404 from S3 on a signed object GET.
+// ErrObjectNotFound обозначает HTTP 404 от S3 при подписанном GET объекта.
 var ErrObjectNotFound = errors.New("файл не найден")
 
 // S3Config описывает параметры S3-совместимого хранилища.
@@ -59,7 +59,7 @@ func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Re
 	return s.SaveContext(ctx, projectID, versionID, relativePath, reader)
 }
 
-// SaveContext performs a signed, cancellable streaming S3 upload.
+// SaveContext выполняет подписанную отменяемую потоковую загрузку в S3.
 func (s *S3Storage) SaveContext(ctx context.Context, projectID, versionID, relativePath string, reader io.Reader) (string, int64, error) {
 	key, err := objectKey(projectID, versionID, relativePath)
 	if err != nil {
@@ -109,8 +109,8 @@ func (s *S3Storage) SaveContext(ctx context.Context, projectID, versionID, relat
 	return key, size, nil
 }
 
-// Delete removes an exact object with a signed S3 request. It is used for
-// temporary cross-replica storage probes and accepts an arbitrary URL.
+// Delete удаляет конкретный объект подписанным запросом S3. Используется для
+// временных проверок хранилища между репликами и принимает произвольный URL.
 func (s *S3Storage) Delete(ctx context.Context, projectID, versionID, relativePath string) error {
 	key, err := objectKey(projectID, versionID, relativePath)
 	if err != nil {
@@ -142,7 +142,7 @@ func (s *S3Storage) Open(projectID, versionID, relativePath string) (io.ReadClos
 	return &cancelReadCloser{ReadCloser: r, cancel: cancel}, size, nil
 }
 
-// OpenContext is the cancellable equivalent of Open; caller closes the stream.
+// OpenContext — отменяемый аналог Open; вызывающий закрывает поток.
 func (s *S3Storage) OpenContext(ctx context.Context, projectID, versionID, relativePath string) (io.ReadCloser, int64, error) {
 	key, err := objectKey(projectID, versionID, relativePath)
 	if err != nil {
@@ -206,7 +206,7 @@ func (s *S3Storage) newSignedRequestWithHash(ctx context.Context, method, key st
 	return s.newSignedRequestWithHeaders0253(ctx, method, key, body, size, payloadHash, nil)
 }
 
-// Additional object headers MUST be set before SigV4 canonicalization.
+// Дополнительные заголовки объекта ДОЛЖНЫ задаваться до каноникализации SigV4.
 func (s *S3Storage) newSignedRequestWithHeaders0253(ctx context.Context, method, key string, body io.Reader, size int64, payloadHash string, extra http.Header) (*http.Request, error) {
 	objectURL, err := s.objectURL(key)
 	if err != nil {

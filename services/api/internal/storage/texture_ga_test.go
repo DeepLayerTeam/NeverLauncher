@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// Regression: restore of a partial backup must claim success when the
-// database inventory contains an additional live texture.
+// Регрессия: восстановление из частичной копии НЕ должно заявлять успех, когда
+// список объектов БД содержит дополнительную активную текстуру.
 func TestTextureGA0260RejectsIncompleteSnapshotBeforeMutation(t *testing.T) {
 	ctx := context.Background()
 	store := NewLocalStorage(t.TempDir())

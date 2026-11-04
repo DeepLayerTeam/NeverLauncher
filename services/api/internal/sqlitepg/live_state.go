@@ -722,8 +722,8 @@ func bridgeCommand0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	}
 	switch status {
 	case "pending", "leased":
-		// Never dispatch a command to an old process. Preserve the identity
-		// and result but force the operator to submit a fresh request.
+		// Никогда не отправлять команду старому процессу. Сохранить идентичность
+		// и результат, но заставить оператора подать новый запрос.
 		status = "indeterminate"
 		completed = time.Now().UTC()
 	case "succeeded", "failed", "unsupported", "indeterminate", "expired":
@@ -760,8 +760,8 @@ func stateRules0474() []stateRule0474 {
 }
 
 func prepareState0474(ctx context.Context, tx pgx.Tx) error {
-	// Historical migrations are immutable. Additional columns retain fields
-	// that the mature PostgreSQL model does not otherwise represent.
+	// Исторические миграции неизменяемы. Дополнительные столбцы сохраняют поля,
+	// которые зрелая модель PostgreSQL иначе не представляет.
 	changes := []string{
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS core_auth_epoch_0474 BIGINT NOT NULL DEFAULT 1`,
 		`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS core_auth_epoch_0474 BIGINT NOT NULL DEFAULT 1`,
@@ -840,8 +840,8 @@ func moveState0474(ctx context.Context, tx pgx.Tx, receipt Report, report *LiveR
 		}
 		report.LiveTables = append(report.LiveTables, LiveTable0473{Source: r.source, Destination: r.target, Rows: expected.Rows})
 	}
-	// We copied original explicit IDs into a BIGSERIAL, so the next PG attempt
-	// must never reuse an existing value.
+	// Исходные явные ID были скопированы в BIGSERIAL, поэтому следующая попытка PG
+	// никогда не должна повторно использовать существующее значение.
 	if _, e := tx.Exec(ctx, `SELECT setval(pg_get_serial_sequence('durable_job_attempts','id'), GREATEST(COALESCE((SELECT max(id) FROM durable_job_attempts),0),1),true)`); e != nil {
 		return e
 	}

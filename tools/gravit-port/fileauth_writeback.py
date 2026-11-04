@@ -94,8 +94,8 @@ def change(data, *, operation, user_uuid, username="", secret=b"", allow_legacy=
         if not accounts:
             raise WritebackError("refusing to remove last account")
     elif operation == "set-password":
-        # Strict, explicit compat-only legacy hash to avoid any silent format
-        # change which might lock all users out of the upstream Gravit server.
+        # Строгий явно включённый устаревший хеш только для совместимости во избежание незаметного изменения формата,
+        # которое могло бы заблокировать всех пользователей вышестоящего сервера Gravit.
         if not allow_legacy or password_format != "sha256-hex":
             raise WritebackError("SHA-256 legacy write requires --password-format sha256-hex and --allow-weak-legacy-hash")
         if not 1 <= len(secret) <= 4096 or not DIGEST.fullmatch(account["password"].lower()):
@@ -139,8 +139,8 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
         secret = read_regular(Path(password_file), max_bytes=4096)
     elif password_file is not None:
         raise WritebackError("password file not accepted for this operation")
-    # flock serializes cooperating maintenance invocations. External Gravit
-    # processes don't obey this lock, hence the enforced operator precondition.
+    # flock сериализует согласованные вызовы обслуживания. Внешние процессы Gravit
+    # процессы не соблюдают эту блокировку, поэтому требуется явное предусловие оператора.
     lock_path = source.with_name(".FileAuthSystem.writeback.lock")
     lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(lock_fd, "a+b") as lock:
@@ -166,8 +166,8 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
                 os.fsync(dest.fileno())
             if hashlib.sha256(read_regular(source)).hexdigest() != digest:
                 raise WritebackError("source changed before commit")
-            # A preimage hardlink remains intact after atomic replace and is
-            # created without clobbering another operator's existing backup.
+            # Жёсткая ссылка на исходные байты остаётся целой после атомарной замены и
+            # создаётся без перезаписи существующей резервной копии другого оператора.
             os.link(source, backup, follow_symlinks=False)
             fsync_directory(source.parent)
             os.replace(name, source)

@@ -1,5 +1,5 @@
-// Package yggdrasiltexture signs authlib-injector texture properties with the
-// protocol's RSA PKCS#1 v1.5 / SHA-1 signature, with manifest Ed25519.
+// Пакет yggdrasiltexture подписывает свойства текстур authlib-injector с помощью
+// протокольную подпись RSA PKCS#1 v1.5 / SHA-1, вместе с Ed25519 манифеста.
 package yggdrasiltexture
 
 import (
@@ -17,7 +17,7 @@ import (
 	"sync"
 )
 
-// Signer is immutable; create it at startup and restart the API for key rotation.
+// Signer неизменяем; создавайте его при запуске и перезапускайте API для ротации ключа.
 type Signer struct {
 	key       *rsa.PrivateKey
 	PublicPEM string
@@ -109,7 +109,7 @@ var ephemeral struct {
 	err    error
 }
 
-// Development-only process-local key: production must use a stable on-disk key.
+// Ключ локального процесса только для разработки: в production нужен постоянный ключ на диске.
 func DevelopmentSigner() (*Signer, error) {
 	ephemeral.once.Do(func() {
 		k, err := rsa.GenerateKey(rand.Reader, 2048)

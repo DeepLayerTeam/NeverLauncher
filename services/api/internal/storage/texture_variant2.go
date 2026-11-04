@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// PutTextureImmutable0253 ensures that an existing digest-keyed blob
-// overwritten on S3. A conflict is accepted only after verifying the remote
-// bytes, including their digest. The local implementation uses atomic hardlink.
+// PutTextureImmutable0253 гарантирует, что существующий блоб с ключом-дайджестом НЕ
+// перезаписывается в S3. Конфликт принимается только после проверки удалённых
+// байтов, включая их дайджест. Локальная реализация использует атомарную жёсткую ссылку.
 func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, png []byte) (string, int64, error) {
 	rel, err := texturePath0252(digest)
 	if err != nil {
@@ -54,7 +54,7 @@ func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, 
 		case resp.StatusCode >= 200 && resp.StatusCode < 300:
 			return key, int64(len(png)), nil
 		case resp.StatusCode == http.StatusPreconditionFailed || resp.StatusCode == http.StatusConflict:
-			// Conflicting, immutable object may be corrupt: verify before deduplicating.
+			// Конфликтующий неизменяемый объект может быть повреждён: проверить до дедупликации.
 			body, size, err := OpenTexture0252(s3, digest)
 			if err != nil {
 				return "", 0, fmt.Errorf("S3 texture collision read: %w", err)
@@ -73,8 +73,8 @@ func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, 
 	return SaveTexture0252(store, digest, png)
 }
 
-// DeleteTexture0253 is idempotent. It accepts only SHA-256 texture object keys.
-// Calling it requires a database GC lease; user-controlled requests cannot call it.
+// DeleteTexture0253 идемпотентен. Принимает только ключи текстурных объектов SHA-256.
+// Вызов требует GC-аренды БД; пользовательские запросы не могут вызывать его.
 func DeleteTexture0253(ctx context.Context, store Storage, digest string) error {
 	rel, err := texturePath0252(digest)
 	if err != nil {
@@ -85,7 +85,7 @@ func DeleteTexture0253(ctx context.Context, store Storage, digest string) error 
 		if err != nil {
 			return err
 		}
-		// A symlink, unexpected file type or tampered file must not be followed/deleted.
+		// Не переходить по ссылкам и не удалять символьные ссылки, неожиданные типы или подменённые файлы.
 		info, err := os.Lstat(filePath)
 		if errors.Is(err, os.ErrNotExist) {
 			return nil

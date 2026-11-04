@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-/** Guard for loader implementation classes at their actual JVM definition point.
- * Only code from SHA-256 pinned, operator-authorized loader JARs can define
- * Fabric/Quilt/Forge/NeoForge launch and Mixin transformation infrastructure.
- * This DOES NOT claim to identify the author of each downstream Mixin edit.
+/** Guard для классов реализации загрузчика в фактический момент их определения JVM.
+ * Только код из JAR загрузчика с закреплённым SHA-256 и разрешением оператора может определять
+ * инфраструктуру запуска Fabric/Quilt/Forge/NeoForge и преобразований Mixin.
+ * Это НЕ означает определение автора каждого последующего изменения Mixin.
  */
 final class LoaderGuard0504 implements ClassFileTransformer {
     private final String loader;

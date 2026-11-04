@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 
-/** Real selected SPI, authenticated JVM HTTP callback and provider session revocation. */
+/** Реальный выбранный SPI, аутентифицированный JVM HTTP-колбэк и отзыв сеанса провайдера. */
 public final class IdentitySpi0485Tests {
     private static int checks;
     private static void ok(boolean pass,String why){checks++;if(!pass)throw new AssertionError(why);}

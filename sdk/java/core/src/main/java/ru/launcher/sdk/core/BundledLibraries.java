@@ -12,7 +12,7 @@ import java.util.jar.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-/** Loads signed-package embedded dependency JARs in the extension process, never the launcher JVM. */
+/** Загружает встроенные JAR-зависимости подписанного пакета в процесс расширения, но никогда в JVM лаунчера. */
 public final class BundledLibraries implements AutoCloseable {
     private static final String PREFIX="META-INF/launcher/libs/";
     private static final String LOCK="META-INF/launcher/libraries.lock";

@@ -1,6 +1,6 @@
-// Package texturepng validates, fully decodes and deterministically rewrites
-// uploaded Minecraft skin/cape PNGs. It trusts the filename, MIME type or
-// PNG signature alone. Limits are checked before allocating decoded pixels.
+// Пакет texturepng проверяет, полностью декодирует и детерминированно перекодирует
+// загруженные PNG скинов/плащей Minecraft. Он НЕ доверяет одному имени файла, MIME или
+// Недостаточно одной сигнатуры PNG. Лимиты проверяются до выделения памяти для декодированных пикселей.
 package texturepng
 
 import (
@@ -33,9 +33,9 @@ type Result struct {
 	Model  string
 }
 
-// Process reads no more than MaxEncodedBytes+1 bytes, validates the complete
-// PNG data (including CRCs), bounds decompression and re-encodes only the pixel
-// matrix, stripping any ancillary data and non-canonical pixel representations.
+// Process читает не более MaxEncodedBytes+1 байтов, проверяет полные
+// данные PNG (включая CRC), ограничивает распаковку и повторно кодирует только матрицу
+// пикселей, удаляя вспомогательные данные и неканонические представления пикселей.
 func Process(src io.Reader, kind, model string) (Result, error) {
 	var result Result
 	if kind != "skin" && kind != "cape" {
@@ -57,9 +57,9 @@ func Process(src io.Reader, kind, model string) (Result, error) {
 	if len(content) < 33 || !bytes.Equal(content[:8], []byte("\x89PNG\r\n\x1a\n")) {
 		return result, ErrInvalid
 	}
-	// Check complete chunk sequence before handing the file to the decoder.
-	// In particular reject trailing payloads, animated PNGs and malformed CRCs
-	// including those on ancillary chunks that image/png may otherwise skip.
+	// Проверить полную последовательность блоков до передачи файла декодеру.
+	// В частности, отклонять хвостовые данные, анимированные PNG и ошибочные CRC,
+	// в том числе во вспомогательных блоках, которые image/png иначе может пропустить.
 	if err := validateChunks(content); err != nil {
 		return result, err
 	}
@@ -80,9 +80,9 @@ func Process(src io.Reader, kind, model string) (Result, error) {
 	if decoded.Bounds().Dx() != cfg.Width || decoded.Bounds().Dy() != cfg.Height {
 		return result, ErrInvalid
 	}
-	// NRGBA fixes channel representation across grayscale, palette, RGBA etc.
-	// Fully transparent pixels have their RGB channels zeroed, so identical
-	// visible content normalizes to an identical SHA-256 digest.
+	// NRGBA унифицирует представление каналов для grayscale, palette, RGBA и т. п.
+	// Для полностью прозрачных пикселей каналы RGB обнуляются, поэтому одинаковое
+	// видимое содержимое нормализуется в одинаковый дайджест SHA-256.
 	normalized := image.NewNRGBA(image.Rect(0, 0, cfg.Width, cfg.Height))
 	draw.Draw(normalized, normalized.Bounds(), decoded, decoded.Bounds().Min, draw.Src)
 	for i := 0; i < len(normalized.Pix); i += 4 {
@@ -102,8 +102,8 @@ func Process(src io.Reader, kind, model string) (Result, error) {
 }
 
 func validGeometry(kind, model string, width, height int) bool {
-	// Minecraft supports integer HD scales of the original 64px layout;
-	// legacy 64x32 skin geometry predates Alex/slim arms.
+	// Minecraft поддерживает целочисленные HD-масштабы исходного макета 64px;
+	// устаревшая геометрия скина 64x32 появилась до рук Alex/slim.
 	if width < 64 || width%64 != 0 || width > MaxDimension {
 		return false
 	}

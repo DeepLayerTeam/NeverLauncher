@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.Base64;
 
-/** Secret access always goes through the existing permission-checked Go secrets broker. */
+/** Доступ к секретам всегда проходит через существующий Go-брокер секретов с проверкой разрешений. */
 public final class Secrets {
     @FunctionalInterface public interface SecretConsumer<T>{T use(byte[] secret)throws Exception;}
     private final HostSession host;

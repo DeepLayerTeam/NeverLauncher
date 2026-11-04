@@ -50,7 +50,7 @@ def validate(cfg: dict, cutover: dict):
     require(not set(units["source"]).intersection(units["target"]), "same unit cannot be both source and target")
     for name in ("currentSnapshot", "sourceSnapshot"):
         require(isinstance(cfg.get(name), str) and Path(cfg[name]).is_absolute(), "absolute " + name + " required")
-    # No arbitrary shell/script runner, insecure HTTP or secrets accepted in recovery config.
+    # Никаких произвольных shell-скриптов, небезопасного HTTP или секретов в конфигурации восстановления.
     permitted = {"format", "runId", "profileId", "channel", "cutoverConfigSha256", "units",
                  "currentSnapshot", "sourceSnapshot", "reconciliationEvidenceSha256"}
     require(set(cfg) <= permitted, "unknown or unsafe rollback configuration fields")
@@ -169,8 +169,8 @@ def fence(cfg, cut, directory, cfg_hash, proxy):
     route = get_route(cut, directory, "rollback-before.json")
     verify_active(cut, route)
     pid = proxy.instance()
-    # First cut public ingress, then stop/mask ALL known independent writers externally.
-    # If close fails no false readiness journal is created.
+    # Сначала закрыть публичный вход, затем внешне остановить/заблокировать ВСЕ известные независимые процессы записи.
+    # При неудаче закрытия ложный журнал готовности не создаётся.
     co.close_ingress(proxy, cut)
     require(proxy.instance() == pid, "HAProxy restarted while closing ingress")
     state = {"format": FORMAT, "configSha256": cfg_hash, "cutoverConfigSha256": cut["_hash"],
@@ -196,9 +196,9 @@ def typed_digest(snapshot: dict) -> str:
 
 
 def validate_source_against_target(current: dict, source: dict, has_reconciliation: bool, baseline: str):
-    # When Never has produced new game data, require the operator to reconcile it
-    # into the QUARANTINED source FIRST, then independently re-export BOTH. The
-    # Backend performs further domain-specific semantic verification.
+    # Если Never создал новые игровые данные, оператор должен сначала согласовать их
+    # с ИЗОЛИРОВАННЫМ источником, затем независимо повторно экспортировать ОБА набора. При этом
+    # Backend выполняет дополнительную доменную семантическую проверку.
     if has_reconciliation:
         require(current == source, "source is not exactly reconciled to current Never world/player state")
     else:
@@ -295,7 +295,7 @@ def reconcile(cut, directory, state, proxy):
     require(state["phase"] in ("committing", "uncertain", "committed_fenced"),
             "only a commit attempt may be reconciled")
     assert_proxy(proxy, cut, state)
-    # Do NOT retry COMMIT after a timeout. Read authoritative PostgreSQL state.
+    # НЕ повторять COMMIT после тайм-аута. Прочитать авторитетное состояние PostgreSQL.
     verify_completed(cut, directory, state)
     change(directory, state, "committed_fenced", trafficOpen=False)
 

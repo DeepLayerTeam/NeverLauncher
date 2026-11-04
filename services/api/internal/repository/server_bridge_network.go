@@ -11,9 +11,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// ListServerBridgeNetworkStates reads observed, runtime-bound routing and operator
-// admission policy from the same PostgreSQL source used by handoff execution.
-// It intentionally infers a healthy route from heartbeat alone.
+// ListServerBridgeNetworkStates читает наблюдаемую привязанную к Runtime маршрутизацию и политику оператора.
+// политику допуска из того же источника PostgreSQL, который используется при выполнении передачи управления.
+// Нельзя выводить работоспособность маршрута только по heartbeat.
 func (r *SQLRepository) ListServerBridgeNetworkStates(ctx context.Context, projectID string, now time.Time) ([]model.ServerBridgeNetworkState, error) {
 	if err := r.check(); err != nil {
 		return nil, err

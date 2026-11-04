@@ -22,8 +22,8 @@ var (
 	ErrNodeProof    = errors.New("invalid, stale or unauthorized node proof")
 )
 
-// NodeRegistration is an operator-managed trust anchor. Private keys are stored here.
-// New keys require explicit rotation and increment the durable identity epoch.
+// NodeRegistration — управляемый оператором якорь доверия. Приватные ключи здесь НЕ хранятся.
+// Новые ключи требуют явной ротации и увеличивают сохраняемую эпоху идентичности.
 type NodeRegistration struct {
 	ID, ProjectID, ProfileID, Channel, PublicKeyHex, Actor string
 }
@@ -177,8 +177,8 @@ func (r *Repository) DisableNode(ctx context.Context, nodeID, actor string) erro
 	})
 }
 
-// verifyProofTx compares persisted trust anchors and validates the signature, timestamp
-// and random nonce. It trusts a caller-supplied fingerprint or epoch alone.
+// verifyProofTx сравнивает сохранённые якоря доверия и проверяет подпись, время
+// и случайный nonce. Он не доверяет одному лишь отпечатку или эпохе, переданным вызывающим.
 func verifyProofTx(ctx context.Context, q sqlitedurable.Executor, action string, proof NodeProof, payloadHash string, now time.Time) error {
 	if proof.NodeID == "" || proof.IdentityEpoch < 1 || !isHex256(payloadHash) || (action != "ping" && action != "redeem" && action != "runtime" && action != "control-lease" && action != "control-ack") {
 		return ErrNodeProof
@@ -390,8 +390,8 @@ func (r *Repository) RedeemJoinTicket(ctx context.Context, raw string, proof Nod
 	return out, nil
 }
 
-// PruneExpiredReplayNonces only removes nonces whose signed timestamp must be
-// stale already. Join tickets are retained for audit and resurrected.
+// PruneExpiredReplayNonces удаляет только nonce, подписанная временная метка которых уже
+// должна устареть. Join-ticket сохраняются для аудита и НЕ восстанавливаются для повторного использования.
 func (r *Repository) PruneExpiredReplayNonces(ctx context.Context) (int64, error) {
 	var count int64
 	e := r.store.Write(ctx, func(q sqlitedurable.Executor) error {

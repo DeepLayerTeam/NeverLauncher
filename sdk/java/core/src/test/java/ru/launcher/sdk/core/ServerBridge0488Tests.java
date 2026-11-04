@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Exercises real authenticated HostSession HTTP and typed ServerBridge services. */
+/** Проверяет реальные аутентифицированные HTTP-запросы HostSession и типизированные сервисы ServerBridge. */
 public final class ServerBridge0488Tests {
     private static int checks;
     private static void ok(boolean value,String why){checks++;if(!value)throw new AssertionError(why);}

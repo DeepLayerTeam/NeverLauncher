@@ -5,7 +5,7 @@ import java.util.jar.*;
 import pro.gravit.launcher.base.modules.*;
 import ru.launcher.sdk.core.*;
 
-/** Executable adapter for explicitly ported Gravit-style modules in signed .nlext JARs. */
+/** Работающий адаптер явно перенесённых модулей Gravit в подписанных .nlext JAR. */
 public final class GravitCompatExtension implements Extension {
     private LauncherModule module;
     private volatile boolean initialized;

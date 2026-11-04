@@ -1,4 +1,4 @@
-// Package texturefetch downloads untrusted HTTPS PNGs while blocking SSRF.
+// Пакет texturefetch загружает недоверенные HTTPS PNG, блокируя SSRF.
 package texturefetch
 
 import (
@@ -27,8 +27,8 @@ var (
 	ErrBusy     = errors.New("too many concurrent texture fetches")
 )
 
-// Deny allocations not fully handled by netip.IsGlobalUnicast, including
-// private, carrier, documentation, 6to4, NAT64, and Teredo IPs.
+// Запрещать адреса, не полностью охватываемые netip.IsGlobalUnicast, включая
+// частные, операторские, документационные, 6to4, NAT64 и Teredo IP.
 var blocked = func() []netip.Prefix {
 	raw := []string{
 		"0.0.0.0/8", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16",
@@ -56,8 +56,8 @@ func safeAddress(ip netip.Addr) bool {
 	return true
 }
 
-// A blank allowlist permits public HTTPS DNS hosts; entries in the allowlist
-// must be exact hostnames. There is no wildcard or suffix matching.
+// Пустой allowlist разрешает публичные HTTPS DNS-хосты; записи в allowlist
+// должны быть точными именами хостов. Маски и совпадения суффиксов не поддерживаются.
 type Fetcher struct {
 	hosts  map[string]bool
 	lookup func(context.Context, string) ([]netip.Addr, error)
@@ -87,8 +87,8 @@ func isDNSName(host string) bool {
 	return true
 }
 
-// New parses an optional comma-delimited exact-host allowlist; invalid rules
-// fail closed instead of silently permitting arbitrary hosts.
+// New разбирает необязательный список точных хостов через запятую; некорректные правила
+// отказывать по умолчанию, а не незаметно разрешать произвольные хосты.
 func New(allowlist string) (*Fetcher, error) {
 	f := &Fetcher{hosts: map[string]bool{}}
 	if allowlist != "" {
@@ -135,7 +135,7 @@ func (f *Fetcher) dialValidated(ctx context.Context, network, address string) (n
 	if err != nil || len(ips) == 0 || len(ips) > 32 {
 		return nil, fmt.Errorf("%w: DNS resolution rejected", ErrUnsafe)
 	}
-	// Validate ALL A/AAAA records before using any of them, preventing rebinding.
+	// Проверить ВСЕ записи A/AAAA до использования любой из них, предотвращая DNS-rebinding.
 	for _, ip := range ips {
 		if !safeAddress(ip) {
 			return nil, ErrUnsafe
@@ -152,9 +152,9 @@ func (f *Fetcher) dialValidated(ctx context.Context, network, address string) (n
 	return nil, fmt.Errorf("%w: dial validated address: %v", ErrRemote, lastErr)
 }
 
-// Fetch has hard response, DNS, connect, TLS, and total time limits. No proxy,
-// redirect, compression, persistent connection, cookies or credentials are used.
-// It returns only fully decoded, geometry-checked, normalized PNG content.
+// Fetch имеет жёсткие ограничения времени ответа, DNS, подключения, TLS и общего времени. Не используются прокси,
+// перенаправления, сжатие, постоянные соединения, cookies или учётные данные.
+// Возвращает только полностью декодированное, проверенное по геометрии, нормализованное содержимое PNG.
 var fetchSlots = make(chan struct{}, 8)
 
 func (f *Fetcher) Fetch(ctx context.Context, rawURL, kind, model string) (texturepng.Result, error) {

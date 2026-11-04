@@ -19,8 +19,8 @@ import java.util.Properties;
 import java.util.ServiceLoader;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/** Trusted premain: loads only digest-pinned plugin JARs from a signed package.
- *  All plugins have the FULL privilege level of this JVM. */
+/** Доверенный premain: загружает только JAR плагинов с закреплённым дайджестом из подписанного пакета.
+ *  Все плагины имеют ПОЛНЫЕ привилегии этой JVM. */
 public final class Agent {
     private static final CopyOnWriteArrayList<MinecraftHook> HOOKS = new CopyOnWriteArrayList<MinecraftHook>();
     private static final ThreadLocal<Boolean> IN_CALLBACK = new ThreadLocal<Boolean>();

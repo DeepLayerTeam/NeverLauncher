@@ -112,9 +112,9 @@ func validate(o Options) error {
 	return nil
 }
 
-// icacls /T is recursive and follows Windows reparse points on some filesystem
-// configurations. Never grant a sandbox SID permissions through a junction,
-// symlink, mount point or another reparse tag, including a parent of the package.
+// icacls /T работает рекурсивно и на некоторых конфигурациях файловой системы переходит по reparse points.
+// Никогда не выдавать sandbox SID разрешения через junction,
+// символьную ссылку, точку монтирования или иной reparse tag, включая родительский каталог пакета.
 func validatePackageTree(root, entry string) error {
 	for dir := filepath.Clean(root); ; dir = filepath.Dir(dir) {
 		if err := rejectReparsePoint(dir); err != nil {
@@ -150,8 +150,8 @@ func validatePackageTree(root, entry string) error {
 	return nil
 }
 
-// Use the OS supplied system tools, never a PATH-selected executable that a
-// less privileged account could plant before the trusted system directory.
+// Использовать системные инструменты ОС, а не выбранный по PATH исполняемый файл, который
+// менее привилегированная учётная запись могла бы разместить перед доверенным системным каталогом.
 func systemICACLS() (string, error) {
 	root := os.Getenv("SystemRoot")
 	if !filepath.IsAbs(root) {
@@ -165,7 +165,7 @@ func systemICACLS() (string, error) {
 }
 
 func createPipe(path, sid string, firstInstance bool) (uintptr, error) {
-	// Explicit per-instance SID: no AppContainer wildcard, anonymous users or network clients.
+	// Явный SID экземпляра: без wildcard AppContainer, анонимных пользователей или сетевых клиентов.
 	sddl := "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;" + sid + ")S:(ML;;NW;;;LW)"
 	sd, e := securityDescriptor(sddl)
 	if e != nil {
@@ -177,7 +177,7 @@ func createPipe(path, sid string, firstInstance bool) (uintptr, error) {
 		Descriptor uintptr
 		Inherit    uint32
 	}{uint32(unsafe.Sizeof(uint32(0)) + 2*unsafe.Sizeof(uintptr(0))), sd, 0}
-	// SECURITY_ATTRIBUTES offset after Length on 64bit is 8, so use a native-layout struct.
+	// Смещение SECURITY_ATTRIBUTES после Length в 64-битном варианте равно 8; используйте структуру нативной раскладки.
 	sa.Length = uint32(unsafe.Sizeof(sa))
 	openMode := uintptr(0x00000003) // PIPE_ACCESS_DUPLEX, synchronous
 	if firstInstance {
@@ -297,8 +297,8 @@ func (h *Handle) Close() {
 	}
 	if h.root != "" && h.sid != "" {
 		if tool, err := systemICACLS(); err == nil {
-			// A package may have changed while the extension was running.
-			// Never recursively walk a newly inserted junction during cleanup.
+			// Пакет мог измениться, пока расширение работало.
+			// При очистке никогда не обходить рекурсивно недавно вставленный junction.
 			if validatePackageTree(h.root, h.entry) == nil {
 				_ = exec.Command(tool, h.root, "/remove:g", "*"+h.sid, "/T").Run()
 			}
@@ -312,8 +312,8 @@ func (h *Handle) Started() error {
 	if h.ready == 0 {
 		return errors.New("sandbox-not-initialized")
 	}
-	// The ready pipe was created with a random name and ACL. This handshake
-	// is emitted only after the target has been added to its Job and resumed.
+	// Канал ready создан со случайным именем и ACL. Это рукопожатие
+	// отправляется только после помещения целевого процесса в Job и его возобновления.
 	ch := make(chan error, 1)
 	go func() {
 		if e := acceptPipe(h.ready); e != nil {
@@ -333,8 +333,8 @@ func (h *Handle) Started() error {
 				h.mu.Lock()
 				h.pid = pid
 				h.mu.Unlock()
-				// The target has not been resumed yet. Explicit ACK makes
-				// it impossible for /v1/hello to race the PID registration.
+				// Целевой процесс ещё не возобновлён. Явный ACK делает
+				// невозможной гонку /v1/hello с регистрацией PID.
 				var written uint32
 				if e := syscall.WriteFile(syscall.Handle(h.ready), []byte("RESUME\n"), &written, nil); e != nil {
 					ch <- e
@@ -394,14 +394,14 @@ func Prepare(o Options) (*Handle, error) {
 	if e = os.MkdirAll(scratch, 0o700); e != nil {
 		return fail(e)
 	}
-	// Read/execute is granted ONLY to the signed immutable package; shared host
-	// directories are ACL-granted. Shared files are accessed by the broker.
+	// Разрешение чтения/исполнения выдаётся ТОЛЬКО подписанному неизменяемому пакету; общие каталоги хоста
+	// получают ACL. Общие файлы доступны через брокер.
 	tool, e := systemICACLS()
 	if e != nil {
 		return fail(e)
 	}
-	// Recheck immediately before recursively granting rights. No /C: any
-	// subtree failure is fatal, not a silently partially shared package.
+	// Повторно проверить непосредственно перед рекурсивной выдачей прав. Без /C: любая
+	// ошибка подкаталога фатальна, а не незаметно частично открытый пакет.
 	if e = validatePackageTree(o.PayloadRoot, o.Entrypoint); e != nil {
 		return fail(e)
 	}
@@ -499,8 +499,8 @@ func runChild() {
 	}
 	closeHandle(thread)
 	thread = 0
-	// The Job handle is kept open for the lifetime of the helper. Its last close
-	// causes the kernel to terminate all descendants (no BREAKAWAY flags).
+	// Дескриптор Job остаётся открытым весь срок работы помощника. Закрытие последнего дескриптора
+	// заставляет ядро завершить всех потомков (без флагов BREAKAWAY).
 	ms := uintptr(c.Policy.TimeoutSeconds) * 1000
 	r, _, _ = waitObject.Call(proc, ms)
 	if r == 0x102 {

@@ -3,7 +3,7 @@ package ru.launcher.sdk.core;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-/** Implementation metadata checked before any provider constructor is invoked. */
+/** Метаданные реализации проверяются до вызова любого конструктора провайдера. */
 public record ProviderDescriptor<T extends JavaProvider>(
         ProviderService<T> service, String id, SemVer version,
         String supportedSpi, String supportedExtensionApi, Supplier<? extends T> factory) {

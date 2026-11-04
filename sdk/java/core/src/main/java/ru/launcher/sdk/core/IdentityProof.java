@@ -2,7 +2,7 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Proof returned after the provider has verified a secret or a provider-owned session. */
+/** Доказательство, возвращаемое после проверки секрета или принадлежащего провайдеру сеанса. */
 public record IdentityProof(VerifiedIdentity identity, List<String> authMethods, String providerToken, long expiresAtEpochSeconds) {
     public IdentityProof {
         Objects.requireNonNull(identity,"verified identity");

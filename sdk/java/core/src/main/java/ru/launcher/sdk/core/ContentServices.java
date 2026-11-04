@@ -5,10 +5,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
-/** Operational Java content SPI. Every source read goes through the authenticated
- * Go Host Broker; external network or storage access is not given to providers.
- * A transformed package is PRE-SIGN data only and must be signed and published by
- * the existing NeverLauncher release pipeline. */
+/** Рабочий Java SPI для контента. Любое чтение источника проходит через аутентифицированный
+ * Go Host Broker; провайдерам не предоставляется прямой доступ к внешней сети или хранилищу.
+ * Преобразованный пакет — данные ТОЛЬКО ДО ПОДПИСИ, которые должны быть подписаны и опубликованы
+ * через существующий конвейер выпуска NeverLauncher. */
 public final class ContentServices {
     public static final ProviderService<ContentProvider> CONTRACT =
         new ProviderService<>("never.content", ContentProvider.class, SemVer.parse("1.0.0"));
@@ -35,8 +35,8 @@ public final class ContentServices {
             throw new IllegalArgumentException("content path traversal");
         return value;
     }
-    /** Descriptor pins exact bytes. HTTPS origins remain under the Go outbound allowlist.
-     * Local storage uses the project's existing version namespace. */
+    /** Дескриптор закрепляет точные байты. HTTPS-источники остаются под контролем Go-списка исходящих соединений.
+     * Локальное хранилище использует существующее пространство версий проекта. */
     public record Asset(String projectId, String location, String version, String path,
                         String sha256, int size) {
         public Asset {
@@ -118,8 +118,8 @@ public final class ContentServices {
         if (result == null || result.length>MAX_ASSET) throw new IllegalArgumentException("invalid transformed package");
         return new PreparedPackage(result,sha(result),result.length,true);
     }
-    /** Bytes are checked BEFORE returning to the extension. No source is implicitly trusted
-     * as a published release; the core manifest trust/signature gate remains mandatory. */
+    /** Байты проверяются ДО передачи расширению. Ни один источник по умолчанию не считается доверенным
+     * опубликованным выпуском; основная проверка манифеста и подписи остаётся обязательной. */
     public byte[] readChecked(Asset asset) throws IOException,InterruptedException {
         Objects.requireNonNull(asset);
         Map<String,Object> res;
@@ -145,7 +145,7 @@ public final class ContentServices {
         try { return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
         catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}
     }
-    /** Authenticated Go->JVM callback for actual selected content providers. */
+    /** Аутентифицированный обратный вызов Go->JVM для фактически выбранных провайдеров контента. */
     Map<String,Object> dispatch(String method,Map<String,Object> params) {
         try {
             if (method.equals("content.health")) return Map.of("available",registry().selected(CONTRACT.id()).isPresent());

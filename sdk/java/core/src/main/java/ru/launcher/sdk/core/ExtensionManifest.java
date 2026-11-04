@@ -6,7 +6,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
-/** Reads the actual Extensions 2.0 signed-package manifest format; does not replace package signature verification. */
+/** Читает фактический формат манифеста подписанного пакета Extensions 2.0; не заменяет проверку подписи пакета. */
 public record ExtensionManifest(String id, String name, SemVer version, String versionText, String publisher, String api,
         List<Target> targets, Set<String> permissions, List<String> hooks,
         List<Dependency> dependencies, List<Conflict> conflicts) {

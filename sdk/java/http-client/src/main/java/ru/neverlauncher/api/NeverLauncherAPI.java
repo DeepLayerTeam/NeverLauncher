@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import ru.launcher.sdk.core.Json;
 
-/** Live REST API v1 client. Uses the existing NeverLauncher Java core JSON parser. */
+/** Рабочий клиент REST API v1. Использует существующий JSON-парсер Java-ядра NeverLauncher. */
 public final class NeverLauncherAPI {
     public static final String CONTRACT_VERSION = "1.0.0";
     private static final int MAX_RESPONSE = 8 * 1024 * 1024;
@@ -70,7 +70,7 @@ public final class NeverLauncherAPI {
         try {return Json.parse(new String(raw,StandardCharsets.UTF_8));}
         catch(RuntimeException ex){throw new IOException("invalid JSON API response",ex);}
     }
-    /** Binary/multipart transport with bounded response, useful for file download and upload operations. */
+    /** Двоичный/multipart-транспорт с ограниченным ответом, полезный для скачивания и загрузки файлов. */
     public byte[] requestBytes(String method,String path,Map<String,String> query,byte[] body,String contentType,String idempotencyKey) throws IOException,InterruptedException {
         if(!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains(".."))throw new IllegalArgumentException("unsafe API route");
         var uri=base.resolve(path+(query==null||query.isEmpty()?"":"?"+query.entrySet().stream().sorted(Map.Entry.comparingByKey())
@@ -97,14 +97,14 @@ public final class NeverLauncherAPI {
         }
         return bytes;
     }
-    /** Streams large API responses into an operator-owned destination (max 1 GiB).
+    /** Потоковая передача больших ответов API в каталог назначения оператора (не более 1 ГиБ).
      *
-     * The caller must discard the destination if an IOException is raised: on
-     * network interruption the destination may contain a partial payload.
-     * Redirects are never followed, including for caller-supplied request bodies.
-     * For large uploads supply HttpRequest.BodyPublishers.ofFile(...), not a byte[].
-     * A limit of zero selects the 1 GiB upper bound. This method never closes
-     * the caller's OutputStream.
+     * При возникновении IOException вызывающий код должен удалить результат: при
+     * прерывании сети в нём может остаться неполезная часть данных.
+     * Перенаправления никогда не выполняются, даже для предоставленных вызывающим тел запросов.
+     * Для больших загрузок используйте HttpRequest.BodyPublishers.ofFile(...), а не byte[].
+     * Нулевой лимит означает верхнюю границу 1 ГиБ. Этот метод никогда не закрывает
+     * предоставленный вызывающим OutputStream.
      */
     public long requestStream(String method, String path, Map<String,String> query,
                               HttpRequest.BodyPublisher requestBody, String contentType,
@@ -156,7 +156,7 @@ public final class NeverLauncherAPI {
         }
     }
 
-    /** Calls a generated OpenAPI operation using a streaming request and response. */
+    /** Вызывает сгенерированную операцию OpenAPI с потоковым запросом и ответом. */
     public long callStream(String operationId, Map<String,String> pathParameters, Map<String,String> query,
                            HttpRequest.BodyPublisher requestBody, String contentType,
                            OutputStream destination, long limit, String idempotencyKey)
@@ -172,7 +172,7 @@ public final class NeverLauncherAPI {
                path.startsWith("/api/profiles/minecraft") || path.startsWith("/api/user/profile/") ||
                path.startsWith("/authserver/") || path.startsWith("/sessionserver/");
     }
-    /** N-1 compatibility: 0.45.11 lacked the contract header; /ready version is authoritative. */
+    /** Совместимость N-1: в 0.45.11 отсутствовал заголовок контракта; определяющая версия находится в /ready. */
     public void checkCompatibility() throws IOException,InterruptedException {
         var response=http.send(HttpRequest.newBuilder(base.resolve("/ready")).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
         if(response.statusCode()!=200)throw new IOException("backend not ready: "+response.statusCode());

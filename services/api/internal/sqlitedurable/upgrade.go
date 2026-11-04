@@ -1,7 +1,7 @@
 package sqlitedurable
 
-// Mandatory, verified physical backup before a versioned SQLite migration.
-// The caller retains the exclusive owner lock for the entire operation.
+// Обязательная проверенная физическая резервная копия перед версионированной миграцией SQLite.
+// Вызывающий код удерживает эксклюзивную блокировку владельца на всём протяжении операции.
 import (
 	"context"
 	"errors"

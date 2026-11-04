@@ -7,8 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-/** User-mode checks inside the real Linux game JVM. The parent Rust Guard
- * independently monitors /proc/<pid>, so this class is not the trust root. */
+/** Пользовательские проверки внутри настоящей Linux JVM игры. Родительский Rust Guard
+ * независимо отслеживает /proc/<pid>, поэтому этот класс не является корнем доверия. */
 final class LinuxProcessGuard0508 {
     private LinuxProcessGuard0508() { }
 

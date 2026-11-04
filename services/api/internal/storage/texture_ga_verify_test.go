@@ -33,7 +33,7 @@ func TestTextureGA0260VerificationRequiresCanonicalPNG(t *testing.T) {
 	if checked := VerifyTextureGA0260(ctx, store, obj); checked.Result != "ok" {
 		t.Fatalf("valid normalized PNG rejected: %+v", checked)
 	}
-	// Object naming and SHA-256 matching alone are not sufficient evidence.
+	// Имя объекта и совпадение SHA-256 сами по себе недостаточны как доказательство.
 	plain := []byte("not an image, though stored under its correct SHA256")
 	fake := textureFixture0253(plain)
 	if _, _, err := PutTextureImmutable0253(ctx, store, fake.Digest, plain); err != nil {
@@ -45,8 +45,8 @@ func TestTextureGA0260VerificationRequiresCanonicalPNG(t *testing.T) {
 	if checked := VerifyTextureGA0260(ctx, store, fake); checked.Result != "corrupt" {
 		t.Fatalf("non-PNG bytes accepted as release-quality texture: %+v", checked)
 	}
-	// Hash-valid but not canonically encoded pixels must be rejected: the
-	// service promises normalized blobs and a stable content-addressed cache.
+	// Пиксели с корректным хешем, но неканоническим кодированием должны отклоняться:
+	// сервис гарантирует нормализованные блобы и стабильный кэш с адресацией по содержимому.
 	noncanonical := raw.Bytes()
 	if !bytes.Equal(noncanonical, canonical.PNG) {
 		digest := sha256.Sum256(noncanonical)

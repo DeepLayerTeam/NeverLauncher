@@ -38,8 +38,8 @@ func (p *postgresAdapter) SetUserDisabled(id string, disabled bool) (model.User,
 func (p *postgresAdapter) IsConflict(err error) bool { return errors.Is(err, repository.ErrConflict) }
 func (p *postgresAdapter) Close() error              { return p.repo.Close() }
 
-// A disposable PostgreSQL DSN is mandatory for the dedicated CI job. Neither
-// SQLite nor an in-memory fallback can satisfy this test.
+// Для отдельного задания CI обязателен одноразовый DSN PostgreSQL. Ни
+// SQLite, ни резервное хранилище в памяти не удовлетворяют этому тесту.
 func TestPostgresRealStorageParity0371(t *testing.T) {
 	dsn := os.Getenv("LAUNCHER_PARITY_POSTGRES_DSN")
 	if dsn == "" {

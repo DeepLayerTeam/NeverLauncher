@@ -233,7 +233,7 @@ def journal_write(directory: Path, payload: dict, *, new: bool = False):
             f.flush()
             os.fsync(f.fileno())
     else:
-        # Atomic replacement on same filesystem. All journals remain private.
+        # Атомарная замена в той же файловой системе. Все журналы остаются закрытыми.
         temp = directory / "cutover-state.json.next"
         fd = os.open(temp, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "wb") as f:
@@ -274,7 +274,7 @@ def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
         require(digest(f.read()) == cfg["launcherSha256"], "CLI changed during cutover")
     with open(os.devnull, "wb") as sink:
         env = dict(os.environ)
-        # The bearer token is environment-only, never stored or placed in argv.
+        # Bearer-токен доступен только через окружение, никогда не сохраняется и не передаётся в argv.
         env.pop("LAUNCHER_PASSWORD", None)
         try:
             subprocess.run([str(launcher), "migrate", "gravit", *args, "--output", str(output)],
@@ -314,7 +314,7 @@ def receipt_check(cfg: dict) -> None:
                 (("runId", "runId"), ("profileId", "profileId"), ("channel", "channel"), ("stageId", "stageId"))) and
             receipt.get("unitState") == "inactive" and receipt.get("unitFileState") in ("masked", "masked-runtime") and
             receipt.get("snapshotSha256") == cfg.get("sourceSnapshotSha256"), "source fence receipt not bound to approved source")
-    # Backend/CLI independently checks the receipt hash and its freshness.
+    # Backend/CLI независимо проверяют хеш квитанции и её свежесть.
     from datetime import datetime, timezone
     checked = datetime.fromisoformat(receipt["checkedAt"].replace("Z", "+00:00"))
     stopped = datetime.fromisoformat(receipt["stoppedAt"].replace("Z", "+00:00"))
@@ -334,7 +334,7 @@ def auth_canary(cfg: dict, *, public: bool = False):
     require(digest(body) == canary["requestSha256"], "auth canary payload changed since preflight")
     req = Request(canary["frontendUrl"] if public else canary["url"], body, method="POST",
                   headers={"Content-Type": "application/json", "Cache-Control": "no-store"})
-    # TLS validation uses OS trust; no insecure override and no cross-host redirects.
+    # TLS проверяется по доверию ОС; без небезопасного обхода и межхостовых редиректов.
     try:
         with build_opener(HTTPSHandler(), NoRedirect()).open(req, timeout=8) as response:
             require(response.status == 200, "auth canary denied")
@@ -345,7 +345,7 @@ def auth_canary(cfg: dict, *, public: bool = False):
     result = json.loads(data)
     require(isinstance(result, dict) and result.get(canary["uuidJSONField"]) == canary["expectedPlayerUuid"],
             "auth canary authenticated wrong Minecraft UUID")
-    # Intentionally do not persist session cookies, token, password or body.
+    # Намеренно не сохранять cookies сеанса, токен, пароль или тело.
 
 
 def live_canary(cfg: dict, directory: Path) -> dict:
@@ -410,7 +410,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
     route = route_list(cfg, directory, "route-pre-activate.json")
     assert_route(route, cfg, False)
     receipt_check(cfg)
-    # Verify real target auth before changing the PostgreSQL delivery pointer.
+    # Проверить настоящую целевую авторизацию до смены указателя доставки PostgreSQL.
     auth_canary(cfg)
     update_phase(directory, state, "activating")
     try:
@@ -427,7 +427,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
         inspect_proxy(proxy, cfg, "open")
         update_phase(directory, state, "target_open", trafficOpen=True)
         auth_canary(cfg, public=True)  # Real public HTTPS ingress, not just direct upstream.
-        # The same UUID must actually join the Minecraft server after switching.
+        # Тот же UUID должен действительно подключиться к серверу Minecraft после переключения.
         live_canary(cfg, directory)
         route = route_list(cfg, directory, "route-final.json")
         assert_route(route, cfg, True)
@@ -446,7 +446,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
 
 
 def main(argv=None) -> int:
-    # Do not allow migration CLI output files to be created world-readable.
+    # Не допускать создания выходных файлов CLI миграции с правом чтения для всех.
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("prepare", "activate", "status"))

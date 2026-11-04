@@ -1,6 +1,6 @@
 package ru.launcher.sdk.core;
 
-/** Sanitized, stable error class for authentication flows; no credentials in messages. */
+/** Очищенный стабильный класс ошибки для потоков аутентификации; сообщения не содержат учётных данных. */
 public final class IdentityFailure extends Exception {
     public enum Code { INVALID_CREDENTIALS, IDENTITY_DISABLED, IDENTITY_NOT_FOUND, CONFLICT, UNSUPPORTED, UNAVAILABLE, MISCONFIGURED }
     private final Code code;

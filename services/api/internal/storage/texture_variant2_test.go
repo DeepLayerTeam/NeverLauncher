@@ -59,7 +59,7 @@ func TestTextureLocalBackupRestoreGC0253(t *testing.T) {
 	if err != nil || !bytes.Equal(recovered, payload) {
 		t.Fatal("restore mismatch", err)
 	}
-	// Tampered snapshots must be rejected before modifying the storage.
+	// Подменённые снимки должны отклоняться до изменения хранилища.
 	if err := os.WriteFile(filepath.Join(dest, "blobs", obj.Digest+".png"), []byte(strings.Repeat("x", len(payload))), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 	if puts != 2 {
 		t.Fatalf("expected PUT + conditional retry, got %d", puts)
 	}
-	// Object was tampered with between uploads; accept a collision by key only.
+	// Объект был подменён между загрузками; нельзя принимать совпадение лишь по ключу.
 	mu.Lock()
 	for k := range stored {
 		stored[k] = []byte("tampered")

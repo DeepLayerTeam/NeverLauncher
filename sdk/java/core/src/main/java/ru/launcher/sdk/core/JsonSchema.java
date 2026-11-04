@@ -2,10 +2,10 @@ package ru.launcher.sdk.core;
 
 import java.util.*;
 
-/** Fail-closed JSON Schema subset used by runtime events, commands and config.
+/** Подмножество JSON Schema с отказом по умолчанию для событий, команд и конфигурации Runtime.
  * Supported: type, properties, required, additionalProperties, items, enum,
  * minLength, maxLength, minimum, maximum, minItems, maxItems. Unknown keywords
- * are rejected; this is deliberately not an unrestricted JSON Schema engine.
+ * отклоняются; это намеренно не полноценный движок JSON Schema без ограничений.
  */
 public final class JsonSchema {
     private static final Set<String> KEYS=Set.of("type","properties","required","additionalProperties","items","enum","minLength","maxLength","minimum","maximum","minItems","maxItems");

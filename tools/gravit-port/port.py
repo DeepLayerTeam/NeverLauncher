@@ -119,7 +119,7 @@ def build(args: argparse.Namespace) -> None:
             "a .nlext needs all of --private-key, --public-key, --package and --nl"
         )
 
-    # The official source-port subset is built against our exact SDK, upstream Gravit JARs.
+    # Официально поддерживаемое подмножество исходного порта собирается с нашей точной версией SDK, а не upstream JAR Gravit.
     run("sh", "sdk/java/gravit-compat/build.sh")
     core = ROOT / "sdk/java/core/build/classes"
     adapter = ROOT / "sdk/java/gravit-compat/build/classes"
@@ -157,7 +157,7 @@ def build(args: argparse.Namespace) -> None:
         main = classes.joinpath(*args.module_class.split(".")).with_suffix(".class")
         if not main.is_file():
             raise PortError(f"module class not generated: {args.module_class}")
-        # javap inspects bytecode without initializing or executing an untrusted class.
+        # javap проверяет байткод, не инициализируя и не выполняя недоверенный класс.
         javap = (
             str(Path(os.environ["JAVA_HOME"]) / "bin/javap")
             if os.environ.get("JAVA_HOME")
@@ -234,10 +234,10 @@ def build(args: argparse.Namespace) -> None:
                 if name not in names:
                     raise PortError("missing executable JAR class: " + name)
         (stage / "launcher-extension.json").write_bytes(raw_manifest)
-        # Publish the build directory only after the actual compilation and JAR verification.
+        # Публиковать каталог сборки только после фактической компиляции и проверки JAR.
         stage.rename(destination)
 
-    # No signing key -> only an untrusted staging directory. Represent that as an installable package.
+    # Нет ключа подписи — есть только недоверенный staging-каталог. Не представлять его устанавливаемым пакетом.
     if args.private_key is not None:
         pkg = args.package.resolve()
         try:

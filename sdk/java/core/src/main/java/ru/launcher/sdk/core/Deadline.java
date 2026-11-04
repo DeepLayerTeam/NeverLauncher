@@ -3,7 +3,7 @@ package ru.launcher.sdk.core;
 import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 
-/** Monotonic deadline; immune to wall-clock adjustments. */
+/** Монотонный крайний срок, не зависящий от изменения системных часов. */
 public final class Deadline {
     private final long start=System.nanoTime();private final long nanos;
     private Deadline(Duration duration){if(duration.isZero()||duration.isNegative())throw new IllegalArgumentException("deadline must be positive");nanos=duration.toNanos();}

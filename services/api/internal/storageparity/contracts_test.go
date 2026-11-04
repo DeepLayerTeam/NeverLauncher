@@ -16,9 +16,9 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// This is a real-database, shared behavioral contract (not a mock repository).
-// The currently different HTTP and SQLite Core APIs are adapted explicitly.
-// Until DEP02 completes, this suite certifies ONLY the operations exercised here.
+// Это контракт поведения реальной БД, общий для реализаций (не имитация репозитория).
+// Текущие разные API HTTP и SQLite Core явно адаптируются.
+// До завершения DEP02 этот набор подтверждает ТОЛЬКО реально проверенные здесь операции.
 type storage interface {
 	SaveProject(model.Project) (model.Project, error)
 	GetProject(string) (model.Project, error)
@@ -92,8 +92,8 @@ func sqliteFactory(t *testing.T) func() storage {
 	}
 }
 
-// runCommon is used unchanged against both real database implementations.
-// A restart is a fresh connection, an in-memory snapshot replay.
+// runCommon применяется без изменений к обеим настоящим реализациям БД.
+// Перезапуск — это новое подключение, а не восстановление снимка памяти.
 func runCommon(t *testing.T, open func() storage, scope string) {
 	t.Helper()
 	s := open()
@@ -113,7 +113,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		t.Fatalf("upsert replaced createdAt: %#v %v", p, err)
 	}
 
-	// Real revision CAS and immutable revision-history guarantees.
+	// Настоящий CAS ревизии и гарантии неизменяемой истории редакций.
 	original, err := s.SaveProfile(model.Profile{ProjectID: id, ID: "client", Name: "Vanilla", Loader: "vanilla"})
 	if err != nil || original.Revision != 1 {
 		t.Fatalf("initial profile: %+v / %v", original, err)
@@ -141,7 +141,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		t.Fatalf("revision content modified: %+v", history)
 	}
 
-	// Cross-connection write race with the same revision: exactly one winner.
+	// Гонка записи из двух соединений с одной ревизией: победитель ровно один.
 	var wg sync.WaitGroup
 	outcomes := make(chan error, 2)
 	for i := 0; i < 2; i++ {
@@ -170,7 +170,7 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 		t.Fatalf("CAS concurrency: winner=%d conflicts=%d", wins, conflicts)
 	}
 
-	// User identity and project roles survive a genuine backend reopen.
+	// Идентичность пользователя и роли проекта сохраняются после настоящего повторного открытия Backend.
 	u, err := s.SaveUser(model.User{ID: id + "-owner", Email: id + "@example.invalid", DisplayName: "Parity Owner", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{id: "owner"}})
 	if err != nil {
 		t.Fatalf("SaveUser: %v", err)
@@ -178,8 +178,8 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	if u.ProjectRoles[id] != "owner" {
 		t.Fatalf("role binding missing: %+v", u.ProjectRoles)
 	}
-	// Account disable is security-critical: it must be durable and must not
-	// erase project role bindings or accidentally re-enable on a stale read.
+	// Отключение аккаунта критично для безопасности: оно должно сохраняться и не должно
+	// стирать привязки ролей проекта или случайно включать пользователя при чтении устаревших данных.
 	disabled, err := s.SetUserDisabled(u.ID, true)
 	if err != nil || disabled.Status != "disabled" || disabled.ProjectRoles[id] != "owner" {
 		t.Fatalf("disable failed/roles lost: %+v / %v", disabled, err)

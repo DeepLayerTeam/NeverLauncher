@@ -26,9 +26,9 @@ func texturePath0252(digest string) (string, error) {
 	return digest[:2] + "/" + digest + ".png", nil
 }
 
-// SaveTexture0252 writes already-normalized bytes by content hash. Local writes
-// are fsynced and linked atomically, preventing simultaneous uploads of the
-// same object from exposing a partially-written PNG.
+// SaveTexture0252 пишет уже нормализованные байты по хешу содержимого. Локальные записи
+// синхронизируются fsync и связываются атомарно, не давая параллельным загрузкам
+// одного объекта раскрыть частично записанный PNG.
 func SaveTexture0252(store Storage, digest string, png []byte) (string, int64, error) {
 	path, err := texturePath0252(digest)
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *LocalStorage) saveTextureAtomic0252(path string, png []byte) (string, i
 		if !errors.Is(err, os.ErrExist) {
 			return "", 0, err
 		}
-		// Validate existing immutable object instead of trusting its filename.
+		// Проверять существующий неизменяемый объект, а не доверять его имени файла.
 		existing, readErr := os.ReadFile(dest)
 		if readErr != nil {
 			return "", 0, readErr

@@ -386,9 +386,9 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             stages[stage].get("evidenceSha256") == hashes[name],
             "stage evidence does not match raw artifact: " + stage,
         )
-    # The job's actual display, renderer and OS are part of the verified
-    # observations. A headless/materialization-only job must be signed
-    # as a positive Minecraft runtime run.
+    # Фактический дисплей, рендерер и ОС задания входят в проверенные
+    # наблюдения. Задание без графического интерфейса/только материализация должно быть подписано
+    # НЕ должно подписываться как положительный запуск Runtime Minecraft.
     host = read_json(work / "host-capabilities.json")
     check(
         host.get("schemaVersion") == "launcher.runner-capabilities.v1"
@@ -422,8 +422,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and HEX64.fullmatch(identity["guardPolicySha256"]),
         "unbound runtime plan or guard policy",
     )
-    # Independently verify the exact staged downloads AND the actual installed
-    # bytes. A report saying "valid" cannot compensate for a modified game jar.
+    # Независимо проверять точные подготовленные загрузки И реально установленные
+    # байты. Отчёт со словом «valid» не компенсирует изменённый JAR игры.
     snapshot = read_json(work / "payload" / "staged-package-description.json")
     signed_manifest = read_json(work / "payload" / "signed-release-manifest.json")
     check(
@@ -479,8 +479,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             observed <= selected_paths and bool(observed),
             "native verifier checked files outside selected preset",
         )
-        # For every optional JAR, presence must equal signed membership. A
-        # default install leaving unselected mods in mods/ would be a FAIL.
+        # Для каждого необязательного JAR наличие должно совпадать с подписанным включением.
+        # Установка по умолчанию с невыбранными модами в mods/ означала бы FAIL.
         all_optional = {f for c in catalog["components"] for f in c["files"]}
         for name in all_optional:
             if name not in selected_paths:
@@ -775,7 +775,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and finished <= datetime.now(timezone.utc),
         "invalid execution time bounds",
     )
-    # IMPORTANT: order must match Go validationPayload0345 field order.
+    # ВАЖНО: порядок должен совпадать с порядком полей validationPayload0345 в Go.
     evidence = {
         "schemaVersion": SCHEMA,
         "runNonce": issued["nonce"],
@@ -817,8 +817,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         .isoformat()
         .replace("+00:00", "Z"),
     }
-    # The target matrix is issued by the Backend, not selected by CI or the
-    # worker. Require an EXACT identity match; no wildcard or fallback target.
+    # Целевая матрица выдаётся Backend, а не выбирается CI или
+    # исполнителя. Требовать ТОЧНОГО совпадения идентичности; без масок и резервной цели.
     fields = (
         "packageVersion",
         "manifestSha256",
@@ -905,7 +905,7 @@ def sign_evidence(payload, key_path):
         private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     ).hexdigest()
     payload = {key: payload[key] for key in EVIDENCE_FIELDS}
-    # The byte order of the following dictionary is the Go struct field order.
+    # Порядок байтов следующего словаря совпадает с порядком полей структуры Go.
     return {
         "evidence": payload,
         "signature": base64.urlsafe_b64encode(private.sign(DOMAIN + canonical(payload)))
@@ -936,9 +936,9 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
     check(
         HEX64.fullmatch(cfg.manifest_key), "signed staged manifest key must be pinned"
     )
-    # Pull/inspect the digest-identified image on the trusted host. Image labels
-    # are immutable under the pinned digest, so arbitrary host-provided source
-    # and build identifiers cannot be silently presented as observed provenance.
+    # Получать/проверять образ по дайджесту на доверенном хосте. Метки образа
+    # неизменяемы при закреплённом дайджесте, поэтому произвольные предоставленные хостом источники
+    # и идентификаторы сборки нельзя незаметно представить как наблюдаемое происхождение.
     subprocess.run(
         [cfg.engine, "pull", "--quiet", cfg.image],
         check=True,
@@ -959,7 +959,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
         and labels.get("io.launcher.validation.build-sha256") == cfg.build_sha,
         "pinned image build provenance labels do not match operator-approved release",
     )
-    # Do not accept a user-chosen executable, runtime, image, Docker flags or signing key.
+    # Не принимать выбранный пользователем исполняемый файл, Runtime, образ, флаги Docker или ключ подписи.
     grant = (
         issued_grant
         if issued_grant is not None
@@ -1010,9 +1010,9 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
             stderr=subprocess.PIPE,
             timeout=30,
         )
-        # Mount production data, Docker socket, runner source checkout,
-        # admin token or signing key. Each job gets a fresh network namespace,
-        # root filesystem readonly, all Linux capabilities dropped and bounded resources.
+        # Монтировать производственные данные, Docker socket, исходный checkout раннера,
+        # токен администратора или ключ подписи. Каждое задание получает отдельное сетевое пространство имён,
+        # корневую файловую систему только для чтения, отключённые Linux capabilities и ограниченные ресурсы.
         name = "nl-validation-" + grant["runId"][:24]
         args = [
             cfg.engine,
@@ -1151,7 +1151,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 and stat.st_size <= 16384,
                 "test-account credential file must be a regular owner-only file",
             )
-            # Mounted directly, copied into generic work/output artifacts.
+            # Монтировать напрямую, копировать в общие артефакты work/output.
             args[args.index(cfg.image) : args.index(cfg.image)] = [
                 "--mount",
                 f"type=bind,src={path},dst={inside},readonly",
@@ -1215,8 +1215,8 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 timeout=30,
                 check=False,
             )
-        # Retain only redacted, bounded host-only diagnostics with a digest and
-        # expiry; make the raw stdout available to API, CI or operator UI.
+        # Сохранять только обезличенную ограниченную диагностику хоста с дайджестом и
+        # сроком действия; НЕ предоставлять сырой stdout через API, CI или UI оператора.
         if cfg.diagnostics_dir:
             retain_redacted_diagnostics(
                 worker_log,
@@ -1239,8 +1239,8 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 "worker executed a different runtime matrix target",
             )
         signed = sign_evidence(payload, cfg.signing_key)
-        # No signature is ever exposed to an OCI container or a user-supplied
-        # report. Only the backend receives signed evidence via scoped API.
+        # Ни одна подпись не передаётся OCI-контейнеру или предоставленному пользователем
+        # отчёту. Только Backend получает подписанные свидетельства через API с ограничениями по правам.
         result = request_json(
             cfg.backend,
             "/api/v1/packages/" + package_id + "/validation-attestations",
@@ -1299,8 +1299,8 @@ def execute_matrix(cfg, package_id):
             )
             continue
         try:
-            # A separate grant/challenge/workdir prevents one successful run
-            # from being replayed for two target IDs or two different presets.
+            # Отдельные grant/challenge/workdir не позволяют одному успешному запуску
+            # для предотвращения повторного использования с двумя ID целей или двумя разными пресетами.
             grant = (
                 initial
                 if index == 0
@@ -1443,8 +1443,8 @@ def main():
     check(bool(cfg.operator_token), "missing host operator credential")
     check(15 <= cfg.runtime_seconds <= 3600, "invalid runtime deadline")
     check(1 <= cfg.diagnostics_ttl_hours <= 720, "invalid diagnostic retention TTL")
-    # A rootful Docker daemon makes its client effectively root on the host,
-    # including access to the signing key. Refuse it unconditionally.
+    # Docker daemon с root-правами делает клиента фактически root на хосте,
+    # включая доступ к ключу подписи. Безусловно отклонять.
     info = subprocess.run(
         ["podman", "info", "--format", "{{.Host.Security.Rootless}}"],
         stdout=subprocess.PIPE,

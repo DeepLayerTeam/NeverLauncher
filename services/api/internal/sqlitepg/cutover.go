@@ -14,10 +14,10 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// CutoverCheck0475 verifies committed imports, the actual SQLRepository reader,
-// and the target file receipt. It does not authorize a backend cutover: HTTP,
-// Coordinator and external runtime state need independent reconciliation.
-// No SQL is executed against the source SQLite database by this check.
+// CutoverCheck0475 проверяет зафиксированные импорты, реальный SQLRepository reader
+// и квитанцию целевого файла. Он не разрешает переключать Backend: HTTP,
+// Coordinator и внешнее состояние Runtime требуют независимой сверки.
+// Эта проверка не выполняет SQL-запросы к исходной базе SQLite.
 type CutoverCheck0475 struct {
 	SourceSHA256           string `json:"sourceSha256"`
 	LiveVerified           bool   `json:"liveVerified"`
@@ -43,8 +43,8 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 		return result, fmt.Errorf("cannot connect to PostgreSQL (credentials redacted): %w", err)
 	}
 	defer pg.Close(context.Background())
-	// The receipt and counts must describe the same database snapshot. Take a
-	// repeatable-read view, with no writes and no reliance on HTTP readiness.
+	// Квитанция и счётчики должны относиться к одному снимку БД. Получить
+	// снимок repeatable-read без записи и зависимости от готовности HTTP.
 	tx, err := pg.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return result, err
@@ -74,7 +74,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 			return result, errors.New("invalid live table receipt")
 		}
 		seen[table.Source] = true
-		// The table name comes only from compiled mappings, not the JSON receipt.
+		// Имя таблицы берётся только из скомпилированных сопоставлений, а не из JSON-квитанции.
 		var count int64
 		query := `SELECT count(*) FROM ` + quoted(table.Destination)
 		if table.Source == "bridge_runtime" {
@@ -107,8 +107,8 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	if actual != count {
 		return result, errors.New("files catalog modified since verified file copy")
 	}
-	// A 0.47.4 count-only receipt cannot establish catalog identity. Query
-	// the complete canonical row set and compare with the file-copy receipt.
+	// Квитанция 0.47.4 только со счётчиками не доказывает идентичность каталога. Запросить
+	// полный канонический набор строк и сравнить с квитанцией копирования файлов.
 	rows, err := tx.Query(ctx, `SELECT project_id,version_id,path,size,sha256 FROM files ORDER BY project_id,version_id,path`)
 	if err != nil {
 		return result, err
@@ -139,9 +139,9 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	}
 	result.FilesVerified = true
 	result.FileObjects = count
-	// Ensure the nominated previous owner still has the same identity,
-	// password credential, active status and project permission. Query from
-	// the same transaction; SQLRepository is checked separately below.
+	// Убедиться, что указанный предыдущий владелец сохранил ту же идентичность,
+	// пароль, активный статус и разрешения проекта. Читать из
+	// той же транзакции; SQLRepository проверяется отдельно ниже.
 	var ownerID, role, password, status string
 	if err = tx.QueryRow(ctx, `SELECT id,role_id,password_hash,status FROM users WHERE lower(email)=lower($1)`, ownerEmail).Scan(&ownerID, &role, &password, &status); err != nil {
 		return result, fmt.Errorf("owner not found: %w", err)
@@ -163,8 +163,8 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	if err = tx.Commit(ctx); err != nil {
 		return result, err
 	}
-	// Inspect the same persisted objects through the real backend repository
-	// implementation, not a reconstructed staging view.
+	// Проверять те же сохранённые объекты через настоящую реализацию Backend-репозитория,
+	// а не через реконструированное промежуточное представление.
 	r := repository.NewSQLRepository("pgx", dsn, "")
 	defer func() {
 		if c, ok := r.(interface{ Close() error }); ok {
@@ -186,7 +186,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 		return result, fmt.Errorf("SQLRepository failed to list profiles: %w", err)
 	}
 	result.RepositoryVerified = true
-	// NO automatic approval. 0.47.4 does not migrate HTTP/Coordinator/etc.
+	// НИКАКОГО автоматического одобрения. Версия 0.47.4 не переносит HTTP/Coordinator и т. п.
 	result.ReadyForBackendCutover = false
 	return result, nil
 }

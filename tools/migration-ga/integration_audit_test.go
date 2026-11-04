@@ -57,8 +57,8 @@ func TestIntegrationAudit0491LiveReadbackAndFailClosed(t *testing.T) {
 	}
 	root := t.TempDir()
 	psql := filepath.Join(root, "psql")
-	// A test fixture, not PostgreSQL evidence. Production always uses the
-	// operator's psql executable against the live migrated SQLRepository.
+	// Тестовая фикстура, а не доказательство PostgreSQL. Production всегда использует
+	// исполняемый psql оператора против живого перенесённого SQLRepository.
 	script := `#!/bin/sh
 [ "$PGDATABASE" = "postgres://test-only" ] || exit 10
 [ "$PGOPTIONS" = "-c default_transaction_read_only=on" ] || exit 11
@@ -140,7 +140,7 @@ printf '%s\n' '{"readOnly":"on","project":"project-1","migration":{"id":"migrati
 	if _, err := os.Stat(opts.Output); !os.IsNotExist(err) {
 		t.Fatal("bad JVM wrote PASS evidence")
 	}
-	// Falsified credentials and untrusted origin must not produce evidence.
+	// Поддельные учётные данные и недоверенный источник не должны создавать свидетельство.
 	opts.Token = "wrong-token"
 	opts.Output = filepath.Join(root, "reject-token.json")
 	if err := executeIntegrationAudit0491(context.Background(), opts); err == nil {

@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-// OpenGravitSourceObject02510 reads a raw key from an explicitly configured,
-// trusted source S3 bucket using the normal SigV4 implementation. Untrusted
-// Gravit file_url URLs MUST be passed here or fetched directly.
+// OpenGravitSourceObject02510 читает сырой ключ из явно настроенного
+// доверенного исходного bucket S3 с обычной реализацией SigV4. Недоверенные
+// URL Gravit file_url ДОЛЖНЫ передаваться сюда или загружаться напрямую.
 func (s *S3Storage) OpenGravitSourceObject02510(ctx context.Context, key string) (io.ReadCloser, error) {
 	if key == "" || len(key) > 512 || strings.HasPrefix(key, "/") || strings.Contains(key, "\\") || strings.ContainsAny(key, "\x00\r\n") {
 		return nil, errors.New("invalid S3 object key")
@@ -28,7 +28,7 @@ func (s *S3Storage) OpenGravitSourceObject02510(ctx context.Context, key string)
 		cancel()
 		return nil, err
 	}
-	// Redirect a signed request to a host supplied in an S3 HTTP response.
+	// Не перенаправлять подписанный запрос на хост, указанный в HTTP-ответе S3.
 	client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {

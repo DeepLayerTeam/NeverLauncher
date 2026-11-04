@@ -22,7 +22,7 @@ type StableRuntimePermit03411 struct {
 	MatrixSHA256   string
 	TargetsJSON    json.RawMessage
 	Runs           map[string]string
-	// TrustedAttestorKey0374 is the API-configured Ed25519 public key, a runner-supplied key.
+	// TrustedAttestorKey0374 — публичный ключ Ed25519, настроенный через API, а не ключ, предоставленный раннером.
 	TrustedAttestorKey0374 string
 }
 

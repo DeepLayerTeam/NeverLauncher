@@ -17,8 +17,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// FileCopyReport0474 is written only after each file has been read back and
-// cryptographically verified from the destination backend.
+// FileCopyReport0474 записывается только после повторного чтения каждого файла и
+// криптографической проверки из целевого Backend.
 type FileCopyReport0474 struct {
 	SourceSHA256   string `json:"sourceSha256"`
 	Driver         string `json:"driver"`
@@ -34,8 +34,8 @@ type fileObject0474 struct {
 	size                         int64
 }
 
-// Canonical catalog serialization must include values, not merely a row
-// count. The unexported fileObject fields would otherwise marshal as {}.
+// Каноническая сериализация каталога обязана включать значения, а не только
+// счётчик строк. Иначе неэкспортируемые поля fileObject сериализуются как {}.
 func (f fileObject0474) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Project string `json:"project"`
@@ -133,9 +133,9 @@ func verifyObject0474(ctx context.Context, store storage.Storage, obj fileObject
 	return true, nil
 }
 
-// Before opening a local destination, reject symlinks even if the object
-// currently exists with matching bytes. A matching link outside the storage
-// root is not an acceptable proof of ownership of the destination object.
+// Перед открытием локального назначения отклонять символьные ссылки, даже когда объект
+// уже существует с совпадающими байтами. Совпадающая ссылка за пределами корня хранилища
+// не является допустимым доказательством владения целевым объектом.
 func safeExistingLocal0474(local *storage.LocalStorage, obj fileObject0474) error {
 	rel, e := filePath0474(obj.project, obj.version, obj.path)
 	if e != nil {
@@ -175,9 +175,9 @@ func safeLocalObject0474(local *storage.LocalStorage, obj fileObject0474) error 
 	return noSymlinks0474(local.RootPath(), rel)
 }
 
-// atomicLocalSave0474 publishes a verified file without O_TRUNC or following
-// symlinks. A hardlink from an fsynced private temporary file guarantees that
-// concurrent writers cannot overwrite an existing object.
+// atomicLocalSave0474 публикует проверенный файл без O_TRUNC и перехода по
+// символьным ссылкам. Жёсткая ссылка из fsync-синхронизированного закрытого временного файла гарантирует, что
+// конкурирующие писатели не перезапишут существующий объект.
 func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fileObject0474, source io.Reader) error {
 	rel, e := filePath0474(obj.project, obj.version, obj.path)
 	if e != nil {
@@ -198,7 +198,7 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 		return errors.New("unsafe destination storage root")
 	}
 	parent := filepath.Dir(filepath.Join(root, rel))
-	// Create directories one at a time, refusing symlink traversal.
+	// Создавать каталоги по одному, отклоняя переход по символьным ссылкам.
 	cur := root
 	for _, part := range strings.Split(filepath.ToSlash(filepath.Dir(rel)), "/") {
 		if part == "." {
@@ -246,10 +246,10 @@ func atomicLocalSave0474(ctx context.Context, dest *storage.LocalStorage, obj fi
 	return e
 }
 
-// CopyFileObjects0474 is an explicitly offline, idempotent copy for a migrated
-// SQLRepository. Source and destination must be isolated from service writers.
-// Existing matching objects are accepted; mismatching objects are NEVER
-// overwritten. It works with LocalStorage and S3Storage and verifies readback.
+// CopyFileObjects0474 — явно офлайновое идемпотентное копирование для перенесённого
+// SQLRepository. Источник и назначение должны быть изолированы от пишущих служб.
+// Существующие совпадающие объекты принимаются; несовпадающие НИКОГДА не
+// перезаписываются. Работает с LocalStorage и S3Storage и проверяет повторное чтение.
 func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Storage) (report FileCopyReport0474, err error) {
 	if src == nil || dst == nil || pgDSN == "" {
 		return report, errors.New("database and both storage drivers required")
@@ -269,7 +269,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		return report, fmt.Errorf("PostgreSQL connection: %w", e)
 	}
 	defer pg.Close(context.Background())
-	// Read-only preflight; no partial migration can make the receipt claim true.
+	// Предварительная проверка только на чтение; частичная миграция не может сделать квитанцию достоверной.
 	var sourceSHA string
 	e = pg.QueryRow(ctx, `SELECT source_sha256 FROM sqlite_live_receipts_0473 ORDER BY created_at DESC LIMIT 1`).Scan(&sourceSHA)
 	if e != nil {
@@ -343,8 +343,8 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 			if local, ok := dst.(*storage.LocalStorage); ok {
 				er = atomicLocalSave0474(ctx, local, o, r)
 			} else {
-				// S3 objects are written only on a frozen destination, then
-				// read back; a failed remote write never yields a receipt.
+				// Объекты S3 записываются только в замороженное назначение, затем
+				// читаются обратно; неудачная удалённая запись никогда не выдаёт квитанцию.
 				_, n, writeErr := dst.Save(o.project, o.version, o.path, &contextReader0474{ctx, r})
 				er = writeErr
 				if er == nil && n != o.size {
@@ -363,7 +363,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		}
 		report.Checked++
 	}
-	// Concurrency protection: a changing file catalog cannot be certified.
+	// Защита от конкуренции: изменяющийся файловый каталог нельзя сертифицировать.
 	var liveCount int64
 	if e = pg.QueryRow(ctx, `SELECT count(*) FROM files`).Scan(&liveCount); e != nil {
 		return report, e
@@ -371,7 +371,7 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 	if liveCount != report.Checked {
 		return report, errors.New("files catalog changed during copy")
 	}
-	// Verify that no catalog metadata changed with the same row count.
+	// Проверить, что при том же количестве строк метаданные каталога не изменились.
 	againRows, e := pg.Query(ctx, `SELECT project_id,version_id,path,size,sha256 FROM files ORDER BY project_id,version_id,path`)
 	if e != nil {
 		return report, e
@@ -405,8 +405,8 @@ func CopyFileObjects0474(ctx context.Context, pgDSN string, src, dst storage.Sto
 		report.Verified = false
 		return report, e
 	}
-	// Old 0.47.4 receipts lack the catalog digest. They must be reverified
-	// by this routine rather than silently accepted as a matching catalog.
+	// В старых квитанциях 0.47.4 отсутствует дайджест каталога. Их нужно повторно проверить
+	// этой процедурой, а не молча принять как совпадающий каталог.
 	_, e = pg.Exec(ctx, `ALTER TABLE sqlite_file_receipts_0474 ADD COLUMN IF NOT EXISTS catalog_sha256 TEXT NOT NULL DEFAULT ''`)
 	if e != nil {
 		report.Verified = false

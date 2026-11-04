@@ -782,7 +782,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Проверяйте все предыдущие подтверждения, а не только текущий ключ идемпотентности.
 	// Если сбой произошёл после необратимого действия, новые ключи не могут
-	// silently issue a second dangerous action.
+	// незаметно повторно выполнить второе опасное действие.
 	unknown, guardErr := remoteUnresolvedCommand04112(a.dir)
 	if guardErr != nil {
 		write(http.StatusServiceUnavailable, map[string]string{"error": "command journal integrity unavailable"})
@@ -1079,7 +1079,7 @@ func remoteCall0284(args []string) error {
 	} else if action == "receipt" {
 		// Ответ мог потеряться уже после выполнения операции узлом.
 		// Прочитайте исходное подтверждение, сохранённое через fsync: НИКОГДА не повторяйте изменение на
-		// another host or with a fresh idempotency key after I/O uncertainty.
+		// другим хостом либо с новым ключом идемпотентности после неопределённого результата ввода-вывода.
 		key := flagValue(args, "--idempotency-key", "")
 		if !remoteIdempotency0284.MatchString(key) {
 			return errors.New("receipt recovery requires the original --idempotency-key (16-128 safe characters)")

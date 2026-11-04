@@ -2,7 +2,7 @@ package ru.launcher.sdk.gravit;
 import pro.gravit.launcher.base.modules.LauncherModule;
 import ru.launcher.sdk.core.RuntimeEvents;
 import java.util.Map;
-/** Go eventbus release.published with original idempotency metadata. */
+/** Событие Go eventbus release.published с исходными метаданными идемпотентности. */
 @HostEvent(type="release.published")
 public final class ReleasePublishedEvent extends LauncherModule.Event {
     public final String id,projectId,idempotencyKey;

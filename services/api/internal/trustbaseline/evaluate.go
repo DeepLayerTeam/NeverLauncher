@@ -7,10 +7,10 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// Decisions are computed from authoritative server-side device/session state.
-// 0.31.1 has no remote TPM / Secure Enclave key provenance verifier. In
-// particular no persisted legacy value or client-supplied hardware label can
-// upgrade its result to remotely verified.
+// Решения вычисляются по авторитетному состоянию устройства/сеанса на сервере.
+// В версии 0.31.1 нет проверки происхождения удалённого TPM / Secure Enclave. В
+// частности, никакое сохранённое устаревшее значение или присланная клиентом метка оборудования не может
+// повысить его результат до статуса удалённо проверенного.
 const (
 	Standard = "standard"
 	Strict   = "strict"
@@ -48,8 +48,8 @@ func Evaluate(device model.TrustedDevice, sessionBound bool, now time.Time) mode
 	if !sessionBound {
 		reasons = append(reasons, "session-device-binding-missing")
 	}
-	// Local KSP/TPM labels come from the registering client and are not
-	// server-verifiable hardware evidence. Report them as claims only.
+	// Локальные метки KSP/TPM передаются регистрирующимся клиентом и не являются
+	// доказательством оборудования, проверяемым сервером. Сообщать о них только как о заявлениях.
 	if device.KeyBinding == "hardware" && device.KeyAlgorithm == "p256" && strings.TrimSpace(device.HardwareProvider) != "" {
 		a.LocalHardwareBinding = "client-reported"
 	}
@@ -72,9 +72,9 @@ func Evaluate(device model.TrustedDevice, sessionBound bool, now time.Time) mode
 		standard.RecoveryAction = "login-or-verify-device"
 	}
 	strictReasons := append([]string(nil), standardReasons...)
-	// Until 0.31.2+ actually verifies a trusted root, exact key, nonce and
-	// binding epoch, strict cannot be granted even for a legacy row marked
-	// "verified" or a locally TPM-backed key.
+	// Пока 0.31.2+ реально не проверяет доверенный корень, точный ключ, nonce и
+	// эпоху привязки, строгий уровень нельзя выдавать даже для старой строки с меткой
+	// «verified» или локального ключа, хранящегося в TPM.
 	strictReasons = append(strictReasons, "remote-hardware-verifier-unavailable", "guard-runtime-evidence-unavailable")
 	if isMacPlatform0316(device.Platform) {
 		strictReasons = append(strictReasons, "macos-device-key-provenance-unsupported", "macos-app-attest-not-bound-to-device-identity")
@@ -92,9 +92,9 @@ func Evaluate(device model.TrustedDevice, sessionBound bool, now time.Time) mode
 	return a
 }
 
-// EvaluateWithHardwareEvidence promotes hardware provenance only from a
-// server-verified TPM Certify result whose active root, epoch and session have
-// been rechecked by the caller. Guard runtime remains independently unverified.
+// EvaluateWithHardwareEvidence повышает доверие к происхождению оборудования только по
+// проверенному сервером результату TPM Certify, чей активный корень, эпоха и сеанс
+// были повторно проверены вызывающим. Guard Runtime остаётся независимо непроверенным.
 func EvaluateWithHardwareEvidence(device model.TrustedDevice, sessionBound bool, evidence model.DeviceHardwareEvidence, now time.Time) model.TrustAssessment {
 	a := Evaluate(device, sessionBound, now)
 	if !sessionBound || a.KeyPossession != "verified" || evidence.DeviceID != device.ID || evidence.UserID != device.UserID || evidence.KeyFingerprint != device.KeyFingerprint || evidence.RootID == "" || evidence.AKFingerprint == "" || evidence.VerifiedAt.After(now) || !evidence.ExpiresAt.After(now) {
