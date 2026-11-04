@@ -172,7 +172,7 @@ export function BackendOperations0289({
   }
   return (
     <section className="card wide">
-      <h2>Backend Operations · {__LAUNCHER_VERSION__}</h2>
+      <h2>Управление серверной частью · {__LAUNCHER_VERSION__}</h2>
       <p className="muted">
         Управление самим Backend, не Minecraft-серверами или процессами
         произвольного хоста. Требуется глобальное backend:control.
@@ -192,10 +192,10 @@ export function BackendOperations0289({
         <>
           <p>
             Версия: <strong>{status.version}</strong> · commit:{" "}
-            <code>{status.commit}</code> · uptime: {status.uptimeSeconds} с
+            <code>{status.commit}</code> · время работы: {status.uptimeSeconds} с
           </p>
           <p>
-            Runtime identity: <code>{status.instanceId}</code> · config
+            Идентификатор Runtime: <code>{status.instanceId}</code> · конфигурация
             revision: #{status.operationalConfigRevision}
           </p>
           <p>
@@ -221,7 +221,7 @@ export function BackendOperations0289({
               ))}
             </tbody>
           </table>
-          <h3>Контролируемый restart</h3>
+          <h3>Контролируемый перезапуск</h3>
           <p className="muted">
             Только при наличии внешнего service manager и PostgreSQL-журнала.
             Требуется свежая phishing-resistant MFA. Повтор не должен создавать
@@ -248,7 +248,7 @@ export function BackendOperations0289({
           </button>
         </>
       ) : (
-        <p>Backend status недоступен.</p>
+        <p>Состояние серверной части недоступно.</p>
       )}
       <h3>Наблюдаемые сессии</h3>
       <p className="muted">

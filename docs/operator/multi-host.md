@@ -1,59 +1,21 @@
 # NeverLauncher 0.51.2 — работающее развёртывание API и обработчиков на нескольких узлах
 
-**Result:** two independent Docker Engines, one API process + one durable worker
-per host, one Admin + HTTPS ingress per host. Both processes connect to the
-**same externally provisioned PostgreSQL, Redis and S3**. A health-checking
-**external** load balancer routes HTTPS to both host ingress ports. Taking down
-one of the product stacks leaves the other stack operational *when* the external
-dependencies and the load balancer remain available. This is a runnable topology
-and a controlled outage exercise, **not** proof of physical host, hypervisor,
-PostgreSQL, Redis, S3 or public-edge HA.
+**Результат:** два независимых Docker Engine, по одному процессу API и одному устойчивому worker на хост, по одному Admin и HTTPS ingress на хост. Все процессы подключены к **одним и тем же внешним PostgreSQL, Redis и S3**. **Внешний** балансировщик с проверкой здоровья распределяет HTTPS между ingress-портами обоих хостов. Остановка одного продуктового стека оставляет второй работоспособным, *если* внешние зависимости и балансировщик доступны. Это действующая топология и управляемое испытание отказа, **но не** доказательство HA физических серверов, гипервизора, PostgreSQL, Redis, S3 либо публичного края сети.
 
-This file is a separate production deployment. **Do not overlay it on
-`docker-compose.yml` or `docker-compose.network-ha.yml`**: those files launch
-single-host Redis/PostgreSQL or rely on Docker-local service discovery.
+Это самостоятельное промышленное развёртывание. **Не накладывайте его на `docker-compose.yml` или `docker-compose.network-ha.yml`**: те файлы запускают однохостовые Redis/PostgreSQL или используют локальное обнаружение служб Docker.
 
 ## Предварительные условия и обязательные ограничения
 
-- At least two separately administered Linux machines/VMs with Docker Engine
-  and Docker Compose v2, with **different real** `/etc/machine-id` values.
-  Separate physical failure domains must be verified by the operator: unique
-  machine IDs alone do not prove distinct hypervisors, racks or power feeds.
-- Reachable **external** PostgreSQL (with full TLS hostname verification), Redis
-  (`rediss://`, ACL/TLS), and S3 (`https://`) shared by *all four processes*.
-  **Database schema and SQLite→PostgreSQL cutover must already be approved**
-  under the existing repository gate. This release does not configure
-  PostgreSQL/Redis/S3 clustering (0.51.3) or partition fencing (0.51.4).
-- A separately hosted external L7/TCP balancer with TLS passthrough or
-  re-encryption. Direct it to `node-a:443` and `node-b:443` with SNI and Host
-  matching `LAUNCHER_PUBLIC_URL`. Health-check **`GET /ready` for HTTP 200**
-  over verified TLS. Remove failed hosts promptly; do not retry ambiguous
-  non-idempotent HTTP requests. The external LB must survive an application
-  host failure. Restrict host port 443 firewall access to trusted balancer IPs.
-  Source address forwarding must use the already configured trusted-proxy
-  policy, not arbitrary client-supplied `X-Forwarded-For`.
-- Build/publish the **real** 0.51.2 API and Admin OCI artifacts using the
-  existing release pipeline and verify source/asset provenance. Pin all four
-  OCI image names to exact immutable `@sha256:...` digests. Never build a
-  `:latest` tag independently on each host; the launcher refuses mutable
-  image references and comparing two tags as if they were identical.
-- Supply **identical** `LAUNCHER_AUTH_TOKEN_SECRET`, signing/trust settings,
-  provider credentials and S3 bucket on both hosts; use strong secrets and
-  private `.env` files owned by the operator. `LAUNCHER_NODE_ID` and host
-  ingress IP must differ. Secrets are not synchronized by SSH or this tool;
-  normal secret rotation requires the existing security/operations procedure.
-- Bootstrap/migrate PostgreSQL **once, before** the multi-host rollout, with
-  exclusive authorized migration; both steady-state replicas have
-  `LAUNCHER_DATABASE_AUTO_MIGRATE=false`. Do not start an unapproved old API
-  concurrently with the new topology. Local factory/backups/cache/extension
-  working files are **not** a shared filesystem. Only PostgreSQL/S3 may be
-  considered authoritative for the advertised operations; local runtime
-  auth/passkey/legacy snapshot consistency requires separate E2E.
+- Не менее двух раздельно администрируемых Linux-машин/ВМ с Docker Engine и Docker Compose v2 и **разными настоящими** `/etc/machine-id`. Оператор обязан проверить независимость физических доменов отказа: разные ID сами по себе не доказывают разные гипервизоры, стойки или питание.
+- Доступные **внешние** PostgreSQL с полной TLS-проверкой имени хоста, Redis (`rediss://`, ACL/TLS) и S3 (`https://`), общие для *всех четырёх процессов*. **Схема БД и переключение SQLite→PostgreSQL должны быть заранее одобрены** действующим шлюзом Repository. Выпуск не настраивает кластеры PostgreSQL/Redis/S3 (0.51.3) или fencing сетевых разделений (0.51.4).
+- Отдельно размещённый внешний L7/TCP-балансировщик с пропуском TLS либо повторным шифрованием. Направьте его на `node-a:443` и `node-b:443` с SNI и Host, совпадающими с `LAUNCHER_PUBLIC_URL`. Проверяйте **`GET /ready` с HTTP 200** через доверенный TLS. Быстро исключайте упавшие хосты; не повторяйте неоднозначные неидемпотентные HTTP-запросы. Балансировщик должен пережить отказ прикладного хоста. Ограничьте доступ к порту 443 firewall только доверенными IP балансировщика. Передача исходного адреса должна использовать уже настроенную политику доверенных прокси, а не произвольный клиентский `X-Forwarded-For`.
+- Соберите и опубликуйте **настоящие** OCI-артефакты API и Admin 0.51.2 штатным конвейером выпуска и проверьте происхождение исходников/ресурсов. Закрепите имена всех четырёх OCI-образов точными неизменяемыми `@sha256:...` дайджестами. Никогда не собирайте `:latest` независимо на каждом хосте: лаунчер запрещает изменяемые ссылки и сравнение тегов как якобы идентичных образов.
+- Предоставьте **одинаковые** `LAUNCHER_AUTH_TOKEN_SECRET`, параметры подписи/доверия, учётные данные провайдеров и бакет S3 на обоих хостах; используйте стойкие секреты и закрытые `.env` под управлением оператора. `LAUNCHER_NODE_ID` и IP ingress-хоста должны отличаться. Средство не синхронизирует секреты по SSH; ротация выполняется существующей процедурой безопасности и эксплуатации.
+- Инициализируйте и мигрируйте PostgreSQL **один раз до** многохостового развёртывания с эксклюзивной разрешённой миграцией; у обеих постоянных реплик `LAUNCHER_DATABASE_AUTO_MIGRATE=false`. Не запускайте старый неодобренный API одновременно с новой топологией. Локальные рабочие файлы сборщика, копий, кэша и расширений **не** являются общей файловой системой. Источником истины для заявленных операций могут считаться лишь PostgreSQL и S3; согласованность локальных сеансов/Passkey/старых снимков требует отдельных E2E.
 
-## Установка на *каждом* хосте Docker
+## Установка на *каждом* Docker-хосте
 
-Install the identical checked-out 0.51.2 source tree at `/opt/launcher` on each
-machine. From the independent machine's console:
+Установите идентичную проверенную рабочую копию исходников 0.51.2 в `/opt/launcher` на каждой машине. Из консоли соответствующей независимой машины:
 
 ```sh
 cd /opt/launcher/deploy/production
@@ -66,13 +28,9 @@ python3 ../../scripts/operations/multi_host_0512.py local-check \
   --directory /opt/launcher/deploy/production --output /var/tmp/launcher-preflight-a.json
 ```
 
-`local-check` calls the real `docker compose config --format json` and refuses
-local dependencies, unpinned OCI images, absent/mis-permissioned TLS keys,
-invalid replicas, unexpected services, non-TLS external URLs and missing
-machine IDs. No child process is started on failure.
+`local-check` вызывает настоящий `docker compose config --format json` и отклоняет локальные зависимости, незакреплённые OCI-образы, отсутствующие TLS-ключи или неверные права на них, недопустимые реплики, посторонние службы, внешние URL без TLS и отсутствующие ID машин. При ошибке дочерние процессы не запускаются.
 
-If database migration is required, from **one** host during the approved
-maintenance window, after backup and with old writers stopped:
+Если требуется миграция БД, выполните её **на одном** хосте в одобренное окно обслуживания, после резервного копирования и остановки старых писателей:
 
 ```sh
 cd /opt/launcher/deploy/production
@@ -84,32 +42,20 @@ docker compose -p launcher -f docker-compose.multi-host.yml run --rm --no-deps \
   -e LAUNCHER_DATABASE_AUTO_MIGRATE=true api
 ```
 
-One-shot migration exits without HTTP or worker. Check its status **and**
-existing backend cutover approval before enabling requests. This route is not
-an automated rolling schema migration.
+Одноразовая миграция завершается без HTTP и worker. До допуска запросов проверьте её статус **и** действующее одобрение переключения Backend. Этот путь не выполняет автоматическую поэтапную миграцию схемы.
 
-If preflight succeeds and external dependencies are live, start each node:
+После успешной предварительной проверки и доступности внешних зависимостей запустите каждый узел:
 
 ```sh
 python3 /opt/launcher/scripts/operations/multi_host_0512.py local-up \
   --directory /opt/launcher/deploy/production --output /var/tmp/launcher-node-a-up.json
 ```
 
-`local-up` pulls pinned immutable OCI images, starts all local roles and waits
-for actual Docker healthchecks. It executes real `/ready` from the API and
-worker and real PostgreSQL/Redis-lease/S3 round-trip via existing
-`launcher-api diagnose growth` before writing a private JSON report. Missing
-external resources fail closed. The worker's listener binds **only** to
-container loopback; API and worker have **no host-published port**. Per-process
-writable volumes and image digest are checked. Container images must include
-working `launcher-api`, `wget` and the official Admin package.
+`local-up` загружает закреплённые неизменяемые OCI-образы, запускает локальные роли и ждёт настоящих Docker-healthcheck. До записи закрытого JSON-отчёта выполняются реальные проверки `/ready` API и worker и обращения к PostgreSQL/арендам Redis/S3 через существующий `launcher-api diagnose growth`. Отсутствующие внешние ресурсы вызывают строгий отказ. Слушатель worker привязан **только** к loopback контейнера; у API и worker **нет опубликованных на хост портов**. Проверяются тома записи отдельных процессов и дайджест образа. Контейнерные образы должны включать рабочие `launcher-api`, `wget` и официальный пакет Admin.
 
 ## Управление кластером с третьей доверенной машины
 
-Use dedicated SSH operator credentials with exact pinned host keys in
-`known_hosts`, `BatchMode=yes`, and the installed code and pre-provisioned `.env`
-on each target. SSH account needs Docker access; this is root-equivalent
-access and must be restricted. Do not run this as an anonymous web API.
+Используйте выделенные SSH-учётные данные оператора с точно закреплёнными ключами хостов в `known_hosts`, `BatchMode=yes`, установленным кодом и заранее подготовленным `.env` на каждой цели. SSH-пользователю нужен доступ к Docker; это эквивалентно root и должно быть ограничено. Не выставляйте инструмент анонимным веб-API.
 
 ```sh
 TOOL=/opt/launcher/scripts/operations/multi_host_0512.py
@@ -121,54 +67,28 @@ python3 "$TOOL" cluster-verify $NODES --edge-url https://launcher.example \
   --output /var/tmp/ha-live-0512.json
 ```
 
-Cluster preflight checks different OS machine IDs/replica prefixes, exactly
-matching image digest refs, equal public origin and shared dependency endpoint
-hosts. Actual cross-node secret equivalence, provider failover, live session
-round-trips and independent hypervisor placement are not inferred from these
-non-secret observations; test them separately before admitting real users.
+Предварительная проверка кластера сравнивает отличающиеся machine ID/префиксы реплик, точное совпадение ссылок-дайджестов образов, единый публичный адрес и хосты общих зависимостей. По этим наблюдениям без секретов **нельзя** делать вывод о равенстве секретов между узлами, переключении провайдеров, живых переходах между репликами или размещении на независимых гипервизорах; проверьте отдельно до допуска настоящих пользователей.
 
-The operator should test an authenticated **read→write→read on the other
-API**, a completed durable job and ServerBridge reconnection against the
-real service. Check actual UUID, idempotency key, database revisions and S3
-hashes. Current `/ready` and S3/Redis growth probes alone are *insufficient*
-for claiming cross-replica session or game-state coherence.
+Оператор должен протестировать аутентифицированную цепочку **чтение→запись→чтение на другом API**, завершённое устойчивое фоновое задание и переподключение ServerBridge к настоящей службе. Проверьте реальные UUID, ключ идемпотентности, ревизии БД и хеши S3. Одних `/ready` и проб Redis/S3 недостаточно, чтобы заявлять о согласованности сеансов и игрового состояния между репликами.
 
 ## Контролируемый тест отказа стека узла (с нарушением работы)
 
-On a maintained staging cluster, with an independent LB and data backups:
+На обслуживаемом промежуточном кластере с независимым балансировщиком и резервными копиями данных:
 
 ```sh
 python3 "$TOOL" cluster-drill $NODES --edge-url https://launcher.example \
   --failed-node a --allow-disruption --output /var/tmp/ha-drill-a-0512.json
 ```
 
-Before the drill both hosts and the public HTTPS `/ready` must pass. The tool
-stops **all four** product roles (API, worker, Admin, ingress) on node A,
-checks three consecutive public HTTPS readiness probes, verifies a live API
-and worker on node B, and restarts node A even after a probe failure. It
-verifies both hosts and the public edge again. An error is not rewritten as
-PASS, and interrupted restoration is recorded. Repeat for node B, on a
-second new report path. **This simulates loss of one product stack; it is
-not equivalent to pulling the power cord, dropping routes, or a hypervisor
-failure.** A physical-host fault test is still required for HA GA.
+До учения должны проходить оба хоста и публичный HTTPS `/ready`. Средство останавливает **все четыре** продуктовые роли (API, worker, Admin, ingress) узла A, проверяет три последовательные публичные HTTPS-пробы готовности, настоящий API и worker узла B и перезапускает A даже при ошибке проверки. Затем оно повторно проверяет оба хоста и публичный край. Ошибка не переписывается как PASS; прерванное восстановление фиксируется. Повторите для узла B с новым путём отчёта. **Это имитация потери одного продуктового стека, а не отключение питания, маршрутов или гипервизора.** Для HA GA всё ещё нужен тест неисправности физического хоста.
 
-Private reports use atomic exclusive write and mode `0600`; reports contain
-non-secret image digest references and endpoint hostnames, not credentials or
-Docker environment blocks. Store reports access-controlled. CLI status:
-`0`=requested operation/check succeeded, `2`=not executed/error, `3`=runtime
-was observed but a required condition failed.
+Закрытые отчёты создаются атомарно и эксклюзивно с правами `0600`; они содержат ссылки на дайджесты образов и имена хостов без секретов, а не учётные данные или окружение Docker. Ограничьте доступ к отчётам. Коды завершения CLI: `0` — операция/проверка успешна, `2` — не выполнялась либо произошла ошибка, `3` — Runtime наблюдался, но обязательное условие не выполнялось.
 
 ## Известные ограничения (не считать автоматически сертифицированными)
 
-1. PostgreSQL/Redis/S3 failover and their RPO/RTO are not handled by this release
-   (0.51.3); a shared single dependency can still take down both product nodes.
-2. Network partitions, stale workers/ServerBridge fencing and exact-once
-   external effects require 0.51.4/0.51.5 adversarial verification.
-3. Cross-replica local legacy security/session snapshot and file-based plugin
-   mutation remain unverified; avoid routes relying on unsynchronized in-memory
-   or local state until there is a dedicated transactional consistency test.
-4. The original `cluster-up` path still requires all hosts pinned to **identical** images; do not use it to perform a rolling update. Version 0.51.7 provides the separate operational `rolling_update_0517.py` host-by-host controller (see `docs/deployment/rolling-update.md`). Online schema changes are still prohibited during the 0.51.6/0.51.7 mixed-version window.
-5. The external load balancer and DNS remain managed outside this Compose.
-   An LB deployed on node A alone would recreate a host SPOF.
-6. The existing final-byte, game/Guard and independent GA gates still apply.
-   Lack of access to two real hosts prevents any claim of measured HA RTO/RPO.
+1. Переключение PostgreSQL/Redis/S3 и их RPO/RTO не реализованы этим выпуском (0.51.3); отказ единой общей зависимости всё ещё может отключить оба продуктовых узла.
+2. Разделение сети, ограждение устаревших worker/ServerBridge и ровно однократные внешние эффекты требуют враждебных проверок 0.51.4/0.51.5.
+3. Локальные старые снимки безопасности/сеансов и файловые изменения плагинов между репликами ещё не проверены; избегайте маршрутов с несинхронизированным состоянием в памяти или локально до отдельных тестов транзакционной согласованности.
+4. Исходная команда `cluster-up` требует **идентичных** закреплённых образов на всех хостах; не используйте её для поэтапного обновления. Версия 0.51.7 даёт отдельный рабочий контроллер `rolling_update_0517.py` для последовательного обновления узлов (см. `docs/deployment/rolling-update.md`). Онлайн-изменения схемы также запрещены во время смешанной работы 0.51.6/0.51.7.
+5. Внешний балансировщик и DNS управляются вне Compose. Балансировщик только на узле A вновь создаст единую точку отказа хоста.
+6. По-прежнему действуют шлюзы точных окончательных байтов, игры/Guard и независимого GA. Без доступа к двум настоящим хостам нельзя заявлять измеренные HA RTO/RPO.

@@ -1,26 +1,26 @@
 # Launcher 0.22.4 — владение файлами, восстановление и безопасная очистка
 
-## фактическое выполнение
+## Фактическое выполнение
 
-Manifest v2 now signs both `files[].ownership` and `fileRules[]`. The same policy is validated by the Go API before persistence and publication, by Runtime before file inspection/download/repair/cleanup, and by the CLI manifest updater. Neither historical Manifest v1 signatures nor published v2 payloads are rewritten. The new PostgreSQL migration `0058_file_ownership_0224.sql` persists per-file ownership for new uploads; existing rows default to an empty ownership field to preserve the previous wire format.
+Manifest v2 теперь подписывает и `files[].ownership`, и `fileRules[]`. Одна и та же политика проверяется Go API перед сохранением и публикацией, Runtime — до проверки, загрузки, восстановления и очистки файлов, а также CLI при обновлении манифеста. Подписи исторических манифестов v1 и содержимое уже опубликованных манифестов v2 не переписываются. Новая миграция PostgreSQL `0058_file_ownership_0224.sql` сохраняет владельца каждого нового загружаемого файла; существующим строкам назначается пустое поле владельца для сохранения прежнего формата обмена.
 
-Ownership values:
+Значения поля владения:
 
-| Value | Installation / repair | Verification / cleanup |
+| Значение | Установка и восстановление | Проверка и очистка |
 |---|---|---|
-| `required` | Download / replace from a signed URL; `required=true` | Must match SHA-256; missing is a repair failure |
-| `managed` | Download / replace from a signed URL | Must match SHA-256; may be removed when absent from the next release if explicitly tracked |
-| `optional` | Not automatically downloaded when absent unless an explicit `verify` rule requires it; a present corrupt copy is repaired | Missing allowed by default; user installation choices remain separate until P05/P09 |
-| `user-owned` | Never overwritten or deleted by repair / cleanup | Not hash-verified against the release |
-| `generated` | Never downloaded, never overwritten | Exempt from manifest verification |
+| `required` | Загрузка или замена по подписанному URL; `required=true` | Обязательно совпадение SHA-256; отсутствие считается ошибкой восстановления |
+| `managed` | Загрузка или замена по подписанному URL | Обязательно совпадение SHA-256; файл можно удалить при отсутствии в следующем выпуске, если он явно отслеживался |
+| `optional` | Отсутствующий файл не загружается автоматически, если явное правило `verify` этого не требует; повреждённый существующий файл восстанавливается | По умолчанию отсутствие допустимо; выбор пользователя остаётся отдельной функцией до P05/P09 |
+| `user-owned` | Восстановление и очистка никогда не перезаписывают и не удаляют файл | Хеш не сравнивается с хешем выпуска |
+| `generated` | Никогда не загружается и не перезаписывается | Исключён из проверки по манифесту |
 
-Missing `ownership` on existing v2 files is interpreted as `required` if `required=true`, otherwise `optional`. This is a *runtime default*, not a rewriting of the signed JSON. `required=true` with `user-owned`, `generated` or `optional` is invalid.
+Если в существующих файлах v2 поле `ownership` отсутствует, оно трактуется как `required` при `required=true`, иначе как `optional`. Это *правило Runtime по умолчанию*, а не переписывание подписанного JSON. Сочетание `required=true` с `user-owned`, `generated` либо `optional` недопустимо.
 
-The following paths are always protected even if an administrator accidentally marks them managed: `saves/`, `screenshots/`, `resourcepacks/`, `shaderpacks/`, `config/`, `logs/`, `crash-reports/`, `diagnostics/`, `.launcher/`, `.launcher-quarantine/`, `options.txt`, `optionsof.txt`, `servers.dat`, `usercache.json`. These are protected case-insensitively, including descendants. Conflicting rules and explicit managed-file references to protected paths block v2 release validation. Legacy v1 repair and cleanup also preserve these protected locations.
+Следующие пути всегда защищены, даже если администратор ошибочно пометит их управляемыми: `saves/`, `screenshots/`, `resourcepacks/`, `shaderpacks/`, `config/`, `logs/`, `crash-reports/`, `diagnostics/`, `.launcher/`, `.launcher-quarantine/`, `options.txt`, `optionsof.txt`, `servers.dat`, `usercache.json`. Защита действует без учёта регистра, включая все вложенные пути. Конфликтующие правила и явные ссылки на защищённые пути как на управляемые файлы блокируют проверку выпуска v2. Восстановление и очистка устаревшего v1 также сохраняют эти каталоги и файлы.
 
-## подписанные включения, исключения и проверки
+## Подписанные включения, исключения и проверки
 
-Example fragment of a Manifest v2 **before** signing (other normal v2 Manifest fields omitted):
+Пример фрагмента Manifest v2 **до** подписания (прочие стандартные поля Manifest v2 опущены):
 
 ```json
 {
@@ -35,18 +35,18 @@ Example fragment of a Manifest v2 **before** signing (other normal v2 Manifest f
 }
 ```
 
-`pattern` accepts exact slash-separated relative paths and anchored `<directory>/**` recursively. Absolute paths, traversal, mixed slash formats, partial wildcards and overlapping rules are rejected. `exclude` explicitly protects matching user-owned/generated content. `verify` makes matching optional files mandatory for verification/repair (and cannot select user-owned/generated data). `include` permits quarantine of *unlisted* files only within an explicitly managed scope. Without a signed `include`, unknown files are preserved. Default protected directories take precedence over every rule.
+Поле `pattern` принимает точные относительные пути с разделителями `/` и закреплённый шаблон `<directory>/**` для рекурсивного совпадения. Абсолютные пути, выход за границы каталога, смешанные разделители, частичные подстановочные знаки и пересекающиеся правила запрещены. `exclude` явно защищает совпадающие пользовательские или сгенерированные данные. `verify` делает совпадающие необязательные файлы обязательными при проверке и восстановлении (но не может выбирать `user-owned` или `generated`). `include` разрешает помещать в карантин *неперечисленные* файлы только в явно управляемой области. При отсутствии подписанного `include` неизвестные файлы сохраняются. Защищённые по умолчанию каталоги имеют приоритет над любыми правилами.
 
-All managed download bytes are staged to exclusive `.nlpart-*` files, validated against length and SHA-256, flushed and synchronized before a final switch. The runtime refuses symlinks in target paths and parent components. On Windows an existing managed target is temporarily backed up and restored if installation fails; Unix uses an atomic rename over the old managed target. A clean/repair request can only execute against an Ed25519 Manifest verified against a **pinned public key**; cleanup now requires that key from Desktop's Tauri bridge.
+Все загружаемые управляемые данные сначала записываются в эксклюзивные файлы `.nlpart-*`, проверяются по длине и SHA-256, сбрасываются и синхронизируются до окончательной замены. Runtime запрещает символьные ссылки в целевом пути и его родительских компонентах. В Windows существующий управляемый файл временно резервируется и восстанавливается при ошибке установки; в Unix выполняется атомарное переименование поверх старого файла. Очистка и восстановление выполняются только по Manifest с подписью Ed25519, проверенной по **закреплённому открытому ключу**; теперь Desktop передаёт этот ключ через мост Tauri и для очистки.
 
 ## API, CLI и миграция
 
-- `POST /api/v1/packages/{packageId}/files` multipart accepts `ownership=required|managed|optional`; default `required`. User-owned or generated content must not be uploaded as a managed release blob. Ownership is persisted in the SQL `files` row and copied to the signed Manifest during package validation.
-- The existing authenticated Manifest editing request supports `fileRules` alongside its existing minecraft/runtime/directories fields. Rules are covered by Ed25519 signatures, and published versions remain immutable. An incomplete draft may be edited; publishing requires a valid managed file URL and SHA-256.
-- CLI manifest updates apply only listed managed/required/selected optional files, do not treat user-owned/generated files as targets, and remove only old tracked managed/required paths that no longer appear. CLI client cleanup/rollback no longer sweep arbitrary unknown `mods/` files: only paths from the installed `.launcher/client-state.json` are eligible for cleanup/rollback operations.
-- The migration is additive and must be applied normally by API and CLI migrators before version 0.22.4 uses SQL file rows; migration `0057` must already exist. No old release signing payloads, snapshots or profile revisions are migrated or re-signed.
+- Multipart-маршрут `POST /api/v1/packages/{packageId}/files` принимает `ownership=required|managed|optional`; по умолчанию `required`. Данные `user-owned` или `generated` нельзя загружать как управляемые объекты выпуска. Значение владения сохраняется в SQL-строке `files` и переносится в подписанный Manifest при проверке пакета.
+- Существующий аутентифицированный запрос редактирования Manifest поддерживает `fileRules` вместе с действующими полями Minecraft, Runtime и каталогов. Правила покрываются подписями Ed25519; опубликованные версии неизменяемы. Незавершённый черновик редактировать можно; публикация требует действительного URL управляемого файла и SHA-256.
+- CLI обновляет манифест только для перечисленных управляемых, обязательных и выбранных необязательных файлов; не использует `user-owned` и `generated` как цели. Удаляются только старые отслеживаемые пути `managed`/`required`, которых больше нет в выпуске. Очистка и откат CLI-клиента больше не удаляют произвольные неизвестные файлы `mods/`: допустимы только пути из установленного `.launcher/client-state.json`.
+- Миграция добавочная; её нужно применить стандартными миграторами API и CLI до работы версии 0.22.4 с SQL-строками файлов. Миграция `0057` должна уже существовать. Старые подписываемые данные выпуска, снимки и ревизии профилей не переносятся и повторно не подписываются.
 
-## команды проверки
+## Команды проверки
 
 ```sh
 cd services/api && GOPROXY=off go test ./internal/model ./internal/dbmigrate
@@ -56,8 +56,8 @@ cd runtime/runtime && cargo test --lib
 python3 scripts/version/manage.py check
 ```
 
-The model and CLI integration tests assert protected-path rejection, duplicates, rules overlap, v1 signing compatibility, SHA-256 coverage, preservation of saves/screenshots/resourcepacks/options/config/optional/untracked mods, managed-file replacement, real repair, and rollback. The Rust unit tests cover signed policy tampering, signed cleanup, symlink rejection and legacy repair without settings replacement. Rust tests require a locally installed Rust toolchain. PostgreSQL live migrations and Desktop multi-OS E2E must still be run in CI/production-like environments before certifying an official production release.
+Интеграционные тесты модели и CLI проверяют отказ для защищённых путей, дубликаты, пересечения правил, совместимость подписей v1, покрытие SHA-256, сохранность сохранений, снимков экрана, пакетов ресурсов, настроек, конфигурации, необязательных и неотслеживаемых модов, замену управляемых файлов, настоящее восстановление и откат. Модульные тесты Rust проверяют подмену подписанной политики, подписанную очистку, запрет символьных ссылок и старый механизм восстановления без замены настроек. Для тестов Rust необходим локально установленный инструментарий Rust. До сертификации официального промышленного выпуска ещё нужно выполнить реальные миграции PostgreSQL и многооперационные E2E-тесты Desktop для разных ОС в CI либо среде, приближённой к промышленной.
 
-### границы области действия
+### Границы области действия
 
-This version deliberately does **not** claim transactional release-version sync/channel-head CAS (P08), end-user optional mod selection (P09), or profile workspaces (P06). The new manifest ownership policy is enforced by the actual repair/download/cleanup/update paths, not merely defined as a schema.
+Версия намеренно **не** заявляет о транзакционной синхронизации версий выпуска и CAS головного выпуска канала (P08), выборе необязательных модов конечным пользователем (P09) или рабочих пространствах профилей (P06). Новая политика владения файлами манифеста фактически применяется в рабочих путях восстановления, загрузки, очистки и обновления, а не только описана схемой.

@@ -1,6 +1,6 @@
-// Package officialminecraft implements the public Microsoft/Xbox/Minecraft Java
-// authentication chain and account-owned texture operations. It never accepts
-// local Yggdrasil identities as proof of ownership.
+// Пакет officialminecraft реализует публичную цепочку авторизации Microsoft/Xbox/Minecraft Java
+// и операции с текстурами, принадлежащими учётной записи. Он не принимает
+// локальные идентификаторы Yggdrasil как доказательство владения.
 package officialminecraft
 
 import (
@@ -100,8 +100,8 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 		req.Header.Set("Content-Type", contentType)
 	}
 	var resp *http.Response
-	// Only idempotent reads may be replayed. Minecraft Services occasionally
-	// rate-limits profile lookup; retrying writes or OAuth exchanges is unsafe.
+	// Повторять разрешено только идемпотентные запросы чтения. Minecraft Services иногда
+	// ограничивает частоту запросов профиля; повтор записи или обмена OAuth небезопасен.
 	for attempt := 0; ; attempt++ {
 		resp, err = c.http.Do(req)
 		if err != nil {
@@ -111,7 +111,7 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 			(resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable && resp.StatusCode != http.StatusGatewayTimeout) {
 			break
 		}
-		// Drain a bounded amount so the pooled connection can be reused.
+		// Считайте ограниченный объём ответа, чтобы соединение можно было вернуть в пул.
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxResponse))
 		resp.Body.Close()
 		delay := time.Duration(100*(1<<attempt)) * time.Millisecond
@@ -144,9 +144,9 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 		}
 		_ = json.Unmarshal(b, &body)
 		code := body.Error
-		// Minecraft Services may reject an otherwise valid OAuth/XSTS chain
-		// because the application's client ID has not been authorized.
-		// Normalize the provider message; never echo arbitrary response text.
+		// Minecraft Services может отклонить корректную цепочку OAuth/XSTS,
+		// если идентификатор клиентского приложения не был разрешён.
+		// Нормализуйте сообщение провайдера; не выводите произвольный текст его ответа.
 		if resp.StatusCode == http.StatusForbidden && strings.Contains(strings.ToLower(body.ErrorMessage), "invalid app registration") {
 			code = "invalid_app_registration"
 		}
@@ -156,8 +156,8 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 		if code == "" {
 			code = "upstream_error"
 		}
-		// Codes are untrusted upstream data; prevent credential leakage in
-		// structured CLI evidence, logs or future error instrumentation.
+		// Коды приходят из недоверенного внешнего источника; не допускайте утечки учётных данных
+		// в структурированные свидетельства CLI, журналы и будущие сообщения об ошибках.
 		if len(code) > 64 || !safeServiceCode(code) {
 			code = "upstream_error"
 		}
@@ -249,9 +249,9 @@ func (c *Client) Exchange(ctx context.Context, microsoftToken string) (Minecraft
 	return c.ExchangeWithStages(ctx, microsoftToken, nil)
 }
 
-// ExchangeWithStages emits only names of successfully completed provider
-// stages, never credentials. It is used to prove exactly where a real POC
-// failed without copying bearer tokens into any evidence file.
+// ExchangeWithStages выдаёт только названия успешно пройденных этапов провайдера,
+// но не учётные данные. Это позволяет установить, на каком этапе реальная проверка
+// завершилась ошибкой, не записывая токены доступа в файлы свидетельств.
 func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, stagePassed func(string)) (MinecraftToken, error) {
 	if microsoftToken == "" {
 		return MinecraftToken{}, errors.New("missing Microsoft access token")
@@ -326,9 +326,9 @@ func (c *Client) Profile(ctx context.Context, token string) (Profile, error) {
 	return p, nil
 }
 func (c *Client) Entitled(ctx context.Context, token string) error {
-	// The profile endpoint is authoritative for Game Pass as well as paid Java licences.
-	// Entitlements can legitimately be empty for Game Pass. A non-existent profile
-	// is rejected by Profile, rather than treating an Xbox account as Java ownership.
+	// Конечная точка профиля авторитетна и для Game Pass, и для платной лицензии Java.
+	// Для Game Pass список прав может законно быть пустым. Отсутствующий профиль
+	// отклоняется через Profile: наличие аккаунта Xbox не доказывает владение Java.
 	_, err := c.Profile(ctx, token)
 	return err
 }
@@ -388,11 +388,11 @@ func (c *Client) ResetCape(ctx context.Context, token string) error {
 	return c.request(ctx, "DELETE", c.minecraft+"/minecraft/profile/capes/active", token, "", nil, nil)
 }
 
-// ConfirmTexture0395 fetches the *actual* official profile after a successful
-// texture mutation. Minecraft Services may acknowledge a write before its
-// profile representation changes; retries are bounded and never repeat the
-// write. A different UUID is a hard identity error, not a retryable condition.
-// kind: skin-upload, skin-reset, cape-select, cape-reset.
+// ConfirmTexture0395 получает *фактический* официальный профиль после успешного
+// изменения текстуры. Minecraft Services может подтвердить запись раньше,
+// чем обновится представление профиля; повторы ограничены и никогда не повторяют
+// запись. Другой UUID — ошибка идентичности, которую нельзя исправить повтором.
+// тип: skin-upload, skin-reset, cape-select, cape-reset.
 func (c *Client) ConfirmTexture0395(ctx context.Context, token, uuid, kind, value string) (Profile, error) {
 	if uuid == "" || token == "" {
 		return Profile{}, ErrDenied
@@ -452,8 +452,8 @@ func confirmedTexture0395(p Profile, kind, value string) bool {
 		}
 		return true
 	case "skin-reset":
-		// A default skin after a reset is provider-dependent. Only a fresh,
-		// token-authenticated profile (checked above) is authoritative.
+		// Скин по умолчанию после сброса зависит от провайдера. Только актуальный
+		// профиль, проверенный токеном (выше), считается авторитетным.
 		return true
 	}
 	return false

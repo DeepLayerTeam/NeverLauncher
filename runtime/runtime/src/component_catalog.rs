@@ -1,6 +1,6 @@
-//! Signed catalogs v1-v3; v3 resolves dependency, version and exclusion constraints before IO.
-//! Preset resolution returns actual allow-listed manifest file paths, never
-//! commands or client-supplied destinations.
+//! Подписанные каталоги v1–v3; v3 разрешает ограничения зависимостей, версий и исключений до ввода-вывода.
+//! Выбор пресета возвращает реальные разрешённые пути файлов из манифеста, но не
+//! команды и не пути назначения, переданные клиентом.
 use crate::{Manifest,file_ownership};
 use serde::{Deserialize,Serialize};
 use sha2::{Digest,Sha256};
@@ -196,8 +196,8 @@ fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
     }
     Ok(())
 }
-// Only the native authenticated backend transport may establish this per-task
-// authorization context. Never read grants from a renderer/manifest/ENV field.
+// Только нативный аутентифицированный транспорт Backend может устанавливать
+// контекст разрешений для задания. Не читайте права из renderer, манифеста или ENV.
 #[derive(Clone,Debug)]
 pub struct VerifiedComponentScope0392 {
     pub project_id:String,pub profile_id:String,pub channel:String,
@@ -209,15 +209,15 @@ tokio::task_local! {static VERIFIED_RELEASE_SCOPES_0393: Vec<VerifiedComponentSc
 pub async fn with_verified_component_scope_0392<F:std::future::Future>(scope:VerifiedComponentScope0392, future:F)->F::Output {
     VERIFIED_COMPONENT_SCOPE_0392.scope(scope,future).await
 }
-/// A transaction may verify TWO separately signed catalogs while switching
-/// releases. Each entitlement remains bound to its own digest, project and
-/// expiry; an entitlement for one catalog never authorizes the other.
+/// При переключении выпусков транзакция может проверить ДВА независимо подписанных каталога.
+/// Каждое право связано со своим дайджестом, проектом и
+/// сроком действия; право одного каталога не распространяется на другой.
 pub async fn with_verified_release_scopes_0393<F:std::future::Future>(scopes:Vec<VerifiedComponentScope0392>,future:F)->F::Output{
     VERIFIED_RELEASE_SCOPES_0393.scope(scopes,future).await
 }
-/// Preserve the authenticated task-local permission scope when a runtime
-/// operation moves synchronous release validation to the blocking pool.
-/// A bare spawned task cannot inherit a grant, and therefore fails closed.
+/// Сохраняйте аутентифицированную локальную для задачи область прав, когда операция
+/// Runtime передаёт синхронную проверку выпуска в пул блокирующих задач.
+/// Отдельно запущенная задача не наследует права и поэтому отклоняется.
 pub async fn spawn_blocking_with_permissions_0392<F,R>(job:F)->Result<R,tokio::task::JoinError>
 where F:FnOnce()->R+Send+'static,R:Send+'static {
     let scope=VERIFIED_COMPONENT_SCOPE_0392.try_with(Clone::clone).ok();
@@ -238,9 +238,9 @@ fn verified_environment_0392(manifest:&Manifest)->ComponentEnvironment0244 {
         std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok()
            .is_some_and(|now| i64::try_from(now.as_secs()).ok().is_some_and(|now|now<scope.valid_until))
     };
-    // The multi-release context is established only by the native rollback /
-    // recovery handler, after fetching independent rights for each signed
-    // catalog. It does not union permissions from unrelated release digests.
+    // Контекст нескольких выпусков создаётся только нативным обработчиком отката
+    // или восстановления после получения независимых разрешений для каждого
+    // подписанного каталога. Права для разных дайджестов выпуска не объединяются.
     if VERIFIED_RELEASE_SCOPES_0393.try_with(|scopes| {
         if let Some(grant)=scopes.iter().find(|g|permitted(g)) {
             env.verified_permissions=grant.permissions.clone();
@@ -256,8 +256,8 @@ fn verified_environment_0392(manifest:&Manifest)->ComponentEnvironment0244 {
 pub struct ComponentEnvironment0244 {
     pub os:String,pub arch:String,pub java_major:u32,
     pub minecraft_version:String,pub loader:String,pub loader_version:String,
-    /// Permissions are never read from process environment or desktop input.
-    /// This is empty unless a trusted signed server authorization is verified.
+    /// Права никогда не читаются из окружения процесса или ввода Desktop.
+    /// Контекст пуст, пока не проверено доверенное подписанное разрешение сервера.
     pub verified_permissions:HashSet<String>,
 }
 impl ComponentEnvironment0244 {
@@ -442,17 +442,17 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     }
     let mut state=HashMap::new();let mut stack=Vec::new();
     for c in &cat.components{visit(c.id.as_str(),&items,&mut state,&mut stack)?}
-    // An implicit default may be filtered by the player's platform. Explicit
-    // named presets are never filtered and must be structurally satisfiable on
-    // every target before an owner can sign and publish their manifest.
+    // Неявный пресет по умолчанию может отфильтровываться по платформе игрока. Явные
+    // именованные пресеты не фильтруются и должны быть структурно пригодны
+    // для всех целей до подписи и публикации манифеста владельцем.
     if cat.schema_version!="4.0" && cat.schema_version!="5.0" {resolve_graph_v3(cat,"")?;}
     for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
     Ok(())
 }
-// v0.24.7: an installation choice is an untrusted list of signed component IDs,
-// NOT a modified manifest, a trusted preset, or a command line. Encode choices
-// in the pre-existing persisted preset field so staging, resume, rollback,
-// integrity checks and JVM launch all resolve the same immutable plan.
+// v0.24.7: выбор установки — недоверенный список ID подписанных компонентов,
+// а НЕ изменённый манифест, доверенный пресет или командная строка. Сохраняйте выбор
+// в существующем поле пресета, чтобы подготовка, возобновление, откат,
+// проверка целостности и запуск JVM использовали один неизменяемый план.
 const CUSTOM_SELECTION_PREFIX_0247:&str="@custom:v1:";
 fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<String>,HashSet<String>),String>{
     let (base,changes)=if let Some(encoded)=preset.strip_prefix(CUSTOM_SELECTION_PREFIX_0247){
@@ -538,9 +538,9 @@ pub struct ComponentSelectionReason0247 { pub id:String,pub reason:String }
 #[serde(rename_all="camelCase")]
 pub struct UnavailableComponent0244 { pub id:String,pub reason:String }
 
-// Desktop receives the same native result that staging and launch use.
-// Caller MUST verify the signed manifest first. This API never trusts local
-// permissions, operating-system or architecture input.
+// Desktop получает тот же нативный результат, что используют подготовка и запуск.
+// Вызывающий ОБЯЗАН сначала проверить подписанный манифест. Этот API не доверяет
+// локальным разрешениям, параметрам ОС или архитектуры.
 pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<ComponentSelectionPreview0244,String>{
     validate(m)?;
     let cat=m.component_catalog.as_ref().ok_or("catalog is missing")?;

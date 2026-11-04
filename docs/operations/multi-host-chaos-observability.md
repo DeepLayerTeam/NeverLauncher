@@ -1,23 +1,23 @@
 # NeverLauncher 0.51.10 — хаос-тестирование нескольких узлов и наблюдаемость
 
-This document describes **executable fault injection** against two or more *independent Docker hosts* with NeverLauncher multi-host deployment. It is **not** a production GA certificate. Commands here intentionally disrupt live containers; run only on an authorized disposable/test deployment with separate, independently managed PostgreSQL/Redis/S3 and externally load-balanced HTTPS ingress.
+Документ описывает **исполняемую инъекцию отказов** для двух или более *независимых Docker-хостов* с многохостовым NeverLauncher. Это **не** промышленный сертификат GA. Команды намеренно нарушают работу настоящих контейнеров: запускайте их только на разрешённом временном/тестовом развёртывании с раздельно управляемыми PostgreSQL/Redis/S3 и внешним HTTPS-балансировщиком.
 
 ## Предварительные условия (запрет при ошибке)
 
-1. Deploy `deploy/production/docker-compose.multi-host.yml` on at least two different Docker hosts; run the multi-host 0.51.2/0.51.7 health/inventory checks beforehand. Never run the chaos CLI with the single-host Network-HA Compose file. The tool validates immutable images, distinct machine IDs, API+worker readiness and shared external PG/Redis/S3 round trips via `multi_host_0512.py` before fault injection.
-2. Install **both** `scripts/operations/multi_host_chaos_05110.py` and `scripts/operations/multi_host_0512.py` with the same files/paths on the operator workstation and each Docker host. Allow the SSH operator only the required Docker operations. Strict known_hosts verification, noninteractive SSH and an explicit `I-ACCEPT-REAL-OUTAGE` token are mandatory. Use separate SSH principals for each host. Do not run unrelated application releases or database migrations concurrently with drills.
-3. Put `--state` and `--report` into a pre-created operator-owned private directory (`0700`), e.g. `/var/lib/neverlauncher-chaos`; do not reuse filenames. Keep private recovery journals until a complete verified repair. A failure or SIGKILL can leave a remote node isolated. **Run `recover` before new drills**.
-4. On each node that may be network-partitioned, create a *private, regular `0600`* `/opt/launcher/deploy/production/.chaos-approval-05110.json`, scoped to the real node ID and current project:
+1. Разверните `deploy/production/docker-compose.multi-host.yml` как минимум на двух разных Docker-хостах; заранее выполните проверки здоровья и инвентаризации 0.51.2/0.51.7. Никогда не используйте CLI хаос-тестов с однохостовым Compose Network-HA. Перед воздействием средство через `multi_host_0512.py` проверяет неизменяемые образы, разные ID машин, готовность API+worker и реальные обращения к общим внешним PG/Redis/S3.
+2. Установите **оба** скрипта `scripts/operations/multi_host_chaos_05110.py` и `scripts/operations/multi_host_0512.py` с одинаковыми файлами/путями на компьютере оператора и каждом Docker-хосте. Разрешите SSH-оператору только нужные Docker-операции. Обязательны строгая проверка `known_hosts`, неинтерактивный SSH и явный токен `I-ACCEPT-REAL-OUTAGE`. Используйте отдельных SSH-пользователей для каждого хоста. Не выполняйте одновременно учения и посторонние выпуски приложения или миграции БД.
+3. Размещайте `--state` и `--report` в заранее созданном закрытом каталоге оператора (`0700`), например `/var/lib/neverlauncher-chaos`; не используйте имена файлов повторно. Сохраняйте закрытые журналы восстановления до полного подтверждённого исправления. Ошибка или SIGKILL могут оставить удалённый узел изолированным. **До новых учений выполните `recover`.**
+4. На каждом потенциально изолируемом узле создайте *закрытый обычный файл `0600`* `/opt/launcher/deploy/production/.chaos-approval-05110.json`, ограниченный настоящим ID узла и текущим проектом:
 
 ```json
 {"project":"launcher", "nodeId":"lab-a", "allow":["network-partition"], "expiresUtc":"2026-11-03T21:00:00Z"}
 ```
 
-The expiration must be in the future and within four hours. Replace this illustrative timestamp with a valid UTC expiry. `host-stop` instead needs the operator's explicit disruption token. Never commit approval files or credentials.
+Срок действия должен быть в будущем, но не более четырёх часов. Замените иллюстративную временную метку на настоящий UTC-срок. Для `host-stop` вместо этого нужен явный токен разрешения разрушительного воздействия. Никогда не добавляйте файлы одобрения или секреты в Git.
 
 ## Реальное внедрение сбоев и восстановление
 
-Run from a trusted operator host (absolute remote paths are mandatory):
+Запускайте с доверенного хоста оператора (обязательны абсолютные удалённые пути):
 
 ```bash
 python3 scripts/operations/multi_host_chaos_05110.py run \
@@ -30,7 +30,7 @@ python3 scripts/operations/multi_host_chaos_05110.py run \
   --allow-disruption I-ACCEPT-REAL-OUTAGE
 ```
 
-For a **repeatable four-case-per-iteration E2E suite**, pre-create an **empty private** directory (`mkdir -m 700 /var/lib/neverlauncher-chaos/suite-01`). Then run:
+Для **повторяемого набора E2E из четырёх случаев на итерацию** создайте заранее **пустой закрытый** каталог (`mkdir -m 700 /var/lib/neverlauncher-chaos/suite-01`). Затем выполните:
 
 ```bash
 python3 scripts/operations/multi_host_chaos_05110.py suite \
@@ -41,13 +41,13 @@ python3 scripts/operations/multi_host_chaos_05110.py suite \
   --iterations 1 --allow-disruption I-ACCEPT-REAL-OUTAGE
 ```
 
-This runs a full host-service stop and a Docker network partition on **each** host, in deterministic order. A failed or unrecovered case aborts the remaining sequence and writes `suite-report.json` plus separate per-case evidence and SHA-256 hashes. Maximum repetitions: three. Recover the specific `*.state.json` journal with `recover` before another run. This does not certify external storage quorum safety, real JVM continuity or guaranteed notification delivery.
+Процедура по детерминированному порядку останавливает весь стек служб хоста и отделяет сеть Docker на **каждом** хосте. Неудавшийся или невосстановленный случай прерывает дальнейшие шаги и создаёт `suite-report.json`, отдельные свидетельства и SHA-256 для каждого случая. Максимум повторов — три. Перед следующим запуском восстановите конкретный журнал `*.state.json` командой `recover`. Это не подтверждает безопасность кворума внешнего хранилища, непрерывность JVM или гарантированную доставку оповещений.
 
-Choose `--fault host-stop` for a complete shutdown of the four product services (`api`, `worker`, `admin`, `ingress`) on one Docker host. Repeat for a second node and varied production-like loads; each run needs distinct state/report paths. The network partition uses *real* `docker network disconnect --force` on the API and worker containers and separately checks that both were removed from the `launcher_launcher` bridge. This is a **Docker-container partition**, not a physical host power cut, inter-switch network blackhole or quorum failure.
+Выберите `--fault host-stop`, чтобы полностью остановить четыре продуктовые службы (`api`, `worker`, `admin`, `ingress`) одного Docker-хоста. Повторите для второго узла и разных нагрузок, приближённых к промышленным; каждому запуску нужны отдельные пути состояния/отчёта. Сетевое разделение использует настоящие `docker network disconnect --force` для контейнеров API/worker и отдельно убеждается, что оба отключились от моста `launcher_launcher`. Это **разделение Docker-контейнеров**, а не отключение питания физического хоста, блокировка межкоммутаторной сети или отказ кворума.
 
-The controller requires three consecutive HTTPS readiness successes after disruption, five sustained additional probes, and healthy remaining API/worker nodes with live dependency round trips; it records sample success/failure and p50/p95 latency as observed, not inferred. It always attempts node restoration, then rechecks the entire cluster. A successful isolated API readiness response is not enough to claim no user-visible errors during the outage.
+После воздействия контроллер требует три последовательных успешных проверки HTTPS-готовности, пять дополнительных устойчивых измерений и исправные оставшиеся API/worker с настоящими обращениями к зависимостям; фиксируются фактически наблюдаемые успехи, ошибки и задержки p50/p95 без предположений. Он всегда пытается восстановить узел, затем повторно проверяет весь кластер. Одного успешного ответа отдельного API о готовности недостаточно для заявления об отсутствии видимых пользователю ошибок при аварии.
 
-If SSH or the operator process dies during injection, execute:
+Если SSH или процесс оператора завершился во время внедрения сбоя, выполните:
 
 ```bash
 python3 scripts/operations/multi_host_chaos_05110.py recover \
@@ -57,11 +57,11 @@ python3 scripts/operations/multi_host_chaos_05110.py recover \
   --state /var/lib/neverlauncher-chaos/partition.state.json
 ```
 
-This reconnects the original verified container IDs **with the original Compose DNS aliases** (required for ingress to resolve `api`) or restarts a stopped host and verifies the baseline. If the original container was replaced, the tool **refuses** to reconnect an unverified replacement: repair manually and keep the journal as evidence. Recovery is never a database/world rollback and cannot silently undo confirmed writes.
+Команда заново подключает исходные проверенные ID контейнеров **с прежними DNS-псевдонимами Compose** (чтобы ingress разрешал `api`) либо перезапускает остановленный хост и проверяет исходное состояние. Если исходный контейнер был заменён, средство **отказывается** подключать непроверенную замену: исправьте вручную и сохраните журнал как свидетельство. Восстановление никогда не означает откат БД/мира и не может незаметно отменить подтверждённые записи.
 
 ## Оповещения и воспроизводимые наблюдения
 
-`deploy/production/docker-compose.observability.yml` now supports distinct Prometheus alerts via `LAUNCHER_PROMETHEUS_ALERT_RULES`. Generate operator-owned Prometheus scrape/alert configs for **different direct host ingress names**, not two DNS names backed by the same LB:
+`deploy/production/docker-compose.observability.yml` теперь поддерживает раздельные правила оповещений Prometheus через `LAUNCHER_PROMETHEUS_ALERT_RULES`. Сформируйте принадлежащие оператору конфигурации опроса/оповещений Prometheus для **разных прямых имён ingress-хостов**, а не двух DNS-имён одного балансировщика:
 
 ```bash
 mkdir -m 700 -p /opt/launcher/deploy/production/monitoring/ha-05110
@@ -72,12 +72,12 @@ python3 scripts/operations/multi_host_chaos_05110.py monitor-config \
   --output-directory /opt/launcher/deploy/production/monitoring/ha-05110
 ```
 
-The generated files are JSON documents with `.yml` extension (strictly valid YAML); use them directly with Prometheus. Set `LAUNCHER_PROMETHEUS_CONFIG=./monitoring/ha-05110/prometheus-05110.yml` and `LAUNCHER_PROMETHEUS_ALERT_RULES=./monitoring/ha-05110/alerts-05110.yml` **in the Compose operator environment**. Keep the existing Blackbox exporter from the observability Compose overlay. The strict `https_2xx_strict` module validates TLS, only accepts status 200, and refuses redirects. Configure an Alertmanager HTTPS webhook receiver using the existing `observability_0459.py configure` in a private file. Confirm Alertmanager actually sends a test notification to the operator's receiver; an HTTP 200 from Alertmanager's API is **not** receipt proof.
+Полученные файлы — JSON-документы с расширением `.yml` (строго корректный YAML); используйте их напрямую в Prometheus. Установите `LAUNCHER_PROMETHEUS_CONFIG=./monitoring/ha-05110/prometheus-05110.yml` и `LAUNCHER_PROMETHEUS_ALERT_RULES=./monitoring/ha-05110/alerts-05110.yml` **в окружении оператора Compose**. Сохраните существующий Blackbox exporter из Compose-надстройки наблюдаемости. Строгий модуль `https_2xx_strict` проверяет TLS, принимает только HTTP 200 и отвергает перенаправления. Настройте HTTPS webhook-получатель Alertmanager через существующую `observability_0459.py configure` в закрытом файле. Убедитесь, что Alertmanager действительно доставляет тестовое уведомление получателю оператора: HTTP 200 от API Alertmanager **не** доказывает доставку.
 
-Three real alert rules are generated: per-host ingress down; fewer than two healthy host ingresses; public HTTPS ingress down. They fire after a real 30-second fault; the default Alertmanager check waits up to 100 seconds. To require observation of an active Alertmanager alert in the fault test, append `--alertmanager-url https://alerts.example.org --alert-name NeverLauncherHostIngressDown`. Without these arguments report field `alertState=UNVERIFIED` does not claim notification delivery. A monitored drill cannot report PASS if the expected alert was not observed.
+Формируются три настоящих правила: недоступен ingress отдельного хоста; исправны менее двух ingress-хостов; недоступен публичный HTTPS ingress. Они срабатывают после настоящего 30-секундного отказа; стандартная проверка Alertmanager ожидает не более 100 секунд. Чтобы требовать наблюдения активного оповещения в тесте, добавьте `--alertmanager-url https://alerts.example.org --alert-name NeverLauncherHostIngressDown`. Без этих аргументов поле отчёта `alertState=UNVERIFIED` не заявляет о доставке. Наблюдаемый тест не может получить PASS, если ожидаемое оповещение не обнаружено.
 
 ## Подтверждения и независимый допуск
 
-Each result is written to a new `0600` JSON file only after recovery has been attempted. Result fields distinguish actual fault, survivor checks, edge samples, Alertmanager observation, duration, recovered state and unverified conditions. Never record credentials, bearer headers, full environment or raw Docker logs. The `recover` journal survives a failed restore, with a strict manual fix path.
+Каждый результат записывается в новый JSON с правами `0600` только после попытки восстановления. Поля результата различают фактический сбой, проверки оставшихся узлов, краевые измерения, наблюдение Alertmanager, длительность, восстановленное состояние и неподтверждённые условия. Никогда не сохраняйте учётные данные, Bearer-заголовки, полное окружение или исходные журналы Docker. Журнал `recover` переживает неудачный откат и содержит строгий путь ручного исправления.
 
-Actual acceptance still requires **physical** host power loss, real network partition of both infrastructure and database-quorum links, Patroni/Redis failover, S3 replication/recovery, stale-lease/fencing scenarios, durable worker/outbox readback, Minecraft JVM world snapshot/rejoin, downstream alert notification, and quantitative RTO/RPO/SLO measurements across independently deployed final release binaries. Existing 0.51.3 dependency drills and 0.51.8/0.51.9 recovery can be run independently and their evidence linked by the operator; this 0.51.10 script does not falsely aggregate their results into a complete GA certificate. There are no automatic sanctions or forced database primaries.
+Для настоящей приёмки всё ещё обязательны **физическое** отключение питания хостов, реальное разделение инфраструктурной сети и связей кворума БД, переключение Patroni/Redis, репликация и восстановление S3, сценарии устаревших аренд/fencing, устойчивое обратное чтение worker/outbox, снимки и повторный вход в мир Minecraft JVM, доставленное конечному получателю оповещение и количественные RTO/RPO/SLO на независимо развёрнутых окончательных исполняемых файлах выпуска. Учения зависимостей 0.51.3 и восстановление 0.51.8/0.51.9 можно выполнять отдельно со ссылками оператора на свидетельства; скрипт 0.51.10 не подменяет их совокупный результат вымышленным сертификатом GA. Автоматических санкций и принудительного назначения primary БД нет.

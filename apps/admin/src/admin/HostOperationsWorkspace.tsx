@@ -313,9 +313,9 @@ export function HostOperationsWorkspace04111({
   return (
     <section
       className="bridgeSection"
-      aria-label="Реальное управление JVM и Host Supervisor"
+      aria-label="Управление JVM и службой хоста"
     >
-      <h3>Host Supervisor · JVM · {serverName}</h3>
+      <h3>Управление хостом · JVM · {serverName}</h3>
       <p className="muted">
         Backend → PostgreSQL journal → TLS RemoteControl → Host Supervisor → OS
         JVM. Игровой heartbeat проверяется отдельно. Команды требуют свежей MFA
@@ -360,7 +360,7 @@ export function HostOperationsWorkspace04111({
             ? `${host.telemetry?.processId || "—"} / ${host.sessionId || "—"}`
             : "неизвестно"}
         </dd>
-        <dt>RSS / Host RAM</dt>
+        <dt>RSS / ОЗУ хоста</dt>
         <dd>
           {host
             ? `${formatBytes(host.telemetry?.processResidentBytes)} / ${formatBytes(host.telemetry?.hostTotalMemoryBytes)}`
@@ -458,7 +458,7 @@ export function HostOperationsWorkspace04111({
           </button>
         </article>
       )}
-      <h4>Журнал Host Supervisor (PostgreSQL)</h4>
+      <h4>Журнал управления хостом (PostgreSQL)</h4>
       {history === null ? (
         <p className="bridgeAttention">
           Не удалось получить журнал. Новые операции заблокированы.

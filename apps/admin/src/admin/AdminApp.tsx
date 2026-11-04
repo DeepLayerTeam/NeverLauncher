@@ -1648,7 +1648,7 @@ export function AdminApp() {
   return (
     <main className="layout">
       <aside className="sidebar">
-        <div className="brand">Launcher Admin</div>
+        <div className="brand">Администрирование Launcher</div>
         <div className="version">
           Версия {TOOL_VERSION} · API v1 · токены в sessionStorage · подписанный
           релизный поток
@@ -1673,7 +1673,7 @@ export function AdminApp() {
       <section className="main">
         <header className="header">
           <div>
-            <h1>Launcher Admin · API v1</h1>
+            <h1>Панель управления Launcher · API v1</h1>
             <p>{`Рабочая панель Launcher ${TOOL_VERSION}: проекты, профили, каналы, пользователи, подписанный релизный поток, multipart-загрузка, ServerBridge, диагностика и резервное копирование через единый /api/v1.`}</p>
           </div>
           <span className={`badge ${status === "online" ? "ok" : "warn"}`}>

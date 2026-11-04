@@ -21,14 +21,14 @@ import (
 
 const javaRPCVersion0304 = "1.0"
 
-// All JAR validation is shared with the lifecycle preflight (0.30.5).
-// Never downgrade checks when an operator starts a JAR outside the installer.
+// Все проверки JAR общие с предварительной проверкой жизненного цикла (0.30.5).
+// Не ослабляйте их, когда оператор запускает JAR в обход установщика.
 func validateJavaJar0304(path string) error {
 	_, err := extensionjava.Inspect(path)
 	return err
 }
 
-// javaCommand0304 resolves a trusted Java executable; never accepts Java command arguments from a package.
+// javaCommand0304 находит доверенный исполняемый файл Java и не принимает аргументы команды из пакета.
 func (s *Supervisor) javaCommand0304(jar string, argv []string) (*exec.Cmd, error) {
 	java := strings.TrimSpace(s.cfg.JavaExecutable)
 	if java != "" {
@@ -48,8 +48,8 @@ func (s *Supervisor) javaCommand0304(jar string, argv []string) (*exec.Cmd, erro
 		if err != nil {
 			return nil, fmt.Errorf("Java 17+ runtime missing: %w", err)
 		}
-		// A process must never obtain an executable from an implicit working-
-		// directory PATH element. Resolve the normal JDK alternatives symlink.
+		// Процесс никогда не должен получать исполняемый файл из неявного элемента PATH,
+		// указывающего на рабочий каталог. Разрешайте обычную ссылку alternatives для JDK.
 		java, err = filepath.EvalSymlinks(java)
 		if err != nil {
 			return nil, fmt.Errorf("resolve Java runtime: %w", err)
@@ -62,9 +62,9 @@ func (s *Supervisor) javaCommand0304(jar string, argv []string) (*exec.Cmd, erro
 	if err != nil || !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm()&0111 == 0) {
 		return nil, errors.New("Java executable must be an executable regular file")
 	}
-	// These are JVM allocations, not OS isolation: the process-tree monitor
-	// remains the total-RSS enforcement boundary. Retain native headroom for
-	// threads, GC, JIT and libc, rather than assigning 65% to Java heap alone.
+	// Это ограничения памяти JVM, а не изоляция ОС: монитор дерева процессов
+	// остаётся границей контроля общего RSS. Оставляйте нативный запас для
+	// потоков, GC, JIT и libc вместо выделения 65 % памяти только куче Java.
 	memoryMiB := s.cfg.MaxMemoryBytes / (1 << 20)
 	if memoryMiB < 256 {
 		return nil, errors.New("Java Host requires at least 256 MiB process memory budget")
@@ -99,8 +99,8 @@ type javaRPCResponse0304 struct {
 	Result          json.RawMessage `json:"result"`
 }
 
-// CallJavaRPC0304 performs an authenticated, deadline-bound Go -> JVM request.
-// It is intentionally usable only for a running Java target registered by this supervisor.
+// CallJavaRPC0304 выполняет аутентифицированный запрос Go → JVM с крайним сроком.
+// Он доступен только для работающего Java-процесса, зарегистрированного руководителем.
 func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string, params json.RawMessage) (json.RawMessage, error) {
 	switch method {
 	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare", "ui.action.invoke", "ui.settings.get", "ui.settings.put", "state.migrate":
@@ -128,8 +128,8 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		return nil, ErrHostNotRunning
 	}
 	if strings.HasPrefix(method, "auth.") {
-		// Authentication connectors are only allowed for explicitly consented,
-		// global installations. Project extensions cannot authenticate accounts.
+		// Коннекторы авторизации разрешены только явно согласованным
+		// глобальным установкам. Расширения проекта не могут авторизовать аккаунты.
 		if key.Scope != "global" || st.manifest.ID != key.ExtensionID {
 			return nil, errors.New("Java authentication provider scope denied")
 		}
@@ -149,9 +149,9 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 		}
 	}
 	if strings.HasPrefix(method, "content.") {
-		// Content callbacks cannot mint signed releases or bypass the Go broker.
-		// A global extension must be granted release:read for the explicit project;
-		// a project extension is confined to its installation project.
+		// Обратные вызовы контента не могут выпускать подписанные релизы или обходить брокер Go.
+		// Глобальному расширению необходимо разрешение release:read для явного проекта;
+		// расширение проекта ограничено проектом своей установки.
 		var payload struct {
 			ProjectID string `json:"projectId"`
 		}
@@ -173,21 +173,21 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 			}
 		}
 	}
-	// UI callbacks are only exposed to signed Admin/Desktop contributions.
-	// Never accept arbitrary Java method/handler names from an iframe.
+	// Обратные вызовы интерфейса доступны только подписанным дополнениям Admin/Desktop.
+	// Никогда не принимайте произвольные имена Java-методов и обработчиков из iframe.
 	if strings.HasPrefix(method, "ui.") {
 		if err := s.checkJavaUI0489(ctx, st, method, params); err != nil {
 			return nil, err
 		}
 	}
-	// A previously authorized supervisor command must not race an emergency
-	// disable, revoked publisher or replaced installation. The HTTP broker
-	// already checks live trust, but direct Go -> JVM RPC bypasses that broker.
+	// Ранее разрешённая команда супервизора не должна конкурировать с аварийным
+	// отключением, отзывом издателя или заменённой установкой. HTTP-брокер
+	// проверяет актуальное доверие, но прямой RPC Go → JVM обходит его.
 	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
 		s.denyRevokedHost04210(st, err)
 		return nil, fmt.Errorf("Java RPC denied by current extension trust: %w", err)
 	}
-	// The process can be stopped/replaced while the durable check is running.
+	// Процесс может быть остановлен или заменён во время длительной проверки.
 	st.mu.Lock()
 	stillRunning := st.state == "running" && st.javaHost && st.callbackURL == endpoint && st.callbackToken == token
 	st.mu.Unlock()
@@ -239,8 +239,8 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, method string, params json.RawMessage) (json.RawMessage, error) {
 	budget := s.cfg.CapabilityTimeout
 	if method == "state.migrate" {
-		// State migrations are bounded separately from ordinary interactive RPC;
-		// the global HTTP callback timeout is 10 seconds by default.
+		// Миграции состояния ограничиваются отдельно от обычных интерактивных RPC;
+		// общий тайм-аут HTTP-обратного вызова по умолчанию составляет 10 секунд.
 		budget = 8 * time.Second
 	} else {
 		if budget > 1800*time.Millisecond {
@@ -297,8 +297,8 @@ func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, m
 	return answer.Result, nil
 }
 
-// probeJava0304 runs independently of the supervisor's heartbeat/resource monitor.
-// A noncooperative callback can keep sending heartbeats but will not keep an unresponsive JVM alive.
+// probeJava0304 работает независимо от монитора heartbeat и ресурсов супервизора.
+// Некорректный обратный вызов может продолжать слать heartbeat, но не оставит зависшую JVM живой.
 func (s *Supervisor) probeJava0304(st *processState) {
 	defer func() { st.mu.Lock(); st.rpcBusy = false; st.mu.Unlock() }()
 	st.mu.Lock()

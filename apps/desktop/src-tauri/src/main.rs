@@ -50,7 +50,7 @@ struct SecureAuthSession {
     expires_at: Option<String>,
 }
 
-// 0.35.7: The OS/window state is native; the webview only presents it.
+// 0.35.7: Состояние ОС и окна ведётся нативным кодом; webview лишь отображает его.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DesktopNativeUI0357 {
@@ -155,8 +155,8 @@ struct GuardAttestationV2Request {
 #[serde(rename_all = "snake_case")]
 enum LaunchRealm0269 { Official, Yggdrasil, Offline }
 
-// Validate the complete selection before touching the OS runtime. A JS caller
-// cannot claim 'offline' while slipping a bearer, nor label a project token MSA.
+// Проверяйте весь выбор до обращения к Runtime ОС. Вызывающий код JS
+// не может заявить «офлайн», подставив токен доступа, или выдать токен проекта за MSA.
 fn validate_launch_realm_0269(
     mode: LaunchRealm0269,
     credentials: Option<&MinecraftLaunchCredentials>,
@@ -426,7 +426,7 @@ struct DesktopConfig {
     #[serde(default)] server_host: String,
     #[serde(default = "default_server_port_0229")] server_port: u16,
     #[serde(default)] offline_enabled: bool,
-    // Persist the installed signed component choice across application restarts.
+    // Сохраняйте выбор установленных подписанных компонентов между перезапусками.
     #[serde(default)] component_preset: String,
     #[serde(default)]
     discord_presence_enabled: bool,
@@ -455,8 +455,8 @@ fn desktop_config_dir() -> Result<PathBuf, String> {
     Ok(PathBuf::from(".launcher").join("config"))
 }
 fn desktop_config_path() -> Result<PathBuf, String> { Ok(desktop_config_dir()?.join("config.json")) }
-// The file location may be configured by a previously verified Prestarter;
-// the Rust verifier still authenticates its content against pinnedPublicKey.
+// Расположение файла может задаваться ранее проверенным Prestarter;
+// проверяющий модуль Rust всё равно сверяет его содержимое с pinnedPublicKey.
 fn initialize_desktop_game_trust_02312() -> Result<(),String> {
     if std::env::var_os("LAUNCHER_GAME_TRUST_POLICY_FILE").is_some() {return Ok(())}
     let path=desktop_config_path()?;
@@ -492,7 +492,7 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.screen_width == 0 { cfg.screen_width = 1280; }
     if cfg.screen_height == 0 { cfg.screen_height = 720; }
     if cfg.server_port == 0 { cfg.server_port = 25565; }
-    // Corrupt/unsupported preferences are not authoritative for any release.
+    // Повреждённые или неподдерживаемые настройки не определяют состояние выпуска.
     if cfg.component_preset.len()>8192 || cfg.component_preset.bytes().any(|b|b<0x20||b==0x7f){
         cfg.component_preset.clear();
     }
@@ -539,9 +539,9 @@ async fn preserve_legacy_config_0359(path:&std::path::Path)->Result<(),String>{
     result
 }
 
-// The signed owner binding is applied in the native process on every read and
-// write. Renderer/localStorage cannot change the trusted root or route users
-// to a different backend, project, profile or signed manifest.
+// Подписанная привязка владельца применяется в нативном процессе при каждом чтении и
+// записи. Renderer/localStorage не может изменить доверенный корень или направить пользователя
+// к другому серверу, проекту, профилю или подписанному манифесту.
 fn enforce_signed_binding_0352(cfg:&mut DesktopConfig, dir:&std::path::Path)->Result<Option<signed_first_run_0352::Provisioning0352>,String>{
     let signed=signed_first_run_0352::load(dir)?;
     if let Some(ref p)=signed {
@@ -571,12 +571,12 @@ async fn load_desktop_config() -> Result<DesktopConfig, String> {
     validate_desktop_config_schema_0359(&cfg.schema_version)?;
     let verified=enforce_signed_binding_0352(&mut cfg,&desktop_config_dir()?)?;
     if let Some(p)=verified {
-        // Completion is valid only for the exact owner-signed bootstrap.
+        // Завершение действительно только для точного bootstrap с подписью владельца.
         if cfg.onboarding_bootstrap_digest!=p.digest {cfg.onboarding_completed=false;}
     }
     if config_existed && cfg.schema_version=="1.0" {
-        // Migrate once after the signed binding was verified. The writer
-        // performs an atomic replacement and keeps the original exact bytes.
+        // Миграция выполняется один раз после проверки подписанной привязки. Записывающий модуль
+        // атомарно заменяет файл и сохраняет исходные байты в точности.
         save_desktop_config_impl_0352(cfg.clone(),None).await?;
         cfg.schema_version="1.1".into();
     }
@@ -586,7 +586,7 @@ async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_diges
     let path = desktop_config_path()?; let parent = path.parent().ok_or("не удалось определить каталог desktop config")?;
     fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
     let mut cfg = normalize_desktop_config(config); validate_desktop_config_schema_0359(&cfg.schema_version)?; cfg.schema_version = "1.1".into(); cfg.config_path = path.to_string_lossy().to_string();
-    // Renderer-supplied completion flags are NOT accepted by preference saves.
+    // Флаги завершения из renderer НЕ принимаются при сохранении настроек.
     cfg.onboarding_completed=false;
     let old=if let Ok(existing)=fs::read(&path).await {
         let stored=serde_json::from_slice::<DesktopConfig>(&existing).map_err(|e|format!("existing Desktop config повреждён: {e}"))?;
@@ -604,8 +604,8 @@ async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_diges
         cfg.onboarding_completed=false;
         cfg.onboarding_bootstrap_digest.clear();
     }
-    // Protect legacy settings before first upgrade. The original remains
-    // authoritative until the new file is flushed and atomically replaced.
+    // Защитите прежние настройки до первого обновления. Оригинал остаётся
+    // авторитетным, пока новый файл не записан на диск и атомарно не заменён.
     if old.as_ref().is_some_and(|v|v.schema_version=="1.0") {
         preserve_legacy_config_0359(&path).await?;
     }
@@ -631,8 +631,8 @@ async fn save_desktop_config(config: DesktopConfig)->Result<DesktopBindingResult
     save_desktop_config_impl_0352(config,None).await
 }
 
-// A completed first run is a fact established by the native verifier from
-// installed files, not a renderer-controlled `onboardingCompleted: true` flag.
+// Завершённый первый запуск подтверждается нативным проверяющим модулем по
+// установленным файлам, а не флагом `onboardingCompleted: true`, управляемым renderer.
 #[tauri::command]
 async fn complete_first_run_0352(config:DesktopConfig,manifest:Manifest)->Result<DesktopBindingResult,String>{
     let signed=signed_first_run_0352::load(&desktop_config_dir()?)?
@@ -645,9 +645,9 @@ async fn complete_first_run_0352(config:DesktopConfig,manifest:Manifest)->Result
     runtime::verify_manifest_signature(&manifest,&signed.pinned_public_key)?;
     let root=PathBuf::from(&cfg.game_directory);
     if !root.is_absolute(){return Err("Каталог игры должен быть абсолютным".into())}
-    // First-run verification must use the same short-lived server grant as
-    // subsequent installs. Otherwise a legitimate gated mod cannot complete
-    // onboarding, while a bypass here would silently accept a local claim.
+    // Проверка первого запуска должна использовать тот же краткосрочный допуск сервера,
+    // что и последующие установки. Иначе легальный мод с ограничением доступа не завершит
+    // первичную настройку, а обход молча примет локально заявленные права.
     let grant=component_permissions_for_manifest_0392(&manifest,&signed.pinned_public_key).await?;
     let checks=runtime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
         runtime::check_files_with_preset(&manifest,&root,
@@ -689,8 +689,8 @@ async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root:
     grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
     let result=runtime::component_catalog_0241::with_verified_release_scopes_0393(grants,
         download_missing_files_inner_0392(app,manifest,root.clone(),pinned_public_key.clone(),preset)).await?;
-    // The release pointer commits before Tauri responds. Persist the exact
-    // native installed selection even if the renderer receives success.
+    // Указатель выпуска фиксируется до ответа Tauri. Сохраняйте точный
+    // нативный выбор установленных компонентов даже при успешном ответе renderer.
     if result.failed==0 {reconcile_component_preference_0393(&root,&pinned_public_key).await?;}
     Ok(result)
 }
@@ -731,9 +731,9 @@ async fn control_download_job(root: String, action: String) -> Result<(), String
 }
 #[tauri::command]
 async fn resume_download_job(app: tauri::AppHandle, root: String, pinned_public_key: String) -> Result<DownloadResult, String> {
-    // Journal bytes are user-editable: verify their signature and pinned key,
-    // fetch rights for that exact catalog, and re-verify the journal on resume.
-    // A substituted catalog will not match the scope and fails closed.
+    // Пользователь может изменить байты журнала: проверяйте подпись и закреплённый ключ,
+    // получайте права на этот точный каталог и перепроверяйте журнал при возобновлении.
+    // Подменённый каталог не совпадёт с областью доступа и будет отклонён.
     let manifest=runtime::durable_downloads::pending_manifest_for_permissions_0392(
         &PathBuf::from(&root),&pinned_public_key).await?
         .ok_or("no signed download job to resume")?;
@@ -759,9 +759,9 @@ async fn release_permission_scopes_0393(root:&str,key:&str,include_lkg:bool)->Re
     }
     Ok(grants)
 }
-// After a crash or a rollback, the native signed release pointer is the
-// authority for the selected preset. Synchronize the desktop preference even
-// if the renderer crashes before receiving the Tauri response.
+// После сбоя или отката авторитетным источником выбранного пресета служит
+// нативный подписанный указатель выпуска. Синхронизируйте настройки Desktop, даже
+// если renderer завершится до получения ответа Tauri.
 async fn reconcile_component_preference_0393(root:&str,key:&str)->Result<(),String>{
     let scope=installed_component_scope_0392(root,key).await?;
     let Some(scope)=scope else{return Ok(())};
@@ -784,9 +784,9 @@ async fn reconcile_component_preference_0393(root:&str,key:&str)->Result<(),Stri
         cfg.component_preset=installed;
         save_desktop_config(cfg).await?;
     }
-    // A successful rollback must not leave an offline cache pointing to the
-    // superseded release. This cache operation verifies installed bytes and
-    // the signed owner binding before atomically replacing the cached manifest.
+    // Успешный откат не должен оставлять офлайн-кеш с указателем на
+    // заменённый выпуск. Операция проверяет установленные байты и
+    // подписанную привязку владельца до атомарной замены кешированного манифеста.
     if update_offline_cache {
         let grant=component_permissions_for_manifest_0392(&manifest,key).await?;
         runtime::component_catalog_0241::with_verified_component_scope_0392(grant,async {

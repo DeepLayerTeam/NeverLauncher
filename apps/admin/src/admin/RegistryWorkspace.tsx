@@ -517,7 +517,7 @@ export function RegistryWorkspace({
     <section className="card wide registryPanel">
       <div className="registryHeading">
         <div>
-          <h2>Extensions Registry {TOOL_VERSION}</h2>
+          <h2>Реестр расширений {TOOL_VERSION}</h2>
           <p className="muted">
             Private/local registry подписанных immutable .nlext. Publish
             принимает только artifact с доверенным Ed25519 publisher key;
@@ -813,7 +813,7 @@ export function RegistryWorkspace({
       <section className="registryResults">
         <div className="registryHeading">
           <h3>Жизненный цикл установки</h3>
-          <span className="muted">{extensionInstalls.length} installs</span>
+          <span className="muted">{extensionInstalls.length} установок</span>
         </div>
         <p className="muted" role="status">
           OS sandbox:{" "}

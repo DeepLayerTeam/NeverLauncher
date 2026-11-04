@@ -1,6 +1,6 @@
-// Package sqlitecoord is the durable, fail-closed Redis-free coordinator for
-// exactly one API process. It uses the same supported WAL filesystem contract
-// as sqlitedurable and intentionally does not implement distributed HA.
+// Пакет sqlitecoord — постоянный координатор для одного процесса API без Redis,
+// закрывающий доступ при ошибках. Он использует тот же контракт файловой системы WAL,
+// что и sqlitedurable, и намеренно не реализует распределённую отказоустойчивость.
 package sqlitecoord
 
 import (
@@ -21,9 +21,9 @@ import (
 
 var ErrInvalid = errors.New("sqlite coordinator: invalid arguments")
 
-// Coordinator owns exactly one local SQLite database and lock for its lifetime.
-// A second process cannot open the same database through sqlitedurable.Open.
-// The store must be closed on orderly application shutdown.
+// Coordinator владеет ровно одной локальной базой SQLite и блокировкой весь срок работы.
+// Второй процесс не может открыть ту же базу через sqlitedurable.Open.
+// При штатной остановке приложения хранилище необходимо закрыть.
 type Coordinator struct{ db *sqlitedurable.Store }
 
 var _ ratelimit.Limiter = (*Coordinator)(nil)
@@ -53,9 +53,9 @@ CREATE TABLE IF NOT EXISTS coord_limits (
 CREATE INDEX IF NOT EXISTS coord_limits_expiry ON coord_limits(resets_at);
 `
 
-// Require the exact production coordinator schema. CREATE IF NOT EXISTS is
-// not a migration: silently using a same-named table with different columns,
-// constraints or indexes would corrupt live locks and rate limits.
+// Требуется точная производственная схема координатора. CREATE IF NOT EXISTS —
+// не миграция: незаметное использование одноимённой таблицы с другими столбцами,
+// ограничениями или индексами повредит блокировки и лимиты запросов.
 func validateExistingSchema0471(ctx context.Context, q sqlitedurable.Executor) (bool, error) {
 	expected := map[string]string{}
 	for _, raw := range strings.Split(schema, ";\n") {
@@ -135,7 +135,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 		}
 	}
 	err = db.Write(ctx, func(q sqlitedurable.Executor) error {
-		// Statements deliberately execute inside one BEGIN IMMEDIATE transaction.
+		// Операторы намеренно выполняются внутри одной транзакции BEGIN IMMEDIATE.
 		for _, stmt := range strings.Split(schema, ";\n") {
 			stmt = strings.TrimSpace(stmt)
 			if stmt == "" {
@@ -175,7 +175,7 @@ func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 func (c *Coordinator) Close() error    { return c.db.Close() }
 func (c *Coordinator) Backend() string { return "sqlite-wal-single-node" }
 func (c *Coordinator) Health(ctx context.Context) error {
-	// Health must prove the writer is available; a read-only DB is not healthy.
+	// Проверка состояния должна подтверждать доступность записи; база только для чтения нездорова.
 	return c.db.Write(ctx, func(q sqlitedurable.Executor) error {
 		var v int
 		if err := q.QueryRowContext(ctx, "SELECT value FROM coord_meta WHERE key='version'").Scan(&v); err != nil {
@@ -219,7 +219,7 @@ func (c *Coordinator) TouchChannel(ctx context.Context, p serverbridgeha.Channel
 	now := time.Now().UTC()
 	expires := millis(now.Add(leaseTTL(ttl)))
 	return c.db.Write(ctx, func(q sqlitedurable.Executor) error {
-		// Do not let an out-of-order touch rewind a live channel cursor.
+		// Не допускайте отката курсора активного канала из-за запоздалого обновления.
 		res, e := q.ExecContext(ctx, `INSERT INTO coord_channels(server_id,runtime_id,channel_id,replica_id,backend_address,resume_after,expires_at)
 VALUES(?,?,?,?,?,?,?) ON CONFLICT(server_id,runtime_id,channel_id) DO UPDATE SET
 replica_id=excluded.replica_id,backend_address=excluded.backend_address,
@@ -240,8 +240,8 @@ WHERE coord_channels.expires_at<=? OR coord_channels.resume_after<=excluded.resu
 	})
 }
 
-// AcquireCommandLease reuses an old token, including after expiry or
-// release. Fencing high-water marks and the token tombstone table persist.
+// AcquireCommandLease повторно использует старый токен, в том числе после истечения
+// или освобождения. Верхние границы fencing и таблица удалённых токенов сохраняются.
 func (c *Coordinator) AcquireCommandLease(ctx context.Context, serverID, commandID, owner, token string, ttl time.Duration) (bool, error) {
 	if e := validatePart(serverID, commandID, owner, token); e != nil {
 		return false, e
@@ -262,13 +262,13 @@ func (c *Coordinator) AcquireCommandLease(ctx context.Context, serverID, command
 			if prevOwner != own || prevToken != key {
 				return nil
 			}
-			// Only the current holder can extend a live lease.
+			// Продлевать действующую аренду может только текущий владелец.
 			_, e = q.ExecContext(ctx, "UPDATE coord_leases SET expires_at=? WHERE server_id=? AND command_id=?", expires, serverID, commandID)
 			acquired = e == nil
 			return e
 		}
-		// A released or expired token cannot acquire again; a fresh token must
-		// accompany each new ownership epoch even if the owner string is equal.
+		// Освобождённый или просроченный токен нельзя получить повторно; свежий токен
+		// обязателен для каждой новой эпохи владения, даже при совпадении имени владельца.
 		var exists int
 		e = q.QueryRowContext(ctx, "SELECT 1 FROM coord_lease_tokens WHERE server_id=? AND command_id=? AND token_hash=?", serverID, commandID, key).Scan(&exists)
 		if e == nil {
@@ -323,8 +323,8 @@ WHERE server_id=? AND command_id=? AND owner_hash=? AND token_hash=? AND expires
 	})
 }
 
-// Allow implements a durable fixed window. Like the Redis implementation,
-// requests that exceed the budget are counted. Invalid budgets fail closed.
+// Allow реализует постоянное фиксированное окно. Как и в реализации Redis,
+// запросы сверх лимита учитываются. Недопустимые лимиты приводят к отказу.
 func (c *Coordinator) Allow(ctx context.Context, key string, limit int, window time.Duration) (ratelimit.Result, error) {
 	if e := validatePart(key); e != nil {
 		return ratelimit.Result{}, e
@@ -333,7 +333,7 @@ func (c *Coordinator) Allow(ctx context.Context, key string, limit int, window t
 		return ratelimit.Result{}, ErrInvalid
 	}
 	now := millis(time.Now().UTC())
-	// Reject huge conversion overflows; UnixMillis addition must remain safe.
+	// Отклоняйте переполнение при больших преобразованиях; сложение UnixMillis должно быть безопасным.
 	if window.Milliseconds() > math.MaxInt64-now {
 		return ratelimit.Result{}, ErrInvalid
 	}
@@ -364,8 +364,8 @@ last_updated=excluded.last_updated`, digest(key), reset, now, now, now)
 	return ratelimit.Result{Allowed: count <= int64(limit), Limit: limit, Remaining: remaining, ResetAfter: resetAfter}, nil
 }
 
-// Prune only removes expired ephemeral channel and counter data. Lease rows
-// and token tombstones are retained permanently to prevent ABA and token replay.
+// Prune удаляет только просроченные временные данные каналов и счётчиков. Строки аренд
+// и метки удалённых токенов хранятся постоянно, чтобы исключить ABA и повтор токенов.
 func (c *Coordinator) Prune(ctx context.Context) (int64, error) {
 	var n int64
 	err := c.db.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -389,8 +389,8 @@ func (c *Coordinator) Prune(ctx context.Context) (int64, error) {
 	return n, err
 }
 
-// Channel retrieves only unexpired presence and is useful to a local worker
-// recovering a channel after a process restart.
+// Channel возвращает только непросроченное присутствие и используется локальным обработчиком
+// при восстановлении канала после перезапуска процесса.
 func (c *Coordinator) Channel(ctx context.Context, serverID, runtimeID, channelID string) (p serverbridgeha.ChannelPresence, found bool, err error) {
 	if err = validatePart(serverID, runtimeID, channelID); err != nil {
 		return p, false, err

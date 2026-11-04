@@ -344,11 +344,11 @@ export function ClientFactoryBuilder02710({
   return (
     <section
       className="subcard clientFactory"
-      aria-label="Сборщик Client Factory"
+      aria-label="Конструктор клиента"
     >
       <header className="registryHeading">
         <div>
-          <h4>Client Factory · {__LAUNCHER_VERSION__}</h4>
+          <h4>Конструктор клиента · {__LAUNCHER_VERSION__}</h4>
           <p className="muted">
             Minecraft и загрузчик → сборка → проверка SHA-256 → diff → экспорт
             InstallPlan и файлов.
@@ -363,7 +363,7 @@ export function ClientFactoryBuilder02710({
           Обновить задания
         </button>
       </header>
-      <nav className="clientFactorySteps" aria-label="Этапы Client Factory">
+      <nav className="clientFactorySteps" aria-label="Этапы создания клиента">
         {(["configure", "preview", "run", "result"] as const).map((s, i) => (
           <button
             type="button"
@@ -397,7 +397,7 @@ export function ClientFactoryBuilder02710({
               }
             >
               <option value="version">Minecraft + загрузчик</option>
-              <option value="modpack">Modrinth / CurseForge modpack</option>
+              <option value="modpack">Модпак Modrinth / CurseForge</option>
             </select>
           </label>
           <label className="field">
@@ -552,7 +552,7 @@ export function ClientFactoryBuilder02710({
               <h5>Журналы обработки / установщика</h5>
               <pre
                 className="clientFactoryLog"
-                aria-label="Журнал Client Factory"
+                aria-label="Журнал создания клиента"
               >
                 {detail.log || "Нет сообщений; проверьте состояние задания."}
               </pre>

@@ -1,5 +1,5 @@
-// Package gravitinventory inventories and exports Gravit source installations.
-// It never executes untrusted JARs or retains source credentials in reports.
+// Пакет gravitinventory выполняет инвентаризацию и экспорт исходных установок Gravit.
+// Он никогда не запускает недоверенные JAR и не сохраняет исходные учётные данные в отчётах.
 package gravitinventory
 
 import (
@@ -52,8 +52,8 @@ type Inventory struct {
 	ManifestSHA256   string         `json:"manifestSha256"`
 }
 
-// canonical excludes the manifest hash itself; it is the exact JSON included
-// in every exported ZIP. Report fields are derived from file bytes, not headers.
+// canonical исключает собственный хеш манифеста; это точный JSON, включённый
+// в каждый экспортируемый ZIP. Поля отчёта выводятся из байтов файлов, а не заголовков.
 func (v Inventory) canonical() ([]byte, error) {
 	v.ManifestSHA256 = ""
 	return json.MarshalIndent(v, "", "  ")
@@ -82,17 +82,17 @@ func entryKind(n string) (string, bool) {
 	case base == "launchserverruntime.json" || base == "launchserverruntimeconfig.json" || strings.HasPrefix(l, "runtime/") || strings.Contains(l, "/runtime/"):
 		return "runtime", strings.HasSuffix(l, ".json")
 	case base == "serverwrapper.json" || base == "serverwrapperconfig.json" || strings.Contains(l, "serverwrapper/"):
-		// ServerWrapper packages also contain JARs/large binaries; parse only configs.
+		// Пакеты ServerWrapper также содержат JAR и крупные бинарные файлы; читайте только настройки.
 		return "server_wrapper", strings.HasSuffix(l, ".json") || strings.HasSuffix(l, ".env")
 	case strings.HasPrefix(l, "profiles/") && strings.HasSuffix(l, ".json") || strings.Contains(l, "/profiles/") && strings.HasSuffix(l, ".json"):
 		return "client_profile", true
 	case (base == "database.json" && (strings.Contains(l, "fileauthsystem/") || strings.Contains(l, "fileauth/"))) ||
 		strings.Contains(l, "sql-export/") && strings.HasSuffix(l, ".csv") ||
 		strings.HasSuffix(l, ".sql") && (strings.Contains(l, "/auth/") || strings.Contains(l, "/database/")):
-		// Account dumps contain secrets and potentially hundreds of thousands
-		// of records. Hash and CRC-check them without loading them into the
-		// 2 MiB configuration parser. MIG04/MIG05 perform strict identity and
-		// credential decoding only after the source has been pinned by SHA-256.
+		// Выгрузки аккаунтов содержат секреты и потенциально сотни тысяч
+		// записей. Проверяйте хеши и CRC без загрузки в
+		// парсер конфигураций на 2 МиБ. MIG04/MIG05 строго декодируют идентичность и
+		// учётные данные только после фиксации исходника по SHA-256.
 		return "authentication", false
 	case strings.HasPrefix(l, "modules-config/") || strings.Contains(l, "/modules-config/"):
 		return "module_config", strings.HasSuffix(l, ".json")
@@ -349,16 +349,16 @@ func gather(v *Inventory, kind string, config []byte) error {
 	return nil
 }
 
-// ValidateSource checks the exact source bytes, member CRCs, decompression
-// limits, file types and case-insensitive paths without interpreting Gravit
-// configuration. Compatibility analysis must be able to report malformed JSON
-// as findings rather than aborting the entire source scan.
+// ValidateSource проверяет точные байты источника, CRC элементов, ограничения распаковки,
+// типы файлов и пути без учёта регистра, не интерпретируя конфигурацию Gravit.
+// Анализ совместимости должен сообщать об ошибках JSON как о находках,
+// а не прекращать полное сканирование источника.
 func ValidateSource(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string) (Inventory, error) {
 	return scan(ctx, src, archiveSize, sourceDigest, false)
 }
 
-// Inspect checks the complete source ZIP, then interprets bounded JSON
-// configurations to count providers, optional actions and server references.
+// Inspect проверяет весь исходный ZIP и затем анализирует ограниченные по размеру
+// конфигурации JSON для подсчёта провайдеров, дополнительных действий и серверов.
 func Inspect(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string) (Inventory, error) {
 	return scan(ctx, src, archiveSize, sourceDigest, true)
 }
@@ -367,8 +367,8 @@ func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest 
 	if archiveSize < 1 || archiveSize > MaxSourceBytes || len(sourceDigest) != 64 {
 		return Inventory{}, errors.New("source archive size/digest invalid")
 	}
-	// Do not trust a caller-supplied digest. A staged source can change between
-	// requests or be passed by an untrusted worker; pin the exact archive bytes.
+	// Не доверяйте хешу, предоставленному вызывающей стороной. Источник может измениться между
+	// запросами или поступить от недоверенного обработчика; закрепляйте точные байты архива.
 	for _, c := range sourceDigest {
 		if !strings.ContainsRune("0123456789abcdef", c) {
 			return Inventory{}, errors.New("invalid source SHA-256")
@@ -428,12 +428,12 @@ func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest 
 	return v, nil
 }
 
-// Export creates a byte-for-byte verifiable, reproducible ZIP of all source
-// files and a canonical checksum manifest. Export is sensitive: it may contain
-// credentials; callers must use TLS and save to a mode-0600 file.
+// Export создаёт воспроизводимый ZIP всех исходных файлов с побайтовой проверкой
+// и каноническим манифестом контрольных сумм. Экспорт может содержать секреты:
+// используйте TLS и сохраняйте файл с правами 0600.
 func Export(ctx context.Context, out io.Writer, src io.ReaderAt, size int64, v Inventory) error {
-	// The second inspection is deliberate: the export cannot be made with
-	// a mismatched/modified snapshot, even when the source is a mutable file.
+	// Вторая проверка намеренна: экспорт не должен использовать
+	// неподходящий или изменённый снимок, даже если исходный файл изменяемый.
 	actual, e := Inspect(ctx, src, size, v.SourceSHA256)
 	if e != nil {
 		return e

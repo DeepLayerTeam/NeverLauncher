@@ -65,7 +65,7 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
   });
   const match = (value: string) => value.toLowerCase().includes(query.trim().toLowerCase());
   return <section className="card wide">
-    <div className="registryHeading"><div><h2>Сессии и устройства</h2><p className="muted">Свои сессии доступны каждому вошедшему пользователю. Административный отзыв trusted device требует users:manage и свежий phishing-resistant step-up.</p></div><button disabled={!!busy} onClick={() => void perform('refresh', async () => { await refresh(); return 'Состояния обновлены.'; })}>Обновить</button></div>
+    <div className="registryHeading"><div><h2>Сессии и устройства</h2><p className="muted">Свои сессии доступны каждому вошедшему пользователю. Административный отзыв trusted device требует users:manage и свежий дополнительную фишинг-устойчивую аутентификацию.</p></div><button disabled={!!busy} onClick={() => void perform('refresh', async () => { await refresh(); return 'Состояния обновлены.'; })}>Обновить</button></div>
     {error && <p className="error" role="alert">{error}</p>}{result && <p className="success" role="status">{result} <a href={auditHref('session')}>Посмотреть аудит</a></p>}
     <div className="dataToolbar"><label>Поиск<input type="search" value={query} onChange={e => setQuery(e.target.value)} /></label><button disabled={!!busy || sessions.length < 2} onClick={revokeOthers}>Отозвать другие сессии</button></div>
     <h3>Мои активные сессии ({sessions.length})</h3>
@@ -77,10 +77,10 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
       {renameId === item.id && <div className="formGrid"><label className="field">Новое название<input value={newName} maxLength={120} onChange={e => setNewName(e.target.value)} /></label><div className="buttonRow"><button disabled={!!busy || !newName.trim()} onClick={() => rename(item)}>Сохранить</button><button onClick={() => setRenameId('')}>Отмена</button></div></div>}
     </article>)}
     {sessions.length === 0 && <p className="muted">Список сессий пуст или ещё загружается.</p>}
-    {adminAccess && <><h3>Trusted devices ({devices.length})</h3>
+    {adminAccess && <><h3>Доверенные устройства ({devices.length})</h3>
       {devices.filter(item => match(`${item.id} ${item.userId} ${item.name} ${item.status}`)).map(item => <article className="subcard" key={item.id}>
         <div className="registryHeading"><strong>{item.name || item.id}</strong><span className={`badge ${item.status === 'active' ? 'ok' : 'warn'}`}>{item.status}</span></div>
-        <p className="muted">User: {item.userId} · trust: {item.trustState || 'unknown'} · {item.keyAlgorithm || 'key unknown'} · binding: {item.keyBinding || 'unknown'} · last seen: {item.lastSeenAt || '—'}</p>
+        <p className="muted">Пользователь: {item.userId} · доверие: {item.trustState || 'неизвестно'} · {item.keyAlgorithm || 'ключ неизвестен'} · привязка: {item.keyBinding || 'неизвестно'} · последнее посещение: {item.lastSeenAt || '—'}</p>
         {item.revokedAt && <p>Отозвано: {item.revokedAt} · {item.revokedReason || 'причина не указана'}</p>}
         <p><code>{item.id}</code> · <a href={auditHref(item.id)}>Аудит устройства</a></p>
         {item.status === 'active' && <div><button disabled={!!busy} className="danger" onClick={() => { setReasonId(item.id); setReason(''); }}>Отозвать ключ устройства</button>

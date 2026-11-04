@@ -425,7 +425,7 @@ export function ComponentChooser0247({
                   </button>
                 </div>
               )}
-              <small>Resolved plan: {diff.planSha256}</small>
+              <small>Сформированный план: {diff.planSha256}</small>
             </>
           )}
           <div className="toolbar inline">

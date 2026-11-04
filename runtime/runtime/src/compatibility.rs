@@ -15,9 +15,9 @@ pub(crate) fn pin_windows_lwjgl_extract_path(args: &mut Vec<String>, game_root: 
     if os != "windows" {
         return;
     }
-    // The Sensor accepts this single, platform-specific extraction directory.
-    // Strip publisher/mod-provided overrides so the JVM and Sensor cannot
-    // disagree on where LWJGL's classpath natives are expected to be loaded.
+    // Sensor принимает только этот каталог распаковки, специфичный для платформы.
+    // Удаляйте переопределения издателя или модификаций, чтобы JVM и Sensor не
+    // расходились в том, где ожидаются нативные библиотеки LWJGL из classpath.
     args.retain(|arg| !arg.starts_with(LWJGL_EXTRACT_PROPERTY));
     let extract = game_root.join(".launcher").join("lwjgl-extract")
         .join("windows").join(arch);
@@ -437,11 +437,11 @@ pub async fn resolve_compatibility(
     if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
         jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
     }
-    // LWJGL 3 prefers native resources on the classpath and can extract
-    // lwjgl.dll even when java.library.path points at a verified flat copy.
-    // Keep extraction inside the pinned client root, never in a user-global
-    // temp directory. Guard rechecks extracted bytes against the signed
-    // package's native copy before trusting any executable-memory calls.
+    // LWJGL 3 предпочитает нативные ресурсы из classpath и может извлекать
+    // lwjgl.dll, даже если java.library.path указывает на проверенную копию.
+    // Распаковывайте только в закреплённый корень клиента, никогда в общую
+    // временную папку пользователя. Guard повторно сверяет извлечённые байты с
+    // нативной копией подписанного пакета перед доверием к вызовам исполняемой памяти.
     pin_windows_lwjgl_extract_path(
         &mut jvm_args,
         Path::new(&context.game_directory),
@@ -568,11 +568,11 @@ fn merge_layers(
             merged.logging_client = layer.logging.client.clone();
         }
     }
-    // LaunchWrapper is loaded ahead of the inherited Minecraft libraries.
-    // Its classpath must prefer child Forge JARs (including overridden Maven
-    // coordinates) before the base game dependencies. This matches the
-    // verified Client Factory legacy-launch recipe, rather than retaining a
-    // parent-first order that could load an older class of the same name.
+    // LaunchWrapper загружается до унаследованных библиотек Minecraft.
+    // Его classpath должен предпочитать дочерние JAR Forge (включая переопределённые
+    // координаты Maven) зависимостям базовой игры. Это соответствует
+    // проверенному рецепту старого запуска Client Factory, а не сохраняет
+    // родительский приоритет, способный загрузить старый одноимённый класс.
     if merged.main_class == "net.minecraft.launchwrapper.Launch" && layers.len() > 1 {
         let mut seen = HashSet::new();
         let mut preferred = Vec::new();
@@ -599,9 +599,9 @@ fn merge_layers(
 
 type ResolvedLibraries = (Vec<ResolvedLibrary>, Vec<ResolvedNative>, Vec<String>);
 
-// Preserve inherited Mojang options even when a legacy Forge profile also
-// declares identity placeholders. The child overrides only the flags it
-// explicitly specifies, and values containing spaces remain single argv items.
+// Сохраняйте унаследованные параметры Mojang, даже когда старый профиль Forge
+// также содержит заполнители идентичности. Дочерний профиль переопределяет лишь
+// явно заданные флаги, а значения с пробелами остаются едиными аргументами argv.
 fn merge_legacy_argument_tokens(parent: &[String], child: &[String]) -> Vec<String> {
     if parent.is_empty() {
         return child.to_vec();
@@ -654,9 +654,9 @@ fn resolve_libraries(
         // Часть старых записей Mojang — нативные контейнеры только
         // с классификаторами, например lwjgl-platform и jinput-platform.
         // Не превращайте их в обычные артефакты classpath.
-        // Modern Mojang/LWJGL metadata may publish a native classifier as
-        // downloads.artifact instead of downloads.classifiers + natives.
-        // This is a native archive, never a Java classpath entry.
+        // В новых метаданных Mojang/LWJGL нативный классификатор может находиться в
+        // downloads.artifact вместо downloads.classifiers + natives.
+        // Это нативный архив, но никогда не элемент classpath Java.
         let classified_native = library.name.split(':').nth(3)
             .is_some_and(|value| value.to_ascii_lowercase().starts_with("natives-"));
         if let Some(artifact) = library.downloads.artifact.clone() {
@@ -694,8 +694,8 @@ fn resolve_libraries(
                 classpath.push(path);
             }
         } else if classified_native {
-            // A classified native without an artifact descriptor is not a
-            // classpath JAR. Do not invent a file or silently omit a native.
+            // Нативная библиотека с классификатором, но без описателя артефакта, не является
+            // JAR для classpath. Не выдумывайте файл и не пропускайте библиотеку молча.
             return Err(format!("{}: native classifier missing downloads.artifact", library.name));
         } else if library.downloads.classifiers.is_empty() {
             // Сохраняйте совместимость со старыми локальными метаданными, появившимися
@@ -1296,8 +1296,8 @@ fn library_artifact_matches_environment(name: &str, environment: &CompatibilityE
     if !classifier.starts_with("natives-") {
         return true;
     }
-    // A native archive for a different OS must not enter the classpath or
-    // the extracted natives for this target. Unknown variants fail closed.
+    // Нативный архив для другой ОС не должен попасть в classpath или
+    // извлечённые библиотеки данной платформы. Неизвестные варианты отклоняются.
     let prefixes: &[&str] = if environment.os == "osx" {
         &["natives-macos", "natives-osx"]
     } else if environment.os == "windows" {

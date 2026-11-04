@@ -1,13 +1,13 @@
-//! Filesystem barriers for durable client releases. Never mutate the active tree
-//! before verifying targets, capacity, staged bytes and synced rollback copies.
+//! Барьеры файловой системы для надёжных выпусков клиента. Не изменяйте активное дерево
+//! до проверки целевых путей, объёма, подготовленных байтов и синхронизированных копий отката.
 use crate::file_ownership;
 use std::{collections::HashMap, ffi::OsString, fs, io, path::{Path, PathBuf}};
 
 const SAFETY_RESERVE: u64 = 16 * 1024 * 1024;
 
-/// This is intentionally conservative: updates need both a backup and enough
-/// space to restore old bytes after a partial switch, not merely room for the
-/// new downloaded files. Arithmetic errors fail closed.
+/// Проверка намеренно консервативна: обновлению нужна резервная копия и достаточно
+/// места для возврата старых байтов после частичного переключения, а не только объём
+/// для новых скачанных файлов. Ошибки арифметики приводят к отказу.
 fn check_capacity(available: u64, required: u64) -> Result<(), String> {
     let need = required.checked_add(SAFETY_RESERVE).ok_or("disk reservation overflow")?;
     if available < need {
@@ -26,9 +26,9 @@ pub(crate) fn checked_add(total: u64, additional: u64) -> Result<u64, String> {
     total.checked_add(additional).ok_or_else(|| "client release disk requirement overflow".into())
 }
 
-/// Never silently replace a player-supplied directory, junction, read-only
-/// file or a path with different casing. ACLs remain enforced by the OS; do not
-/// automatically escalate privilege or clear read-only bits.
+/// Не заменяйте незаметно каталог, точку соединения, файл только для чтения,
+/// предоставленный игроком, или путь с другим регистром. ACL применяются ОС;
+/// не повышайте права и не снимайте атрибут только для чтения автоматически.
 pub(crate) fn check_target(root: &Path, target: &Path) -> Result<(), String> {
     file_ownership::ensure_no_symlinks(root, target)?;
     if !target.starts_with(root) { return Err("target outside client root".into()); }
@@ -36,9 +36,9 @@ pub(crate) fn check_target(root: &Path, target: &Path) -> Result<(), String> {
     while let Some(dir) = parent {
         if !dir.starts_with(root) { break; }
         match fs::symlink_metadata(dir) {
-            // Windows ignores the READONLY directory attribute for write
-            // authorization (and Explorer sets it on ordinary directories).
-            // ACL access failures are enforced by the actual OS operations.
+            // Windows игнорирует атрибут READONLY каталога при разрешении записи
+            // (Проводник выставляет его и обычным каталогам).
+            // Нарушения ACL выявляются фактическими файловыми операциями ОС.
             Ok(meta) if cfg!(unix) && meta.permissions().readonly() => {
                 return Err(format!("managed parent directory is read-only: {}", dir.display()));
             },
@@ -60,9 +60,9 @@ pub(crate) fn check_target(root: &Path, target: &Path) -> Result<(), String> {
     }
 }
 
-/// Batch-scan each parent directory once instead of O(files * siblings) for
-/// large Minecraft assets trees. This detects on-disk casing differences
-/// before the journal is published, including on case-sensitive CI hosts.
+/// Сканируйте каждый родительский каталог один раз, а не O(файлы × соседи),
+/// для больших каталогов ресурсов Minecraft. Это выявляет расхождения регистра
+/// на диске до публикации журнала, в том числе на CI с чувствительной ФС.
 pub(crate) fn preflight_targets(root: &Path, targets: &[PathBuf]) -> Result<(), String> {
     let mut cache: HashMap<PathBuf, HashMap<String, OsString>> = HashMap::new();
     for target in targets {
@@ -106,10 +106,10 @@ fn sync_parent(dest: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// On Windows, ReplaceFileW preserves the replaced file if a running game or
-/// antivirus denies FILE_SHARE_DELETE. Unlike rename-old + rename-new there
-/// is no gap in which the live executable is missing. On Unix rename() is an
-/// atomic same-volume replacement. Staging lives on the installation volume.
+/// В Windows ReplaceFileW сохраняет заменяемый файл, если запущенная игра или
+/// антивирус запрещает FILE_SHARE_DELETE. В отличие от двух переименований,
+/// нет промежутка с отсутствующим исполняемым файлом. В Unix rename() выполняет
+/// атомарную замену в одном томе. Подготовка ведётся на томе установки.
 pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Result<(), String> {
     file_ownership::ensure_no_symlinks(root, source)?;
     check_target(root, destination)?;
@@ -125,8 +125,8 @@ pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Re
             path.as_os_str().encode_wide().chain(std::iter::once(0)).collect()
         }
         if destination.exists() {
-            // Safety: both paths are valid terminated UTF-16 strings held for
-            // the entire synchronous call. Null excludes backup and reserved.
+            // Безопасность: оба пути — корректные завершённые строки UTF-16, существующие
+            // весь синхронный вызов. Null исключает резервное и зарезервированное имена.
             let ok = unsafe { ReplaceFileW(wide(destination).as_ptr(), wide(source).as_ptr(),
                 std::ptr::null(), 0, std::ptr::null(), std::ptr::null()) };
             if ok == 0 {
@@ -141,7 +141,7 @@ pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Re
         fs::rename(source, destination).map_err(|e| format!("atomically switch managed file {}: {e}", destination.display()))?;
     }
     #[cfg(windows)] {
-        // Flush the winning file contents/metadata after ReplaceFileW succeeds.
+        // После успешного ReplaceFileW сбросьте содержимое и метаданные файла на диск.
         fs::File::open(destination).and_then(|f| f.sync_all())
             .map_err(|e| format!("persist Windows replaced file: {e}"))?;
     }
@@ -169,7 +169,7 @@ mod tests {
         permissions.set_readonly(true);
         fs::set_permissions(root.join("Mods/a.jar"), permissions).unwrap();
         assert!(check_target(&root, &root.join("Mods/a.jar")).is_err());
-        // Windows may be unable to delete a readonly file even as its owner.
+        // Windows может не удалить файл только для чтения даже от имени владельца.
         let mut permissions = fs::metadata(root.join("Mods/a.jar")).unwrap().permissions();
         permissions.set_readonly(false);
         fs::set_permissions(root.join("Mods/a.jar"), permissions).unwrap();
@@ -194,7 +194,7 @@ mod tests {
         let next = root.join("staged.exe");
         fs::write(&dest, b"KNOWN_GOOD").unwrap();
         fs::write(&next, b"NEXT").unwrap();
-        // No sharing permitted, including FILE_SHARE_DELETE.
+        // Общий доступ запрещён, включая FILE_SHARE_DELETE.
         let lock = fs::OpenOptions::new().read(true).share_mode(0).open(&dest).unwrap();
         assert!(replace_file(&root, &next, &dest).is_err());
         drop(lock);

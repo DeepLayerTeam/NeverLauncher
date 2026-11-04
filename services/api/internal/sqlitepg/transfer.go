@@ -1,7 +1,7 @@
-// Package sqlitepg transfers an immutable, verified SQLite 326 snapshot into a
-// PostgreSQL quarantine schema. Is changes the live PostgreSQL tables or
-// enables an unsafe backend cutover. It preserves every source table/row/column,
-// including audit, revoked tokens, join tickets, UUIDs, binary blobs and leases.
+// Пакет sqlitepg переносит неизменяемый проверенный снимок SQLite 326 в
+// карантинную схему PostgreSQL. Он не изменяет действующие таблицы PostgreSQL и не
+// разрешает небезопасное переключение серверной части. Сохраняются все таблицы, строки и столбцы,
+// включая аудит, отозванные токены, билеты входа, UUID, бинарные данные и аренды.
 package sqlitepg
 
 import (
@@ -59,7 +59,7 @@ func identifier(name string) (string, error) {
 	if name == "" || len(name) > 62 || strings.ContainsRune(name, 0) {
 		return "", fmt.Errorf("unsafe SQL identifier %q", name)
 	}
-	// No SQL interpolation is used for VALUES. Identifiers are always quoted.
+	// Для VALUES не применяется интерполяция SQL. Идентификаторы всегда экранируются кавычками.
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`, nil
 }
 func quoted(name string) string     { s, _ := identifier(name); return s }
@@ -251,10 +251,10 @@ func rowDigest(vals []any) (string, []byte, error) {
 }
 func addDigest(h hash.Hash, d []byte) { _, _ = h.Write(d) }
 
-// verifyRestoredCore runs the existing authoritative SQLite Core Check on a
-// disposable restore, covering manifest hashes, revoked sessions, tickets,
-// published heads, jobs and bridge/extension invariants. The source backup is
-// opened read-only throughout the actual PostgreSQL import.
+// verifyRestoredCore запускает существующую авторитетную проверку SQLite Core
+// на одноразовой восстановленной копии: хеши манифестов, отозванные сеансы, билеты,
+// опубликованные указатели, задания и инварианты мостов и расширений. Исходная копия
+// остаётся доступной только для чтения на протяжении импорта в PostgreSQL.
 func verifyRestoredCore(ctx context.Context, backup string) error {
 	dir, err := os.MkdirTemp(filepath.Dir(backup), ".nl-pg-verify-*")
 	if err != nil {
@@ -272,10 +272,10 @@ func verifyRestoredCore(ctx context.Context, backup string) error {
 	return repo.Close() // OpenExisting already runs every Core invariant check
 }
 
-// Import creates a new, immutable, fully verified PostgreSQL mirror in one
-// serializable transaction. Existing PG schemas are untouched; any mismatch
-// aborts and rolls back all copied data. This is a staging transfer ONLY:
-// PostgreSQL's live repository uses a different schema and cannot yet cut over.
+// Import создаёт новое неизменяемое полностью проверенное зеркало PostgreSQL за одну
+// сериализуемую транзакцию. Существующие схемы не затрагиваются; любое расхождение
+// отменяет операцию и откатывает все скопированные данные. Это ТОЛЬКО промежуточный перенос:
+// действующий репозиторий PostgreSQL использует другую схему и пока не может переключиться.
 func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error) {
 	report := Report{Format: importVersion, PostgreSQLSchema: Schema, ReadyForBackendCutover: false}
 	if strings.TrimSpace(postgresDSN) == "" {
@@ -323,7 +323,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	if report.SQLiteSchema != sqlitecore.SchemaVersion {
 		return report, errors.New("snapshot schema changed after verification")
 	}
-	// Hold a single SQLite read transaction to prevent time-of-check/time-of-use changes.
+	// Удерживайте одну транзакцию чтения SQLite, исключая изменение между проверкой и использованием.
 	if _, err = src.ExecContext(ctx, "BEGIN"); err != nil {
 		return report, err
 	}
@@ -345,7 +345,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, err
 	}
 	defer tx.Rollback(context.Background())
-	// Acquiring a transaction-scoped lock coordinates simultaneous migrations.
+	// Блокировка в области транзакции согласует одновременные миграции.
 	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(32011, 326)`); err != nil {
 		return report, err
 	}
@@ -376,8 +376,8 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		report.Tables = append(report.Tables, result)
 		report.TotalRows += result.Rows
 	}
-	// Keep relational uniqueness and references in the target, not just in
-	// a manifest. Data are imported before constraints to handle FK cycles.
+	// Сохраняйте ограничения уникальности и ссылочной целостности в целевой базе,
+	// а не только в манифесте. Данные загружаются до ограничений из-за циклов внешних ключей.
 	if err = addUniqueIndexes(ctx, src, tx, tableDefs); err != nil {
 		return report, err
 	}
@@ -389,9 +389,9 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 			return report, err
 		}
 	}
-	// Save the exact verified SQLite snapshot alongside the relational mirror.
-	// A reverse transfer can reproduce SQLite schema, indexes, triggers, values,
-	// and binary state without lossy SQL type/DDL translations.
+	// Сохраните точный проверенный снимок SQLite вместе с реляционным зеркалом.
+	// Обратный перенос сможет восстановить схему SQLite, индексы, триггеры, значения
+	// и бинарное состояние без потерь при преобразовании типов SQL и DDL.
 	if err = storeSnapshot(ctx, tx, backupPath, manifest); err != nil {
 		return report, fmt.Errorf("store SQLite snapshot: %w", err)
 	}
@@ -428,7 +428,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	if err = protectTable(ctx, tx, "migration_receipt"); err != nil {
 		return report, err
 	}
-	// Recheck backup bytes and SQLite logical constraints before commit.
+	// Перед фиксацией повторно проверьте байты копии и логические ограничения SQLite.
 	again, e := sqlitedurable.VerifyBackup(ctx, backupPath)
 	if e != nil {
 		return report, e
@@ -690,9 +690,9 @@ func addForeignKeys(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInfo)
 	return nil
 }
 
-// protectTable rejects every data-changing DML operation, including TRUNCATE.
-// The earlier 0.32.11 implementation mistakenly placed the truncate trigger
-// inside an unreachable error branch; that made TRUNCATE a possible bypass.
+// protectTable запрещает все изменяющие данные операции DML, включая TRUNCATE.
+// В прежней реализации 0.32.11 триггер усечения ошибочно помещён
+// в недостижимую ветвь ошибки; поэтому TRUNCATE мог обходить запрет.
 func protectTable(ctx context.Context, tx pgx.Tx, table string) error {
 	if _, err := tx.Exec(ctx, `CREATE TRIGGER nl_reject_mutation BEFORE INSERT OR UPDATE OR DELETE ON `+qualified(table)+` FOR EACH ROW EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`); err != nil {
 		return err

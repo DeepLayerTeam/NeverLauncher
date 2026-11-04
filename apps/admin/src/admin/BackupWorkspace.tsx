@@ -61,7 +61,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
   return <section className="card wide" aria-label="Резервное копирование и восстановление">
     <div className="registryHeading"><div><h2>Резервное копирование / восстановление</h2><p className="muted">Настоящие архивы Backend; проверка SHA-256, dry-run и подтверждённое восстановление. Restore требует свежей phishing-resistant аутентификации.</p></div><div className="buttonRow"><button disabled={!!busy} onClick={() => void run('refresh', load)}>Обновить</button><button disabled={!!busy} onClick={create}>Создать backup</button></div></div>
     <p className="muted">Состояние: {data?.status ?? 'загрузка'} · Режим: {data?.mode ?? '—'} · Архивов: {data?.backups?.length ?? '—'}</p>
-    {error && <p className="error" role="alert">{error} <span className="muted">Проверьте полномочия, соединение и повторите чтение статуса. Для restore подтвердите passkey.</span></p>}
+    {error && <p className="error" role="alert">{error} <span className="muted">Проверьте полномочия, соединение и повторите чтение статуса. Для восстановления подтвердите вход с помощью ключа доступа.</span></p>}
     {notice && <p className="success" role="status">{notice}</p>}
     <a href={auditHref(selected || 'backup:')} >Открыть журнал аудита backup</a>
     <div className="dataToolbar"><label>Поиск по ID<input type="search" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
@@ -70,21 +70,21 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
       {filtered.length === 0 && <tr><td colSpan={5}>Архивов нет либо поиск ничего не нашёл.</td></tr>}
     </tbody></table></div>
     {selected && current && <article className="subcard">
-      <h3>Backup {selected}</h3>
+      <h3>Резервная копия {selected}</h3>
       <p>Серверный SHA-256: <code>{current.sha256}</code></p>
       <div className="buttonRow"><button disabled={!!busy} onClick={() => inspect(selected)}>Инспектировать</button><button disabled={!!busy} onClick={dryRun}>Проверить восстановимость (dry-run)</button><a href={auditHref(selected)}>Аудит этого архива</a></div>
-      {inspection && <div><p>Файлы: {inspection.manifest.files?.length ?? 0} · PostgreSQL: {inspection.manifest.databaseDump ? 'есть' : 'нет'} · Storage objects: {inspection.manifest.storageObjects}</p><p className="muted">Манифест прочитан. Для восстановления обязательно выполните dry-run.</p></div>}
-      {verified && <div className="subcard"><h4>Результат restore dry-run: {verified.status}</h4><p>Проверено файлов: {verified.checked} · PostgreSQL dump: {verified.databaseDump} · Storage: {verified.storageObjects}</p><p className="muted">Dry-run подтверждает структуру архива, но не гарантирует успешность destructive restore при других внешних условиях.</p></div>}
+      {inspection && <div><p>Файлы: {inspection.manifest.files?.length ?? 0} · PostgreSQL: {inspection.manifest.databaseDump ? 'есть' : 'нет'} · Объекты хранилища: {inspection.manifest.storageObjects}</p><p className="muted">Манифест прочитан. Для восстановления обязательно выполните dry-run.</p></div>}
+      {verified && <div className="subcard"><h4>Результат пробного восстановления: {verified.status}</h4><p>Проверено файлов: {verified.checked} · Дамп PostgreSQL: {verified.databaseDump} · Хранилище: {verified.storageObjects}</p><p className="muted">Dry-run подтверждает структуру архива, но не гарантирует успешность destructive restore при других внешних условиях.</p></div>}
       <div className="subcard">
         <h4>Восстановить данные</h4>
-        <p className="muted">Доступно только после успешного dry-run. Backend создаёт safety backup. Операция синхронная, не является durable job; при обрыве соединения сначала проверьте состояние и аудит, не повторяйте запрос автоматически.</p>
+        <p className="muted">Доступно только после успешного dry-run. Сервер создаёт защитную резервную копию. Операция синхронная и не является долговременным заданием; при обрыве соединения сначала проверьте состояние и аудит, не повторяйте запрос автоматически.</p>
         <label><input type="checkbox" checked={database} onChange={e => setDatabase(e.target.checked)} disabled={!canRestore || verified?.databaseDump !== 'valid' || !inspection?.manifest.databaseDump} /> PostgreSQL</label>
         <label><input type="checkbox" checked={storage} onChange={e => setStorage(e.target.checked)} disabled={!canRestore || !verified} /> Хранилище</label>
         <label className="field">Введите ID архива точно<input value={confirmId} onChange={e => setConfirmId(e.target.value)} autoComplete="off" placeholder={selected}/></label>
         {!canRestore && <p className="muted">Требуются глобальные права settings:manage и свежий passkey step-up.</p>}
         <button className="danger" disabled={!!busy || !canRestore || !verified || !inspection || confirmId !== selected || (!database && !storage)} onClick={executeRestore}>Выполнить подтверждённое восстановление</button>
       </div>
-      {restore && <article className="subcard"><h4>Ответ restore: {restore.status}</h4><p>Затронуто: {restore.restored?.join(', ') || '—'}</p><p>Защитная копия: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}
+      {restore && <article className="subcard"><h4>Результат восстановления: {restore.status}</h4><p>Затронуто: {restore.restored?.join(', ') || '—'}</p><p>Защитная копия: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}
     </article>}
   </section>;
 }

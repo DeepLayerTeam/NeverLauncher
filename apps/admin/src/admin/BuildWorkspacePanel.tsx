@@ -396,7 +396,7 @@ export function BuildWorkspacePanel({
   const counts = comparison ? diffCounts0384(comparison.items) : {};
   return (
     <article className="subcard">
-      <h4>Build Workspace · {__LAUNCHER_VERSION__}</h4>
+      <h4>Рабочая область сборки · {__LAUNCHER_VERSION__}</h4>
       <p className="muted">
         Каталог или отдельные файлы → SHA-256 → сравнение → выбор stage →
         validate → проверка материализованного пакета. Публикация и подпись
@@ -568,7 +568,7 @@ export function BuildWorkspacePanel({
           {scan && (
             <>
               <p>
-                Scan revision {scan.revision}: <strong>{scan.status}</strong> ·
+                Ревизия сканирования {scan.revision}: <strong>{scan.status}</strong> ·
                 проверено {scan.files.length}; ошибок{" "}
                 {scan.files.filter((f) => f.status !== "ok").length}
               </p>

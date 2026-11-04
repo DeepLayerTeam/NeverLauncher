@@ -1,51 +1,51 @@
 # Launcher 0.25.9 — управление текстурами в Admin
 
-## что развёртывается
+## Что развёртывается
 
-**Admin → Скины и плащи** operates on the existing local Minecraft/Yggdrasil texture service, not a second storage or identity backend. The default scope (`projectId=''`) governs the global local profiles used by the current Desktop texture service. A named project scope configures assignments explicitly scoped to that project. Official Microsoft/Minecraft identities, UUIDs and capes are unaffected.
+Раздел **Admin → Скины и плащи** работает с уже существующей локальной службой текстур Minecraft/Yggdrasil, а не с отдельным хранилищем или Backend идентичностей. Область по умолчанию (`projectId=''`) управляет глобальными локальными профилями, которые использует текущая служба текстур Desktop. Именованная область проекта настраивает назначения текстур, явно относящиеся к этому проекту. Официальные идентичности Microsoft/Minecraft, UUID и плащи не затрагиваются.
 
-New PostgreSQL migration: `services/api/internal/dbmigrate/sql/0072_texture_admin_0259.sql`.
+Новая миграция PostgreSQL: `services/api/internal/dbmigrate/sql/0072_texture_admin_0259.sql`.
 
-- Project policy with `allowPlayerSkins`, `allowPlayerCapes`, independent `defaultSkinDigest`, `defaultCapeDigest`, `fallbackSkinDigest`, `fallbackCapeDigest`, skin model `classic/slim` for default and fallback, byte quota, blob-count quota and optimistic `revision`.
-- A newly created policy starts at revision 1; absence of a project-specific row is represented by revision 0 with safe defaults (skins allowed, capes denied, 10 MiB and 20 blobs).
-- Explicit `allow` or `deny` exceptions for individual account **user IDs** and skin/cape kind, with `inherit` removing the exception. Pre-existing `texture_cape_grants` continue working unless overridden by a new exception. An explicit denial defeats a globally permitted cape.
-- Policy and exception changes run in transactions with reason, actor ID and dated append-only history. Policy changes serialize on a PostgreSQL advisory lock and enforce expected revision. A 409 means reload and resubmit deliberately; do not retry automatically.
-- Stored default/fallback digests must refer to already-verified, currently *public and active*, correctly typed managed images in the same scope. An administrator cannot publish a private user blob by guessing its SHA-256. Objects named by default/fallback are protected from texture GC. Use a legitimate local account to upload and publish an eligible texture first; select it from the Admin image list.
-- Default image: returned if a player has no active selection. Fallback image: returned if the player has an active selection that cannot be publicly used (e.g. revoked by policy, private or quarantined). If fallback is not configured the regular default applies. Local Yggdrasil/ServerBridge URLs are public only for verified and explicitly published managed blobs.
-- Read-only change history for actual player assignments (upload/select/reset/delete/import), scoped to a user ID and project; official Minecraft identities are never included.
+- Политика проекта включает `allowPlayerSkins`, `allowPlayerCapes`, независимые `defaultSkinDigest`, `defaultCapeDigest`, `fallbackSkinDigest`, `fallbackCapeDigest`, модели кожи `classic/slim` для стандартного и резервного изображения, квоты байтов и числа объектов, а также оптимистическую `revision`.
+- Новая политика начинается с ревизии 1; отсутствие строки для конкретного проекта представляется ревизией 0 с безопасными значениями по умолчанию (скины разрешены, плащи запрещены, 10 МиБ и 20 объектов).
+- Явные исключения `allow` или `deny` для отдельных **идентификаторов пользователей** и типов `skin`/`cape`; `inherit` удаляет исключение. Ранее созданные `texture_cape_grants` продолжают действовать, если не переопределены новым исключением. Явный запрет сильнее глобального разрешения плащей.
+- Изменения политики и исключений выполняются транзакционно с записью причины, ID исполнителя и времени в историю только для добавления. Изменения политики сериализуются блокировкой PostgreSQL advisory lock и требуют ожидаемую ревизию. HTTP 409 означает, что нужно заново загрузить данные и осознанно отправить запрос; автоматический повтор недопустим.
+- Хеши стандартного и резервного изображения должны ссылаться на уже проверенные, **публичные и активные** управляемые изображения нужного типа в той же области. Администратор не может опубликовать частный объект пользователя, угадав его SHA-256. Объекты для стандартных и резервных изображений защищены от сборщика мусора. Сначала загрузите и опубликуйте допустимую текстуру через настоящий локальный аккаунт; затем выберите её в списке изображений Admin.
+- Стандартное изображение возвращается, если игрок не выбрал активную текстуру. Резервное возвращается при наличии активного выбора, который больше нельзя публиковать (например, из-за отзыва политикой, приватности или карантина). Без резервного изображения применяется обычное стандартное. Локальные URL Yggdrasil/ServerBridge доступны публично только для проверенных и явно опубликованных управляемых объектов.
+- История фактических назначений игрокам (загрузка, выбор, сброс, удаление и импорт) доступна только для чтения и ограничивается ID пользователя и проектом; официальные идентичности Minecraft никогда не включаются.
 
-**Important:** Local Desktop presently creates global (`projectId=''`) assignments. Policies for a named project govern project-scoped assignments only and do not automatically override global local/Yggdrasil selection.
+**Важно:** Desktop сейчас создаёт глобальные назначения (`projectId=''`). Политики именованного проекта действуют только на назначения этой проектной области и не заменяют автоматически глобальный выбор локального/Yggdrasil профиля.
 
 ## API
 
-All routes require an authenticated Admin Bearer token with **global** `settings:manage` (project-only permission is insufficient). Both writes require a **fresh MFA session**, just like operational configuration changes. The server, not the browser, makes every authorization decision.
+Все маршруты требуют аутентифицированный Bearer-токен Admin с **глобальным** правом `settings:manage` (права только на проект недостаточно). Оба варианта записи требуют **свежего сеанса MFA**, как и изменение эксплуатационной конфигурации. Решения о доступе принимает сервер, а не браузер.
 
-| Method | Endpoint | Purpose |
+| Метод | Маршрут | Назначение |
 | --- | --- | --- |
-| GET | `/api/v1/admin/textures/policy?projectId=` | Current policy, including CAS revision |
-| PUT | `/api/v1/admin/textures/policy?projectId=` | Change project policy and record revision |
-| GET | `/api/v1/admin/textures/policy/history?projectId=` | Last 100 policy changes |
-| GET | `/api/v1/admin/textures/default-options?projectId=` | Public verified eligible PNG blobs |
-| GET | `/api/v1/admin/textures/exceptions?projectId=&userId=` | Current user-specific exceptions |
-| PUT | `/api/v1/admin/textures/exceptions/{userId}?projectId=` | Set `allow`, `deny` or `inherit` |
-| GET | `/api/v1/admin/textures/exceptions/history?projectId=` | Last 100 exception changes |
-| GET | `/api/v1/admin/textures/players/{userId}/history?projectId=` | Last 100 actual texture selection revisions |
+| GET | `/api/v1/admin/textures/policy?projectId=` | Текущая политика, включая ревизию CAS |
+| PUT | `/api/v1/admin/textures/policy?projectId=` | Изменение политики проекта и запись ревизии |
+| GET | `/api/v1/admin/textures/policy/history?projectId=` | Последние 100 изменений политики |
+| GET | `/api/v1/admin/textures/default-options?projectId=` | Публичные проверенные подходящие PNG |
+| GET | `/api/v1/admin/textures/exceptions?projectId=&userId=` | Текущие исключения пользователя |
+| PUT | `/api/v1/admin/textures/exceptions/{userId}?projectId=` | Установка `allow`, `deny` или `inherit` |
+| GET | `/api/v1/admin/textures/exceptions/history?projectId=` | Последние 100 изменений исключений |
+| GET | `/api/v1/admin/textures/players/{userId}/history?projectId=` | Последние 100 фактических ревизий выбора текстуры |
 
-**PUT policy** receives a JSON object with `expectedRevision`, `policy` and a 3–500-character `reason`. `policy` includes all booleans, four SHA-256 digest fields (empty string disables them), both skin-model fields and both quotas. Server-supplied `revision`, `projectId` and timestamps inside the policy object never authorize mutation: the scope is derived from the query and current revision from PostgreSQL.
+**PUT политики** принимает JSON с `expectedRevision`, `policy` и `reason` длиной 3–500 символов. `policy` включает все булевы поля, четыре поля SHA-256 (пустая строка отключает соответствующий выбор), две модели скина и обе квоты. Переданные клиентом `revision`, `projectId` и временные метки внутри объекта политики никогда не разрешают изменение: область определяется параметром запроса, а текущая ревизия — из PostgreSQL.
 
-**PUT exception** receives `kind` (`skin`/`cape`), `decision` (`allow`/`deny`/`inherit`), `reason` (3–500 characters), optionally the matching `userId`. The actual user must exist in the Launcher users table, and the global capability is checked before the handler.
+**PUT исключения** принимает `kind` (`skin` или `cape`), `decision` (`allow`, `deny` или `inherit`), `reason` (3–500 символов) и при необходимости соответствующий `userId`. Пользователь должен существовать в таблице пользователей Launcher; глобальное право проверяется до обработчика.
 
-## развёртывание и проверка
+## Развёртывание и проверка
 
-1. Back up the PostgreSQL database and previously uploaded texture objects (local/S3). Deploy backend and admin files together; apply migration `0072` using the existing migration runner. Do **not** modify the sealed earlier migrations.
-2. Confirm the current profile returns an existing Minecraft UUID and its previously selected managed texture without change.
-3. As a globally authorized Admin, open **Скины и плащи**, select the global scope, and set a previously public verified PNG as the standard skin. Confirm a player with no skin sees it through `/api/v1/textures/{uuid}` and in a real game session.
-4. Set a different fallback if desired. Revoke player skins for a controlled test user; confirm their active skin is no longer published and the fallback is used. Restore policy after the test.
-5. Grant an individual cape while project capes are disabled. Then explicitly deny an account with an existing legacy cape grant and verify that the denial wins in upload, selection and public delivery.
-6. Submit an outdated expected revision to the policy PUT and require HTTP 409; confirm the committed policy and history are unchanged.
-7. Try to set private, non-PNG, staging, quarantined or foreign-scope digests as defaults. All must be rejected with 400. Test both local and real S3 storage for default/fallback ETag, refresh and GC retention.
-8. Check that a player token, anonymous request and project-only operator cannot access any Admin texture endpoint. Validate fresh MFA rejection of an expired or unstepped-up Admin token.
-9. Perform a clean Admin React/Vite build and live PostgreSQL integration test; run real Minecraft/Yggdrasil profiles before a production release.
+1. Сделайте резервную копию PostgreSQL и ранее загруженных объектов текстур (локально или в S3). Разверните Backend и файлы Admin вместе, примените миграцию `0072` существующим мигратором. **Не** изменяйте ранее закреплённые миграции.
+2. Убедитесь, что текущий профиль по-прежнему возвращает существующий UUID Minecraft и ранее выбранную управляемую текстуру без изменений.
+3. Войдите в Admin с глобальными правами, откройте **Скины и плащи**, выберите глобальную область и назначьте ранее опубликованный проверенный PNG стандартным скином. Проверьте, что игрок без скина получает его через `/api/v1/textures/{uuid}` и видит в настоящей игровой сессии.
+4. При необходимости установите другое резервное изображение. Запретите скины контролируемому тестовому пользователю; убедитесь, что активный скин перестал публиковаться и используется резервный. После теста восстановите политику.
+5. Разрешите индивидуальный плащ при отключённых для проекта плащах. Затем явно запретите плащ аккаунту со старым разрешением и убедитесь, что запрет имеет приоритет при загрузке, выборе и публичной доставке.
+6. Отправьте устаревшую ожидаемую ревизию в PUT политики и потребуйте HTTP 409; проверьте, что сохранённая политика и история не изменились.
+7. Попробуйте использовать хеши частных объектов, не-PNG, подготовленных, карантинных или принадлежащих другой области в качестве значений по умолчанию. Все запросы должны отклоняться HTTP 400. Проверьте ETag, обновление и сохранение при GC для локального и настоящего S3.
+8. Проверьте, что токен игрока, анонимный запрос и оператор только с правами проекта не имеют доступа к маршрутам Admin для текстур. Проверьте отказ при истёкшем MFA и Admin-токене без необходимого повышения уровня аутентификации.
+9. Выполните чистую сборку React/Vite Admin, интеграционный тест с реальным PostgreSQL и проверки настоящих профилей Minecraft/Yggdrasil перед промышленным выпуском.
 
 ```bash
 cd services/api
@@ -57,4 +57,4 @@ npm test
 npm run build
 ```
 
-Production certification **is not asserted** merely because a patch archive or its offline tests exist. Confirm full API compilation, PostgreSQL migration and repository tests, live S3/local fetch and Minecraft game delivery on release infrastructure. If a rollback is necessary, restore from the pre-migration PostgreSQL backup (the new migration is additive; do not rewrite applied migration checksums).
+Наличие архива исправлений и прохождение автономных тестов **не подтверждает промышленную сертификацию**. На инфраструктуре выпуска проверьте полную компиляцию API, миграцию PostgreSQL и тесты Repository, настоящую выдачу из S3/локального хранилища и доставку в игру Minecraft. При необходимости отката восстановите резервную копию PostgreSQL до миграции (новая миграция добавочная; не переписывайте контрольные суммы уже применённых миграций).

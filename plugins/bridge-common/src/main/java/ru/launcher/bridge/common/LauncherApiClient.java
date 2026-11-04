@@ -157,8 +157,8 @@ public final class LauncherApiClient {
         return validateJoin(username, uuid, ip, false);
     }
 
-    // The platform, not the player, reports whether Mojang online authentication
-    // is enforced on the connection endpoint. This field is signed by the node.
+    // Платформа, а не игрок, сообщает, требуется ли онлайн-аутентификация Mojang
+    // на точке подключения. Это поле подписывается узлом.
     public JoinValidationResult validateJoin(String username, String uuid, String ip, boolean onlineModeVerified) {
         if (identity == null) {
             return new JoinValidationResult(false, "node_identity_missing", "{}");
@@ -187,11 +187,11 @@ public final class LauncherApiClient {
             "}";
         IOException lastIo = null;
         InterruptedException lastInterrupted = null;
-        // Join redemption consumes a one-time ticket. A lost ACK must not
-        // silently trigger a second consumption from another Backend replica.
+        // Подтверждение входа расходует одноразовый билет. Потеря ACK не должна
+        // незаметно вызывать повторное погашение на другом экземпляре Backend.
         for (int attempt = 0; attempt < 1; attempt++) {
             try {
-                // Signed request with a fresh nonce; never replay on I/O uncertainty.
+                // Подписанный запрос со свежим nonce; при неопределённости ввода-вывода не повторять.
                 HttpResponse<String> response = sendSignedWithoutReplay0287("POST", config.validateJoinPath(), body);
                 String raw = response.body() == null ? "" : response.body();
                 BridgeAuthResponse0287.Decision decision = BridgeAuthResponse0287.join(
@@ -212,8 +212,8 @@ public final class LauncherApiClient {
             }
         }
         String reason = lastInterrupted != null ? "backend_interrupted" : (lastIo != null ? "backend_unavailable" : "backend_denied");
-        // A ticket-authenticated project/online join may never fail open.
-        // Legacy failMode=open is ignored for Minecraft admission.
+        // Вход в проект/онлайн-сервер по билету никогда не разрешается при ошибке проверки.
+        // Старый failMode=open игнорируется для допуска в Minecraft.
         return new JoinValidationResult(false, reason, "{}");
     }
 
@@ -239,9 +239,9 @@ public final class LauncherApiClient {
             "\"targetServer\":" + quote(targetServer) + sessionField +
             "}";
         IOException lastIo = null;
-        // Handoff creation has an external, one-time side effect. If the reply
-        // is lost, never issue a second creation under a different nonce: the
-        // original may have committed. Fail closed and require a new attempt.
+        // Создание передачи управления даёт внешний одноразовый эффект. При потере ответа
+        // не создавайте повторно запрос с другим nonce: прежний уже мог быть выполнен.
+        // Отклоните операцию и потребуйте новую попытку.
         for (int attempt = 0; attempt < 1; attempt++) {
             try {
                 HttpResponse<String> response = sendSignedWithoutReplay0287("POST", config.handoffPath(), body);
@@ -442,8 +442,8 @@ public final class LauncherApiClient {
     private void pollControlOnce() throws Exception {
         BridgeProtocolNegotiation protocol = negotiateProtocol();
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_CONTROL_API) || !protocol.features().contains(BridgeDefaults.FEATURE_HA_CONTROL_PLANE)) return;
-        // Retry durable receipts before receiving new work. Lost HTTP ACK and plugin reload
-        // must never require invoking the game command again to recover its outcome.
+        // Повторяйте отправку постоянных квитанций до получения новых задач. Потеря HTTP ACK
+        // и перезагрузка плагина не должны требовать повторного запуска игровой команды.
         for (BridgeControlJournal.Receipt pending : controlJournal.unacknowledged(runtimeIdentity.runtimeId(), controlChannelId)) {
             sendControlAck(pending);
         }
@@ -506,8 +506,8 @@ public final class LauncherApiClient {
         BridgeControlResult result;
         if (state == null) {
             BridgeAdapterCapability needed = BridgeAdapterCapability.forControl(command.type());
-            // Capability checks are execution gates, not merely Admin presentation hints.
-            // The signed runtime identity is what was actually advertised to Backend.
+            // Проверки возможностей — условия исполнения, а не только подсказки интерфейса Admin.
+            // Подписанная идентичность Runtime — та, что фактически объявлена Backend.
             boolean allowed = needed != null && runtimeIdentity.descriptor().capabilities().contains(needed.runtimeCapability());
             controlJournal.begin(command);
             if (!allowed) {
@@ -525,8 +525,8 @@ public final class LauncherApiClient {
             result = state.result();
             if (result == null) result = BridgeControlResult.indeterminate("control journal result unavailable");
         }
-        // Upgrade a legacy execution tombstone to the durable receipt format
-        // using only the original authenticated delivery. Never invoke it again.
+        // Переводите старую отметку исполнения в формат постоянной квитанции,
+        // используя только первоначальную подтверждённую доставку. Не выполняйте её повторно.
         controlJournal.bindLegacyReceipt(command);
         // This receipt is already on disk; a lost ACK is retried on subsequent polls.
         sendControlAck(new BridgeControlJournal.Receipt(command.commandId(), command.runtimeId(),

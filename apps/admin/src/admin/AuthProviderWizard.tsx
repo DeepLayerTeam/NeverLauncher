@@ -178,7 +178,7 @@ export function AuthProviderWizard02910({
     setStep("config");
   };
   async function activateFor(h: Head, target: number) {
-    if (reason.trim().length < 3) throw new Error("Reason is required.");
+    if (reason.trim().length < 3) throw new Error("Необходимо указать причину.");
     await request(`${base}/${encodeURIComponent(h.id)}/activate`, {
       revision: target,
       expectedActiveRevision: h.activeRevision,
@@ -223,7 +223,7 @@ export function AuthProviderWizard02910({
             disabled={busy}
           >
             <option value="sql">SQL (PostgreSQL / MySQL / MariaDB)</option>
-            <option value="http">HTTP (signed)</option>
+            <option value="http">HTTP (с подписью)</option>
             <option value="oidc">OIDC</option>
             <option value="microsoft">Microsoft Entra</option>
             <option value="java">Java Identity SPI (одобренное глобальное расширение)</option>
@@ -305,7 +305,7 @@ export function AuthProviderWizard02910({
               ? "проверены без раскрытия"
               : "не проверены"}
           </p>
-          <p>Capabilities: {test.metadata?.capabilities?.join(", ") || "—"}</p>
+          <p>Возможности: {test.metadata?.capabilities?.join(", ") || "—"}</p>
           {test.mapping && (
             <table className="table">
               <thead>
@@ -342,7 +342,7 @@ export function AuthProviderWizard02910({
           {error}
         </p>
       )}
-      <h3>3. Rollout и история ревизий</h3>
+      <h3>3. Поэтапное внедрение и история ревизий</h3>
       <p className="muted">
         Активация и откат требуют свежей phishing-resistant MFA и
         compare-and-swap версии. Новый коннектор проверяется непосредственно
@@ -353,7 +353,7 @@ export function AuthProviderWizard02910({
       ) : (
         heads.map((h) => (
           <div key={h.id} className="card" style={{ marginBottom: 12 }}>
-            <strong>{h.id}</strong> · active:{" "}
+            <strong>{h.id}</strong> · активен:{" "}
             {h.activeRevision === 0 ? "disabled" : `#${h.activeRevision}`} ·
             status:{" "}
             {h.activeRevision === 0

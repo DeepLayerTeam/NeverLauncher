@@ -1,19 +1,19 @@
 # NeverLauncher 0.51.7 — работающее поэтапное обновление нескольких узлов
 
-Scope: **control-plane API + worker only**, from **0.51.6 to 0.51.7**. No schema migration, database rewind, Minecraft process migration, unsigned component substitution or mass host restart. The external load balancer, PostgreSQL primary, Redis and S3 must already be working and independently monitored. Host-local extension files and world state are **not made highly available** by this procedure.
+Область действия: **только API и worker управляющего контура**, переход с **0.51.6 на 0.51.7**. Без миграции схемы, отката состояния БД, переноса процессов Minecraft, подмены неподписанных компонентов или одновременного перезапуска всех хостов. Внешний балансировщик, основной PostgreSQL, Redis и S3 должны уже работать и независимо наблюдаться. Эта процедура **не обеспечивает высокую доступность** локальных файлов расширений и игровых миров.
 
 ## Предварительные условия
 
-1. At least **two distinct physical Docker hosts** run `deploy/production/docker-compose.multi-host.yml`; each has independently healthy API/worker/Admin/ingress. The public TLS LB routes `/ready` to a healthy surviving host, and keeps another route available while one host API is restarted. Use distinct node/replica IDs and independent Docker Engine identities.
-2. Release engineers independently verify the **0.51.7 API OCI image digest**, signed supply-chain evidence and package/commit identity. Its `/ready` and `/api/v1/status` must reflect `0.51.7` after startup. All other images (Admin, ingress, init) stay unchanged. Release certificates and production secrets are managed separately; this controller does not sign images or bypass trust gates.
-3. On **each** host install the 0.51.7 versions of `scripts/operations/rolling_update_0517.py`, `multi_host_0512.py`, `nn1_compat_0516.py`, `ha_inventory_0511.py`. The trusted operator also installs them with the complete unchanged PostgreSQL SQL catalog and installs `psql`. SSH must use a pre-provisioned known-hosts file and `BatchMode=yes`; Docker access is limited to trusted operators. Python 3.11+ and Docker Compose v2 are required.
-4. On each Docker host create a **private** `deploy/production/.env.rolling-target-0517` from its existing `.env`; the *only* change must be `LAUNCHER_API_IMAGE=<verified-0.51.7-image@sha256:digest>`. The controller compares complete rendered Compose JSON (not just declared strings) and refuses any changes to secrets, trust keys, endpoints, node IDs, network ports, volumes, Admin/ingress images, mounts or healthchecks. Keep files owner-consistent, 0600, and their directory non-group/world-writable. Do not transfer `.env` to the operator host or put credentials on argv.
-5. On the operator machine create a 0600 file containing one PostgreSQL URL with `sslmode=verify-full` for the shared *writer*. The role needs read access to `schema_migrations` and information_schema and permission to obtain advisory locks. This URL is passed through the local file, not command-line credentials. No DDL may run while 0.51.6 is present. Verify all 117 migration file hashes match the pinned 0.51.5/0.51.6 catalog. Freeze other deployment tools on these hosts during the update (the PostgreSQL advisory lock is used by this controller, not by unrelated tools).
-6. Before cutover, independently test an explicit real ServerBridge command, background job/outbox processing, authentication, publication, and read/write traffic on the shared dependencies. The controller performs HTTP/live dependency checks; it does **not** reproduce every application workflow.
+1. Не менее **двух отдельных физических Docker-хостов** работают с `deploy/production/docker-compose.multi-host.yml`; на каждом API, worker, Admin и ingress должны быть исправны независимо. Публичный TLS-балансировщик направляет `/ready` на исправный оставшийся узел и сохраняет другой маршрут, пока перезапускается API одного хоста. Используйте разные ID узлов/реплик и независимые идентичности Docker Engine.
+2. Инженеры выпуска независимо проверяют **OCI-дайджест образа API 0.51.7**, подписанные свидетельства цепочки поставки и соответствие пакета коммиту. После запуска `/ready` и `/api/v1/status` должны отражать `0.51.7`. Все остальные образы (Admin, ingress, init) остаются прежними. Сертификаты выпуска и промышленные секреты управляются отдельно; контроллер не подписывает образы и не обходит шлюзы доверия.
+3. На **каждом** хосте установите версии 0.51.7 скриптов `scripts/operations/rolling_update_0517.py`, `multi_host_0512.py`, `nn1_compat_0516.py`, `ha_inventory_0511.py`. Доверенный оператор устанавливает их вместе с полным неизменённым каталогом SQL PostgreSQL и `psql`. SSH должен использовать заранее подготовленный файл известных хостов и `BatchMode=yes`; доступ к Docker ограничен доверенными операторами. Требуются Python 3.11+ и Docker Compose v2.
+4. На каждом Docker-хосте создайте **закрытый** `deploy/production/.env.rolling-target-0517` из существующего `.env`; *единственным* отличием должно быть `LAUNCHER_API_IMAGE=<verified-0.51.7-image@sha256:digest>`. Контроллер сравнивает полностью отрисованный Compose JSON, а не только объявленные строки, и отклоняет изменения секретов, доверенных ключей, конечных точек, ID узлов, портов, томов, образов Admin/ingress, монтирований и healthcheck. Владелец файлов должен совпадать, права — 0600, каталог не должен быть доступен группе и посторонним на запись. Не переносите `.env` на машину оператора и не передавайте секреты через argv.
+5. На машине оператора создайте файл 0600 с одним URL PostgreSQL и `sslmode=verify-full` для общего *основного узла записи*. Роли необходимы чтение `schema_migrations` и `information_schema` и право получать advisory locks. URL передаётся через локальный файл, а не учётные данные командной строки. Пока работает 0.51.6, DDL запрещён. Проверьте соответствие всех 117 хешей файлов миграций закреплённому каталогу 0.51.5/0.51.6. На время обновления заморозьте другие инструменты развёртывания на этих хостах (блокировку PostgreSQL использует только этот контроллер, но не посторонние инструменты).
+6. До переключения независимо проверьте настоящую явную команду ServerBridge, обработку фоновых заданий и исходящей очереди, аутентификацию, публикацию и трафик чтения/записи к общим зависимостям. Контроллер выполняет HTTP-проверки и проверки живых зависимостей, но **не** повторяет все сценарии приложения.
 
 ## Предварительная проверка каждого узла (без изменения контейнеров)
 
-On **each** host:
+На **каждом** хосте:
 
 ```sh
 cd /opt/launcher/deploy/production
@@ -23,9 +23,9 @@ python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-plan \
   --output /var/lib/launcher/evidence/roll-plan-$(hostname).json
 ```
 
-The plan confirms the **actual** healthy 0.51.6 API/worker, validates the staged config and returns only redacted image references/digests and node identifiers. Do not proceed if any host fails. Stage the target image under the real registry digest; no mutable tag is accepted.
+План подтверждает **действительно работающие** API и worker 0.51.6, проверяет подготовленную конфигурацию и возвращает только отредактированные для безопасности ссылки/дайджесты образов и ID узлов. Не продолжайте при отказе любого хоста. Подготовьте целевой образ по настоящему дайджесту реестра; изменяемый тег запрещён.
 
-## промышленное развёртывание доверенным оператором
+## Промышленное развёртывание доверенным оператором
 
 ```sh
 python3 scripts/operations/rolling_update_0517.py cluster-roll \
@@ -39,22 +39,22 @@ python3 scripts/operations/rolling_update_0517.py cluster-roll \
   --output /secure/evidence/rolling-0517.json
 ```
 
-The controller obtains one **session-scoped PostgreSQL advisory lock** and refuses concurrent runs that use the same lock. It checks every live API/worker version, signed ServerBridge v3 capability fingerprints, loader/runtime API contracts and real PostgreSQL schema shape/checksums. An external HTTPS `/ready` must pass; each host's dependency probes must succeed. It then processes one host at a time:
+Контроллер получает одну **привязанную к сеансу advisory lock PostgreSQL** и запрещает параллельные запуски с той же блокировкой. Он проверяет версии всех работающих API/worker, подписанные отпечатки возможностей ServerBridge v3, контракты API загрузчика/Runtime, фактическую структуру и контрольные суммы схемы PostgreSQL. Внешняя проверка HTTPS `/ready` должна пройти; проверки зависимостей на каждом хосте тоже. Затем хосты обрабатываются последовательно:
 
-1. **Plan:** confirm the current live process is 0.51.6, compare exact rendered source/target Compose configurations, verify pinned image and store the already-vetted previous `.env` securely with `fsync`.
-2. **Pre-pull:** fetch the 0.51.7 image by digest before disrupting any existing service; verify source and target images are present.
-3. **Graceful local stop:** stop **only that host's worker and API** with a 45-second grace period. Its other ingress/Admin and **all other hosts** remain running. Docker volumes are not removed.
-4. **Atomic switch:** use a private file and `os.replace` to update `.env`, record each phase in `.rolling-state-0517.json`, and `docker compose up -d --no-build --no-deps --force-recreate --wait api worker`. This is a real container recreate, not a simulated rollout.
-5. **Admission:** check real runtime version 0.51.7 for both roles, complete per-host dependency growth and API/Bridge response fingerprints, the surviving peers, PostgreSQL rows/checksums, and the external public HTTPS LB. While the node changes, a background thread samples public `/ready` once per second; any sampled failure blocks success and causes a rollback of **that node** only.
-6. **Continue:** only after all checks pass, repeat for the next host. The controller supports re-entry when earlier hosts are already running 0.51.7; a completed node is not restarted merely to resume after an SSH/operator failure.
+1. **План:** убедиться, что действующий процесс — 0.51.6; сравнить точные исходную и целевую отрисованные конфигурации Compose, проверить закреплённый образ и безопасно сохранить уже проверенный прежний `.env` с `fsync`.
+2. **Предварительная загрузка:** получить образ 0.51.7 по дайджесту без остановки служб; проверить наличие исходного и целевого образов.
+3. **Плавная локальная остановка:** остановить **только worker и API этого хоста** с периодом завершения 45 секунд. Его ingress/Admin и **все остальные хосты** продолжают работать. Тома Docker не удаляются.
+4. **Атомарное переключение:** обновить `.env` с помощью закрытого временного файла и `os.replace`, фиксировать каждый этап в `.rolling-state-0517.json` и выполнить `docker compose up -d --no-build --no-deps --force-recreate --wait api worker`. Это настоящее пересоздание контейнеров, а не симуляция развёртывания.
+5. **Допуск:** проверить реальную версию 0.51.7 обеих ролей, полные проверки зависимостей и отпечатков ответов API/Bridge на узле, оставшихся соседей, строки/контрольные суммы PostgreSQL и внешний публичный HTTPS-балансировщик. Во время изменения узла отдельный поток раз в секунду опрашивает публичный `/ready`; любой обнаруженный отказ запрещает успех и вызывает откат **только этого узла**.
+6. **Продолжение:** переходить к следующему хосту только после успешных проверок. Контроллер допускает повторный вход, когда предыдущие хосты уже на 0.51.7; завершённый узел не перезапускается просто ради возобновления после ошибки SSH/оператора.
 
-**Readiness sampling is not proof of zero interrupted requests.** For a production SLO, record real client traffic, in-flight 5xx/latency, WebSocket behavior, task completion, timeouts and server joins throughout the rollout with an external load driver. A compatible control-plane update does not live-migrate Minecraft world memory.
+**Выборочное опрашивание готовности не доказывает отсутствие прерванных запросов.** Для промышленного SLO измеряйте реальный клиентский трафик, ошибки 5xx и задержки выполняемых запросов, WebSocket, завершение задач, тайм-ауты и входы на сервер на всём протяжении обновления внешним генератором нагрузки. Совместимое обновление управляющего контура не переносит живую память игрового мира Minecraft.
 
-## восстановление после ошибок и аварий
+## Восстановление после ошибок и аварий
 
-A host update which fails after creating its private backup attempts to restore the exact original `.env`, recreates only that host's API/worker from the previously pinned source image, and confirms **real** 0.51.6 readiness. It never restores a previous PostgreSQL backup and silently discards acknowledged writes. If the restart or verification fails, the host journal is marked `manual-recovery-required` and the controller returns a nonzero status; **do not** continue the rollout.
+Если обновление хоста не удалось после создания его закрытой резервной копии, контроллер пытается восстановить точный исходный `.env`, пересоздать лишь API/worker этого хоста из ранее закреплённого исходного образа и подтвердить **настоящую** готовность 0.51.6. Он никогда не восстанавливает старую резервную копию PostgreSQL с незаметной потерей подтверждённых записей. При ошибке перезапуска или проверки журнал хоста получает `manual-recovery-required`, контроллер завершается ненулевым кодом; **не** продолжайте обновление.
 
-If the operator or SSH process exits unexpectedly, check the actual cluster versions and the host's state journal. If the host's journal is `stopping`, `switching` or `applied` and you need to revert that node, run on that host:
+При неожиданном завершении оператора или SSH проверьте фактические версии кластера и журнал состояния хоста. Если журнал содержит `stopping`, `switching` либо `applied` и требуется откат узла, выполните на нём:
 
 ```sh
 python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-rollback \
@@ -62,13 +62,13 @@ python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-rollback \
   --allow-update --output /var/lib/launcher/evidence/rollback-$(hostname).json
 ```
 
-The backup and journal are separate root/operator-controlled 0600 files and **must not be edited by automation during recovery**. The rollback rejects a modified source backup or a current `.env` that does not match the pinned source/target. After a `rolled-back` journal, operators must investigate, archive evidence and explicitly remove the completed journal+backup before scheduling another attempt; no automatic deletion of prior recovery evidence occurs.
+Резервная копия и журнал — отдельные файлы 0600 под управлением root/оператора; **автоматизация не должна редактировать их при восстановлении**. Откат отклоняет изменённую исходную копию или текущий `.env`, не совпадающий с закреплённым исходным/целевым состоянием. После появления в журнале `rolled-back` операторы обязаны расследовать причину, архивировать свидетельства и явно удалить завершённые журнал и копию до новой попытки; старые свидетельства восстановления автоматически не удаляются.
 
-If only one host is running, PostgreSQL migration checks fail, a different version is detected, the load balancer is unhealthy, the PostgreSQL advisory lock/session is unavailable, or any SSH command has ambiguous results: **BLOCKED**. Do not force the next host or manually overwrite a report. In all cases verify integrity of published builds and ServerBridge command receipts separately after the update.
+Если работает лишь один хост, не проходят миграционные проверки PostgreSQL, обнаружена другая версия, балансировщик неисправен, нет сеанса/блокировки PostgreSQL или результат SSH неоднозначен, итог — **BLOCKED**. Не переводите следующий хост принудительно и не переписывайте отчёт вручную. Во всех случаях после обновления отдельно проверьте целостность опубликованных сборок и квитанций команд ServerBridge.
 
-## что проверено и что не проверено
+## Что проверено и что не проверено
 
-- The script performs *actual* Docker Compose, SSH, SQL and HTTPS operations when connected to a real multi-host environment; its Python unit tests use controlled fixtures to verify refusals and failure paths, **not** to claim a physical multi-host PASS.
-- Database migration catalog remains byte-identical to 0.51.6 (checksum pinned to 0.51.5). There is no expand/contract DDL and no independent validation of arbitrary future N/N−1 combinations.
-- PostgreSQL advisory lock serializes **this** rolling controller only. It does not fence independent operators/legacy scripts, prevent nonparticipating writers, or substitute for PostgreSQL quorum and ServerBridge/world fencing.
-- Final 0.52.0 HA GA requires independent physical-host failover, real network partition, real gameplay and confirmed RTO/RPO on signed final packages. A valid 0.51.7 report is an operational observation for its exact images and hosts, not that GA receipt.
+- При подключении к настоящей многохостовой среде скрипт выполняет **реальные** операции Docker Compose, SSH, SQL и HTTPS. Модульные тесты Python используют управляемые фикстуры для проверки отказов и ошибок, **а не** для заявления о физической многохостовой проверке со статусом PASS.
+- Каталог миграций базы побайтово совпадает с 0.51.6 (контрольная сумма закреплена на 0.51.5). Миграций DDL с расширением/сужением схемы нет, как и независимой проверки произвольных будущих сочетаний N/N−1.
+- Advisory lock PostgreSQL сериализует **только этот** контроллер последовательного обновления. Она не блокирует независимых операторов/старые скрипты, не останавливает посторонние процессы записи и не заменяет кворум PostgreSQL или fencing ServerBridge/миров.
+- Окончательный HA GA 0.52.0 требует независимого переключения физического хоста, реального разделения сети, настоящего игрового процесса и подтверждённых RTO/RPO на окончательных подписанных пакетах. Корректный отчёт 0.51.7 — эксплуатационное наблюдение для своих конкретных образов и хостов, но не сертификат такого GA.

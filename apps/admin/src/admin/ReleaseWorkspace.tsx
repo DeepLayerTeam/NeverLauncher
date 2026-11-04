@@ -776,7 +776,7 @@ export function ReleaseWorkspace({
   );
   return (
     <section className="card wide releaseWorkspace">
-      <h2>Release Workspace · {__LAUNCHER_VERSION__}</h2>
+      <h2>Рабочая область выпуска · {__LAUNCHER_VERSION__}</h2>
       <p className="muted">
         Мастер: проект → профиль и загрузчик → сборка → проверка → канал.
         Черновики хранятся на Backend с проверкой версии при сохранении.
@@ -1158,7 +1158,7 @@ export function ReleaseWorkspace({
       )}
       {step === "verify" && (
         <article className="subcard">
-          <h3>4. Проверки, подпись, runtime evidence</h3>
+          <h3>4. Проверки, подпись и свидетельства Runtime</h3>
           {form.packageId && packageInfo?.manifestSchemaVersion === "3.0" && (
             <ComponentGraphEditor0248
               key={`${form.packageId}-verify-${catalogRefresh}`}
@@ -1534,7 +1534,7 @@ export function ReleaseWorkspace({
             <code>{pending.intent.channel}</code>.
           </p>
           <p>
-            Idempotency key: <code>{pending.intent.idempotencyKey}</code> · job:{" "}
+            Ключ идемпотентности: <code>{pending.intent.idempotencyKey}</code> · задание:{" "}
             <code>{pending.jobId || "ответ потерян / неизвестен"}</code>
           </p>
           <p>

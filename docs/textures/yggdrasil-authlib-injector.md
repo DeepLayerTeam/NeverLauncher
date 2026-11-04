@@ -1,8 +1,8 @@
 # Launcher 0.25.6 — подписание текстур Yggdrasil/authlib-injector
 
-## развёртывание промышленной версии
+## Развёртывание промышленной версии
 
-Generate a persistent RSA private key separate from the **Ed25519 release manifest keys**:
+Создайте постоянный закрытый RSA-ключ отдельно от **ключей Ed25519 для подписания манифестов выпуска**:
 
 ```sh
 umask 077
@@ -10,37 +10,37 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out /etc/launcher/
 chmod 600 /etc/launcher/yggdrasil-rsa.pem
 ```
 
-Set `LAUNCHER_YGGDRASIL_RSA_KEY_FILE` to its absolute path on **each replica** and distribute the **same key** securely to all API instances. Do not commit the PEM to git, bake it into an image, serve it over HTTP, or place it in `LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY`. File must be a non-symlink regular file with mode 0600, PKCS#1 or PKCS#8, unencrypted RSA >= 2048 bits. Rotate only as a coordinated deployment: changing the public key invalidates cached metadata/profile signatures. Restart replicas when changing the file. If no key is configured in production or key loading fails, metadata and signed texture profile endpoints return 503 rather than unsigned properties.
+Укажите абсолютный путь к файлу в `LAUNCHER_YGGDRASIL_RSA_KEY_FILE` на **каждой реплике** и безопасно распространите **одинаковый ключ** на все экземпляры API. Не добавляйте PEM в Git, не включайте в образ, не передавайте по HTTP и не помещайте в `LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY`. Файл должен быть обычным (без символьной ссылки), с правами 0600, формата PKCS#1 либо PKCS#8, с незашифрованным RSA-ключом не короче 2048 бит. Ротация допускается только как согласованное развёртывание: смена открытого ключа аннулирует кэшированные метаданные и подписи профилей. При изменении файла перезапустите реплики. Если промышленный ключ не настроен или не загружается, метаданные и подписанные профили текстур возвращают 503 вместо свойств без подписи.
 
-Set `LAUNCHER_PUBLIC_URL` to the public HTTPS API origin. `skinDomains` automatically includes its exact hostname. For a CDN that mirrors the *same normalized digest paths*, optionally set `LAUNCHER_YGGDRASIL_TEXTURE_DOMAINS` to a CSV of explicitly trusted hosts, e.g. `textures.example.org,.cdn.example.org` (leading dot allows subdomains only). `*`, IP literal, invalid domain and scheme are rejected. Only immutable `/api/v1/textures/blob/{64-hex-sha256}` URLs are signed; raw legacy external URLs are omitted and must first pass through the bounded secure import pipeline. A texture URL on a host outside the whitelist is also omitted from signed profile attributes. Prefer managed SHA-256 texture URLs (`/api/v1/textures/blob/{digest}`) to avoid client cache staleness. Imported PNGs must have gone through the secure texture pipeline.
+Укажите в `LAUNCHER_PUBLIC_URL` публичный HTTPS-адрес происхождения API. `skinDomains` автоматически включает точное имя его хоста. Для CDN, который зеркалирует *те же нормализованные пути по дайджестам*, можно указать `LAUNCHER_YGGDRASIL_TEXTURE_DOMAINS` — CSV доверенных хостов, например `textures.example.org,.cdn.example.org` (точка в начале разрешает только поддомены). `*`, IP-адреса, недопустимые домены и схемы отклоняются. Подписываются только неизменяемые URL `/api/v1/textures/blob/{64-hex-sha256}`; исходные внешние URL старых систем исключаются и должны сначала пройти ограниченную безопасную процедуру импорта. URL текстуры на хосте вне белого списка также не входит в подписанные атрибуты профиля. Предпочитайте управляемые URL по SHA-256 (`/api/v1/textures/blob/{digest}`), чтобы избежать устаревшего клиентского кэша. Импортированные PNG обязаны пройти безопасный конвейер текстур.
 
-## конечные точки
+## Конечные точки
 
-* `GET /` — authlib-injector metadata with PEM `signaturePublickey` and `skinDomains`. 503 when signing unavailable.
-* `GET /sessionserver/session/minecraft/profile/{uuid}?unsigned=false` — RSA PKCS#1 v1.5 SHA-1 signed `textures`. Default `unsigned=true` returns property without the signature as specified.
-* `GET /sessionserver/session/minecraft/hasJoined` — includes signed `textures` when an eligible one-time join ticket exists.
-* `GET /api/v1/minecraft/profile` and `POST /api/v1/minecraft/session` — also include correctly signed textures for the local identity.
-* `POST /api/profiles/minecraft` — bounded batch lookup of profile names (max 100; no private account data).
-* `PUT /api/user/profile/{uuid}/{skin|cape}` — Minecraft Bearer token, multipart `file` as image/png, optional skin `model` (`slim` or empty); validates image and owner, persists through staging/quotas/SHA-256 and returns 204.
-* `DELETE /api/user/profile/{uuid}/{skin|cape}` — clears the active texture with the same Minecraft token and returns 204.
-* `GET /api/v1/textures/blob/{sha256}` — serves content-addressed normalized PNG with `image/png` and SHA-256 ETag.
+* `GET /` — метаданные authlib-injector с PEM `signaturePublickey` и `skinDomains`; 503, когда подпись недоступна.
+* `GET /sessionserver/session/minecraft/profile/{uuid}?unsigned=false` — подписанное RSA PKCS#1 v1.5 SHA-1 свойство `textures`. Значение по умолчанию `unsigned=true` возвращает свойство без подписи по требованиям протокола.
+* `GET /sessionserver/session/minecraft/hasJoined` — включает подписанное `textures` при наличии допустимого одноразового билета подключения.
+* `GET /api/v1/minecraft/profile` и `POST /api/v1/minecraft/session` — также включают корректно подписанные текстуры локальной идентичности.
+* `POST /api/profiles/minecraft` — ограниченный пакетный поиск имён профилей (максимум 100; без закрытых данных аккаунта).
+* `PUT /api/user/profile/{uuid}/{skin|cape}` — Bearer-токен Minecraft, multipart-поле `file` с `image/png`, необязательная модель скина `model` (`slim` или пустая); проверяет изображение и владельца, сохраняет через подготовку, квоты и SHA-256, возвращает 204.
+* `DELETE /api/user/profile/{uuid}/{skin|cape}` — сбрасывает активную текстуру с тем же Minecraft-токеном и возвращает 204.
+* `GET /api/v1/textures/blob/{sha256}` — выдаёт нормализованный PNG по хешу содержимого с `image/png` и ETag SHA-256.
 
-`textures` is Base64(UTF-8 JSON) containing Java epoch-millis `timestamp`, unhyphenated Minecraft `profileId`, `profileName`, and `SKIN`/`CAPE` URLs. `slim` is an explicit metadata model; classic omits metadata (the wire default). The signature is **SHA1withRSA** (legacy protocol requirement, not a general-purpose recommended algorithm), computed on the *Base64 property value bytes*, verifiable with the metadata RSA public key. No official Minecraft identities are re-signed or substituted.
+`textures` — Base64(UTF-8 JSON), содержащий `timestamp` (миллисекунды эпохи Java), `profileId` Minecraft без дефисов, `profileName` и URL `SKIN`/`CAPE`. Модель `slim` указывается явно в метаданных; для классической модели метаданные опускаются (значение протокола по умолчанию). Подпись **SHA1withRSA** (требование старого протокола, а не рекомендованный универсальный алгоритм) вычисляется по *байтам Base64-значения свойства* и проверяется открытым RSA-ключом из метаданных. Официальные идентичности Minecraft не переподписываются и не заменяются.
 
-The non-production in-memory RSA key is created once per process and must not be used for persistent real-server sessions or load-balanced deployments. Production uses stable configured key files. Set a single consistent `LAUNCHER_PUBLIC_URL` across replicas.
+Непромышленный RSA-ключ в памяти создаётся один раз на процесс и не предназначен для постоянных сеансов настоящих серверов или развёртываний за балансировщиком. В промышленной среде используются стабильные настроенные файлы ключей. У всех реплик должен быть одинаковый `LAUNCHER_PUBLIC_URL`.
 
-### Verify
+### Проверка
 
 ```sh
 curl -fsS https://your-api.example/ | jq '.skinDomains,.signaturePublickey'
 curl -fsS 'https://your-api.example/sessionserver/session/minecraft/profile/LOCAL_UUID?unsigned=false' | jq '.properties'
 ```
 
-For a full Minecraft compatibility certification, run a client with authlib-injector pointed at the API root and verify signed texture downloads in-game, including change of digest after replacing skin, 204 on unknown profiles, and replay rejection on hasJoined. These real-game tests have not been run in the archive authoring environment.
+Для полной сертификации совместимости Minecraft запустите клиент с authlib-injector, направленным на корень API, и проверьте загрузку подписанных текстур в игре, в том числе смену дайджеста после замены скина, HTTP 204 для неизвестных профилей и отказ при повторе `hasJoined`. Эти реальные игровые тесты не выполнялись в среде подготовки исходного архива.
 
 ## 0.39.4 — проверяемая доставка локальных скинов и плащей
 
-После загрузки/выбора публичного PNG, Desktop предлагает **«Проверить доставку Yggdrasil»**. Проверка выполняет настоящий запрос к опубликованному Backend: считывает `GET /`, загружает `GET /sessionserver/session/minecraft/profile/{uuid}?unsigned=false`, сверяет RSA-подпись ответа с `signaturePublickey`, канонический UUID и ожидаемый SHA-256 выбранного скина/плаща, затем получает публичный `GET /api/v1/textures/blob/{digest}` и сверяет хеш самих PNG-байтов. Minecraft/административные токены на эти три публичных запроса **не передаются**. Если текстура имеет `visibility=private` или `unlisted`, интерфейс не заявляет её публичной: переключите видимость на `public`, чтобы другие игроки могли её получить. Для отображения собственного скина в игровом мире также необходим корректный `authlib-injector` в *подписанной* сборке клиента и соответствующая настройка серверной части.
+После загрузки/выбора публичного PNG Desktop предлагает **«Проверить доставку Yggdrasil»**. Проверка выполняет настоящий запрос к опубликованному Backend: считывает `GET /`, загружает `GET /sessionserver/session/minecraft/profile/{uuid}?unsigned=false`, сверяет RSA-подпись ответа с `signaturePublickey`, канонический UUID и ожидаемый SHA-256 выбранного скина/плаща, затем получает публичный `GET /api/v1/textures/blob/{digest}` и сверяет хеш самих PNG-байтов. Minecraft/административные токены на эти три публичных запроса **не передаются**. Если текстура имеет `visibility=private` или `unlisted`, интерфейс не заявляет её публичной: переключите видимость на `public`, чтобы другие игроки могли её получить. Для отображения собственного скина в игровом мире также необходим корректный `authlib-injector` в *подписанной* сборке клиента и соответствующая настройка серверной части.
 
 Профиль Minecraft теперь каждый раз читает актуальный выбор через `TextureRepository0251`, а не через устаревший снимок ServerBridge; ошибка DB возвращает HTTP 503, а не 200 с пустой текстурой. Ответы профильного и session join API имеют `Cache-Control: no-store`; PNG по SHA-256 могут кэшироваться как неизменяемые объекты. Изменение скина, модели или плаща поэтому отражается в следующем запросе профиля без рестарта Backend. Уже запущенный Minecraft может кэшировать скин в памяти: для подтверждения нового отображения потребуется перезаход/обновление GameProfile; это свойство игрового клиента, не ошибка сервера.
 

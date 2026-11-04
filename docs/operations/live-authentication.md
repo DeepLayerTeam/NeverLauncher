@@ -2,39 +2,21 @@
 
 ## Область действия и граница доверия
 
-The independent, rootless Podman attestation host (not build/test CI and not a
-user-submitted JSON) runs the **exact immutable staged release** and real Minecraft
-client/server. The attestation schema is `launcher.validation-evidence.v4`
-(domain `Launcher/validation-evidence/v4\0`); v3 signatures do not certify
-V07. A new mandatory `authentication` stage, its `authentication.json` SHA-256
-and the `authenticationMode` target field are verified before the host signs.
-A `passed` from the observational GitHub Actions job is not an attestation.
+Независимый хост аттестации с rootless Podman (не CI сборки/тестов и не присланный пользователем JSON) запускает **точный неизменяемый подготовленный выпуск** и реальные клиент/сервер Minecraft. Схема аттестации — `launcher.validation-evidence.v4` (домен `Launcher/validation-evidence/v4\0`); подписи v3 не подтверждают V07. Перед подписью хост проверяет новый обязательный этап `authentication`, SHA-256 его `authentication.json` и поле цели `authenticationMode`. Статус `passed` у наблюдательного задания GitHub Actions не является аттестацией.
 
-Stable remains **fail-closed** per 0.34.1. V07 is NOT approval to open stable.
+Для стабильного выпуска сохраняется **строгий отказ по умолчанию** согласно 0.34.1. V07 **не разрешает** открывать стабильный выпуск.
 
 ## Обязательное изменение матрицы Backend
 
-Each exact target in `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` now MUST
-include `authenticationMode`: `official` or `custom`. A missing mode, a mock,
-or a target configured for a different mode is rejected. The entire configured
-matrix remains bound to staged manifest/files/source/build/Java/adapter/Guard/
-ServerBridge/preset digests and the backend run nonce. Changing this configuration
-invalidates previous evidence. Deploy Backend and attestor together.
+Каждая точная цель в `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` теперь **обязана** содержать `authenticationMode`: `official` либо `custom`. Отсутствующий режим, подставной провайдер или цель с другим режимом отклоняются. Вся настроенная матрица по-прежнему привязана к дайджестам подготовленного манифеста, файлов, исходников, сборки, Java, адаптера, Guard, ServerBridge и пресетов, а также к одноразовому значению запуска Backend. Изменение этой конфигурации аннулирует предыдущие свидетельства. Развёртывайте Backend и аттестатор совместно.
 
 ## Отдельные тестовые учётные записи (не промышленные)
 
-Run on a dedicated attestation host under an unprivileged local account with
-rootless Podman. The Ed25519 signing key and operator API token remain host-only;
-account refresh credentials never enter the container. Configure private 0600
-credential files, private network and an isolated test backend/server. Do not
-put production user accounts, provider refresh tokens, attestor signing keys or
-server node keys into source control, GitHub artifacts or OCI images.
+Запускайте проверку на выделенном аттестационном хосте от непривилегированного локального пользователя с rootless Podman. Ключ подписи Ed25519 и API-токен оператора остаются только на хосте; учётные данные обновления аккаунтов никогда не попадают в контейнер. Настройте закрытые файлы 0600 с учётными данными, частную сеть и изолированные тестовые Backend/сервер. Не помещайте промышленные аккаунты пользователей, refresh-токены провайдеров, ключи подписи аттестатора или ключи серверных узлов в репозиторий, артефакты GitHub или OCI-образы.
 
 ### Официальная учётная запись Microsoft
 
-Authorize a **Minecraft Java licensed** staging account using the existing
-first-party Microsoft browser PKCE or device flow. Save its `refresh_token` in
-host-only `0600` file and use your own public-client application ID. Example:
+Авторизуйте промежуточный аккаунт с **лицензией Minecraft Java** через существующий собственный браузерный поток Microsoft PKCE либо Device Flow. Сохраните его `refresh_token` только на хосте в файле `0600` и используйте свой ID приложения публичного клиента. Пример:
 
 ```
 python3 tools/validation-attestor/attestor.py \
@@ -50,87 +32,44 @@ python3 tools/validation-attestor/attestor.py \
   --package-id <staged-package-id>
 ```
 
-The trusted host actually performs:
+Доверенный хост фактически выполняет:
 
-1. Microsoft OAuth refresh with `XboxLive.signin offline_access`; persist a
-   rotated refresh token atomically in the host-only file.
-2. Xbox Live user authenticate, RETAIL XSTS authorize (same XUID/UHS),
-   Minecraft Services `login_with_xbox` and actual Java profile lookup.
-3. Pass the *short-lived Minecraft access token* and exact Java profile to
-   `Runtime launch --credentials-file` in the isolated worker.
-4. Worker independently checks real Mojang sessionserver `join/hasJoined` and
-   launches the exact staged client against an isolated matching server using
-   `online-mode=true`. The server must accept the player and real gameplay
-   smoke must succeed, not just TCP or `joined the game`.
+1. Обновление Microsoft OAuth с `XboxLive.signin offline_access`; при ротации атомарно сохраняет refresh-токен в файле, доступном только хосту.
+2. Аутентификацию пользователя Xbox Live, авторизацию RETAIL XSTS (тот же XUID/UHS), `login_with_xbox` Minecraft Services и реальное получение профиля Java.
+3. Передачу *краткоживущего токена доступа Minecraft* и точного Java-профиля в `Runtime launch --credentials-file` изолированного worker.
+4. Независимую проверку настоящих Mojang `join/hasJoined` работником и запуск точного подготовленного клиента на изолированном соответствующем сервере с `online-mode=true`. Сервер должен принять игрока, а настоящая быстрая проверка игрового процесса — пройти; одного TCP или сообщения `joined the game` недостаточно.
 
-No OAuth refresh token goes into the worker. A transport outage is
-`inconclusive`, an invalid/unlicensed account is rejected. No mock fallback.
-A Guard-enabled official target without a live negative Guard-policy proof is
-currently blocked (not falsely certified).
+OAuth refresh-токен в worker не передаётся. Отказ транспорта даёт `inconclusive`, недействительный аккаунт или отсутствие лицензии — отказ. Подмена имитацией запрещена. Официальная цель с включённым Guard без живого отрицательного доказательства политики Guard сейчас блокируется, а не ложно сертифицируется.
 
 ### Пользовательские Yggdrasil и ServerBridge
 
-Set `--auth-mode custom --credentials-file /secure/custom-test-session.json`
-plus `--negative-credentials-file /secure/revocable-test-session.json` and
-`--guard-denied-credentials-file /secure/trust-denied-test-session.json`.
-Credential files contain `username`, `uuid` (32 hex characters), `accessToken`,
-`userType: mojang`, `authServerBaseUrl: https://<dedicated-staging-backend>`.
-These are session credentials **issued by the real backend**, bound to the
-staging account, trusted device and active policy; do not substitute a test
-JSON with an invented token. All three accounts/tokens must be independent.
+Укажите `--auth-mode custom --credentials-file /secure/custom-test-session.json`, а также `--negative-credentials-file /secure/revocable-test-session.json` и `--guard-denied-credentials-file /secure/trust-denied-test-session.json`. Файлы должны содержать `username`, `uuid` (32 шестнадцатеричных символа), `accessToken`, `userType: mojang`, `authServerBaseUrl: https://<dedicated-staging-backend>`. Это учётные данные сеанса, **выданные настоящим Backend** и привязанные к промежуточному аккаунту, доверенному устройству и действующей политике; нельзя подменять их тестовым JSON с выдуманным токеном. Все три аккаунта и токена должны быть независимыми.
 
-The real Yggdrasil test performs:
+Настоящая проверка Yggdrasil включает:
 
-- Backend `/authserver/validate` of active and separately revocable sessions.
-- Fresh randomized `/sessionserver/session/minecraft/join` and matching
-  `/hasJoined`, with exact profile and one-time replay rejection.
-- Real invalidation of the revocable test session and denial of its outstanding
-  `hasJoined` ticket.
-- Actual trust-denied identity whose **otherwise valid token** is refused by
-  backend gameplay-trust policy at join. For Guard-enabled releases a denial
-  with a specific `guard` reason is required, not just generic 403.
-- Same active identity launched through Runtime with its signed required
-  authlib-injector and isolated pinned modded server distribution containing a
-  version/SHA-256 verified ServerBridge; gameplay and join are checked as V02.
+- Проверку `/authserver/validate` для активного и отдельно отзываемого сеансов.
+- Свежие случайные `/sessionserver/session/minecraft/join` и соответствующий `/hasJoined` с точным профилем и отказом при повторном использовании одноразового билета.
+- Фактический отзыв тестового сеанса и запрет его ещё действующего билета `hasJoined`.
+- Настоящую идентичность с запретом по доверию, чей **во всём остальном действительный токен** отклоняется политикой доверия Backend при входе в игру. Для выпуска с Guard нужен конкретный код причины `guard`, а не просто общий HTTP 403.
+- Запуск той же активной идентичности через Runtime с необходимым подписанным authlib-injector и изолированным закреплённым дистрибутивом модифицированного сервера, включающим ServerBridge с проверенными версией и SHA-256; вход и игровой процесс проверяются как в V02.
 
-WARNING: custom provider validation alone must not be interpreted as proof
-that an unrelated offline-mode Vanilla server enforced authentication. The
-attestor therefore requires the pinned ServerBridge for custom targets.
+**Предупреждение:** проверка пользовательского провайдера сама по себе не доказывает, что посторонний Vanilla-сервер с offline-mode контролирует аутентификацию. Поэтому для целей `custom` аттестатор требует закреплённый ServerBridge.
 
 ### Сеть и доступ
 
-Do not allow generic outbound internet on production workers. The attestor
-network needs only the staging Backend, the approved provider endpoints and
-Minecraft artifact delivery. Limit network destinations using host/firewall
-controls; rootless Podman network isolation alone is not an egress allowlist.
-Do not send credentials in command-line arguments or place private token files
-under `/work`, which is inspected as attestation artifacts.
+Не разрешайте промышленным worker произвольный исходящий доступ в интернет. Сети аттестатора нужны только промежуточный Backend, одобренные адреса провайдеров и доставка артефактов Minecraft. Ограничивайте направления исходящего трафика на хосте и межсетевом экране: одной сетевой изоляции rootless Podman недостаточно для списка разрешённых адресов. Не передавайте учётные данные аргументами командной строки и не размещайте закрытые токены в `/work`, который проверяется как каталог артефактов аттестации.
 
 ## Правила статуса и диагностика
 
-- `passed`: real provider identity, join/hasJoined and required negative
-  policy tests, matching online-mode/ServerBridge server, actual gameplay.
-- `failed`: account denied, wrong profile, replay allowed, revoked join works,
-  Guard trust bypass or actual game failure.
-- `inconclusive`: real upstream HTTP 5xx/429, transport outage or timeout.
-- `blocked`: no properly provisioned test account, wrong backend/target mode,
-  absent ServerBridge/Guard negative session or unsupported GUI capability.
+- `passed`: настоящая идентичность провайдера, `join/hasJoined` и обязательные отрицательные тесты политики, соответствующий сервер `online-mode`/ServerBridge и реальный игровой процесс.
+- `failed`: аккаунту отказано, неправильный профиль, допускается повтор билета, отозванный сеанс подключается, обойдена политика Guard или произошёл игровой сбой.
+- `inconclusive`: настоящий HTTP 5xx/429 внешнего провайдера, сбой транспорта либо тайм-аут.
+- `blocked`: не подготовлен корректный тестовый аккаунт, неверный режим Backend/цели, отсутствует ServerBridge/отрицательный сеанс Guard или не поддерживается нужная графическая среда.
 
-`authentication.json` contains only mode, hashed test profile, status, outcome
-flags, run ID and immutable manifest/artifact identity; never token or user name.
-The host independently checks the file hash and the signed report stage. Tests
-that mock provider HTTP endpoints are unit tests only, and cannot create an
-accepted provider certification.
+`authentication.json` содержит только режим, хеш тестового профиля, статус, флаги результата, ID запуска и неизменяемую идентичность манифеста/артефакта — **никаких** токенов или имени пользователя. Хост независимо сверяет хеш файла и этап подписанного отчёта. Тесты с имитацией HTTP-маршрутов провайдера — только модульные; принятая сертификация провайдера на них не создаётся.
 
 ## Приёмочная проверка
 
-Test 0.34.7 on a dedicated staging cluster with *real provisioned accounts*:
-valid account, revoked custom session, replayed join, deleted trusted device,
-Guard-denied test device, wrong UUID/name, expired token and provider outage.
-A fully successful auth stage alone is insufficient: same-session Minecraft
-server join and gameplay smoke are still required. Without live credentials,
-real OCI runtime and matching Minecraft servers, **do not declare the feature
-production-certified**.
+Проверьте 0.34.7 на выделенном промежуточном кластере с *настоящими подготовленными аккаунтами*: действительный аккаунт, отозванный пользовательский сеанс, повтор `join`, удалённое доверенное устройство, тестовое устройство с отказом Guard, неправильный UUID/имя, истёкший токен и отказ провайдера. Одного успешного этапа аутентификации недостаточно: необходимы подключение к Minecraft-серверу и быстрая проверка игрового процесса в том же сеансе. Без действующих учётных данных, настоящего OCI Runtime и соответствующих Minecraft-серверов **нельзя заявлять о промышленной сертификации функции**.
 
-
-**0.34.12 upgrade:** include the required `--diagnostics-dir` on all live attestor invocations.
+**Изменение 0.34.12:** при всех реальных запусках аттестатора дополнительно укажите обязательный `--diagnostics-dir`.

@@ -1,18 +1,18 @@
 # NeverLauncher 0.49.12 — эксплуатационный откат переключения с Gravit
 
-**Scope:** one migrated `runId/profileId/channel`, on a dedicated local HAProxy process and a systemd-controlled pair of Gravit/Never writer groups. This is runnable operator code; it is **not** a substitute for independently proven production recovery. It reuses the existing PostgreSQL transactional `rollback-plan` / `rollback-commit` APIs. It must not be used to imply that overwriting an old Minecraft world restores new data. No automatic source restart or traffic reopen is provided.
+**Область действия:** одна миграция `runId/profileId/channel`, отдельный локальный процесс HAProxy и две группы писателей Gravit/Never под управлением systemd. Это исполняемый операторский код, но **не замена независимо подтверждённому промышленному восстановлению**. Используются существующие транзакционные API PostgreSQL `rollback-plan` и `rollback-commit`. Нельзя считать, что перезапись старого мира Minecraft восстанавливает новые данные. Автоматический перезапуск источника или открытие трафика отсутствуют.
 
 ## Обязательные предварительные условия
 
-- Use the **unchanged** mode-0600 0.49.11 cutover JSON and 0700 cutover journal containing the real post-activation state. Verify the live route, not just the local journal. A *new*, mode-0600 rollback JSON is bound to the exact SHA-256 bytes of that cutover JSON.
-- The operator must execute from a host with real `systemctl show` access to **all** the listed source/target units and the local HAProxy admin Unix socket. This tool does **not** stop/mask processes, force-close unrelated ingress, fence other hosts, stop database writers, or inspect Kubernetes/Docker processes. If any such writer exists, its separately verified fencing is an additional hard prerequisite. Merely listing one systemd unit does not prove global quiescence.
-- Export fresh, consistent Gravit/Never snapshots from actual quiesced worlds and user/plugin data in the `gravitrehearsal.Snapshot` JSON format. All exports are *owner-only (0600)* files. The source must still match the MIG10 baseline unless a separately completed and independently validated reconciliation provides a new source export matching the changed Never data. **The snapshot report is not a backup and does not copy worlds or plugin SQL databases.**
-- Verify independent backups and test restoring them on another machine. A changed inventory, UUID, privileges, economy, world hash or other material state is not safe to silently discard. The Backend compares domain fields and is the authority for whether a rollback plan is ready. For a reconciliation, the operator must supply the existing Backend `reconciliationEvidenceSha256`, not an invented value. This local tool additionally requires the current/source exports to agree exactly after reconciliation.
-- The old baseline **NeverLauncher release** must still exist, be signed and pass its runtime gates. A PostgreSQL rollback changes the Never release channel head; it does **not** switch a Gravit proxy, restore worlds or reissue legacy sessions. A stable-channel rollback still needs the existing one-time stable gate token.
+- Используйте **неизменённый** JSON переключения версии 0.49.11 с правами 0600 и журнал переключения 0700 с настоящим состоянием после активации. Проверяйте действующий маршрут, не только локальный журнал. *Новый* JSON отката 0600 привязывается к точному SHA-256 байтов этого JSON переключения.
+- Оператор должен запускать средство на хосте с настоящим доступом к `systemctl show` для **всех** указанных исходных/целевых служб и к локальному административному Unix-сокету HAProxy. Средство **не** останавливает и не маскирует процессы, не перекрывает чужой ingress, не отгораживает другие хосты, не останавливает писателей БД и не проверяет Kubernetes/Docker. Если такие писатели существуют, их отдельно подтверждённое ограждение — дополнительное строгое условие. Перечень одного systemd-юнита не доказывает глобальную остановку записи.
+- Экспортируйте свежие согласованные снимки Gravit и Never из действительно остановленных миров и данных пользователей/плагинов в JSON-формате `gravitrehearsal.Snapshot`. Все экспорты — закрытые файлы **0600**. Источник должен совпадать с базовым снимком MIG10, если только отдельно выполненная и независимо проверенная сверка не создала новый экспорт источника, соответствующий изменённым данным Never. **Отчёт снимка не является резервной копией и не копирует миры или SQL-БД плагинов.**
+- Проверьте независимые резервные копии и восстановление на другой машине. Изменившиеся инвентарь, UUID, права, экономика, хеш мира или другие существенные данные нельзя незаметно отбросить. Backend сравнивает поля доменов и окончательно решает, готов ли план отката. Для сверки оператор обязан передать существующее `reconciliationEvidenceSha256` от Backend, а не придуманное значение. Локальное средство дополнительно требует точного совпадения текущего и исходного экспорта после сверки.
+- Старый базовый **выпуск NeverLauncher** должен существовать, быть подписанным и проходить шлюзы Runtime. PostgreSQL-откат изменяет головной выпуск канала Never, но **не** переключает прокси Gravit, не восстанавливает миры и не перевыпускает старые сеансы. Для отката стабильного канала по-прежнему нужен существующий одноразовый токен шлюза стабильного выпуска.
 
-## восстановление конфигурация
+## Конфигурация восстановления
 
-`/srv/never-cutover/rollback.json` (mode 0600), created and sealed **after** the unchanged cutover JSON has been chosen:
+`/srv/never-cutover/rollback.json` (права 0600), созданный и запечатанный **после** выбора неизменённого JSON переключения:
 
 ```json
 {
@@ -30,11 +30,11 @@
 }
 ```
 
-If source was reconciled to new Never data, add `"reconciliationEvidenceSha256": "..."` only after completing and independently verifying the real data reconciliation. Never add it merely to bypass mismatches. Both world and all player records must match, and the Backend must confirm the reconciled plan. There are no bearer tokens or passwords in this JSON; set `LAUNCHER_TOKEN` in the protected process environment. `cutoverConfigSha256` must be an actual SHA-256 of the unmodified cutover JSON, not a placeholder.
+Если источник согласован с новыми данными Never, добавляйте `"reconciliationEvidenceSha256": "..."` только после завершения и независимой проверки настоящей сверки данных. Не используйте поле для обхода несоответствий. Должны совпадать и миры, и все записи игроков; Backend должен подтвердить согласованный план. Этот JSON не содержит Bearer-токенов или паролей; `LAUNCHER_TOKEN` задаётся в защищённом окружении процесса. `cutoverConfigSha256` должен быть настоящим SHA-256 неизменённого JSON, а не шаблонным значением.
 
 ## Порядок действий
 
-**1. Fence traffic:** stop new maintenance-window sessions on *all* ingress paths. The first command actively issues HAProxy `MAINT` for auth and game sources and targets, checks the same PID and writes a durable phase journal. It requires the original Backend route still active. This can disconnect players. On any uncertainty keep the firewall/HAProxy closed.
+**1. Оградите трафик:** прекратите новые сеансы на *всех* маршрутах ingress в окне обслуживания. Первая команда действительно переводит источники и цели авторизации и игры в HAProxy `MAINT`, проверяет тот же PID и сохраняет устойчивый журнал этапов. Требуется, чтобы исходный маршрут Backend всё ещё был активен. Возможен обрыв игроков. При любой неопределённости оставьте firewall/HAProxy закрытыми.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py fence \
@@ -43,7 +43,7 @@ python3 tools/gravit-port/operational_rollback_04912.py fence \
   --journal-dir /srv/never-cutover/journal --confirm run_12345678
 ```
 
-**2. Stop and mask all independent source/target writers.** Only after real stop confirmations export NEW, consistent source/Never JSON snapshots. The `plan` command re-reads every listed systemd unit, the live HAProxy process, the source baseline digest and the current PostgreSQL route. If Never data changed, it fails unless reconciliation is already complete. `plan` calls the Backend's actual rollback planner and requires `ready=true`, no blockers, correct mode and exact raw snapshot SHA-256.
+**2. Остановите и замаскируйте всех независимых писателей источника/цели.** Только после подтверждения настоящей остановки экспортируйте НОВЫЕ согласованные JSON-снимки источника и Never. Команда `plan` повторно проверяет каждый указанный systemd-юнит, работающий HAProxy, дайджест базового источника и текущий маршрут PostgreSQL. Если данные Never изменились, без законченной сверки она отказывает. `plan` вызывает настоящий планировщик отката Backend и требует `ready=true`, отсутствия блокировок, правильного режима и точного SHA-256 исходных байтов снимка.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py plan \
@@ -52,7 +52,7 @@ python3 tools/gravit-port/operational_rollback_04912.py plan \
   --journal-dir /srv/never-cutover/journal --confirm run_12345678
 ```
 
-**3. Export another independent NEW Never snapshot, after the plan** (a separate absolute path; bytes must still agree exactly). Complete the commit within the Backend's ten-minute approval window. The operator tool conservatively refuses plans aged nine minutes. `commit` checks both writer groups again, rechecks closed HAProxy, compares the fresh bytes and source export with the plan and executes existing `rollback-commit` with both writer fences. It then independently reads the stored rollback status and the rolled-back PostgreSQL route.
+**3. Экспортируйте ещё один независимый НОВЫЙ снимок Never после плана** (другой абсолютный путь; байты должны по-прежнему точно совпадать). Завершите фиксацию в десятиминутном окне одобрения Backend. Средство консервативно отвергает планы старше девяти минут. `commit` заново проверяет обе группы писателей и закрытый HAProxy, сравнивает свежие байты и экспорт источника с планом, вызывает существующий `rollback-commit` с обеими блокировками записи. Затем независимо считывает сохранённый статус отката и новый маршрут PostgreSQL.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py commit \
@@ -62,7 +62,7 @@ python3 tools/gravit-port/operational_rollback_04912.py commit \
   --fresh-snapshot /srv/never-cutover/snapshots/never-second-export.json
 ```
 
-If the commit is ambiguous due to timeout, the tool records `uncertain` and tries to close ingress. **Do not repeat `commit`.** Inspect PostgreSQL and use `reconcile` to read *only* authoritative Backend status/route. A result cannot be upgraded to success from a local process exit status alone.
+Если фиксация неоднозначна из-за тайм-аута, средство сохраняет статус `uncertain` и пытается закрыть ingress. **Не повторяйте `commit`.** Исследуйте PostgreSQL и используйте `reconcile` только для чтения авторитетного состояния/маршрута Backend. Код завершения локального процесса сам по себе не превращает результат в успех.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py reconcile \
@@ -71,11 +71,11 @@ python3 tools/gravit-port/operational_rollback_04912.py reconcile \
   --journal-dir /srv/never-cutover/journal --confirm run_12345678
 ```
 
-`status` reads local phase only. Success is `committed_fenced`: **both ingress backends remain MAINT**. This is deliberate: the restored Never channel head is not a license to restart legacy Gravit writers or replay outdated worlds. An independent operator must verify data and auth, deliberately enable the intended serving deployment, persist the desired HAProxy configuration, perform real Minecraft authentication/join and test HAProxy reload/failover. No other frontend or load balancer is changed here.
+`status` читает лишь локальный этап. Успех называется `committed_fenced`: **оба ingress Backend остаются в `MAINT`**. Это намеренно: восстановленный головной выпуск Never не даёт разрешения запускать старых писателей Gravit или воспроизводить устаревшие миры. Независимый оператор должен проверить данные и авторизацию, осознанно включить нужное обслуживающее развёртывание, сохранить конфигурацию HAProxy, проверить настоящий вход/подключение Minecraft и испытать перезагрузку конфигурации и failover HAProxy. Другие frontend и балансировщики здесь не меняются.
 
 ## Восстановление файлов остановленного Minecraft (не работающей базы данных)
 
-`cold_data_restore_04912.py` can seal an already **consistent offline backup directory** and restore its regular world/player/config files into a stopped directory. It rejects symlinks, hard-linked files, device nodes, duplicate/unsafe paths, changed sizes or hashes, and overlarge input. It copies files to a same-filesystem staging directory, verifies every SHA-256, then retains the previous target as `TARGET.before-RUN` while installing the replacement. Its durable journal supports `recover` after a kill during the two-rename window; no old directory is silently deleted.
+`cold_data_restore_04912.py` может запечатать уже **согласованный автономный каталог резервной копии** и восстановить обычные файлы мира, игроков и конфигурации в остановленный каталог. Он отвергает символьные и жёсткие ссылки, устройства, повторные/опасные пути, несовпадения размера/хеша и слишком большие входы. Файлы копируются в подготовительный каталог той же файловой системы, проверяется каждый SHA-256, прежняя цель сохраняется как `TARGET.before-RUN`, после чего устанавливается замена. Устойчивый журнал позволяет выполнить `recover` после принудительного завершения между двумя переименованиями; старый каталог не удаляется незаметно.
 
 ```sh
 python3 tools/gravit-port/cold_data_restore_04912.py seal \
@@ -102,10 +102,10 @@ python3 tools/gravit-port/cold_data_restore_04912.py recover \
   --journal-dir /srv/never-cutover/journal --run run_12345678
 ```
 
-A sealed backup is **not automatically newer than the Never world**. If Never accepted new writes, first carry those world/player/economy/permission/plugin changes into the offline source and independently verify the resulting source snapshot; otherwise `rollback-plan` must block. File restore intentionally does not restore PostgreSQL or MySQL/MariaDB, payment/economy plugins, external object stores or Minecraft sessions. Those need their own independently tested transactional/application-consistent restore and reconciliation. Do not restart writers until every such state has been reconciled.
+Запечатанная копия **не обязательно новее мира Never**. Если Never уже принял новые записи, сначала перенесите изменения миров, игроков, экономики, прав и плагинов в автономный источник и независимо проверьте итоговый снимок; иначе `rollback-plan` должен блокировать процесс. Восстановление файлов намеренно не восстанавливает PostgreSQL или MySQL/MariaDB, платёжные/экономические плагины, внешние объектные хранилища и сеансы Minecraft. Для них нужны собственные независимо испытанные транзакционные или согласованные на уровне приложения процедуры восстановления и сверки. Не запускайте писателей, пока всё это состояние не согласовано.
 
 ## Тесты и ограничения GA
 
-Run `python3 -m unittest -v test_operational_rollback_04912 test_cold_data_restore_04912 test_production_cutover_04911` from `tools/gravit-port`.
+Из каталога `tools/gravit-port` выполните `python3 -m unittest -v test_operational_rollback_04912 test_cold_data_restore_04912 test_production_cutover_04911`.
 
-These are local tests of real subprocess calls, Unix socket messages, atomic file replacement and negative failures **against controlled test services**, not actual production PostgreSQL/Minecraft/systemd. Before declaring 0.49.12 GA, independently prove real-world game preservation, auth/UUID equality, plugin and DB recovery, multi-host fencing, signed native packages, failure injection across process/network boundaries, source-service restart, persistent proxy reload and Minecraft join on exact final assets. Missing receipts or independent attestations remain `BLOCKED`.
+Это локальные тесты настоящих вызовов дочерних процессов, сообщений Unix-сокета, атомарной замены файлов и отрицательных сценариев **на управляемых тестовых службах**, а не на промышленном PostgreSQL/Minecraft/systemd. До объявления 0.49.12 GA независимо подтвердите сохранность настоящих игровых миров, равенство авторизации/UUID, восстановление плагинов и БД, fencing нескольких хостов, подписанные нативные пакеты, инъекцию сбоев между процессами и в сети, перезапуск исходных служб, устойчивость HAProxy после перезагрузки конфигурации и вход Minecraft на точных окончательных артефактах. Отсутствующие квитанции или независимые аттестации означают `BLOCKED`.

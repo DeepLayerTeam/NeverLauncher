@@ -356,7 +356,7 @@ export function OperationsWorkspace({
 
   return (
     <section className="card wide">
-      <h2>Unified Operations · {__LAUNCHER_VERSION__}</h2>
+      <h2>Единая панель операций · {__LAUNCHER_VERSION__}</h2>
       <p className="muted">
         Идемпотентные серверные операции. Результат и история сохраняются на
         Backend при закрытии браузера.

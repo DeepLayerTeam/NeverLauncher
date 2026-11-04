@@ -320,7 +320,7 @@ function AdminExtensionFrame({
   };
 
   if (error)
-    return <div className="extensionFrameError">Extension UI: {error}</div>;
+    return <div className="extensionFrameError">Интерфейс расширения: {error}</div>;
   if (!html)
     return (
       <div className="extensionFrameLoading">
@@ -760,7 +760,7 @@ export function AdminExtensions({
       <div className="extensionWorkspaceGrid">
         <nav className="extensionNav" aria-label="Навигация по расширениям">
           {nav.length === 0 && (
-            <span className="muted">Нет navigation contributions</span>
+            <span className="muted">Нет дополнительных пунктов навигации</span>
           )}
           {nav.map(({ ext, nav: n }) => (
             <button

@@ -1,19 +1,19 @@
 # NeverLauncher 0.45.0 — GA миграции: процедура эксплуатации и ограничения
 
-**Status:** source implementation and verification tools. The existence of version 0.45.0 is **not** proof that the production Migration GA criteria have passed. Certification requires independently observed, real Gravit/Minecraft migration of all three reference classes and retained evidence. In the absence of that infrastructure the outcome is `BLOCKED`.
+**Статус:** исходная реализация и средства проверки. Наличие версии 0.45.0 **не доказывает** выполнение промышленных критериев Migration GA. Для сертификации нужна независимо наблюдаемая настоящая миграция Gravit/Minecraft всех трёх эталонных классов с сохранёнными свидетельствами. Без этой инфраструктуры результат — `BLOCKED`.
 
-## область действия
+## Область действия
 
-Migration GA requires three different Gravit source projects with independent migration run IDs: `fileauth-single`, `sql-modded` (Forge and NeoForge), and `proxy-network`. The existing full 36-check matrix, actual player login/join, negative authorization, optional conflicts, module substitution, live ServerBridge, cutover and rollback drills are mandatory. The GA runner does **not** start Minecraft by itself; the operator-provided checks must exercise actual Minecraft, backend and databases. Only the protected `migration-ga-certification` runner may access the signed credentials and evidence.
+Для Migration GA нужны три разных исходных проекта Gravit с независимыми ID запуска миграции: `fileauth-single`, `sql-modded` (Forge и NeoForge), `proxy-network`. Обязательны существующая полная матрица из 36 проверок, реальный вход игрока и подключение, отрицательные проверки авторизации и конфликтов необязательных компонентов, подмена модулей, живой ServerBridge, учения по переключению и откату. Исполнитель GA **не запускает Minecraft самостоятельно**: проверки оператора должны действительно использовать Minecraft, Backend и базы данных. Только защищённый исполнитель `migration-ga-certification` имеет доступ к подписываемым учётным данным и свидетельствам.
 
-**Supported Gravit source JARs for GA:** 5.7.0–5.7.12 after an independently approved JAR SHA-256. Inventory recognizing 5.7.13 does not authorize certifying it. Imported JAR modules are not binary-compatible by default. A source-port or functional replacement must be verified on the target project, otherwise it remains a manual/blocked item.
+**Поддерживаемые для GA исходные JAR Gravit:** версии 5.7.0–5.7.12 после независимого утверждения SHA-256 JAR. Распознавание 5.7.13 инвентаризацией не разрешает её сертифицировать. Импортированные JAR-модули по умолчанию бинарно несовместимы. Перенос исходников или функциональная замена должны проверяться на целевом проекте, иначе элемент остаётся ручным/заблокированным.
 
 ## Подготовка снимка — фактическое чтение файлов, а не ожидаемый хеш
 
-1. Fence *all* writers to each source and target environment, including Paper/Forge/NeoForge servers, proxy, external SQL data writers, upload jobs, and other independent processes. Stopping one systemd service alone does not fence the other processes.
-2. Produce **separate** immutable or quiesced source and target snapshots. Each snapshot directory must contain `world/`, `plugins/` and a UTF-8 `player-uuids.txt` (one lowercase hyphenated Minecraft UUID per line). The world directory must contain real world files. An empty `plugins/` directory is permitted for a Vanilla project with no plugin data, but **both** snapshots must match. A source and target cannot point to the same directory. Store snapshots on local operator-controlled storage. The checker rejects symlinks and unsupported filesystem entries; it reads file bytes, not caller-supplied hash values.
-3. Only the root `world/session.lock` transient file is intentionally ignored, and this exclusion is recorded for the source and target separately. No other files, including playerdata, level data, plugin SQL exports and economy/inventory records that the project stores in those trees, are silently excluded. For data stored **outside** those trees (e.g. PostgreSQL/MySQL economy or permission plugins), the operator must add an independent database reconciliation proof in the `uuid-world-plugin-data` probe and the change ticket.
-4. Compare the fenced snapshots before certifying:
+1. Заблокируйте *все* процессы записи в каждой исходной и целевой среде, включая серверы Paper/Forge/NeoForge, прокси, внешних писателей SQL, задания загрузки и независимые процессы. Остановка одного systemd-сервиса не останавливает остальные.
+2. Создайте **раздельные** неизменяемые или остановленные исходный и целевой снимки. Каждый каталог должен содержать `world/`, `plugins/` и UTF-8 `player-uuids.txt` (по одному UUID Minecraft в нижнем регистре с дефисами на строку). Каталог мира обязан содержать реальные файлы. Для Vanilla без плагинов допустим пустой `plugins/`, но **оба** снимка должны совпадать. Источник и цель не могут указывать на один каталог. Храните снимки в локальном хранилище под контролем оператора. Проверяющий отвергает символьные ссылки и неподдерживаемые типы файловой системы и читает реальные байты, а не переданные вызывающим хеши.
+3. Намеренно исключается только временный корневой файл `world/session.lock`, и исключение отдельно записывается для источника и цели. Никакие другие файлы, в том числе playerdata, данные уровня, SQL-экспорты плагинов, экономики и инвентаря внутри деревьев, не исключаются скрыто. Для данных **вне** этих деревьев (например, PostgreSQL/MySQL экономики или прав плагинов) оператор должен добавить независимое подтверждение сверки БД в проверку `uuid-world-plugin-data` и заявку изменения.
+4. До сертификации сравните остановленные снимки:
 
 ```bash
 go -C tools/migration-ga run . audit-state \
@@ -22,11 +22,11 @@ go -C tools/migration-ga run . audit-state \
   --output /srv/private/fileauth-state-audit.json
 ```
 
-The command fails if a file, directory tree or UUID roster differs. The output is a private, immutable-on-creation JSON file containing exact tree digests, UUIDs, counts and exclusions. **Do not** run this on a live/writable world and treat the result as a consistent snapshot. The operator must ensure snapshot consistency before the read.
+Команда завершается ошибкой при отличии файла, дерева каталогов или списка UUID. Результат — закрытый JSON, неизменяемый с момента создания, с точными дайджестами деревьев, UUID, количествами и исключениями. **Не** запускайте проверку на работающем/изменяемом мире, считая её согласованным снимком. Согласованность до чтения обеспечивает оператор.
 
 ## Планы и сертификация
 
-For each reference add to the 0.44.9 GA JSON plan:
+Для каждого эталонного проекта добавьте в план GA JSON версии 0.44.9:
 
 ```json
 {
@@ -35,9 +35,9 @@ For each reference add to the 0.44.9 GA JSON plan:
 }
 ```
 
-These keys are *additional keys* to the full operator plan described in [0.44.9 integration acceptance](gravit-integration-acceptance.md); this fragment is not a complete plan. They are required for 0.45.0. The native audit runs **again inside `certify`** for `uuid-world-plugin-data`: its calculated hashes and UUID list must match the operator probe's structured `never/gravit-state-audit/v1` evidence **and** the independently fetched MIG13 player identities. A probe that simply returns `passed: true` or a written SHA-256 without the actual files is refused. The GA verifier also rechecks retained state-audit evidence against the signed receipt.
+Это *дополнительные поля* полного операторского плана из [интеграционной приёмки 0.44.9](gravit-integration-acceptance.md), а не готовый план. Для 0.45.0 они обязательны. Нативная проверка выполняется **повторно внутри `certify`** для `uuid-world-plugin-data`: её вычисленные хеши и UUID должны совпадать со структурированным свидетельством `never/gravit-state-audit/v1` операторской проверки **и** независимо полученными идентичностями игроков MIG13. Простое `passed: true` либо написанный SHA-256 без реальных файлов отклоняются. Верификатор GA снова сверяет сохранённые свидетельства аудита состояния с подписанной квитанцией.
 
-Generate the per-project worklist from the *current* verified backend report before any cutover:
+Перед переключением сформируйте перечень ручных действий из *текущего* проверенного отчёта Backend:
 
 ```bash
 export LAUNCHER_MIGRATION_GA_TOKEN='<short-lived admin credential>'
@@ -46,11 +46,11 @@ go -C tools/migration-ga run . manual-actions \
   --output /srv/private/ga/fileauth-single-worklist.md
 ```
 
-This produces concrete manual items for that migration report, plus the operator obligations for backup, external traffic, authentication resets, changes after cutover and rollback. All items must be separately checked and evidenced in the change ticket. The file itself does not certify that a human performed the actions. The file contains identifying source paths and must remain private.
+Это создаёт конкретные ручные задачи для отчёта миграции вместе с обязанностями по копированию, внешнему трафику, сбросам аутентификации, изменениям после переключения и откату. Все пункты нужно отдельно отметить и подтвердить свидетельствами в заявке изменения. Сам файл не доказывает, что человек выполнил действия. В нём есть идентифицирующие исходные пути, поэтому он должен оставаться закрытым.
 
-After real probes for each class, `certify` and `verify` produce and validate the signed `launcher.gravit-ga-execution.v3` certificate. Old `v2` / 0.44.9 signatures are deliberately ineligible. Re-run after changing code, archive bytes, plan, source or game state.
+После реальных проверок каждого класса `certify` и `verify` создают и проверяют подписанный сертификат `launcher.gravit-ga-execution.v3`. Старые подписи `v2`/0.44.9 намеренно не подходят. Повторите процедуры после изменения кода, байтов архива, плана, источника или игрового состояния.
 
-**Before GA promotion**, invoke the live check (offline `verify-cohort` is useful for archival verification, but is not the production release gate):
+**До продвижения в GA** выполните живую проверку (автономная `verify-cohort` полезна для архива, но не служит шлюзом промышленного выпуска):
 
 ```bash
 go -C tools/migration-ga run . verify-cohort-live \
@@ -66,12 +66,12 @@ go -C tools/migration-ga run . verify-cohort-live \
   --proxy-network-plan /srv/private/ga/proxy-network.plan.json
 ```
 
-It requires `LAUNCHER_MIGRATION_GA_TOKEN` and rejects absent private evidence, invalid signatures, changed original Gravit archive/JAR, stale report, altered operator review, revoked/rolled-back target or inconsistent project. The signed certificate alone never authorizes traffic changes or proves an operator is trustworthy.
+Требуется `LAUNCHER_MIGRATION_GA_TOKEN`; отсутствующие закрытые свидетельства, неверные подписи, изменённый исходный архив/JAR Gravit, устаревший отчёт, изменённое операторское заключение, отозванная/откаченная цель или несогласованный проект отклоняются. Один подписанный сертификат никогда не разрешает смену трафика и не доказывает добросовестность оператора.
 
-## откат ограничения
+## Ограничения отката
 
-Record the source/target writer fence, deployment route revision, restore point, backup verification and post-rollback player world/UUID/inventory/economy checks. The `operational-rollback-drill` and `negative-rollback` checks must actually exercise the rollback and its refusal path on an isolated real copy. After players modify the Never world, an old Gravit backup is **not** a lossless restore. Reconcile the newer player and plugin data under fenced writers before switching traffic back. Never mark a failed, unsupported or untested case PASS.
+Запишите блокировку исходной/целевой записи, ревизию маршрута развёртывания, точку восстановления, проверку копии и проверки мира/UUID/инвентаря/экономики после отката. `operational-rollback-drill` и `negative-rollback` должны действительно выполнять откат и сценарий его отказа на изолированной настоящей копии. После изменения мира Never игроками старая копия Gravit **не обеспечивает восстановление без потерь**. До обратного переключения трафика согласуйте новые данные игроков и плагинов при заблокированной записи. Никогда не отмечайте неуспешный, неподдерживаемый или непроверенный случай PASS.
 
 ## Чего не подтверждают локальные проверки кода
 
-Go unit/race tests validate hashing, signature verification, strict input handling, snapshot comparisons and live-backend validation using a test HTTP server. They do **not** constitute production PostgreSQL, Java Minecraft, RCON, ServerBridge, Windows/macOS or DNS/proxy cutover acceptance. The canonical workflow `.github/workflows/gravit-migration-ga-0340.yml` includes the full CI build matrix and three isolated live reference projects, but an authorized operator must run it and independently inspect raw evidence and the documented manual actions before declaring Migration GA certified.
+Модульные и race-тесты Go проверяют хеширование, подписи, строгую обработку входов, сравнение снимков и живую проверку Backend через тестовый HTTP-сервер. Они **не** составляют промышленную приёмку PostgreSQL, Java Minecraft, RCON, ServerBridge, Windows/macOS или переключения DNS/прокси. Канонический workflow `.github/workflows/gravit-migration-ga-0340.yml` включает полную сборочную матрицу CI и три изолированных реальных эталонных проекта, но уполномоченный оператор обязан запустить его и независимо проверить исходные свидетельства и документированные ручные действия до объявления Migration GA сертифицированным.

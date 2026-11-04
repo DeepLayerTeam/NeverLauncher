@@ -1,8 +1,8 @@
 # Ядро Launcher Java SDK / Runtime 0.31.0
 
-A **working Java 17+** SDK for the existing Extensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
+**Рабочий SDK для Java 17+**, использующий существующие Extensions API `1.0`, Manifest `2.0` и локальный протокол Go Extension Host `1.0`. SDK не создаёт другой манифест, серверный API или реестр. Для сборки его JAR не нужны загрузки зависимостей Maven.
 
-## сборка и запуск тестов
+## Сборка и запуск тестов
 
 ```bash
 sh sdk/java/core/build.sh test
@@ -11,15 +11,15 @@ sh examples/extensions/java-lifecycle/build.sh
 python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requires Java on PATH
 ```
 
-The core jar can be included in an extension package as `backend/lib/launcher-java-sdk-core.jar`; all Java classes are compiled with `--release 17`. Cross-platform Java 17/21 CI builds and tests the SDK, and Linux CI launches the example as a real child process.
+JAR ядра можно включить в пакет расширения как `backend/lib/launcher-java-sdk-core.jar`; все Java-классы компилируются с `--release 17`. CI проверяет сборку и тесты SDK на Java 17/21 для разных платформ, а Linux CI запускает пример как настоящий дочерний процесс.
 
-## исполняемое расширение
+## Исполняемое расширение
 
-Implement `ru.launcher.sdk.core.Extension` with `start(ExtensionContext)` and `stop(ExtensionContext)` methods. The provided `ExtensionRunner` loads the implementation class, validates its shipped manifest and its host identity, performs a real authenticated `POST /v1/hello`, maintains `POST /v1/heartbeat` and executes lifecycle methods on managed executor threads. Exit when the host becomes unreachable or on process shutdown.
+Реализуйте `ru.launcher.sdk.core.Extension` с методами `start(ExtensionContext)` и `stop(ExtensionContext)`. Поставляемый `ExtensionRunner` загружает класс реализации, проверяет поставленный манифест и идентичность хоста, выполняет настоящий аутентифицированный `POST /v1/hello`, поддерживает `POST /v1/heartbeat` и вызывает методы жизненного цикла в управляемых потоках исполнителя. При недоступности хоста или завершении процесса работа прекращается.
 
-A Linux/macOS backend target is an executable launcher script (see `examples/extensions/java-lifecycle/backend/bin/java-lifecycle`). The existing Go supervisor launches it with the active package payload directory as working directory, injecting the `LAUNCHER_EXTENSION_*` environment variables. The extension process **must not be launched as a general network-facing service**; the SDK accepts only the loopback host origin. `ExtensionRunner` supports typed subscriptions and callback dispatch. For first-class JAR launch, use the 0.30.4 Java Extension Host described below.
+Цель Backend для Linux/macOS — исполняемый скрипт запуска (см. `examples/extensions/java-lifecycle/backend/bin/java-lifecycle`). Существующий Go Supervisor запускает его с рабочим каталогом активного содержимого пакета и внедряет переменные `LAUNCHER_EXTENSION_*`. Процесс расширения **нельзя запускать как универсальную публичную сетевую службу**: SDK принимает только loopback-адрес хоста. `ExtensionRunner` поддерживает типизированные подписки и вызовы обработчиков. Для непосредственного запуска JAR используйте Java Extension Host 0.30.4, описанный ниже.
 
-## упаковка через существующий CLI расширений
+## Упаковка через существующий CLI расширений
 
 ```bash
 sh examples/extensions/java-lifecycle/build.sh
@@ -28,28 +28,28 @@ nl extension pack examples/extensions/java-lifecycle/build/package \
 nl extension verify java-lifecycle.nlext --public-key /secure/location/ed25519-verify.pem
 ```
 
-Register the publisher public signing key in the **existing** registry/trust policy, then publish and install using the existing Extensions workflow. `pack` can produce unsigned artifacts, but unsigned artifacts must not be trusted or installed. **Never** include private keys in a package or extension repository. Build metadata (`+...`) is preserved when checking exact package identity against the host.
+Зарегистрируйте открытый ключ подписи издателя в **существующем** реестре и политике доверия, затем опубликуйте и установите пакет штатным процессом Extensions. `pack` может создавать неподписанные артефакты, но их запрещено считать доверенными и устанавливать. **Никогда** не кладите закрытые ключи в пакет или репозиторий расширения. Метаданные сборки (`+...`) сохраняются при проверке точной идентичности пакета по хосту.
 
-## реальное поведение и ограничения
+## Реальное поведение и ограничения
 
-- Manifest parser verifies schema, identity, target paths, dependency constraints and conflicting entries, with bounded JSON. The Go package verifier and signing/trust policy remain authoritative. Reading a manifest through this SDK does **not** verify a package signature.
-- `SemVer` uses SemVer 2.0 precedence and Extensions Go-style `^`, `~`, `>=`, `<=`, `>`, `<`, `=`, `x`, `*`, whitespace-AND and `||` version ranges. Invalid constraints are rejected instead of silently matching.
-- `DependencyResolver.resolve(available, roots)` picks highest compatible versions, supports required/optional transitive dependencies, conflicts, backtracking and deterministic dependency-first startup order; cycles and unsatisfiable graphs fail. This local planner **does not** fetch packages or supersede the authoritative Go registry resolver.
-- `Cancellation` supports cooperative cancellation, child scopes and exactly-once listeners; `Deadline` uses a monotonic clock; `ExtensionLifecycle` uses bounded waits, thread interruption and explicit transition states. Java cannot forcibly terminate an arbitrary noncooperative callback in the same JVM. The existing Go process supervisor is the final execution boundary.
-- SDK Java code is **not** isolated or sandboxed within its own JVM; permissions are enforced by the existing Go host broker. No arbitrary JavaFX/LaunchServer/Gravit JAR compatibility is claimed.
-- The current sample launchers are POSIX-specific. The Java SDK and tests run on Linux, macOS and Windows; a Windows executable wrapper and dedicated Java Extension Host are scheduled for subsequent releases.
+- Анализатор Manifest проверяет схему, идентичность, целевые пути, ограничения зависимостей и конфликтующие записи при ограниченном размере JSON. Авторитетными остаются Go-проверяющий пакета и политика подписи/доверия. Чтение манифеста этим SDK **не** проверяет подпись пакета.
+- `SemVer` использует правила приоритета SemVer 2.0 и принятые в Go Extensions диапазоны `^`, `~`, `>=`, `<=`, `>`, `<`, `=`, `x`, `*`, объединение пробелом через И и `||`. Недопустимые ограничения отклоняются, а не молча совпадают.
+- `DependencyResolver.resolve(available, roots)` выбирает старшие совместимые версии, поддерживает обязательные/необязательные транзитивные зависимости, конфликты, поиск с возвратом и детерминированный порядок запуска «сначала зависимости». Циклы и несовместимые графы вызывают отказ. Этот локальный планировщик **не** загружает пакеты и не заменяет авторитетный Go-резолвер реестра.
+- `Cancellation` предоставляет кооперативную отмену, дочерние области и обработчики с вызовом ровно один раз; `Deadline` использует монотонные часы; `ExtensionLifecycle` — ограниченные ожидания, прерывание потоков и явные состояния переходов. Java не может принудительно завершить произвольный некооперативный обработчик внутри той же JVM. Окончательная граница исполнения — существующий Go Supervisor.
+- Код Java SDK **не** изолирован внутри собственной JVM; разрешения применяются существующим Go Host Broker. Не заявляется произвольная совместимость JAR JavaFX/LaunchServer/Gravit.
+- Текущие примеры запуска ориентированы на POSIX. Сам Java SDK и тесты работают в Linux, macOS и Windows; исполняемая обёртка Windows и отдельный Java Extension Host намечены для последующих выпусков.
 
-## поставляемые API Java Runtime (0.30.3)
+## Поставляемые API Java Runtime (0.30.3)
 
-`ExtensionContext.runtime()` supplies **working** services after the runner connects to the Go host:
+После подключения к Go Host `ExtensionContext.runtime()` предоставляет **работающие** сервисы:
 
-- `runtime().events().subscribe(type, "async" | "sync", schema, decoder, handler)` registers with the existing durable Go EventBus. `RuntimeCallbackServer` listens only on `127.0.0.1`, authenticates a separate callback token, validates the event envelope, and bounds callback execution to 1.8 seconds. Idempotency keys are exposed; handlers should deduplicate side effects when necessary because the bus is at-least-once.
-- `runtime().commands().register(name, schema, decoder, handler)` registers commands only if declared in the extension's signed `cli.commands` manifest. The existing administrative `nl x <namespace> <command>` path starts a short-lived Java CLI target through the Go supervisor. `ExtensionRunner --cli` invokes the handler and prints JSON to stdout. `RuntimeCallbackServer` also supports authenticated `/v1/commands` callback calls, but Go's CLI target is the supported externally invocable path.
-- `runtime().config()` and `runtime().storage()` read/write/delete extension-owned JSON documents over `runtime.config.*` and `runtime.storage.*` broker capabilities. Go enforces `storage:read`/`storage:write` on **every** request, including after revocation. Documents are segregated by extension ID and installation scope and survive package updates/restarts; 128 KiB per key, 256 keys and 4 MiB per extension+scope.
-- `runtime().secrets().withSecret(name, projectId, callback)` uses the existing encrypted Go `secret.get` broker. A fresh `secrets:read` grant is required; the SDK zeroes the temporary decoded byte array after the callback. The application must not persist or log secret copies.
-- `JsonSchema` rejects unknown keywords and validates the implemented strict subset: object/array/string/number/integer/boolean/null, properties, required, additionalProperties (boolean), items, enum, min/max-length, min/max-items, minimum, maximum. **Not** a complete JSON Schema 2020-12 implementation. Validation is done on config reads+writes, event payloads and command input before user callbacks.
+- `runtime().events().subscribe(type, "async" | "sync", schema, decoder, handler)` регистрирует обработчик в существующем устойчивом Go EventBus. `RuntimeCallbackServer` слушает только `127.0.0.1`, проверяет отдельный токен обратного вызова, конверт события и ограничивает обработку 1,8 секунды. Ключи идемпотентности доступны; при необходимости обработчики должны устранять дубли побочных эффектов, потому что шина гарантирует доставку как минимум один раз.
+- `runtime().commands().register(name, schema, decoder, handler)` регистрирует команды, только если они объявлены в подписанном `cli.commands` манифеста расширения. Существующий административный путь `nl x <namespace> <command>` запускает краткоживущую Java CLI-цель через Go Supervisor. `ExtensionRunner --cli` вызывает обработчик и печатает JSON в stdout. `RuntimeCallbackServer` также поддерживает аутентифицированные обратные вызовы `/v1/commands`, но внешне поддерживаемый путь — Go CLI.
+- `runtime().config()` и `runtime().storage()` читают, записывают и удаляют принадлежащие расширению JSON-документы через возможности брокера `runtime.config.*` и `runtime.storage.*`. Go проверяет `storage:read`/`storage:write` при **каждом** запросе, в том числе после отзыва. Документы изолированы по ID расширения и области установки, переживают обновления/перезапуски; ограничения — 128 КиБ на ключ, 256 ключей и 4 МиБ на расширение и область.
+- `runtime().secrets().withSecret(name, projectId, callback)` использует существующий зашифрованный Go Broker `secret.get`. Нужен действующий свежий доступ `secrets:read`; SDK обнуляет временный массив декодированных байтов после обработчика. Приложение не должно сохранять или журналировать копии секретов.
+- `JsonSchema` отклоняет неизвестные ключевые слова и проверяет реализованное строгое подмножество: object/array/string/number/integer/boolean/null, properties, required, additionalProperties (boolean), items, enum, min/max-length, min/max-items, minimum, maximum. Это **не** полная реализация JSON Schema 2020-12. Конфигурация проверяется при чтении и записи, содержимое событий и ввод команд — до пользовательских обработчиков.
 
-Live backend/CLI demonstration:
+Демонстрация на настоящих Backend и CLI:
 
 ```bash
 sh examples/extensions/java-runtime/build.sh
@@ -57,12 +57,11 @@ python3 examples/extensions/java-runtime/test-runner.py
 # Подготовьте пакет к подписанию существующими командами nl extension pack/sign/verify.
 ```
 
-`Java SDK Runtime` operates on the **existing** Extensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. The 0.30.4 Java Extension Host supports direct JAR targets on Windows, macOS and Linux. Legacy POSIX example launchers remain available; do not rely on a JVM security sandbox.
+`Java SDK Runtime` работает поверх **существующего** процесса Extensions Host, разрешений, подписи и локального протокола событий. Go Host не изолирует состояние ОС от недоверенных программ с тем же пользователем файловой системы; при исполнении враждебного кода используйте границу песочницы ОС, контейнера либо отдельной учётной записи и контроль доступа к `data/extensions`. JVM не является песочницей. Java Extension Host 0.30.4 поддерживает прямые JAR-цели на Windows, macOS и Linux. Старые POSIX-примеры остаются доступными; не полагайтесь на песочницу безопасности JVM.
 
+## Хост Java-расширений (0.30.4)
 
-## хост Java-расширений (0.30.4)
-
-`backend` and `cli` manifest targets may point directly to the same **fat JAR** rather than a shell script. Build a JAR containing the SDK (`ru.launcher.sdk.host.JavaExtensionHost`), extension implementation classes and the JAR main attributes:
+Цели манифеста `backend` и `cli` могут указывать напрямую на один **fat JAR**, а не shell-скрипт. Соберите JAR с SDK (`ru.launcher.sdk.host.JavaExtensionHost`), классами расширения и основными атрибутами JAR:
 
 ```
 Manifest-Version: 1.0
@@ -70,11 +69,11 @@ Main-Class: ru.launcher.sdk.host.JavaExtensionHost
 Launcher-Extension-Class: org.example.MyExtension
 ```
 
-Launcher Go validates the JAR before execution, launches it as `java -jar <entrypoint>` using an administrator-configured Java executable or `java` from PATH, and passes **only** sanitized Extensions environment variables. The JAR must be within the signed `.nlext` package, with its `backend` target entrypoint declared in the signed manifest. Before hello, the Java host fetches the **authoritative manifest** from the authenticated Go `GET /v1/manifest`; no copied manifest in the payload is required or trusted. A Java target is considered healthy only after an authenticated `POST /v1/ready`, sent **after** `Extension.start()` succeeds. `hello` alone does not mark Java startup as complete.
+Go Launcher проверяет JAR до исполнения, запускает его как `java -jar <entrypoint>` через Java, настроенную администратором, либо `java` из PATH и передаёт **только** очищенные переменные среды Extensions. JAR обязан находиться внутри подписанного `.nlext`, а его `backend` entrypoint — быть в подписанном манифесте. До hello Java Host запрашивает **авторитетный манифест** через аутентифицированный Go `GET /v1/manifest`; копия манифеста в содержимом пакета не нужна и не считается доверенной. Java-цель становится исправной только после аутентифицированного `POST /v1/ready`, отправляемого **после** успешного `Extension.start()`. Одного `hello` для готовности Java недостаточно.
 
-The JVM opens an authenticated loopback callback server. The existing Java→Go broker/host remains the sole way to access backend capabilities. Go→JVM RPC is `POST /v1/rpc`, with a versioned envelope, a per-request nonce, a maximum 64 KiB body/response, explicit method allowlist (`health`, `command.invoke`, `event.deliver`, `hook.deliver`) and a maximum 1.8s deadline. Java callback handlers run in bounded thread pools/queues; a noncooperative callback can exhaust them, but Go does not wait indefinitely. The Go supervisor periodically issues concurrent liveness probes and terminates an unresponsive JVM after three consecutive RPC health failures, even when regular heartbeats continue. Existing process tree memory/process limits, restart backoff and crash-loop handling still apply. All event and command permissions continue to be enforced in the Go broker and Java's declared CLI command registry.
+JVM открывает аутентифицированный loopback-сервер обратных вызовов. Существующий брокер Java→Go остаётся единственным способом получить возможности Backend. RPC Go→JVM — `POST /v1/rpc` с версионируемым конвертом, одноразовым значением каждого запроса, лимитом тела/ответа 64 КиБ, явным списком методов (`health`, `command.invoke`, `event.deliver`, `hook.deliver`) и предельным временем 1,8 секунды. Java-обработчики работают в ограниченных пулах потоков и очередях; некооперативный обработчик может исчерпать пул, но Go не ждёт бесконечно. Supervisor Go периодически отправляет конкурентные пробы готовности и завершает неотзывчивую JVM после трёх подряд ошибок RPC, даже если обычные heartbeat продолжаются. Сохраняются ограничения памяти/процессов дерева, экспоненциальные паузы перезапуска и защита от циклов падения. Права событий и команд по-прежнему применяются в Go Broker и объявленном реестре CLI-команд Java.
 
-Build and run a working example:
+Сборка и запуск рабочего примера:
 
 ```bash
 sh examples/extensions/java-host/build.sh
@@ -82,119 +81,65 @@ python3 examples/extensions/java-host/test-runner.py
 nl extension pack examples/extensions/java-host/build/package --output /tmp/java-host.nlext --private-key /secure/signing-key.pem
 ```
 
-Java 17+ is required on the backend host. The Java runtime itself is an external administrator dependency: deployments can pin its absolute executable path using the Go `extensionhost.Config.JavaExecutable` field. A fat JAR is not sandboxed and runs with its process user's permissions. Publisher signing only proves package provenance, not harmlessness; hostile packages require an OS-level sandbox/container/service account boundary. Go unit/integration tests and the CI Java-host E2E workflow must pass for release certification. No arbitrary Gravit/LaunchServer JAR compatibility is implied.
+На Backend-хосте обязательна Java 17+. Сам Java Runtime — внешняя зависимость, заданная администратором: можно закрепить абсолютный путь к Java через `extensionhost.Config.JavaExecutable` в Go. Fat JAR не изолирован и работает с правами пользователя процесса. Подпись издателя подтверждает лишь происхождение пакета, а не безопасность; враждебные пакеты требуют границы песочницы ОС, контейнера или служебного аккаунта. Для релизной сертификации обязательны модульные/интеграционные Go-тесты и CI E2E Java Host. Произвольная совместимость JAR Gravit/LaunchServer не подразумевается.
 
-The `java-host` sample includes a deliberately noncooperative `hang` command strictly for supervisor resilience tests. Do not deploy this sample in production.
+Пример `java-host` содержит намеренно некооперативную команду `hang` исключительно для проверки устойчивости Supervisor. Не устанавливайте этот пример в промышленной среде.
 
 ## 0.42.1 — двоичная и протокольная совместимость Host/SDK 1.0
 
-`Host Protocol` and `Extension API` remain `1.0` when the product version changes.
-The authenticated JSON `POST /v1/hello` request retains all 0.42.0 fields,
-including `protocolVersion`, `extensionApiVersion`, `instanceId`, `extensionId`,
-and `pid`, with an optional `callbackUrl`. Extensions built against 0.42.0
-continue to use that exact wire request.
+`Host Protocol` и `Extension API` остаются версии `1.0` при изменении версии продукта. Аутентифицированный JSON-запрос `POST /v1/hello` сохраняет все поля 0.42.0, в том числе `protocolVersion`, `extensionApiVersion`, `instanceId`, `extensionId` и `pid` с необязательным `callbackUrl`. Расширения, собранные для 0.42.0, продолжают использовать этот точный формат обмена.
 
-After the host returns its signed-instance identity and negotiated list, the
-Java SDK refuses undeclared or non-granted broker operations **locally before
-sending HTTP requests**. For a host-dependent startup prerequisite, call
-`host.connect(callbackUrl, Set.of("runtime.config.get"))`; absent capabilities
-cause `HostSession.CompatibilityError` with code `HOST_CAPABILITY_UNAVAILABLE`.
-This overload also works with 0.42.0 hosts because it does not alter the wire
-request. Java code that calls only `connect()` or `connect(callbackUrl)` remains
-source/binary compatible, and still gets runtime capability checks per call.
+После возврата хостом идентичности подписанного экземпляра и согласованного списка Java SDK отклоняет необъявленные или невыданные операции брокера **локально, ещё до HTTP-запроса**. Для обязательной при запуске возможности вызовите `host.connect(callbackUrl, Set.of("runtime.config.get"))`; отсутствие возможности даёт `HostSession.CompatibilityError` с кодом `HOST_CAPABILITY_UNAVAILABLE`. Перегрузка работает и с хостами 0.42.0, поскольку формат запроса не меняет. Java-код, вызывающий лишь `connect()` или `connect(callbackUrl)`, сохраняет совместимость исходников и бинарников и получает проверку возможностей Runtime при каждом вызове.
 
-The SDK validates the independent `eventProtocolVersion`, available event names,
-heartbeat period and response identity. Missing event types cannot be subscribed
-to. `HostSession.HostError.code()` exposes structured reason codes emitted by
-0.42.1 Go; old plaintext Go errors continue to expose `HOST_HTTP_<status>`.
-Repeated hello requests and capability calls before hello are rejected. A
-managed Java extension class is initialized and constructed only **after** a
-successful authenticated hello, before lifecycle `start()`; `ready` requires a
-positive acknowledgement from the Go supervisor.
+SDK проверяет независимый `eventProtocolVersion`, доступные названия событий, период heartbeat и идентичность ответа. Нельзя подписаться на отсутствующий тип события. `HostSession.HostError.code()` предоставляет структурированные коды причин Go 0.42.1; старые текстовые ошибки Go по-прежнему представляются `HOST_HTTP_<status>`. Повторные hello-запросы и вызовы возможностей до hello запрещены. Управляемый класс Java-расширения инициализируется и создаётся **только после** успешного аутентифицированного hello, перед `start()`; для `ready` нужно положительное подтверждение Go Supervisor.
 
-Go now advertises `runtime.config.delete` and `runtime.storage.delete` only
-when the existing `storage:write` permission is effectively granted; broker
-checks remain authoritative on every operation (including after revocation).
-The Go supervisor returns `409` with `error` and `code` for incompatible
-protocol/API, process identity, unsupported callback and hello replay. None of
-these changes adds a public endpoint or weakens permission checks.
+Теперь Go объявляет `runtime.config.delete` и `runtime.storage.delete` только при реально выданном `storage:write`; брокер остаётся авторитетным проверяющим каждой операции, в том числе после отзыва. При несовместимости протокола/API, идентичности процесса, неподдерживаемом callback и повторе hello Go Supervisor возвращает `409` с `error` и `code`. Никаких публичных маршрутов или ослабления прав не добавляется.
 
-Run `sh sdk/java/core/build.sh test` for real loopback HTTP compatibility
-regressions, including the original 0.42.0 hello envelope. Full integration
-against a production Go host still requires Go 1.27.3 and the existing release
-matrix; a JVM HTTP fixture alone is not release certification.
+Для настоящих регрессий совместимости loopback HTTP выполните `sh sdk/java/core/build.sh test`, включая старый конверт hello 0.42.0. Полная интеграция с промышленным Go Host всё ещё требует Go 1.27.3 и действующую релизную матрицу; одной HTTP-фикстуры JVM недостаточно для сертификации.
 
-## 0.42.3: долговременные подписки и размеры событий
+## 0.42.3 — долговременные подписки и размеры событий
 
-Java `runtime().events().close()` now closes only local callback handlers. Backend subscriptions remain durable, so an update or JVM restart does not erase the pending EventBus backlog. To intentionally delete a subscription, invoke `runtime().events().unsubscribe(eventType, mode)` while the host session is active. The EventBus is at-least-once and callers must deduplicate non-idempotent side effects.
+Теперь Java `runtime().events().close()` закрывает лишь локальные обработчики. Подписки Backend остаются долговременными: обновление либо перезапуск JVM не удаляет ожидающие события EventBus. Для намеренного удаления подписки вызовите `runtime().events().unsubscribe(eventType, mode)` при активном сеансе с хостом. EventBus гарантирует доставку как минимум один раз, поэтому вызывающие стороны должны предотвращать дубли неидемпотентных побочных эффектов.
 
-The authenticated callback server accepts event/hook envelopes up to 2 MiB to carry the existing 1 MiB EventBus payload limit; authenticated command/RPC requests retain their separate 64 KiB bound. Java `null` is a valid JSON command result. Full documentation and tests: `docs/extensions/eventbus-rpc-persistence.md`.
+Аутентифицированный callback-сервер принимает конверты событий/хуков до 2 МиБ, чтобы передавать существующий лимит содержимого EventBus 1 МиБ; для команд и RPC сохраняется отдельный лимит 64 КиБ. `null` Java допустим как результат JSON-команды. Полная документация и тесты: `docs/extensions/eventbus-rpc-persistence.md`.
 
 ## 0.48.3 — настоящий реестр провайдеров Java SPI
 
-`ExtensionContext.providers()` exposes a per-JVM, typed `ProviderRegistry`. Modules implement
-`JavaProvider`, register `ProviderDescriptor` instances for a `ProviderService<T>`, and call
-`select(serviceId, providerId, timeout)` before using `call(service, action)`. Registration
-checks exact contract identity, compatible SPI SemVer range and signed manifest API range;
-selection drains calls, gracefully replaces the active implementation and fails closed on
-errors or timeouts. `ExtensionLifecycle` automatically shuts down providers after
-`Extension.stop()` or failed startup. Persistent selection is retrieved from the existing
-permission-controlled Go config broker; no launcher core classpath changes are needed.
+`ExtensionContext.providers()` предоставляет типизированный `ProviderRegistry` отдельной JVM. Модули реализуют `JavaProvider`, регистрируют `ProviderDescriptor` для `ProviderService<T>` и вызывают `select(serviceId, providerId, timeout)` до использования `call(service, action)`. Регистрация проверяет точную идентичность контракта, совместимый диапазон SPI SemVer и подписанный диапазон API манифеста. Выбор ожидает завершения вызовов, плавно заменяет активную реализацию и строго отказывает при ошибках или тайм-аутах. `ExtensionLifecycle` автоматически останавливает провайдеров после `Extension.stop()` или неудачного запуска. Устойчивый выбор читается через существующий Go Broker конфигурации с проверкой прав; изменения classpath ядра лаунчера не требуются.
 
-Real compile/run integration: `sh sdk/java/core/build.sh test`,
-`sh examples/extensions/java-spi/build.sh`, and
-`python3 examples/extensions/java-spi/test-runner.py`. The fixture exercises the actual
-JVM Host, embedded pinned JAR library, authenticated config, live provider switching
-through existing command RPC, CLI, heartbeat, shutdown and refusal of unknown selections.
-See `docs/extensions/java-spi.md`. This SPI is *per-extension-JVM*, not a cross-package
-registry and not a Java sandbox.
+Настоящая интеграция сборки/запуска: `sh sdk/java/core/build.sh test`, `sh examples/extensions/java-spi/build.sh` и `python3 examples/extensions/java-spi/test-runner.py`. Фикстура проверяет настоящие JVM Host, встроенную библиотеку закреплённого JAR, аутентифицированную конфигурацию, переключение активного провайдера через существующий RPC команд, CLI, heartbeat, завершение и отказ неизвестному выбору. См. `docs/extensions/java-spi.md`. Этот SPI — *внутри одной JVM расширения*, а не межпакетный реестр и не Java-песочница.
 
 ## 0.48.4 — Java-сервисы Backend
 
-`context.runtime().backend()` exposes typed, read-only project/profile/channel/release/job-status services via the authenticated Go Host Broker. Individual capabilities require live `project:read` or `release:read` grants and enforce project scope. Bounded list pagination uses `Page<T>` with optional `nextOffset`; see [Backend Java Services](../../../docs/extensions/java-backend-services.md) for the operations, permissions and limitations.
+`context.runtime().backend()` предоставляет типизированные сервисы проектов, профилей, каналов, выпусков и статуса заданий только для чтения через аутентифицированный Go Host Broker. Отдельные возможности требуют действующих прав `project:read` или `release:read` и соблюдения области проекта. Ограниченная постраничная выдача использует `Page<T>` с необязательным `nextOffset`; перечень операций, прав и ограничений — в [Java-сервисах Backend](../../../docs/extensions/java-backend-services.md).
 
 ## 0.48.5 — SPI авторизации и идентификации
 
-`IdentityServices.CONTRACT` connects one selected `IdentityProvider` implementation to the existing authenticated callback RPC. Implementations verify external credentials, provide a stable immutable subject, introspect and revoke their **own** provider sessions. They never issue NeverLauncher tokens or Microsoft/Minecraft authentication evidence. Configuration, grants and activation: `docs/authentication/java-identity-spi.md`. Run `sh sdk/java/core/build.sh test` to exercise the live JVM callback checks.
+`IdentityServices.CONTRACT` подключает одну выбранную реализацию `IdentityProvider` к существующему аутентифицированному RPC обратных вызовов. Реализации проверяют внешние учётные данные, предоставляют стабильный неизменяемый subject, проверяют и отзывают **собственные** сеансы провайдера. Они никогда не выпускают токены NeverLauncher или свидетельства аутентификации Microsoft/Minecraft. Конфигурация, права и активация: `docs/authentication/java-identity-spi.md`. Выполните `sh sdk/java/core/build.sh test`, чтобы проверить живые обратные вызовы JVM.
 
 ## 0.48.6 — SPI содержимого и распространения
 
-`context.runtime().content()` provides actual provider-driven source/texture/delivery resolution, metadata enrichment, bounded pre-sign byte transformations, and SHA-256 checked content reads using the current Go Host broker. Register a `ContentProvider` via `ContentServices.CONTRACT`; the selected provider is managed by `ExtensionLifecycle`. A transformed file is not a published release and must pass the existing signing and integrity pipeline. Build the executable sample: `sh examples/extensions/java-content-spi/build.sh`. For the production opt-in `contentExtensionId` multipart package transform, permissions, strict limits and the remaining public-distribution boundaries see `docs/extensions/java-content-spi.md`.
+`context.runtime().content()` предоставляет реальное разрешение источников/текстур/доставки провайдерами, обогащение метаданных, ограниченные побайтовые преобразования до подписи и чтение содержимого с проверкой SHA-256 через существующий Go Host Broker. Зарегистрируйте `ContentProvider` через `ContentServices.CONTRACT`; выбранным провайдером управляет `ExtensionLifecycle`. Преобразованный файл не является опубликованным выпуском и обязан пройти обычную цепочку подписи и целостности. Соберите исполняемый пример: `sh examples/extensions/java-content-spi/build.sh`. Промышленный включаемый параметр `contentExtensionId` для multipart-преобразования пакета, права, строгие лимиты и оставшиеся границы публичной доставки описаны в `docs/extensions/java-content-spi.md`.
 
-### 0.48.7 задания по событиям и хуки политик
+### 0.48.7 — задания по событиям и хуки политик
 
-Use `runtime().events().subscribeJob(...)` for durable event-backed async jobs,
-`subscribeHook(...)` with explicit `HookDecision.allow()/deny()` for synchronous
-pre-mutation vetoes, and `subscribeDetailed(...)` for event sequence, schema,
-aggregate, ordering and idempotency metadata. The Go EventBus owns lease, retry
-and dead-letter state. Permanent failures use `RuntimeEvents.PermanentFailure`;
-other callback failures request retry. **Do not assume exactly-once external
-effects**. See `docs/extensions/java-events-hooks.md`.
-
+Используйте `runtime().events().subscribeJob(...)` для устойчивых фоновых заданий, поддерживаемых событиями; `subscribeHook(...)` с явными `HookDecision.allow()/deny()` — для синхронного запрета перед изменением; `subscribeDetailed(...)` — для получения порядка событий, схемы, агрегата и метаданных упорядочения/идемпотентности. Go EventBus управляет арендами, повторами и очередью невыполнимых сообщений. Для необратимых ошибок используйте `RuntimeEvents.PermanentFailure`; другие ошибки callback запрашивают повтор. **Не считайте внешние эффекты исполняемыми ровно один раз.** См. `docs/extensions/java-events-hooks.md`.
 
 ### 0.48.8 — интеграция ServerBridge с Java
 
-`context.runtime().serverBridge()` exposes real, permission-scoped ServerBridge
-v3 project nodes, live status, advisory pre-existing join-ticket checks,
-commands persisted through the authenticated Go broker, status polling and
-typed durable server event callbacks. Commands remain subject to the existing
-signed adapter capabilities, runtime fencing, game-domain RBAC and PostgreSQL
-idempotency. `server.console` and `server.shutdown` are not exposed to Java.
-Actual Minecraft session admission is unchanged. Details and tests:
-`docs/extensions/java-serverbridge.md` and
-`sh sdk/java/core/build.sh test`.
+`context.runtime().serverBridge()` предоставляет настоящие, ограниченные разрешениями узлы проектов ServerBridge v3, живой статус, консультативные проверки уже существующих билетов входа, команды, сохраняемые через аутентифицированный Go Broker, опрос статуса и типизированные callback долговременных серверных событий. Команды по-прежнему подчиняются подписанным возможностям адаптера, fencing Runtime, RBAC игровых доменов и идемпотентности PostgreSQL. `server.console` и `server.shutdown` Java не предоставляются. Фактический допуск Minecraft-сеанса остаётся прежним. Подробности и тесты: `docs/extensions/java-serverbridge.md`, `sh sdk/java/core/build.sh test`.
 
-### 0.48.9 интеграция интерфейсов Admin/Desktop и CLI
+### 0.48.9 — интеграция интерфейсов Admin/Desktop и CLI
 
-`RuntimeServices.ui()` registers `registerAction("admin"|"desktop", actionId, JsonSchema|null, (actor, payload)->result)` and `registerSetting(surface, key, JsonSchema, defaultValue)` during `Extension.start()`. UI action IDs must be listed in the signed `admin.actions` / `desktop.actions` manifest. The existing Admin/Desktop iframe sends a `rpc.request` message to its host with method `java.action.invoke`, `java.settings.get` or `java.settings.put` and parameters including the current extension `version` and `generation`; the backend authenticates the user and routes authorized requests to a running Java backend target. UI source has no direct network access or bearer token. Settings persist through the existing `runtime.config` broker and require signed `storage:read` / `storage:write` permissions; only registered keys are exposed, and schema failure rejects the mutation.
+`RuntimeServices.ui()` регистрирует `registerAction("admin"|"desktop", actionId, JsonSchema|null, (actor, payload)->result)` и `registerSetting(surface, key, JsonSchema, defaultValue)` во время `Extension.start()`. ID UI-действий должны быть перечислены в подписанном манифесте `admin.actions`/`desktop.actions`. Существующий iframe Admin/Desktop отправляет хосту `rpc.request` с методом `java.action.invoke`, `java.settings.get` либо `java.settings.put` и параметрами, включающими текущие `version` и `generation` расширения; Backend аутентифицирует пользователя и направляет авторизованные запросы работающей Java-цели Backend. У исходного кода UI нет прямого сетевого доступа и Bearer-токенов. Настройки сохраняются существующим брокером `runtime.config`, требуют подписанных прав `storage:read`/`storage:write`; доступны только зарегистрированные ключи, а ошибка схемы запрещает изменение.
 
-Current policy requires authenticated `extension:manage` for all three Java UI methods. A signed UI contribution permission (`ui:contribute` or `desktop:contribute`) is independently checked before and after RPC; package revocation, stale generation, process exit and project scope changes fail closed. Java callback responses are capped at 48 KiB and execute under the existing 1.8-second deadline. CLI remains an isolated short-lived target using the signed CLI namespace and `RuntimeCommands.register()`.
+Действующая политика требует аутентифицированного `extension:manage` для всех трёх методов Java UI. Подписанное разрешение UI (`ui:contribute` либо `desktop:contribute`) независимо проверяется до и после RPC; отзыв пакета, устаревшее поколение, выход процесса и изменение области проекта вызывают отказ. Ответ callback Java ограничен 48 КиБ и выполняется с существующим сроком 1,8 секунды. CLI остаётся изолированной краткоживущей целью с подписанным пространством имён и `RuntimeCommands.register()`.
 
-Build and test a complete example including both iframe surfaces and an executable JAR: `sh examples/extensions/java-ui/build.sh && python3 examples/extensions/java-ui/test-runner.py`. Production signing/installation uses the normal extension pipeline and is not bypassed by this demo. `sh sdk/java/core/build.sh test` exercises in-process HTTP regressions as well.
+Соберите и проверьте полный пример с обоими iframe и исполняемым JAR: `sh examples/extensions/java-ui/build.sh && python3 examples/extensions/java-ui/test-runner.py`. Промышленная подпись и установка выполняются обычным конвейером расширений и не обходятся примером. `sh sdk/java/core/build.sh test` также проверяет внутрипроцессные HTTP-регрессии.
 
 ### 0.48.10 — версионируемая миграция состояния при безопасных обновлениях
 
-Register migrations in `Extension.start(ExtensionContext)` before the Host reaches readiness:
+Зарегистрируйте миграции в `Extension.start(ExtensionContext)` до достижения готовности Host:
 
 ```java
 context.runtime().stateMigrations().register("1.0.0", "2.0.0", (config, storage) -> {
@@ -203,4 +148,4 @@ context.runtime().stateMigrations().register("1.0.0", "2.0.0", (config, storage)
 });
 ```
 
-The authenticated Host invokes the migrations only during an update with a changed version. Registered transitions must form an unbroken forward-only path from the installed version to the target; gaps fail closed. No registered transitions means the extension intentionally keeps its existing document schema. All writes use the existing scoped, permission-checked Host Broker and quotas. The Go update manager saves a checksum-checked on-disk snapshot and restores the previous data *before* restarting an older version on failed health checks, callback errors or interrupted updates. A migration must not alter any external resource it cannot compensate. Avoid relying on exactly-once callbacks: interrupted updates can safely re-run after rollback.
+Аутентифицированный Host вызывает миграции только при обновлении с изменением версии. Зарегистрированные переходы должны образовывать непрерывный путь только вперёд от установленной версии до целевой; пробелы блокируются. Отсутствие переходов означает намеренное сохранение прежней схемы документов. Все записи используют существующий Go Host Broker с проверкой области, прав и квот. Менеджер обновления Go сохраняет дисковый снимок с контрольной суммой и восстанавливает прежние данные *до* перезапуска старой версии при ошибках здоровья, callback или прерванном обновлении. Миграция не должна изменять внешние ресурсы, для которых нет компенсирующего действия. Не полагайтесь на вызовы ровно один раз: прерванное обновление безопасно повторяется после отката.

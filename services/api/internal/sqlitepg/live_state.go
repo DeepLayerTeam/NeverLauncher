@@ -1,9 +1,9 @@
 package sqlitepg
 
-// This is an offline conversion of verified Core staging rows into tables used
-// by the PostgreSQL repository. It runs in PopulateLive0473's SERIALIZABLE
-// transaction. Nothing here copies unauthenticated staging data or revives a
-// worker/session belonging to the stopped SQLite installation.
+// Это офлайн-преобразование проверенных промежуточных строк Core в таблицы
+// репозитория PostgreSQL. Оно выполняется в транзакции SERIALIZABLE
+// функции PopulateLive0473. Недоверенные данные не копируются и
+// сеансы/обработчики остановленной SQLite-установки не возрождаются.
 
 import (
 	"context"
@@ -93,9 +93,9 @@ func digestJSON0474(src map[string]any, field, digest string) (string, error) {
 	return s, nil
 }
 
-// Runtime schema has no Core auth_epoch and otherwise cannot faithfully
-// enforce already-issued tokens. Persist the original epoch and session state,
-// but revoke old bearer sessions at the trust boundary, requiring new login.
+// Схема Runtime не содержит Core auth_epoch и потому не может надёжно
+// проверять уже выпущенные токены. Сохраняйте исходную эпоху и состояние сеансов,
+// но отзывайте старые bearer-сеансы на границе доверия с обязательным повторным входом.
 func session0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	uid, e := mustText0474(s, "user_id")
 	if e != nil {
@@ -150,7 +150,7 @@ func session0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	if status != "active" && status != "revoked" {
 		return fmt.Errorf("invalid session status %s", status)
 	}
-	// Original credentials were minted by a different token authority.
+	// Исходные учётные данные выпущены другим центром токенов.
 	if status == "active" {
 		status = "revoked"
 		revoked = time.Now().UTC()
@@ -179,7 +179,7 @@ func family0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	if status != "active" && status != "revoked" && status != "compromised" {
 		return fmt.Errorf("invalid family status %s", status)
 	}
-	// Every old refresh token is invalidated; its history is retained.
+	// Все старые refresh-токены отзываются, но их история сохраняется.
 	_, e = tx.Exec(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status,created_at,compromised_at,revoked_at,revoked_reason,core_original_status_0474)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, s["id"], s["session_id"], userID, "revoked", created, func() any {
 		if status == "compromised" {
@@ -215,10 +215,10 @@ func refresh0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	return e
 }
 
-// MFASecrets0474 carries original SQLite Core and target PostgreSQL keys.
-// The caller must provide both for *every* legacy TOTP record, including pending
-// enrollments. The Core key is raw AES-256 material; PostgreSQLSecret is exactly
-// the API secret used by securityPostgres111, without a development fallback.
+// MFASecrets0474 содержит исходный ключ SQLite Core и целевой ключ PostgreSQL.
+// Вызывающий должен передать оба для *каждой* прежней записи TOTP, включая
+// незавершённые подключения. Ключ Core — сырые байты AES-256; PostgreSQLSecret — точно
+// секрет API из securityPostgres111 без резервного ключа разработки.
 type MFASecrets0474 struct {
 	SQLiteMFAKey     []byte
 	PostgreSQLSecret string
@@ -265,7 +265,7 @@ func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 	if _, err = rand.Read(nonce); err != nil {
 		return "", err
 	}
-	// Same key derivation, encoding and authenticated envelope as encryptString950.
+	// Вывод ключа, кодирование и аутентифицированный конверт такие же, как в encryptString950.
 	encrypted := dst.Seal(nonce, nonce, []byte(text), []byte("0.10.0"))
 	return base64.RawURLEncoding.EncodeToString(encrypted), nil
 }
@@ -371,7 +371,7 @@ func minecraftSession0474(ctx context.Context, tx pgx.Tx, s map[string]any) erro
 	if status != "active" && status != "revoked" {
 		return errors.New("unknown Minecraft session state")
 	}
-	// All cross-authority access tokens are unusable after migration.
+	// После миграции токены доступа другого центра недействительны.
 	_, e = tx.Exec(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,core_original_status_0474,core_original_reason_0474)
     VALUES($1,$2,$3,$4,$5,'revoked',$6,$6,$7,$8,$9,$10,$11)`, s["id"], s["user_id"], s["session_id"], s["profile_uuid"], hash, created, expires, time.Now().UTC(), "SQLite migration: new login required", status, s["revoked_reason"])
 	return e
@@ -471,7 +471,7 @@ func lease0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	if fence < 1 || fence == int64(^uint64(0)>>1) {
 		return errors.New("invalid scope fencing token")
 	}
-	// Old owner cannot renew; next PostgreSQL claimant gets a higher token.
+	// Прежний владелец не может продлевать аренду; новый в PostgreSQL получает больший токен.
 	_, e = tx.Exec(ctx, `INSERT INTO durable_scope_leases(scope_key,owner,lease_token,fencing_token,expires_at,updated_at)
       VALUES($1,'','',$2,now() - interval '1 second',now())`, s["scope_key"], fence+1)
 	return e
@@ -578,9 +578,9 @@ func bridgeNonce0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	return e
 }
 
-// The old signed token format is intentionally NOT accepted by SQLRepository.
-// Durable token tombstones prevent silently discarding identity/revocation
-// history, without accidentally granting the new auth stack old credentials.
+// Старый формат подписанного токена намеренно НЕ принимается SQLRepository.
+// Постоянные метки удалённых токенов сохраняют историю идентичности и отзыва,
+// не предоставляя новым механизмам авторизации доступ по прежним учётным данным.
 func accessToken0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 	hash, e := validatedHash0474(s, "token_hash")
 	if e != nil {

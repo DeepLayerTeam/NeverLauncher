@@ -1,9 +1,9 @@
 package sqlitepg
 
-// Live import is deliberately separate from the immutable staging transfer.
-// It only runs against an EMPTY, completely migrated SQLRepository database.
-// Untranslatable durable/security state blocks the transaction: a partial
-// migration is never advertised as a working project.
+// Живой импорт намеренно отделён от переноса неизменяемого промежуточного снимка.
+// Он выполняется только в ПУСТОЙ базе SQLRepository с завершёнными миграциями.
+// Непереносимое постоянное или защищённое состояние блокирует транзакцию: частичная
+// миграция никогда не представляется как работоспособный проект.
 
 import (
 	"context"
@@ -39,7 +39,7 @@ type LiveReport0473 struct {
 	ReauthenticatedSessions int64           `json:"reauthenticatedSessions"`
 	FencedLeases            int64           `json:"fencedLeases"`
 	Verified                bool            `json:"verified"`
-	// Full cutover additionally requires service data/storage migration (0.47.4-0.47.5).
+	// Полное переключение дополнительно требует переноса данных сервисов и хранилища (0.47.4–0.47.5).
 	ReadyForBackendCutover bool `json:"readyForBackendCutover"`
 }
 
@@ -209,7 +209,7 @@ func validateCatalog0473(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 func emptyLive0473(ctx context.Context, tx pgx.Tx) error {
-	// A brand-new SQLRepository schema seeds roles; no other data is admissible.
+	// Новая схема SQLRepository предварительно создаёт роли; иные данные недопустимы.
 	seeded := map[string]string{
 		"launcher_installation_state":  `singleton=true AND bootstrap_token_hash='' AND bootstrap_token_used_at IS NULL AND installation_completed=false AND completed_at IS NULL`,
 		"extension_ga_contract":        `singleton=true AND package_format_version='1.0' AND manifest_schema_version='2.0' AND host_protocol_version='1.0' AND extension_api_version='1.0' AND legacy_api_aliases='["3.7"]'::jsonb`,
@@ -278,8 +278,8 @@ func sourceRows0473(ctx context.Context, tx pgx.Tx, name string, expected TableR
 		cols = append(cols, quoted(c.Name))
 	}
 	cols = append(cols, `"_nl_import_ordinal"`, `"_nl_import_digest"`)
-	// A pgx.Conn cannot execute INSERT while an earlier result stream is open.
-	// Read bounded batches, close the result set, then write that batch.
+	// pgx.Conn не может выполнять INSERT при открытом потоке результатов предыдущего запроса.
+	// Читайте ограниченные порции, закрывайте набор результатов и только затем записывайте порцию.
 	query := `SELECT ` + strings.Join(cols, ",") + ` FROM ` + qualified(name) + ` WHERE "_nl_import_ordinal" > $1 ORDER BY "_nl_import_ordinal" LIMIT $2`
 	h := sha256.New()
 	var count int64
@@ -397,9 +397,9 @@ func installLocalIdentity0473(ctx context.Context, tx pgx.Tx, u map[string]any) 
 }
 
 func installRoles0473(ctx context.Context, tx pgx.Tx, expected TableResult) error {
-	// Seeded PostgreSQL roles are replaced with exactly the source authority.
-	// No modification of role IDs referenced by existing users is possible:
-	// emptyLive0473 has already ruled out pre-existing identities.
+	// Предварительно созданные роли PostgreSQL заменяются точно ролями источника.
+	// Изменить идентификаторы ролей, используемых существующими пользователями, нельзя:
+	// emptyLive0473 уже исключил наличие прежних учётных записей.
 	if _, err := tx.Exec(ctx, `DELETE FROM roles`); err != nil {
 		return err
 	}
@@ -521,16 +521,16 @@ func verifyFK0473(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// PopulateLive0473 converts the immutable, verified SQLite staging import into
-// SQLRepository's actual public tables. It requires complete PG schema migrations,
-// an empty destination, and ZERO non-mappable source state. Entire operation,
-// including receipt and FK checks, is atomic; no table is left half-filled.
+// PopulateLive0473 преобразует неизменяемый проверенный импорт SQLite во
+// фактические таблицы SQLRepository. Требуются все миграции схемы PostgreSQL,
+// пустая целевая база и ПОЛНОЕ отсутствие непереносимого состояния. Операция
+// вместе с квитанцией и проверками внешних ключей атомарна; частично заполненных таблиц нет.
 func PopulateLive0473(ctx context.Context, postgresDSN string) (LiveReport0473, error) {
 	return PopulateLiveWithMFA0474(ctx, postgresDSN, MFASecrets0474{})
 }
 
-// PopulateLiveWithMFA0474 preserves enabled MFA by cryptographically rewrapping
-// each AES-GCM seed. Import is atomic; a missing key causes a full rollback.
+// PopulateLiveWithMFA0474 сохраняет включённую MFA путём криптографической перепаковки
+// каждого секрета AES-GCM. Импорт атомарен; отсутствие ключа вызывает полный откат.
 func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASecrets0474) (LiveReport0473, error) {
 	report := LiveReport0473{Format: liveImportVersion0473}
 	if strings.TrimSpace(postgresDSN) == "" {
@@ -552,7 +552,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(718033100100)`); err != nil {
 		return report, err
 	}
-	// Ensure schema/table lookups happen in the same expected application schema.
+	// Убедитесь, что схемы и таблицы ищутся в одной ожидаемой схеме приложения.
 	var current string
 	if err = tx.QueryRow(ctx, `SELECT current_schema()`).Scan(&current); err != nil {
 		return report, err
@@ -587,8 +587,8 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	for _, rule := range stateRules0474() {
 		allow[rule.source] = true
 	}
-	// Fail closed on unexpected/duplicated staged table declarations and data.
-	// This includes deleted/mutated records in tables not selected for import.
+	// При неожиданных или дублированных объявлениях таблиц и данных завершайте операцию отказом.
+	// Это касается и удалённых или изменённых записей таблиц, не выбранных для импорта.
 	seen := map[string]bool{}
 	for _, table := range original.Tables {
 		if seen[table.Name] || table.Rows < 0 || len(table.SHA256) != 64 {
@@ -718,14 +718,14 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	if _, err = tx.Exec(ctx, `UPDATE users u SET project_roles=COALESCE((SELECT jsonb_object_agg(ur.project_id,ur.role_id) FROM project_user_roles ur WHERE ur.user_id=u.id),'{}'::jsonb)`); err != nil {
 		return report, err
 	}
-	// Importing a real owner/project must not resurrect installer first-admin bootstrap.
+	// Импорт настоящего владельца и проекта не должен заново активировать создание первого администратора.
 	if _, err = tx.Exec(ctx, `UPDATE launcher_installation_state SET installation_completed=true,completed_at=now(),updated_at=now() WHERE singleton=true AND EXISTS(SELECT 1 FROM users) AND EXISTS(SELECT 1 FROM projects)`); err != nil {
 		return report, err
 	}
 	if err = verifyFK0473(ctx, tx); err != nil {
 		return report, err
 	}
-	// Persist receipt in the same live transaction. No changes to old SQL migrations.
+	// Сохраните квитанцию в той же живой транзакции. Старые миграции SQL не меняйте.
 	if _, err = tx.Exec(ctx, `CREATE TABLE IF NOT EXISTS sqlite_live_receipts_0473(source_sha256 TEXT PRIMARY KEY,report JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
 		return report, err
 	}
@@ -743,4 +743,4 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	return report, nil
 }
 
-// Compile-time guard against changing the streaming SHA-256 verification path.
+// Защита на этапе компиляции от изменения потоковой проверки SHA-256.

@@ -1,12 +1,12 @@
 # Launcher 0.25.10 — миграция Gravit TextureProvider
 
-This version imports **real** GravitLauncher/TextureProvider texture records into the existing Launcher local-project texture pipeline. It reads either the official upstream PostgreSQL table (`textures`) or an offline JSON export. No Gravit credentials, sessions or upstream access tokens are imported. The command is operator-only; there is no public migration endpoint.
+Эта версия импортирует **настоящие** записи текстур GravitLauncher/TextureProvider в существующую систему локальных проектных текстур Launcher. Источник — официальная таблица PostgreSQL (`textures`) либо автономный JSON-экспорт. Учётные данные Gravit, сеансы и токены доступа источника не импортируются. Команда предназначена только для оператора; публичного маршрута миграции нет.
 
-## исходный формат и сопоставление идентичностей
+## Исходный формат и сопоставление идентичностей
 
-Supported upstream PostgreSQL fields are `id UUID`, `user_uuid UUID`, `texture_type` (`SKIN` / `CAPE`), `file_hash` (SHA-1 or SHA-256 of the **original PNG**), `file_url`, and optional `metadata.model` (`slim` or `default`). The schema matches the upstream TextureProvider table in `migrations/001_initial.sql` at `GravitLauncher/TextureProvider`. Supported JSON exports are arrays of objects with those snake_case properties. JSON may additionally provide `object_key` (relative to the trusted source root/bucket).
+Поддерживаемые поля исходной таблицы PostgreSQL: `id UUID`, `user_uuid UUID`, `texture_type` (`SKIN` / `CAPE`), `file_hash` (SHA-1 или SHA-256 **исходного PNG**), `file_url` и необязательное `metadata.model` (`slim` либо `default`). Схема соответствует таблице TextureProvider из `migrations/001_initial.sql` проекта `GravitLauncher/TextureProvider`. Поддерживаемый JSON-экспорт — массив объектов с указанными полями в snake_case. JSON также может включать `object_key` (относительно доверенного каталога или бакета источника).
 
-Launcher makes **no** username-based, user-ID-derived, or official-UUID identity guesses. It imports a row only if `user_uuid` equals an existing `minecraft_profiles.uuid` with `issuer=launcher, realm=local`, or an administrator explicitly maps a verified legacy UUID to an existing local UUID. Mapping is a JSON array:
+Launcher **не угадывает** соответствие по имени пользователя, производным ID пользователя или официальным UUID. Строка импортируется только если `user_uuid` совпадает с существующим `minecraft_profiles.uuid` при `issuer=launcher, realm=local` либо администратор явно сопоставил проверенный старый UUID с существующим локальным UUID. Сопоставление задаётся JSON-массивом:
 
 ```json
 [
@@ -14,13 +14,13 @@ Launcher makes **no** username-based, user-ID-derived, or official-UUID identity
 ]
 ```
 
-This is an **operator assertion**, not proof from the legacy source: review account ownership manually before import. No import is permitted into an official Minecraft profile. Unmatched records appear in the report.
+Это **утверждение оператора**, а не доказательство со стороны старой системы: до импорта вручную проверьте владельца аккаунта. Импорт в официальный профиль Minecraft запрещён. Не найденные соответствия попадают в отчёт.
 
-## подготовка и выполнение
+## Подготовка и выполнение
 
-Apply the normal Launcher migrations **through 0073_texture_gravit_import_02510** before running this command. Back up the target database and local/S3 bucket first; verify quotas and cape entitlements. Set the same target environment variables used by the API (`LAUNCHER_DATABASE_DSN`, `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH` or `LAUNCHER_STORAGE_S3_*`).
+До запуска команды примените обычные миграции Launcher **вплоть до 0073_texture_gravit_import_02510**. Сначала сохраните резервную копию целевой базы и локального/S3-бакета; проверьте квоты и права на плащи. Настройте те же переменные целевого окружения, что и API (`LAUNCHER_DATABASE_DSN`, `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH` или `LAUNCHER_STORAGE_S3_*`).
 
-Example: source PostgreSQL + local source files. Do not put DSNs with credentials in shell history or log output: prefer preconfigured environment-file secrets.
+Пример: исходный PostgreSQL и локальные исходные файлы. Не сохраняйте DSN с секретами в истории оболочки или журналах; предпочтительнее секреты из файла окружения.
 
 ```bash
 cd services/api
@@ -35,9 +35,9 @@ go run ./cmd/gravit-textures-import-02510 \
   --dry-run --report ./gravit-dry-run.json
 ```
 
-The dry run validates *real file bytes*, verifies source digest, decodes/normalizes PNG and checks target identities. It neither writes the destination blob nor updates target assignments. The 0.44.5 report contains `planSha256`, binding the exact TextureProvider rows, SHA digests, UUID mapping, source ID, object-key configuration and `--replace` choice to that dry-run. It intentionally excludes the untrusted `file_url`, which is never used for fetching.
+Предварительный запуск проверяет **реальные байты файлов**, исходный дайджест, декодирование и нормализацию PNG и целевые идентичности. Он не записывает целевой объект и не изменяет назначения. Отчёт версии 0.44.5 содержит `planSha256`, закрепляющий точные строки TextureProvider, SHA-дайджесты, сопоставление UUID, ID источника, конфигурацию ключей объектов и выбор `--replace` за конкретным пробным запуском. Недоверенный `file_url` намеренно исключён: по нему никогда не загружаются данные.
 
-**Since 0.44.5, live import requires explicit approval of the current dry-run fingerprint**; it will perform another complete read-only PNG/identity preflight before writing any texture. Review the entire report (including every `unmatched`, `blocked`, `skipped-existing`, `quarantined` entry) and then run:
+**Начиная с 0.44.5, живой импорт требует явного одобрения отпечатка текущего пробного запуска.** Перед записью любой текстуры будет повторена полная проверка PNG и идентичностей только для чтения. Изучите весь отчёт, включая каждую запись `unmatched`, `blocked`, `skipped-existing`, `quarantined`, после чего запустите:
 
 ```bash
 # Пример: укажите утверждённый SHA-256 после независимой проверки отчёта.
@@ -49,26 +49,26 @@ go run ./cmd/gravit-textures-import-02510 \
   --report ./gravit-live-report.json
 ```
 
-Use exactly the same source, mapping, template and replacement option for both calls. If any source PNG or target identity became unusable, the new preflight blocks **all writes** for that run; no source hash or mapping mismatch is accepted as a partial success. Per-record CAS/storage errors after preflight can still result in a partial live import; re-run with the **same** `source-id`, following a fresh reviewed dry-run. Always retain the original exports and a tested backup until game rendering is verified. Existing Launcher selections are **never overwritten by default**; add `--replace` only after explicit approval (with CAS checking; concurrent updates are rejected). Record and review all `quarantined`, `unmatched`, `skipped-existing` and `blocked` items.
+В обоих запусках используйте ровно один и тот же источник, сопоставление, шаблон и параметр замены. Если исходный PNG или целевая идентичность перестали подходить, новая проверка блокирует **все записи** этого запуска; несовпадение хеша либо сопоставления не считается частичным успехом. После предварительной проверки ошибки CAS/хранилища отдельных записей всё ещё могут дать частичный импорт. Повторите с **тем же** `source-id` после нового проверенного пробного запуска. Сохраняйте исходный экспорт и проверенную резервную копию до подтверждения отображения текстур в игре. Существующие выборы Launcher по умолчанию **не перезаписываются**; добавляйте `--replace` только с явным одобрением (проверка CAS отклоняет конкурентные изменения). Регистрируйте и анализируйте все `quarantined`, `unmatched`, `skipped-existing` и `blocked`.
 
-For offline JSON, use `--source-json /path/to/export.json` instead of `--source-dsn`. Export the actual `textures` rows as JSON from the source database; do not export secrets. For S3 source, set `GRAVIT_S3_ENDPOINT`, `GRAVIT_S3_BUCKET`, `GRAVIT_S3_REGION`, `GRAVIT_S3_ACCESS_KEY`, `GRAVIT_S3_SECRET_KEY`, optionally `GRAVIT_S3_PATH_STYLE`, and pass `--source-s3` rather than `--source-root`. This reads S3 **directly with authenticated SigV4**, from the configured bucket; `file_url` from legacy records is never fetched. All relative object keys are validated, and keys do not control S3 host or credentials.
+Для автономного JSON используйте `--source-json /path/to/export.json` вместо `--source-dsn`. Экспортируйте настоящие строки `textures` из исходной БД в JSON без секретов. Для S3-источника задайте `GRAVIT_S3_ENDPOINT`, `GRAVIT_S3_BUCKET`, `GRAVIT_S3_REGION`, `GRAVIT_S3_ACCESS_KEY`, `GRAVIT_S3_SECRET_KEY`, при необходимости `GRAVIT_S3_PATH_STYLE`, и используйте `--source-s3` вместо `--source-root`. Чтение идёт **напрямую по аутентифицированному SigV4** из заданного бакета; `file_url` старых записей никогда не запрашивается. Все относительные ключи объектов проходят проверку и не могут управлять S3-хостом или учётными данными.
 
-`--source-template` supports `%kind%` (`skin` or `cape`), `%KIND%` (`SKIN`/`CAPE`) and `%hash%` (original source digest). For example `--source-template 'skins/%hash%.png'` can only import skins. If skins and capes live in separate directories, either supply per-row `object_key` in a vetted JSON export, use a common template `'%kind%/%hash%.png'`, or run separate imports with a **distinct source ID** for each appropriately filtered export. Keys cannot contain `..`, absolute paths, empty components or backslashes. If a source points only to an HTTP URL and no trusted local/S3 object is available, it is quarantined: import the PNG to the trusted source storage first, rather than bypassing the SSRF-safe fetcher.
+`--source-template` поддерживает `%kind%` (`skin`/`cape`), `%KIND%` (`SKIN`/`CAPE`) и `%hash%` (исходный дайджест). Например, `--source-template 'skins/%hash%.png'` позволяет импортировать только скины. Если скины и плащи расположены в разных каталогах, укажите `object_key` в каждой строке проверенного JSON, используйте общий шаблон `'%kind%/%hash%.png'` либо выполните отдельные импорты с **разными идентификаторами источника** для соответственно отфильтрованных экспортов. Ключи не могут содержать `..`, абсолютные пути, пустые компоненты и обратные слеши. Если источник указывает только на HTTP URL, а доверенного локального/S3-объекта нет, запись помещается в карантин: сначала перенесите PNG в доверенное хранилище, а не обходите защищённый от SSRF механизм загрузки.
 
-## поведение импорта и восстановление
+## Поведение импорта и восстановление
 
-Each row is checked independently. SHA-1/SHA-256 verification is against source bytes **before** PNG normalization; resulting content-addressed SHA-256 is stored through the existing normalizer, prewrite staging, local/S3 immutable writer, owner quotas, cape policies and revision-controlled assignment. `source=imported` and `event=gravit-import` are recorded in the existing tables. A `texture_gravit_import_receipts` row (source ID + legacy ID) is committed **atomically** with its selection to prevent a second import from overwriting a subsequently changed skin. Re-running the same source ID reports `already-imported`; choosing a new ID is a new migration and should not be used to bypass provenance.
+Каждая строка проверяется независимо. SHA-1/SHA-256 сверяется по байтам источника **до** нормализации PNG; итоговый SHA-256 с адресацией по содержимому сохраняется существующим нормализатором, предварительным размещением, неизменяемой записью в локальное/S3-хранилище, квотами владельца, политиками плащей и назначением с контролем ревизии. В существующих таблицах записываются `source=imported` и `event=gravit-import`. Строка `texture_gravit_import_receipts` (ID источника + старый ID) фиксируется **атомарно** с выбором текстуры, чтобы повторный импорт не перезаписал изменённый впоследствии скин. Повторный запуск с тем же ID сообщает `already-imported`; новый ID означает новую миграцию и не должен использоваться для обхода проверки происхождения.
 
-Preflight refuses ambiguous many-to-one UUID mappings (including an unmapped player sharing a mapped target), repeated row IDs and multiple active skin/cape records targeting the same local player. These conflicts must be resolved in the reviewed source export before any assignment is changed. A `null` mapping/export is not a valid array. The import cannot infer which historical texture should win.
+Предварительная проверка отклоняет неоднозначные соответствия нескольких UUID одному (включая несопоставленного игрока, использующего сопоставленную цель), повторяющиеся ID строк и несколько активных скинов/плащей для одного локального игрока. Конфликты нужно устранить в проверенном экспорте до изменения назначений. Значение `null` вместо массива сопоставлений или экспорта недопустимо. Импорт не определяет автоматически, какая историческая текстура должна победить.
 
-Rows with missing objects, invalid/oversized PNG, unknown digest format, wrong source digest, unsupported model or type, unmatched target UUID, disabled cape permissions or exceeded quotas are not selected. The report is atomically written with mode 0600, recording per-row reasons; any `blocked`, `unmatched`, `quarantined`, or `skipped-existing` outcomes result in nonzero exit status while valid rows remain committed. Inspect report before repeating. An interrupted import can be repeated with the same source ID. Orphaned staging data and immutable objects are handled by the existing 0.25.3 garbage collector after its safety window.
+Записи с отсутствующими объектами, повреждёнными или слишком большими PNG, неизвестным форматом дайджеста, неправильным исходным хешем, неподдерживаемой моделью/типом, несопоставленным UUID цели, запретом плаща или превышенными квотами не выбираются. Отчёт атомарно записывается с правами 0600 и причинами для каждой строки; исходы `blocked`, `unmatched`, `quarantined` и `skipped-existing` дают ненулевой код завершения, хотя корректные строки уже зафиксированы. Проверьте отчёт до повтора. Прерванный импорт можно повторить с тем же ID источника. Осиротевшие подготовленные данные и неизменяемые объекты очищаются существующим сборщиком мусора 0.25.3 по завершении безопасного периода.
 
-## контрольный список проверки
+## Контрольный список проверки
 
-1. Start with a fresh backup; test dry run using valid, truncated, malformed, oversized, symlink-escaping, source-hash-mismatch and missing-object samples.
-2. Perform a small canary batch; inspect `texture_gravit_import_receipts`, `texture_assignment_revisions` and `texture_saved_items` and confirm original hashes are not treated as normalized hashes.
-3. Run twice: second execution must be `already-imported` without changing any revision. Re-test after a player changes their selection.
-4. Verify cape policies and quota denials, official account isolation, preview and signed Yggdrasil `textures` in a real client.
-5. Check local and S3 storage, backup/restore and GC. Keep original Gravit storage read-only until rollback/verification is complete.
+1. Создайте свежую резервную копию; проверьте пробный запуск на корректных, усечённых, повреждённых, слишком больших образцах, уходе за границы через символьные ссылки, несовпадении исходного хеша и отсутствующих объектах.
+2. Выполните небольшую пробную партию; изучите `texture_gravit_import_receipts`, `texture_assignment_revisions` и `texture_saved_items` и убедитесь, что исходные хеши не приравниваются к нормализованным.
+3. Запустите дважды: второй запуск должен вернуть `already-imported` без изменения ревизий. Повторите после того, как игрок сменит свой выбор.
+4. Проверьте политики плащей и отказы по квотам, изоляцию официальных аккаунтов, предварительный просмотр и подписанный Yggdrasil `textures` в настоящем клиенте.
+5. Проверьте локальное и S3-хранилище, резервное копирование, восстановление и сборщик мусора. Храните исходное Gravit-хранилище только для чтения до завершения проверки и возможности отката.
 
-**Certification limits:** PostgreSQL integration, a real source database, production S3/MinIO, and Minecraft end-to-end testing must be run in a provisioned environment. Unit tests are not substitutes for those checks.
+**Границы сертификации:** интеграционные тесты PostgreSQL, настоящая исходная БД, промышленный S3/MinIO и сквозные тесты Minecraft должны выполняться в подготовленной среде. Модульные тесты не заменяют эти проверки.
