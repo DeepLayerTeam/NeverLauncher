@@ -1,28 +1,14 @@
-# Launcher 0.22.0 — Admin GA приёмка и развёртывание
+# Launcher 0.22.0 — Admin GA: приёмка и развёртывание
 
-**Policy:** Changing `VERSION` to `0.22.0` is not evidence that the release passed
-GA. The deployable release is certified only when the exact-commit
-`Launcher Production Release Candidate` workflow and all its required
-platform, trust and Admin jobs have passed. Do not tag or distribute the source
-archive as a certified production release before then.
+**Политика:** изменение `VERSION` на `0.22.0` не доказывает прохождение GA. Пригодный к развёртыванию выпуск сертифицирован только после успешного `Launcher Production Release Candidate` для **точного коммита** и всех обязательных заданий платформ, доверия и Admin. Не ставьте тег и не распространяйте исходный архив как сертифицированный промышленный выпуск до выполнения условий.
 
-## область действия
+## Область действия
 
-This release completes the 0.21.6–0.21.12 Admin track without changing the
-ServerBridge protocol v3 or weakening release signing and server-side RBAC.
-Daily operations include project-scoped releases and rollback, durable job
-recovery, ServerBridge control/telemetry, devices/sessions, backup/restore,
-Extensions, typed live config and server-side audit search.
+Выпуск завершает этап Admin 0.21.6–0.21.12 без изменения ServerBridge v3, ослабления подписи релизов и серверного RBAC. Ежедневные операции охватывают выпуски и откаты в пределах проекта, восстановление долговременных заданий, управление/телеметрию ServerBridge, устройства/сеансы, резервное копирование/восстановление, расширения, типизированную оперативную конфигурацию и поиск по серверному аудиту.
 
-## обязательная сертификация (без имитаций и пропусков)
+## Обязательная сертификация без имитаций и пропусков
 
-Run from a **clean checkout of the intended release commit**, with pinned Go,
-Node and Python dependencies, PostgreSQL 16 via Docker and a dedicated staging
-installation. Staging must have a ready Backend **and** Admin frontend built
-from the **same source commit**, with `sourceCommit` embedded in Backend via
-`-X main.commit=<SHA>` and in Admin by `LAUNCHER_SOURCE_COMMIT=<SHA>`
-when Vite builds. CI Docker/release build paths propagate this build-time identity. The script checks the source commit against the
-caller-supplied `LAUNCHER_GA_SOURCE_SHA` and fails if the checkout is dirty.
+Запускайте из **чистого checkout целевого коммита** с закреплёнными зависимостями Go, Node, Python, PostgreSQL 16 через Docker и выделенным тестовым развёртыванием. Должны работать Backend **и** интерфейс Admin, собранные из **одного коммита**, с `sourceCommit` в Backend через `-X main.commit=<SHA>` и в Admin через `LAUNCHER_SOURCE_COMMIT=<SHA>` при сборке Vite. Пути Docker/релизной сборки передают эту идентичность. Скрипт сравнивает коммит с `LAUNCHER_GA_SOURCE_SHA` оператора и отклоняет грязное дерево.
 
 ```bash
 export LAUNCHER_GA_SOURCE_SHA="$(git rev-parse HEAD)"
@@ -35,94 +21,43 @@ export LAUNCHER_GA_SOURCE_SHA="$(git rev-parse HEAD)"
 bash scripts/release/certify-admin-ga-0220.sh
 ```
 
-The runner actually executes, and fails on any nonzero result:
+Исполнитель действительно запускает следующие этапы и останавливается при любом ненулевом результате:
 
-1. `python3 scripts/release/check-admin-ga-0220.py`: version, canonical OpenAPI,
-   repository safety checks, SHA-256 equality of **all** immutable migration
-   files in Backend and CLI, and full deterministic regeneration of 16 SDK
-   artifacts. It does not rewrite historical SQL migrations.
-2. `npm ci`, all Admin Node tests and `tsc && vite build` to a deployable Admin
-   bundle.
-3. Backend and CLI full `go test -race -count=1 ./...`, `go vet ./...` and
-   production Go builds.
-4. `e2e/scripts/run-admin-hardening-02112-e2e.sh` in real PostgreSQL (pgx):
-   concurrent config compare-and-swap, migrations, durable job recovery,
-   ServerBridge v3 enqueue/lease/ACK, inter-project access tests.
-5. `e2e/scripts/admin-hardening-02112-browser.py` against **real staging**:
-   actual Backend readiness/version/**source commit**, Admin version/source commit, two tabs editing the same
-   revision, network loss/reload, cross-project forbidden reads and login
-   accessibility labels. A test account and second inaccessible project must
-   be provisioned. The test may create/delete its own draft only.
-6. `e2e/scripts/admin-ga-0220-serverbridge.py` against an **actual disposable
-   Minecraft server with ServerBridge v3**, using a freshly MFA-authenticated
-   operator. It requires exact server ID and an explicit destructive-test
-   acknowledgement. It runs save, drain and undo-drain, waits for real
-   successful ACKs, and checks that identical idempotency keys do not enqueue
-   duplicate commands. `pending` or `leased` are **not** success. If ACK or
-   undrain fails, GA certification fails; investigate the staging server.
+1. `python3 scripts/release/check-admin-ga-0220.py`: версия, канонический OpenAPI, безопасность репозитория, совпадение SHA-256 **всех** неизменяемых миграций Backend/CLI, полная детерминированная генерация 16 артефактов SDK. Исторические SQL не переписываются.
+2. `npm ci`, все Node-тесты Admin и `tsc && vite build` промышленного пакета Admin.
+3. Полные `go test -race -count=1 ./...` и `go vet ./...` Backend/CLI, а также Go-сборки для production.
+4. `e2e/scripts/run-admin-hardening-02112-e2e.sh` с настоящим PostgreSQL (pgx): конкурентный CAS конфигурации, миграции, восстановление заданий, очередь/аренда/ACK ServerBridge v3, проверки доступа между проектами.
+5. `e2e/scripts/admin-hardening-02112-browser.py` на **настоящем тестовом стенде**: готовность/версия/**исходный коммит** Backend, версия и коммит Admin, две вкладки с одной ревизией, потеря сети/перезагрузка, запрещённое чтение чужого проекта и доступные подписи входа. Нужны тестовый аккаунт и второй недоступный проект; тест создаёт/удаляет только собственный черновик.
+6. `e2e/scripts/admin-ga-0220-serverbridge.py` на **настоящем одноразовом Minecraft-сервере ServerBridge v3** от имени оператора с недавним MFA. Необходимы точный ID сервера и явное согласие на разрушительные тесты. Запускаются save, drain, отмена drain, ожидание настоящих успешных ACK, проверка отсутствия дубликатов при одинаковых ключах идемпотентности. `pending` и `leased` **не считаются** успехом; неверный ACK или отмена drain блокирует GA.
 
-After **all** stages succeed, the runner writes
-`dist/ga-certification/admin-0220.json` with commit, source contract hash and
-built Admin asset hashes. Absence of this file means no GA certification.
-This JSON is test evidence, not a cryptographic signature, and does not replace
-product-wide platform/signing certificates.
+После успеха **всех** этапов формируется `dist/ga-certification/admin-0220.json` с коммитом, хешем контракта и хешами собранных ресурсов Admin. Отсутствие файла означает отсутствие сертификации. JSON — тестовое свидетельство, а не криптографическая подпись; оно не заменяет проверки подписи и платформ всего продукта.
 
-GitHub Actions `.github/workflows/production-release-candidate.yml` requires
-this result from `admin-ga-certification` after the complete base CI succeeds,
-and verifies the certificate's commit and version before bundling. Other
-required production certifications and signed artifacts remain independently
-mandatory. A missing staging URL, token, Docker, dependency, proof, or passing
-test **blocks** release; there is no fallback to unit-only or mocked tests.
+GitHub Actions `.github/workflows/production-release-candidate.yml` требует результат `admin-ga-certification` после полного базового CI и проверяет коммит/версию до упаковки. Остальные сертификаты и подписанные артефакты остаются обязательными независимо. Отсутствие тестового URL, токена, Docker, зависимостей, доказательств или успешного теста **блокирует** выпуск; перехода на одни unit-тесты или имитации нет.
 
-**Provenance limit:** the live probe validates the source commit ID **embedded
-at build time** in both Backend and Admin; this establishes build identity
-consistency but is not a cryptographic attestation on its own. Signed build
-provenance from the release pipeline and trusted staging deployment are still
-required. Do not treat a manually spoofed commit string as release proof.
+**Ограничение происхождения:** живая проверка сравнивает коммит исходников, **встроенный при сборке** в Backend и Admin. Это подтверждает согласованность идентичности сборки, но само по себе не является криптографической аттестацией. Нужны подписанное происхождение выпуска и доверенное тестовое развёртывание. Подставленная вручную строка коммита не является доказательством.
 
-## матрица эксплуатационной приёмки
+## Матрица эксплуатационной приёмки
 
-| Exit requirement | Certification proof |
+| Требование допуска | Подтверждение |
 |---|---|
-| Release-manager publishes and rolls back own project only | Project RBAC tests, release operations tests, live restricted-project denial |
-| Operator drains and saves world without shell | ServerBridge v3 integration plus live `server.save`, `server.drain`, undrain, signed ACK and replay against a disposable Minecraft server |
-| Jobs survive browser disconnect and replay remains idempotent | Admin network tests, PostgreSQL durable tests and real browser recovery |
-| User-facing access/field/server refusal is actionable | Structured error tests, Admin UI tests and manual UAT |
-| Sessions, devices, restore and extensions have confirmations and audit links | Admin test suite and manual staging UAT of destructive operations |
-| Config CAS and restore-as-new-revision | PostgreSQL concurrent revision test and two-tab browser CAS test |
-| Docs, SDK, migration parity and production build | Source audit, SDK regeneration, both SQL directories, tsc/Vite and Go builds |
+| Менеджер выпуска публикует и откатывает только свой проект | Тесты RBAC проекта, операций выпуска и запрета чужого проекта на живом стенде |
+| Оператор сохраняет мир и переводит сервер в drain без shell | Интеграция ServerBridge v3 и живые `server.save`, `server.drain`, отмена drain, подписанные ACK и повтор на одноразовом Minecraft-сервере |
+| Задания переживают разрыв связи браузера, повторы идемпотентны | Сетевые тесты Admin, долговременные тесты PostgreSQL и восстановление браузера |
+| Отказ доступа/поля/сервера понятен пользователю | Тесты структурированных ошибок, UI Admin и ручной UAT |
+| Сеансы, устройства, восстановление и расширения имеют подтверждения и аудит | Набор тестов Admin и ручная UAT разрушительных операций |
+| CAS конфигурации и восстановление новой ревизией | Конкурентный тест PostgreSQL и двухвкладочный браузерный CAS |
+| Документация, SDK, миграции и промышленная сборка согласованы | Аудит исходников, повторная генерация SDK, оба каталога SQL, сборки tsc/Vite и Go |
 
-**Manual UAT is additionally required** for actual player kick/broadcast,
-backup/restore with
-disposable real data, step-up/MFA, passkeys, extension host lifecycle and
-keyboard/screen-reader accessibility. Automations listed above do not
-constitute proof of these physical/interactive scenarios by themselves. Record
-evidence on the release issue before production approval.
+**Дополнительная ручная UAT обязательна** для реального удаления игрока/рассылки, копирования/восстановления одноразовых настоящих данных, step-up/MFA, passkeys, жизненного цикла Extension Host и доступности с клавиатуры/скринридером. Автоматизация выше сама по себе не доказывает эти физические и интерактивные сценарии. Зафиксируйте подтверждения в задаче выпуска до одобрения production.
 
-## развёртывание и откат
+## Развёртывание и откат
 
-1. Back up PostgreSQL and object storage. Verify the restore procedure on an
-   isolated instance. Check active sessions/jobs and ServerBridge health.
-2. Test SQL migration upgrades from the deployed schema with Backend and CLI
-   migration tools. **Do not edit applied migration files**, or run the CLI
-   with a migration catalog older than Backend. Upgrades through
-   `0055_config_audit_02111.sql` must be applied and verified before traffic.
-3. Deploy the certified API, Admin and CLI for the *same release commit*;
-   verify `GET /ready` returns `ready`, `GET /api/v1/status` returns `0.22.0`
-   and the expected `sourceCommit`, and the Admin footer displays `0.22.0`
-   with the correct source commit embedded in its page metadata.
-4. Exercise RBAC on two disposable projects, check publish/rollback and
-   ServerBridge command acknowledgements, audit correlation, config history,
-   and job recovery in a staging/sandbox project before enabling production.
-5. To roll back a failed **application** deployment, restore the previous
-   application build and its compatible schema, **not** blindly down-migrate
-   the database. Do not run an older Backend or CLI against newer unknown SQL
-   migration versions. Use tested backup/restore for incompatible rollback;
-   preserve job idempotency records and audit trail. Release channel rollback
-   is a separate durable operation and does not restore database schema.
+1. Скопируйте PostgreSQL и объектное хранилище; проверьте восстановление на изолированном экземпляре. Оцените активные сеансы, задания и состояние ServerBridge.
+2. Проверьте SQL-обновление от установленной схемы средствами Backend и CLI. **Не меняйте применённые миграции** и не запускайте CLI с каталогом старее Backend. Обновления до `0055_config_audit_02111.sql` должны быть выполнены и проверены до трафика.
+3. Разверните сертифицированные API, Admin и CLI из **одного коммита**. Убедитесь, что `GET /ready` даёт `ready`, `GET /api/v1/status` — `0.22.0` и ожидаемый `sourceCommit`, а нижний колонтитул Admin показывает `0.22.0` с правильным коммитом в метаданных страницы.
+4. На двух одноразовых проектах проверьте RBAC, публикацию/откат, ACK ServerBridge, корреляцию аудита, историю конфигурации и восстановление заданий до включения производства.
+5. При неудачной установке **приложения** верните предыдущую сборку и совместимую схему, **не** выполняя бездумно обратные миграции. Не запускайте старые Backend/CLI на неизвестных новых SQL. Для несовместимого отката используйте проверенные копии, сохраните идемпотентность заданий и аудит. Откат канала выпуска — отдельная долговременная операция, не восстанавливающая схему БД.
 
-## локально не подтверждено
+## Локально не подтверждено
 
-On machines without npm/Go modules and Docker, static checks may pass while the
-mandatory full production, PostgreSQL/ServerBridge and browser gates remain
-**unexecuted**. In that case 0.22.0 source is a *candidate*, **not certified GA**.
+На компьютере без модулей npm/Go и Docker статические проверки могут проходить, пока полные промышленные проверки PostgreSQL/ServerBridge и браузерные этапы остаются **невыполненными**. В таком случае исходники 0.22.0 — **кандидат, а не сертифицированный GA**.

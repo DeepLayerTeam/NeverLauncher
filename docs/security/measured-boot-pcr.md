@@ -1,30 +1,16 @@
 # Launcher 0.31.5 — TPM2 Quote, измеряемая загрузка и проверка PCR
 
-## гарантии и ограничения
+## Гарантии и ограничения
 
-This version **cryptographically verifies TPM2 Quote**, compares a single
-SHA-256 PCR bank with an **operator-approved** exact PCR-value allowlist, pins
-the Quote's AK certificate to the AK already verified via TPM2 Certify for the
-**same user/device/session/binding epoch**, and consumes one-time challenges.
+Версия **криптографически проверяет TPM2 Quote**, сравнивает один банк PCR SHA-256 с **утверждённым оператором** списком точных значений PCR, привязывает сертификат AK из Quote к уже проверенному через TPM2 Certify AK для **того же пользователя, устройства, сеанса и эпохи привязки** и использует одноразовые вызовы-подтверждения.
 
-A verified Quote establishes only that the enrolled TPM AK signed the reported
-PCR digest and that these PCR values match an active operator policy.
-**It does not attest the active Guard process, JVM bytecode or user-mode memory.**
-The Guard/strict-device profile remains independently governed by Guard checks.
-There is no silent fallback to software evidence, generic TPM provider claims,
-missing PCR measurements or an unsigned policy.
+Успешный Quote подтверждает только то, что зарегистрированный TPM AK подписал представленный дайджест PCR и что эти значения соответствуют активной политике оператора. **Это не удостоверяет работающий процесс Guard, байткод JVM или память процесса пользователя.** Режим Guard/strict-device отдельно контролируется проверками Guard. Нет автоматического перехода на программные доказательства, произвольных заявлений TPM-провайдера, отсутствующих измерений PCR или неподписанной политики.
 
-## развёртывание
+## Развёртывание
 
-Provision a trusted AK issuer and root store as for 0.31.2–0.31.4. Set
-`LAUNCHER_TPM_AK_ROOTS_FILE` to the operator-controlled absolute path.
-Separately set `LAUNCHER_TPM_PCR_POLICY_FILE` to an absolute JSON policy
-file, writable by the backend operator only (never writable by the launcher
-user, an extension or the untrusted service worker).
+Подготовьте доверенного издателя AK и хранилище корней как в 0.31.2–0.31.4. Установите `LAUNCHER_TPM_AK_ROOTS_FILE` в абсолютный путь под контролем оператора. Отдельно укажите `LAUNCHER_TPM_PCR_POLICY_FILE` — абсолютный путь к JSON-политике, доступной для записи только оператору Backend (никогда пользователю Launcher, расширению или недоверенному служебному процессу).
 
-Example policy (replace values with **independently measured, approved**
-SHA-256 PCR digests from supported boot configurations; example values do not
-represent an approved real system):
+Пример политики (замените значения **независимо измеренными и утверждёнными** PCR SHA-256 для поддерживаемой конфигурации загрузки; образцы не относятся к одобренной реальной системе):
 
 ```json
 {
@@ -45,65 +31,27 @@ represent an approved real system):
 }
 ```
 
-Choose the PCR set based on the platform's measured-boot design and threat
-model. For Windows/UEFI policies, pin approved Secure Boot and boot-path
-measurements. For Linux, policy must match the actual firmware/bootloader and
-chosen boot path; PCR 7 alone is not a complete measured-boot policy. Maintain
-separate IDs for different approved images and configurations. Independently
-validate expected PCRs (including boot event log and image verification) before
-allowlisting. **Never enroll the first PCR values submitted by a client.**
+Выбирайте PCR на основании модели угроз и устройства measured boot конкретной платформы. Для Windows/UEFI закрепляйте утверждённые измерения Secure Boot и цепочки загрузки. Для Linux политика должна соответствовать фактическим прошивке, загрузчику и пути загрузки; одного PCR 7 недостаточно. Для разных утверждённых образов и конфигураций используйте разные ID. Независимо сверяйте ожидаемые PCR, включая журнал событий загрузки и проверку образа, прежде чем добавлять в allowlist. **Никогда не регистрируйте как доверенные первые PCR, сообщённые клиентом.**
 
-## протокол
+## Протокол
 
-1. Register a hardware P-256 identity, bind the current device session, and
-   complete the existing TPM2 Certify challenge successfully.
-2. `POST /api/v1/auth/devices/{deviceId}/measured-boot/begin?policyId=<id>`
-   with bearer token. Requires active pinned TPM Certify, a known active policy
-   and current session epoch. Returns an unpredictable challenge, expiration,
-   `sha256:` PCR selection, policy hash and domain-separated TPM extraData.
-3. Desktop (Windows PCP/TBS or Linux `tpm2-tools`) asks the same TPM AK to
-   sign TPM2_Quote with the 32-byte server qualifier. It reads selected PCR
-   values; they are *untrusted until validated against the signed quote*.
-4. `POST .../measured-boot/complete` sends `challengeId`, `challenge` and
-   `evidence` containing `tpm2bAttest`, `tpmtSignature`, `pcrValues`,
-   `akCertificatePem`, optional `intermediatesPem`.
-5. Backend **atomically consumes** the challenge, re-checks session/epoch and
-   root+AK pin, validates TPM magic/TPM_ST_ATTEST_QUOTE, full extraData,
-   exact SHA-256 PCR bitmap, digest SHA256(concat(selected PCR values in index
-   order)), operator-approved values, AK signature and X.509 chain. Successful
-   results are stored separately from device-key and Guard attestations.
-6. `GET /api/v1/auth/devices/{deviceId}/measured-boot` returns only an active
-   status. Root revocation, expired evidence, policy file changes, changed
-   device binding and session epoch invalidate the status. Evidence lifetime
-   is capped at 5 minutes and by the AK+policy expiration.
+1. Зарегистрируйте аппаратную идентичность P-256, привяжите текущий сеанс устройства и успешно завершите существующий вызов TPM2 Certify.
+2. Выполните `POST /api/v1/auth/devices/{deviceId}/measured-boot/begin?policyId=<id>` с bearer-токеном. Требуются активный закреплённый TPM Certify, известная активная политика и текущая эпоха сеанса. Возвращаются непредсказуемый вызов, срок действия, выбор PCR `sha256:`, хеш политики и разделённые по домену данные TPM extraData.
+3. Desktop (Windows PCP/TBS или Linux `tpm2-tools`) просит **тот же AK** подписать TPM2_Quote с 32-байтовым квалификатором сервера. Выбранные PCR до проверки подписи Quote **не считаются доверенными**.
+4. В `POST .../measured-boot/complete` передаются `challengeId`, `challenge` и `evidence` с `tpm2bAttest`, `tpmtSignature`, `pcrValues`, `akCertificatePem` и необязательными `intermediatesPem`.
+5. Backend **атомарно расходует** вызов, повторно сверяет сеанс/эпоху и закреплённые root+AK, проверяет TPM magic/TPM_ST_ATTEST_QUOTE, полные extraData, точную карту PCR SHA-256, дайджест SHA256(concat(выбранные PCR по возрастанию индексов)), утверждённые значения, подпись AK и цепочку X.509. Успех сохраняется отдельно от аттестации ключа устройства и Guard.
+6. `GET /api/v1/auth/devices/{deviceId}/measured-boot` выдаёт только активное состояние. Отзыв корня, истечение доказательства, изменение файла политики, привязки устройства или эпохи сеанса аннулируют статус. Срок — не более 5 минут и не дольше действия AK/политики.
 
-**Failure modes:** missing TPM 2.0, missing trusted AK, unsupported PCR bank,
-unknown PCR policy, malformed or replayed challenge, quote digest mismatch,
-revoked AK/root, policy rotation, old session epoch → fail closed.
+**Отказы:** отсутствие TPM 2.0 или доверенного AK, неподдерживаемый банк PCR, неизвестная политика, повреждённый или повторно использованный вызов, несовпадение дайджеста Quote, отзыв AK/корня, смена политики и устаревшая эпоха сеанса приводят к отказу без понижения требований.
 
-## требования Linux
+## Требования Linux
 
-Access to `/dev/tpmrm0`, `tpm2-tools` 5.x (at fixed `/usr/bin` paths), a
-pre-provisioned persistent AK (`0x81xxxxxx`) with a trusted issuer certificate,
-and permission to use the TPM. Commands are invoked without a shell, with
-bounded timeouts, and the fixed TPM Resource Manager TCTI.
-`TPM2_Quote` and `PCR_Read` are separate operations. PCR values changing between
-the operations cause a signed digest mismatch and rejection, not downgrade.
+Доступ к `/dev/tpmrm0`, `tpm2-tools` 5.x по фиксированным путям `/usr/bin`, заранее созданный постоянный AK (`0x81xxxxxx`) с сертификатом доверенного издателя и право использовать TPM. Команды запускаются без оболочки, с ограниченным временем и фиксированным TCTI диспетчера ресурсов TPM. `TPM2_Quote` и `PCR_Read` — отдельные операции. Если PCR изменятся между ними, проверка подписи дайджеста завершится отказом, а не понижением требований.
 
-## требования Windows
+## Требования Windows
 
-Windows Platform Crypto Provider and TPM Base Services (TBS), an enrolled AK
-accessible as a PCP key, an AK certificate issued by the trusted CA and TPM
-authorization compatible with empty-password AK sessions. Machines requiring
-other authorization sessions fail closed. No software quote is synthesized.
+Windows Platform Crypto Provider и TPM Base Services (TBS), зарегистрированный AK как ключ PCP, сертификат AK от доверенного CA и авторизация TPM, совместимая с сеансами AK с пустым паролем. Компьютеры, требующие иной авторизации, блокируются. Программный Quote не создаётся.
 
-## проверка и утверждение промышленного выпуска
+## Проверка и утверждение промышленного выпуска
 
-`go test -race -count=1 ./internal/attestverify ./internal/trustbaseline`
-from `services/api`. Windows/Linux compile/test in
-`.github/workflows/measured-boot-pcr-0315.yml`. A real production signoff
-requires fresh TPM 2.0 evidence on Windows and Linux with trusted EK/AK
-provisioning, cold-boot baseline validation and negative hardware experiments
-(replay, PCR mutation, wrong AK/chain/root, session/key rotation, AK revoke,
-expired cert, policy update), plus PostgreSQL migration/application tests.
-CI builds on hosted virtual machines do not substitute for physical TPM tests.
+Из `services/api` выполните `go test -race -count=1 ./internal/attestverify ./internal/trustbaseline`. Сборка и тесты Windows/Linux описаны в `.github/workflows/measured-boot-pcr-0315.yml`. Для промышленной приёмки нужны свежие подтверждения реальных TPM 2.0 на Windows и Linux с доверенным EK/AK, сверка эталона холодной загрузки и негативные аппаратные испытания (повтор, изменение PCR, неверные AK/цепочка/корень, смена сеанса/ключа, отзыв AK, истекший сертификат, обновление политики), а также проверка миграций PostgreSQL и работы приложения. CI на виртуальных машинах не заменяет испытания физических TPM.

@@ -1,27 +1,27 @@
 # Launcher 0.42.3 — EventBus, хуки, RPC JVM и долговременное хранилище Runtime
 
-This release changes **executable behavior**, not protocol identifiers. Host Protocol, Event Protocol and Extension API stay at `1.0`. No new public endpoint or manifest format is required.
+В выпуске изменено **исполняемое поведение**, а не идентификаторы протоколов. Host Protocol, Event Protocol и Extension API сохраняют версию `1.0`. Новые публичные конечные точки и форматы манифеста не нужны.
 
-## жизненный цикл доставки и подписчиков
+## Жизненный цикл доставки и подписчиков
 
-- The Go EventBus records events and deliveries in its existing durable repository. A worker acquires **one lease immediately before each callback**, leaving the remainder of a batch unleased until ready; this prevents idle leases expiring while an earlier callback is running. Callback deadlines use 90% of the lease duration, reserving time for acknowledgement/retry.
-- Delivery is **at least once**, not exactly once. Callback handlers must make external effects idempotent by the supplied `event.id`, `idempotencyKey`, or their own transactional state. On failure the existing bounded retry/dead-letter mechanism applies. Restarting the worker does not lose existing pending deliveries.
-- `RuntimeEvents.close()` stops **local** Java handlers and keeps the server-side subscription so events produced during normal extension downtime can be queued and resumed on restart. `RuntimeEvents.subscribe(type, mode, ...)` upserts the persisted binding when the JVM starts again. To permanently stop listening, call `RuntimeEvents.unsubscribe(type, mode)` before shutting down. Removing an extension through lifecycle management remains a separate administrative operation; normal shutdown no longer acts as an unsubscribe.
-- A stale event with a removed/disabled installation is not delivered by the store; the installed extension and live broker policy remain authoritative. Changing a declared hook between versions may require an explicit unsubscribe/migration; it must not be done implicitly on every JVM stop.
+- Go EventBus сохраняет события и доставки в существующем долговременном репозитории. Рабочий процесс получает **одну аренду непосредственно перед каждым callback**, оставляя остальные элементы пакета без аренды до момента обработки. Это предотвращает истечение аренды во время длительного предыдущего callback. Срок callback равен 90% времени аренды, остаток зарезервирован для подтверждения или повторной попытки.
+- Гарантия доставки — **не менее одного раза**, а не ровно один раз. Обработчики обязаны обеспечивать идемпотентность внешних эффектов по `event.id`, `idempotencyKey` либо собственному транзакционному состоянию. При сбое действуют существующие ограниченные повторы и очередь невыполненных доставок. Перезапуск рабочего процесса не теряет ожидающие доставки.
+- `RuntimeEvents.close()` останавливает **локальные** Java-обработчики, сохраняя серверную подписку: события во время обычного простоя расширения могут накапливаться и доставляться после перезапуска. `RuntimeEvents.subscribe(type, mode, ...)` при новом запуске JVM обновляет или создаёт сохранённую привязку. Для окончательной отмены прослушивания перед остановкой вызовите `RuntimeEvents.unsubscribe(type, mode)`. Удаление расширения через управление жизненным циклом — отдельная административная операция; штатное выключение больше не эквивалентно отписке.
+- Событие для удалённой или отключённой установки не доставляется хранилищем; источником истины остаются установка расширения и актуальная политика брокера. Изменение объявленного хука между версиями может требовать явной отписки или миграции, но не неявной отписки при каждом завершении JVM.
 
-## ограничения вызовов JVM и команд
+## Ограничения вызовов JVM и команд
 
-- The existing EventBus permits canonical payloads up to 1 MiB. Java `/v1/events` and `/v1/hooks` now accept bounded envelopes **up to 2 MiB**, accommodating the payload plus metadata/escapes. Calls over 2 MiB return HTTP 413. They remain authenticated and loopback-only, with the same bounded handler pool and timeout; event schema validation still runs before extension code.
-- Java `/v1/commands` and `/v1/rpc` stay at **64 KiB request/response limits**, including RPC deadline and request-ID verification. Command handlers returning JSON `null` are correctly serialized rather than failing with HTTP 422.
-- A synchronous hook that throws returns a non-success response; the Go caller fails closed instead of proceeding with publication. Hook callbacks are never considered successful on a timeout.
+- Существующий EventBus принимает канонические данные до 1 МиБ. Java `/v1/events` и `/v1/hooks` теперь принимают ограниченные оболочки **до 2 МиБ** с учётом метаданных и экранирования. Превышение возвращает HTTP 413. Сохраняются аутентификация, доступ только через loopback, ограниченный пул обработчиков и тайм-аут; схему события проверяют до запуска кода расширения.
+- Для Java `/v1/commands` и `/v1/rpc` сохраняются ограничения **64 КиБ на запрос и ответ**, срок RPC и проверка request-ID. JSON `null` от обработчика теперь сериализуется корректно, без ошибочного HTTP 422.
+- Исключение синхронного хука приводит к неуспешному ответу: вызывающая сторона Go запрещает продолжение публикации. Тайм-аут callback никогда не считается успехом.
 
-## долговременные документы JSON
+## Долговременные документы JSON
 
-- `runtime.config.*` and `runtime.storage.*` use the existing Go broker on the configured `ExtensionRoot`, isolated by extension ID and scope. Values are validated, atomically renamed on update, and guarded by live `storage:read`/`storage:write` permissions. The service also makes a best-effort directory sync after delete, matching rename behavior. Limits remain 128 KiB per document, 256 documents and 4 MiB per extension/scope.
-- This is **node-local filesystem durability**, not a claim of distributed writable storage across multiple independent `ExtensionRoot` hosts. In an HA deployment arrange for consistent ownership and a verified supported storage topology; the per-process mutex does not provide a cross-node quota lock.
-- Invalid multi-document JSON event input is rejected rather than silently accepting only its first value.
+- `runtime.config.*` и `runtime.storage.*` используют существующий брокер Go в настроенном `ExtensionRoot`, с изоляцией по ID расширения и области. Значения проверяются и при обновлении заменяются атомарным переименованием; действуют актуальные разрешения `storage:read`/`storage:write`. После удаления служба по возможности синхронизирует каталог, как при переименовании. Пределы: 128 КиБ на документ, 256 документов и 4 МиБ на расширение/область.
+- Это **долговременное хранение файлов на одном узле**, а не распределённое доступное для записи хранилище разных хостов `ExtensionRoot`. Для HA обеспечьте согласованное владение и проверенную поддерживаемую топологию. Мьютекс процесса не блокирует квоты между узлами.
+- Некорректный ввод нескольких JSON-документов отклоняется целиком, вместо молчаливого принятия первого значения.
 
-## воспроизводимые проверки
+## Воспроизводимые проверки
 
 ```sh
 sh sdk/java/core/build.sh test
@@ -33,8 +33,8 @@ go test -race -count=1 -run 'Test.*(0206|0423)' ./internal/eventbus ./internal/r
 go test -race -count=1 -run 'TestRuntime.*(0303|0423)' ./internal/extensionhost
 ```
 
-The JVM tests use real Java processes, authenticated HTTP callbacks, broker operations and typed CLI invocations, including shutdown/restart and re-registration. The Go tests cover durable replay across Bus worker restarts, independent lease acquisition while a callback blocks, invalid JSON rejection, and recovery of on-disk broker documents across restarted Supervisors. **Tests requiring Go 1.27.3 or live PostgreSQL/production release attestations must execute in CI or the intended environment; a Java-only pass is not product-wide certification.**
+JVM-тесты используют настоящие Java-процессы, аутентифицированные HTTP callback, операции брокера, типизированные вызовы CLI, остановку/перезапуск и повторную регистрацию. Go-тесты проверяют восстановление долговременной доставки после перезапуска EventBus, независимое получение аренды во время блокирующего callback, отказ некорректному JSON и восстановление документов брокера с диска после перезапуска Supervisor. **Тесты с Go 1.27.3, реальным PostgreSQL или промышленными подтверждениями выпуска должны выполняться в CI либо целевой среде. Успешный Java-тест не сертифицирует весь продукт.**
 
-## сохранённые ограничения
+## Сохранённые ограничения
 
-Do not treat Java extension code as OS-sandboxed or infer Gravit binary compatibility. Full 0.42.3 production release approval still requires the project's current mandatory ServerBridge, signing, target matrix, negative-path and final artifact checks. This patch does not provide those signed acceptance artifacts.
+Не считайте Java-код расширения изолированным на уровне ОС и не делайте выводов о бинарной совместимости с Gravit. Для промышленного выпуска 0.42.3 по-прежнему требуются обязательные проверки ServerBridge, подписи, матрицы целевых платформ, негативных сценариев и конечных артефактов. Этот патч не предоставляет подписанных подтверждений такой приёмки.

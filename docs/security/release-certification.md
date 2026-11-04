@@ -1,16 +1,16 @@
 # Сертификация и поставка релиза
 
-## Что проверять
+## Обязательные проверки
 
-1. `VERSION`, lockfiles и схемы согласованы.
-2. `schemas/openapi.yaml` проходит контрактную проверку.
-3. Offline gates подтверждают security invariants, а не просто присутствие комментариев.
-4. Go/Rust/TypeScript/Java тесты успешны; реальный Minecraft Client и loader прошли предусмотренные матрицы.
-5. Сформированы и проверены certificate/evidence для **этого commit SHA**, ОС и архитектур.
-6. Манифесты, packages, Guard/Bridge/JRE и release-артефакты подписаны согласно политикам поставки.
-7. Перед публичной выдачей выполнены production preflight, backup и smoke.
+1. Версия в `VERSION`, файлы блокировки зависимостей и схемы согласованы.
+2. Файл `schemas/openapi.yaml` проходит проверку контракта.
+3. Автономные проверки подтверждают инварианты безопасности, а не простое наличие комментариев.
+4. Успешны тесты Go, Rust, TypeScript и Java; реальные клиент Minecraft и загрузчик прошли предписанные матрицы.
+5. Сформированы и проверены сертификаты и подтверждающие материалы для **этого SHA коммита**, ОС и архитектуры.
+6. Манифесты, пакеты, Guard, Bridge, JRE и артефакты релиза подписаны согласно политике поставки.
+7. Перед публикацией выполнены предварительная проверка рабочего окружения, резервное копирование и дымовые тесты.
 
-## Локальные контракты
+## Локальные проверки контрактов
 
 ```bash
 python3 scripts/version/manage.py check
@@ -19,18 +19,14 @@ python3 scripts/release/test_fetch_exact_certifications.py
 python3 scripts/smoke/offline/repository-policy.py
 ```
 
-`LAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh` — строгий режим проверок, зависящий от платформы и установленного toolchain. `scripts/release/fetch-exact-certifications.py` работает с сертификатами GitHub, не должен пересылать auth bearer на адреса артефактов. Не встраивайте токены в публичные URL.
+`LAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh` запускает строгие проверки с учётом платформы и установленного набора инструментов. `scripts/release/fetch-exact-certifications.py` работает с сертификатами GitHub и не должен передавать bearer-токен авторизации на адреса хранения артефактов. Не включайте токены в публичные URL.
 
-## Принцип честной сертификации
+## Принцип достоверной сертификации
 
-Отсутствующее, просроченное, подменённое, не относящееся к SHA или неуспешное evidence **запрещает** маркировку как certified. PASS нельзя получать путём исключения обязательного теста или отключения Guard. Особенно внимательно проверяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/extensions-ga-0210.yml`, `.github/workflows/production-release-candidate.yml`.
+Отсутствующее, просроченное, подменённое, не соответствующее SHA или неуспешное подтверждение **запрещает** помечать выпуск как сертифицированный. Результат PASS нельзя получать путём исключения обязательных тестов или отключения Guard. Особое внимание уделяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/extensions-ga-0210.yml`, `.github/workflows/production-release-candidate.yml`.
 
-См. [troubleshooting/ci](../troubleshooting/ci.md) и [COMPATIBILITY.md](../../COMPATIBILITY.md).
+См. [устранение неполадок CI](../troubleshooting/ci.md) и [матрицу совместимости](../../COMPATIBILITY.md).
 
-## Контроль допуска Profile/Workspace 0.23.0
+## Проверка допуска Profile/Workspace 0.23.0
 
-`python3 scripts/release/certify-profiles-ga-0230.py` runs actual unit,
-HTTP and PostgreSQL E2E tests with the Go race detector and rejects missing or
-skipped cases. It requires `LAUNCHER_TEST_POSTGRES_DSN` and the exact
-source SHA. Production release candidate requires its passed artifact, tied
-to the current commit. See [Profile/Workspace GA](../releases/profile-workspaces-0230.md).
+`python3 scripts/release/certify-profiles-ga-0230.py` запускает реальные модульные, HTTP- и PostgreSQL E2E-тесты с детектором гонок Go и отклоняет результат при отсутствующих или пропущенных сценариях. Необходимы `LAUNCHER_TEST_POSTGRES_DSN` и точный SHA исходного кода. Для кандидата в рабочий релиз обязателен успешно пройденный сертификат, привязанный к текущему коммиту. См. [приёмку профилей и рабочих областей](../releases/profile-workspaces-0230.md).

@@ -2,43 +2,43 @@
 
 ## Гарантии и граница доверия
 
-- The capability registry runs **on the worker**, not in CI configuration. It verifies the actual selected Java binary, native display and OpenGL renderer, OS and architecture. GPU inventory, PID, `DISPLAY` alone, a completed timeout and an uploaded JSON are **not** positive startup evidence.
-- Supported OS/architectures: Windows amd64/arm64, Linux amd64/arm64, macOS amd64/arm64. A host which cannot actually supply the GUI driver, desktop session, renderer or required permission returns **blocked**. Hardware compatibility is **not** certified by being listed here.
-- Headless runner downloads **the exact staged package bytes** with the limited grant, performs normal transactional `client install`/`verify`, and reports all GUI/runtime stages as `blocked`. A headless pass **never** proves startup, matching server, gameplay or V09.
-- The Linux pinned OCI worker is still the only independently attested runtime in V04/V06. A Windows/macOS **observational** run is not independently signed ValidationEvidence and cannot grant stable publication. Other architectures must have a separately approved trusted attestation worker; this release does not silently convert native CI artifacts into signed evidence.
-- Backend stable publication remains fail-closed.
+- Реестр возможностей работает **на исполнителе**, а не в конфигурации CI. Он проверяет выбранный исполняемый файл Java, настоящий дисплей и рендерер OpenGL, ОС и архитектуру. Наличие GPU в списке, PID, одного `DISPLAY`, завершившегося тайм-аута либо загруженного JSON **не подтверждает запуск**.
+- Поддерживаемые пары: Windows amd64/arm64, Linux amd64/arm64, macOS amd64/arm64. Если хост не может обеспечить GUI-драйвер, сеанс рабочего стола, рендерер или права, результат — **blocked**. Само присутствие платформы в списке не сертифицирует оборудование.
+- Исполнитель без GUI загружает **точные байты подготовленного пакета** с ограниченным разрешением, выполняет обычные транзакционные `client install`/`verify` и отмечает все этапы GUI/Runtime как `blocked`. Успешный headless-этап **не доказывает** запуск, подключение к нужному серверу, игровой процесс или V09.
+- Linux OCI с закреплённой версией пока остаётся единственным независимо аттестованным Runtime V04/V06. **Наблюдательный** прогон Windows/macOS не является независимо подписанным ValidationEvidence и не разрешает стабильную публикацию. Для других архитектур нужен отдельно утверждённый доверенный исполнитель аттестации; обычные артефакты CI не становятся подписанными подтверждениями.
+- Публикация стабильного выпуска Backend остаётся запрещающей по умолчанию при ошибке.
 
-## предварительные требования
+## Предварительные требования
 
-- Dedicated self-hosted OS user, no production data or signing keys, disposable worker VM/snapshot; outbound connections allowlisted for staged delivery, live provider and pinned server dependencies. Do not run GUI E2E unattended on a shared interactive workstation.
-- `python >=3.11`, Go toolchain from `cli/go.mod`, Rust toolchain for `Runtime`, Java runtimes for all supported target majors, real staged package grant/operator credentials, exact prior-release and pinned ServerBridge artifacts, properly authorized real-provider test accounts. No mock provider for V07.
-- GUI workers require `psutil`, Pillow, `glfw`, `PyOpenGL`, `pynput`, Tesseract (English OCR) and a working native desktop. **macOS:** additionally `pyobjc-framework-Quartz`, Screen Recording and Accessibility grants for the dedicated agent account. **Windows:** unlocked interactive desktop; service session 0 / disconnected RDP is blocked. **Linux:** `DISPLAY`, `xwininfo`, `xprop`, `scrot`, `identify`, `tesseract`, `glxinfo`, `xdotool`, functional GLX/OpenGL (software renderer accepted if functional). No assumption that a GitHub-hosted runner is GUI-capable.
-- GUI proof is only for an English main menu with two recognizable Minecraft controls and an actual window belonging to the selected Java binary. Other localizations/themes require separate real probes; they are not auto-certified.
-- On Windows, modded matching servers may use a pinned `run.bat` or direct Java JAR; Unix `run.sh` is rejected. Windows local workers need Git Bash if using the supplied workflow. Headless does not run a matching server.
+- Выделенный пользователь ОС на собственном исполнителе, без промышленных данных и ключей подписи; одноразовая VM/снимок. Исходящие соединения ограничиваются необходимыми хостами доставки подготовленного пакета, реального провайдера и закреплённого сервера. Не запускайте автоматические GUI E2E на общем интерактивном компьютере.
+- `python >=3.11`, Go из `cli/go.mod`, инструменты Rust для Runtime, Java нужных основных версий, действительные разрешения подготовленного пакета/учётные данные оператора, точные артефакты предыдущего выпуска и закреплённого ServerBridge, разрешённые тестовые аккаунты реального провайдера. Подмена провайдера в V07 запрещена.
+- Для GUI нужны `psutil`, Pillow, `glfw`, `PyOpenGL`, `pynput`, Tesseract (английский OCR) и настоящий рабочий стол. **macOS:** дополнительно `pyobjc-framework-Quartz` и разрешения Screen Recording/Accessibility для выделенного аккаунта. **Windows:** разблокированный интерактивный рабочий стол; сеанс службы 0 или разорванный RDP блокируются. **Linux:** `DISPLAY`, `xwininfo`, `xprop`, `scrot`, `identify`, `tesseract`, `glxinfo`, `xdotool`, работающий GLX/OpenGL (допускается программный рендерер). Не считайте обычный GitHub-hosted runner пригодным для GUI.
+- Подтверждение GUI охватывает только англоязычное главное меню с двумя узнаваемыми элементами Minecraft и реальным окном, принадлежащим выбранному Java-процессу. Другие языки и темы требуют собственных проверок.
+- В Windows модифицированный целевой сервер может запускаться закреплённым `run.bat` либо непосредственным Java JAR; Unix `run.sh` отклоняется. Локальным Windows-исполнителям требуется Git Bash для поставляемого workflow. Headless-режим не запускает целевой сервер.
 
 ## CI и локальное выполнение
 
-`native-runtime-v10-03410.yml` is opt-in `workflow_dispatch` (package ID, OS, architecture, execution mode). A matching dedicated runner must bear **all** labels: `self-hosted`, `nl-validation`, `nl-<os>`, `nl-<arch>`, `nl-<mode>`. Only explicitly provisioned runners execute these jobs. Jobs compile the real production CLI and Runtime, run platform probes, use a private per-job temporary directory, and export a restricted set of JSON diagnostics. Failure or lack of a renderer means **BLOCKED**, not false incompatible-Minecraft **FAILED**. The published CI artifact is observational.
+`native-runtime-v10-03410.yml` запускается вручную через `workflow_dispatch` с ID пакета, ОС, архитектурой и режимом исполнения. Выделенный исполнитель должен иметь **все** метки: `self-hosted`, `nl-validation`, `nl-<os>`, `nl-<arch>`, `nl-<mode>`. Задания запускаются только на явно подготовленных исполнителях. Собираются реальные промышленные CLI и Runtime, выполняются проверки платформы и ограниченный прогон в отдельном временном каталоге; наружу выдаётся только разрешённый набор диагностических JSON. Отсутствие рендерера означает **BLOCKED**, а не ложный **FAILED** из-за несовместимости Minecraft. Артефакт CI имеет только наблюдательный характер.
 
-Manual capability check, with an actual executable Java path:
+Проверка возможностей вручную с настоящим исполняемым файлом Java:
 
 ```sh
 python3 e2e/scripts/runtime_capabilities_03410.py --mode gui --java /path/to/java --output /tmp/nl-capability.json
 ```
 
-Exit 0 means the worker is ready to **attempt** the chosen scenario, not that Minecraft works. Exit 3 means blocked. The report contains actual renderer version and Java SHA-256. A nonempty `blockers` array always prevents positive readiness.
+Код выхода 0 означает готовность исполнителя **попытаться** выполнить сценарий, а не успешную работу Minecraft. Код 3 означает блокировку. Отчёт содержит фактическую версию рендерера и SHA-256 Java. Непустой массив `blockers` всегда исключает положительную готовность.
 
-Use `run_native_validation_03410.py --mode gui --report-dir /safe/reports -- [run-staged-package flags, excluding --output]` for the bounded and isolated observational run. For headless use `--mode headless` and do not present completion as gameplay. Worker stdout/stderr are not exported because they may contain live provider secrets; the allowlisted JSON reports are copied before the whole isolated work directory is deleted. Do not retain jobs' grant, token files or raw logs on shared hosts. Centralized redaction/retention remains V12.
+Для ограниченного изолированного наблюдения используйте `run_native_validation_03410.py --mode gui --report-dir /safe/reports -- [run-staged-package flags, excluding --output]`. В режиме без GUI укажите `--mode headless` и не называйте успешное завершение подтверждением игрового процесса. Stdout/stderr рабочего процесса не экспортируются: в них могут быть секреты провайдера. Разрешённые JSON-отчёты копируются до удаления всего изолированного рабочего каталога. Не сохраняйте разрешения пакета, токены и сырые журналы заданий на общих хостах. Централизованная редакция секретов и срок хранения относятся к V12.
 
 ## Негативные приёмочные испытания
 
-1. Stop or disconnect the GUI session / make OpenGL context creation fail: capability status `blocked`, startup not `passed`, no attestor signature.
-2. Provide wrong/nonexecutable Java: `blocked` before Minecraft launch.
-3. Headless runner with a correct staged JAR: manifest/materialization `passed`, startup/gameplay `blocked`, never signed.
-4. Window from a different process: not recognized as selected Java, no startup PASS.
-5. Drop macOS Accessibility or Screen Recording permission: `blocked` even if Java and GPU are installed.
-6. Terminate updater in staging and committing: invoke public recovery, require a verified retry and rollback; merely killing a PID is not PASS.
+1. Остановите или отсоедините GUI-сеанс либо нарушьте создание OpenGL-контекста: возможности — `blocked`, запуск — не `passed`, подписи аттестатора нет.
+2. Передайте неправильный или неисполняемый Java: `blocked` до запуска Minecraft.
+3. Для headless с корректным подготовленным JAR: манифест/материализация — `passed`, запуск/игра — `blocked`; подписи нет.
+4. Окно другого процесса не распознаётся как выбранная Java; положительного результата запуска нет.
+5. Отзовите в macOS Accessibility или Screen Recording: `blocked`, даже если Java и GPU установлены.
+6. Завершите updater во время подготовки и фиксации: вызовите публичное восстановление и потребуйте проверенные повтор и откат. Убийство PID само по себе не означает PASS.
 
 ## Область проверки
 
-This source tree includes executable native observers, capability checks and process-tree lifecycle handling; only Linux tests can be executed in a Linux development container. To claim target-specific production readiness, execute the **actual** native workflows on dedicated Windows/macOS/arm64 hardware with the real signed staged package, GUI permissions, Java, server and account fixtures. A green unit test does not establish platform compatibility.
+В репозитории есть исполняемые нативные наблюдатели, проверки возможностей и управление деревом процессов; в контейнере разработки Linux можно выполнить только Linux-тесты. Для подтверждения готовности целевой платформы выполните **настоящие** нативные workflow на выделенном оборудовании Windows/macOS/arm64 с подписанным подготовленным пакетом, правами GUI, Java, сервером и тестовыми аккаунтами. Успешный модульный тест не удостоверяет совместимость платформы.

@@ -1,6 +1,7 @@
-/** 0.26.2 official Minecraft facade. Only native Tauri is allowed to hold official
- * session tickets/Microsoft refresh/Minecraft access tokens. Renderer receives
- * profile metadata, Device Code display values and status, credentials.
+/** Официальный интерфейс Minecraft версии 0.26.2. Только нативный модуль Tauri
+ * может хранить билеты сеанса, токены обновления Microsoft и доступа Minecraft.
+ * Интерфейс получает метаданные профиля, отображаемые параметры Device Code и статус,
+ * но не учётные данные.
  */
 export type OfficialProfile0257 = {
   id: string;
@@ -61,13 +62,13 @@ export class OfficialMinecraftClient0257 {
     this.generation++;
     this.active = false;
     this.nextPoll = 0;
-    // No async command is fired here: begin() must not race a delayed cancel.
-    // Old flows expire natively or can be explicitly cancelled by cancel().
+    // Здесь не запускаются асинхронные команды: begin() не должен конфликтовать с запоздалой отменой.
+    // Старые сценарии истекают в нативном модуле либо отменяются через cancel().
   }
   get linked() {
     return this.active;
   }
-  /** Restore validates the encrypted backend ticket and official UUID server-side. */
+  /** Восстановление проверяет зашифрованный билет бэкенда и официальный UUID на сервере. */
   async restore(): Promise<OfficialProfile0257 | null> {
     const generation = this.generation;
     const profile = await this.call<OfficialProfile0257 | null>(
@@ -80,17 +81,17 @@ export class OfficialMinecraftClient0257 {
   async cancel(): Promise<void> {
     const hadLinkedAccount = this.active;
     this.clear();
-    this.active = hadLinkedAccount; // cancelling an add-account flow does not sign out an existing account
+    this.active = hadLinkedAccount; // отмена добавления аккаунта не завершает сеанс уже подключённого аккаунта
     await this.native("official_identity_cancel_0262", {
       backendUrl: this.backendUrl,
       SessionId: this.SessionId,
     });
   }
-  /** System-browser OAuth PKCE: authorization code and verifier enter React. */
+  /** OAuth PKCE в системном браузере: код авторизации и verifier не должны попадать в React. */
   async browserLogin(): Promise<OfficialProfile0257> {
     const beforeCancel = this.generation;
     await this.cancel();
-    // A user cancellation racing with native cancel must not start a new browser flow.
+    // Пользовательская отмена, совпавшая с нативной отменой, не должна запускать новый вход через браузер.
     if (this.generation !== beforeCancel + 1)
       throw new Error("Авторизация отменена.");
     const generation = this.generation;
@@ -107,7 +108,7 @@ export class OfficialMinecraftClient0257 {
   async begin(): Promise<OfficialDevice0257> {
     const beforeCancel = this.generation;
     await this.cancel();
-    // Prevent a cancelled pending begin from creating a new Device Code flow.
+    // Не позволяем отменённому вызову begin создавать новый процесс Device Code.
     if (this.generation !== beforeCancel + 1)
       throw new Error("Авторизация отменена.");
     const generation = this.generation;
@@ -140,8 +141,8 @@ export class OfficialMinecraftClient0257 {
     }
     return result;
   }
-  /** Rust owns all Device Code polling, retry delays and cancellation.
-   * Only a completed, verified Minecraft profile crosses IPC. */
+  /** Опрос Device Code, задержки повторов и отмену полностью выполняет Rust.
+   * Через IPC передаётся только подтверждённый профиль Minecraft после завершения входа. */
   async waitDevice(): Promise<OfficialProfile0257> {
     const generation = this.generation;
     let profile: OfficialProfile0257;
@@ -150,8 +151,8 @@ export class OfficialMinecraftClient0257 {
         "official_identity_wait_device_0264",
       );
     } catch (cause) {
-      // Tauri may reject with a string. Invalidate a late rejection from an
-      // older flow rather than allowing it to dismiss a newly started flow.
+      // Tauri может отклонить запрос строковым значением. Запоздалый отказ старого
+      // процесса не должен отменять недавно запущенный процесс.
       if (generation !== this.generation)
         throw new Error("Авторизация отменена.");
       throw cause instanceof Error ? cause : new Error(String(cause));
@@ -168,11 +169,11 @@ export class OfficialMinecraftClient0257 {
     if (!profile) throw new Error("Подключите официальный Minecraft-аккаунт.");
     return profile;
   }
-  /** Metadata-only directory: credentials leave the Rust OS vault. */
+  /** Каталог содержит только метаданные: учётные данные не покидают хранилище ОС под управлением Rust. */
   async accounts(): Promise<OfficialAccount0267[]> {
     return this.call("official_identity_accounts_0267");
   }
-  /** A selection becomes active only after Rust validates the provider profile/UUID. */
+  /** Аккаунт становится активным только после проверки профиля поставщика и UUID в Rust. */
   async selectAccount(accountId: string): Promise<OfficialProfile0257> {
     const generation = ++this.generation;
     const profile = await this.call<OfficialProfile0257>(
@@ -184,7 +185,7 @@ export class OfficialMinecraftClient0257 {
     this.active = true;
     return profile;
   }
-  /** Explicit Microsoft refresh-token rotation and Java profile revalidation. */
+  /** Явное обновление refresh-токена Microsoft и повторная проверка Java-профиля. */
   async refresh(): Promise<OfficialProfile0257> {
     const generation = this.generation;
     const profile = await this.call<OfficialProfile0257>(
@@ -195,7 +196,7 @@ export class OfficialMinecraftClient0257 {
     this.active = true;
     return profile;
   }
-  /** Logout deletes one selected UUID's native credential, all linked accounts. */
+  /** Выход удаляет нативные учётные данные выбранного UUID, не затрагивая остальные аккаунты. */
   async logout(accountId: string): Promise<OfficialProfile0257 | null> {
     ++this.generation;
     this.active = false;
@@ -206,10 +207,10 @@ export class OfficialMinecraftClient0257 {
     this.clear();
     await this.call("official_identity_disconnect_0262");
   }
-  /** An official change is complete only with a matching, verified native
-   * account and the state returned by Minecraft Services. The renderer
-   * constructs a provider request, persists a bearer, and cannot choose
-   * a different account while the native mutation holds its vault lock. */
+  /** Официальное изменение считается завершённым только при совпадении проверенного
+   * нативного аккаунта и состояния, возвращённого Minecraft Services. Интерфейс
+   * не формирует запрос поставщика, не сохраняет bearer-токен и не может переключить
+   * аккаунт, пока нативная операция удерживает блокировку хранилища. */
   private async texture(
     operation: "uploadSkin" | "resetSkin" | "selectCape" | "resetCape",
     extras: Record<string, unknown> = {},
@@ -305,8 +306,8 @@ export class OfficialMinecraftClient0257 {
       throw new Error(
         "Официальный Minecraft принимает скин PNG 64×64 или Classic 64×32.",
       );
-    // Once the native write starts, AbortSignal cannot undo a server-side
-    // change. Always return its verified result rather than claiming rollback.
+    // После начала нативной записи AbortSignal не отменяет серверное изменение.
+      // Всегда возвращаем подтверждённый результат, а не заявляем о несуществующем откате.
     const result = await this.texture(
       "uploadSkin",
       { skinBytes: Array.from(buffer), variant },
@@ -324,7 +325,7 @@ export class OfficialMinecraftClient0257 {
   async resetCape(): Promise<OfficialProfile0257> {
     return this.texture("resetCape");
   }
-  /** Durable to-Minecraft links are verified independently by the Backend. */
+  /** Постоянные связи с Minecraft независимо проверяются бэкендом. */
   async Links(): Promise<NeverOfficialLink0268[]> {
     return this.call<NeverOfficialLink0268[]>("official_identity_links_0268");
   }
@@ -345,7 +346,7 @@ export class OfficialMinecraftClient0257 {
       confirmed: true,
     });
   }
-  /** Intentional break: return game access tokens through renderer. */
+  /** Намеренно запрещено передавать токены доступа к игре через интерфейс. */
   async credentials(): Promise<never> {
     throw new Error(
       "Official Minecraft launch credentials доступны только Runtime через native manager.",

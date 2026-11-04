@@ -1,24 +1,24 @@
 # Launcher 0.26.3 — браузерный OAuth + PKCE (предварительная интеграция MS03)
 
-## настройка оператором (обязательно до включения официальной авторизации)
+## Настройка оператором — обязательна до включения официальной авторизации
 
-1. Register **your own** Microsoft Entra application supporting **personal Microsoft accounts**. Use a **Mobile and desktop** / public-client application (not SPA or confidential client). Register the exact native redirect **`http://localhost/minecraft-poc/callback`** as a desktop redirect. Azure ignores the ephemeral localhost port in redirect URI matching but **not** the path. Do not configure a client secret for this native flow.
-2. Assign the application's UUID to the existing Backend `LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID` setting (see deployment `.env.example` / Admin authentication settings for the current key). Provide a strong independently configured Backend auth token encryption secret, as required by the 0.25.7 backend.
-3. Obtain **actual** Microsoft/Xbox/Minecraft Services permissions for that app. Microsoft OAuth success alone does not establish Minecraft application approval. Run the 0.26.1 `official-provider-poc` CLI with this same Client ID and a real Minecraft Java account; archive its redacted stage report outside the repository.
-4. Run Backend 0.26.3 with Desktop 0.26.3. Sign into the existing Launcher platform identity first; then in Desktop open **Официальный Minecraft → Войти через браузер Microsoft (PKCE)**. The default external system browser opens automatically; after personal-account consent, the loopback callback displays completion and Desktop shows the verified Minecraft profile.
-5. If a desktop cannot open the browser or loopback callback (e.g. endpoint security), choose **Device Code (резервный режим)**. Do not embed Microsoft auth into a webview or copy someone else's client ID.
+1. Зарегистрируйте **собственное** приложение Microsoft Entra с поддержкой **личных аккаунтов Microsoft**. Выберите тип **мобильное и настольное приложение / публичный клиент**, не SPA или конфиденциальный клиент. Настройте точный нативный redirect **`http://localhost/minecraft-poc/callback`**. Azure игнорирует случайный порт localhost при сопоставлении redirect URI, **но не путь**. Секрет клиента для этого нативного потока не нужен.
+2. Укажите UUID приложения в существующей настройке Backend `LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID` (см. `.env.example` и настройки аутентификации Admin). Настройте отдельно надёжный секрет шифрования токенов Backend, как требует 0.25.7.
+3. Получите **реальные** разрешения Microsoft/Xbox/Minecraft Services для приложения. Успешный Microsoft OAuth не доказывает одобрение Minecraft. Запустите CLI `official-provider-poc` 0.26.1 с тем же Client ID и реальным Minecraft Java аккаунтом; сохраните очищенный отчёт этапов вне репозитория.
+4. Разверните вместе Backend 0.26.3 и Desktop 0.26.3. Сперва войдите в платформенный аккаунт Launcher; в Desktop выберите **Официальный Minecraft → Войти через браузер Microsoft (PKCE)**. Системный браузер открывается автоматически; после согласия владельца аккаунта локальный callback покажет завершение, а Desktop — проверенный Minecraft-профиль.
+5. Если браузер или loopback callback заблокирован, например защитным ПО, выберите **Device Code (резервный режим)**. Не внедряйте форму Microsoft в webview и не копируйте чужой Client ID.
 
-## реализованный путь обработки запросов
+## Реализованный путь обработки запросов
 
-- `GET /api/v1/minecraft/official/browser/config` — authenticated private native-client registration metadata only. Fails closed when configured client UUID or encrypted ticket secret is absent.
-- `POST /api/v1/minecraft/official/browser/exchange` — authenticated Never platform identity, strict bounded JSON containing `code`, `verifier` and `redirectUri`. Backend enforces valid PKCE verifier and fixed loopback callback path, derives own Client ID **only** from server configuration, redeems code with Microsoft and checks Xbox/Minecraft chain + Minecraft Java profile. It returns the existing authenticated/identity-bound encrypted official session.
-- Rust binds `127.0.0.1:0` (ephemeral OS port) **before** launching the browser, constructs the registered localhost redirect, generates a fresh random 256-bit OAuth state and 512-bit PKCE verifier, sends the S256 challenge, validates the return callback with an exact Host/path/state check and accepts only one matched response.
-- Secret values exist in native Rust and trusted Backend process memory. Never appear in React/renderer requests, desktop command parameters, logs, localStorage, diagnostics, URL preview, or text shown in the callback browser page. The backend session ticket persists exclusively in OS keyring as in 0.26.2. Microsoft refresh/game access tokens are inside the backend-encrypted session ticket.
-- Cancellation is explicit, stops accepting callbacks and prevents a late grant from being persisted; abandoned attempts expire in 5 minutes. OAuth errors are normalized to safe user-facing diagnostics.
+- `GET /api/v1/minecraft/official/browser/config` — только приватные метаданные регистрации нативного клиента после авторизации. Если нет настроенного UUID клиента или секрета зашифрованного билета — отказ.
+- `POST /api/v1/minecraft/official/browser/exchange` — аутентифицированная платформенная идентичность Never и ограниченный строгий JSON с `code`, `verifier`, `redirectUri`. Backend проверяет PKCE verifier и фиксированный путь loopback callback, берёт Client ID **только** из серверной конфигурации, обменивает код у Microsoft, проверяет цепочку Xbox/Minecraft и Java-профиль, возвращает существующую зашифрованную официальную сессию, привязанную к идентичности.
+- Rust привязывает `127.0.0.1:0` (случайный порт ОС) **до** открытия браузера, формирует зарегистрированный localhost redirect, генерирует новые случайные OAuth state 256 бит и PKCE verifier 512 бит, передаёт вызов S256 и принимает только один callback с точным Host/путём/state.
+- Секреты хранятся в памяти нативного Rust и доверенного Backend, не появляются в запросах React/renderer, параметрах desktop-команд, журналах, localStorage, диагностике, предварительном просмотре URL и тексте страницы callback. Билет Backend хранится исключительно в защищённом хранилище ОС, как в 0.26.2. Microsoft refresh/game access-токены находятся внутри зашифрованного Backend билета.
+- Отмена явно прекращает приём callback и не даёт сохранить позднее разрешение; оставленные попытки истекают через пять минут. Ошибки OAuth нормализуются до безопасных пользовательских сообщений.
 
-**Trust boundary:** In this milestone the Backend — not the Desktop — performs Microsoft token exchange and token refresh (existing Backend flow). Version 0.26.5 may move that work if required by the future native-client architecture. Renderer isolation does not mean the Backend has no credentials.
+**Граница доверия:** в этом этапе обмен и обновление Microsoft-токенов выполняет **Backend, а не Desktop** (существующий поток). В 0.26.5 это может измениться согласно будущей нативной архитектуре. Изоляция renderer не означает отсутствия учётных данных у Backend.
 
-## обязательная локальная проверка и CI
+## Обязательные локальные проверки и CI
 
 ```bash
 cd apps/desktop
@@ -34,14 +34,14 @@ go test ./internal/httpapi -run 'TestBrowserPKCE|TestOfficial' -count=1
 go run ./cmd/official-provider-poc --client-id YOUR_REGISTERED_UUID --flow browser
 ```
 
-Manual acceptance includes: valid account and official profile, refused consent, expired state, repeated and cross-origin callbacks, duplicate code/state, user cancellation before/during code exchange, simultaneous repeated login attempts, OS browser failure, native vault restore, and real Minecraft Services permission. Go and Rust simulated providers are **negative/regression testing only** and cannot certify real Minecraft permissions.
+Ручная приёмка: действительный аккаунт и официальный профиль, отказ в согласии, истёкшее state, повторные и междоменные callback, дубли code/state, отмена до/во время обмена кода, одновременные повторные входы, сбой браузера ОС, восстановление нативного vault и настоящее разрешение Minecraft Services. Имитированные Go/Rust-провайдеры служат **только негативным и регрессионным проверкам**, но не подтверждают реальные права Minecraft.
 
-## замечания о провайдерах и ошибках
+## Замечания о провайдерах и ошибках
 
-- Microsoft `AADSTS50011` generally means the registered redirect **path/platform** does not match; use `http://localhost/minecraft-poc/callback` in the **mobile/desktop public client** configuration.
-- A 403 `Invalid app registration` at Minecraft Services is a provider approval blocker, not something to work around with a different public Client ID.
-- Only a Minecraft Java profile from Minecraft Services can set Official Ready. Microsoft/OIDC platform login alone cannot.
-- If cancellation occurs after Microsoft issued a code, the backend may redeem it but the native manager refuses to commit its encrypted ticket after cancellation; the code cannot be reused.
-- Backend and Desktop updates must be deployed together for this new flow; existing Device Code remains compatible with 0.26.2.
+- Microsoft `AADSTS50011` обычно означает неверный зарегистрированный **путь или тип платформы** redirect; используйте `http://localhost/minecraft-poc/callback` у **публичного мобильного/настольного клиента**.
+- HTTP 403 `Invalid app registration` от Minecraft Services означает блокировку одобрения провайдером; нельзя обходить её чужим публичным Client ID.
+- Состояние Official Ready допускает только Java-профиль, полученный из Minecraft Services. Одного Microsoft/OIDC-входа на платформу недостаточно.
+- При отмене после выдачи кода Microsoft Backend может уже обменять его, но нативный менеджер не сохранит зашифрованный билет. Повторно использовать код нельзя.
+- Backend и Desktop для нового потока обновляются вместе; существующий Device Code совместим с 0.26.2.
 
-References: Microsoft Learn [redirect URI restrictions](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), Microsoft Learn [authorization code PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252).
+Ссылки: Microsoft Learn — [ограничения redirect URI](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), [authorization code PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252).

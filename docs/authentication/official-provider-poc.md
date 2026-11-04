@@ -1,58 +1,35 @@
 # Launcher 0.26.1 — прототип собственного провайдера Microsoft → Xbox → Minecraft
 
-## что действительно реализовано
+## Что действительно реализовано
 
-Run the **executable** Go CLI `services/api/cmd/official-provider-poc` against the
-real Microsoft personal-account, Xbox Live, XSTS and Minecraft Services hosts.
-It does not use Never's Microsoft/OIDC platform login and does not modify or
-authenticate local/Yggdrasil profiles. This is an isolated engineering
-preflight, not yet the native Desktop account manager planned for 0.26.2+.
+Запускайте **исполняемую** Go CLI `services/api/cmd/official-provider-poc` против настоящих серверов личных аккаунтов Microsoft, Xbox Live, XSTS и Minecraft Services. Инструмент не использует платформенный Microsoft/OIDC-вход Never и не меняет/авторизует локальные Yggdrasil-профили. Это изолированная предварительная инженерная проверка, а не нативный менеджер аккаунтов Desktop, запланированный на 0.26.2+.
 
-The tool checks, in order:
+Проверки выполняются по порядку:
 
-1. Explicit UUID for **your own** registered Microsoft Entra public-client app.
-2. Interactive personal Microsoft account login: **system browser + authorization
-   code + PKCE S256** on local loopback, or optional `--flow=device` with compliant
-   minimum polling, `slow_down`, expiry and cancellation.
-3. Microsoft `offline_access` refresh (actually exchanges the refresh token).
-4. Xbox Live user authentication (`RpsTicket: d=<Microsoft access token>`).
-5. XSTS with `RETAIL` sandbox and `rp://api.minecraftservices.com/`, verifying
-   matching user hashes.
-6. Minecraft Services `/authentication/login_with_xbox` using XSTS credentials.
-7. Minecraft `/entitlements/mcstore` using **Minecraft** access token.
-8. Minecraft `/minecraft/profile` using **Minecraft** access token; validates
-   official 32-hex Java UUID and non-empty name.
+1. Явный UUID **собственного** зарегистрированного публичного приложения Microsoft Entra.
+2. Интерактивный вход личного Microsoft-аккаунта: **системный браузер + authorization code + PKCE S256** по локальному loopback, либо `--flow=device` с корректным минимальным интервалом опроса, `slow_down`, сроком и отменой.
+3. Обновление Microsoft `offline_access` с **реальным** обменом refresh-токена.
+4. Авторизация пользователя Xbox Live (`RpsTicket: d=<Microsoft access token>`).
+5. XSTS для sandbox `RETAIL` и `rp://api.minecraftservices.com/` с проверкой совпадения хешей пользователей.
+6. Minecraft Services `/authentication/login_with_xbox` по данным XSTS.
+7. Minecraft `/entitlements/mcstore` с **Minecraft** access-токеном.
+8. Minecraft `/minecraft/profile` с **Minecraft** access-токеном; проверяется официальный Java UUID из 32 hex-символов и непустое имя.
 
-The entitlement **count is diagnostic**. Some Game Pass-enabled accounts have
-zero regular purchase-entitlement items. A working official Java profile is
-required; neither an Xbox login nor a Microsoft OAuth success is sufficient.
+**Количество** прав на игру — диагностический показатель: Game Pass иногда даёт ноль обычных прав покупки. Обязателен работающий официальный Java-профиль; вход Xbox и Microsoft OAuth сами по себе недостаточны.
 
-## Обязательные внешние предварительные условия
+## Обязательные внешние условия
 
-- Register a **new app you own** in Microsoft Entra: *personal Microsoft
-  accounts*; desktop/mobile (public client), **not** a confidential web client.
-  Use `/consumers` authority. No client secret is required.
-- For browser mode register the native redirect
-  `http://localhost/minecraft-poc/callback` (desktop loopback authorization,
-  port chosen dynamically; Microsoft ignores the port for registered localhost
-  redirect URIs). Supported scopes: `XboxLive.signin offline_access`.
-- For device mode allow public client/device code in your app registration;
-  the app **still needs** permission from Minecraft Services.
-- Obtain the application's actual Minecraft Services permission through the
-  provider's current approval/review process. Refer to
-  <https://aka.ms/mce-reviewappid> and Minecraft support guidance; validate the
-  process independently if the form or responsible team changes.
-- Use an actual personal Microsoft account with usable Java Edition access
-  (or supported Game Pass entitlement). Do not feed anyone your password.
+- Зарегистрируйте **своё новое** приложение Entra для *личных аккаунтов Microsoft*, как публичный клиент для компьютеров/телефонов, **не** конфиденциальное веб-приложение. Используйте `/consumers`, секрет клиента не нужен.
+- Для браузера зарегистрируйте `http://localhost/minecraft-poc/callback` как нативный redirect (порт выбирается динамически; Microsoft игнорирует порт в зарегистрированном localhost URI). Нужны области `XboxLive.signin offline_access`.
+- Для Device Code разрешите public client/device code у своего приложения; **права Minecraft Services всё равно необходимы**.
+- Получите действительное разрешение приложения Minecraft Services согласно текущему процессу провайдера. См. <https://aka.ms/mce-reviewappid> и поддержку Minecraft; при изменении формы/ответственной команды проверьте процедуру самостоятельно.
+- Используйте настоящий личный Microsoft-аккаунт с доступом к Java Edition либо поддерживаемым Game Pass. Никому не передавайте пароль.
 
-**An application created successfully in Entra is not automatically approved
-for Minecraft Services.** `403 Invalid app registration` from Minecraft
-Services is an external-blocked state, not a reason to impersonate another
-client ID or generate local official credentials.
+**Успешная регистрация в Entra не означает автоматического одобрения Minecraft Services.** `403 Invalid app registration` — внешняя блокировка, а не повод подменить Client ID другого приложения или создавать локальные «официальные» учётные данные.
 
-## запуск реального прототипа
+## Запуск настоящего прототипа
 
-From the repository root:
+Из корня репозитория:
 
 ```sh
 cd services/api
@@ -64,24 +41,11 @@ go run ./cmd/official-provider-poc \
   --report ./official-minecraft-live-evidence.json
 ```
 
-For environments unable to open a browser automatically, add `--no-open`
-and open the printed Microsoft URL in the **same machine's** browser. For the
-secondary device-code POC, use `--flow=device`. Use a NEW report filename on
-every run; the command will not overwrite previous results. Exit code `0`
-means the live sequence returned a valid Java profile; `2` means the provider
-chain was blocked or failed; `3` means the evidence file could not be saved.
+Если браузер нельзя открыть автоматически, добавьте `--no-open` и откройте выведенный URL Microsoft в браузере **того же компьютера**. Для резервного сценария используйте `--flow=device`. Для каждого запуска выбирайте **новое имя отчёта**, старые результаты не перезаписываются. Код 0 означает настоящий Java-профиль, 2 — ошибку/блокировку провайдера, 3 — невозможность сохранить подтверждение.
 
-All Microsoft access/refresh, Xbox Live/XSTS and Minecraft access tokens remain
-in process memory and are discarded at process exit; **none** are written to
-report, environment, stdout or launcher storage. The *interactive terminal*
-shows the ephemeral authorization URL or one-time device code (do not paste
-this into a ticket); the JSON file contains only stage results, safe error
-classifications, the explicit app UUID and SHA-256 of the Minecraft Java UUID,
-**not** the username, email, authorization code or token. Evidence files use
-exclusive creation and Unix `0600`; on Windows, protect the file with account
-ACLs. Do not run with tracing/proxies that capture authorization headers.
+Microsoft access/refresh, Xbox Live/XSTS и Minecraft-токены остаются только в памяти и уничтожаются при выходе; **ни один** не попадает в отчёт, переменные среды, stdout или хранилище лаунчера. **Интерактивный терминал** показывает временный URL или одноразовый Device Code (не копируйте в тикеты). JSON содержит только результаты этапов, безопасные классы ошибок, явный UUID приложения и SHA-256 Java UUID — **не** имя, e-mail, код авторизации или токен. Отчёт создаётся эксклюзивно с Unix-правами `0600`; в Windows используйте ACL аккаунта. Не запускайте трассировку и прокси, сохраняющие Authorization-заголовки.
 
-Example successful **report structure** (illustrative only, NOT a real pass):
+Пример **структуры** успешного отчёта (условный, **не** настоящий PASS):
 
 ```json
 {
@@ -96,31 +60,21 @@ Example successful **report structure** (illustrative only, NOT a real pass):
 }
 ```
 
-A 403 with `invalid_app_registration` is classified in the report as
-`minecraft_app_not_authorized` and `result: blocked`. Missing Xbox profiles,
-family/child settings, region restrictions, revoked refresh credentials,
-consent denial and provider unavailability are **not** converted to success.
-No anonymous profile or fake Minecraft token is created.
+HTTP 403 с `invalid_app_registration` классифицируется как `minecraft_app_not_authorized` и `result: blocked`. Отсутствие Xbox-профиля, ограничения семейных/детских аккаунтов или региона, отозванные refresh-токены, отказ в согласии и недоступность провайдера **не** считаются успехом. Анонимный профиль или поддельный Minecraft-токен не создаётся.
 
-## условия выпуска и внешнего одобрения
+## Условия выпуска и внешнего одобрения
 
-The code and local unit tests alone **DO NOT complete MS01**. Before unblocking
-subsequent rollout, record privately:
+Исходники и локальные unit-тесты **НЕ завершают MS01**. Перед продолжением зафиксируйте приватно:
 
-- Independently verify ownership of the exact Client ID and app registration type/scopes/loopback redirect (UUID format alone does not prove ownership).
-- The real `--flow=browser` report with every stage actually passed.
-- At least one actual `--flow=device` test of the same app (where permitted).
-- Confirmation of Minecraft Services app registration/access from the
-  responsible provider team, if applicable, with date/reference. API success
-  proves technical access, **not a formal approval email**.
-- Independent validation of gameplay on an `online-mode=true` server
-  (including join/hasJoined) as a later **MS10 / 0.26.12–0.27.0 GA** gate.
+- Независимо подтверждённое владение точным Client ID, тип регистрации/области/loopback redirect (формат UUID не доказывает владение).
+- Настоящий отчёт `--flow=browser`, где все этапы действительно пройдены.
+- Минимум один настоящий `--flow=device` с тем же приложением (если разрешён).
+- При необходимости — подтверждение регистрации/доступа Minecraft Services от ответственной команды провайдера с датой и ссылкой. Успешный API доказывает технический доступ, **не формальное письмо одобрения**.
+- Независимое испытание игрового процесса на `online-mode=true` (включая join/hasJoined) как следующий шлюз **MS10 / 0.26.12–0.27.0 GA**.
 
-Failure to obtain provider authorization is a **release blocker**. No CI stub,
-mock, unit test, manifest, report copy, or manual switch substitutes for
-successful live provider calls; an editable JSON report is not signed evidence.
+Отсутствие авторизации провайдера — **блокер выпуска**. Заглушки CI, имитации, unit-тесты, манифесты, копии отчётов и ручные переключатели не заменяют успешных запросов к реальному провайдеру; редактируемый JSON не является подписанным доказательством.
 
-## автоматизированные тесты (не заменяют настоящую авторизацию)
+## Автоматические тесты (не заменяют настоящую авторизацию)
 
 ```sh
 cd services/api
@@ -129,17 +83,8 @@ go vet ./internal/officialminecraft ./cmd/official-provider-poc
 go build -o /tmp/launcher-official-provider-poc ./cmd/official-provider-poc
 ```
 
-The unit tests mock network responses to verify cryptographic/HTTP input
-validation, status classification, callback state validation, report redaction,
-and stage ordering. There is intentionally **no mock/live selector** in the
-compiled CLI: production execution always targets fixed provider HTTPS hosts.
+Unit-тесты имитируют сетевые ответы для проверки криптографических и HTTP-входных данных, классификации статусов, state callback, скрытия секретов в отчёте и порядка этапов. В собранной CLI намеренно **нет переключателя mock/live**: промышленные вызовы всегда идут на фиксированные HTTPS-серверы провайдера.
 
 ## Добавлено в 0.26.12: настоящая проверка sessionserver
 
-`official-provider-poc` now performs Mojang's live `join` and `hasJoined`
-challenge by default (`--online-session=true`), with the authenticated
-Minecraft bearer, a fresh RSA public key and random AES shared secret.
-Use the 0.26.12 [release runbook](../releases/0.26.12-official-integration-certification.md)
-for the optional server handshake probe, actual client/server game-login
-checks and platform matrix. `--online-session=false` checks only provider
-profile accessibility and is not 0.26.12 certification evidence.
+`official-provider-poc` теперь по умолчанию выполняет живой вызов Mojang `join` и `hasJoined` (`--online-session=true`) с аутентифицированным Minecraft bearer, новым RSA-ключом и случайным общим AES-секретом. Для дополнительного рукопожатия с сервером, реального входа клиента/сервера и платформенной матрицы используйте [инструкцию выпуска 0.26.12](../releases/0.26.12-official-integration-certification.md). `--online-session=false` проверяет только доступность профиля у провайдера и не является подтверждением 0.26.12.

@@ -1,30 +1,30 @@
 # 0.31.11 — Windows AppContainer и объекты заданий
 
-This release integrates the existing signed `sandbox.mode=isolated` policy into **native Windows process creation**, rather than labelling a normal process as isolated.
+Выпуск встраивает существующую подписанную политику `sandbox.mode=isolated` в **нативное создание процессов Windows**, а не просто помечает обычный процесс как изолированный.
 
-## порядок принудительного применения
+## Порядок принудительного применения
 
-1. The privileged host validates the signed policy, absolute executable path and configured grants, then creates a random per-launch AppContainer profile and SID.
-2. `icacls` grants that SID read/execute on the immutable extension package. No backend settings, storage or secret directories are shared.
-3. A random local named pipe uses a DACL tied to the new SID and low-integrity mandatory label. Only this pipe carries HTTP Host Protocol requests, protected by the existing instance bearer token. The AppContainer is given no network capabilities or loopback exemption.
-4. A short-lived, self-executing helper calls `CreateProcessW` with `PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES`, `EXTENDED_STARTUPINFO_PRESENT` and `CREATE_SUSPENDED`. It queries the **actual process token** for `TokenIsAppContainer` and `TokenAppContainerSid` and fails on mismatch.
-5. Before the target can run, the helper attaches it to a Job Object with `KILL_ON_JOB_CLOSE`, active process count, process/job memory caps and CPU hard cap. No breakaway flags are enabled. A two-way control pipe registers the real PID before `ResumeThread`.
-6. The helper owns the Job until exit or timeout. Terminating the helper closes the Job, killing all descendants. Sandbox setup failures stop launch: no fallback to trusted mode.
-7. Both Backend and CLI use this path. UI/API status reports `windows-appcontainer` only after the child has been verified, job-assigned, resumed and acknowledged.
+1. Привилегированный Host проверяет подписанную политику, абсолютный путь исполняемого файла и заданные разрешения, затем создаёт случайный профиль AppContainer и SID для каждого запуска.
+2. `icacls` предоставляет SID чтение/исполнение неизменяемого пакета расширения. Настройки Backend, хранилище и каталоги секретов не открываются.
+3. Локальный именованный канал со случайным именем получает DACL для нового SID и обязательную метку низкой целостности. Только по нему проходят запросы HTTP Host Protocol, защищённые существующим bearer-токеном экземпляра. AppContainer не получает сетевых возможностей или исключений loopback.
+4. Короткоживущий самозапускающийся помощник вызывает `CreateProcessW` с `PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES`, `EXTENDED_STARTUPINFO_PRESENT`, `CREATE_SUSPENDED`. Он читает **настоящий токен процесса** (`TokenIsAppContainer`, `TokenAppContainerSid`) и запрещает продолжение при несовпадении.
+5. До запуска целевого процесса помощник помещает его в Job Object с `KILL_ON_JOB_CLOSE`, ограничением числа процессов, лимитами памяти процесса/задания и жёстким CPU cap. Разрешений breakaway нет. Двунаправленный управляющий канал регистрирует настоящий PID до `ResumeThread`.
+6. Помощник владеет Job до завершения или тайм-аута. Закрытие Job при завершении помощника убивает всех потомков. Ошибка настройки изоляции блокирует запуск, **без** возврата к доверенному режиму.
+7. Этим путём пользуются Backend и CLI. Статус UI/API показывает `windows-appcontainer` только после подтверждения дочернего процесса, назначения Job, возобновления и подтверждения готовности.
 
-## поддерживаемые платформы
+## Поддерживаемые платформы
 
-Native, signed `.exe` extension targets that communicate over the updated Go Backend or CLI SDK through `LAUNCHER_EXTENSION_HOST_PIPE`. Other extension clients must explicitly implement HTTP/1.1 over the SID-restricted named pipe, including bearer authentication. Unsandboxed fallback is forbidden.
+Поддерживаются нативные подписанные `.exe` расширения, общающиеся через обновлённый Go Backend или CLI SDK и `LAUNCHER_EXTENSION_HOST_PIPE`. Другие клиенты обязаны явно реализовать HTTP/1.1 по именованному каналу с ограничением SID и bearer-аутентификацией. Неизолированный запасной режим запрещён.
 
-Java callbacks and any application requiring direct outbound network or a loopback listener are not supported in Windows isolated mode. Scoped network and secret requests remain accessible through Host Protocol. The *shared filesystem broker* from 0.31.10 currently remains unavailable on Windows: secure handle-relative NT filesystem operations are required before this grant can be enabled. Configuration with shared roots fails closed. The AppContainer scratch directory is writable; the package is read-only.
+Java callback и приложения, которым нужен прямой исходящий доступ к сети или локальный loopback listener, в Windows isolated не поддерживаются. Ограниченные запросы сети/секретов можно выполнять через Host Protocol. **Общий файловый брокер** из 0.31.10 в Windows ещё недоступен: для безопасной выдачи разрешения необходимы NT-операции относительно файлового дескриптора. Настройка общих корней блокируется. Scratch-каталог AppContainer доступен для записи, пакет — только для чтения.
 
-AppContainer is not equivalent to LPAC and does not prove absence of ALL APPLICATION PACKAGES-readable objects or OS escape vulnerabilities. The trust indicator describes enforced OS sandbox boundaries, not absolute anti-cheat or kernel integrity.
+AppContainer не эквивалентен LPAC и не доказывает отсутствия объектов, доступных ALL APPLICATION PACKAGES, или уязвимостей выхода из песочницы ОС. Индикатор доверия означает реально применённые границы изоляции ОС, а не абсолютную античит-защиту или целостность ядра.
 
-## приёмка и развёртывание
+## Приёмка и развёртывание
 
-Use Windows 10/11 or supported Windows Server with working AppContainer API and standard Job Object facilities. The service identity needs permission to create AppContainer profiles and adjust package ACLs. Do not run the API as an elevated interactive administrator unnecessarily. Keep extension payload packages immutable and restrict write access to deployment roles.
+Используйте Windows 10/11 или поддерживаемый Windows Server с работающим AppContainer API и стандартным Job Object. Сервисной идентичности нужны права на создание профилей AppContainer и управление ACL пакета. Без необходимости не запускайте API от повышенного интерактивного администратора. Пакеты расширений должны оставаться неизменяемыми; запись ограничивается ролями развёртывания.
 
-Run from a Windows machine:
+Запуск на компьютере Windows:
 
 ```powershell
 cd services/api
@@ -32,14 +32,14 @@ $env:NL_RUN_LIVE_WIN_SANDBOX='1'
 go test -tags launcher_nopgx -count=1 -v ./internal/windowssandbox
 ```
 
-The test creates a **real** AppContainer process, asserts it cannot read private backend files or change package contents, probes denied direct outbound access and attempts to exceed its Job active-process limit. Test failures must block deployment; availability checks and compilation alone do not certify the kernel isolation.
+Тест создаёт **настоящий** AppContainer, проверяет запрет чтения приватных файлов Backend и изменения пакета, отсутствие прямого исходящего доступа и ограничение количества процессов в Job. Ошибка теста должна блокировать развёртывание. Проверка доступности API и успешная компиляция не сертифицируют изоляцию ядра.
 
-## 0.43.10 нативная приёмка Windows и контрольное чтение применённой политики
+## 0.43.10 — нативная приёмка Windows и контроль фактически применённой политики
 
-The sandbox helper reads the **live kernel Job configuration** (membership, process count, both memory caps, CPU hard cap and breakaway flags) after attaching the suspended AppContainer child and **before** resuming its main thread. If any value is missing or differs from the signed policy, it terminates the Job and refuses launch. The helper also verifies the actual AppContainer SID on the child token. This protects against assuming that successful Win32 setup calls imply effective restrictions.
+Помощник изоляции читает **действительную конфигурацию Job в ядре** (членство, количество процессов, оба ограничения памяти, жёсткий CPU cap, breakaway) после помещения приостановленного AppContainer в Job, **до** запуска основного потока. При отсутствии либо несовпадении значения с подписанной политикой Job завершается и запуск запрещается. Повторно проверяется фактический SID AppContainer в токене дочернего процесса. Нельзя считать успешные вызовы Win32 гарантией фактических ограничений.
 
-Recursive package ACL grants cannot cross reparse points or directory junctions. `icacls` must report success for the entire package and runs from the OS system directory, never from a PATH-selected binary. The Windows shared-root filesystem broker is still unavailable: `shared:*` grants fail closed. Host-protocol broker requests for approved network/secrets remain separate from direct network access, which AppContainer is not granted. Both IPC pipe modes deny remote clients; the single-instance ready pipe also rejects pre-existing instances of its randomized name.
+Рекурсивная выдача ACL для пакета не должна переходить reparse points или directory junctions. `icacls` обязан завершиться успешно для всего пакета и вызывается из системного каталога ОС, а не по двоичному файлу из PATH. Брокер общих файловых корней Windows по-прежнему недоступен: `shared:*` блокируются. Запросы разрешённых сети/секретов через Host Protocol отделены от прямого сетевого доступа, которого нет у AppContainer. Оба IPC-режима запрещают удалённых клиентов; одноэкземплярный ready-канал также отвергает ранее созданный канал с тем же случайным именем.
 
-**Required live jobs:** `.github/workflows/windows-extension-sandbox-03111.yml` runs the sandbox boundary tests on native `windows/amd64` and a self-hosted native `windows/arm64` runner with label `launcher-appcontainer`. A missing runner or failed system policy must leave native acceptance unverified; a Windows x64 build or ARM64 cross-compile cannot replace the ARM64 Job kernel test. The tests include killing a running isolated process by closing the owning helper's Job handle and proving that it actually terminates.
+**Обязательные нативные задания:** `.github/workflows/windows-extension-sandbox-03111.yml` выполняет проверки на Windows `amd64` и собственном исполнителе `arm64` с меткой `launcher-appcontainer`. Отсутствующий исполнитель или отказ системной политики оставляют приёмку неподтверждённой. Сборка x64 и кросс-компиляция ARM64 не заменяют реальный тест ядра Job на ARM64. Проверяется также закрытие дескриптора Job у работающего процесса и фактическое завершение всех потомков.
 
-These tests validate the native extension sandbox subsystem. Independent end-to-end gaming, anti-cheat, signed package hashes and the six-target release evidence gate still apply separately.
+Эти тесты проверяют подсистему изоляции нативных расширений. Независимые сквозные игровые испытания, античит, хеши подписанных пакетов и проверка выпуска для шести платформ остаются отдельными обязательными этапами.

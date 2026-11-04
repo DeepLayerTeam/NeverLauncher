@@ -1,6 +1,6 @@
-// Package sqlitedurable implements the DEP00 SQLite/WAL transactional store.
-// It is NOT the application's SQLite Repository (DEP01), and must not be selected
-// as the backend's repository before the schema/auth/coordination parity gates.
+// Пакет sqlitedurable реализует транзакционное хранилище SQLite/WAL этапа DEP00.
+// Это НЕ репозиторий SQLite приложения (DEP01). Его нельзя выбирать репозиторием
+// бэкенда до прохождения проверок соответствия схемы, авторизации и координации.
 package sqlitedurable
 
 import (
@@ -37,17 +37,17 @@ var (
 	ErrPoisoned      = errors.New("sqlite transaction state uncertain; close store and reconcile with a fresh connection before serving requests")
 )
 
-// Options requires a plain absolute or relative on-disk pathname, a URI,
-// in-memory DB, special file, or shared writable network/overlay volume.
+// Options требует обычный абсолютный или относительный путь на диске;
+// URI, база в памяти, специальный файл или общий сетевой/overlay-том с записью недопустимы.
 type Options struct {
 	Path        string
 	BusyTimeout time.Duration // 0 = 5s; positive values must be between 1ms and 60s
 	Readers     int           // 0 = 4; maximum 16
 }
 
-// Store is a single-process, exclusive-owner SQLite WAL store. A separate
-// process cannot open the same DB via Open while this store holds its lock.
-// All writes serialize on the one writer connection. Reads use a bounded pool.
+// Store — хранилище SQLite WAL с исключительным владением одного процесса.
+// Пока удерживается блокировка, другой процесс не может открыть эту БД через Open.
+// Запись сериализуется в одном соединении; чтение использует ограниченный пул.
 type Store struct {
 	path     string
 	writer   *sql.DB
@@ -106,8 +106,8 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 		return nil, err
 	}
 	base := (&url.URL{Scheme: "file", Path: path}).String()
-	// modernc.org/sqlite applies every _pragma on *each newly opened* connection.
-	// Do not set safety PRAGMAs once on a pooled sql.DB and assume persistence.
+	// modernc.org/sqlite применяет каждый _pragma к *каждому новому* соединению.
+	// Однократная настройка защитных PRAGMA в пуле sql.DB не гарантирует сохранения параметров.
 	timeout := strconv.FormatInt(opt.BusyTimeout.Milliseconds(), 10)
 	writerDSN := base + "?mode=rwc&_pragma=foreign_keys(1)&_pragma=busy_timeout(" + timeout + ")&_pragma=synchronous(FULL)&_pragma=journal_mode(WAL)&_pragma=trusted_schema(OFF)&_pragma=secure_delete(ON)"
 	readerDSN := base + "?mode=ro&_pragma=foreign_keys(1)&_pragma=busy_timeout(" + timeout + ")&_pragma=trusted_schema(OFF)&_pragma=query_only(ON)"
@@ -157,8 +157,8 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	return s, nil
 }
 
-// Create the database with 0600 instead of SQLite's permissive default 0644.
-// The database's parent directory was verified before acquiring owner lock.
+// Создаём базу с правами 0600 вместо стандартных для SQLite 0644.
+// Родительский каталог уже проверен до получения блокировки владельца.
 func createDatabase0600(path string) error {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if os.IsExist(err) {
@@ -196,8 +196,8 @@ func checkExistingRegularFile(path string) error {
 	return nil
 }
 
-// SQLite may create WAL and shared-memory sidecars before the first query.
-// Never allow symlinked or world-readable sidecars in a private datastore.
+// SQLite может создать сопутствующие файлы WAL и общей памяти до первого запроса.
+// В приватном хранилище запрещены символические ссылки и доступные всем файлы-сателлиты.
 func checkSQLiteSidecars(path string) error {
 	for _, name := range []string{path + "-wal", path + "-shm"} {
 		info, err := os.Lstat(name)
@@ -214,8 +214,8 @@ func checkSQLiteSidecars(path string) error {
 	return nil
 }
 
-// Verify every SQLite integrity result (not just the first row), including
-// foreign keys. A quick_check alone cannot certify a recovered WAL database.
+// Проверяем все результаты контроля целостности SQLite (не только первую строку),
+// включая внешние ключи. Одного quick_check недостаточно для подтверждения восстановления WAL.
 func verifyDatabaseIntegrity(ctx context.Context, q Executor) error {
 	rows, err := q.QueryContext(ctx, "PRAGMA integrity_check")
 	if err != nil {
@@ -363,17 +363,17 @@ func (s *Store) verifyReaders(ctx context.Context, timeout string) error {
 	return pragmaInt(ctx, conn, "busy_timeout", n)
 }
 
-// Executor exposes connection-bound statements while the immediate transaction
-// is active. Callers must run raw BEGIN/COMMIT/ROLLBACK/PRAGMA here.
+// Executor предоставляет команды, привязанные к соединению, пока действует
+// немедленная транзакция. Здесь вызывающие стороны выполняют BEGIN/COMMIT/ROLLBACK/PRAGMA.
 type Executor interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
-// Write uses BEGIN IMMEDIATE (not database/sql BeginTx's deferred BEGIN).
-// A successful return requires SQLite to report a successful FULL-sync COMMIT.
-// On error it rolls back with an independent timeout, even if ctx was canceled.
+// Write использует BEGIN IMMEDIATE, а не отложенный BEGIN метода database/sql BeginTx.
+// Успех возможен лишь после подтверждённого SQLite COMMIT с полной синхронизацией.
+// При ошибке откат выполняется с отдельным тайм-аутом, даже при отменённом ctx.
 func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -396,16 +396,16 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	}
 	active := true
 	defer func() {
-		// Always try to roll back using an independent context, including after
-		// cancellation and panic. An unresolved live transaction must never be
-		// returned to the pooled writer connection.
+		// Всегда пытаемся откатить транзакцию в независимом контексте, в том числе
+		// после отмены или паники. Незавершённую активную транзакцию нельзя
+		// возвращать в пул соединений записи.
 		if active {
 			rollbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			_, rbErr := conn.ExecContext(rollbackCtx, "ROLLBACK")
 			cancel()
 			if rbErr != nil {
-				// database/sql may already have discarded a canceled connection;
-				// otherwise invalidate the connection and fail this store closed.
+				// database/sql мог уже удалить отменённое соединение из пула;
+				// иначе делаем соединение недействительным и аварийно закрываем хранилище.
 				if !errors.Is(rbErr, sql.ErrConnDone) && !errors.Is(rbErr, driver.ErrBadConn) {
 					s.poisoned.Store(true)
 					err = errors.Join(err, fmt.Errorf("sqlite rollback unresolved: %w", rbErr))
@@ -420,8 +420,8 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	if err = fn(conn); err != nil {
 		return err
 	}
-	// SQLite commits even if an API call races with a deadline; callers must
-	// reconcile an error's outcome using an immutable operation identifier.
+	// SQLite может зафиксировать изменения, даже если API-вызов упирается в крайний срок;
+	// результат ошибки необходимо сверять по неизменяемому идентификатору операции.
 	if _, err = conn.ExecContext(ctx, "COMMIT"); err != nil {
 		s.poisoned.Store(true)
 		return errors.Join(ErrCommitUnknown, err)
@@ -450,8 +450,8 @@ func (s *Store) Read(ctx context.Context, fn func(Executor) error) error {
 	return fn(conn)
 }
 
-// Checkpoint makes progress only when readers permit it; it cannot be treated
-// as backup and intentionally truncates an active WAL.
+// Контрольная точка продвигается лишь когда разрешают читатели; она не заменяет
+// резервное копирование и намеренно обрезает активный WAL.
 func (s *Store) Checkpoint(ctx context.Context) (status WALStatus, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -461,9 +461,9 @@ func (s *Store) Checkpoint(ctx context.Context) (status WALStatus, err error) {
 	if s.poisoned.Load() {
 		return status, ErrPoisoned
 	}
-	// TRUNCATE waits up to busy_timeout for active readers, reports blocked
-	// readers, and bounds WAL growth. PASSIVE often returns success despite
-	// leaving frames behind and was not a reliable maintenance signal.
+	// TRUNCATE ожидает активных читателей до busy_timeout, сообщает о блокировках
+	// и ограничивает рост WAL. PASSIVE часто возвращает успех, оставляя кадры WAL,
+	// поэтому непригоден как надёжный сигнал успешного обслуживания.
 	err = s.writer.QueryRowContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)").Scan(&status.Busy, &status.LogFrames, &status.CheckpointedFrames)
 	if err != nil {
 		return status, err
@@ -492,8 +492,8 @@ func (s *Store) Close() error {
 	return err
 }
 
-// ProbeDurability performs two independent starts, a committed challenge and
-// a full close/reopen. It does NOT claim to be an SQLite-to-PostgreSQL migration.
+// ProbeDurability проводит два независимых запуска, подтверждённую пробную запись
+// и полное закрытие/повторное открытие. Это НЕ миграция из SQLite в PostgreSQL.
 func ProbeDurability(ctx context.Context, opt Options) (WALStatus, error) {
 	s, err := Open(ctx, opt)
 	if err != nil {

@@ -139,9 +139,9 @@ type moduleEnrollmentRequest0338 struct {
 	PublicKey   string `json:"publicKey"`
 }
 
-// Real ServerBridge registration (with a newly generated Ed25519 public key),
-// NEVER adoption of a Gravit checkServer token. A durable enrollment receipt
-// makes retries observable if registration succeeded but the response was lost.
+// Настоящая регистрация ServerBridge с новым открытым ключом Ed25519,
+// а НЕ принятие токена Gravit checkServer. Устойчивая квитанция регистрации
+// позволяет отследить повтор при успешной записи, если ответ потерялся.
 func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.migrationModulesStore0338(w)
 	if !ok {
@@ -197,9 +197,9 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		writeError(w, 422, "invalid wrapper or ServerBridge enrollment request")
 		return
 	}
-	// Enrollment must target the profile that the operator actually previewed
-	// and imported. A project permission alone does not authorize binding a
-	// new game node to an arbitrary profile in that project.
+	// Регистрация должна относиться к профилю, который оператор действительно
+	// просмотрел и импортировал. Одного разрешения на проект недостаточно, чтобы
+	// привязать новый игровой узел к любому его профилю.
 	if err = s.migrationBridgeTarget0446(r.Context(), run.ID, run.ProjectID, req.ProfileID, report); err != nil {
 		migrationHTTPError0331(w, mw.ErrConflict)
 		return
@@ -213,8 +213,8 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		writeError(w, 422, err.Error())
 		return
 	}
-	// An already enrolled node is only reusable when its independent identity
-	// and ownership exactly match; unrelated IDs are never silently adopted.
+	// Уже зарегистрированный узел можно использовать повторно лишь при точном
+	// совпадении его независимой идентичности и владельца; посторонние ID не принимаются.
 	previousID, previousFP, lookupErr := store.GetMigrationWrapperEnrollment0338(r.Context(), run.ID, req.WrapperPath)
 	if lookupErr == nil && (previousID != req.ID || previousFP != fingerprint) {
 		migrationHTTPError0331(w, mw.ErrConflict)
@@ -235,9 +235,9 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 			writeError(w, 503, "ServerBridge lookup failed")
 			return
 		}
-		// Persist an immutable enrollment intent BEFORE the external
-		// ServerBridge write. On a crash, only a node tied to that intent
-		// can be adopted by the same run with the exact same public key.
+		// Сохраняем неизменяемое намерение регистрации ДО внешней записи
+		// в ServerBridge. После сбоя тот же запуск может принять только узел,
+		// связанный с этим намерением и точно тем же открытым ключом.
 		if err = store.RecordMigrationWrapperEnrollment0338(r.Context(), run.ID, req.WrapperPath, req.ID, fingerprint); err != nil {
 			migrationHTTPError0331(w, err)
 			return
@@ -257,9 +257,9 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, 200, map[string]any{"data": map[string]any{"serverId": node.ID, "projectId": run.ProjectID, "profileId": req.ProfileID, "keyFingerprint": fingerprint, "status": "registered-new-trust", "requiresFreshHeartbeat": true}})
 }
 
-// migrationBridgeTarget0446 binds a new node to the exact pinned migration
-// plan AND an already persisted imported client profile. No node is created
-// from a mere preview or from an unrelated profile of the same project.
+// migrationBridgeTarget0446 привязывает новый узел к точно закреплённому плану
+// миграции И уже сохранённому импортированному клиентскому профилю.
+// На основе предварительного просмотра или постороннего профиля узел не создаётся.
 func (s Server) migrationBridgeTarget0446(ctx context.Context, runID, projectID, profileID string, modules gm.Report) error {
 	plans, ok := s.Repo.(interface {
 		GetMigrationPlan0442(context.Context, string) (gp.Plan, error)
@@ -303,9 +303,9 @@ func modulesMatch0446(a, b gm.Report) bool {
 	return e == nil && string(x) == string(y)
 }
 
-// An enrollment reservation is NOT proof of a live ServerBridge connection.
-// Read the actual ServerBridge node state after its signed runtime heartbeat;
-// never return ready solely because a database row or public key exists.
+// Резервирование регистрации НЕ доказывает наличие активного соединения ServerBridge.
+// Проверяем фактическое состояние узла после подписанного heartbeat среды выполнения;
+// наличие строки БД или открытого ключа само по себе не означает готовности.
 func migrationBridgeLive0446(node bridgeServerRecord, project, profile, fingerprint string, now time.Time) (string, string) {
 	if node.ProjectID != project || node.ProfileID != profile || node.KeyAlgorithm != "ed25519" || node.KeyFingerprint != fingerprint || node.IdentityEpoch < 1 {
 		return "blocked", "identity_or_ownership_mismatch"
@@ -406,8 +406,8 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 	}})
 }
 
-// Guard against a second JSON document after the request body. An enrollment
-// must be a single, unambiguous object rather than an ignored extra payload.
+// Запрещаем второй JSON-документ после тела запроса. Регистрация должна содержать
+// ровно один однозначный объект, без игнорируемых дополнительных данных.
 func decodeMigrationEnrollment0446(r io.Reader, req *moduleEnrollmentRequest0338) error {
 	dec := json.NewDecoder(r)
 	dec.DisallowUnknownFields()

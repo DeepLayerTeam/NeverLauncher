@@ -1,22 +1,22 @@
-# адаптер совместимости Gravit 0.31.0 (ограниченный API)
+# Адаптер совместимости Gravit 0.31.0 (ограниченный API)
 
-This is a **working, deliberately limited source-port adapter** for GravitLauncher-style Java modules, not a universal Gravit JAR loader. It runs in Launcher's existing Java Extension Host (`java -jar`) under Go supervisor deadlines and Ed25519-signed `.nlext` package verification. Gravit's internal LaunchServer/LauncherRuntime/JavaFX APIs are not present and are not emulated. This code is independently implemented and is not a copy of Gravit sources.
+Это **рабочий, намеренно ограниченный адаптер для переноса исходного кода** Java-модулей в стиле GravitLauncher, а не универсальный загрузчик JAR-файлов Gravit. Он работает в существующем Java Extension Host лаунчера (`java -jar`) под контролем супервизора Go с ограничениями времени и проверкой подписи Ed25519 пакетов `.nlext`. Внутренние API Gravit LaunchServer, LauncherRuntime и JavaFX отсутствуют и не имитируются. Реализация независимая и не копирует исходный код Gravit.
 
-## Поддерживаемый API (фиксированный список)
+## Поддерживаемый API (фиксированный перечень)
 
-| Type / API | Actual Extensions behavior |
+| Тип / API | Фактическое поведение расширения |
 |---|---|
-| `pro.gravit.utils.Version` | 4-component integer version, compare, `Type`, `getVersionString` |
-| `pro.gravit.launcher.base.modules.LauncherModule`, `LauncherInitContext` | `preInitAction` + `init`, bounded by Java Extension Host lifecycle. Context is a `GravitInitContext` exposing real `ExtensionContext` |
-| `LauncherModuleInfo`, `LauncherModuleInfoBuilder` | Local module metadata; legacy internal Gravit dependencies rejected instead of silently treated as satisfied |
-| `LauncherModule.EventHandler`, `registerEvent()` | Typed adapter over Go's **real** EventBus. Only whitelisted `@HostEvent` types with existing EventBus types are accepted |
-| `ReleasePublishedEvent`, `ProjectSavedEvent` | Binds respectively to `release.published`, `project.saved`, preserving event id/project/idempotency key and raw JSON payload |
-| `pro.gravit.utils.command.Command`, `CommandHandler.registerCommand()` | `invoke(String... args)` runs via Extensions authenticated RPC/CLI command registry; command names must be declared by a signed `.nlext` manifest; `CommandHandler.respond(Object)` returns bounded JSON output |
-| `AutoCloseable` module | `close` called at extension stop; local callbacks are removed on exit; durable Backend subscriptions are preserved |
+| `pro.gravit.utils.Version` | Целочисленная версия из четырёх компонентов, сравнение, `Type`, `getVersionString` |
+| `pro.gravit.launcher.base.modules.LauncherModule`, `LauncherInitContext` | `preInitAction` и `init` в рамках жизненного цикла Java Extension Host. Контекст `GravitInitContext` предоставляет настоящий `ExtensionContext` |
+| `LauncherModuleInfo`, `LauncherModuleInfoBuilder` | Локальные метаданные модуля; неподдерживаемые внутренние зависимости Gravit отклоняются, а не помечаются как удовлетворённые |
+| `LauncherModule.EventHandler`, `registerEvent()` | Типизированный адаптер поверх **настоящего** EventBus Go. Принимаются только разрешённые типы `@HostEvent`, имеющие соответствующие типы EventBus |
+| `ReleasePublishedEvent`, `ProjectSavedEvent` | Соответствуют `release.published` и `project.saved`; сохраняются идентификатор события, проект, ключ идемпотентности и исходный JSON |
+| `pro.gravit.utils.command.Command`, `CommandHandler.registerCommand()` | `invoke(String... args)` выполняется через реестр команд CLI/RPC с аутентификацией Extensions. Имена команд должны быть объявлены в подписанном манифесте `.nlext`; `CommandHandler.respond(Object)` возвращает ограниченный по размеру JSON |
+| Модуль `AutoCloseable` | При остановке расширения вызывается `close`; локальные обработчики удаляются при выходе, а постоянные подписки бэкенда сохраняются |
 
-**Not supported**: binary compatibility with unmodified upstream modules, `LaunchServer` internals, `LaunchServerInitContext`, `LaunchServerPostInitPhase`, `PreConfigPhase`, providers/registries, `ModulesConfigManager`, JavaFX UI, `Event.cancel()` and cancellation semantics, arbitrary Gravit `CommandHandler` internals, unchecked classpath dependencies. Calls to unsupported cancellation or event types are rejected, not silently accepted. Port source against this published subset, use Extensions `ExtensionContext.runtime()` for config/storage/secrets, and declare permissions/dependencies in the signed package. Gravit package names are used only for the documented subset, not to promise ABI parity across Gravit versions.
+**Не поддерживаются:** бинарная совместимость с неизменёнными исходными модулями, внутренние компоненты `LaunchServer`, `LaunchServerInitContext`, `LaunchServerPostInitPhase`, `PreConfigPhase`, поставщики и реестры, `ModulesConfigManager`, интерфейс JavaFX, `Event.cancel()` и семантика отмены событий, произвольные внутренние механизмы `CommandHandler` Gravit и непроверенные зависимости classpath. Вызовы неподдерживаемых методов отмены или типов событий отклоняются явно, а не принимаются молча. Переносите исходный код только на опубликованное подмножество API, используйте `ExtensionContext.runtime()` из Extensions для конфигурации, хранилища и секретов, объявляйте разрешения и зависимости в подписанном пакете. Имена пакетов Gravit используются исключительно для задокументированных классов; они не гарантируют ABI-совместимость между версиями Gravit.
 
-## сборка, запуск и упаковка
+## Сборка, запуск и упаковка
 
 ```sh
 sh sdk/java/gravit-compat/build.sh test
@@ -30,7 +30,7 @@ nl extension pack examples/extensions/gravit-compat/build/package --output /tmp/
 nl extension verify /tmp/gravit-port.nlext --public-key /secure/extension-public.pem
 ```
 
-For each ported module, build a self-contained JAR with:
+Для каждого переносимого модуля соберите самостоятельный JAR со следующими записями в манифесте:
 
 ```
 Main-Class: ru.launcher.sdk.host.JavaExtensionHost
@@ -38,8 +38,8 @@ Launcher-Extension-Class: ru.launcher.sdk.gravit.GravitCompatExtension
 Launcher-Gravit-Module-Class: your.package.YourPortedModule
 ```
 
-The Java SDK, adapter and ported class must be packaged in this JAR. Go's `extensionjava.Inspect()` verifies that the adapter and module class are present **before** a Java process is launched; signature verification and issuer trust remain in existing Extensions package lifecycle. No automatic loading of arbitrary Gravit JARs or dependencies on external `Class-Path` is allowed. Compile with Java 17+; Java 21 is also covered by CI.
+Java SDK, адаптер и перенесённый класс должны находиться внутри этого JAR. Метод `extensionjava.Inspect()` на стороне Go **до запуска** процесса Java проверяет наличие классов адаптера и модуля; проверка подписи и доверия к издателю остаётся частью существующего жизненного цикла пакетов Extensions. Автоматическая загрузка произвольных JAR Gravit или внешних зависимостей через `Class-Path` не допускается. Для компиляции требуется Java 17 или новее; Java 21 также проверяется в CI.
 
-Example `PortedModule` subclasses `LauncherModule`, receives a real `release.published` event, writes a persistent record through Go storage broker, and exposes a declaratively authorized `status` CLI command. The subprocess E2E boots an actual JVM-host JAR, verifies the hello/ready/heartbeat loop, invokes an authenticated RPC event callback, reads state from a second JVM CLI invocation, rejects invalid tokens and undeclared commands. Host simulation in the E2E tests only the transport; test on an actual deployed Go backend before certifying production rollout. Commands execute in a **trusted Java OS process**, not a sandbox.
+В примере `PortedModule` наследуется от `LauncherModule`, получает настоящее событие `release.published`, сохраняет запись через брокер хранилища Go и предоставляет декларативно разрешённую CLI-команду `status`. Сквозной тест дочернего процесса запускает действительный JVM-хост из JAR, проверяет цикл hello/ready/heartbeat, вызывает обработчик события через аутентифицированный RPC, читает состояние во втором JVM-вызове CLI, отвергает неправильные токены и необъявленные команды. Имитация хоста в E2E проверяет только транспорт; перед сертификацией промышленного развёртывания проверяйте расширение с настоящим бэкендом Go. Команды исполняются в **доверенном системном процессе Java**, а не в песочнице.
 
-Upstream API signatures checked against `GravitLauncher/Launcher`'s `LauncherModule`, `LauncherModuleInfoBuilder` and `Command` sources (master as of 2026-10-25). The actual API surface is intentionally smaller; binaries linked against the full upstream libraries are not accepted as compatible. See `docs/releases/0.30.7-gravit-compat.md` for tested boundaries.
+Сигнатуры исходного API сверены с классами `LauncherModule`, `LauncherModuleInfoBuilder` и `Command` репозитория `GravitLauncher/Launcher` (ветка master на 25 октября 2026 года). Фактический набор API намеренно меньше; бинарные модули, связанные с полными исходными библиотеками, не считаются совместимыми. Проверенные границы описаны в `docs/releases/0.30.7-gravit-compat.md`.

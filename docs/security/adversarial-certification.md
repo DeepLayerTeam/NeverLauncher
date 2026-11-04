@@ -1,20 +1,20 @@
-# Launcher 0.31.14 — сертификация противодействия атакам
+# Launcher 0.31.14 — сертификация устойчивости к атакам
 
-**Status: certification pending external test evidence.** This release adds executable regression attacks and a fail-closed results gate; it does **not** certify the kernel, physical TPM, other host applications, or the full launcher without running those tests.
+**Статус: сертификация ожидает подтверждения внешних испытаний.** Выпуск добавляет исполняемые регрессионные сценарии атак и проверку результатов с запретом допуска при ошибке. Он **не подтверждает** безопасность ядра ОС, физического TPM, других программ на хосте или всего лаунчера без фактического выполнения испытаний.
 
-## область действия и гарантии
+## Область действия и гарантии
 
-- TPM Certify: certified registered key, AK trust chain, nonce, device/user/session/epoch/expiration. A passing synthetic cryptographic test does not establish physical TPM provenance or attest JVM memory.
-- Quote: independently signed PCR digest, exact PCR selection, operator policy, pinned AK/root. A passing measured-boot quote says nothing about late user-mode injection.
-- Extension host: per-instance HTTP rate, concurrent request and output budgets across reconnects; signed grants, scoped filesystem and HTTPS operations; owner confirmation of privilege changes.
-- Linux: only live user+mount+PID+network namespace/cgroup v2/seccomp tests prove the configured kernel confinement. Root/service process group separation **is not** a sandbox.
-- Windows: only live AppContainer token, Job Object, ACL, IPC and child-process tests prove the boundary. Cross-compilation is not proof.
-- macOS: `isolated` is intentionally unavailable until all descendants have an OS-enforced, non-escapable resource boundary. Signed helper alone is insufficient. Do not silently fall back to `trusted`.
-- OS-level Guard attach/injection protection cannot be inferred from self-reported user-mode evidence. Document and test normal accessibility/overlays/AV on supported hosts before enabling stricter blocking policy.
+- **TPM Certify:** сертификация зарегистрированного ключа, цепочка доверия AK, одноразовый запрос, устройство, пользователь, сеанс, эпоха и срок действия. Успех синтетического криптографического теста не доказывает происхождение от физического TPM и не подтверждает целостность памяти JVM.
+- **TPM Quote:** независимо подписанный дайджест PCR, точный набор PCR, политика оператора, закреплённые AK и корневой ключ. Успешная аттестация измеренной загрузки не исключает позднее внедрение кода на уровне пользовательского процесса.
+- **Хост расширений:** отдельные для экземпляра ограничения частоты HTTP-запросов, одновременных запросов и объёма вывода, действующие и после переподключения; подписанные разрешения, ограниченные файловые и HTTPS-операции; подтверждение владельцем изменения привилегий.
+- **Linux:** только испытания действующих пространств имён пользователя, монтирования, PID и сети вместе с cgroup v2 и seccomp доказывают настроенную изоляцию ядра. Разделение групп процессов root/службы **не является** песочницей.
+- **Windows:** границу безопасности подтверждают только испытания настоящего токена AppContainer, Job Object, ACL, IPC и дочерних процессов. Кросс-компиляции недостаточно.
+- **macOS:** режим `isolated` недоступен намеренно, пока все потомки не ограничены принудительно применяемой ОС, не обходной границей ресурсов. Одной подписи вспомогательного процесса недостаточно. Нельзя незаметно переключаться на `trusted`.
+- **Guard:** защиту от подключения к процессу и внедрения кода на уровне ОС нельзя выводить из самодекларируемых данных пользовательского процесса. Перед ужесточением блокировок документируйте и проверяйте обычные средства доступности, оверлеи и антивирусы на поддерживаемых системах.
 
-## уровни выполняемых проверок
+## Уровни выполняемых проверок
 
-Run from repository root. Python 3 and matching Go toolchain are required.
+Команды запускаются из корня репозитория. Необходимы Python 3 и подходящий набор инструментов Go.
 
 ```bash
 # Детерминированные регрессионные тесты атак, включая -race:
@@ -35,23 +35,23 @@ python scripts/security/certify_03114.py --tier windows-live --output C:\\Temp\\
 python3 scripts/security/certify_03114.py --tier release --output /tmp/nl-gate.json --evidence /tmp/nl-offline.json /tmp/nl-backend.json /tmp/nl-linux-live.json /tmp/nl-windows-live.json
 ```
 
-Live Linux test verifies actual namespace setup (not merely `Available()`), no backend secrets, immutable package, `NoNewPrivs`, seccomp mode, dropped effective capabilities, and termination of children in a new process group using cgroup.kill. Live Windows test checks true AppContainer token, inaccessible private backend file, read-only package, denied direct internet, named-pipe broker, and Job process-count containment.
+Проверка Linux в реальной среде устанавливает фактическое создание пространств имён (не только ответ `Available()`), отсутствие секретов бэкенда, неизменность пакета, `NoNewPrivs`, режим seccomp, снятие эффективных привилегий и завершение дочерних процессов в новой группе через `cgroup.kill`. Проверка Windows проверяет настоящий токен AppContainer, недоступность приватного файла бэкенда, пакет только для чтения, запрет прямого доступа в интернет, брокер именованных каналов и ограничение количества процессов через Job.
 
-The test executor requires each named test to appear as `PASS` in Go's JSON test events. A `SKIP`, absent test, failing command or insufficient platform yields `BLOCKED`/`FAIL` and exit code 1. CI artifacts include the code fingerprint, host platform, run time, statuses and failure excerpts. **Evidence is not cryptographically signed by the Python tool**; use CI artifact provenance and restricted runner permissions.
+Исполнитель требует статус `PASS` для каждого именованного теста в JSON-событиях тестирования Go. `SKIP`, отсутствие теста, неуспешная команда или неподходящая платформа дают `BLOCKED`/`FAIL` и код возврата 1. Артефакты CI содержат отпечаток кода, платформу, время выполнения, статусы и выдержки из ошибок. **Средство Python не ставит криптографическую подпись на подтверждения**; используйте происхождение артефактов CI и ограниченные права исполнителей.
 
-## Дополнительные обязательные **ручные / аппаратные** сценарии
+## Дополнительные обязательные ручные и аппаратные испытания
 
-These are not marked successful by the offline runner and cannot be replaced with a simulator:
+Автономный исполнитель не отмечает их успешными; симулятор не заменяет фактическое испытание:
 
-1. **Physical TPM on Windows and Linux:** genuine AK issued under a trusted CA and real device key; reject software/self-asserted hardware, wrong key, expired challenge, replayed challenge, rotated binding epoch, revoked AK/root, root replacement and stale runtime.
-2. **Measured boot:** accepted physical TPM2 Quote after valid Certify, then policy changes and PCR changes; demonstrate revocation and distinct assurance from Guard process evidence.
-3. **Guard and attach/injection:** attempt user-mode attach, debug agent, injected module and modified JVM binary under each supported policy; verify server-side join rejection when required, and document paths OS/user-mode controls cannot exclude. Never promise absolute anti-cheat.
-4. **OS sandbox:** attempts to read backend secrets, modify foreign files, open ungranted addresses, create child process groups, exhaust memory/CPU/PIDs/output/requests, disable own policy, and restart to reset quotas. Check expected denial and cleanup after process exits on each supported OS.
-5. **Compatibility:** launch tested ordinary screen overlays, assistive technology, antivirus/EDR and debugger/dev tools according to the operator's supported app policy; document false positives and explicit allowed exceptions without disabling isolation.
-6. **macOS:** independently prove sandbox inheritance and the aggregate descendant resource boundary on physical hardware before enabling `isolated`. Until then, an explainable `unsupported` result is expected, not PASS.
+1. **Физический TPM под Windows и Linux:** подлинный AK, выданный доверенным центром, и настоящий ключ устройства. Отклонять программную или самостоятельно заявленную аппаратную подлинность, неверный ключ, просроченный или повторённый запрос, изменённую эпоху привязки, отозванные AK/корень, подмену корня и устаревшую среду выполнения.
+2. **Измеренная загрузка:** принимать физический TPM2 Quote после действительного Certify, затем проверять изменение политики и PCR, отзыв доверия и отличие этой гарантии от сведений процесса Guard.
+3. **Guard и внедрение:** пробовать подключение к процессу, отладочный агент, внедрённый модуль и изменённый бинарный файл JVM для каждой поддерживаемой политики. Проверять отказ сервера при обязательной защите и документировать способы, которые невозможно исключить средствами ОС или пользовательского режима. Не обещать абсолютную защиту от читов.
+4. **Песочница ОС:** попытки прочитать секреты бэкенда, изменить чужие файлы, обратиться по неразрешённым адресам, породить группы дочерних процессов, исчерпать память, ЦП, PID, квоты вывода и запросов, отключить собственную политику и сбросить квоты перезапуском. Проверить ожидаемый отказ и очистку после завершения процессов на каждой ОС.
+5. **Совместимость:** проверять обычные экранные оверлеи, вспомогательные технологии, антивирусы/EDR, отладчики и инструменты разработчика в рамках политики поддерживаемых приложений. Документировать ложные срабатывания и явные исключения без отключения изоляции.
+6. **macOS:** независимо подтвердить наследование песочницы и общую границу ресурсов всех потомков на физическом оборудовании до включения `isolated`. До этого ожидается объяснимый статус `unsupported`, а не PASS.
 
-## критерии завершения
+## Критерии завершения
 
-A real 0.32.0 GA security certification requires offline PASS, Backend Guard tests PASS, live Linux PASS, live Windows PASS, tested macOS policy disposition and PASS on all relevant physical TPM/Guard and compatibility cases, from the **same exact source tree**. Failed or skipped mandatory tests prohibit the claim. Evidence must not contain credentials, AK private keys, raw secrets or proprietary personal logs.
+Для реальной сертификации безопасности 0.32.0 GA необходимы успешные автономные проверки, тесты Backend Guard, проверки Linux и Windows в реальной среде, зафиксированное решение по политике macOS, а также все относящиеся к выпуску аппаратные, Guard- и совместимые сценарии — **для одного и того же дерева исходников**. Пропуск или провал обязательного теста запрещает заявление об успешной сертификации. Подтверждения не должны содержать учётные данные, закрытые ключи AK, исходные секреты и личные журналы пользователей.
 
-Current 0.31.14 automated release gate is deliberately incapable of passing with only three software reports: physical, compatibility and macOS evidence are mandatory and not synthesized.
+Автоматический контроль выпуска 0.31.14 намеренно не может завершиться успехом на основании трёх программных отчётов: физические испытания, совместимость и подтверждение для macOS обязательны и не подделываются.

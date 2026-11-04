@@ -1,28 +1,14 @@
-# NeverLauncher 0.47.5 — автономный SQLite → PostgreSQL операторские процедуры и безопасность переключения
+# NeverLauncher 0.47.5 — автономный SQLite → PostgreSQL: процедуры оператора и безопасность переключения
 
-**Status: source candidate, production cutover BLOCKED by missing source parity.**
-The 0.47.4 SQLite Core importer populates PostgreSQL SQLRepository but does
-not migrate the separate `http.sqlite` snapshot, `coordinator.sqlite`, all
-extension state or every external runtime store. The CLI deliberately does not
-turn its `readyForBackendCutover=false` report into a positive certification.
-There is no supported flag to override this block. Do not turn on a live
-PostgreSQL Backend from these receipts alone.
+**Статус: кандидат исходников, промышленное переключение ЗАБЛОКИРОВАНО из-за отсутствия полноты данных источника.** Импортёр SQLite Core 0.47.4 заполняет PostgreSQL SQLRepository, но не переносит отдельный снимок `http.sqlite`, `coordinator.sqlite`, все состояния расширений и внешние хранилища Runtime. CLI намеренно не превращает `readyForBackendCutover=false` в положительную сертификацию. Флага обхода нет. Запускать промышленный Backend PostgreSQL только по этим квитанциям запрещено.
 
-## что действительно делает оператор
+## Что действительно делает оператор
 
-`python3 scripts/operations/sqlite_pg_cutover_0475.py` implements a durable,
-local-only operator workflow with private journals, one-owner flock, source
-preflight, independent Core restore-proof backup, writer-service stop and
-inactive checks, frozen Core/HTTP/Coordinator backup, immutable staging/live
-SQLite Core import, verified file transfer and read-only PostgreSQL check.
-The Backend now also refuses startup against PostgreSQL that contains a live or staging SQLite import but lacks complete cutover acceptance. This check executes before application bootstrap, extensions, workers, or HTTP listeners. Unrelated PostgreSQL installations with no import are unaffected.
+`python3 scripts/operations/sqlite_pg_cutover_0475.py` обеспечивает долговременный локальный сценарий оператора с приватными журналами, `flock` единственного владельца, проверкой источника, независимой резервной копией Core с доказательством восстановления, остановкой и проверкой неактивности служб-писателей, замороженной копией Core/HTTP/Coordinator, неизменяемым импортом SQLite Core в staging/live, проверенным переносом файлов и чтением PostgreSQL без записи. Backend также отклоняет запуск на PostgreSQL, где есть live/staging импорт SQLite без полного допуска к переключению. Проверка выполняется **до** инициализации приложения, расширений, рабочих процессов и HTTP listeners. Посторонние PostgreSQL-установки без импорта не затрагиваются.
 
-The reader verifies receipt SHA-256, every mapped table's row count (including
-special transformations), catalog digest and user/project data from the actual
-SQLRepository implementation. Existing old count-only file receipts must be
-regenerated with the 0.47.5 copier. Unmapped source state is **not dropped**.
+Средство проверки сверяет SHA-256 квитанции, количество строк каждой отображённой таблицы (включая специальные преобразования), дайджест каталога и данные пользователей/проектов из действительной реализации SQLRepository. Старые квитанции копирования, содержащие только количества, должны быть пересозданы копировщиком 0.47.5. Несопоставленное исходное состояние **не удаляется**.
 
-For actual systemd-backed operator execution on an isolated test deployment:
+Для настоящего запуска под systemd на изолированном тестовом стенде:
 
 ```bash
 # До выполнения разверните launcher-sqlite с изменениями 0.47.5 на Go 1.27.3,
@@ -59,40 +45,15 @@ python3 scripts/operations/sqlite_pg_cutover_0475.py rollback \
   --owner-email original-owner@example.invalid
 ```
 
-`LAUNCHER_POSTGRES_DSN` must be present in the operator process environment.
-If TOTP is configured, add `--mfa-key-file <0600 file>` and
-`--pg-secret-env <variable-name>` to the `run` action. Do not put secret values
-into command-line flags. `--writer-unit` must enumerate **all** writer units,
-including schedulers and extension/bridge supervisors; anything outside systemd
-requires independent fencing before running. The operator cannot prove that an
-unknown unmanaged process has stopped writing. A frozen snapshot is taken only
-after all the declared units are inactive.
+`LAUNCHER_POSTGRES_DSN` обязателен в окружении процесса оператора. Для TOTP добавьте `--mfa-key-file <0600 file>` и `--pg-secret-env <variable-name>` к `run`; секретные значения не передавайте флагами. `--writer-unit` должен перечислять **все службы с правом записи**, включая планировщики и супервизоры расширений/Bridge; всё вне systemd нужно независимо заблокировать. Оператор не может доказать остановку неизвестного неуправляемого процесса. Замороженный снимок создаётся только после проверки остановки всех перечисленных служб.
 
-## семантика сбоев
+## Семантика сбоев
 
-- The operator retains `state.json` and fsynced append-only `stages.jsonl`
-  under a private 0700 work directory. A completed stage is skipped when the
-  command is resumed. Ambiguous PostgreSQL commit after a crash is **not**
-  automatically retried: inspect `sqlite_live_receipts_0473` and reconcile
-  manually before new work.
-- Original Core, HTTP and Coordinator SQLite files are not mutated by import.
-  `rollback` restores the source configuration and restarts its systemd unit
-  only when a service has **not** crossed the new-write boundary. A failed run
-  attempts this safe rollback automatically once a verified source backup
-  exists; an uncertain rollback is logged as a failure rather than success. Frozen
-  backups must still pass their integrity checks.
-- An unsuccessful import keeps the PostgreSQL destination isolated. A storage
-  copy conflict or bad SHA-256 blocks further steps; never advertise success
-  based on file counts alone.
-- Backend cutover remains blocked until a future release migrates and verifies
-  the HTTP Repository, Coordinator, Extensions, persistent security and other
-  active state and independently validates user authentication, publish and
-  Minecraft execution. A read-only owner/project lookup does **not** prove
-  password login, working server-bridge or a complete Minecraft launch.
+- Рабочий каталог с правами `0700` содержит `state.json` и fsync-обеспеченный журнал `stages.jsonl` только на добавление. После возобновления завершённый этап пропускается. Неоднозначный коммит PostgreSQL после аварии **не** повторяется автоматически: перед новой работой вручную изучите `sqlite_live_receipts_0473` и согласуйте состояние.
+- Исходные файлы Core/HTTP/Coordinator SQLite при импорте не меняются. `rollback` восстанавливает конфигурацию источника и перезапускает systemd-службу только **до** перехода границы новых записей. При сбое сценарий пытается безопасно откатиться после появления проверенной резервной копии; неопределённый результат записывается как ошибка. Замороженные копии тоже должны пройти проверку целостности.
+- Неуспешный импорт оставляет PostgreSQL изолированным. Конфликт копирования или неверный SHA-256 блокирует следующие этапы; успех по одному количеству файлов запрещён.
+- Backend остаётся заблокированным до будущего переноса и проверки HTTP Repository, Coordinator, расширений, долговременного состояния защиты и остальных активных данных, независимого подтверждения авторизации пользователей, публикации и запуска Minecraft. Чтение owner/project **не доказывает** работу пароля, ServerBridge и полноценный запуск игры.
 
-## приёмка ещё не завершена
+## Приёмка ещё не завершена
 
-Full Go 1.27.3 tests, PostgreSQL integration, actual systemd freeze/restart,
-independent restore/HA fencing, owner credential login, API publication,
-ServerBridge and real Minecraft E2E were not executed in the authoring
-container. Version 0.47.5 is not certified as a production GA cutover.
+Полные тесты Go 1.27.3, интеграция PostgreSQL, реальная остановка/перезапуск systemd, независимое восстановление/HA fencing, вход владельца, публикация API, ServerBridge и настоящий Minecraft E2E не запускались в контейнере разработки. Версия 0.47.5 не сертифицирована как промышленное GA-переключение.

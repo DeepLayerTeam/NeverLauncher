@@ -1,32 +1,32 @@
 # Launcher 0.25.5 — API службы текстур и права владения
 
-The service is implemented in the existing authenticated Backend, PostgreSQL and local/S3 storage. It manages only the logged-in user's **local Launcher Minecraft identity**. An official Mojang/Microsoft Minecraft identity is never modified by this API. Desktop UX, Admin grants UI and Yggdrasil/authlib-injector signing are later 0.26 milestones.
+Служба реализована внутри существующего аутентифицированного Backend с PostgreSQL и локальным/S3-хранилищем. Она управляет только **локальной идентичностью Launcher Minecraft вошедшего пользователя**. Через этот API невозможно изменить официальную идентичность Mojang/Microsoft Minecraft. Интерфейс Desktop, выдача разрешений Admin и подпись Yggdrasil/authlib-injector относятся к более поздним этапам 0.26.
 
-## обновление базы данных
+## Обновление базы данных
 
-Run the standard checksum-tracked DB migrator through migration `0071_texture_service_0255.sql` **before** deploying the API binary. This migration adds `texture_saved_items` referencing already-accounted `texture_blob_owners`; backfills verified managed images; allows a cleared, inactive assignment with no blob/URL; and extends immutable revision events with `delete`.
+До развёртывания API примените штатным мигратором с контрольными суммами миграцию `0071_texture_service_0255.sql`. Она добавляет `texture_saved_items` со ссылками на уже учтённые `texture_blob_owners`, переносит проверенные управляемые изображения, позволяет сброшенное неактивное назначение без объекта/URL и добавляет событие `delete` в неизменяемые ревизии.
 
-This is a forward-only migration. Do not revise migrations 0067–0070. Keep database and texture-storage backups before rolling out. Rollback after applying 0071 means restoring a compatible DB snapshot, not silently starting an older API binary against the new state. The content constraint forbids empty *active* selections. Resets are tombstones with retained CAS revision/history, not physical row deletion.
+Миграция выполняется только вперёд. Не меняйте 0067–0070. Перед выпуском сохраните резервные копии БД и хранилища текстур. Откат после применения 0071 означает восстановление совместимого снимка БД, а не запуск старого API против новой схемы. Ограничение содержимого запрещает пустое **активное** назначение. Сбросы представлены надгробными записями с сохранёнными CAS-ревизией и историей, а не физическим удалением строки.
 
-## конечные точки с авторизацией
+## Конечные точки с авторизацией
 
-All endpoints require a current Launcher Bearer session and resolve `minecraft_profiles.uuid` from that account. The optional `profileUuid` JSON field is an assertion checked against the authenticated UUID, **never** an owner selector. All successful mutation responses contain `apiVersion` and updated `data`, with `Cache-Control: private, no-store`.
+Все маршруты требуют действующей Bearer-сессии Launcher и определяют `minecraft_profiles.uuid` из аккаунта. Необязательное JSON-поле `profileUuid` — только утверждение, сверяемое с аутентифицированным UUID, **не** средство выбора владельца. Все успешные ответы изменений включают `apiVersion` и новое `data`, с `Cache-Control: private, no-store`.
 
-| Method and path | Request | Result |
+| Метод и путь | Запрос | Результат |
 | --- | --- | --- |
-| `GET /api/v1/me/textures` | none | Canonical Minecraft UUID, both assignments and CAS revisions |
-| `GET /api/v1/me/textures/library?kind=skin` | optional `skin` or `cape` filter | Up to 500 saved verified PNGs with digest, geometry, bytes, saved model and provenance |
-| `GET /api/v1/me/textures/library/{kind}/{digest}/image` | no body | Private owner-only integrity-checked PNG (works while inactive) |
-| `POST /api/v1/me/textures/{kind}/select` | `digest`, `expectedRevision`, `model`, `visibility`, optional `profileUuid` | Makes an already-saved, verified PNG active, records CAS revision `select` and checks kind/policy |
-| `POST /api/v1/me/textures/{kind}/reset` | `expectedRevision`, optional `profileUuid` | Disables the assignment and clears blob/URL immediately; saved PNG stays in library |
-| `DELETE /api/v1/me/textures/{kind}` | `expectedRevision`, optional `profileUuid` | Clears active assignment and removes its saved item (if locally managed) without erasing revisions |
-| `DELETE /api/v1/me/textures/library/{kind}/{digest}` | no body | Deletes an unselected saved item, releases owner quota if no other references remain |
-| `PATCH /api/v1/me/textures/{kind}` | Existing 0.25.1 selection body | Model/visibility/active changes, but cannot reactivate an empty reset tombstone |
-| `GET /api/v1/me/textures/{kind}/history` | none | Up to 100 most recent immutable snapshots; includes reset and delete events |
+| `GET /api/v1/me/textures` | Нет | Канонический UUID Minecraft, оба назначения и CAS-ревизии |
+| `GET /api/v1/me/textures/library?kind=skin` | Необязательный фильтр `skin` или `cape` | До 500 сохранённых проверенных PNG с дайджестом, геометрией, размером, моделью и происхождением |
+| `GET /api/v1/me/textures/library/{kind}/{digest}/image` | Без тела | Частный PNG владельца с проверкой целостности, даже при неактивном выборе |
+| `POST /api/v1/me/textures/{kind}/select` | `digest`, `expectedRevision`, `model`, `visibility`, необязательный `profileUuid` | Активирует уже сохранённый проверенный PNG; фиксирует CAS `select`, проверяет вид и политику |
+| `POST /api/v1/me/textures/{kind}/reset` | `expectedRevision`, необязательный `profileUuid` | Отключает назначение и сразу очищает объект/URL; PNG остаётся в библиотеке |
+| `DELETE /api/v1/me/textures/{kind}` | `expectedRevision`, необязательный `profileUuid` | Очищает выбор и удаляет сохранённый элемент (если он управляемый), но не историю |
+| `DELETE /api/v1/me/textures/library/{kind}/{digest}` | Без тела | Удаляет невыбранный элемент и освобождает квоту, если других ссылок нет |
+| `PATCH /api/v1/me/textures/{kind}` | Существующее тело выбора 0.25.1 | Изменяет модель/видимость/активность, но не может активировать пустую запись после сброса |
+| `GET /api/v1/me/textures/{kind}/history` | Нет | До 100 последних неизменяемых снимков, включая reset/delete |
 
-`{kind}` is `skin` or `cape`. All digests are lowercase SHA-256. For *new* saved selection use `expectedRevision=0` if no assignment exists; otherwise use the exact latest revision returned by GET. Reset/delete require revision >= 1. `model=classic|slim` only for skins; capes require classic. `visibility=public|private|unlisted`, public means visible to the public Minecraft texture resolver; unlisted/private are not public. Client-supplied `projectId`, `userId`, `realm`, arbitrary storage key and URL are not accepted.
+`{kind}` — `skin` или `cape`; дайджесты — SHA-256 в нижнем регистре. Для **первого** сохранённого выбора используйте `expectedRevision=0`, если назначения ещё нет, иначе точную последнюю ревизию GET. Для сброса/удаления нужна ревизия ≥ 1. `model=classic|slim` разрешён только скинам, для плащей — `classic`. `visibility=public|private|unlisted`; только `public` виден публичному резолверу текстур Minecraft. Переданные клиентом `projectId`, `userId`, `realm`, произвольный ключ хранилища или URL отклоняются.
 
-Example: select a previously uploaded skin from the private library:
+Пример выбора ранее загруженного скина из приватной библиотеки:
 
 ```sh
 curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/select" \
@@ -34,7 +34,7 @@ curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/select" \
  -d '{"digest":"<64-lowercase-hex-sha256>","expectedRevision":2,"model":"slim","visibility":"public"}'
 ```
 
-Reset (retains PNG in gallery):
+Сброс (PNG остаётся в галерее):
 
 ```sh
 curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/reset" \
@@ -42,18 +42,18 @@ curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/reset" \
  -d '{"expectedRevision":3}'
 ```
 
-Deletion semantics are different from a reset. `DELETE .../{kind}` removes the *currently assigned* saved item and resets the selection; `DELETE .../library/{kind}/{digest}` removes an *inactive* saved item. Deleting an actively assigned saved item directly returns HTTP 409; reset or delete the current selection first. Deletion never overwrites another player's shared SHA-256 object and never destroys the immutable assignment history. Physical objects become eligible for the existing seven-day GC grace window only when no assignments, gallery items or project defaults reference them. GC now explicitly excludes saved library items.
+Семантика удаления отличается от сброса. `DELETE .../{kind}` удаляет **текущий назначенный** сохранённый элемент и сбрасывает выбор; `DELETE .../library/{kind}/{digest}` удаляет **неактивный** сохранённый элемент. Прямое удаление активного элемента возвращает HTTP 409; сперва выполните сброс или удалите текущий выбор. Удаление никогда не перезаписывает общий SHA-256 объект другого игрока и не уничтожает неизменяемую историю. Физическое удаление через GC после семидневного периода допускается только без ссылок из назначений, галереи и проектных значений по умолчанию. GC теперь явно исключает сохранённые элементы библиотеки.
 
-## сценарии отказов и безопасность
+## Сценарии отказов и безопасность
 
-- HTTP 401 when no usable user session; 403 for asserted foreign `profileUuid`, disallowed skin/cape policy, or denied cape grant.
-- HTTP 404 for an unknown/foreign digest or missing owned assignment. Distinct error messages never reveal another account's texture.
-- HTTP 409 for an incorrect `expectedRevision` or a saved item still assigned. Each assignment update and its revision event commit atomically.
-- The repository checks actual ownership in PostgreSQL against `minecraft_profiles`, not just the UUID from the request. Use the same owned profile lock (advisory class 252) and per-user lock (253) as verified upload to coordinate selection, library delete, quotas and GC.
-- Gallery lookup and private image serving require account ownership, verified storage status and SHA-256 validation of returned PNG bytes. Saved preview works even when not publicly assigned; its response is `private, no-store`.
-- Official identities are not accepted by these operations. Cape selection is checked against project policy and a per-user grant even if a saved cape already exists. A previously reset assignment cannot be reactivated by merely setting `active=true`: choose a saved PNG first.
+- HTTP 401 — нет действующей пользовательской сессии; 403 — чужой `profileUuid`, запрет политики скина/плаща или отказ в разрешении на плащ.
+- HTTP 404 — неизвестный/чужой дайджест либо отсутствие собственного назначения. Тексты ошибок не раскрывают чужую текстуру.
+- HTTP 409 — неверный `expectedRevision` либо попытка удаления используемого элемента. Изменение назначения и событие ревизии фиксируются атомарно.
+- Репозиторий проверяет настоящее владение по `minecraft_profiles` в PostgreSQL, а не только UUID запроса. Для согласования выбора, удаления из библиотеки, квот и GC используются блокировки профиля (advisory class 252) и пользователя (253), как при проверенной загрузке.
+- Выдача галереи и приватного изображения требует владения, проверенного состояния хранилища и проверки SHA-256 возвращаемого PNG. Предпросмотр работает без публичного назначения и имеет `private, no-store`.
+- Официальные идентичности не принимаются. Выбор плаща проверяется по проектной политике и пользовательскому разрешению, даже если плащ сохранён. Сброшенный выбор нельзя включить одним `active=true`: сперва нужно выбрать сохранённый PNG.
 
-## регрессионные тесты и условия выпуска
+## Регрессионные тесты и условия выпуска
 
 ```sh
 cd services/api
@@ -63,4 +63,4 @@ TEST_PG_DSN_0255="$POSTGRES_TEST_DSN" go test -count=1 ./internal/repository -ru
 go test ./internal/httpapi ./internal/repository
 ```
 
-Integration test covers another user's UUID/digest, false public access after reset, revision conflicts, saved-library deletion, quota release, immutable event order, saved-but-inactive GC protection, denied/granted capes and ownership of previews. Deployment additionally requires real local/S3 storage and full Backend/UI compilation, plus an authenticated test against the running API and actual Minecraft texture refresh. Never treat passing pure Go unit tests as proof of complete production certification.
+Интеграционный тест охватывает чужой UUID/дайджест, отсутствие публичного доступа после сброса, конфликты ревизий, удаление из библиотеки, освобождение квоты, неизменяемый порядок событий, защиту неактивных сохранённых элементов от GC, разрешённые/запрещённые плащи и владение предпросмотрами. Для развёртывания дополнительно нужны настоящее локальное/S3-хранилище, сборка Backend/UI, проверка работающего API с аутентификацией и обновление текстур в Minecraft. Успешные чистые Go unit-тесты не являются полной промышленной сертификацией.

@@ -1,5 +1,5 @@
-// Package gravitcontent converts an inventoried Gravit installation into
-// hash-pinned Never build-workspace inputs. No source JAR is ever executed.
+// Пакет gravitcontent преобразует инвентаризированную установку Gravit в исходные данные
+// рабочей области сборки Never с закреплёнными хешами. Исходные JAR-файлы не запускаются.
 package gravitcontent
 
 import (
@@ -20,7 +20,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-const MaxFileBytes int64 = 64 << 20 // encrypted workspace upload is buffered by the existing builder
+const MaxFileBytes int64 = 64 << 20 // существующий сборщик буферизует загрузку зашифрованной рабочей области
 const MaxImportFiles = 25000
 
 type File struct {
@@ -31,8 +31,8 @@ type File struct {
 	Ownership  string `json:"ownership"`
 }
 
-// SkippedFile is an audit record for a client-tree member deliberately not
-// staged. A protected/user-owned path is never copied to Never's managed tree.
+// SkippedFile — запись аудита о файле клиентского дерева, намеренно исключённом
+// из подготовки. Защищённые и принадлежащие игроку пути не копируются в управляемое дерево Never.
 type SkippedFile struct {
 	SourcePath string `json:"sourcePath"`
 	Reason     string `json:"reason"`
@@ -62,9 +62,9 @@ func safeTarget(p string) bool {
 	return p != "" && len(p) < 1024 && !strings.HasPrefix(p, "/") && !strings.ContainsAny(p, "\\:\x00\r\n\t") && path.Clean(p) == p && p != ".." && !strings.HasPrefix(p, "../") && !strings.HasPrefix(strings.ToLower(p), ".")
 }
 
-// safeSourceDirectory accepts a Gravit-relative client installation directory,
-// not an arbitrary path in the source ZIP. The inventory is already authenticated
-// and rejects traversal, but relative input must also be checked independently.
+// safeSourceDirectory принимает каталог установки клиента относительно Gravit,
+// а не произвольный путь в исходном ZIP. Инвентаризация уже проверена
+// и запрещает обход каталогов, но относительный путь также проверяется отдельно.
 func safeSourceDirectory(s string) bool {
 	if !safeTarget(s) || len(s) > 512 {
 		return false
@@ -77,9 +77,9 @@ func safeSourceDirectory(s string) bool {
 	return true
 }
 
-// Gravit's update/exclusion rules are literal file paths or subtree names,
-// not unrestricted regexes or globs. Reuse the pattern produced by the model
-// converter, which has already validated every path and collision.
+// Правила обновления и исключений Gravit задают буквальные пути к файлам или поддеревьям,
+// а не неограниченные регулярные выражения или маски. Используем результат конвертера
+// модели, который уже проверил каждый путь и возможные конфликты.
 func matchesFileRule(file string, patterns []string) bool {
 	for _, rule := range patterns {
 		if strings.HasSuffix(rule, "/**") {
@@ -102,9 +102,9 @@ func hiddenClientFile(file string) bool {
 	return false
 }
 func protectedClientFile(file string) bool {
-	// Paths containing players' worlds, settings, screenshots and resource packs
-	// must never be deployed as if they were launcher-managed, even when the
-	// upstream update list is misconfigured.
+	// Пути с мирами игроков, настройками, снимками экрана и наборами ресурсов
+	// нельзя развёртывать как управляемые лаунчером, даже если список обновлений
+	// исходной системы настроен неправильно.
 	first := strings.ToLower(strings.SplitN(file, "/", 2)[0])
 	switch first {
 	case "saves", "screenshots", "resourcepacks", "shaderpacks", "logs", "crash-reports":
@@ -117,9 +117,9 @@ func protectedClientFile(file string) bool {
 	return false
 }
 
-// The optional catalog converter validates semantics, but it needs the source
-// file candidates before it can resolve ownership. Only exact file action keys
-// (never redirects, JVM commands or script arguments) grant candidacy.
+// Конвертер необязательного каталога проверяет семантику, но для определения владельца
+// ему сначала нужны исходные файлы-кандидаты. Кандидатами могут быть только точные ключи
+// файловых действий, но не перенаправления, JVM-команды или аргументы скриптов.
 func optionalFilePaths(raw json.RawMessage) map[string]bool {
 	paths := map[string]bool{}
 	if len(raw) == 0 {
@@ -206,10 +206,10 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 	return nil, errors.New("missing source file")
 }
 
-// Prepare verifies the entire input against the recorded MIG03 inventory, then
-// selects ONE profile's client tree and shared libraries/assets. Files from
-// other profiles, launchserver, auth, wrappers, keys and custom modules are
-// never copied into a client workspace.
+// Prepare сверяет все исходные данные с зафиксированной инвентаризацией MIG03,
+// затем выбирает клиентское дерево ОДНОГО профиля и общие библиотеки/ресурсы.
+// Файлы других профилей, launchserver, auth, обёртки, ключи и пользовательские модули
+// никогда не копируются в клиентскую рабочую область.
 func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string, exactLoaderVersion ...string) (Plan, error) {
 	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
 	actual, e := inv.Inspect(ctx, src, size, saved.SourceSHA256)
@@ -222,10 +222,10 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 	return PreparePinned(ctx, src, size, saved, profilePath, projectID, profileID, name, loader, exactLoaderVersion...)
 }
 
-// PreparePinned converts one profile after the caller has fully verified the
-// immutable source bytes with gravitinventory.Inspect and compared the manifest
-// to the committed run. It is for the multi-profile dry-run operating on an
-// unlinked, private, closed-for-writing spool only. Actual imports use Prepare.
+// PreparePinned преобразует один профиль после полной проверки неизменяемых исходных
+// байтов через gravitinventory.Inspect и сравнения манифеста с зафиксированным запуском.
+// Применяется только для пробной миграции нескольких профилей из закрытого для записи,
+// приватного изолированного хранилища. Реальный импорт выполняется через Prepare.
 func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string, exactLoaderVersion ...string) (Plan, error) {
 	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
 	if size != saved.SourceBytes || saved.ManifestSHA256 == "" {
@@ -257,9 +257,9 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	if hex.EncodeToString(sum[:]) != profileMeta.SHA256 {
 		return out, errors.New("profile content differs from inventory")
 	}
-	// The old converter reports all nonempty optional arrays as blocked. Extract
-	// and independently verify them with the production OptionalFile converter;
-	// only then remove this handled field from its isolated conversion copy.
+	// Старый конвертер блокирует все непустые необязательные массивы. Извлеките их
+	// и независимо проверьте промышленным конвертером OptionalFile; лишь после этого
+	// удалите обработанное поле из изолированной копии для преобразования.
 	var obj map[string]json.RawMessage
 	if e = json.Unmarshal(raw, &obj); e != nil || obj == nil {
 		return out, errors.New("profile must be a JSON object")
@@ -274,8 +274,8 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 			obj["updateOptional"] = json.RawMessage(`[]`)
 		}
 	} else if bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
-		// Gravit can serialize an absent optional list as null, whereas the
-		// legacy profile converter accepts only arrays. Treat null as empty.
+		// Gravit может представить отсутствующий необязательный список как null, тогда как
+		// устаревший конвертер профилей принимает только массивы. Считаем null пустым списком.
 		obj["updateOptional"] = json.RawMessage(`[]`)
 	}
 	clean, e := json.Marshal(obj)
@@ -286,10 +286,10 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	if e != nil {
 		return out, e
 	}
-	// Gravit ClientProfile does not identify the loader build. The operator
-	// supplies its exact version, which is pinned to both immutable Profile v2
-	// and the release's Minecraft manifest. Never guess Forge/Fabric build
-	// from a client JAR or claim a generic loader is launchable.
+	// Gravit ClientProfile не указывает сборку загрузчика. Оператор задаёт точную версию,
+	// закрепляемую одновременно в неизменяемом Profile v2 и манифесте Minecraft релиза.
+	// Нельзя определять сборку Forge/Fabric по клиентскому JAR или считать
+	// универсальный загрузчик заведомо пригодным к запуску.
 	loaderVersion := ""
 	if len(exactLoaderVersion) > 1 {
 		return out, errors.New("only one exact loader version is allowed")
@@ -313,8 +313,8 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		converted.Profile = normalized
 	}
 	out.Profile = converted
-	// A source profile may carry supported manually-reviewed server references;
-	// NEVER interpret a 'manual' field as permission to configure a server.
+	// Исходный профиль может содержать поддерживаемые ссылки на серверы после ручной проверки;
+	// поле 'manual' НИКОГДА не означает разрешения на настройку сервера.
 	for _, fld := range converted.Fields {
 		if fld.Status == "blocked" {
 			out.Blockers = append(out.Blockers, "profile."+fld.Field+": "+fld.Reason)
@@ -324,10 +324,10 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	if stem == "" || stem == "." {
 		return out, errors.New("invalid profile basename")
 	}
-	// The Gravit profile's `dir` is the client tree identity. It is not
-	// necessarily equal to the JSON filename (renames are commonplace). Never
-	// fall back to the basename when an explicit dir was provided: that could
-	// import another profile's files without an operator noticing.
+	// Поле `dir` профиля Gravit определяет клиентское дерево и не обязательно
+	// совпадает с именем JSON-файла (переименования распространены). Если `dir` указан
+	// явно, нельзя подставлять вместо него базовое имя файла: это может незаметно
+	// для оператора импортировать файлы другого профиля.
 	sourceDirectory := stem
 	if dirRaw, exists := obj["dir"]; exists {
 		if e = json.Unmarshal(dirRaw, &sourceDirectory); e != nil || !safeSourceDirectory(sourceDirectory) {
@@ -342,13 +342,13 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	used := map[string]string{}
 	clientFiles := 0
 	optionalCandidates := []model.ManifestFile{}
-	// `update` identifies Gravit-managed members; everything else in the
-	// client tree is potentially player-owned data. A source JAR listed on the
-	// classpath is also required, even when omitted from `update`.
+	// Поле `update` определяет файлы под управлением Gravit; всё остальное
+	// в клиентском дереве потенциально принадлежит игроку. Исходный JAR из
+	// classpath также обязателен, даже если он отсутствует в `update`.
 	updateRules, e := sourcePaths(obj, "update")
 	if e != nil {
 		out.Blockers = append(out.Blockers, e.Error())
-		// A blocked source must not gain a more permissive interpretation.
+		// Заблокированный источник не должен получать более разрешительную трактовку.
 		updateRules = []string{".migration/no-match"}
 	}
 	optionalFiles := optionalFilePaths(optionRaw)
@@ -445,8 +445,8 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 			}
 		}
 	}
-	// Verify classpath membership now, not after stage/sign. Missing JARs must
-	// not be silently downloaded or synthesized by the migration service.
+	// Проверяем присутствие JAR в classpath до подготовки и подписания.
+	// Служба миграции не должна незаметно загружать или создавать отсутствующие JAR.
 	selected := map[string]bool{}
 	for _, f := range out.Files {
 		selected[f.TargetPath] = true
@@ -466,8 +466,8 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 	return out, nil
 }
 
-// Reader indexes the authenticated source ZIP once: importing 25,000 files
-// must not perform quadratic linear searches through its central directory.
+// Reader один раз индексирует проверенный исходный ZIP: импорт 25 000 файлов
+// не должен вызывать квадратичное число линейных поисков по центральному каталогу.
 type Reader struct{ entries map[string]*zip.File }
 
 func NewReader(src io.ReaderAt, size int64) (*Reader, error) {

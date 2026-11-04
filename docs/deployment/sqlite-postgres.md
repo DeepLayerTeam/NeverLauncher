@@ -1,37 +1,37 @@
 # Launcher 0.37.7 — проверенный автономный перенос SQLite ↔ PostgreSQL
 
-**Status: runnable offline transfer, not live backend cutover.** Importing rows into the `launcher_sqlite_import_03211` schema or a complete minimal backup into `launcher_minimal_transfer_0377` does **not** populate PostgreSQL HTTP Repository production tables. The current PostgreSQL `SQLRepository` cannot serve these imported schemas. Consequently `readyForBackendCutover` is always `false`, including for a successful import/export. No CLI flag promotes an unverified migration to production.
+**Статус: работающий автономный перенос, но не переключение действующего Backend.** Импорт строк в `launcher_sqlite_import_03211` или полного минимального бэкапа в `launcher_minimal_transfer_0377` **не заполняет** промышленные таблицы HTTP Repository PostgreSQL. Текущий PostgreSQL `SQLRepository` не может обслуживать эти схемы. Поэтому `readyForBackendCutover` всегда `false`, даже при успешном импорте/экспорте. Флага CLI для перевода непроверенной миграции в production нет.
 
-Run all operations on a local, operator-controlled, private filesystem, with an isolated PostgreSQL database. The PostgreSQL account must have permission to create a new schema and triggers. The transfer stores password hashes, secrets, signing keys, tokens, audit trails, and user data in PostgreSQL **unencrypted at the application layer**; apply transport encryption, full-disk encryption, strict role privileges, and backups. Never point the command at a shared or untrusted database.
+Выполняйте операции на приватной локальной файловой системе оператора с изолированным PostgreSQL. Аккаунту PostgreSQL нужны права создания схем и триггеров. Перенос помещает хеши паролей, секреты, ключи подписи, токены, аудит и данные пользователей в PostgreSQL **без шифрования на уровне приложения**: обеспечьте шифрование транспорта/диска, строгие права ролей и резервные копии. Не направляйте команду на общую или недоверенную БД.
 
 ## Полная минимальная установка, включая HTTP/Coordinator SQLite и файлы проекта
 
-1. Stop API and every file writer. Acquire a consistent offline backup using the existing installer:
+1. Остановите API и всех писателей файлов. Создайте согласованную автономную копию штатным установщиком:
 
    ```sh
    python3 scripts/install/minimal-install.py backup --root /var/lib/launcher-minimal --destination /private/backups/minimal-2026-10-29
    python3 scripts/install/minimal-install.py backup-verify --bundle /private/backups/minimal-2026-10-29
    ```
 
-2. Set `LAUNCHER_POSTGRES_DSN` in the operator's environment (do not put secrets in command arguments). Using the compiled `launcher-sqlite` binary:
+2. Задайте `LAUNCHER_POSTGRES_DSN` в окружении оператора (не раскрывайте секреты через аргументы). Используйте собранный `launcher-sqlite`:
 
    ```sh
    launcher-sqlite minimal-to-postgres --bundle /private/backups/minimal-2026-10-29 --ack-no-backend-cutover
    launcher-sqlite postgres-to-minimal --bundle /private/backups/reconstructed --ack-no-backend-cutover
    ```
 
-3. Verify and restore the exported bundle **into a new, nonexistent directory**:
+3. Проверьте экспорт и восстановите его **в новый несуществующий каталог**:
 
    ```sh
    python3 scripts/install/minimal-install.py backup-verify --bundle /private/backups/reconstructed
    python3 scripts/install/minimal-install.py restore --bundle /private/backups/reconstructed --target-root /var/lib/launcher-restored
    ```
 
-The transfer validates the SHA-256 and length of each file and chunk, checks both SQLite databases for logical/foreign-key corruption, and preserves original JSON manifests and byte-exact file data. The destination cannot be overwritten. A second import into the same transfer schema is rejected. User/role/device trust, nonce history, durable jobs, published heads and identity data remain in the original SQLite bytes, not a lossy reinterpreted data model.
+Перенос проверяет SHA-256 и размер каждого файла/фрагмента, проверяет обе SQLite-БД на логическую целостность и целостность внешних ключей, сохраняет исходные JSON-манифесты и точные байты файлов. Целевые данные не перезаписываются, второй импорт в ту же схему отклоняется. Пользователи/роли/доверие устройств, история nonce, долговременные задания, опубликованные вершины и идентичности остаются в исходных байтах SQLite, а не теряются при преобразовании модели.
 
 ## Независимый перенос схемы SQLite Core 326
 
-If working with an existing `sqlitecore` backup (created by `launcher-sqlite backup`), the separate SQL row-preserving transfer supports:
+Для существующей копии `sqlitecore` (созданной `launcher-sqlite backup`) отдельный перенос с сохранением SQL-строк поддерживает:
 
 ```sh
 launcher-sqlite sqlite-to-postgres --backup /private/core-backup.db --ack-staging-only
@@ -39,20 +39,15 @@ launcher-sqlite postgres-to-sqlite --backup /private/recovered-core.db --ack-no-
 launcher-sqlite backup-verify --backup /private/recovered-core.db
 ```
 
-The `launcher_sqlite_import_03211` schema includes immutable row mirrors and the original byte-exact SQLite backup in SHA-256-verified chunks. The reverse operation checks every mirrored table and row digest against the reconstructed SQLite snapshot and verifies Core invariants before publishing the restored file and its `.json` manifest. The original core migration bug that allowed `TRUNCATE` in its mirror is closed.
+`launcher_sqlite_import_03211` содержит неизменяемые зеркала строк и исходный побайтовый SQLite-бэкап в фрагментах, проверяемых SHA-256. Обратная операция сверяет все таблицы и дайджесты строк зеркала с восстановленным SQLite-снимком и проверяет инварианты Core до публикации восстановленного файла и `.json` манифеста. Исправлена прежняя ошибка Core-миграции, допускавшая `TRUNCATE` в зеркале.
 
-## обязательные ограничения
+## Обязательные ограничения
 
-- Import is **additive** and transactionally rolls back on errors; it never truncates or edits live PostgreSQL application tables. PostgreSQL transactions with unknown commit outcomes must be reconciled before any retry.
-- Import/export is **not** a conflict merge, active-session migration, credential reissuance, filesystem snapshot without stopping writers, HA migration or a PostgreSQL production backend switch.
-- A true live SQLite → PostgreSQL → SQLite backend cutover still requires mapping and verifying every active HTTP Repository and runtime store, a service maintenance window, fencing, dual-mode application acceptance, and reverse failover tests. Do not claim this production gate passed based solely on the offline transfer.
-- Required CI runs actual PostgreSQL and modernc SQLite integration tests, including import/reverse export, hash parity, immutable-table enforcement, missing/duplicate target rejection, and reconstruction of both SQLite databases plus binary files. The checked-in tests require the repository's Go toolchain and an isolated PostgreSQL fixture.
+- Импорт **только добавляет** данные и транзакционно откатывается при ошибках; промышленные таблицы приложения PostgreSQL не очищаются и не редактируются. При неизвестном исходе коммита PostgreSQL требуется сверка до любого повтора.
+- Импорт/экспорт — **не** слияние конфликтов, перенос активных сеансов, перевыпуск учётных данных, снимок файловой системы без остановки писателей, HA-миграция или переключение промышленного Backend на PostgreSQL.
+- Для настоящего переключения SQLite → PostgreSQL → SQLite нужно сопоставить и проверить все активные хранилища HTTP Repository/Runtime, провести окно обслуживания и блокирование писателей, приёмку приложения в обоих режимах и тест обратного переключения. Автономный перенос сам по себе не закрывает этот этап.
+- CI обязан выполнять настоящие интеграционные тесты PostgreSQL и modernc SQLite с импортом/обратным экспортом, совпадением хешей, защитой неизменяемых таблиц, отклонением отсутствующей/дублирующей цели и восстановлением обеих SQLite-БД с бинарными файлами. Нужны инструменты Go проекта и изолированная база PostgreSQL.
 
 ## Новое в 0.47.3: импорт действующих данных SQLRepository
 
-The existing `sqlite-to-postgres --ack-staging-only` command documented above
-remains an **immutable quarantine** transfer. For the separate, explicit offline
-SQLite Core → **live PostgreSQL Repository** conversion, see
-[`sqlite-postgres-live.md`](sqlite-postgres-live.md). It requires a
-pristine, fully migrated PostgreSQL schema, rejects unsupported active security
-and durable state, and is **not** an automatic Backend cutover.
+Описанная выше `sqlite-to-postgres --ack-staging-only` остаётся переносом в **неизменяемый карантин**. Отдельный явный автономный перенос SQLite Core → **рабочий PostgreSQL Repository** описан в [`sqlite-postgres-live.md`](sqlite-postgres-live.md). Он требует чистой полностью мигрированной схемы PostgreSQL, блокирует неподдерживаемое активное состояние безопасности и долговременное состояние, **не** переключает Backend автоматически.

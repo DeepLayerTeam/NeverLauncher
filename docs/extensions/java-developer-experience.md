@@ -2,17 +2,17 @@
 
 ## Публикация готового SDK (реально собранные артефакты)
 
-`dist/java-sdk/maven/ru/launcher/` contains the published **0.48.12** Java 17 ABI artifacts:
+В `dist/java-sdk/maven/ru/launcher/` находятся опубликованные артефакты **0.48.12** с ABI Java 17:
 
-| Maven artifact | Contents | Dependency |
+| Артефакт Maven | Состав | Зависимость |
 |---|---|---|
-| `ru.launcher:launcher-java-sdk-core:0.48.12` | Extension, Host, SPI, events, identity, content, UI, lifecycle, JSON and broker client | JDK 17+ |
-| `ru.launcher:launcher-gravit-compat:0.48.12` | Limited, source-portable Gravit compatibility adapter | `launcher-java-sdk-core` |
-| `ru.launcher:neverlauncher-api-sdk:0.48.12` | Working HTTP API client and 452-operation registry | `launcher-java-sdk-core` |
+| `ru.launcher:launcher-java-sdk-core:0.48.12` | Расширения, Host, SPI, события, идентичность, содержимое, UI, жизненный цикл, JSON и клиент брокера | JDK 17+ |
+| `ru.launcher:launcher-gravit-compat:0.48.12` | Ограниченный адаптер совместимости Gravit, переносимый на уровне исходников | `launcher-java-sdk-core` |
+| `ru.launcher:neverlauncher-api-sdk:0.48.12` | Работающий клиент HTTP API и реестр из 452 операций | `launcher-java-sdk-core` |
 
-Each artifact has a binary JAR, sources JAR, generated Javadoc JAR and real Maven POM; each file has SHA-256 and SHA-512 sidecars. Artifacts are built with `javac --release 17`; **these are unsigned local publication artifacts**, not Maven Central releases or a production signature. They are shipped so developers can compile without access to NeverLauncher internal source tree.
+Каждый артефакт содержит бинарный JAR, JAR исходников, сгенерированный Javadoc JAR и настоящий Maven POM; для каждого файла предусмотрены контрольные суммы SHA-256 и SHA-512. Сборка выполняется с `javac --release 17`. **Это неподписанные локально опубликованные артефакты**, а не выпуск Maven Central или промышленная подпись. Они позволяют собирать расширения без исходников внутренних компонентов NeverLauncher.
 
-Reproduce the local publication from source using JDK 17/21 and Python 3.12:
+Воспроизведение локальной публикации из исходников с JDK 17/21 и Python 3.12:
 
 ```sh
 sh sdk/java/core/build.sh test
@@ -22,20 +22,20 @@ python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output /tmp/java-sdk-04812
 python3 scripts/java/compare_sdk_repos_04812.py dist/java-sdk/maven /tmp/java-sdk-04812/maven
 ```
 
-The final comparison is **byte-for-byte** and assumes the same effective compiler/Javadoc versions for the checked-in publication and the local rebuild. Cross-JDK source compatibility is tested separately; differing Javadoc output across toolchain versions does not imply API incompatibility.
+Итоговое сравнение выполняется **побайтово** и предполагает одинаковые эффективные версии компилятора и Javadoc у сохранённой публикации и локальной сборки. Совместимость исходников между версиями JDK проверяется отдельно; различия Javadoc не означают несовместимости API.
 
-## независимый потребитель (Maven + Gradle)
+## Независимый потребитель (Maven и Gradle)
 
-The complete sample is `examples/extensions/java-developer-04812/`. Maven and Gradle **both** resolve SDK coordinates from the packaged local Maven repository, not source-tree `build/classes`. The sample implements Java extension lifecycle, Admin/Desktop action handlers, validated persisted settings and a CLI `status` command.
+Полный пример находится в `examples/extensions/java-developer-04812/`. Maven и Gradle получают координаты SDK из упакованного локального репозитория Maven, **а не** из `build/classes` исходного дерева. Пример реализует жизненный цикл Java-расширения, обработчики действий Admin/Desktop, сохраняемые настройки с проверкой и CLI-команду `status`.
 
 ```sh
 mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml package
 gradle --no-daemon -p examples/extensions/java-developer-04812 classes
 ```
 
-Maven/Gradle themselves (and their standard compiler plugins) must be installed or accessible in the build environment. The local publication and the JVM integration harness need only JDK and Python, **not** Maven/Gradle or network access.
+Сами Maven/Gradle и их стандартные плагины компилятора должны быть установлены или доступны в среде сборки. Для локальной публикации и JVM-интеграции достаточно JDK и Python, **без** Maven/Gradle и сети.
 
-Build a deployable **unsigned** extension directory from the *published* SDK, not local SDK class directories:
+Сборка пригодного для развёртывания **неподписанного** каталога расширения из **опубликованного** SDK, а не локальных каталогов классов:
 
 ```sh
 python3 scripts/java/build_developer_package_04812.py --output /tmp/java-developer-package
@@ -43,33 +43,33 @@ python3 scripts/java/developer_e2e_04812.py --report /tmp/java-developer-e2e.jso
 python3 scripts/java/test_developer_e2e_04812.py
 ```
 
-The generated directory contains `launcher-extension.json`, `backend/workspace.jar`, `cli/workspace.jar`, `admin/index.html` and `desktop/index.html`. Use the existing `nl extension pack` with a real publisher's Ed25519 signing key and the normal trusted installation workflow; this tool deliberately does not sign, install or grant capabilities.
+Результат содержит `launcher-extension.json`, `backend/workspace.jar`, `cli/workspace.jar`, `admin/index.html` и `desktop/index.html`. Используйте существующий `nl extension pack` с настоящим ключом Ed25519 издателя и обычный доверенный процесс установки. Инструмент намеренно не подписывает, не устанавливает и не выдаёт разрешения.
 
-## Независимые подтверждения функций и атакующие проверки
+## Независимые подтверждения функций и негативные проверки
 
-The E2E harness compiles **only** the sample source against the Maven **binary** SDK. It reads its own signed-package-compatible manifest and starts a real `java -jar` process against an authenticated, loopback-only Python HTTP Host implementation. Tests cover:
+E2E-комплекс компилирует **только исходники примера** против **бинарного** SDK из Maven. Он читает совместимый с подписанным пакетом манифест и запускает настоящий процесс `java -jar` с аутентифицированной Python-реализацией HTTP Host, доступной только по loopback. Проверяются:
 
-- Real JVM hello/ready/heartbeat/lifecycle and process termination;
-- Authenticated Admin and Desktop `ui.action.invoke` callback execution;
-- `ui.settings.get/put` persistence through the simulated Host broker and JSON Schema rejection;
-- Short-lived CLI `status` execution with a separate target;
-- Refusal of unknown unsigned actions and incorrect callback bearer tokens;
-- Maven POM dependencies and checksums, Java 17 `.class` bytecode limits, duplicate/unsafe entries;
-- Tampered JAR, missing sources JAR, invalid SHA-512 and corrupt dependency POM failures;
-- Determinism: two separately staged Maven repositories compared byte-for-byte.
+- Настоящие hello/ready/heartbeat/жизненный цикл JVM и завершение процесса.
+- Аутентифицированное выполнение callback `ui.action.invoke` для Admin и Desktop.
+- Сохранение `ui.settings.get/put` через имитируемый брокер Host и отклонение по JSON Schema.
+- Краткоживущая CLI-команда `status` с отдельной целевой частью.
+- Отказ неизвестным неподписанным действиям и неверным bearer-токенам callback.
+- Зависимости Maven POM, контрольные суммы, предел версии байткода `.class` Java 17, дубли и небезопасные записи.
+- Обнаружение изменённого JAR, отсутствующего JAR исходников, неправильного SHA-512 и повреждённого POM зависимости.
+- Детерминизм: побайтовое сравнение двух отдельно подготовленных репозиториев Maven.
 
-The Python Host is a test double for the real Go Broker: **the test confirms Java-to-Host protocol behavior, not end-to-end Go persistence, installed signatures, production RBAC or Minecraft sessions.** The Go 1.27.3 integration suite and release certification remain separate blockers.
+Python Host — тестовая замена реального Go Broker: **проверяется протокол Java–Host, а не сквозное хранение Go, подписи установленных пакетов, промышленный RBAC или игровые сеансы Minecraft.** Интеграционные проверки Go 1.27.3 и сертификация выпуска остаются отдельными условиями допуска.
 
 ## Матрица совместимости и интерпретация подтверждений
 
-| OS | Java 17 | Java 21 | Evidence |
+| ОС | Java 17 | Java 21 | Подтверждения |
 |---|---|---|---|
-| Linux x64 | CI required | **Locally tested** | Published SDK, real JVM E2E, Core/HTTP/Gravit tests on OpenJDK 21 |
-| Windows x64 | CI required | CI required | GitHub Actions matrix using Temurin |
-| macOS ARM64 / x64 runner | CI required | CI required | GitHub Actions matrix using Temurin; actual runner architecture recorded by CI |
+| Linux x64 | Требуется CI | **Проверено локально** | Опубликованный SDK, настоящий JVM E2E, тесты Core/HTTP/Gravit на OpenJDK 21 |
+| Windows x64 | Требуется CI | Требуется CI | Матрица GitHub Actions с Temurin |
+| macOS ARM64 / x64 | Требуется CI | Требуется CI | Матрица GitHub Actions с Temurin; действительная архитектура runner фиксируется в CI |
 
-Cross-platform job: `.github/workflows/java-developer-experience-04812.yml`. Its six OS/JDK combinations execute SDK tests, publication from built classes, external JDK consumer, negative security tests, Maven and Gradle compilation and upload per-job evidence. An independent Linux job repeats the publication twice and compares its binary output. **Adding CI configuration is not evidence the remote jobs have run**. No Java 17 local runtime, Maven, Gradle, Windows or macOS executable is installed in the local acceptance environment used for the 0.48.12 source patch.
+Межплатформенное задание: `.github/workflows/java-developer-experience-04812.yml`. Шесть комбинаций ОС/JDK выполняют тесты SDK, публикацию из собранных классов, сборку внешнего потребителя, негативные проверки безопасности, Maven и Gradle, а также загружают подтверждения каждого задания. Независимое задание Linux повторяет публикацию дважды и побайтово сравнивает результаты. **Наличие конфигурации CI не доказывает, что удалённые задания уже выполнялись.** В локальной приёмочной среде патча 0.48.12 нет Java 17, Maven, Gradle и исполняемых сред Windows/macOS.
 
 ## Границы безопасности и ограничения GA
 
-All Java code in this example is **trusted for the purpose of the local test**; it runs inside a process with the OS permissions of its launcher. Go Host Broker permissions and the signed package trust chain remain necessary in a real deployment. This release does **not** add OS sandbox enforcement, secure arbitrary third-party JVM bytecode, migrate a live PostgreSQL installation, certify Minecraft integrations or satisfy earlier independent GA gates. In particular the previous 0.48.11 Linux/Windows/macOS sandbox restrictions remain unverified and cannot be substituted by a passing SDK test.
+Весь Java-код примера считается **доверенным только в рамках локального теста**: он работает с правами ОС запустившего его процесса. В промышленной установке необходимы разрешения Go Host Broker и цепочка доверия подписанного пакета. Выпуск **не** обеспечивает изоляцию ОС, безопасность произвольного стороннего JVM-байткода, миграцию работающего PostgreSQL, сертификацию Minecraft и выполнение прежних независимых проверок GA. В частности, ограничения sandbox Linux/Windows/macOS из 0.48.11 остаются непроверенными и не могут подменяться успешным тестом SDK.
