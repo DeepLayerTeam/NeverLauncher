@@ -1,20 +1,14 @@
-> **0.34.7 compatibility:** V07 requires ValidationEvidence v4 and the explicit `authenticationMode` target field. The v3 procedure below is historical; follow [live-authentication.md](live-authentication.md) for new trusted runs. Older evidence never satisfies the new required authentication stage.
+> **Совместимость 0.34.7:** для V07 необходимы ValidationEvidence v4 и явное поле цели `authenticationMode`. Описанная ниже процедура v3 устарела; для новых доверенных запусков используйте [live-authentication.md](live-authentication.md). Прежние свидетельства никогда не удовлетворяют новому обязательному этапу аутентификации.
 
 # 0.34.6 — применимость действующих подтверждений V05, истечение срока и аварийный отзыв ключей
 
-This upgrade **does not** open stable: the 0.34.1 database/Backend stable gate
-remains in effect. It implements actual verification, rejection and revocation
-of attestation evidence for staged releases, and reports required-target coverage.
+Это обновление **не открывает** канал stable: блокировка стабильных выпусков БД/Backend из 0.34.1 остаётся в силе. Реализованы настоящая проверка, отклонение и отзыв свидетельств аттестации для подготовленных выпусков, а также отчёт об охвате обязательных целей.
 
 ## Перед запуском службы аттестации
 
-1. Apply PostgreSQL migration `0104_validation_freshness_0346.sql` (also mirrored
-   to the CLI migration bundle). Ensure all API instances use the same DB.
-2. Keep `LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY` and
-   `LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` from 0.34.5, in the Backend
-   process; the private attestation key stays on the isolated host.
-3. Set `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` to an operator-controlled
-   JSON array. For every required test target provide exactly these properties:
+1. Примените миграцию PostgreSQL `0104_validation_freshness_0346.sql` (её копия также включена в набор миграций CLI). Убедитесь, что все экземпляры API используют одну БД.
+2. Сохраните `LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY` и `LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` из 0.34.5 в процессе Backend; закрытый ключ аттестации остаётся на изолированном узле.
+3. Задайте `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` как JSON-массив под контролем оператора. Для каждой обязательной тестовой цели укажите точно следующие свойства:
 
 ```
 id, projectId, profileId, channel, version, manifestSha256,
@@ -23,33 +17,16 @@ javaVersion, os, arch, loader, installAdapterSha256, guardMode,
 guardPolicySha256, serverBridgeSha256, serverPluginVersion, preset
 ```
 
-All digests are **actual lower-case** SHA-256, except sourceSha which may be a
-40-character Git commit SHA. There are no wildcards. Each target is bound to
-an exact version and staged snapshot. Multiple presets/Java/OS combinations
-must be listed as separate required targets; do not list hypothetical targets
-that the provisioned attestor cannot execute. A changed snapshot or target
-configuration invalidates previous attestations. An empty config cannot
-confer an all-passed verdict.
+Все хеши должны быть **настоящими SHA-256 в нижнем регистре**, за исключением `sourceSha`, который может быть 40-символьным SHA коммита Git. Подстановочные символы не допускаются. Каждая цель привязана к точной версии и подготовленному снимку. Разные сочетания preset/Java/OS перечисляйте как отдельные обязательные цели; не добавляйте гипотетические цели, которые подготовленный аттестатор не может исполнить. Изменение снимка или конфигурации целей отменяет предыдущие аттестации. Пустая конфигурация не может давать вердикт о полном прохождении.
 
-4. Run the separate attestor with its pinned image; it obtains a Backend-issued
-   run ID and **independent 256-bit nonce**. Backend stores the challenge before
-   delivering a temporary download grant. The host verifies the installed
-   bytes, stage artifacts, actual Java and ServerBridge, identifies the unique
-   matching configured target and signs v3 evidence with domain separation.
-5. Backend accepts signed evidence only while the challenge is active and
-   before the evidence expires; it checks trust anchor, key fingerprint,
-   purpose/audience, nonce, snapshot, target matrix and all seven recorded
-   stages. One run ID may be recorded once. Signed evidence is valid at most
-   24 hours and its applicability is re-evaluated on every query.
+4. Запустите отдельный аттестатор с закреплённым образом; он получает от Backend ID запуска и **независимый 256-битный nonce**. Backend сохраняет challenge до выдачи временного разрешения на скачивание. Хост сверяет установленные байты, подготовленные артефакты, настоящую Java и ServerBridge, определяет единственную подходящую настроенную цель и подписывает свидетельство v3 с разделением доменов.
+5. Backend принимает подписанное свидетельство только при активном challenge и до истечения срока свидетельства; проверяются якорь доверия, отпечаток ключа, назначение/аудитория, nonce, снимок, матрица целей и все семь записанных этапов. Один ID запуска может быть зафиксирован лишь один раз. Подписанное свидетельство действительно максимум 24 часа, а его применимость пересчитывается при каждом запросе.
 
-`GET /api/v1/packages/{packageId}/validation-attestations` returns:
-`targetCoverage`, `targetBlockers`, `allRequiredTargetsVerified`, plus the
-stored attestations. `allRequiredTargetsVerified` is deliberately separate from
-`stablePublishEligible` (still `false`).
+`GET /api/v1/packages/{packageId}/validation-attestations` возвращает `targetCoverage`, `targetBlockers`, `allRequiredTargetsVerified` и сохранённые аттестации. `allRequiredTargetsVerified` намеренно отделено от `stablePublishEligible` (по-прежнему `false`).
 
 ## Аварийный отзыв ключа подписи
 
-Authenticate with `settings:manage` and fresh MFA, then POST:
+Аутентифицируйтесь с `settings:manage` и свежим MFA, затем отправьте POST:
 
 ```
 POST /api/v1/admin/validation-attestation/keys/revoke
@@ -58,32 +35,19 @@ Content-Type: application/json
 {"fingerprint":"<64 lowercase hex chars>","reason":"operator confirmed key compromise"}
 ```
 
-Fingerprint is SHA-256 of the **raw Ed25519 public key**. The revocation is
-stored permanently in PostgreSQL; every evidence acceptance and applicability
-read consults that store and fails closed if unavailable. A key cannot be
-unrevoked by the API. Rotating the configured trusted public key immediately
-invalidates previous evidence even without explicit revocation.
+Отпечаток — SHA-256 **необработанного открытого ключа Ed25519**. Отзыв навсегда сохраняется в PostgreSQL; каждая проверка принятия или применимости свидетельства обращается к этому хранилищу и отказывает, если оно недоступно. API не позволяет отменить отзыв ключа. Смена настроенного доверенного открытого ключа немедленно делает прежние свидетельства недействительными даже без явного отзыва.
 
 ## Признание недействительным и конкурентность
 
-- Changing manifest/files means a different staged snapshot: no reuse.
-- Changing Java binary/version, preset, install adapter, source/build, loader,
-  Guard mode/policy or server/plugin identity invalidates the exact target.
-- Adding/removing/changing any required target changes the signed matrix hash.
-- A run from a different package/version, with a replaced nonce, wrong scope,
-  expired proof or revoked signer cannot be accepted as passing.
-- The API rechecks freshness and policy immediately before immutable insertion,
-  and reports always re-evaluate live revocation/applicability. Concurrent
-  signer revocation can leave a stored row but can never make it *applicable*.
-- The hard stable release and channel-head write guards stay in place until
-  the separate V11 implementation replaces them atomically. No currently
-  allowed stable publication race exists.
+- Изменение манифеста или файлов образует другой подготовленный снимок: повторное использование запрещено.
+- Изменение бинарника/версии Java, preset, адаптера установки, источника/сборки, загрузчика, режима/политики Guard или идентичности сервера/плагина делает точную цель недействительной.
+- Добавление, удаление или изменение любой обязательной цели меняет подписанный хеш матрицы.
+- Запуск от другого пакета/версии, с подменённым nonce, неверной областью действия, просроченным доказательством или отозванным подписантом не может считаться успешным.
+- API проверяет свежесть и политику непосредственно перед неизменяемой вставкой, а отчёты всегда заново проверяют отзыв и применимость. Конкурентный отзыв ключа может оставить сохранённую запись, но никогда не делает её *применимой*.
+- Жёсткие запреты записи стабильного выпуска и вершины канала действуют, пока отдельная реализация V11 не заменит их атомарно. Сейчас нет допустимой гонки публикации stable.
 
 ## Совместимость и развёртывание
 
-ValidationEvidence v2 is **not** accepted as v3 and does not satisfy V05 target
-coverage. The attestation host and Backend must be upgraded together. V01/V02
-observational reports do not turn into trusted evidence retroactively.
+ValidationEvidence v2 **не** принимается как v3 и не выполняет условия охвата целей V05. Хост аттестации и Backend необходимо обновлять вместе. Наблюдательные отчёты V01/V02 не превращаются задним числом в доверенные свидетельства.
 
-Do not put private attestation keys or production auth credentials in the worker
-container or build logs. Retain separate run logs and audit entries.
+Не помещайте закрытые ключи аттестации и производственные учётные данные в контейнер worker или журналы сборки. Храните отдельные журналы запусков и записи аудита.

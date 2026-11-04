@@ -1,34 +1,16 @@
 # NeverLauncher 0.46.2 — настоящая поставка и независимая приёмка
 
-This is the executable verification path for *actual* release files. It does not
-mint signatures or substitute test data for native executables. No release
-passes if the six signed packages are absent or if the native OS checks fail.
+Это выполняемая процедура проверки **настоящих** файлов выпуска. Она не выпускает подписи и не подменяет нативные исполняемые файлы тестовыми данными. Если отсутствует хотя бы один из шести подписанных пакетов или не пройдена проверка на целевой ОС, выпуск считается непрошедшим.
 
-## промышленный конвейер выпуска
+## Производственный конвейер выпуска
 
-1. Run required CI on exact committed source. Windows production builder must
-   sign both x64 and ARM64 executables with Authenticode/RFC3161 and check them
-   using SignTool. macOS production builder must validate Developer ID signatures,
-   hardened runtime, Gatekeeper, notarization and stapling for both targets.
-   Linux x64 and ARM64 binaries must originate on native target hosts.
-2. Run `scripts/release/build-release.sh` with the required independently signed
-   six-platform GA, Guard, compatibility, operational and live runtime evidence,
-   the exact commit and separate release signing credentials in environment.
-   Never supply signing credentials via the archive or the repository.
-3. The build writes `DELIVERY_VERIFIED_0462.json` by inspecting ZIP/TAR contents.
-   The Go release command requires this file, adds its SHA-256 to the signed
-   RELEASE_MANIFEST and verifies package/cohort evidence. It must not produce
-   a publishable bundle if any executable has the wrong platform/architecture.
-4. Before and after release signing, the build checks that the release manifest
-   enumerates the exact *on-disk* six package hashes. It runs the independent
-   Ed25519/GA/Operations checks already present in release 0.46.1.
-5. Production GitHub publication rehashes the local bundle, copies immutable
-   bytes, uploads a draft release, downloads **all** draft release assets and
-   compares hashes. Starting with 0.46.2 it also re-inspects inner executable
-   formats and manifest bindings before promotion to public. Public production
-   delivery E2E runs after publication using the original pinned trust keys.
+1. Запустите обязательный CI для точного зафиксированного коммита. Production-сборщик Windows должен подписать исполняемые файлы x64 и ARM64 через Authenticode/RFC3161 и проверить их SignTool. Сборщик macOS должен подтвердить подписи Developer ID, hardened runtime, Gatekeeper, нотариальное заверение и stapling для обеих целей. Бинарники Linux x64 и ARM64 должны быть собраны на нативных целевых узлах.
+2. Запустите `scripts/release/build-release.sh` с обязательными независимо подписанными подтверждениями GA для шести платформ, Guard, совместимости, эксплуатации и реального Runtime, точным коммитом и отдельными учётными данными подписания выпуска в переменных среды. Никогда не помещайте учётные данные подписания в архив или репозиторий.
+3. Сборка создаёт `DELIVERY_VERIFIED_0462.json` после проверки содержимого ZIP/TAR. Команда выпуска на Go требует этот файл, добавляет его SHA-256 в подписанный `RELEASE_MANIFEST` и проверяет доказательства пакетов/наборов. Публикуемый пакет не должен создаваться, если хотя бы один исполняемый файл предназначен для неверной платформы или архитектуры.
+4. До и после подписания выпуска сборка проверяет, что манифест перечисляет точные хеши **шести пакетов на диске**. Выполняются независимые проверки Ed25519/GA/Operations, уже существовавшие в 0.46.1.
+5. Production-публикация через GitHub повторно вычисляет хеш локального набора, копирует неизменяемые байты, загружает черновик выпуска, скачивает **все** вложения черновика и сравнивает хеши. Начиная с 0.46.2 перед публичным выпуском дополнительно перепроверяются внутренние форматы исполняемых файлов и их привязка к манифесту. После публикации выполняется публичный production E2E поставки с исходными закреплёнными доверенными ключами.
 
-## ручная предварительная проверка
+## Ручная предварительная проверка
 
 ```bash
 VERSION="$(cat VERSION)"
@@ -37,8 +19,7 @@ python3 scripts/release/inputs_guard_0461.py verify
 python3 scripts/release/delivery_verify_0462.py --bundle "dist/release-$VERSION" --release-manifest
 ```
 
-To independently accept bytes served from an immutable HTTPS staging/CDN path,
-**first** upload the exact signed release assets without repacking. Then run:
+Для независимой приёмки байтов, доступных по неизменяемому HTTPS-пути подготовки/CDN, **сначала** загрузите точные подписанные артефакты без перепаковки. Затем выполните:
 
 ```bash
 python3 scripts/release/staged_accept_0462.py \
@@ -51,24 +32,10 @@ python3 scripts/release/staged_accept_0462.py \
   --report /secure/staging-acceptance-0462.json
 ```
 
-The staging verifier refuses HTTP, redirects, wrong-version URLs, truncated
-or changed files, missing release manifests, incomplete six-platform packages,
-invalid signatures and invalid distribution attestations. The report is only
-written after each byte has been downloaded and the production CLI has verified
-both local and downloaded final packages. It is operational evidence and must
-be separately approved under the independent GA policy for signing; it is not
-an approval by itself. Report must not be committed as a signed receipt.
+Проверяющий подготовленный выпуск отклоняет HTTP, перенаправления, URL неверной версии, усечённые или изменённые файлы, отсутствующие манифесты, неполный набор шести платформ, недействительные подписи и неверные подтверждения распространения. Отчёт создаётся только после загрузки каждого байта и проверки production-CLI как локальных, так и скачанных итоговых пакетов. Отчёт — эксплуатационное доказательство, которое отдельно утверждается по независимой политике GA для подписания, а не самостоятельное разрешение. Нельзя коммитить отчёт как подписанную квитанцию.
 
-## границы проверки
+## Границы проверки
 
-- A PE certificate table / Mach-O LC_CODE_SIGNATURE is structural evidence,
-  **not** proof that a signature chains to an authorized issuer. Native
-  Authenticode, codesign, stapling and trust policy validation are separate,
-  mandatory checks. No unsigned/development package can satisfy the required
-  Windows production manifest mode.
-- `SOURCE_COMMIT`, `VERSION` and independent operator receipts must belong to
-  the exact candidate. CI skipped or missing jobs, a reused earlier receipt,
-  a re-signed different archive, or a GitHub draft with differing downloaded
-  bytes must remain release blockers.
-- Cryptographically reproducible unsigned payload across independent builders
-  is the distinct goal of 0.47.0, not a claim made by 0.46.2.
+- Таблица сертификата PE или `LC_CODE_SIGNATURE` Mach-O подтверждает наличие структуры подписи, **но не** доказывает, что цепочка доверия ведёт к разрешённому издателю. Проверки Authenticode, codesign, stapling и политики доверия на целевой ОС обязательны и независимы. Неподписанный или отладочный пакет не соответствует обязательному production-режиму манифеста Windows.
+- `SOURCE_COMMIT`, `VERSION` и независимые квитанции оператора должны относиться к точному кандидату. Пропущенные или отсутствующие задания CI, повторно использованная старая квитанция, переподписанный другой архив и черновик GitHub со скачанными несовпадающими байтами остаются блокирующими условиями выпуска.
+- Криптографически воспроизводимый неподписанный набор файлов у независимых сборщиков — отдельная цель 0.47.0, а не свойство, заявляемое версией 0.46.2.

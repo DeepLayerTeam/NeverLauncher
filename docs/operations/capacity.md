@@ -1,36 +1,36 @@
 # Launcher 0.32.15 — DEP10: ёмкость и диагностика
 
-This release includes **real process and infrastructure measurements**, a 60-second rolling request window, a read-only bounded benchmark utility, and operator recommendations. It **does not** claim to know the maximum throughput of your infrastructure without measurements on it.
+Выпуск содержит **настоящие измерения процессов и инфраструктуры**, скользящее окно запросов в 60 секунд, ограниченный инструмент нагрузки только для чтения и рекомендации оператору. Он **не** заявляет знание максимальной пропускной способности вашей инфраструктуры без измерений в ней.
 
 ## Эксплуатационные интерфейсы
 
-- `launcher-api diagnose capacity` — JSON with observed disk usage, PostgreSQL connections/DB size/job and outbox backlog, Go heap, goroutines, and recommendations. Exit `2` for failed probes or critical conditions. Run with the SAME environment as the service; secrets stay on the host.
-- `GET /api/v1/operations/capacity` — last sampled JSON, requires existing `diagnostics:read`; returns HTTP 503 if no verified/fresh sample.
-- `GET /metrics` — Prometheus gauges. Samples are collected in the background at 30-second intervals and never query PostgreSQL on the HTTP request path. Keep this pre-existing endpoint isolated to your monitoring network or reverse proxy.
-- HTTP middleware — last-minute request count, 429 count, 5xx count, current in-flight, average and histogram-estimated p95. No route labels, tokens, IPs, or player identifiers.
-- `launcher-capacity-bench --confirm --url http://127.0.0.1:8080/api/v1/status --max-workers 16 --step 8s` — explicitly requested GET load test with 1,2,4,8,16 concurrent requests, automatically stopping on first failing step. `--allow-remote` is also required for non-loopback targets, which you must own/control. Responses contain observed RPS, p95/p99, failures and rate limiting. Do not run against third-party endpoints.
+- `launcher-api diagnose capacity` — JSON с наблюдаемым использованием диска, соединениями PostgreSQL, размером БД, очередями заданий и outbox, кучей Go, числом горутин и рекомендациями. Код выхода `2` означает ошибку проверок или критические условия. Запускайте с **тем же** окружением, что и службу; секреты остаются на узле.
+- `GET /api/v1/operations/capacity` — последний собранный JSON; необходимо существующее право `diagnostics:read`. Без свежего проверенного образца возвращает HTTP 503.
+- `GET /metrics` — метрики Prometheus. Сбор выполняется в фоне каждые 30 секунд; HTTP-запрос не инициирует обращения к PostgreSQL. Оставьте существующий маршрут доступным только сети мониторинга или через обратный прокси.
+- Промежуточное ПО HTTP — число запросов, ответов 429 и 5xx за минуту, число активных запросов, средняя задержка и оценка p95 по гистограмме. Метки маршрутов, токены, IP и идентификаторы игроков не собираются.
+- `launcher-capacity-bench --confirm --url http://127.0.0.1:8080/api/v1/status --max-workers 16 --step 8s` — запускаемый только по явному запросу GET-нагрузочный тест с 1, 2, 4, 8 и 16 конкурентными запросами. Он останавливается на первом неуспешном шаге. Для адресов вне loopback дополнительно требуется `--allow-remote`; такой адрес должен принадлежать вам или находиться под вашим управлением. Вывод содержит наблюдаемые RPS, p95/p99, ошибки и ограничения частоты. Не направляйте нагрузку на сторонние службы.
 
 ## Измеряемые условия и действия
 
-| Measurement | Alert condition | Operational action |
+| Показатель | Условие предупреждения | Действие оператора |
 |---|---|---|
-| Free local filesystem space | Below 2 GiB **or** below 10% | Move storage/backups to a larger volume, test restore; do not fill the WAL volume |
-| PostgreSQL client connections | ≥80% of `max_connections` | Profile leaking sessions, bound pools, use PgBouncer before increasing replicas |
-| Pending durable jobs | ≥500 | Investigate workers, retries and DB latency; scale workers only with lease/fencing testing |
-| Oldest pending job age | >60 seconds | Check worker progress, retry delays and dependencies |
-| Running job leases expired | >0 | Investigate stale workers and idempotent recovery; never blindly replay unsafe actions |
-| Outbox backlog | ≥500 | Check dispatcher, downstream acknowledgements and idempotency |
-| HTTP 5xx percentage | ≥5% of ≥20 requests / 60s | Diagnose failures before increasing replicas |
-| HTTP 429 percentage | ≥10% of ≥20 requests / 60s | Investigate abusive load and legitimate client retry patterns |
-| HTTP p95 | >1s of ≥20 requests / 60s | Profile handlers and dependency pressure |
+| Свободное место локальной ФС | Меньше 2 ГиБ **или** 10% | Перенесите хранилище/копии на более крупный том, проверьте восстановление; не заполняйте том WAL |
+| Соединения клиентов PostgreSQL | ≥80% от `max_connections` | Найдите утечки сеансов, ограничьте пулы, рассмотрите PgBouncer до увеличения числа реплик |
+| Ожидающие устойчивые задания | ≥500 | Проверьте обработчики, повторы и задержку БД; масштабируйте обработчики только после проверки аренд и fencing |
+| Возраст старейшего ожидающего задания | Более 60 секунд | Проверьте продвижение обработчиков, задержки повторов и зависимости |
+| Просроченные аренды работающих заданий | Более 0 | Проверьте зависшие обработчики и идемпотентное восстановление; не воспроизводите опасные действия вслепую |
+| Очередь outbox | ≥500 | Проверьте диспетчер, подтверждения получателей и идемпотентность |
+| Доля ответов HTTP 5xx | ≥5% при ≥20 запросах за 60 с | Найдите причину ошибок до добавления реплик |
+| Доля ответов HTTP 429 | ≥10% при ≥20 запросах за 60 с | Исследуйте вредоносную нагрузку и допустимые повторные запросы клиентов |
+| Задержка HTTP p95 | Более 1 с при ≥20 запросах за 60 с | Профилируйте обработчики и нагрузку зависимостей |
 
-**These are operator-defined warning thresholds, not published benchmarked maximum limits.** No auto-scaling or automatic topology transitions occur. A return code of zero does not certify HA/failover. More than one Backend in Network/HA must pass independent lease/fencing, failover, network-partition, storage and authentication tests. SQLite-only HTTP Backend is still blocked in the existing deployment gate.
+**Это пороги предупреждений, заданные оператором, а не опубликованные измеренные максимумы.** Автомасштабирование и автоматические смены топологии не выполняются. Нулевой код выхода не сертифицирует HA или отказоустойчивость. При нескольких Backend в Network/HA необходимы независимые проверки аренд/fencing, переключения, разделения сети, хранилища и аутентификации. В существующем ограничении развёртывания HTTP Backend только с SQLite по-прежнему запрещён.
 
 ## Охват и оговорки
 
-- The API's current production HTTP repository is PostgreSQL; these measurements cannot certify unsupported SQLite-only HTTP production.
-- Filesystem sampling uses `statfs` on existing local paths. A missing volume is an explicit probe error, not zero usage. The report includes no storage paths.
-- PostgreSQL samples are read using separate bounded SQL connections, a five-second query deadline, server-wide connection counts, and queue/outbox SQL aggregates. Failed queries mark the report unverified and are not treated as empty queues.
-- S3 storage quota is not exposed by a standard portable S3 API; therefore no numeric quota is invented. Redis lease and S3 round-trip availability remain subject to existing `/ready` and `diagnose growth` validation.
-- A benchmark of `/api/v1/status` or `/ready` establishes the throughput **only of that selected endpoint**, in that test environment and time window. Auth flows, release publishing, large downloads and actual players need their own representative workload experiments.
-- Sampling never writes to SQLite or PostgreSQL and does not mutate jobs, leases, nonces, identities or authorization state.
+- Текущий production-репозиторий HTTP API использует PostgreSQL; эти измерения не могут сертифицировать неподдерживаемый production HTTP только на SQLite.
+- Для измерения ФС вызывается `statfs` по существующим локальным путям. Отсутствующий том считается явной ошибкой проверки, а не нулевой загрузкой. В отчёт не включаются пути Storage.
+- Образцы PostgreSQL собираются через отдельные ограниченные SQL-соединения, тайм-аут запроса пять секунд, счётчики соединений всего сервера и агрегаты очередей/outbox. При ошибке запроса отчёт отмечается непроверенным, а не показывает пустые очереди.
+- Стандартный переносимый API S3 не раскрывает квоту Storage, поэтому числовая квота не выдумывается. Доступность Redis-аренд и операций S3 по-прежнему проверяется существующими `/ready` и `diagnose growth`.
+- Нагрузка на `/api/v1/status` или `/ready` подтверждает пропускную способность **только выбранной конечной точки** в данной среде и временном окне. Аутентификация, публикация выпусков, крупные загрузки и настоящие игроки требуют отдельных репрезентативных экспериментов.
+- Сбор образцов ничего не записывает в SQLite или PostgreSQL и не изменяет задания, аренды, nonce, идентичности или состояние авторизации.

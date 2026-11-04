@@ -2,37 +2,37 @@
 
 ## Поведение Runtime (нативный Rust/Tauri)
 
-The Minecraft token is never sufficient alone to mark an account game-ready. Every new native Microsoft/Xbox/XSTS/Minecraft grant is followed by **two real, authenticated HTTPS requests using the same Minecraft access token**:
+Самого токена Minecraft никогда недостаточно, чтобы считать учётную запись готовой к игре. После каждой новой выдачи прав нативной цепочкой Microsoft/Xbox/XSTS/Minecraft выполняются **два настоящих авторизованных HTTPS-запроса с одним и тем же токеном доступа Minecraft**:
 
-1. `GET https://api.minecraftservices.com/entitlements/mcstore` — JSON `items` must be a well-formed array of named items. Recognized **Java** entitlements are `game_minecraft` and `product_minecraft`; Bedrock/Dungeons/other items are **not** treated as Java licenses. `product_game_pass_pc`/`game_pass_pc` is a possible Game Pass indicator, not definitive standalone proof of Java access.
-2. `GET https://api.minecraftservices.com/minecraft/profile` — must succeed and contain a valid nonzero 32-character hexadecimal Java UUID and a valid 3–16-character Minecraft username. Explicit demo profiles are not accepted. An HTTP 404 is a **hard rejection** (`NoMinecraftJava`); malformed JSON, 401/403, provider failures and missing fields also fail closed.
+1. `GET https://api.minecraftservices.com/entitlements/mcstore` — JSON-поле `items` должно быть корректным массивом именованных элементов. Распознаются права **Java** `game_minecraft` и `product_minecraft`; Bedrock, Dungeons и другие элементы **не** считаются лицензией Java. `product_game_pass_pc`/`game_pass_pc` может указывать на Game Pass, но само по себе не доказывает доступ к Java.
+2. `GET https://api.minecraftservices.com/minecraft/profile` — должен успешно завершиться и вернуть правильный ненулевой UUID Java из 32 шестнадцатеричных символов и имя игрока Minecraft длиной 3–16 символов. Явные демо-профили не принимаются. HTTP 404 — **безусловный отказ** (`NoMinecraftJava`); некорректный JSON, 401/403, сбои провайдера и отсутствующие поля также вызывают отказ.
 
-Java player profiles are authoritative for **playability** when the entitlements list is empty (which can happen for Game Pass). The entitlement list alone NEVER qualifies an account, even if it contains a Java product. The nickname is UI metadata only; persistent account identity is the verified Minecraft UUID, not an email or mutable username.
+При пустом списке прав (что возможно для Game Pass) подтверждённый профиль игрока Java остаётся авторитетным доказательством **возможности играть**. Один лишь список прав **никогда** не делает учётную запись пригодной, даже если содержит продукт Java. Ник отображается только в интерфейсе; постоянная идентичность — проверенный UUID Minecraft, а не email или изменяемое имя.
 
-### каждое использование сохранённой учётной записи
+### При каждом использовании сохранённой учётной записи
 
-Before status, textures, or launch, native code checks Never identity session and Client ID, refreshes expired Microsoft/Xbox/Minecraft credentials in the trusted process, and validates both `mcstore` and the live Java profile again. The returned UUID must match the previously stored UUID irrespective of letter case. A changed UUID **fails** and requires explicit account reconnect. Usernames may change without changing the identity. No fallback to cached profile, local session, project Yggdrasil, or offline credentials is allowed after validation failure.
+Перед проверкой статуса, текстур или запуском нативный код проверяет сеанс идентичности Never и Client ID, обновляет просроченные данные Microsoft/Xbox/Minecraft в доверенном процессе и заново проверяет `mcstore` и актуальный профиль Java. Полученный UUID обязан совпадать с ранее сохранённым без учёта регистра. Изменённый UUID приводит к **отказу** и требует явного повторного подключения аккаунта. Имя игрока может измениться без смены идентичности. После ошибки проверки запрещено переходить к кэшированному профилю, локальному сеансу, проектному Yggdrasil или автономным учётным данным.
 
-Tokens stay in the Rust process / protected OS credential store and are never returned to React. The old `schema=1` Backend ticket is supported unchanged during transition; the new native `schema=2` account needs no vault migration. Microsoft OIDC for logging into Never is **not** equivalent to Minecraft Java readiness.
+Токены остаются в процессе Rust и защищённом хранилище учётных данных ОС, никогда не возвращаясь в React. Старый билет Backend `schema=1` поддерживается без изменений на переходном этапе; для новой нативной учётной записи `schema=2` миграция хранилища не нужна. Microsoft OIDC для входа в Never **не** равнозначен готовности Minecraft Java.
 
-### чего это НЕ доказывает
+### Чего это НЕ доказывает
 
-- Whether Microsoft/Xbox family/privacy settings allow **multiplayer** for a specific user. Explicit XSTS family/age responses are categorized as `XboxFamily`, including `XErr` represented as a number or string. An otherwise valid profile does not override multiplayer privacy restrictions. A real vanilla/modded online-mode server join and Mojang sessionserver validation remain required for certification.
-- External registration/allowlisting of Launcher's own Client ID at Minecraft Services, or a successful production login. Requires an approved app and actual Java/Game Pass account.
-- Cancellation/refund/license changes after the last live check. A fresh check occurs on the next status/launch; no offline success is synthesized when services cannot be reached.
+- Разрешают ли настройки конфиденциальности и семьи Microsoft/Xbox **многопользовательскую игру** конкретному пользователю. Явные ответы XSTS о возрасте и семейных ограничениях классифицируются как `XboxFamily`, включая `XErr` в виде числа или строки. Корректный профиль не обходит ограничения приватности многопользовательской игры. Для сертификации по-прежнему нужны реальное подключение к vanilla/modded-серверу в режиме online-mode и проверка Mojang sessionserver.
+- Внешнюю регистрацию/разрешение собственного Client ID Launcher в Minecraft Services или успешный production-вход. Нужны одобренное приложение и настоящий аккаунт Java/Game Pass.
+- Отмену, возврат средств или смену лицензии после последней онлайн-проверки. Новая проверка выполняется при следующем запросе статуса/запуске; при недоступности служб офлайн-успех не подделывается.
 
-## положительные и отрицательные проверки тестовых данных
+## Положительные и отрицательные проверки тестовых данных
 
-- Java entitlement + 404 Java profile -> denied.
-- Empty entitlements + valid token-authenticated Java profile (possible Game Pass) -> accepted.
-- Bedrock-only entitlement + conflicting stored Java UUID -> denied.
-- Demo Java profile or malformed entitlements -> denied.
-- Xbox `XErr` family restrictions as string or integer -> categorized with static redacted error message.
-- Name change with same UUID -> accepted; UUID change with same name -> denied.
+- Право Java + ответ 404 профиля Java → отказ.
+- Пустой список прав + действительный профиль Java, полученный по токену (возможен Game Pass), → разрешение.
+- Только право Bedrock + несоответствующий сохранённый UUID Java → отказ.
+- Демо-профиль Java или некорректный список прав → отказ.
+- Семейное ограничение Xbox `XErr` как строка или целое число → классификация с постоянным сообщением об ошибке без секретов.
+- Смена имени при том же UUID → разрешение; смена UUID при том же имени → отказ.
 
-HTTP fixtures validate client request order and bearer attachment. They are **not** proof of provider approval. The native CI gate runs on Windows, macOS and Linux; sign-off additionally requires real account and `online-mode=true` multiplayer testing.
+Тестовые HTTP-ответы проверяют порядок запросов клиента и передачу bearer-токена. Они **не** доказывают одобрение провайдера. Нативный CI запускается на Windows, macOS и Linux; для окончательного утверждения также требуются настоящая учётная запись и проверка многопользовательской игры с `online-mode=true`.
 
-## команды проверки
+## Команды проверки
 
 ```bash
 cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_verification_0266::tests

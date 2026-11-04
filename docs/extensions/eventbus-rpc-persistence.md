@@ -27,7 +27,7 @@ This release changes **executable behavior**, not protocol identifiers. Host Pro
 sh sdk/java/core/build.sh test
 sh examples/extensions/java-runtime/build.sh
 python3 examples/extensions/java-runtime/test-runner.py
-# Requires project Go 1.27.3, a configured development toolchain and test dependencies:
+# Требуются Go 1.27.3 проекта, настроенные инструменты разработки и тестовые зависимости:
 cd services/api
 go test -race -count=1 -run 'Test.*(0206|0423)' ./internal/eventbus ./internal/repository
 go test -race -count=1 -run 'TestRuntime.*(0303|0423)' ./internal/extensionhost

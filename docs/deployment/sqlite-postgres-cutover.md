@@ -25,9 +25,9 @@ regenerated with the 0.47.5 copier. Unmapped source state is **not dropped**.
 For actual systemd-backed operator execution on an isolated test deployment:
 
 ```bash
-# Before execution, deploy a Go 1.27.3 launcher-sqlite binary with 0.47.5 changes,
-# apply all existing PostgreSQL SQL migrations to an empty destination and
-# export LAUNCHER_POSTGRES_DSN and MFA secrets securely.
+# До выполнения разверните launcher-sqlite с изменениями 0.47.5 на Go 1.27.3,
+# примените все миграции PostgreSQL к пустому назначению и
+# безопасно задайте LAUNCHER_POSTGRES_DSN и секреты MFA.
 python3 scripts/operations/sqlite_pg_cutover_0475.py run \
   --work-dir /private/neverlauncher-cutover-0475 \
   --launcher-sqlite /usr/local/bin/launcher-sqlite \
@@ -42,11 +42,11 @@ python3 scripts/operations/sqlite_pg_cutover_0475.py run \
   --project existing-project-id \
   --owner-email original-owner@example.invalid
 
-# Review current state. No credentials or DSN are persisted to this journal.
+# Проверьте состояние. Учётные данные и DSN в этом журнале не сохраняются.
 python3 scripts/operations/sqlite_pg_cutover_0475.py status \
   --work-dir /private/neverlauncher-cutover-0475
 
-# Before any PostgreSQL writer has started, recover previous env / SQLite unit.
+# До запуска любых процессов записи PostgreSQL восстановите прежнее окружение/службу SQLite.
 python3 scripts/operations/sqlite_pg_cutover_0475.py rollback \
   --work-dir /private/neverlauncher-cutover-0475 \
   --source-env /etc/neverlauncher/backend.env \

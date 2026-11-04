@@ -1,12 +1,12 @@
 # Launcher 0.37.5: установка SQLite на одном узле (Linux)
 
-This procedure uses the actual HTTP repository and persisted auth/session stores; it does not set up PostgreSQL or Redis. It is a **single API process** on a supported local filesystem, not network HA. Use a service account that owns the installation directory, and a reverse proxy terminating HTTPS. Never place the SQLite databases on NFS or shared/overlay writable volumes.
+Эта процедура использует настоящий HTTP-репозиторий и постоянные хранилища аутентификации/сеансов, но не устанавливает PostgreSQL или Redis. Это **один процесс API** на поддерживаемой локальной файловой системе, а не сетевая конфигурация высокой доступности. Используйте отдельную служебную учётную запись — владельца каталога установки — и обратный прокси, завершающий HTTPS. Никогда не размещайте базы SQLite на NFS, общих томах или доступных для записи overlay-томах.
 
-## предварительные требования
+## Предварительные требования
 
-Build `launcher-api` from the exact release sources with the toolchain pinned by `services/api/go.mod`; obtain a verified executable and the actual `Guard` and `ServerBridge` release allowlist JSON policies for your shipped artifacts. The installer intentionally cannot invent signed release data. If these policies are missing or invalid, startup must fail.
+Соберите `launcher-api` из исходников точного выпуска инструментами, версии которых закреплены в `services/api/go.mod`; получите проверенный исполняемый файл и реальные JSON-политики разрешённых выпусков `Guard` и `ServerBridge` для поставляемых артефактов. Установщик намеренно не создаёт вымышленные данные подписанного выпуска. При отсутствии или ошибке этих политик запуск должен завершиться отказом.
 
-## установка
+## Установка
 
 ```sh
 python3 scripts/install/minimal-install.py init \
@@ -23,15 +23,15 @@ python3 scripts/install/minimal-install.py run \
   --binary /opt/launcher/bin/launcher-api
 ```
 
-The initializer creates private `config`, `db`, `storage`, `backups`, `extensions` and `factory` directories and writes the initial configuration with mode `0600`. It refuses to overwrite an existing installation. `check` calls the backend's real offline `diagnose deployment` command and stops if release policies, persistent storage or security settings are invalid. `run` replaces the Python process with the API. To enable automatic startup, configure your local service manager to run that command as the dedicated service user; ensure the API binary and Python script are protected against untrusted modification.
+Инициализатор создаёт закрытые каталоги `config`, `db`, `storage`, `backups`, `extensions` и `factory`, а также сохраняет начальную конфигурацию с правами `0600`. Существующая установка не перезаписывается. Команда `check` вызывает настоящую офлайн-команду Backend `diagnose deployment` и прекращает работу при неверных политиках выпуска, настройках постоянного хранилища или безопасности. `run` заменяет процесс Python процессом API. Для автозапуска настройте локальный менеджер служб на выполнение команды от имени выделенного служебного пользователя; защитите бинарник API и Python-скрипт от изменений недоверенными субъектами.
 
-Use a TLS reverse proxy for `https://api.example.org`; the API defaults to `127.0.0.1:8080` and is not exposed directly. Read `LAUNCHER_BOOTSTRAP_TOKEN` only from the private `backend.env`; never include it in a URL, log, issue or public paste. Submit it to `POST /api/v1/install/bootstrap-admin` via the `X-Launcher-Bootstrap-Token` header with a 12+-character admin password. Sign in as that owner, then call `POST /api/v1/install/first-project` with the owner's credentials. `GET /api/v1/install/readiness` shows installation status.
+Для `https://api.example.org` используйте обратный прокси TLS. По умолчанию API слушает `127.0.0.1:8080` и не публикуется напрямую. Читайте `LAUNCHER_BOOTSTRAP_TOKEN` только из закрытого `backend.env`; не включайте его в URL, журналы, задачи или общедоступные сообщения. Отправьте токен в `POST /api/v1/install/bootstrap-admin` через заголовок `X-Launcher-Bootstrap-Token` вместе с паролем администратора длиной не менее 12 символов. Войдите как владелец и вызовите `POST /api/v1/install/first-project` с учётными данными владельца. `GET /api/v1/install/readiness` показывает состояние установки.
 
-After the administrator is committed, the bootstrap token cannot be reused and restarting with a different value does not re-enable it. For local offline backup, use [minimal-backup.md](../minimal-backup.md). For authenticated transfer and restore on a second Linux host in **0.45.2**, use [minimal-recovery.md](minimal-recovery.md). Stop API and other file writers before creating the backup; never copy live `*.sqlite` files or separate blobs while API is running. The **0.37.7 SQLite ↔ PostgreSQL transfer** stage requires separate acceptance. A green offline backup test does not certify the complete deployment as production-ready.
+После сохранения администратора начальный токен нельзя повторно использовать, а перезапуск с другим значением не включает его вновь. Для локального автономного резервирования используйте [minimal-backup.md](../minimal-backup.md). Для авторизованного переноса и восстановления на втором узле Linux в **0.45.2** используйте [minimal-recovery.md](minimal-recovery.md). До создания копии остановите API и другие процессы записи: никогда не копируйте работающие `*.sqlite` и отдельные объекты, пока API активен. Этап переноса **SQLite ↔ PostgreSQL 0.37.7** требует отдельной приёмки. Успешный тест офлайн-копии сам по себе не сертифицирует всю установку как готовую к production.
 
-## границы безопасности
+## Границы безопасности
 
-- Production rejects a memory repository, missing or malformed release allowlists, weak signing keys, unsafe WebAuthn/CORS origins, Redis/HA selection in minimal mode, and missing fail-closed rate limiting.
-- The single-host API holds an exclusive instance lock anchored to its local storage root and SQLite's own database owner locks. Never unlink a held lock file to circumvent fencing.
-- SQLite snapshots and runtime state persist under WAL before operations return; stable release publication retains its signed, one-use authorization checks from 0.37.4.
-- A successful `check` confirms configuration only. For an operational acceptance, boot the **compiled** API on a supported filesystem, create owner/project, restart it and inspect persisted users, authentication and release policies; perform separate negative tests and signed release verification before claiming GA.
+- Production отклоняет репозиторий в памяти, отсутствующие или неправильно сформированные списки разрешённых выпусков, слабые ключи подписи, небезопасные источники WebAuthn/CORS, выбор Redis/HA в минимальном режиме и отсутствие ограничений частоты запросов по принципу отказа при сомнении.
+- API на одном узле удерживает эксклюзивную блокировку экземпляра, привязанную к локальному корню Storage, а также собственные блокировки владельца БД SQLite. Не удаляйте удерживаемый файл блокировки для обхода защиты от параллельных владельцев.
+- Снимки SQLite и состояние Runtime сохраняются в режиме WAL до возврата операций; публикация stable сохраняет проверки подписанного одноразового разрешения из 0.37.4.
+- Успешный `check` подтверждает только конфигурацию. Для эксплуатационной приёмки запустите **скомпилированный** API на поддерживаемой файловой системе, создайте владельца/проект, перезапустите API и проверьте сохранённые данные пользователей, аутентификации и политики выпусков. До заявления GA проведите отдельные отрицательные тесты и проверку подписанного выпуска.

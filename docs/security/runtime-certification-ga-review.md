@@ -1,28 +1,28 @@
 # Launcher 0.35.0 — анализ безопасности Runtime перед GA
 
-## защищаемые ресурсы и корни доверия
+## Защищаемые ресурсы и корни доверия
 
-The release signing key and the validation attestation key must never be shared. A normal CI runner may fetch staged bytes with a temporary limited token but must not possess a valid attestation signer. Independent attestation runs in an isolated, pinned OCI image; sensitive provider tokens are provisioned by the trusted host and removed after the run. Backend pins the verifier key, OCI digest, challenge nonce, purpose/audience, source/build SHA, exact Java/loader/Guard/ServerBridge, artifact and target matrix digest.
+Ключ подписи выпусков и ключ подписи аттестационных доказательств никогда не должны совпадать или совместно использоваться. Обычный исполнитель CI может загружать подготовленные байты по временно выданному ограниченному токену, но не должен обладать ключом действующей аттестации. Независимая аттестация запускается в изолированном закреплённом OCI-образе; конфиденциальные токены провайдера выдаёт доверенный узел и удаляет после прогона. Backend закрепляет ключ проверяющего, дайджест OCI, nonce запроса, назначение и аудиторию, SHA исходников/сборки, точные Java/загрузчик/Guard/ServerBridge, дайджесты артефактов и матрицы целей.
 
-## атаки, от которых защищают изменения GA
+## Атаки, от которых защищают изменения GA
 
-1. **Integrity-positive tampered bytes after verification:** SQL `0107` freezes file metadata and manifest after stable integrity PASS. Runtime startup/gameplay still rejects correctly owner-rehashed but broken artifacts. Direct DB writes to verified stable metadata are rejected even if an attacker does not use the HTTP API.
-2. **Published stable record mutation:** the stable release trigger rejects changing manifest, status or published timestamp after publication, even if an attacker keeps `status=published`. Verified stable release deletion is blocked. Original channel-head V11 trigger remains authoritative.
-3. **Integrity history rewrite:** stable integrity results cannot be updated/deleted after PASS. Insert-only history and latest-result checks remain in place.
-4. **Mismatched source across targets:** Backend refuses a supposed stable certification whose mandatory targets derive from different source commits; read-only GA preflight requires the release workflow commit to match the source claim.
-5. **Forged CI preflight or replay:** the preflight is not a certification and has no permission to grant a stable head; release signing calls the real Backend again; Backend/SQL re-evaluate at commit. The read-only API call disallows redirects to prevent token forwarding to another host.
-6. **Expired, revoked or substituted evidence:** the v4 attestation verifier enforces Ed25519, audience/purpose, nonce, source/Java/preset/adapter and stage outcomes. The transaction rechecks stored evidence and revocations under locks; distinct targets require their own runs.
-7. **Manual certification and alternate routes:** runtime coverage derives from trusted signed evidence, not `certified=true`. The V11 SQL trigger applies to durable publish, promotion, rollback and Migration Center changes to `channel_heads`.
+1. **Изменение байтов после положительной проверки целостности:** SQL `0107` замораживает метаданные файлов и манифест после прохождения проверки целостности stable. Проверки запуска Runtime и игрового процесса всё равно отклоняют сломанные артефакты, даже если владелец пересчитал их хеши. Прямое изменение в БД уже проверенных метаданных stable отклоняется и без использования злоумышленником HTTP API.
+2. **Изменение опубликованной записи stable:** триггер запрещает менять манифест, статус и время публикации после выпуска, даже если злоумышленник оставляет `status=published`. Удаление проверенного стабильного выпуска блокируется. Исходный триггер головной версии канала V11 остаётся авторитетным.
+3. **Переписывание истории целостности:** результаты успешной проверки целостности stable нельзя обновлять или удалять. Сохраняются история только для добавления и проверки последнего результата.
+4. **Разные исходники для разных целей:** Backend отвергает заявленную сертификацию stable, если обязательные цели построены из разных коммитов. Предварительная GA-проверка только для чтения требует соответствия коммита workflow выпуска заявленным исходникам.
+5. **Поддельная предварительная проверка CI или повторное воспроизведение:** предварительная проверка не является сертификацией и не может разрешить головную версию stable. При подписании выпуска повторно вызывается настоящий Backend, а Backend/SQL повторно проверяют состояние при коммите. API только для чтения запрещает перенаправления, чтобы токен не отправился другому узлу.
+6. **Просроченные, отозванные или подменённые доказательства:** проверяющий аттестации v4 контролирует Ed25519, аудиторию и назначение, nonce, исходники/Java/набор/адаптер и результаты этапов. Транзакция под блокировками повторно проверяет хранимые доказательства и отзывы; отдельным целям нужны собственные запуски.
+7. **Ручная сертификация и обходные маршруты:** покрытие Runtime определяется доверенными подписанными доказательствами, а не значением `certified=true`. Триггер SQL V11 действует для устойчивой публикации, продвижения, отката и изменений `channel_heads` через Migration Center.
 
-## остаточные риски и сознательные ограничения
+## Остаточные риски и сознательные ограничения
 
-- The PostgreSQL **owner/superuser** can disable triggers or forge database contents; provision separate least-privilege DB roles, audited migrations, backups and restricted DBA access. App role with arbitrary SQL write privileges to attestation/permit tables is outside the application API trust model; privilege separation must be reviewed in deployment.
-- V12 audit records are immutable against normal writes but do not constitute an independent transparency log. Store externally signed backups for stronger non-repudiation.
-- GUI recognition based on OCR and frames can false-negative on localized or custom menus. Treat uninstrumented environments as `blocked`, not passing or Minecraft incompatibility.
-- CI GitHub actions are a software-supply-chain dependency. Pin actions and runners under the organization's supply-chain policy; the attestor must independently verify binary identity.
-- Snapshot preflight can become stale between read and publication. It is deliberately advisory. Only the protected PostgreSQL channel-head transaction authorizes stable; its versioned permit has single-use semantics.
-- The local development environment did **not** execute live Minecraft/server, official provider, PostgreSQL or all-platform runs. No verified GA certificate is asserted by this repository patch.
+- **Владелец/суперпользователь PostgreSQL** может отключить триггеры или подделать содержимое БД. Настройте отдельные роли БД с минимальными правами, аудит миграций, резервные копии и ограниченный доступ администраторов БД. Роль приложения с произвольной записью SQL в таблицы аттестации/разрешений находится вне модели доверия API приложения; при развёртывании нужно проверить разделение полномочий.
+- Записи аудита V12 неизменяемы для обычных операций записи, но не образуют независимый журнал прозрачности. Для более сильной неотказуемости храните внешне подписанные резервные копии.
+- Распознавание GUI по OCR и кадрам может давать ложные отрицательные результаты на локализованных или пользовательских меню. Неинструментированные среды обозначайте как `blocked`, а не как успешные или несовместимые с Minecraft.
+- GitHub Actions в CI — зависимость цепочки поставки ПО. Закрепляйте версии Actions и исполнителей по политике организации; аттестатор должен независимо проверять идентичность бинарников.
+- Состояние предварительной проверки снимка может устареть между чтением и публикацией. Проверка намеренно носит рекомендательный характер. Stable разрешает только защищённая транзакция головной версии канала PostgreSQL с одноразовым версионированным разрешением.
+- В локальной среде разработки **не запускались** настоящие Minecraft/сервер, официальный провайдер, PostgreSQL и проверки всех платформ. Этот патч репозитория не заявляет наличие подтверждённого сертификата GA.
 
-## обязательные тесты безопасности
+## Обязательные тесты безопасности
 
-Run `TestGAStableSnapshotImmutablePostgres0350` on PostgreSQL 17 and V11/V12 suites, plus the 18 deterministic Python acceptance negatives. On staging, demonstrate rollback/promotion/cutover bypass attempts, concurrent publish and revocation, forged and stale signed evidence, changed source/preset/Java, corrupted correctly rehashed release and provider outage. Record the actual results and logs in the readiness report; do not mark unexecuted checks as passed.
+Запустите `TestGAStableSnapshotImmutablePostgres0350` на PostgreSQL 17, наборы V11/V12 и 18 детерминированных отрицательных сценариев приёмки Python. На staging продемонстрируйте попытки обхода через откат, продвижение и переключение, конкурентную публикацию и отзыв, поддельные и просроченные подписанные доказательства, изменённые исходники/набор/Java, повреждённый выпуск с корректно пересчитанными хешами и отказ провайдера. Сохраните реальные результаты и журналы в отчёте готовности; непроверенные сценарии нельзя отмечать как успешные.

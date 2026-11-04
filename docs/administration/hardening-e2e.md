@@ -1,17 +1,17 @@
 # Launcher 0.21.12 — защита Admin и сквозные тесты
 
-## реализованные меры защиты
+## Реализованные меры защиты
 
-- Unified Operations `GET /operations/{id}/attempts` returns only the public attempt number, outcome, timestamps and error. Worker identities, lease fences, internal IDs and tokens stay server-side.
-- ServerBridge Admin prevents a second browser submit before React renders its disabled button; a pending control request is persisted before network IO. A lost ACK can only be retried with the exact saved request and key. Successful submissions retain the command ID for monitoring after refresh. Pending command state is scoped to the Backend URL, authenticated session and project, then cleared on explicit logout.
-- Unified Operations Admin persists the intent and idempotency key **before** execute. After a lost reply, an operator must recover with the same key or explicitly clear recovery after inspecting jobs/audit. A fresh random key is not generated implicitly.
-- The Admin HTTP client does not automatically replay mutations. Network failure or broken 2xx JSON after mutation is reported as an *indeterminate outcome*, not success. HTTP reason codes remain distinguishable.
-- Login controls have associated accessible labels, autocomplete attributes and semantic error/status announcements.
-- Backend job list no longer emits internal SQL driver messages to clients on storage outage.
+- Unified Operations `GET /operations/{id}/attempts` возвращает только публичный номер попытки, результат, временные метки и ошибку. Идентичности обработчиков, ограничители аренд, внутренние ID и токены остаются на сервере.
+- Admin ServerBridge запрещает вторую отправку из браузера ещё до того, как React покажет отключённую кнопку; ожидающий управляющий запрос сохраняется до сетевого ввода-вывода. При потере ACK допустим повтор только с точно сохранённым запросом и ключом. Успешные отправки сохраняют ID команды для контроля после обновления страницы. Ожидающая команда привязана к URL Backend, аутентифицированному сеансу и проекту; явный выход очищает её состояние.
+- Admin Unified Operations сохраняет намерение и ключ идемпотентности **до** выполнения. После потери ответа оператор обязан восстановить операцию с прежним ключом или явно очистить состояние восстановления после проверки заданий и аудита. Новый случайный ключ не создаётся неявно.
+- HTTP-клиент Admin не повторяет автоматически запросы на изменение данных. Сетевая ошибка или некорректный JSON при HTTP 2xx после изменения показываются как **неопределённый результат**, а не как успех. Причины HTTP-ошибок остаются различимыми.
+- Элементы входа имеют связанные доступные подписи, атрибуты автозаполнения и семантические объявления ошибок/статуса.
+- Список заданий Backend больше не выдаёт клиентам внутренние сообщения драйвера SQL при отказе хранилища.
 
-Protocol v3 packets, command ACK schema and cryptographic/runtime binding are **unchanged**.
+Пакеты протокола v3, схема ACK команд и криптографическая привязка к Runtime **не изменены**.
 
-## проверки, запускаемые локально
+## Проверки, запускаемые локально
 
 ```bash
 cd apps/admin && npm ci && npm test && npm run build
@@ -21,26 +21,26 @@ python3 scripts/contracts/validate-openapi.py
 cd services/api && go test -race -count=1 ./internal/httpapi ./internal/repository
 ```
 
-The real PostgreSQL/ServerBridge integration requires **Docker and Go module availability**:
+Настоящая интеграция PostgreSQL/ServerBridge требует **Docker и доступных модулей Go**:
 
 ```bash
 bash e2e/scripts/run-admin-hardening-02112-e2e.sh
 ```
 
-The script creates a disposable PostgreSQL 16 container on a dynamically selected localhost port, applies migrations, and executes real pgx integration tests: competing concurrent config revisions through independent PostgreSQL connections, restore-as-new-revision, ServerBridge v3 command enqueue/lease/ACK/idempotency/transactional audit, distributed HA leasing, event streaming, durable scope fencing/restart. It also runs HTTP tests with real route middleware for cross-project RBAC, anonymous denial, concurrent stale revisions, and rollback idempotency. It **fails** if Docker is unavailable; it does not substitute memory tests for PostgreSQL tests.
+Скрипт создаёт одноразовый контейнер PostgreSQL 16 на динамически выбранном локальном порту, применяет миграции и запускает реальные интеграционные тесты pgx: конфликтующие одновременные ревизии конфигурации через независимые подключения, восстановление как новая ревизия, постановка/аренда/ACK/идемпотентность/транзакционный аудит команд ServerBridge v3, распределённые аренды HA, потоковые события, устойчивое разграничение областей и перезапуск. Он также выполняет HTTP-тесты с настоящим промежуточным ПО маршрутов на RBAC между проектами, запрет анонимного доступа, конкурентные устаревшие ревизии и идемпотентность отката. При отсутствии Docker тест **завершается ошибкой**, а не подменяет PostgreSQL тестами в памяти.
 
-A CI workflow at `.github/workflows/admin-hardening-02112.yml` gates Admin production build, Node test suite, Go race tests and this PostgreSQL/ServerBridge integration for matching pull requests.
+Workflow CI `.github/workflows/admin-hardening-02112.yml` блокирует соответствующие pull request, пока не пройдут production-сборка Admin, тесты Node, тесты Go с детектором гонок и интеграционные проверки PostgreSQL/ServerBridge.
 
-## сертификация в настоящем браузере с развёрнутым Backend
+## Сертификация в настоящем браузере с развёрнутым Backend
 
-The optional Playwright browser probe is a **live integration test, not a mock server**. Run only against an isolated test instance with real project/account fixtures and live Admin service. Provide:
+Необязательная браузерная проверка Playwright — **реальный интеграционный тест, а не имитация сервера**. Запускайте её только в изолированной тестовой установке с настоящими тестовыми проектом/аккаунтом и работающим Admin. Передайте:
 
-- `E2E_ADMIN_URL`: URL of the built Admin frontend
-- `E2E_API_URL`: URL of the same instance's Backend
-- `E2E_ADMIN_TOKEN`: privileged, valid access token for a test administrator with `release:prepare`
-- `E2E_OPERATOR_TOKEN`: token for an operator restricted to the test project
-- `E2E_PROJECT_ID`: writable test project with release workspace enabled
-- `E2E_FOREIGN_PROJECT_ID`: another project to which operator has no access
+- `E2E_ADMIN_URL` — URL собранного интерфейса Admin.
+- `E2E_API_URL` — URL Backend той же установки.
+- `E2E_ADMIN_TOKEN` — действительный привилегированный токен тестового администратора с `release:prepare`.
+- `E2E_OPERATOR_TOKEN` — токен оператора с доступом только к тестовому проекту.
+- `E2E_PROJECT_ID` — доступный для записи тестовый проект с включённым рабочим пространством выпуска.
+- `E2E_FOREIGN_PROJECT_ID` — другой проект, к которому у оператора нет доступа.
 
 ```bash
 python3 -m pip install playwright
@@ -48,8 +48,8 @@ python3 -m playwright install chromium
 python3 e2e/scripts/admin-hardening-02112-browser.py
 ```
 
-The browser probe uses two independent tabs with the *real* Backend draft store to exercise conflict (one 200, one 409), reload/recovery, temporary offline state, cross-project API 403, hidden privileged actions, and accessible login labels. It creates and cleans up one release draft. A script failure must fail certification; missing environment values are errors, never "skipped and passed".
+Браузерный тест использует две независимые вкладки с **настоящим** хранилищем черновиков Backend для проверки конфликта (один ответ 200, второй 409), перезагрузки/восстановления, временного отсутствия сети, ответа API 403 между проектами, скрытых привилегированных действий и доступных подписей входа. Создаётся и удаляется один черновик выпуска. Ошибка скрипта должна означать непрохождение сертификации; отсутствие переменных окружения — ошибка, а не «пропущено и успешно».
 
-## оставшиеся условия промышленного релиза
+## Оставшиеся условия промышленного релиза
 
-Do not mark 0.21.12 GA-ready unless `npm run build`, `go test -race`, PostgreSQL+ServerBridge tests and real-browser tests all complete successfully in a provisioned CI or staging environment. Existing E2E scenarios exercise server command persistence/ACK, **not** a physical Minecraft server join; physical runtime certification is a separate gate.
+Не объявляйте 0.21.12 готовой к GA, пока `npm run build`, `go test -race`, тесты PostgreSQL+ServerBridge и проверки в настоящем браузере не пройдут успешно в подготовленной среде CI или staging. Существующие E2E покрывают сохранение команд сервера и ACK, **но не** физическое подключение к серверу Minecraft; сертификация настоящего Runtime — отдельное условие.

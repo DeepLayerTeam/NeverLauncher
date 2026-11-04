@@ -26,12 +26,12 @@ caller-supplied `LAUNCHER_GA_SOURCE_SHA` and fails if the checkout is dirty.
 
 ```bash
 export LAUNCHER_GA_SOURCE_SHA="$(git rev-parse HEAD)"
-# Set E2E_ADMIN_URL, E2E_API_URL, E2E_PROJECT_ID,
-# E2E_FOREIGN_PROJECT_ID, E2E_ADMIN_TOKEN and E2E_OPERATOR_TOKEN
-# to disposable staging fixtures (never check credentials into source).
-# Also set E2E_SERVERBRIDGE_NODE_ID to an actively running disposable
-# Minecraft ServerBridge v3 node and E2E_DESTRUCTIVE_STAGING_ACK
-# to exactly I_CONFIRM_DEDICATED_SERVER before running drain/undrain.
+# Задайте E2E_ADMIN_URL, E2E_API_URL, E2E_PROJECT_ID,
+# E2E_FOREIGN_PROJECT_ID, E2E_ADMIN_TOKEN и E2E_OPERATOR_TOKEN
+# для одноразовой тестовой среды (никогда не коммитьте учётные данные в исходники).
+# Также задайте E2E_SERVERBRIDGE_NODE_ID для работающего одноразового узла
+# Minecraft ServerBridge v3 и E2E_DESTRUCTIVE_STAGING_ACK
+# точно равным I_CONFIRM_DEDICATED_SERVER до запуска drain/undrain.
 bash scripts/release/certify-admin-ga-0220.sh
 ```
 

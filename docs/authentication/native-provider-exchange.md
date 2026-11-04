@@ -1,30 +1,30 @@
 # Launcher 0.26.5 — нативная авторизация Microsoft → Xbox Live → XSTS → Minecraft
 
-This release moves the **token exchange itself** from the Go Backend into the trusted Rust/Tauri Desktop process. It is a functional implementation; **external Minecraft Services approval and live game-server entry are not claimed**.
+В этом выпуске **сам обмен токенов** переносится из Go Backend в доверенный процесс Rust/Tauri Desktop. Это работающая реализация, но **одобрение внешних Minecraft Services и реальный вход на игровой сервер не заявляются**.
 
-## реальные пути авторизации
+## Реальные пути авторизации
 
-1. **Browser (primary):** Native Tauri reads the Microsoft **public** Client ID from the authenticated Never Backend `/api/v1/minecraft/official/browser/config`. Tauri opens the system browser and validates the local PKCE callback (introduced in 0.26.3). The Rust provider submits the code+verifier directly to Microsoft's `consumers/oauth2/v2.0/token` endpoint with `XboxLive.signin offline_access`.
-2. **Device Code (fallback):** Native Tauri obtains and polls Microsoft's `/devicecode` and `/token` endpoints directly. The native waiter enforces polling intervals, `authorization_pending`, `slow_down`, expiry and cancellation. `408`, `429`, `5xx` and transport errors use bounded retries. If Microsoft returned its one-time grant but Xbox/Minecraft is temporarily unavailable, the grant remains only in the native pending-flow memory for retries, rather than reusing the device code.
-3. Both flows execute the same native **Xbox Live authenticate** (`RpsTicket=d=<Microsoft access token>`), **XSTS authorize** (Minecraft Services relying party), **Minecraft login_with_xbox** (`XBL3.0 x=<uhs>;<xsts>`), **entitlements/mcstore**, and **minecraft/profile** chain.
-4. The trusted process verifies the Xbox user hash across both responses, Minecraft bearer/token type/lifetime, Java profile UUID and valid player name. A live Java profile is authoritative; an empty entitlement list alone is not proof of no Game Pass entitlement.
-5. The native OS credential store holds the Microsoft refresh token, Minecraft bearer, Minecraft bearer expiry and immutable registered Client ID (`schema=2`). Neither bearer nor OAuth code/verifier is serialised through Tauri IPC; the renderer gets a profile or a Device Code **user** code only.
-6. Before **status**, **texture modifications** or **launch**, Tauri revalidates the Never session/configuration. Expired Minecraft bearers are reacquired by refreshing Microsoft, then performing the entire Xbox/XSTS/Minecraft chain. Refresh-token rotation is saved before further provider calls. UUID changes after refresh are rejected.
-7. Native official credentials flow only to Runtime for real game launch (`user_type=msa`, official UUID). Runtime's command preview continues to redact bearer tokens. No local offline/Yggdrasil session is promoted into official identity.
+1. **Браузер (основной):** нативный Tauri получает **публичный** Client ID Microsoft из аутентифицированного Never Backend `/api/v1/minecraft/official/browser/config`, открывает системный браузер и проверяет локальный callback PKCE (появился в 0.26.3). Провайдер Rust отправляет код и verifier напрямую в Microsoft `consumers/oauth2/v2.0/token` с областью `XboxLive.signin offline_access`.
+2. **Device Code (резервный):** нативный Tauri напрямую получает код и опрашивает конечные точки Microsoft `/devicecode` и `/token`. Нативное ожидание соблюдает интервалы опроса, `authorization_pending`, `slow_down`, истечение срока и отмену. Ответы `408`, `429`, `5xx` и ошибки транспорта повторяются ограниченное число раз. Если Microsoft выдал одноразовое разрешение, но Xbox/Minecraft временно недоступны, оно хранится только в памяти ожидающего нативного потока для повторов; device code повторно не используется.
+3. Оба варианта выполняют одну и ту же нативную цепочку: **Xbox Live authenticate** (`RpsTicket=d=<Microsoft access token>`), **XSTS authorize** (для Minecraft Services), **Minecraft login_with_xbox** (`XBL3.0 x=<uhs>;<xsts>`), **entitlements/mcstore** и **minecraft/profile**.
+4. Доверенный процесс сверяет хеш пользователя Xbox в обоих ответах, тип и срок действия bearer-токена Minecraft, UUID Java-профиля и допустимое имя игрока. Действующий Java-профиль является авторитетным; пустой список прав сам по себе не доказывает отсутствие доступа через Game Pass.
+5. Нативное хранилище учётных данных ОС содержит refresh-токен Microsoft, bearer Minecraft, срок его действия и неизменяемый зарегистрированный Client ID (`schema=2`). Ни bearer, ни OAuth-код/verifier не сериализуются через Tauri IPC; Renderer получает только профиль или **пользовательский** код Device Code.
+6. Перед операциями **status**, **изменением текстур** и **запуском** Tauri повторно проверяет сеанс/конфигурацию Never. Просроченные bearer-токены Minecraft обновляются через refresh Microsoft с последующим полным обменом Xbox/XSTS/Minecraft. Ротация refresh-токена сохраняется до следующих обращений к провайдеру. Изменение UUID после обновления отклоняется.
+7. Нативные официальные учётные данные поступают только в Runtime для настоящего запуска игры (`user_type=msa`, официальный UUID). Предпросмотр команды Runtime по-прежнему скрывает bearer-токены. Локальный offline/Yggdrasil-сеанс не превращается в официальную идентичность.
 
-## существующие установки
+## Существующие установки
 
-OS keyring entries from 0.26.2–0.26.4 (`schema=1`, encrypted Backend ticket) remain readable and usable. New logins create **schema=2** records. Old accounts are not silently migrated to a different Microsoft identity; disconnect/reconnect produces a native record. The OS credential slot name stays unchanged so upgrading does not erase users' credentials.
+Записи хранилища ключей ОС из 0.26.2–0.26.4 (`schema=1`, зашифрованный билет Backend) остаются читаемыми и пригодными к использованию. Новые входы создают записи **`schema=2`**. Старые аккаунты не мигрируют скрыто в другую идентичность Microsoft; отключение и повторное подключение создают нативную запись. Имя слота хранилища ОС не меняется, чтобы обновление не удаляло учётные данные пользователей.
 
-## внешние условия допуска и промышленная проверка
+## Внешние условия допуска и промышленная проверка
 
-- Set `MINECRAFT_MICROSOFT_CLIENT_ID` (your **own** registered public client app UUID) on Never Backend. Register an appropriate native public-client loopback redirect and personal Microsoft account support. Backend `AuthTokenSecret` is no longer needed for **reading public client config**; legacy ticket endpoints still require it.
-- Test an account owning Minecraft Java or with appropriate Game Pass eligibility. Confirm Xbox/XSTS, Minecraft Services acceptance of the registered Client ID, entitlements and Java profile.
-- Test browser callback and Device Code on Windows/Linux/macOS with real OS credential stores. Test `slow_down`, denial, expired grant, family restrictions, App ID refusal, rotated refresh token, XSTS user hash mismatch, temporary HTTP 429/5xx, disconnect and revocation.
-- On a real `online-mode=true` vanilla and modded Minecraft server, verify actual join/hasJoined before certifying the release. Having a Minecraft bearer/profile is not equivalent to proving game-server entry.
-- CI `native-provider-exchange-0265.yml` runs native Rust tests and compilation on three operating systems. Local environments without `cargo` cannot substitute a passing native compilation result.
+- Задайте `MINECRAFT_MICROSOFT_CLIENT_ID` (UUID **собственного** зарегистрированного публичного приложения) на Never Backend. Зарегистрируйте подходящий loopback-redirect нативного публичного клиента и поддержку личных аккаунтов Microsoft. `AuthTokenSecret` Backend больше не нужен для **чтения публичной конфигурации клиента**; прежние точки билетов продолжают его требовать.
+- Проверьте аккаунт, владеющий Minecraft Java или имеющий подходящее право через Game Pass. Убедитесь в работе Xbox/XSTS, принятии зарегистрированного Client ID Minecraft Services, правах и Java-профиле.
+- Проверьте callback браузера и Device Code на Windows/Linux/macOS с настоящими хранилищами учётных данных ОС. Испытайте `slow_down`, отказ, просроченное разрешение, семейные ограничения, отказ по App ID, изменённый refresh-токен, несовпадение хеша пользователя XSTS, временные HTTP 429/5xx, отключение и отзыв.
+- Перед сертификацией выпуска на настоящем сервере Minecraft vanilla и модифицированном с `online-mode=true` проверьте реальное подключение `join/hasJoined`. Наличие bearer/профиля Minecraft не равнозначно доказанному входу на игровой сервер.
+- CI `native-provider-exchange-0265.yml` запускает нативные тесты Rust и компиляцию на трёх ОС. Локальные среды без `cargo` не заменяют успешную нативную сборку.
 
-### команды разработчика
+### Команды разработчика
 
 ```bash
 cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests -- --nocapture
@@ -33,6 +33,6 @@ cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 cd apps/desktop && npm ci && npm run test:official && npm run test:textures && npm run build
 ```
 
-### ограничения безопасности и допуска
+### Ограничения безопасности и допуска
 
-Do not use someone else's registered Client ID to bypass Minecraft approval, print access/refresh tokens, or emit raw upstream HTTP response bodies into logs. Test fixtures are deterministic negative/transport checks only, never evidence of live provider approval.
+Не используйте чужой зарегистрированный Client ID для обхода одобрения Minecraft, не выводите access/refresh-токены и не пишите необработанные тела HTTP-ответов внешних сервисов в журналы. Тестовые среды дают только детерминированные отрицательные и транспортные проверки, но никогда не подтверждают настоящее одобрение провайдера.

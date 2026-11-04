@@ -3,10 +3,10 @@
 Тестовый исполнитель запускает настоящий код, а не просто перечисляет API или заявления о совместимости.
 
 ```bash
-# Requires Docker Compose, upstream images and live JVM/network access,
-# PostgreSQL, Go, Gradle, Cargo, Maven, Java 21 and graphical test prerequisites.
+# Требуются Docker Compose, исходные образы и настоящие доступы JVM/сети,
+# PostgreSQL, Go, Gradle, Cargo, Maven, Java 21 и компоненты графической среды для тестов.
 bash scripts/test/serverbridge-live-matrix-04113.sh --core
-# Strict GA gate. It fails until all 14 targets have independent live evidence.
+# Строгий барьер GA: не пройдёт без независимых реальных доказательств для всех 14 целей.
 bash scripts/test/serverbridge-live-matrix-04113.sh --all
 ```
 

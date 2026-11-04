@@ -1,38 +1,38 @@
-# домены управления и RBAC — Launcher 0.28.1
+# Домены управления и RBAC — Launcher 0.28.1
 
-This release changes **live authorization of ServerBridge v3 game commands**; it does not install a Host RemoteControl agent or provide Backend restart (those are later roadmap milestones).
+В этом выпуске меняется **действующая авторизация игровых команд ServerBridge v3**. Он не устанавливает агент Host RemoteControl и не добавляет перезапуск Backend (это последующие этапы плана развития).
 
-| Command | Required project permission | Domain |
+| Команда | Необходимое проектное разрешение | Домен |
 | --- | --- | --- |
-| `message.broadcast` | `gameserver:broadcast` | Game server |
-| `player.kick`, `ban.*`, `whitelist.*` | `gameserver:moderate` | Game server |
-| `server.save` | `gameserver:save` | Game server |
-| `server.maintenance`, `server.drain` | `gameserver:traffic` | Game server |
-| `server.shutdown` | `gameserver:shutdown` | Game server |
-| `server.console` (allowlisted Minecraft commands only) | `gameserver:console` | Game server |
+| `message.broadcast` | `gameserver:broadcast` | Игровой сервер |
+| `player.kick`, `ban.*`, `whitelist.*` | `gameserver:moderate` | Игровой сервер |
+| `server.save` | `gameserver:save` | Игровой сервер |
+| `server.maintenance`, `server.drain` | `gameserver:traffic` | Игровой сервер |
+| `server.shutdown` | `gameserver:shutdown` | Игровой сервер |
+| `server.console` (только разрешённые команды Minecraft) | `gameserver:console` | Игровой сервер |
 
-The control endpoint rejects anything else (including `host.exec`, `backend.restart`, `server.shell`). No general shell argument or executable path is accepted. `server.console` does **not** execute host shell commands, and remains restricted by the existing Minecraft command allowlist.
+Конечная точка управления отклоняет любые другие команды, включая `host.exec`, `backend.restart` и `server.shell`. Передавать произвольные аргументы оболочки или путь к исполняемому файлу нельзя. `server.console` **не** выполняет команды оболочки узла и по-прежнему ограничен существующим списком разрешённых команд Minecraft.
 
-`backend:control`, `host:process`, and `host:exec` are distinct *global-only* RBAC actions, not project actions. They grant **no operation in ServerBridge** in this release and are not inherited from game permissions. The local Host CLI runs under the OS user's authority; this does not imply that a network RemoteControl user can execute Host operations.
+`backend:control`, `host:process` и `host:exec` — отдельные **исключительно глобальные** действия RBAC, а не проектные разрешения. В этом выпуске они **не** дают доступа к операциям ServerBridge и не наследуются от игровых разрешений. Локальный CLI узла действует с правами пользователя ОС; это не означает, что пользователь сетевого RemoteControl может выполнять операции Host.
 
-## процесс авторизации
+## Процесс авторизации
 
-1. Verify the real authenticated user and session (not the untrusted role list copied into a token). Write requests require fresh MFA within five minutes and pass risk checks.
-2. Resolve the server and its real project. A caller must be able to read that project; cross-project node IDs are hidden.
-3. Decode and validate the command with the existing ServerBridge v3 type and payload allowlist.
-4. Match the exact command to a concrete permission in the live role repository. Deny and audit any missing permission *before the command is placed in the journal*.
-5. Persist with the existing idempotency key and runtime identity. The node's signed poll/ACK flow remains unchanged.
-6. On command GET and overview, re-authorize against the current role; do not return command payload/results to viewers or users whose privileges have been revoked.
+1. Проверьте фактического аутентифицированного пользователя и сеанс, а не недоверенный список ролей, скопированный в токен. Запросы на запись требуют MFA, выполненной в последние пять минут, и проверки риска.
+2. Найдите сервер и его настоящий проект. Пользователь должен иметь право чтения проекта; идентификаторы узлов других проектов скрываются.
+3. Декодируйте и проверьте команду на соответствие существующим разрешённым типам и данным ServerBridge v3.
+4. Сопоставьте точную команду с конкретным разрешением в действующем репозитории ролей. Если права нет, отклоните запрос и сохраните запись аудита **до добавления команды в журнал**.
+5. Сохраните команду с существующим ключом идемпотентности и идентичностью Runtime. Процедура подписанного опроса/ACK со стороны узла не меняется.
+6. При чтении команды через GET и обзора повторно авторизуйте пользователя по актуальной роли. Не возвращайте содержимое и результаты команд наблюдателям и пользователям с отозванными правами.
 
 ## Обновление и развёртывание
 
-- Apply the new `0077_control_domains_rbac_0281.sql` migration as part of the existing schema migration runner before starting new API instances. The migration adds game-only privileges to the canonical `admin`/`operator` roles **if they still have legacy `serverbridge:control`**. An operator's old ability to request shutdown/console is intentionally not migrated; grant these separately after review.
-- **Custom roles are fail-closed**: their legacy `serverbridge:control`/`serverbridge:console` strings grant none of the new command permissions. Administrators must explicitly assign each required `gameserver:*` right. Old strings can be removed after migration.
-- Existing pending/leased commands created on 0.28.0 may remain in the journal; check their effects and runtime before deploying a mixed-version cluster. Drain outstanding commands before a rolling upgrade when restricting existing operators. Later HA journal changes are covered by 0.28.5, not this release.
-- Mixed API versions must not serve mutation routes: **all** serving API instances should run 0.28.1 for consistent enforcement. The Game ServerBridge v3 wire protocol is unchanged.
+- Примените миграцию `0077_control_domains_rbac_0281.sql` обычным механизмом миграций схемы до запуска новых экземпляров API. Миграция добавляет права управления игрой каноническим ролям `admin` и `operator` **только при наличии прежнего разрешения `serverbridge:control`**. Ранее доступные оператору выключение сервера и консоль намеренно не переносятся: предоставляйте их отдельно после проверки.
+- **Пользовательские роли по умолчанию не получают доступ**: прежние строки `serverbridge:control` и `serverbridge:console` не дают новых командных разрешений. Администратор должен явно назначить каждое нужное право `gameserver:*`. После миграции устаревшие строки можно удалить.
+- Ожидающие или арендованные команды из версии 0.28.0 могут остаться в журнале. Перед развёртыванием кластера со смешанными версиями проверьте их последствия и состояние Runtime. При сокращении прав операторов завершите оставшиеся команды до поэтапного обновления. Доработки журнала HA из 0.28.5 не относятся к этому выпуску.
+- Экземпляры API разных версий не должны обслуживать маршруты изменения состояния: **все** экземпляры API должны работать на версии 0.28.1 для единообразного контроля. Сетевой протокол Game ServerBridge v3 не меняется.
 
-## проверка
+## Проверка
 
 - `cd services/api && GOPROXY=off go test ./internal/authorization ./internal/dbmigrate`
 - `cd apps/admin && npm test`
-- With dependencies installed, run the full HTTP API suite, `npm run build`, migrations against a disposable PostgreSQL instance and a real ServerBridge v3 command lifecycle before treating the release as verified for production deployment.
+- При установленных зависимостях запустите полный набор тестов HTTP API, `npm run build`, миграции в одноразовом PostgreSQL и реальный жизненный цикл команд ServerBridge v3 до признания выпуска проверенным для production.

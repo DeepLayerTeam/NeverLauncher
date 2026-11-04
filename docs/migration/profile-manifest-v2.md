@@ -2,34 +2,34 @@
 
 ## Промышленное обновление
 
-1. Back up PostgreSQL and release object storage. Use the **0.22.1** API and CLI binaries together.
-2. Stop publishers and background workers, deploy the updated backend/runtime clients and apply API migrations using the existing `nl db migrate apply --dsn <postgres-dsn>` command, or start the 0.22.1 API with `LAUNCHER_DATABASE_AUTO_MIGRATE=true` (verify the exact variable in `services/api/internal/config/config.go`). The `0056_profile_manifest_schema_evolution_0221` SQL file is embedded in CLI `cli/internal/dbmigrate/catalog.zip`, generated and checked against the API migration catalog.
-3. Confirm `schema_migrations` has the `0056_...` checksum; check the backfill with:
+1. Создайте резервные копии PostgreSQL и объектного хранилища выпусков. Используйте **API и CLI версии 0.22.1 вместе**.
+2. Остановите процессы публикации и фоновые обработчики, разверните обновлённые Backend/Runtime-клиенты и примените миграции API штатной командой `nl db migrate apply --dsn <postgres-dsn>` либо запустите API 0.22.1 с `LAUNCHER_DATABASE_AUTO_MIGRATE=true` (проверьте точное имя переменной в `services/api/internal/config/config.go`). SQL-файл `0056_profile_manifest_schema_evolution_0221` встроен в `cli/internal/dbmigrate/catalog.zip`, создаваемый и проверяемый относительно каталога миграций API.
+3. Убедитесь, что `schema_migrations` содержит контрольную сумму `0056_...`. Проверьте заполнение прежних данных:
 
    ```sql
    SELECT count(*) FROM profiles p LEFT JOIN profile_revisions_0221 r
      ON r.project_id=p.project_id AND r.profile_id=p.id AND r.revision=p.revision
      WHERE r.revision IS NULL OR r.digest<>p.digest;
-   -- expected: 0
+   -- ожидаемый результат: 0
    ```
 
-4. Upgrade desktop builds before publishing Manifest v2 to affected clients. v1 signed manifests remain accepted without modifications.
-5. Verify the release pipeline in staging: create profile → create new draft → edit profile → sign draft → run validations → publish. The published manifest must contain the original immutable `profileSnapshot` revision; no profile edit may rewrite it.
+4. Обновите сборки Desktop до публикации Manifest v2 затронутым клиентам. Подписанные манифесты v1 по-прежнему принимаются без изменений.
+5. Проверьте на staging цепочку выпуска: создание профиля → новый черновик → редактирование профиля → подписание черновика → проверки → публикация. Опубликованный манифест должен содержать исходную неизменяемую ревизию `profileSnapshot`; редактирование профиля не должно переписывать её.
 
 ## Гарантии сохранности данных и совместимости
 
-- Existing `release_versions.manifest` JSON and their Ed25519 signatures are **not changed** by the migration. There is no silent re-sign of public releases.
-- Existing mutable profiles become schema v2, revision 1. Migration seeds append-only `profile_revisions_0221` with the exact backfilled metadata and sha256 digest.
-- A profile edit changes the mutable head atomically with the insertion of one immutable revision row, with an optional compare-and-swap expected revision. A no-op edit doesn't increment the revision.
-- New drafts use Manifest `schemaVersion: "2.0"` and freeze the current `profileSnapshot` at draft creation. Modifying the mutable profile later doesn't alter the draft snapshot. Signing covers the entire v2 payload and the desktop Runtime verifies both the signature and snapshot digest.
-- v1 manifests do **not** carry `profileSnapshot`. v1 serialization is unchanged, so previously signed payloads verify without re-signing.
-- Unsupported manifest versions, missing v2 snapshots, changed snapshot digests, or invalid project/profile identities are rejected before signing or verifying.
-- `GET /api/v1/projects/{projectId}/profiles/{profileId}/manifest` returns only published versions, not drafts. New v2 public manifests are signature-checked before being returned.
-- `GET /api/v1/projects/{projectId}/profiles/{profileId}/revisions` returns immutable revision history; `?revision=N` selects exactly that revision or responds 404.
+- Существующие JSON `release_versions.manifest` и их подписи Ed25519 **не изменяются** миграцией. Публичные выпуски не переподписываются скрытно.
+- Существующие изменяемые профили становятся профилями схемы v2 с ревизией 1. Миграция заполняет историю `profile_revisions_0221` только для добавления точными метаданными и дайджестом sha256.
+- Редактирование профиля атомарно изменяет текущую запись и добавляет одну неизменяемую ревизию, при необходимости с CAS-проверкой ожидаемой ревизии. Изменение без фактических отличий не увеличивает номер ревизии.
+- Новые черновики используют Manifest `schemaVersion: "2.0"` и замораживают текущий `profileSnapshot` при создании. Последующее изменение профиля не влияет на снимок черновика. Подпись охватывает все данные v2; Desktop Runtime проверяет и подпись, и дайджест снимка.
+- Манифест v1 **не** содержит `profileSnapshot`. Его сериализация не изменяется, поэтому старые подписанные данные проходят проверку без переподписания.
+- Неподдерживаемые версии манифеста, отсутствие снимка v2, изменённый дайджест снимка и неверные идентичности проекта/профиля отклоняются до подписания или проверки.
+- `GET /api/v1/projects/{projectId}/profiles/{profileId}/manifest` возвращает только опубликованные версии, не черновики. Новые публичные манифесты v2 проверяются по подписи до выдачи.
+- `GET /api/v1/projects/{projectId}/profiles/{profileId}/revisions` возвращает неизменяемую историю; `?revision=N` выбирает точную ревизию или возвращает 404.
 
 ## Формат передачи Profile v2
 
-`GET /api/v1/projects/{projectId}/profiles` exposes `schemaVersion`, `revision`, and `digest` on each profile. An immutable manifest snapshot contains:
+`GET /api/v1/projects/{projectId}/profiles` предоставляет `schemaVersion`, `revision` и `digest` каждого профиля. Неизменяемый снимок манифеста содержит:
 
 ```json
 {
@@ -43,10 +43,10 @@
 }
 ```
 
-Digest is lowercase hex SHA-256 of the seven spec values in the order `projectId, id, name, description, loader, preset, isDefault`, joined with NUL bytes, UTF-8 encoded; `isDefault` is the ASCII string `true` or `false`. Database migration and Go/Rust use the same encoding.
+Дайджест — SHA-256 в шестнадцатеричном нижнем регистре от семи значений спецификации в порядке `projectId, id, name, description, loader, preset, isDefault`, разделённых нулевыми байтами и закодированных UTF-8. `isDefault` передаётся ASCII-строкой `true` или `false`. Миграция БД и Go/Rust используют одну кодировку.
 
-A profile update may supply `expectedRevision` in the PATCH request. A mismatch produces HTTP 409. Unknown schema versions fail closed. Further Minecraft, server, OS, and file policy semantics are deferred to P02–P04, and are not falsely claimed as implemented in 0.22.1.
+При PATCH-обновлении профиля можно указать `expectedRevision`. Несовпадение возвращает HTTP 409. Неизвестные схемы отклоняются. Дополнительная семантика Minecraft, серверов, ОС и файловых политик отложена до P02–P04 и не объявляется реализованной в 0.22.1.
 
-## откат
+## Откат
 
-The migration is additive except for normalizing existing profiles to v2. Rolling back the *binary* to 0.22.0 after creating v2 manifests is unsafe: the older Rust client cannot verify v2 snapshots, and earlier backend profile writes do not maintain the new revision table. Restore from a compatible backup or keep 0.22.1+ until clients are upgraded; do not edit already signed published manifests as a workaround. There is deliberately no destructive down migration.
+Миграция добавляет структуры, за исключением нормализации существующих профилей до v2. Возврат **бинарника** к 0.22.0 после создания манифестов v2 небезопасен: старый клиент Rust не умеет проверять снимки v2, а ранние версии Backend не поддерживают новую таблицу ревизий при изменениях профиля. Восстановитесь из совместимой копии или используйте 0.22.1+ до обновления клиентов. Не редактируйте уже подписанные опубликованные манифесты в обход ограничений. Разрушающей обратной миграции намеренно нет.

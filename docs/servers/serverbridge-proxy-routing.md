@@ -1,28 +1,28 @@
 # ServerBridge 0.41.7 — маршрутизация через действующий прокси
 
-## порядок выполнения
+## Порядок выполнения
 
-1. The Velocity/BungeeCord/Waterfall adapter requires an authenticated Minecraft UUID on the proxy (`confirmAuthenticatedPlayer`). Transfers without an authenticated session fail closed.
-2. The production API client requests the signed node-authenticated `GET /api/v1/server-bridge/servers/{id}/routes` endpoint (when routing-v2 is negotiated). It parses the actual `data.items` array rather than searching JSON text for an arbitrary node name. The source ID, route/runtime IDs, revision, state, health, capacity and freshness are validated. Invalid, duplicate, expired, full, drained and maintenance routes fail closed.
-3. The same client calls `POST /api/v1/server-bridge/handoff` **once**, never retrying an uncertain POST. Backend/PostgreSQL re-checks current source and target runtime, topology and reserved slots and issues a single-use handoff. The target server consumes the handoff during join. A route check alone never authorizes a join.
-4. Proxy-native connection attempts are bound to one pending handoff per player. A changed registered destination after authorization fails closed; no automatic fallback to a different backend is attempted under the same ticket.
-5. `proxy.connect`/`proxy.switch` is emitted **after** the proxy reports a real server connection (`ServerConnectedEvent`), never merely after ticket creation. Failed switches do not generate false success events; the previously connected player is not disconnected by the plugin on ordinary handoff denial.
+1. Адаптер Velocity/BungeeCord/Waterfall требует подтверждённого UUID Minecraft игрока на прокси (`confirmAuthenticatedPlayer`). Перенаправление без аутентифицированного сеанса отклоняется.
+2. Производственный клиент API обращается к подписанной конечной точке `GET /api/v1/server-bridge/servers/{id}/routes` с аутентификацией узла (при согласованном routing-v2). Он разбирает фактический массив `data.items`, а не ищет произвольное имя узла в тексте JSON. Проверяются исходный ID, идентификаторы маршрута/Runtime, ревизия, состояние, здоровье, доступная ёмкость и актуальность. Некорректные, повторяющиеся, просроченные, заполненные, выведенные из обслуживания или находящиеся в режиме обслуживания маршруты отклоняются.
+3. Тот же клиент вызывает `POST /api/v1/server-bridge/handoff` **один раз**, никогда не повторяя POST с неопределённым результатом. Backend/PostgreSQL повторно проверяет текущие Runtime источника и назначения, топологию и зарезервированные слоты, после чего выдаёт одноразовый пропуск передачи. Сервер назначения погашает пропуск при входе игрока. Одна лишь проверка маршрута никогда не разрешает вход.
+4. Нативные попытки подключения прокси привязаны к одному ожидающему пропуску передачи на игрока. Если после авторизации зарегистрированный пункт назначения изменился, подключение отклоняется; автоматическая замена Backend под тем же пропуском запрещена.
+5. Событие `proxy.connect`/`proxy.switch` отправляется **после** фактического подключения к серверу, о котором сообщил прокси (`ServerConnectedEvent`), а не после создания пропуска. Неудачная смена сервера не порождает ложных событий успеха; при обычном отклонении передачи плагин не отключает игрока от прежнего сервера.
 
-## особенности платформ
+## Особенности платформ
 
-- **Velocity:** preserves asynchronous pre-connect authorization, handles prior plugin deny/redirect results, reserves one transfer until successful connection or ticket expiration, fences stale async completions, and compares registered target identity before allowing the actual connect.
-- **BungeeCord/Waterfall:** shares one production plugin; cancels the initial synchronous connect event, authorizes asynchronously, reconnects through the Bungee player API with a one-time prepared handoff bypass, prevents parallel attempts by the same player and verifies the player/session and registered target before connecting. `ServerConnectedEvent` reports observed successful backend connections.
-- **Quilt/Sponge:** inbound join validation exists in the 0.41.6 adapters, so the Backend routing store now includes these kinds in allowed backends and topology joins. **Vanilla RCON sidecar is not routable:** it cannot enforce inbound one-time join handoffs on the game-server socket.
+- **Velocity:** сохраняет асинхронную авторизацию до подключения, учитывает предыдущие отклонения и перенаправления других плагинов, резервирует одну передачу до подключения либо истечения пропуска, отклоняет устаревшие результаты асинхронных операций и сверяет зарегистрированную идентичность назначения перед разрешением подключения.
+- **BungeeCord/Waterfall:** используют общий production-плагин. Он отменяет исходное синхронное событие подключения, выполняет асинхронную авторизацию, переподключает через API игрока Bungee с одноразовым разрешением на подготовленную передачу, запрещает параллельные попытки одного игрока и проверяет игрока/сеанс и зарегистрированный адрес назначения. `ServerConnectedEvent` отражает реально успешные подключения к Backend.
+- **Quilt/Sponge:** адаптеры версии 0.41.6 уже проверяют входящие подключения, поэтому хранилище маршрутизации Backend включает эти типы в разрешённые серверы и объединения топологии. **Побочный агент Vanilla RCON не поддерживает маршрутизацию**: он не способен принудительно проверить одноразовый пропуск при входящем соединении с игровым сервером.
 
-## эксплуатационные ограничения
+## Эксплуатационные ограничения
 
-- Stale or unreachable Backend returns a deny; not a guessed local routing result. Available targets depend on fresh signed routing snapshots and PostgreSQL state.
-- No transparent retry of a one-time handoff when the Backend response is lost. A separately initiated later player request may obtain a new handoff after the prior in-flight operation is settled/expired.
-- Server plugin load order can influence event ordering. Target-side handoff redemption is the ultimate authorization barrier even if another proxy plugin redirects after this bridge's pre-connect event.
-- Existing player sessions on a drained backend remain attached until another explicit transfer. Draining blocks **new** transfers; it does not force evictions.
+- При недоступном или устаревшем Backend возвращается отказ, а не предположение о локальном маршруте. Доступные назначения определяются актуальными подписанными снимками маршрутов и состоянием PostgreSQL.
+- Если ответ Backend потерян, прозрачный повтор одноразовой передачи запрещён. Позднее отдельное действие игрока может запросить новый пропуск после разрешения или истечения предыдущей операции.
+- Порядок загрузки серверных плагинов влияет на последовательность событий. Погашение пропуска на целевом сервере остаётся окончательной границей авторизации, даже если другой плагин прокси перенаправит игрока после события этого моста перед подключением.
+- Существующие сеансы игроков на выводимом из эксплуатации Backend сохраняются до явной передачи. Вывод из обслуживания блокирует **новые** переводы, но не отключает текущих игроков принудительно.
 
-## проверка
+## Проверка
 
-Run `bash e2e/scripts/test-proxy-routing-0417.sh` with OpenJDK 21. Tests compile the actual shared ServerBridge/Proxy runtime source and exercise parsed route responses, stale/capacity/health scenarios, forged/duplicate JSON and existing auth/journal regressions.
+Запустите `bash e2e/scripts/test-proxy-routing-0417.sh` с OpenJDK 21. Тесты компилируют реальные общие исходники ServerBridge/Proxy и проверяют разобранные ответы маршрутов, устаревшее состояние, ограничения ёмкости и здоровья, поддельный/дублированный JSON, а также регрессии аутентификации и журнала.
 
-**Not certified here:** actual Velocity, BungeeCord or Waterfall JAR execution, simultaneous proxy plugins, true cross-server Minecraft client transfer and PostgreSQL failover. These require upstream platform artifacts and a live E2E environment; Java parser tests are not substitutes.
+**Здесь не сертифицированы:** реальный запуск JAR Velocity, BungeeCord и Waterfall, одновременная работа нескольких плагинов прокси, настоящий переход клиента Minecraft между серверами и отказоустойчивость PostgreSQL. Для этого необходимы исходные артефакты платформ и действующая E2E-среда; тесты Java-парсера не заменяют их.

@@ -1,59 +1,36 @@
 # NeverLauncher 0.48.8 — интеграция Java с ServerBridge
 
-Java extensions use `context.runtime().serverBridge()` to access the actual
-ServerBridge v3 PostgreSQL repository through the **existing authenticated Go
-Extension Host broker**. This is an operational integration, not an alternate
-ServerBridge server, raw SQL API, Minecraft auth endpoint or in-process classpath
-patch. The SDK is Java 17-compatible, including Java 21 hosts.
+Java-расширения используют `context.runtime().serverBridge()` для доступа к действующему репозиторию ServerBridge v3 в PostgreSQL через **существующий аутентифицированный брокер Go Extension Host**. Это эксплуатационная интеграция, а не альтернативный сервер ServerBridge, API прямого SQL, точка аутентификации Minecraft или изменение classpath внутри процесса. SDK совместим с Java 17, включая хосты Java 21.
 
 ## Действующие данные и разрешения
 
-| Java SDK call | Broker operation | Required live permissions |
+| Вызов Java SDK | Операция брокера | Необходимые действующие разрешения |
 | --- | --- | --- |
 | `serverBridge().servers(projectId, offset, limit)` | `bridge.servers` | `serverbridge:read` |
 | `serverBridge().server(projectId, serverId)` | `bridge.server` | `serverbridge:read` |
 | `serverBridge().pendingJoinTicket(projectId, serverId, username)` | `bridge.access.ticket` | `serverbridge:read`, `project:read` |
-| `serverBridge().command(...)` | `bridge.command.create` | `serverbridge:read`, plus game-domain permission by command type |
-| `serverBridge().commandStatus(projectId, serverId, id)` | `bridge.command.get` | `serverbridge:read`, plus game-domain permission by stored command type |
-| `serverBridge().subscribeEvents(listener)` | Existing `serverbridge.event.received` EventBus | `events:subscribe`, `serverbridge:read` |
+| `serverBridge().command(...)` | `bridge.command.create` | `serverbridge:read` и разрешение игрового домена по типу команды |
+| `serverBridge().commandStatus(projectId, serverId, id)` | `bridge.command.get` | `serverbridge:read` и разрешение игрового домена по сохранённому типу команды |
+| `serverBridge().subscribeEvents(listener)` | Существующая шина EventBus `serverbridge.event.received` | `events:subscribe`, `serverbridge:read` |
 
-All data reads are scoped to an explicit project ID and to the installation's
-scope; listing is capped at 50 entries per request. Broker permissions are
-revalidated after data access and before returning a response. Stored node
-credential material, public keys, fingerprint hashes, command arguments, actor,
-raw lease/ACK tokens, and request digests are not sent to Java code.
+Все чтения данных ограничены явно указанным ID проекта и областью действия установки; список содержит не более 50 записей на запрос. Брокер повторно проверяет разрешения после доступа к данным и до возврата ответа. В код Java не передаются сохранённые учётные данные узла, открытые ключи, хеши отпечатков, аргументы команд, сведения об инициаторе, необработанные токены аренды/ACK и хеши запросов.
 
-**Access check is advisory only.** `pendingJoinTicket()` reports whether there
-is a live ticket issued by NeverLauncher for the requested server and player,
-bound to the node identity epoch. It DOES NOT authorize login, issue a ticket,
-consume a ticket or validate a Mojang/Microsoft identity. Actual admission
-still goes exclusively through authenticated ServerBridge `hasJoined` and its
-one-time ticket redemption, continuous trust and official Minecraft validation.
+**Проверка доступа носит только справочный характер.** `pendingJoinTicket()` сообщает, существует ли действующий билет, выданный NeverLauncher для запрошенных сервера и игрока и привязанный к эпохе идентичности узла. Метод НЕ разрешает вход, не выдаёт и не расходует билет и не проверяет идентичность Mojang/Microsoft. Фактический допуск выполняется исключительно через аутентифицированный ServerBridge `hasJoined` с одноразовым погашением билета, непрерывной проверкой доверия и официальной проверкой Minecraft.
 
 ## Управление через очередь, без команд ОС
 
-`command()` inserts into the existing ServerBridge v3 durable command store.
-Queueing returns `pending` and a command ID; it does not mean the game server
-executed the command. Query `commandStatus()` for an authoritative status.
+Метод `command()` помещает запись в существующее устойчивое хранилище команд ServerBridge v3. При добавлении возвращаются состояние `pending` и ID команды; это **не** означает, что игровой сервер выполнил её. Для достоверного состояния вызовите `commandStatus()`.
 
-Supported commands and game-domain grants:
+Поддерживаемые команды и разрешения игрового домена:
 
-- `message.broadcast`: `gameserver:broadcast` (requires `message`)
+- `message.broadcast`: `gameserver:broadcast` (требуется `message`)
 - `player.kick`, `whitelist.add/remove/enable/disable`, `ban.add/remove`: `gameserver:moderate`
 - `server.save`: `gameserver:save`
-- `server.maintenance`, `server.drain`: `gameserver:traffic` (requires `enabled: true|false`)
+- `server.maintenance`, `server.drain`: `gameserver:traffic` (требуется `enabled: true|false`)
 
-The Go broker rejects `server.console`, `server.shutdown`, arbitrary shell or
-host-management commands. It validates command arguments, signed runtime
-capabilities, adapter family restrictions, last observed runtime timestamp,
-identity epoch and verified integration hash. PostgreSQL fences command
-creation against runtime replacement, stores the canonical SHA-256 digest,
-ensures server+actor+idempotency-key uniqueness and audits commands. The
-idempotency key is mandatory (8–128 characters); expiry is 10–600 seconds,
-default 120. Only the existing signed Bridge node can lease and acknowledge a
-queued command. The extension cannot fabricate an ACK or delivery credential.
+Брокер Go отклоняет `server.console`, `server.shutdown`, произвольные команды оболочки и команды управления хостом. Он проверяет аргументы, подписанные возможности Runtime, ограничения семейства адаптеров, метку времени последнего наблюдения Runtime, эпоху идентичности и проверенный хеш интеграции. PostgreSQL защищает создание команд от подмены Runtime, сохраняет канонический SHA-256, обеспечивает уникальность пары сервер + инициатор + ключ идемпотентности и ведёт аудит. Ключ идемпотентности обязателен (8–128 символов); срок действия — 10–600 секунд, по умолчанию 120. Только существующий подписанный узел Bridge вправе арендовать и подтверждать команду из очереди. Расширение не может подделать ACK или учётные данные доставки.
 
-## Java пример
+## Пример Java
 
 ```java
 var bridge = context.runtime().serverBridge();
@@ -65,21 +42,15 @@ if (node.runtimeActive()) {
         "maintenance-notice-20261102", 120);
     var state = bridge.commandStatus(
         "my-project", "my-server", receipt.command().id());
-    // state.status() is a durable queue state, not a synchronous execution result.
+    // state.status() — устойчивое состояние очереди, не результат синхронного выполнения.
 }
 bridge.subscribeEvents(event -> {
     var payload = event.event();
-    // Durable at-least-once delivery; deduplicate external side effects.
+    // Устойчивая доставка как минимум один раз; исключайте повторные внешние побочные эффекты.
     System.out.println(payload.serverId() + ":" + payload.type());
 });
 ```
 
 ## Проверка и оставшиеся условия выпуска
 
-Run `sh sdk/java/core/build.sh test`. The new Java suite uses an actual
-loopback HTTP server with bearer authentication and capability negotiation,
-not a Java mock of `HostSession`. In CI, run the Go broker's authenticated
-HTTP tests, payload/fencing tests and preexisting durable PostgreSQL command
-integration suite using Go 1.27.3. A full signed-package, Java 17/21 and
-real Minecraft adapter integration suite must complete before GA acceptance.
-Inherited 0.48.0+ release blockers are not bypassed by this source update.
+Выполните `sh sdk/java/core/build.sh test`. Новый набор тестов Java использует действительный HTTP-сервер loopback с bearer-аутентификацией и согласованием возможностей, а не имитацию Java `HostSession`. В CI запускайте тесты аутентифицированного HTTP брокера Go, тесты содержимого и fencing и уже существующий интеграционный набор для устойчивых команд PostgreSQL на Go 1.27.3. До приёмки GA необходимо завершить интеграционные проверки полного подписанного пакета, Java 17/21 и реального адаптера Minecraft. Обновление исходников не отменяет блокирующие условия выпуска, действующие с 0.48.0+.

@@ -17,21 +17,21 @@
 Run from repository root. Python 3 and matching Go toolchain are required.
 
 ```bash
-# Deterministic attack regression tests, including -race:
+# Детерминированные регрессионные тесты атак, включая -race:
 python3 scripts/security/certify_03114.py --tier offline --output /tmp/nl-offline.json
 
-# Guard Runtime Policy, continuous ticket/session and release allowlist tests
-# (requires ALL Backend Go dependencies, not merely the nopgx build tag):
+# Проверки Guard Runtime Policy, постоянных билетов/сеансов и разрешённых выпусков
+# (требуют ВСЕ зависимости Go Backend, а не только тег сборки nopgx):
 python3 scripts/security/certify_03114.py --tier backend-security --output /tmp/nl-backend.json
 
-# On a dedicated UNPRIVILEGED Linux worker with delegated writable cgroup v2,
-# enabled unprivileged user namespaces and supported seccomp:
+# На отдельном НЕПРИВИЛЕГИРОВАННОМ Linux-исполнителе с делегированной доступной для записи cgroup v2,
+# включёнными непривилегированными пространствами имён пользователя и поддерживаемым seccomp:
 python3 scripts/security/certify_03114.py --tier linux-live --output /tmp/nl-linux-live.json
 
-# On a provisioned native Windows worker that permits AppContainer/Jobs:
+# На подготовленном нативном Windows-исполнителе с поддержкой AppContainer/Jobs:
 python scripts/security/certify_03114.py --tier windows-live --output C:\\Temp\\nl-windows-live.json
 
-# Never infer PASS from missing evidence. A release fails unless ALL tiers pass:
+# Отсутствие доказательств не означает PASS. Выпуск отклоняется, если не пройдены ВСЕ уровни:
 python3 scripts/security/certify_03114.py --tier release --output /tmp/nl-gate.json --evidence /tmp/nl-offline.json /tmp/nl-backend.json /tmp/nl-linux-live.json /tmp/nl-windows-live.json
 ```
 

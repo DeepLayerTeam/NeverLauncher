@@ -1,63 +1,32 @@
 # Launcher 0.26.2 — нативный диспетчер официальной идентичности
 
-## эксплуатационная функциональность
+## Эксплуатационная функциональность
 
-The existing Backend-owned Microsoft Device Code → Xbox Live → XSTS → Minecraft flow is
-used **without changing provider grants**. The Desktop webview no longer receives the
-opaque backend tickets (which contain Microsoft refresh and Minecraft access tokens)
-or the official Minecraft game access token. Tauri's `official_identity_*_0262` commands
-implement the *actual HTTP calls* to the existing authenticated Backend API.
+Существующая цепочка Microsoft Device Code → Xbox Live → XSTS → Minecraft, управляемая Backend, используется **без изменения разрешений провайдера**. Webview Desktop больше не получает непрозрачные билеты Backend (содержащие refresh-токены Microsoft и токены доступа Minecraft) или официальный игровой токен Minecraft. Команды Tauri `official_identity_*_0262` выполняют **настоящие HTTP-запросы** к существующему аутентифицированному API Backend.
 
-The backend still handles actual provider exchange and refresh at this milestone. Native
-OAuth PKCE and direct MS/Xbox/Minecraft exchange are separate 0.26.3–0.26.5 milestones.
-This release does not falsely claim that Microsoft/Minecraft provider approval has been
-received. Run `official-provider-poc` from 0.26.1 using your own registered public client
-and real personal Minecraft account before enabling official GA.
+На этом этапе Backend по-прежнему выполняет реальный обмен и обновление токенов провайдера. Нативный OAuth PKCE и прямой обмен MS/Xbox/Minecraft относятся к отдельным этапам 0.26.3–0.26.5. Этот выпуск не утверждает, будто получено одобрение провайдера Microsoft/Minecraft. Перед включением официального GA выполните `official-provider-poc` версии 0.26.1 с собственным зарегистрированным публичным клиентом и настоящей личной учётной записью Minecraft.
 
-### действующее поведение
+### Действующее поведение
 
-1. User authenticates to Launcher (unmodified existing platform login). Renderer
-   passes its platform bearer token and Never session ID to the native manager, which
-   makes Device Code and subsequent official HTTP requests.
-2. `begin` returns only Microsoft user code, verification URI, expiry, interval.
-   The backend encrypted flow is held temporarily in **native memory only**.
-3. `poll` uses the native flow and minimum configured polling interval; successful
-   completion verifies a 32-hex official Java UUID and persists the linked ticket to
-   the OS credential manager under a digest of Backend origin and Never session ID.
-4. The OS credential backend must work. `NoEntry` means no linked identity;
-   unavailable/locked/corrupt store produces an **error**, never silent plaintext
-   fallback. Windows Credential Manager, macOS Keychain and Linux Secret Service
-   require a properly configured and unlocked user session.
-5. `status` restores by fetching fresh profile from the authenticated Backend; it
-   will not treat a stored encrypted ticket as proof of current Minecraft access.
-   Restarting Desktop works **only if the original Never session remains active**;
-   new Never sessions must re-link in this milestone.
-6. Skin uploads, resets, owned cape selection and profile reads are performed from
-   Rust. Session ticket rotation is persisted in the OS vault. Public profile metadata
-   is the only data passed back to React. Upload is size-bounded (4 MiB).
-7. Native `launch_minecraft` obtains a fresh Minecraft access token from the verified
-   ticket and immediately passes it into Runtime. Renderer-supplied `msa` tokens,
-   official+local mixed identities, and official+offline launches are rejected.
-8. `cancel` removes the native pending Device Code session; `disconnect` deletes
-   the stored ticket (not a global Microsoft grant revocation).
+1. Пользователь аутентифицируется в Launcher обычным, не изменённым способом. Renderer передаёт платформенный bearer-токен и ID сеанса Never в нативный диспетчер, который выполняет запрос Device Code и последующие официальные HTTP-запросы.
+2. `begin` возвращает только пользовательский код Microsoft, URI проверки, срок действия и интервал. Зашифрованное состояние Backend временно хранится **только в памяти нативного процесса**.
+3. `poll` использует нативное состояние и минимальный заданный интервал опроса; при успехе проверяет официальный UUID Java из 32 шестнадцатеричных символов и сохраняет связанный билет в хранилище учётных данных ОС под хешем адреса Backend и ID сеанса Never.
+4. Хранилище учётных данных ОС обязано работать. `NoEntry` означает отсутствие привязанной идентичности; недоступное, заблокированное или повреждённое хранилище вызывает **ошибку**, без скрытого резервного сохранения открытым текстом. Для Windows Credential Manager, macOS Keychain и Linux Secret Service нужен корректно настроенный и разблокированный пользовательский сеанс.
+5. `status` восстанавливает состояние, получая свежий профиль из аутентифицированного Backend; сохранённый зашифрованный билет не считается доказательством актуального доступа к Minecraft. Перезапуск Desktop работает **только пока исходный сеанс Never активен**; для нового сеанса Never в этом выпуске требуется повторная привязка.
+6. Загрузка и сброс скинов, выбор принадлежащих пользователю плащей и чтение профиля выполняются из Rust. Смена билета сеанса сохраняется в хранилище ОС. В React возвращаются только публичные метаданные профиля. Размер загрузки ограничен 4 МиБ.
+7. Нативная `launch_minecraft` получает свежий токен доступа Minecraft из проверенного билета и сразу передаёт его в Runtime. Токены `msa`, предоставленные Renderer, смешанные официальные и локальные идентичности, а также официальный запуск в offline-режиме отклоняются.
+8. `cancel` удаляет ожидающий нативный сеанс Device Code; `disconnect` удаляет сохранённый билет, но не отзывает разрешение Microsoft глобально.
 
-### границы безопасности промышленной среды
+### Границы безопасности промышленной среды
 
-- Native HTTP: HTTPS only, loopback HTTP for development, origin-only Backend URL,
-  redirects disabled, bounded JSON responses (256 KiB), bounded timeouts (45 s).
-- Secret values must not enter renderer state, localStorage, preview APIs, browser
-  network requests, diagnostic exports or logs.
-- The Microsoft verification URI is a *public URL*; the code can be displayed but
-  must not be copied into production telemetry.
-- No keyring migration from the former renderer session is possible without exposing
-  the ticket once; the user must connect the official account once in the new version.
-- Minecraft tokens are still visible to the spawned Minecraft Java process, as
-  required by the game's protocol. Protect OS process inspection and logs accordingly.
-- Any prior Backend `/launch-credentials` route remains present for compatibility with
-  older Desktop builds. Sunset/removal requires versioned Backend API deprecation and
-  official client minimum-version enforcement; **do not claim cross-version isolation**.
+- Нативный HTTP: только HTTPS; HTTP loopback допускается для разработки; URL Backend ограничен origin; перенаправления отключены; размер JSON-ответов ограничен 256 КиБ, время ожидания — 45 с.
+- Секреты не должны попадать в состояние Renderer, localStorage, API предпросмотра, сетевые запросы браузера, экспорт диагностики и журналы.
+- URI подтверждения Microsoft — *публичный URL*; код может отображаться, но не должен копироваться в производственную телеметрию.
+- Миграция из прежнего сеанса Renderer в хранилище ключей без однократного раскрытия билета невозможна; пользователь должен один раз подключить официальный аккаунт в новой версии.
+- Токены Minecraft остаются видимыми запущенному Java-процессу Minecraft, как того требует игровой протокол. Соответственно защищайте просмотр процессов ОС и журналы.
+- Прежний маршрут Backend `/launch-credentials` сохраняется ради совместимости со старыми сборками Desktop. Его отключение/удаление требует версионированного прекращения поддержки API Backend и принудительной минимальной версии официального клиента; **нельзя заявлять изоляцию между версиями**.
 
-### команды проверки
+### Команды проверки
 
 ```sh
 cd apps/desktop
@@ -67,13 +36,8 @@ cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0
 cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 ```
 
-Manual/native acceptance requires an unlocked OS keyring, real Never session, real
-Microsoft/Xbox/Minecraft provider credentials, successful linking, refresh and launch.
-No mock can substitute for these checks. External application approval is still a
-release blocker, as documented in `official-provider-poc.md`.
+Ручная/нативная приёмка требует разблокированного хранилища ключей ОС, настоящего сеанса Never, действительных учётных данных Microsoft/Xbox/Minecraft и успешной привязки, обновления токенов и запуска. Имитации не заменяют эти проверки. Внешнее одобрение приложения остаётся блокирующим условием выпуска, как описано в `official-provider-poc.md`.
 
-### намеренно отложено до последующих выпусков
+### Намеренно отложено до последующих выпусков
 
-Native browser PKCE, direct provider exchange, multiple account slots, long-lived
-sessions independent of Never session ID, global provider logout/revocation, and
-independent online-mode multiplayer certification are **not** promised in 0.26.2.
+Нативный браузерный PKCE, прямой обмен с провайдерами, несколько слотов аккаунтов, долгоживущие сеансы без зависимости от ID сеанса Never, глобальный выход/отзыв разрешений провайдера и независимая сертификация многопользовательской игры в online-mode **не обещаются** в 0.26.2.

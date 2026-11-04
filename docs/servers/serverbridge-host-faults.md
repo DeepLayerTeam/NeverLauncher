@@ -1,32 +1,32 @@
 # 0.41.12 — обработка ошибок команд узла ServerBridge (операции)
 
-This release changes the **executable RemoteControl listener, Backend host-operation reconciliation and PostgreSQL unique fences**. It does not claim to make arbitrary Minecraft commands exactly-once; uncertain effects remain intentionally unrepeatable without operator investigation.
+Этот выпуск меняет **исполняемый слушатель RemoteControl, согласование операций узла в Backend и уникальные ограничители PostgreSQL**. Он не обещает ровно однократное выполнение произвольных команд Minecraft; действия с неопределённым результатом намеренно не повторяются до расследования оператором.
 
-## инварианты
+## Инварианты
 
-1. Backend commits a PostgreSQL intent before issuing a host command. Replaying the same idempotency key returns its original journal entry, never a second POST.
-2. Both `indeterminate` and `accepted` (host/game not yet verified) operations block **new** keys for the logical server and the physical `remote_node_id`. Migration `0112` enforces both in PostgreSQL; duplicate older unresolved operations will cause migration to fail closed rather than silently discard one.
-3. RemoteControl writes the `indeterminate` receipt before invoking the Host Supervisor. A new command with another key is refused if *any* prior receipt is indeterminate. Corrupt/missing journal access fails closed. Only replay of the original key returns the original receipt.
-4. The listener holds an OS-enforced kernel lock for its lifetime. On Unix, `agent.fence` is flock-locked; on Windows, it is locked with `LockFileEx`. A competing listener cannot steal the lock even if the old `agent.lock` metadata belongs to a dead process. Do not delete or replace the persistent `agent.fence` inode on a live machine.
-5. Recovery of a lost ACK uses an **authenticated read-only GET** `/v1/host/receipts/{originalWireKey}`. It checks the caller's original subject and both status/action permissions. Backend verifies the receipt's action/key hash, reads live Host Supervisor process state, and requires a newly fresh ServerBridge heartbeat before marking `start` or `restart` successful. This path never dispatches the command again.
-6. A timeout, lost receipt, agent crash with `indeterminate` receipt, corrupt journal, unverified host process, stale heartbeat, or missing PostgreSQL does **not** authorize another physical action. New commands remain blocked while the outcome is unresolved; this is intentional and requires supervised incident reconciliation.
+1. До отправки команды узлу Backend фиксирует намерение в PostgreSQL. Повтор того же ключа идемпотентности возвращает исходную запись журнала и никогда не создаёт второй POST.
+2. Операции `indeterminate` и `accepted` (узел/игра ещё не проверены) блокируют **новые** ключи как для логического сервера, так и для физического `remote_node_id`. Миграция `0112` обеспечивает оба ограничения на уровне PostgreSQL. Повторяющиеся старые неразрешённые операции вызывают отказ миграции, а не скрытое удаление одной из записей.
+3. RemoteControl записывает квитанцию `indeterminate` **до** вызова Host Supervisor. Новая команда с другим ключом отклоняется при наличии *любой* прежней неопределённой квитанции. Повреждённый или недоступный журнал приводит к отказу. Только повтор исходного ключа возвращает исходную квитанцию.
+4. Слушатель удерживает блокировку ядра ОС всё время работы. На Unix `agent.fence` блокируется через flock, на Windows — через `LockFileEx`. Конкурирующий слушатель не может перехватить блокировку, даже если метаданные старого `agent.lock` относятся к завершённому процессу. Не удаляйте и не заменяйте постоянный inode `agent.fence` на работающем узле.
+5. После потери ACK восстановление выполняется **авторизованным GET только для чтения** `/v1/host/receipts/{originalWireKey}`. Проверяются исходный субъект запроса и оба разрешения — на состояние и действие. Backend сверяет хеш действия/ключа в квитанции, считывает живое состояние Host Supervisor и требует новый актуальный сигнал активности ServerBridge, прежде чем считать `start` или `restart` успешными. Команда повторно не отправляется.
+6. Тайм-аут, утраченная квитанция, сбой агента с квитанцией `indeterminate`, повреждённый журнал, неподтверждённый процесс узла, устаревший heartbeat или отсутствие PostgreSQL **не** разрешают новое физическое действие. Пока результат не разрешён, новые команды заблокированы; это намеренное поведение, требующее контролируемого расследования инцидента.
 
-## воспроизведение тестов
+## Воспроизведение тестов
 
 ```bash
 scripts/test/serverbridge-host-faults-04112.sh
 ```
 
-This runs race-checked RemoteControl tests (timeout/lost ACK, concurrent callers with distinct keys, agent restart, journal corruption, stale lock split-brain), actual OpenJDK 21 JVM lifecycle regression (stop/restart/crash/backoff), and race-checked isolated Backend TLS client tests. Local Windows cross-compile is separate; actual Windows runtime testing is required before Windows production certification.
+Скрипт выполняет тесты RemoteControl с детектором гонок (тайм-аут/потеря ACK, конкурентные вызовы с разными ключами, перезапуск агента, повреждение журнала, разделение владения устаревшей блокировкой), регрессию жизненного цикла настоящей OpenJDK 21 JVM (остановка/перезапуск/авария/задержка) и изолированные TLS-тесты Backend с детектором гонок. Локальная кросс-компиляция Windows выполняется отдельно; до сертификации production Windows обязательно испытание на настоящей Windows.
 
-## обновление и восстановление
+## Обновление и восстановление
 
-- Back up PostgreSQL and the private Host Supervisor/RemoteControl state **without discarding** `remote/commands` receipts or the backend operation journal. Apply migration `0112` **before** accepting new requests.
-- If migration detects two prior accepted/unresolved operations for the same physical host, keep control disabled and investigate both receipts and actual host/game state before resolving the conflict. Do not disable the unique indexes to force a rollout.
-- After a lost HTTP response, use the **original operation ID** from Admin and perform `GET operation?refresh=1`; this only reads the remote receipt and live host state. If the remote receipt is not durable or the host identity is uncertain, the result remains `indeterminate`.
-- For unresolved action effects, halt automated orchestration. Inspect the original receipt locally with `nl server-bridge host remote inspect --server-root <root> --idempotency-key <wire-key>`, verify the actual JVM/host/game state, and follow incident recovery. **Never delete/modify command receipts or change PostgreSQL status solely to unblock a retry.**
-- The remote journal scan is deliberately fail-closed. Retention and human reconciliation of permanently indeterminate commands require an explicitly audited operational procedure; no unsafe automatic expiry or release was added.
+- Создайте резервную копию PostgreSQL и закрытого состояния Host Supervisor/RemoteControl **с сохранением** квитанций `remote/commands` и журнала операций Backend. Примените миграцию `0112` **до** принятия новых запросов.
+- Если миграция обнаруживает две прежние принятые или неразрешённые операции одного физического узла, оставьте управление отключённым и исследуйте обе квитанции и фактическое состояние узла/игры до разрешения конфликта. Не отключайте уникальные индексы ради принудительного развёртывания.
+- После потери HTTP-ответа используйте **исходный ID операции** из Admin и выполните `GET operation?refresh=1`; запрос только читает удалённую квитанцию и актуальное состояние узла. Если удалённая квитанция неустойчива или идентичность узла не подтверждена, результат остаётся `indeterminate`.
+- При неразрешённом эффекте действия остановите автоматическую оркестрацию. Просмотрите исходную квитанцию локально командой `nl server-bridge host remote inspect --server-root <root> --idempotency-key <wire-key>`, проверьте реальное состояние JVM/узла/игры и выполните процедуру восстановления после инцидента. **Никогда не удаляйте/изменяйте квитанции команд и не меняйте статус PostgreSQL только ради разблокировки повтора.**
+- Сканирование удалённого журнала намеренно использует отказ при сомнении. Хранение и ручное разрешение навсегда неопределённых команд требуют явно аудируемой эксплуатационной процедуры; небезопасное автоматическое истечение или разблокировка не добавлены.
 
-## границы проверки
+## Границы проверки
 
-The script exercises real Java processes, but not actual Paper/Fabric/Velocity Minecraft distributions. PostgreSQL integration and full Backend tests require a working PostgreSQL service and the specified Go toolchain (Go 1.27.3). These checks are still necessary for production release certification.
+Скрипт запускает реальные процессы Java, но не настоящие сборки Minecraft Paper/Fabric/Velocity. Для сертификации production всё ещё требуются интеграционные тесты PostgreSQL и полный набор тестов Backend с работающим PostgreSQL и заданными инструментами Go (Go 1.27.3).

@@ -1,51 +1,22 @@
 # 0.34.2 — настоящий запуск подготовленного пакета (V01 / V02)
 
-This is executable staging validation, **not stable release certification**.
-The 0.34.1 database and application stable gate remain in force even if every
-staged execution report says `passed`.
+Это исполняемая проверка подготовленного выпуска, **а не сертификация стабильного выпуска**. Ограничение публикации stable, введённое в 0.34.1 на уровне базы данных и приложения, остаётся в силе даже тогда, когда во всех отчётах о подготовленном запуске указано `passed`.
 
 ## Упаковка настоящего клиента
 
-1. Build the Minecraft client with the existing Client Factory **before** signing
-   the Backend release, or deliver another complete executable Minecraft client
-   with pinned Minecraft/loader dependencies. Include ALL real runtime files
-   (`versions/`, `libraries/`, `assets/`, `natives/`, mods, runtime metadata)
-   as signed package files. No runner stage may build a substitute Minecraft client.
-2. Sign the release, stage it, and run its real package integrity-check. The Backend
-   `POST /api/v1/packages/{packageId}/staged-runs` returns an expiration-bound
-   read/report grant for that precise integrity-passed package digest.
-3. Dispatch `.github/workflows/staged-package-runtime-0342.yml` with the exact
-   `package_id` or use the production release candidate workflow. Configure
-   protected GitHub Environment `runtime-validation-staging` and:
-   - Variable `NL_STAGED_BACKEND_URL` (TLS URL to Backend).
-   - Variable `NL_STAGED_MANIFEST_PUBLIC_KEY`: project **pinned** 64-character
-     Ed25519 public key hex, independently provisioned (not read from received manifest).
-   - Environment secret `NL_STAGED_RUNNER_OPERATOR_TOKEN` with project-scoped
-     `release:prepare` only. Never expose release signing keys or production data.
-4. The isolated runner gets an HMAC-bound grant (90 minutes), retrieves the
-   backend-verified signed manifest and exact staged files, checks every SHA-256
-   and size, then invokes normal `nl client install` and `nl client verify`.
-   Finally it uses **Runtime `launch`**, the installed client root, the
-   same signed manifest and operator-pinned key, and selects the signed Java
-   major on the GUI-capable worker. No Client Factory lock or rebuild is required.
+1. Соберите клиент Minecraft существующей фабрикой Client Factory **до** подписания выпуска Backend либо предоставьте другой полный исполняемый клиент Minecraft с закреплёнными зависимостями Minecraft/загрузчика. Включите в подписанные файлы пакета **все** реальные файлы среды выполнения (`versions/`, `libraries/`, `assets/`, `natives/`, моды и метаданные Runtime). Ни один этап тестового исполнителя не должен собирать подменный клиент Minecraft.
+2. Подпишите выпуск, подготовьте его и выполните настоящую проверку целостности пакета. `POST /api/v1/packages/{packageId}/staged-runs` в Backend выдаёт ограниченное по времени разрешение на чтение и отправку отчёта для конкретного дайджеста пакета с успешно подтверждённой целостностью.
+3. Запустите `.github/workflows/staged-package-runtime-0342.yml` с точным `package_id` либо используйте процесс подготовки production-кандидата выпуска. Настройте защищённое GitHub Environment `runtime-validation-staging`:
+   - Переменная `NL_STAGED_BACKEND_URL` — TLS-адрес Backend.
+   - Переменная `NL_STAGED_MANIFEST_PUBLIC_KEY` — независимо предоставленный и **закреплённый** открытый ключ Ed25519 проекта в шестнадцатеричном виде из 64 символов (его нельзя брать из полученного манифеста).
+   - Секрет окружения `NL_STAGED_RUNNER_OPERATOR_TOKEN` — токен только с проектным правом `release:prepare`. Никогда не раскрывайте ключи подписания выпусков и production-данные.
+4. Изолированный исполнитель получает разрешение, связанное HMAC, на 90 минут, загружает проверенный Backend подписанный манифест и точные подготовленные файлы, проверяет каждый SHA-256 и размер, затем запускает обычные `nl client install` и `nl client verify`. После этого он использует **`launch` из Runtime** с установленным каталогом клиента, тем же подписанным манифестом и закреплённым оператором ключом; выбирается подписанная основная версия Java на исполнителе с графической средой. Повторная сборка и блокировка Client Factory не требуются.
 
-## доказательства
+## Доказательства
 
-`GET /api/v1/packages/{packageId}/staged-runs` returns PostgreSQL-backed
-observational reports with separate `manifest-files`, `materialization`, and
-`startup` stages. Hash and size mismatches fail `manifest-files` and prevent
-installation. Missing or invalid pinned signing key, Java, native runtime plan, or game files fails the runtime stage.
-Startup is **inconclusive** even after the legacy runtime probe succeeds: positive
-menu readiness, cross-loader readiness and matching-server join become
-mandatory only in later V03/V04/V07 stages. Reports from a runner are **not**
-trusted certification and do not enable stable publication. The Backend also
-rejects stale grants, cross-package grants, replays of report run IDs, modified
-storage bytes and any post-grant manifest/file metadata drift.
+`GET /api/v1/packages/{packageId}/staged-runs` возвращает сохранённые в PostgreSQL наблюдательные отчёты с отдельными этапами `manifest-files`, `materialization` и `startup`. Несовпадение хеша или размера приводит к ошибке этапа `manifest-files` и блокирует установку. Отсутствие или недействительность закреплённого ключа подписи, Java, нативного плана Runtime или игровых файлов приводит к ошибке выполнения. Даже успешное завершение устаревшей проверки Runtime оставляет готовность запуска **неопределённой**: подтверждение меню, совместимости загрузчиков и подключения к соответствующему серверу становятся обязательными только на последующих этапах V03/V04/V07. Отчёты исполнителя **не** являются доверенной сертификацией и не открывают публикацию stable. Backend отклоняет просроченные разрешения, разрешения другого пакета, повторные идентификаторы запусков отчётов, изменённые данные Storage и изменения метаданных манифеста/файлов после выдачи разрешения.
 
-The public `/api/v1/files/...` route now serves only published releases. Staged
-bytes are readable only through the short-lived grant-specific delivery route.
-Never publish a staging grant in Actions logs, artifact uploads, issue trackers
-or diagnostics. The result report never includes the grant or login token.
+Публичный маршрут `/api/v1/files/...` теперь обслуживает только опубликованные выпуски. Подготовленные файлы доступны лишь через отдельный маршрут с краткосрочным разрешением. Никогда не публикуйте разрешение на подготовленный выпуск в журналах Actions, загружаемых артефактах, трекерах задач или диагностике. Итоговый отчёт не содержит разрешения и токена входа.
 
 ## Локальная проверка
 
@@ -55,6 +26,4 @@ cd cli && go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientP
 cd ../services/api && go test ./internal/httpapi ./internal/repository ./internal/dbmigrate -run 'TestStaged.*0342|TestStable.*0341|TestEvaluateAppliedSealedCatalog' -count=1
 ```
 
-Run the actual GitHub job on a GUI-capable worker with Minecraft installed
-as a **staged signed artifact**. Unit tests with fake HTTP servers do not prove
-that a real Minecraft window reached a specific readiness state.
+Запускайте настоящее задание GitHub на машине с графической средой, где Minecraft установлен как **подготовленный подписанный артефакт**. Модульные тесты с поддельными HTTP-серверами не доказывают, что реальное окно Minecraft достигло определённой стадии готовности.

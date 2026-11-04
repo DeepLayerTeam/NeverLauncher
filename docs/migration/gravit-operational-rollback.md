@@ -82,8 +82,8 @@ python3 tools/gravit-port/cold_data_restore_04912.py seal \
   --source /srv/verified-backups/gravit-world \
   --manifest /srv/never-cutover/gravit-world-backup.json --run run_12345678
 
-# Only AFTER the rollback ingress fence and after source and target writers
-# are all stopped/masked. This restores files to the named cold directory.
+# Только ПОСЛЕ блокировки входящего трафика для отката и остановки всех процессов записи
+# источника и назначения. Файлы восстанавливаются в указанный неактивный каталог.
 python3 tools/gravit-port/cold_data_restore_04912.py restore \
   --source /srv/verified-backups/gravit-world \
   --target /srv/gravit/minecraft \
@@ -92,7 +92,7 @@ python3 tools/gravit-port/cold_data_restore_04912.py restore \
   --rollback-config /srv/never-cutover/rollback.json \
   --journal-dir /srv/never-cutover/journal --run run_12345678
 
-# If killed mid-rename, with the writers and ingress still fenced:
+# При завершении посреди переименования, пока запись и входящий трафик заблокированы:
 python3 tools/gravit-port/cold_data_restore_04912.py recover \
   --source /srv/verified-backups/gravit-world \
   --target /srv/gravit/minecraft \

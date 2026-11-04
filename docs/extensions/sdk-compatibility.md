@@ -2,23 +2,23 @@
 
 ## Граница совместимости
 
-Product version `0.42.1` **does not change** Host Protocol `1.0`, Extension API `1.0`, package format `1.0` or manifest schema `2.0`. The Go host still accepts the canonical SDK `1.0` hello and the legacy manifest API `3.7` hello behavior. The wire hello request deliberately has no new mandatory fields, so a Java SDK compiled against 0.42.0 can communicate with the updated host. The updated SDK communicates with the original host for operations it actually advertises; the old 0.42.0 Go host did not advertise `runtime.config.delete` or `runtime.storage.delete` even when the underlying broker supported them.
+Версия продукта `0.42.1` **не изменяет** Host Protocol `1.0`, Extension API `1.0`, формат пакета `1.0` или схему манифеста `2.0`. Go Host по-прежнему принимает каноническое приветствие SDK `1.0` и старое поведение hello для API манифеста `3.7`. В сетевом запросе hello намеренно нет новых обязательных полей, поэтому Java SDK, собранный под 0.42.0, может взаимодействовать с обновлённым Host. Обновлённый SDK работает со старым Host для реально заявленных им операций. Старый Go Host 0.42.0 не объявлял `runtime.config.delete` и `runtime.storage.delete`, даже если лежащий ниже брокер поддерживал их.
 
-| Situation | Observable outcome |
+| Ситуация | Наблюдаемый результат |
 | --- | --- |
-| SDK 0.42.0 hello, Go Host 0.42.1, matching protocol/API | Accepted, same `1.0` response fields |
-| SDK 0.42.1 hello, Go Host 0.42.0, advertised capabilities | Accepted; SDK uses existing response fields |
-| SDK requires unavailable capability during `connect(callbackUrl, required)` | `CompatibilityError.code() = HOST_CAPABILITY_UNAVAILABLE` before extension `start()` |
-| RPC capability not advertised by the host | `SecurityException` in Java before any broker request |
-| Event type absent from host's `events` list | `SecurityException` before subscription request |
-| Event protocol not `1.0` when advertised | `CompatibilityError.code() = HOST_EVENT_PROTOCOL_MISMATCH` |
-| Incorrect hello protocol/API or identity | HTTP `409`; Go Host supplies a stable `code` field |
-| Repeated authenticated hello | HTTP `409` with `HOST_HELLO_ALREADY_COMPLETED`; existing runtime identity not reset |
-| Invalid readiness acknowledgement | SDK rejects; supervisor marks a JVM ready only after verified `POST /v1/ready` |
+| Hello SDK 0.42.0 и Go Host 0.42.1 при согласованном протоколе/API | Принято; поля ответа `1.0` не изменились |
+| Hello SDK 0.42.1 и Go Host 0.42.0 с заявленными возможностями | Принято; SDK использует существующие поля ответа |
+| SDK требует отсутствующую возможность при `connect(callbackUrl, required)` | `CompatibilityError.code() = HOST_CAPABILITY_UNAVAILABLE` до `start()` расширения |
+| RPC-возможность не объявлена Host | `SecurityException` в Java до обращения к брокеру |
+| Тип события отсутствует в списке `events` Host | `SecurityException` до запроса подписки |
+| Объявленный протокол событий не `1.0` | `CompatibilityError.code() = HOST_EVENT_PROTOCOL_MISMATCH` |
+| Неверный протокол/API hello либо идентичность | HTTP `409`; Go Host возвращает стабильное поле `code` |
+| Повторное авторизованное hello | HTTP `409` с `HOST_HELLO_ALREADY_COMPLETED`; текущая идентичность Runtime не сбрасывается |
+| Недействительное подтверждение готовности | SDK отклоняет; супервизор считает JVM готовой лишь после проверенного `POST /v1/ready` |
 
 ## Работающий API
 
-`HostSession.connect()` and `connect(callbackUrl)` remain supported. To require permission before initiating callbacks:
+`HostSession.connect()` и `connect(callbackUrl)` по-прежнему поддерживаются. Чтобы потребовать разрешения **до** запуска обратных вызовов:
 
 ```java
 try (HostSession session = HostSession.fromEnvironment(System.getenv(), manifest)) {
@@ -27,13 +27,13 @@ try (HostSession session = HostSession.fromEnvironment(System.getenv(), manifest
 }
 ```
 
-This is an *opt-in startup check*. An extension can omit a requirement if it implements graceful degradation for that capability. At each actual broker operation, the SDK checks the negotiated capability locally and Go checks effective permissions again; negotiation is **not** a grant and cannot supersede revocation. The Go host now advertises both delete capabilities for effective `storage:write`. The event catalog is checked separately from API permissions.
+Это **необязательная проверка при запуске**. Расширение может не требовать возможность, для которой реализовано корректное ухудшение функциональности. При каждом реальном обращении к брокеру SDK локально проверяет согласованную возможность, а Go повторно проверяет фактические права; согласование **не** выдаёт разрешение и не отменяет отзыв. Теперь Go Host объявляет обе операции удаления при действующем `storage:write`. Каталог событий проверяется отдельно от разрешений API.
 
-`HostSession.HostError` retains its existing `status()` method and now exposes `code()`. An older Go host may reply in plaintext, in which case `code()` returns `HOST_HTTP_<status>`. The new Go host emits codes for mismatched protocol/API, process identity, callback restriction and duplicate hello.
+`HostSession.HostError` сохраняет существующий метод `status()` и добавляет `code()`. Старый Go Host может ответить обычным текстом, тогда `code()` возвращает `HOST_HTTP_<status>`. Новый Go Host выдаёт коды для несовпадения протокола/API, идентичности процесса, запрета обратного вызова и повторного hello.
 
-The JVM `ExtensionRunner` now loads the extension class without running its static initializer until hello succeeds. Only after agreement does it instantiate the extension and invoke `start()`; `ready()` remains after successful start. This prevents startup code from executing for an incompatible host. JVM code remains trusted with process-user privileges; none of these checks provides an OS sandbox.
+JVM `ExtensionRunner` теперь загружает класс расширения, не выполняя статический инициализатор до успешного hello. Только после согласования создаётся экземпляр расширения и вызывается `start()`; `ready()` по-прежнему вызывается после успешного запуска. Это исключает выполнение стартового кода несовместимого Host. Код JVM остаётся доверенным и обладает правами пользователя процесса; эти проверки **не** предоставляют песочницу ОС.
 
-## воспроизводимые проверки
+## Воспроизводимые проверки
 
 ```bash
 sh sdk/java/core/build.sh test
@@ -46,8 +46,8 @@ python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.
 (cd services/api && go test ./internal/extensionhost ./internal/extensioncontract ./internal/extensionjava)
 ```
 
-The Go command requires the repository's declared Go `1.27.3` toolchain. The CI Java SDK workflow tests JDK 17/21 on Linux, macOS and Windows; local Linux tests alone do not certify those targets.
+Команда Go требует объявленных в репозитории инструментов Go `1.27.3`. Workflow Java SDK в CI проверяет JDK 17/21 на Linux, macOS и Windows; одних локальных тестов Linux недостаточно для сертификации этих целей.
 
 ## Ограничение выпуска
 
-**The product-wide 14-target ServerBridge Minecraft/JVM/Proxy release gate remains mandatory in 0.42.1.** The gate now recognizes versions `>=0.42.0`, but checks the version and source commit **exactly** in live proofs and on the final release JARs. It rejects missing or incompatible evidence, including absent Go fault/race logs. Until the four outstanding live target runners and full evidence are supplied, production certification remains blocked; this patch must not be presented as a verified production release.
+**Обязательный общий барьер ServerBridge для 14 целей Minecraft/JVM/Proxy остаётся в силе в 0.42.1.** Теперь он распознаёт версии `>=0.42.0`, но проверяет версию и исходный коммит **точно** как в живых доказательствах, так и в окончательных JAR выпуска. Отсутствующие или несовместимые доказательства, включая журналы Go о сбоях и гонках, отклоняются. До появления четырёх оставшихся исполнителей живых целей и полного комплекта доказательств сертификация production заблокирована; этот патч нельзя представлять как проверенный промышленный релиз.

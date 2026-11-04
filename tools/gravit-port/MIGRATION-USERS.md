@@ -80,8 +80,8 @@ upstream textures export/PNG objects. First run its dry-run, review
 `planSha256`, and explicitly approve it for import:
 
 ```sh
-# Requires the compiled services/api/cmd/gravit-textures-import-02510 binary,
-# LAUNCHER_DATABASE_DSN and target storage configuration.
+# Требуется собранный бинарник services/api/cmd/gravit-textures-import-02510,
+# LAUNCHER_DATABASE_DSN и настройки целевого Storage.
 gravit-textures-import-02510 --source-id source-one \
     --source-json /private/textures.json --source-root /private/gravit-png \
     --mapping /private/texture-map.json --dry-run \

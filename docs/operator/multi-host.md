@@ -59,9 +59,9 @@ machine. From the independent machine's console:
 cd /opt/launcher/deploy/production
 cp multi-host-0512.example.env .env
 chmod 600 .env
-# Edit the real image digests, TLS paths, shared connections, secrets,
-# node ID and host bind IP. Copy neither actual secrets nor SSH private keys
-# into the release archive or report files.
+# Укажите настоящие дайджесты образов, пути TLS, общие подключения, секреты,
+# ID узла и IP привязки. Не включайте реальные секреты или закрытые ключи SSH
+# в архив выпуска или файлы отчётов.
 python3 ../../scripts/operations/multi_host_0512.py local-check \
   --directory /opt/launcher/deploy/production --output /var/tmp/launcher-preflight-a.json
 ```

@@ -2,23 +2,23 @@
 
 ## Порядок действий игрока
 
-1. Obtain Launcher from the **project owner's official distribution**. Verify its publisher/signature via the existing Never installer/updater and operating-system signing guidance. MIG09 does **not** sign an installer or treat an arbitrary migration URL as trusted.
-2. Complete first-run Backend binding, choose your Never project/profile/channel and pin the owner's independent Never Ed25519 public key. Load a valid **signed** release manifest.
-3. Open **Переход с Gravit** and choose the existing legacy directory. The assistant suggests known candidate locations but never traverses the user's home recursively. Select the correct installation yourself.
-4. Preview the manifest-pinned files available from the old installation. The inspection verifies real SHA-256/size bytes and rejects symlinks and unsafe paths. No files are moved/deleted.
-5. Confirm. MIG09 re-scans and rechecks the source, then publishes matching objects to Runtime's existing, **per-object OS-locked** content cache. Each object is rehashed during publication. Partial failures are safe: repeat the operation; objects already cached are reused.
-6. Return to **Загрузка** and perform the ordinary signed release installation/repair; cached objects are restored by Runtime's existing download pipeline and independently checked again. Files not found in the old installation download normally.
-7. Optional components are **suggested by signed file hashes only**. The user must explicitly select and install the permitted preset using Never's existing component chooser. Unsupported Gravit actions are never executed.
-8. With explicit player approval, only Minecraft `options.txt` display preferences (`fullscreen`, bounded `overrideWidth`, `overrideHeight`) are proposed; other preferences remain unchanged.
-9. Sign in to Launcher again and complete device enrollment / Guard attestation as required. Gravit auth sessions, device private keys and trust anchors are **not migrated**.
+1. Получите Launcher из **официального источника владельца проекта**. Проверьте издателя и подпись через существующий установщик/обновлятор Never и инструкции ОС по проверке подписи. MIG09 **не** подписывает установщик и не признаёт произвольный URL миграции доверенным.
+2. Выполните первоначальную привязку Backend, выберите проект/профиль/канал Never и закрепите независимый открытый ключ Ed25519 владельца Never. Загрузите корректный **подписанный** манифест выпуска.
+3. Откройте **Переход с Gravit** и выберите прежний каталог установки. Помощник предлагает известные возможные пути, но никогда не обходит весь домашний каталог рекурсивно. Укажите нужную установку самостоятельно.
+4. Просмотрите файлы старой установки, разрешённые закреплённым манифестом. Проверка сопоставляет фактические SHA-256 и размеры файлов, отклоняя символические ссылки и опасные пути. Файлы не перемещаются и не удаляются.
+5. Подтвердите операцию. MIG09 повторно просканирует и проверит исходные файлы, после чего поместит совпадающие объекты в существующий кэш содержимого Runtime с **блокировкой ОС для каждого объекта**. При сохранении каждый объект хешируется повторно. Частичные сбои безопасны: операцию можно повторить; уже закэшированные объекты используются заново.
+6. Вернитесь на экран **Загрузка** и выполните обычную установку или восстановление подписанного выпуска. Объекты из кэша восстанавливаются существующим механизмом загрузки Runtime и независимо проверяются ещё раз. Отсутствующие в старой установке файлы загружаются обычным способом.
+7. Дополнительные компоненты **предлагаются только на основании хешей подписанных файлов**. Пользователь должен явно выбрать и установить разрешённый набор через существующий выбор компонентов Never. Неподдерживаемые действия Gravit не выполняются.
+8. Только с явного согласия игрока предлагается перенос параметров отображения из Minecraft `options.txt`: `fullscreen`, ограниченные по диапазону `overrideWidth` и `overrideHeight`. Остальные настройки не меняются.
+9. Снова войдите в Launcher и при необходимости пройдите регистрацию устройства и аттестацию Guard. Сеансы аутентификации Gravit, закрытые ключи устройств и корни доверия **не переносятся**.
 
 ## Границы безопасности и эксплуатации
 
-- Signed Never manifest is mandatory. The old source and arbitrary local files are always untrusted.
-- No bulk copying, autoexecution, symlink traversal, arbitrary extension imports, password transfer, credential storage, trusted key migration, or deletion of the old directory.
-- Source layouts are bounded to the explicitly chosen directory, `.minecraft/`, `updates/<profile>`, `clients/<profile>`, and `<profile>`; unknown custom layouts may need manual selection of a different root.
-- At most 30,000 signed selected files and 100 GiB of signed bytes are inspected per preview. An individual file is capped at 16 GiB. Only three whitelisted settings fields are considered.
-- Content adoption is **cache-only**, not a live release install. It does not mark old bytes as owned or publish an unsigned release. Runtime's signed release installation remains necessary.
-- Different Gravit layouts or patched jars can produce fewer matches, not an unsafe fallback. Unknown files are downloaded from Never's signed source instead of adopted.
-- Existing CacheStore locks serialize with concurrent downloads and other processes. A failed scan leaves the game's installation untouched; a failed publication may leave previously verified cache objects, which are safe to reuse.
-- `cargo test --lib player_migration_0339` and desktop build/check are required gates. Production acceptance additionally requires real Windows/macOS/Linux builds, signed installer validation, and end-to-end installation into a clean profile.
+- Обязателен подписанный манифест Never. Старый источник и произвольные локальные файлы всегда считаются недоверенными.
+- Запрещены массовое копирование, автоматический запуск, переход по символическим ссылкам, произвольный импорт расширений, перенос паролей, хранение учётных данных, перенос доверенных ключей и удаление прежнего каталога.
+- Просмотр ограничен явно выбранным каталогом и вариантами `.minecraft/`, `updates/<profile>`, `clients/<profile>` и `<profile>`. Для нестандартной структуры может потребоваться вручную выбрать другой корневой каталог.
+- За один предварительный просмотр проверяются не более 30 000 выбранных подписанных файлов общим подписанным объёмом не более 100 ГиБ. Максимальный размер одного файла — 16 ГиБ. Рассматриваются только три разрешённых поля настроек.
+- Принятие содержимого выполняется **только в кэш**, а не в действующую установку выпуска. Старые файлы не объявляются собственностью приложения, неподписанный выпуск не публикуется. Требуется обычная установка подписанного выпуска через Runtime.
+- Отличающаяся структура Gravit или модифицированные JAR могут уменьшить количество совпадений, но не приводят к небезопасному резервному сценарию. Неизвестные файлы загружаются из подписанного источника Never, а не принимаются из старой установки.
+- Существующие блокировки CacheStore синхронизируются с одновременными загрузками и другими процессами. Неудачное сканирование не меняет установленную игру; неудачное сохранение может оставить ранее проверенные объекты в кэше — их можно безопасно использовать повторно.
+- Обязательные проверки: `cargo test --lib player_migration_0339` и сборка/проверка Desktop. Приёмка production дополнительно требует реальные сборки Windows/macOS/Linux, проверку подписанных установщиков и сквозную установку в чистый профиль.

@@ -1,10 +1,10 @@
 # RemoteControl TLS, systemd и работа с подписанными релизами (0.42.8)
 
-RemoteControl is a **host supervisor**, not an arbitrary remote shell. Its HTTPS API accepts only `host.status`, `host.start`, `host.stop`, and `host.restart`, with short-lived, scoped tokens, CIDR allowlists, auditable requests and durable idempotency receipts. It does not execute arbitrary Java arguments or shell commands.
+RemoteControl — **супервизор узла**, а не произвольная удалённая командная оболочка. Его HTTPS API принимает только `host.status`, `host.start`, `host.stop` и `host.restart` с краткосрочными токенами ограниченных областей, белыми списками CIDR, аудируемыми запросами и устойчивыми квитанциями идемпотентности. Он не исполняет произвольные аргументы Java или команды оболочки.
 
 ## Подготовка сертификатов TLS (настоящие X.509, без подпроцесса OpenSSL)
 
-Run on a trusted operator machine with a secure, **new** directory (the command refuses to overwrite existing credentials):
+На доверенной машине оператора создайте защищённый **новый** каталог (команда не перезаписывает существующие учётные данные):
 
 ```bash
 nl server-bridge host remote tls-init \
@@ -12,11 +12,11 @@ nl server-bridge host remote tls-init \
   --host 10.10.0.21 --host host1.example.internal --days 30
 ```
 
-The command generates an Ed25519 CA, an IP/DNS-SAN server certificate (`server.pem`/`server.key`), and a separate client-authentication certificate (`client.pem`/`client.key`). Every private key is created with `0600`; the directory is `0700`. The CA is valid for the leaf lifetime plus one day. SHA-256 of the CA public key is returned for out-of-band verification. All certificates are verified against the generated CA before the command succeeds.
+Команда создаёт CA Ed25519, серверный сертификат с IP/DNS SAN (`server.pem`/`server.key`) и отдельный сертификат аутентификации клиента (`client.pem`/`client.key`). Все закрытые ключи создаются с правами `0600`, каталог — `0700`. Срок CA превышает срок конечного сертификата на один день. Возвращается SHA-256 открытого ключа CA для независимой проверки. До успешного завершения команды все сертификаты проверяются относительно созданного CA.
 
-**Move `ca.key` offline immediately.** Never copy the CA private key or `client.key` to the game host. Copy `server.pem`, `server.key` and public `ca.pem` to a path readable by the non-root RemoteControl service account. Store `client.key` exclusively on the trusted operator machine. Never put any keys in the repository, release ZIP, web root or shared storage. Reissue credentials in a fresh directory before expiry; do not mutate an existing certificate set in place.
+**Немедленно переместите `ca.key` в автономное хранилище.** Никогда не копируйте закрытый ключ CA или `client.key` на игровой узел. Скопируйте `server.pem`, `server.key` и публичный `ca.pem` в каталог, доступный непривилегированной служебной записи RemoteControl. `client.key` храните только на доверенной машине оператора. Не размещайте ключи в репозитории, ZIP выпуска, корне веб-сайта или общем Storage. До истечения срока выпустите новые данные в отдельном каталоге; не изменяйте существующий набор сертификатов на месте.
 
-Initialize the server identity once and start the TLS listener with mutual TLS (copy public CA to host):
+Однократно инициализируйте идентичность сервера и запустите TLS-слушатель со взаимной TLS-аутентификацией (публичный CA скопирован на узел):
 
 ```bash
 nl server-bridge host remote init --server-root /srv/minecraft/survival
@@ -28,14 +28,14 @@ nl server-bridge host remote serve --server-root /srv/minecraft/survival \
   --allow-source 10.10.0.5/32
 ```
 
-The server verifies the client certificate against the CA *and* verifies its scoped bearer token. Obtain the scoped token with `remote issue --subject ... --scope ... --source ... --ttl-seconds ... --token-file ...` and keep that token file private (`0600`). The client must use `--ca-file`, `--client-cert`, `--client-key` when calling the server. Never use `--insecure`/skip-verification; those modes do not exist.
+Сервер проверяет и клиентский сертификат относительно CA, и ограниченный bearer-токен. Получите токен командой `remote issue --subject ... --scope ... --source ... --ttl-seconds ... --token-file ...` и защитите файл токена (`0600`). Клиент при обращении должен указывать `--ca-file`, `--client-cert` и `--client-key`. Не используйте `--insecure` или отключение проверки: эти режимы отсутствуют.
 
 ## Эксплуатация службы systemd
 
-Use `nl server-bridge host service install --component remote --scope system --name remote-survival --server-root ... --service-user ... --tls-cert ... --tls-key ... --client-ca ... --listen ... --allow-source ... --now`. The installed service remains an unprivileged unit. A SIGTERM causes the remote HTTPS listener to stop accepting new work, allows up to **90 seconds** for existing requests and their durable command receipts to finish, and then fails visibly if that drain cannot complete. The generated unit sets `TimeoutStopSec=105s` rather than killing the listener at its previous 45-second timeout. Never automatically repeat a command with a different idempotency key after loss of acknowledgement; inspect the receipt first.
+Используйте `nl server-bridge host service install --component remote --scope system --name remote-survival --server-root ... --service-user ... --tls-cert ... --tls-key ... --client-ca ... --listen ... --allow-source ... --now`. Установленная служба остаётся непривилегированной. SIGTERM заставляет удалённый HTTPS-слушатель прекратить принимать новые запросы, отводит до **90 секунд** на завершение текущих запросов и их устойчивых квитанций, а затем явно сообщает об ошибке, если завершение невозможно. Созданный unit использует `TimeoutStopSec=105s` вместо прежнего 45-секундного ограничения. После потери подтверждения никогда не повторяйте автоматически команду с другим ключом идемпотентности: сначала проверьте квитанцию.
 
-Both services now use `Type=notify` with `NotifyAccess=main` and `WatchdogSec=30s`. The Minecraft Host reports readiness only for a verified running child. **RemoteControl separately reports `READY=1` only after binding its HTTPS listener**, periodically sends `WATCHDOG=1` while serving, and sends `STOPPING=1` before journal-preserving shutdown. An absent or broken `NOTIFY_SOCKET` fails readiness when configured; an unexpected listener exit is treated as a service failure. No watchdog success implies that a Minecraft child is healthy; that remains the Host supervisor's responsibility.
+Обе службы теперь используют `Type=notify`, `NotifyAccess=main` и `WatchdogSec=30s`. Minecraft Host сообщает о готовности только при проверенном работающем дочернем процессе. **RemoteControl отдельно выдаёт `READY=1` лишь после привязки HTTPS-слушателя**, периодически отправляет `WATCHDOG=1` во время обслуживания и `STOPPING=1` перед завершением с сохранением журнала. Отсутствующий или сломанный `NOTIFY_SOCKET` при настроенном использовании приводит к ошибке готовности, неожиданное завершение слушателя считается сбоем службы. Успешная работа watchdog не означает здоровье дочернего процесса Minecraft: это обязанность Host Supervisor.
 
-## подписи релизов и границы сертификатов
+## Подписи релизов и границы сертификатов
 
-`nl release sign` continues to use Ed25519 signatures and the existing independent GA gates. A trusted signing/verification key must be outside the bundle **both by its path and by its resolved real path**. Symlink aliases into the release tree are rejected. A 64-byte Ed25519 private key with a public component inconsistent with its private seed is refused. These improvements do not replace Authenticode notarization/platform signatures or provide approval for an unverified Minecraft/ServerBridge matrix.
+`nl release sign` продолжает использовать подписи Ed25519 и существующие независимые проверки GA. Доверенный ключ подписания/проверки должен находиться за пределами пакета **и по указанному, и по разрешённому фактическому пути**. Символические ссылки внутрь дерева выпуска отклоняются. Закрытый ключ Ed25519 из 64 байт с открытой частью, не соответствующей закрытому seed, запрещён. Это усиление не заменяет Authenticode, нотариальное заверение или подписи платформ и не утверждает совместимость непроверенной матрицы Minecraft/ServerBridge.

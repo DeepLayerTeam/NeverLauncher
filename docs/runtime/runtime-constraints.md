@@ -1,10 +1,10 @@
 # Launcher 0.22.3 — ограничения Runtime
 
-## что запускается
+## Что выполняется
 
-The production paths are `model.ValidateManifestSchema` (and its v2-only runtime constraints), `adminVersionManifestUpdate`, release publication integrity checks, and `runtime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. New fields are stored in the existing signed Manifest v2 JSON; no SQL schema change is needed. Old Manifest v1 payloads and signatures remain unmodified.
+В production используются `model.ValidateManifestSchema` (и его ограничения Runtime только для v2), `adminVersionManifestUpdate`, проверки целостности публикации выпуска и функции `runtime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. Новые поля хранятся в существующем подписанном JSON Manifest v2; менять схему SQL не требуется. Содержимое и подписи прежних Manifest v1 не изменяются.
 
-### примеры полей манифеста v2
+### Пример полей манифеста v2
 
 ```json
 {
@@ -29,17 +29,17 @@ The production paths are `model.ValidateManifestSchema` (and its v2-only runtime
 }
 ```
 
-* `java.majorVersion` remains mandatory in a runnable release and remains the default required Java major. `recommendedMajorVersion` selects the exact Java major for v2 when set. A Mojang compatibility profile must match its signed version metadata's major requirement. Custom Java paths must satisfy the managed/runtime selector's exact version check. `minimumMajorVersion`/`maximumMajorVersion` reject contradictory policies and prevent out-of-range selection.
-* `memory` is in MiB. `-Xms`/`-Xmx` in JVM args are parsed, range-checked and rejected if duplicated or inconsistent. Missing values are filled from the profile memory policy during plan construction. The validation is applied before and after policy defaults, including Mojang-resolved arguments. Changing the UI memory preference is a separate feature of 0.22.9 and does not bypass this policy.
-* `classpathEntries` / `modulepathEntries` are ordered lists of relative required JAR files in the same signed release. Duplicate, unsigned, unsafe, or platform-inapplicable entries are rejected; missing required content blocks real launch. When omitted, existing manifest-JAR discovery or signed Mojang compatibility resolution is retained.
-* `mainModule` must be a Java module entrypoint of the form `module` or `module/qualified.Main`; it requires `modulepathEntries`. The Rust process builder uses `--module-path` and `-m` instead of the class main class for this mode. It does not call a shell.
-* `environmentAllowlist` is an **allowlist of inherited variable names**, not values injected from a manifest. When nonempty, the child receives only those available inherited variables (plus Windows SystemRoot/WINDIR); Java option-injection variables are always excluded for v2. With an empty list, normal host environment inheritance remains, except for the unsafe Java override variables.
-* V2 rejects shell-control characters in JVM/game args, launch-entrypoint overrides via `-cp`, `-jar`, `-m`, Java agents/bootclasspath/module-patch/command-on-error flags, and unknown classpath strategies. Authorized Java custom-agent behavior will require the signed custom-args feature in the later P07 milestone.
+- `java.majorVersion` остаётся обязательным для запускаемого выпуска и задаёт основную версию Java по умолчанию. Если задан `recommendedMajorVersion`, для v2 выбирается именно эта основная версия. Профиль совместимости Mojang должен соответствовать требованию основной версии в подписанных метаданных версии. Пользовательские пути Java обязаны пройти точную проверку версии в селекторе управляемой среды/Runtime. Поля `minimumMajorVersion` и `maximumMajorVersion` отклоняют противоречивые политики и запрещают выбор вне диапазона.
+- Значения `memory` задаются в МиБ. Аргументы JVM `-Xms`/`-Xmx` разбираются, проверяются на диапазон и отклоняются при дублировании или несогласованности. Отсутствующие значения заполняются из политики памяти профиля при создании плана. Проверка выполняется до и после применения значений по умолчанию, включая аргументы, полученные от Mojang. Изменение настройки памяти в UI — отдельная возможность 0.22.9, не обходящая эту политику.
+- `classpathEntries` и `modulepathEntries` — упорядоченные списки относительных обязательных JAR-файлов в том же подписанном выпуске. Повторяющиеся, неподписанные, небезопасные или неподходящие платформе записи отклоняются; отсутствие обязательного содержимого блокирует запуск. Если список не указан, сохраняется существующий поиск JAR по манифесту либо разрешение подписанной совместимости Mojang.
+- `mainModule` должен указывать точку входа Java-модуля вида `module` или `module/qualified.Main`; необходим `modulepathEntries`. В этом режиме сборщик процесса Rust использует `--module-path` и `-m` вместо основного класса. Оболочка не вызывается.
+- `environmentAllowlist` — **список разрешённых имён наследуемых переменных**, а не значений, внедряемых из манифеста. При непустом списке дочерний процесс получает только существующие разрешённые переменные (плюс Windows SystemRoot/WINDIR); переменные, позволяющие внедрять параметры Java, для v2 исключаются всегда. При пустом списке сохраняется обычное наследование среды узла за исключением опасных переменных переопределения Java.
+- V2 отвергает управляющие символы оболочки в аргументах JVM/игры, подмену точки входа через `-cp`, `-jar`, `-m`, Java-агентов, bootclasspath, module-patch, параметры выполнения команды при ошибке и неизвестные стратегии classpath. Разрешённое поведение пользовательских Java-агентов потребует подписанного механизма дополнительных аргументов в последующем этапе P07.
 
-### публикация и обратная совместимость
+### Публикация и обратная совместимость
 
-Existing published v1 releases are not re-signed or migrated. Incomplete draft manifests may remain persisted while being edited, but a v2 release cannot pass publication integrity checks without a usable Java major and valid runtime constraints. Editing a v2 draft changes the signed payload; the release must be re-signed using the existing publication path. The profile snapshot's identity and digest remain immutable.
+Существующие опубликованные выпуски v1 не переподписываются и не мигрируются. Неполные черновики манифестов могут храниться во время редактирования, но выпуск v2 не пройдёт проверки целостности публикации без пригодной основной версии Java и действительных ограничений Runtime. Редактирование черновика v2 меняет подписываемые данные: выпуск нужно подписать заново существующим механизмом публикации. Идентичность и дайджест снимка профиля остаются неизменными.
 
-### проверка
+### Проверка
 
-The Go `internal/model` test suite exercises valid Java module/classpath and environment policies and a matrix of rejection cases. The Rust unit suite exercises runtime policy and shell-free argument construction; its full execution requires the Rust toolchain and dependency cache. CI needs production API integration, end-to-end signed manifest import, real Java launch (classpath and modulepath), and multi-OS distribution tests before this version can be certified for GA.
+Тесты Go `internal/model` покрывают корректные политики модулей, classpath и среды Java, а также матрицу отказов. Модульные тесты Rust проверяют политику Runtime и создание аргументов без оболочки; для полного запуска необходимы инструменты Rust и кэш зависимостей. До сертификации GA CI должен проверить интеграцию production API, сквозной импорт подписанного манифеста, реальный запуск Java (classpath/modulepath) и пакеты для разных ОС.

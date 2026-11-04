@@ -52,9 +52,9 @@ This performs a real Redfish power transition, observes BMC `Off` and the loss o
 Install `deploy/production/physical-partition-05210.nft` **only** on a dedicated L3 Linux router between the targeted real node and other nodes/dependencies. The `inet launcher_partition_05210` table has an isolated forwarding chain and an expiring dynamic IPv4 set; no host is blocked until a particular private address is added. Verify both source and destination forwarding rules and the kernel timeout set. Ensure the out-of-band management/BMC network and the observer are **not** routed through this firewall. On a shared L2 segment, this method does not partition switch-local peer traffic; the live peer TCP probes will refuse PASS. It does not claim to test arbitrary physical fiber/cable failure.
 
 ```sh
-# Run once, on the dedicated router, after reviewing the exact impact:
+# Запустите однократно на выделенном маршрутизаторе после оценки точных последствий:
 sudo nft -f /opt/launcher/deploy/production/physical-partition-05210.nft
-# Then, on the independent observer:
+# Затем на независимом наблюдателе:
 python3 scripts/operations/physical_ha_dr_05210.py partition \
   --node a=ops@node-a.example.net --node b=ops@node-b.example.net \
   --victim a --victim-ip 10.14.0.11 --victim-port 443 \

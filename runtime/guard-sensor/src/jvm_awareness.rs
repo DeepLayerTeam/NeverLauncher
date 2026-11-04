@@ -118,8 +118,7 @@ extern "system" {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TransitionOrigin {
     HotSpotJvm,
-    // Verified OS dispatchers may allocate executable pages while servicing
-    // HotSpot on Windows; this is not the same as an arbitrary native DLL.
+    // Проверенные системные диспетчеры могут выделять исполняемые страницы при обслуживании HotSpot в Windows; это не равнозначно произвольной нативной DLL.
     TrustedSystemDispatcher,
     ForeignNative,
     Unknown,
@@ -173,17 +172,12 @@ static SENSOR_BASE: AtomicUsize = AtomicUsize::new(0);
 static SENSOR_END: AtomicUsize = AtomicUsize::new(0);
 static JIT_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
 static TRUSTED_SYSTEM_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
-// Initialized once before hooks are active. No Win32 pathname resolution,
-// allocation or locking is performed from inside a VirtualAlloc hook.
+// Инициализация выполняется однократно до активации перехватов. Внутри перехвата VirtualAlloc запрещены разрешение путей Win32, выделение памяти и блокировки.
 static TRUSTED_SYSTEM_DISPATCHERS: OnceLock<Vec<(usize, usize)>> = OnceLock::new();
-// LWJGL is loaded only after Agent_OnLoad. Pin the exact, hashed native from
-// the launch directory so its image base cannot be recycled for an untrusted
-// DLL. No path resolution or heap allocation is performed inside memory hooks.
+// LWJGL загружается только после Agent_OnLoad. Закрепите конкретную нативную библиотеку с проверенным хешем из каталога запуска, чтобы её базовый адрес не мог повторно использоваться недоверенной DLL. Внутри перехватов памяти нельзя разрешать пути или выделять память в куче.
 static VERIFIED_NATIVE_LAUNCH_ROOT: OnceLock<PathBuf> = OnceLock::new();
 static VERIFIED_LWJGL_IMAGE: OnceLock<VerifiedNativeImage> = OnceLock::new();
-// Some client profiles load additional, byte-identical copies of lwjgl.dll.
-// Pin each approved image, but expose address ranges to memory hooks only
-// through release/acquire atomics: no path IO or mutexes in those callbacks.
+// Некоторые профили загружают дополнительные побайтно идентичные копии lwjgl.dll. Закрепите каждый одобренный образ, но публикуйте диапазоны адресов для перехватов памяти только через атомарные операции release/acquire; в обратных вызовах запрещены операции с путями и мьютексы.
 const MAX_ADDITIONAL_LWJGL_IMAGES: usize = 8;
 static LWJGL_REGISTRATION_LOCK: Mutex<()> = Mutex::new(());
 static ADDITIONAL_LWJGL_IMAGES: Mutex<Vec<VerifiedNativeImage>> = Mutex::new(Vec::new());
@@ -282,8 +276,7 @@ fn is_verified_lwjgl_caller(address: usize) -> bool {
         return true;
     }
     for index in 0..MAX_ADDITIONAL_LWJGL_IMAGES {
-        // end is published last and never cleared: a range is either wholly
-        // verified or invisible to this lock-free hook path.
+        // Граница end публикуется последней и не очищается: диапазон либо полностью проверен, либо невидим для этого пути перехвата без блокировок.
         let end = ADDITIONAL_LWJGL_ENDS[index].load(Ordering::Acquire);
         let base = ADDITIONAL_LWJGL_BASES[index].load(Ordering::Relaxed);
         if end > base && address >= base && address < end {
@@ -309,7 +302,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
         return Err("Guard JVM-Aware rejected unexpected LWJGL native image".to_string());
     }
     if let Some(native) = VERIFIED_LWJGL_IMAGE.get() {
-        // Each image is loader-pinned; rehash disk bytes on every heartbeat.
+        // Каждый образ закреплён загрузчиком; при каждом сигнале активности пересчитывайте хеш байтов на диске.
         check_verified_lwjgl_image(native)?;
     }
     for native in ADDITIONAL_LWJGL_IMAGES.lock()
@@ -318,10 +311,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     {
         check_verified_lwjgl_image(native)?;
     }
-    // A DLL loaded through a direct ntdll path may execute once before the
-    // IAT LoadLibrary callback registers it. Only a *single* pending event
-    // may be reclassified, and only after the identical strict path/image
-    // checks above. Multiple/unknown transitions still fail closed.
+    // DLL, загруженная напрямую через ntdll, может один раз выполниться до регистрации обратным вызовом IAT LoadLibrary. Разрешена повторная классификация только ОДНОГО ожидающего события и только после тех же строгих проверок пути и образа. Несколько или неизвестные переходы отклоняются.
     reconcile_first_runtime_native_transition()?;
     let foreign = FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     if foreign != 0 {
@@ -374,8 +364,7 @@ pub fn shutdown() {
     }
 }
 
-// Resolve provenance for diagnostics on the worker thread only; never query
-// module paths or allocate strings from inside the VirtualAlloc hook.
+// Происхождение для диагностики определяйте только в потоке обработчика. В перехвате VirtualAlloc нельзя запрашивать пути модулей или выделять строки.
 fn caller_module_basename(address: usize) -> String {
     if address == 0 { return "unknown".to_string(); }
     let mut module = std::ptr::null_mut();
@@ -390,10 +379,7 @@ fn caller_module_basename(address: usize) -> String {
     path.rsplit(['\\', '/']).next().unwrap_or("unknown").to_string()
 }
 
-// Trust only verified System32 dispatcher images, plus the exact OpenGL image
-// that belongs to the already inspected JVM installation. Module Guard pins
-// loaded DLL path and content; Memory Integrity independently checks image
-// code. No modpack-native or arbitrary PATH-resolved module is exempted.
+// Доверяйте только проверенным образам диспетчеров System32 и конкретному образу OpenGL из уже проверенной установки JVM. Module Guard закрепляет путь и содержимое загруженной DLL; Memory Integrity отдельно проверяет код образа. Модули из модпаков и произвольные модули из PATH не освобождаются от проверки.
 fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     let mut directory = [0u16; MAX_MODULE_PATH];
     let len = unsafe { GetSystemDirectoryW(directory.as_mut_ptr(), directory.len() as u32) } as usize;
@@ -405,12 +391,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         .replace('/', "\\")
         .to_ascii_lowercase();
     let mut ranges = Vec::new();
-    // OpenGL dispatchers legitimately allocate executable MEM_PRIVATE memory.
-    // The CI uses a SHA-256-verified Mesa opengl32.dll installed beside
-    // java.exe, *not* the Windows System32 opengl32.dll. Resolve only the
-    // already-certified JVM's bin directory (or the OS System32 fallback).
-    // Preloading once before installing hooks prevents a later LoadLibrary
-    // from introducing an unclassified dispatcher in the middle of JIT work.
+    // Диспетчеры OpenGL законно выделяют исполняемую память MEM_PRIVATE. В CI используется проверенная по SHA-256 Mesa opengl32.dll рядом с java.exe, а НЕ системная opengl32.dll Windows. Разрешайте только каталог bin уже сертифицированной JVM (либо запасной System32). Предварительная загрузка до установки перехватов не позволяет LoadLibrary внести неизвестный диспетчер посреди работы JIT.
     let jvm_module = unsafe { GetModuleHandleW(wide_null("jvm.dll").as_ptr()) };
     if jvm_module.is_null() {
         return Err("Guard JVM-Aware Protection cannot locate jvm.dll for OpenGL provenance".to_string());
@@ -502,8 +483,7 @@ fn reconcile_first_runtime_native_transition() -> Result<(), String> {
         if unsafe { GetModuleHandleExW(flags, caller as *const u16, &mut module) } == 0 || module.is_null() {
             return Ok(());
         }
-        // This checks basename only to decide whether registration should be
-        // attempted; registration checks canonical path, ancestry and SHA.
+        // Здесь проверяется только имя файла, чтобы решить, нужна ли регистрация; сама регистрация проверяет канонический путь, расположение в дереве и SHA.
         let path = module_path(module)?;
         if !PathBuf::from(path).file_name().is_some_and(|name| {
             name.to_string_lossy().eq_ignore_ascii_case("lwjgl.dll")
@@ -520,10 +500,7 @@ fn reconcile_first_runtime_native_transition() -> Result<(), String> {
     Ok(())
 }
 
-/// Register the one permitted LWJGL dispatcher after LoadLibrary returns.
-/// The complete canonical path must be exactly the platform-specific native
-/// from the materialized client, not merely any file named lwjgl.dll. Module
-/// Guard independently verifies and hashes authenticated DLL load events.
+/// Зарегистрируйте единственный разрешённый диспетчер LWJGL после возврата LoadLibrary. Полный канонический путь должен указывать именно на платформенную библиотеку из подготовленного клиента, а не на произвольный файл lwjgl.dll. Module Guard отдельно проверяет и хеширует аутентифицированные события загрузки DLL.
 pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), String> {
     if module.is_null() || !JVM_ACTIVE.load(Ordering::Acquire) {
         return Ok(());
@@ -534,19 +511,14 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         return Ok(());
     }
     let result = (|| -> Result<(), String> {
-        // Serialize duplicate LoadLibrary notifications and registration from
-        // the heartbeat path. No locks are acquired by VirtualAlloc hooks.
+        // Сериализуйте повторные уведомления LoadLibrary и регистрацию из пути heartbeat. Перехваты VirtualAlloc не берут блокировки.
         let _registration_guard = LWJGL_REGISTRATION_LOCK.lock()
             .map_err(|_| "Guard JVM-Aware native registration lock poisoned".to_string())?;
         let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()
             .ok_or_else(|| "Guard JVM-Aware missing pinned native launch root".to_string())?;
         let native_root = launch_root.join("natives").join("windows")
             .join(std::env::consts::ARCH);
-        // The materialized Mojang LWJGL classifier preserves its archive
-        // entry hierarchy. The approved Windows/x86_64 manifest records
-        // natives/windows/x86_64/windows/x64/org/lwjgl/lwjgl.dll, rather
-        // than the older flat natives/windows/x86_64/lwjgl.dll. Only these
-        // *exact* platform layouts are permitted, never a filename search.
+        // Подготовленный классификатор Mojang LWJGL сохраняет структуру каталогов архива. Одобренный манифест Windows/x86_64 содержит natives/windows/x86_64/windows/x64/org/lwjgl/lwjgl.dll вместо старого плоского natives/windows/x86_64/lwjgl.dll. Разрешены только эти точные платформенные варианты, а не поиск по имени файла.
         let classifier_arch = match std::env::consts::ARCH {
             "x86_64" => "x64",
             "aarch64" => "arm64",
@@ -558,15 +530,12 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             native_root.join("lwjgl.dll"),
             native_root.join("windows").join(classifier_arch)
                 .join("org").join("lwjgl").join("lwjgl.dll"),
-            // An explicitly pinned LWJGL extraction root is accepted only
-            // after comparing its bytes with the certified flat native.
+            // Явно закреплённый корень распаковки LWJGL принимается только после сравнения его байтов с сертифицированной плоской нативной библиотекой.
             extract_root.join("lwjgl.dll"),
         ];
         let canonical_path = std::fs::canonicalize(&loaded)
             .map_err(|err| format!("Guard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
-        // LWJGL 3 extracts to <pinned-root>/<version>/<platform>/lwjgl.dll
-        // (e.g. 3.4.3+4/x64). Derive only this exact layout from the actual
-        // loader-reported path. Arbitrary descendants are never trusted.
+        // LWJGL 3 распаковывает библиотеку в <pinned-root>/<version>/<platform>/lwjgl.dll (например, 3.4.3+4/x64). Выводите только этот точный путь из фактического пути, сообщённого загрузчиком. Произвольным вложенным файлам доверять нельзя.
         let versioned_candidate = canonical_path.strip_prefix(&extract_root).ok()
             .and_then(|relative| {
                 use std::path::Component;
@@ -585,12 +554,10 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                     _ => None,
                 }
             });
-        // A missing legacy layout must not poison the Sensor when the native
-        // is legitimately stored under the platform's archive hierarchy.
+        // Отсутствие старой схемы размещения не должно нарушать работу Sensor, если нативная библиотека корректно хранится в платформенной структуре архива.
         let mut matched = None;
         for (candidate_index, expected) in candidates.iter().chain(versioned_candidate.iter()).enumerate() {
-            // Check each directory component before canonicalizing: no
-            // symlink/reparse traversal from inside the certified client.
+            // До канонизации проверяйте каждый компонент каталога: переходы по символическим ссылкам или точкам повторного разбора внутри сертифицированного клиента запрещены.
             let mut component = expected.as_path();
             let mut safe = true;
             while component != launch_root.as_path() {
@@ -643,10 +610,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         let mut file_sha256 = [0u8; 32];
         file_sha256.copy_from_slice(&Sha256::digest(&bytes));
         if matched == 2 || matched == 3 {
-            // Extracted bytes come from a classpath resource, not the
-            // already-certified package tree. Require an exact digest match
-            // to the pinned flat alias published by the Mojang-verified
-            // installer. This disallows arbitrary DLLs in the extract cache.
+            // Извлечённые байты получены из ресурса classpath, а не из уже сертифицированного дерева пакета. Требуйте точного совпадения дайджеста с закреплённым плоским псевдонимом, опубликованным установщиком с проверкой Mojang. Это запрещает произвольные DLL в кэше распаковки.
             let certified = &candidates[0];
             let mut current = certified.as_path();
             while current != launch_root.as_path() {
@@ -674,9 +638,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                 return Err("Guard JVM-Aware extracted LWJGL differs from certified package image".to_string());
             }
         }
-        // A second LWJGL mapping may be loaded by another classloader.
-        // Accept it only if independently validated against the same package
-        // bytes and an exact approved path; never replace/recycle a known base.
+        // Другой загрузчик классов может создать второе отображение LWJGL. Принимайте его только после независимой проверки по тем же байтам пакета и точному одобренному пути; известный базовый адрес нельзя заменять или повторно использовать.
         if let Some(existing) = VERIFIED_LWJGL_IMAGE.get() {
             if existing.base == base && existing.end == end && existing.canonical_path == canonical_path
                 && existing.file_sha256 == file_sha256 {
@@ -698,7 +660,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         if VERIFIED_LWJGL_IMAGE.get().is_some() && additional.len() >= MAX_ADDITIONAL_LWJGL_IMAGES {
             return Err("Guard JVM-Aware too many verified LWJGL modules".to_string());
         }
-        // Permanently pin each validated DLL before publishing its range.
+        // Перед публикацией диапазона навсегда закрепите каждую проверенную DLL.
         let mut pinned = std::ptr::null_mut();
         if unsafe { GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             base as *const u16, &mut pinned) } == 0 || pinned != module {

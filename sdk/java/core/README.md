@@ -6,7 +6,7 @@ A **working Java 17+** SDK for the existing Extensions API `1.0` / Manifest `2.0
 
 ```bash
 sh sdk/java/core/build.sh test
-# Output: sdk/java/core/build/launcher-java-sdk-core-$(cat VERSION).jar
+# Результат: sdk/java/core/build/launcher-java-sdk-core-$(cat VERSION).jar
 sh examples/extensions/java-lifecycle/build.sh
 python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requires Java on PATH
 ```
@@ -54,7 +54,7 @@ Live backend/CLI demonstration:
 ```bash
 sh examples/extensions/java-runtime/build.sh
 python3 examples/extensions/java-runtime/test-runner.py
-# Prepare a signable package with existing nl extension pack/sign/verify commands.
+# Подготовьте пакет к подписанию существующими командами nl extension pack/sign/verify.
 ```
 
 `Java SDK Runtime` operates on the **existing** Extensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. The 0.30.4 Java Extension Host supports direct JAR targets on Windows, macOS and Linux. Legacy POSIX example launchers remain available; do not rely on a JVM security sandbox.

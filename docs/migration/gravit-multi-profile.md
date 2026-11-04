@@ -1,23 +1,12 @@
 # NeverLauncher 0.49.2 — полное обнаружение профилей Gravit и проверяемый пробный запуск
 
-The existing `migrate gravit inventory` and `assess` operations establish a
-verified source baseline. The new `dry-run-all` operation converts **each**
-source ClientProfile on a single immutable ZIP upload using the same real
-converter, optional-component validator, module inspection, identity extraction
-and migration-plan calculator used for individual imports. It is read-only:
-no players, profiles, worlds, extensions, permissions, files or channels are
-created or replaced by this command.
+Существующие операции `migrate gravit inventory` и `assess` формируют проверенную исходную базу. Новая операция `dry-run-all` преобразует **каждый** исходный ClientProfile из одного неизменяемого загруженного ZIP, используя те же реальные преобразователь, проверку необязательных компонентов, анализ модулей, извлечение идентификационных данных и расчёт плана миграции, что и при отдельном импорте. Операция работает только на чтение: она не создаёт и не заменяет игроков, профили, миры, расширения, разрешения, файлы или каналы.
 
-## предварительные требования
+## Предварительные требования
 
-Use the existing authenticated Backend with PostgreSQL storage, a prepared
-`source_assessment` Gravit migration run and the *same* source ZIP that was
-approved through `compatibility` and `inventory`. Invoke from an operator host
-with a pinned TLS certificate and a short-lived bearer token. The Backend
-rejects any change to the uploaded archive SHA-256, complete inventory manifest,
-compatibility report, migration run revision/fence or live target snapshot.
+Используйте существующий аутентифицированный Backend с PostgreSQL, подготовленный запуск миграции Gravit в состоянии `source_assessment` и **тот же** исходный ZIP, который одобрен операциями `compatibility` и `inventory`. Запускайте команду с операторского узла с закреплённым TLS-сертификатом и краткоживущим bearer-токеном. Backend отклоняет любое изменение SHA-256 загруженного архива, полного манифеста инвентаризации, отчёта совместимости, ревизии или маркера fencing запуска миграции, а также текущего снимка целевого состояния.
 
-Make an explicit mapping JSON file in an existing private directory (0600):
+Создайте явный JSON-файл сопоставления в существующем приватном каталоге (права 0600):
 
 ```json
 [
@@ -40,11 +29,7 @@ Make an explicit mapping JSON file in an existing private directory (0600):
 ]
 ```
 
-The mapping must contain **every** `client_profile` from the approved inventory
-exactly once, with unique destination IDs and explicit destination settings.
-There is an operational limit of 32 profiles per source. If a Gravit project
-has more than 32, split it into explicitly separate reviewed migration runs;
-never omit profiles from a report and then call it complete.
+Сопоставление должно содержать **каждый** `client_profile` из одобренной инвентаризации ровно один раз, с уникальным целевым ID и явно указанными целевыми настройками. Эксплуатационное ограничение — 32 профиля на источник. Если в проекте Gravit их больше, разделите миграцию на отдельные явно проверенные запуски; не пропускайте профили в отчёте и не называйте его полным.
 
 ```bash
 launcher migrate gravit dry-run-all \
@@ -64,39 +49,14 @@ launcher migrate gravit verify-dry-run-all \
   --report /private/gravit-all-profiles.json
 ```
 
-The CLI creates the initial report with `0600` permissions, refusing to
-replace an existing file. The verification command reuploads the full original
-ZIP and mapping to the *live* Backend, recalculates all profiles against the
-current target, verifies both report digests, and rejects changed reports,
-source content, mappings and target state. An unkeyed SHA-256 is an integrity
-check, not a signed authorization or independently witnessed attestation.
+CLI создаёт исходный отчёт с правами `0600` и отказывается перезаписывать существующий файл. Команда проверки повторно загружает полный исходный ZIP и сопоставление в **действующий** Backend, заново рассчитывает все профили для текущей цели, проверяет оба хеша отчёта и отклоняет изменённые отчёты, содержимое источника, сопоставления или целевое состояние. SHA-256 без секретного ключа — это проверка целостности, а не подписанная авторизация или независимое подтверждение.
 
-Inspect each `profiles[]` row: source client directory, deterministic
-`filesSha256` and `planSha256`, count/transfer bytes, actual classpath library
-references, optional dependencies/conflicts and explicit `blockers`. A report
-with unresolved identity, version, module or client dependencies is `blocked`
-and CLI exits nonzero. `manual` means **review required**, not approval to
-publish or cut over.
+Проверьте каждую запись `profiles[]`: исходный каталог клиента, детерминированные `filesSha256` и `planSha256`, количество файлов и объём передачи, фактические ссылки на библиотеки classpath, необязательные зависимости и конфликты, явные `blockers`. При неразрешённых зависимостях идентификации, версии, модулей или клиента отчёт получает состояние `blocked`, а CLI завершается с ненулевым кодом. Состояние `manual` означает **необходимость проверки**, а не разрешение на публикацию или переключение.
 
-An overlapping `dir` (including nested directories), duplicate destination ID,
-missing profile, broken required classpath or cycle of optional-component
-requirements is never silently merged. Unknown/unsupported Gravit behavior
-remains in the blocker or manual list; no legacy JAR is loaded/executed.
+Перекрывающиеся `dir` (включая вложенные каталоги), повторяющиеся целевые ID, отсутствующие профили, неисправный обязательный classpath или циклы требований необязательных компонентов никогда не объединяются молча. Неизвестное или неподдерживаемое поведение Gravit остаётся в списке блокировок или ручной проверки; устаревшие JAR не загружаются и не запускаются.
 
-For each accepted profile, subsequently use the original individual `dry-run`
-operation, signed content staging/import and actual release validation; those
-operations enforce their own durable plan and compare-and-swap guards. The
-multi-profile report is not persisted as an alternate source of trust and
-cannot bypass the ordinary import gates. Subsequent 0.49.3+ work addresses
-full content migration and operational cutover.
+Для каждого принятого профиля затем используйте исходную отдельную операцию `dry-run`, подписанное размещение/импорт содержимого и реальную проверку выпуска; эти операции применяют собственные устойчивые планы и защиты compare-and-swap. Отчёт для нескольких профилей не сохраняется как альтернативный источник доверия и не может обходить обычные этапы допуска импорта. В последующей работе версии 0.49.3+ рассматриваются полная миграция содержимого и эксплуатационное переключение.
 
 ## Подтверждения приёмки и ограничения
 
-Local Go unit/regression tests demonstrate archive inventory, content
-conversion and plan hashing on synthetic multi-profile ZIPs, including source
-profile ID collisions, overlapping client directories and tampered reports.
-They **do not** prove a migration of an independently supplied real Gravit
-project. PostgreSQL/live Backend, signed native packages, real Java agents,
-Minecraft login/join and multi-profile player/world continuity must be checked
-on provisioned test installations. Any absent independent evidence means
-production GA remains blocked.
+Локальные модульные и регрессионные тесты Go демонстрируют инвентаризацию архива, преобразование содержимого и хеширование плана на синтетических ZIP с несколькими профилями, включая коллизии исходных ID профилей, пересекающиеся каталоги клиентов и подменённые отчёты. Они **не доказывают** успешную миграцию независимо предоставленного реального проекта Gravit. PostgreSQL и действующий Backend, подписанные нативные пакеты, реальные Java-агенты, вход и подключение к Minecraft, сохранение состояния игроков и миров при нескольких профилях должны проверяться на подготовленных тестовых установках. Отсутствие независимых подтверждений означает, что production GA остаётся заблокированным.

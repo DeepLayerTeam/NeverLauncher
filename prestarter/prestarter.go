@@ -89,8 +89,7 @@ func Run(ctx context.Context, opts Options) error {
 	if e = validateInputRoot(opts.OfflineDir, root); e != nil {
 		return e
 	}
-	// Lock precedes trust-state acceptance; concurrent processes must not race
-	// policy epochs or downgrade a revocation during first-run.
+	// Блокировка устанавливается до принятия доверенного состояния. Конкурирующие процессы не должны создавать гонку эпох политики или отменять отзыв при первом запуске.
 	store, e := newStorage(filepath.Join(root, ".launcher-prestarter"), opts.OfflineDir, opts.Offline)
 	if e != nil {
 		return e
@@ -139,9 +138,7 @@ func Run(ctx context.Context, opts Options) error {
 	if e != nil {
 		return e
 	}
-	// On Windows the production Desktop enforces Guard's authenticated
-	// supervisor boundary before game launch. Do not offer a lower-security
-	// direct CLI path that bypasses this boundary.
+	// На Windows производственный Desktop требует аутентифицированную границу супервизора Guard до запуска игры. Нельзя предоставлять менее защищённый прямой путь CLI, обходящий эту границу.
 	if opts.LaunchProfile && runtime.GOOS == "windows" {
 		return errors.New("Windows profile launch must be initiated in Desktop (Guard supervisor required)")
 	}
@@ -158,8 +155,7 @@ func Run(ctx context.Context, opts Options) error {
 	if e = safeMkdir(store.root); e != nil {
 		return e
 	}
-	// The dual-slot pointer is the recoverable commit journal. Never execute
-	// binaries from an unverified or partially installed release.
+	// Указатель с двумя слотами служит восстанавливаемым журналом фиксаций. Нельзя запускать бинарники из непроверенного либо частично установленного выпуска.
 	if e = p.cleanupInterruptedStages(); e != nil {
 		return e
 	}
@@ -172,18 +168,14 @@ func Run(ctx context.Context, opts Options) error {
 		return e
 	}
 	if e = p.prepareAndStart(ctx, installed, opts); e != nil {
-		// The new binaries were hash-valid, but startup/Managed Java failed.
-		// Restore the previous *verified* active release with a higher
-		// generation so a crash during this rollback remains recoverable.
+		// Хеши новых бинарников были верны, но запуск или Managed Java завершились ошибкой. Восстановите предыдущий проверенный активный выпуск с более высоким поколением, чтобы даже сбой во время отката оставался восстанавливаемым.
 		if active, currentErr := p.current(); currentErr == nil && active.Release == installed.Release {
 			if previous != nil {
 				if restoreErr := p.activate(active, *previous); restoreErr != nil {
 					return fmt.Errorf("bootstrap failed: %v; last-known-good activation failed: %w", e, restoreErr)
 				}
 			} else {
-				// An initial install has no last-known-good slot. Do not leave a
-				// release that failed verification/Java/sync as active. Its
-				// hash-verified bytes remain cached for a subsequent repair.
+				// При первичной установке нет последнего исправного слота. Не оставляйте активным выпуск, не прошедший проверку, Java или синхронизацию. Проверенные по хешу байты останутся в кэше для дальнейшего восстановления.
 				if rollbackErr := p.deactivateFailedFirstRun(active); rollbackErr != nil {
 					return fmt.Errorf("bootstrap failed: %v; initial activation rollback failed: %w", e, rollbackErr)
 				}
@@ -218,8 +210,7 @@ func validUsername(s string) bool {
 	return true
 }
 
-// Crash recovery discards only our own uncommitted staging directories. A
-// committed active release is never mutated or removed by this sweep.
+// Восстановление после аварии удаляет только собственные незафиксированные каталоги подготовки. Зафиксированный активный выпуск никогда не изменяется и не удаляется этой очисткой.
 func (p *installer) cleanupInterruptedStages() error {
 	releases := filepath.Join(p.launcherRoot, "releases")
 	if err := safeMkdir(releases); err != nil {
@@ -405,9 +396,7 @@ func (p *installer) activate(previous *activeRecord, desired activeRecord) error
 	return syncDir(p.launcherRoot)
 }
 
-// deactivateFailedFirstRun clears only the exact generation-1 activation
-// created by this run. A later activation, or an existing recovery slot, is
-// never deleted. The bootstrap process lock serializes state changes.
+// deactivateFailedFirstRun очищает только активацию поколения 1, созданную текущим запуском. Более поздняя активация или существующий слот восстановления никогда не удаляются. Блокировка процесса инициализации сериализует изменения состояния.
 func (p *installer) deactivateFailedFirstRun(active *activeRecord) error {
 	if active == nil || active.Generation != 1 {
 		return errors.New("initial activation generation mismatch")
@@ -441,8 +430,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if e != nil {
 		return fmt.Errorf("profile manifest: %w", e)
 	}
-	// Verify with the *existing* Runtime signature verifier BEFORE reading
-	// any profile-supplied Java setting or installing game contents.
+	// Используйте существующий проверяющий подписи Runtime ДО чтения настроек Java из профиля или установки игровых данных.
 	var gameTrustEnv []string
 	if p.configTrustEpoch() > 0 {
 		gameTrustEnv = []string{"LAUNCHER_GAME_TRUST_POLICY_FILE=" + filepath.Join(p.store.root, "trust", "active-policy.json")}
@@ -491,7 +479,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if java.Major != profile.Runtime.Java.Major || java.Distribution != "temurin" || java.JavaExecutable == "" {
 		return errors.New("Managed Java did not return verified runtime for signed profile")
 	}
-	// A local signed manifest is now available: no second unsigned manifest fetch.
+	// Подписанный локальный манифест уже доступен: повторная загрузка неподписанного манифеста не требуется.
 	result, e = runChild(ctx, runtimeBin, env, "sync-local", "--manifest", manifestPath, "--root", p.gameRoot, "--pinned-public-key", p.config.ProfilePublicKey)
 	if e != nil {
 		return fmt.Errorf("profile installation/recovery: %w (%s)", e, result)
@@ -500,8 +488,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		return errors.New("signed bootstrap backendUrl is required for unattended Desktop first run")
 	}
 	if !opts.NoDesktop {
-		// Headless installation and direct CLI launch must not mutate (or require)
-		// the Desktop provisioning directory.  Only a Desktop launch needs it.
+		// Установка без интерфейса и прямой запуск CLI не должны изменять или требовать каталог начальной настройки Desktop. Он нужен только для запуска Desktop.
 		desktopConfigDir, e := p.ensureDesktopConfig(opts.Username, profile.Runtime.Launch.OfflineMode && opts.Offline)
 		if e != nil {
 			return e
@@ -532,9 +519,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	return nil
 }
 
-// Preserve the exact bytes signed by the owner: no JSON re-encoding, no
-// content rewriting, and atomic durable replacement after Prestarter verified
-// the signature under its process lock.
+// Сохраните точные байты, подписанные владельцем: никакой повторной сериализации JSON или изменения содержимого. После проверки подписи Prestarter под своей блокировкой выполните атомарную устойчивую замену.
 func writeSignedDesktopHandoff0352(path string, raw []byte) error {
 	dir := filepath.Dir(path)
 	f, err := os.CreateTemp(dir, ".signed-bootstrap-*")
@@ -563,17 +548,13 @@ func writeSignedDesktopHandoff0352(path string, raw []byte) error {
 	return syncDir(dir)
 }
 
-// Provision first-run Desktop settings from the previously verified signed
-// bootstrap payload. Never overwrite an existing user-edited configuration.
-// Desktop receives this directory through its existing config-dir override.
+// Настройки первого запуска Desktop создаются из уже проверенного подписанного начального содержимого. Никогда не перезаписывайте изменённую пользователем конфигурацию. Desktop получает каталог через существующий параметр переопределения config-dir.
 func (p *installer) ensureDesktopConfig(username string, offline bool) (string, error) {
 	dir := filepath.Join(p.store.root, "desktop-config")
 	if err := safeMkdir(dir); err != nil {
 		return "", err
 	}
-	// Pass the exact bytes already verified by Prestarter to Desktop. Native
-	// Desktop independently verifies the same signature with its compiled root
-	// and refuses unsigned changes to the owner-defined binding.
+	// Передайте Desktop точные байты, уже проверенные Prestarter. Нативный Desktop независимо проверяет ту же подпись с вшитым корнем доверия и отклоняет неподписанные изменения заданной владельцем привязки.
 	if err := writeSignedDesktopHandoff0352(filepath.Join(dir, "bootstrap.signed.json"), p.rawConfig); err != nil {
 		return "", err
 	}
@@ -582,7 +563,7 @@ func (p *installer) ensureDesktopConfig(username string, offline bool) (string, 
 		if err != nil {
 			return "", err
 		}
-		// The policy was verified against the embedded trust root earlier in Run.
+		// Политика уже проверена относительно встроенного корня доверия на более раннем этапе Run.
 		if _, _, err := VerifyTrustPolicy(policy, p.key, time.Now().UTC()); err != nil {
 			return "", err
 		}
@@ -677,8 +658,7 @@ func (p *installer) prepareJavaManifest(ctx context.Context, opts Options) (stri
 			return local, nil
 		}
 	}
-	// Use the original remote URL so relative JRE archives resolve against it.
-	// The Rust Managed Java path validates the manifest SHA-256 itself.
+	// Используйте исходный удалённый URL как основу для относительных адресов архивов JRE. Путь Managed Java в Rust самостоятельно проверяет SHA-256 манифеста.
 	if !opts.Offline {
 		if _, e := p.store.artifact(ctx, p.config.JavaManifest, "java-manifest.json"); e != nil {
 			return "", e
@@ -729,5 +709,5 @@ func mergeEnv(overrides []string) []string {
 	return append(result, overrides...)
 }
 
-// AcquireInstallerLock exposes the native process lock already used by bootstrap.
+// AcquireInstallerLock предоставляет нативную блокировку процесса, уже используемую при инициализации.
 func AcquireInstallerLock(path string) (io.Closer, error) { return acquireProcessLock(path) }

@@ -18,7 +18,7 @@ On the existing authenticated `POST /api/v1/packages/{packageId}/files` multipar
 
 Do not pass `contentExtensionId` for an upload of a full game client or other large file; this version deliberately **does not** stream large artifacts through JVM RPC. It does not bypass existing content delivery or trust policy and does not automatically route public game downloads through Java.
 
-## Build and test
+## Сборка и тестирование
 
 ```
 sh sdk/java/core/build.sh test

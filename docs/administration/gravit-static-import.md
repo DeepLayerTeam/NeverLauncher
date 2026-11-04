@@ -1,15 +1,15 @@
 # Launcher 0.22.10 — статический импорт ClientProfile Gravit
 
-The importer is accessible under **Admin → Profiles → Gravit static import**. It processes a single Gravit `ClientProfile` JSON document. Inputs must be valid JSON (remove JSONC comments with a JSON-aware editor), at most 1 MiB. Input is never evaluated; no Java code, loader agent, shell, optional action or module from Gravit is executed.
+Импорт доступен по пути **Admin → Профили → Статический импорт Gravit**. Он обрабатывает один JSON-документ Gravit `ClientProfile`. Входной документ должен быть корректным JSON (комментарии JSONC необходимо удалить в редакторе, понимающем JSON), размер не более 1 МиБ. Входные данные никогда не исполняются: не запускаются код Java, агент загрузчика, shell, необязательные действия или модули Gravit.
 
-## конечные точки
+## Конечные точки
 
-Both routes require `project:write` in the destination project; mutation additionally requires `release:prepare`.
+Оба маршрута требуют `project:write` в целевом проекте; для изменения дополнительно необходимо `release:prepare`.
 
-* `POST /api/v1/admin/projects/{projectId}/profiles/inspect-gravit` (read-only).
-* `POST /api/v1/admin/projects/{projectId}/profiles/import-gravit` (exclusive profile creation plus private Build Workspace).
+- `POST /api/v1/admin/projects/{projectId}/profiles/inspect-gravit` (только чтение).
+- `POST /api/v1/admin/projects/{projectId}/profiles/import-gravit` (создание нового профиля и приватной Build Workspace).
 
-Example inspection request:
+Пример запроса проверки:
 
 ```json
 {
@@ -28,9 +28,9 @@ Example inspection request:
 }
 ```
 
-The response includes `data.format=launcher.gravit-import-report.v1`, exact source SHA-256, `ready`, a deterministic field-by-field `fields` list, `summary`, normalized Never `profile`, `settings` compatible with a Build Workspace, and server descriptions for manual registration. On `inspect-gravit`, **nothing is persisted**. Unknown fields and unsafe conversions are `blocked`; fields needing operator decisions are `manual`. Both prevent import.
+Ответ содержит `data.format=launcher.gravit-import-report.v1`, точный исходный SHA-256, `ready`, детерминированный поэлементный список `fields`, `summary`, нормализованный `profile` Never, `settings`, совместимые с Build Workspace, и описания серверов для ручной регистрации. `inspect-gravit` **ничего не сохраняет**. Неизвестные поля и небезопасные преобразования получают `blocked`; поля, требующие решения оператора, — `manual`. Оба состояния препятствуют импорту.
 
-For commit send the *same* input and also:
+Для фиксации отправьте **те же** исходные данные и дополнительно:
 
 ```json
 {
@@ -40,35 +40,35 @@ For commit send the *same* input and also:
 }
 ```
 
-The body must also include `id`, `name`, `loaderHint`, and `source` from inspection. The server reconverts the input (does not trust a client-supplied report), checks `sourceSha256`, atomically creates a **new** unprivileged Profile v2 and a private workspace pinned to revision 1. PostgreSQL uses one ACID transaction for profile, immutable snapshot and workspace; MemoryRepository uses coordinated locks. Duplicate identities reject the entire operation. Retries must still inspect existing state if a network response was lost.
+Тело также должно содержать `id`, `name`, `loaderHint` и `source` из запроса проверки. Сервер повторно преобразует входные данные (не доверяет переданному клиентом отчёту), сверяет `sourceSha256` и атомарно создаёт **новый** непривилегированный Profile v2 и приватное рабочее пространство с закреплённой ревизией 1. PostgreSQL использует единую ACID-транзакцию для профиля, неизменяемого снимка и рабочего пространства; MemoryRepository использует согласованные блокировки. Повторяющиеся идентичности отклоняют операцию целиком. При повторах после потери сетевого ответа нужно всё равно проверять существующее состояние.
 
-The workspace starts in `importing`. Operators must import the actual game directory, scan, stage required JARs, validate the signed classpath and file rules, and build through the existing release pipeline. Import never publishes or signs arbitrary Gravit data. Existing signed Never manifests, snapshots and access permissions are not modified.
+Рабочее пространство создаётся в состоянии `importing`. Оператор должен импортировать настоящий игровой каталог, выполнить сканирование, подготовить обязательные JAR, проверить подписанный classpath и правила файлов, а затем собрать выпуск через существующий конвейер. Импорт никогда не публикует и не подписывает произвольные данные Gravit. Существующие подписанные манифесты, снимки и разрешения Never не изменяются.
 
-## семантическое сопоставление и правила запрета при сбое
+## Семантическое сопоставление и отказ при нарушениях
 
-| Gravit | Never / status |
+| Gravit | Never / результат |
 | --- | --- |
-| `title`, `info`, `version`, `mainClass` | Profile metadata, Minecraft version, Runtime mainClass — mapped |
-| `minJavaVersion`, `recommendJavaVersion`, `maxJavaVersion` | Typed Java major constraints; Gravit `999` becomes unbounded maximum `0` — transformed |
-| `settings.ram` | Recommended RAM; `0` means automatic — transformed |
-| `jvmArgs`, `clientArgs` | Ordered argument arrays validated by production runtime constraints |
-| `classPath` | Ordered signed `.jar` entries; directory roots are **blocked** until enumerated; JAR hashes supplied during staging |
-| `classLoaderConfig=SYSTEM_ARGS` | Native JVM invocation — transformed; `LAUNCHER`, `AGENT`, `BRIDGE` and unknown values blocked |
-| `altClassPath` | Only an empty list is supported; nonempty alternate bootstrap classpath blocked |
-| `compatClasses`, `updateOptional` | Nonempty bootstrap/additional actions blocked, including JVM arguments, file moves, dependencies, conflicts, triggers |
-| `update`, `updateVerify` | Conservative `verify` rules (no authorization to delete unknown files). Exact and folder patterns normalized, merged deterministically |
-| `updateExclusions` | `user-owned` exclude rules; overlapping incompatible rules blocked |
-| `servers`, `settings.autoEnter`, `settings.fullScreen`, `assetIndex`, nonzero `sortIndex`, custom `properties` | Manual operator decisions; never silently discarded |
-| `limited=true` | Blocked until access policy is explicitly reimplemented in Never; source owner credentials/ACLs never imported |
-| Unknown keys, unsafe paths, Java agents, conflicting rules | Blocked and identified in the report |
+| `title`, `info`, `version`, `mainClass` | Метаданные профиля, версия Minecraft и mainClass Runtime — сопоставляются |
+| `minJavaVersion`, `recommendJavaVersion`, `maxJavaVersion` | Типизированные ограничения основных версий Java; `999` в Gravit превращается в неограниченный максимум `0` |
+| `settings.ram` | Рекомендуемый объём RAM; `0` означает автоматический выбор |
+| `jvmArgs`, `clientArgs` | Упорядоченные массивы аргументов с проверкой промышленными ограничениями Runtime |
+| `classPath` | Упорядоченные подписанные записи `.jar`; корни каталогов **блокируются** до перечисления; хеши JAR задаются при подготовке |
+| `classLoaderConfig=SYSTEM_ARGS` | Нативный запуск JVM — преобразуется; `LAUNCHER`, `AGENT`, `BRIDGE` и неизвестные значения блокируются |
+| `altClassPath` | Поддерживается только пустой список; непустой альтернативный classpath загрузки блокируется |
+| `compatClasses`, `updateOptional` | Непустые начальные/дополнительные действия блокируются, включая аргументы JVM, переносы файлов, зависимости, конфликты и триггеры |
+| `update`, `updateVerify` | Консервативные правила `verify` (без разрешения удалять неизвестные файлы). Точные шаблоны и шаблоны каталогов нормализуются и детерминированно объединяются |
+| `updateExclusions` | Правила исключения `user-owned`; несовместимые перекрывающиеся правила блокируются |
+| `servers`, `settings.autoEnter`, `settings.fullScreen`, `assetIndex`, ненулевой `sortIndex`, пользовательские `properties` | Требуют решения оператора; не отбрасываются молча |
+| `limited=true` | Блокируется до явной реализации политики доступа в Never; исходные учётные данные владельца/ACL не импортируются |
+| Неизвестные ключи, небезопасные пути, Java-агенты, конфликтующие правила | Блокируются и перечисляются в отчёте |
 
-**Safety:** verify and exclude rules cannot authorize cleaning unknown managed files; user saves, screenshots, resourcepacks, settings, and other protected paths must not be overwritten. Classpath paths are not trusted until concrete signed files are staged. No generated report is itself a runnable or publishable Manifest. The Admin report is downloadable as JSON for audit/migration planning.
+**Безопасность:** правила `verify` и исключений не разрешают очищать неизвестные управляемые файлы; сохранения пользователей, скриншоты, resourcepacks, настройки и другие защищённые пути нельзя перезаписывать. Путям classpath нельзя доверять до подготовки конкретных подписанных файлов. Сформированный отчёт сам по себе не является исполняемым или публикуемым манифестом. Отчёт Admin можно скачать как JSON для аудита и планирования миграции.
 
-## локальные тесты
+## Локальные тесты
 
 ```sh
 cd services/api
 GOPROXY=off go test ./internal/model -run TestGravitImport -count=1
 ```
 
-The full API build/HTTP and PostgreSQL integration tests still require the dependencies, services and toolchain defined by the repository CI; successful model tests alone do not certify the entire release.
+Полная сборка API, HTTP-тесты и интеграционные тесты PostgreSQL по-прежнему требуют зависимостей, служб и инструментов, определённых CI проекта. Одних успешных тестов модели недостаточно для сертификации всего выпуска.

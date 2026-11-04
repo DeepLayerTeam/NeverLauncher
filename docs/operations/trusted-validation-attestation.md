@@ -59,7 +59,7 @@ For a modded matching server use `--server-bundle-file`, `--server-sha`,
 are host-controlled, not supplied by the caller. Failure to supply the real
 matching server, Java, GUI, account or bridge prevents attestation.
 
-## Execution
+## Выполнение
 
 The service issues a fresh Backend grant, then hands **only that grant** to
 its immutable OCI worker using a read-only mount. It runs Runtime using

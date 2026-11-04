@@ -56,7 +56,7 @@ From the repository root:
 
 ```sh
 cd services/api
-# Replace this UUID with your OWN Entra application client ID:
+# Замените этот UUID на Client ID СОБСТВЕННОГО приложения Entra:
 go run ./cmd/official-provider-poc \
   --client-id 'YOUR-OWN-APP-CLIENT-UUID' \
   --flow browser \

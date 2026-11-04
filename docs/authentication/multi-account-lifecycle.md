@@ -1,31 +1,31 @@
 # Launcher 0.26.7 — жизненный цикл официальных учётных записей и сессий Minecraft
 
-## действующее поведение
+## Действующее поведение
 
-- **Add** an official account with system browser PKCE or Device Code fallback. Existing accounts remain in the native OS vault; after provider profile verification the newly authenticated Minecraft UUID is selected. Re-authenticating the *same* Minecraft UUID rotates/replaces just that credential entry.
-- **Select** from verified saved official UUIDs. Selection fetches a fresh Java profile and enforces the stored UUID before making the account active. If that step fails, the previous active selection is not changed.
-- **Restore** on Desktop start: migrates an existing 0.26.2–0.26.6 single-account entry into the 0.26.7 directory; loads the selected account and revalidates its Never session / provider profile before marking the launcher official-ready.
-- **Refresh** on user request: Microsoft refresh grant (including refresh token rotation) → Xbox Live → XSTS → Minecraft Services. The new refresh token is committed to native keyring before the downstream chain so a subsequent Xbox/Minecraft outage does not cause accidental loss of a rotated refresh token. Every successful result is bound to the same official Minecraft UUID.
-- **Logout** removes only the selected account from the native credential store and selects the first remaining account, if any. A logout is **local**: Microsoft may retain its browser session and its issued grants; it does not claim to revoke provider-wide sessions.
-- **Re-login** adds or replaces a UUID without destroying unrelated accounts. Credentials are never transmitted to the React renderer.
-- **Launch and textures** always resolve the current selected account under a native vault lock; no cross-account credential or texture mixup when selection changes.
+- **Добавление:** авторизуйтесь в официальной учётной записи через системный браузер с PKCE либо резервный Device Code. Существующие аккаунты остаются в нативном хранилище ОС; после проверки профиля провайдером выбирается новый аутентифицированный UUID Minecraft. Повторный вход с **тем же** UUID заменяет только соответствующую запись учётных данных.
+- **Выбор:** используйте сохранённые подтверждённые официальные UUID. При выборе запрашивается актуальный профиль Java и сверяется сохранённый UUID до активации аккаунта. Если проверка неуспешна, прежний активный выбор не меняется.
+- **Восстановление при запуске Desktop:** прежняя запись одного аккаунта 0.26.2–0.26.6 переносится в каталог 0.26.7; выбранный аккаунт загружается, а его сеанс Never и профиль провайдера повторно проверяются до установления состояния готовности официального Launcher.
+- **Обновление по запросу пользователя:** выдача Microsoft refresh (включая ротацию refresh-токена) → Xbox Live → XSTS → Minecraft Services. Новый refresh-токен записывается в нативный keyring **до** последующей цепочки, чтобы сбой Xbox/Minecraft не привёл к потере уже ротированного токена. Каждый успешный результат привязан к тому же официальному UUID Minecraft.
+- **Выход:** из нативного хранилища удаляется только выбранная учётная запись; при наличии других выбирается первая оставшаяся. Выход является **локальным**: Microsoft может сохранить браузерный сеанс и выданные разрешения; отзыв всех сеансов у провайдера не заявляется.
+- **Повторный вход:** добавляет или заменяет UUID, не затрагивая остальные аккаунты. Учётные данные никогда не передаются рендереру React.
+- **Запуск и текстуры:** всегда определяют текущий выбранный аккаунт под нативной блокировкой хранилища; смена выбора не допускает смешения учётных данных или текстур аккаунтов.
 
-## границы безопасности и формат
+## Границы безопасности и формат
 
-Keyring service remains `Launcher Official Minecraft 0.26.2` for compatible migration. Key identifiers are derived by SHA-256 from Backend origin and Never session identity. Account slots are `<scope>.account.<minecraft-uuid>`; the credential-free directory is `<scope>.directory.0267`. Each account uses the existing bounded OS-keyring chunked format, with random generation and SHA-256 integrity check. The metadata-only directory stores at most 16 lowercase 32-character Minecraft UUIDs and one active UUID. No plaintext JSON files, tokens in Tauri command results, or Browser localStorage.
+Сервис keyring остаётся `Launcher Official Minecraft 0.26.2` для совместимой миграции. Идентификаторы ключей выводятся через SHA-256 из источника Backend и идентичности сеанса Never. Слоты аккаунтов имеют вид `<scope>.account.<minecraft-uuid>`, каталог без учётных данных — `<scope>.directory.0267`. Каждый аккаунт использует существующий ограниченный формат разбитой на части записи keyring ОС со случайным поколением и проверкой целостности SHA-256. Каталог только метаданных хранит до 16 UUID Minecraft по 32 шестнадцатеричных символа в нижнем регистре и один активный UUID. Открытые JSON-файлы, токены в результатах команд Tauri и localStorage браузера не используются.
 
-The 0.26.7 native vault remains scoped to the authenticated Never **session**, matching 0.26.2–0.26.6. This safely prevents accidental cross-session reuse, but it does not yet share the accounts across unrelated Never sessions; cross-session Never identity linking is planned in 0.26.8. It is not an account-cloud sync feature.
+Нативное хранилище 0.26.7 по-прежнему ограничено аутентифицированным **сеансом** Never, как в 0.26.2–0.26.6. Это защищает от случайного использования между сеансами, но ещё не обеспечивает общий доступ к аккаунтам из разных сеансов Never; связывание идентичностей между сеансами запланировано на 0.26.8. Облачной синхронизации аккаунтов здесь нет.
 
-## восстановление и поведение при сбое
+## Восстановление и поведение при сбое
 
-- A corrupted/missing keyring fragment or invalid account directory fails closed. It cannot promote a different UUID or silently switch to offline auth.
-- Migration saves the account in its new account-specific secure slot, commits directory metadata, and only then deletes the original single-account slot. A process interruption before completion leaves the old slot available for retry.
-- Refresh token invalidation and missing Minecraft entitlements/profile never produce a ready-to-launch state; the user must explicitly re-authenticate.
-- A temporary provider outage does not destroy a saved account. The active account remains indexed, but launch is blocked until verification works.
-- Switching selection, logging out, and game launch serialize on the native vault mutex. Backend/renderer never receive the Minecraft bearer.
+- Повреждённый/отсутствующий фрагмент keyring либо некорректный каталог аккаунтов приводит к отказу. Нельзя автоматически активировать другой UUID или скрытно переключиться на автономную авторизацию.
+- При миграции аккаунт сначала сохраняется в новом защищённом слоте, затем записываются метаданные каталога, и только после этого удаляется старый одиночный слот. Прерывание процесса оставляет старый слот доступным для повтора.
+- Недействительный refresh-токен и отсутствие прав/профиля Minecraft никогда не дают состояния готовности к запуску: пользователь должен явно пройти авторизацию заново.
+- Временный отказ провайдера не удаляет сохранённый аккаунт. Активная запись остаётся в каталоге, но запуск блокируется до успешной проверки.
+- Смена аккаунта, выход и запуск игры последовательно выполняются под нативной блокировкой хранилища. Backend и рендерер не получают bearer Minecraft.
 
-## условие допуска релиза
+## Условие допуска релиза
 
-Run `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests`, `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`, and `npm ci && npm run test:official && npm run test:textures && npm run build` from `apps/desktop`. CI workflow `multi-account-lifecycle-0267.yml` runs these on Windows/Linux/macOS. Manual testing must cover two distinct real Microsoft accounts with Java access, switching, refreshing, OS vault persistence after restart, logging out one account, re-login same UUID, revoked refresh token, and an offline provider outage.
+Запустите `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests`, `cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml` и `npm ci && npm run test:official && npm run test:textures && npm run build` из `apps/desktop`. Workflow CI `multi-account-lifecycle-0267.yml` выполняет эти проверки на Windows/Linux/macOS. Ручное тестирование должно покрывать две разные настоящие учётные записи Microsoft с доступом к Java, переключение, обновление, сохранение хранилища ОС после перезапуска, выход из одного аккаунта, повторный вход с тем же UUID, отзыв refresh-токена и недоступность провайдера без сети.
 
-**Blocking external prerequisite:** No release can claim real Microsoft/Xbox/Minecraft end-to-end certification until the project's *own* registered Microsoft application has been permitted to use Minecraft Services and the real-provider cases pass. Mocked negative tests are not a substitute.
+**Блокирующее внешнее условие:** пока **собственное** зарегистрированное приложение Microsoft проекта не получило доступ к Minecraft Services и не прошли проверки настоящего провайдера, релиз нельзя объявлять прошедшим сквозную сертификацию Microsoft/Xbox/Minecraft. Отрицательные тесты с имитациями не заменяют этого.

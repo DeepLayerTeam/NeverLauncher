@@ -16,7 +16,7 @@
 cd services/api
 go mod download
 go mod tidy
-# Commit the resulting go.sum after retrieving upstream signed checksums.
+# Зафиксируйте полученный go.sum после загрузки подписанных исходных контрольных сумм.
 go test -race -count=1 ./internal/sqlitedurable ./cmd/launcher-sqlite
 go build -trimpath -o launcher-sqlite ./cmd/launcher-sqlite
 chmod 0700 /var/lib/launcher/sqlite

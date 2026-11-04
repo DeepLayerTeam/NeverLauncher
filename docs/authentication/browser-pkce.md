@@ -30,7 +30,7 @@ cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_browser_02
 cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 cd services/api
 go test ./internal/httpapi -run 'TestBrowserPKCE|TestOfficial' -count=1
-# Real live approval/test (operator only):
+# Настоящее одобрение и проверка (только для оператора):
 go run ./cmd/official-provider-poc --client-id YOUR_REGISTERED_UUID --flow browser
 ```
 

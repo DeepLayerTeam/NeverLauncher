@@ -24,8 +24,8 @@ Example: source PostgreSQL + local source files. Do not put DSNs with credential
 
 ```bash
 cd services/api
-# The source key template MUST reflect the actual legacy storage layout.
-# Gravit may use hash.png, skins/<hash>.png, or other layouts.
+# Шаблон исходного ключа ОБЯЗАН соответствовать фактической структуре старого хранилища.
+# В Gravit могут использоваться hash.png, skins/<hash>.png и другие схемы путей.
 export LAUNCHER_DATABASE_DSN='postgres://.../launcher'
 export GRAVIT_SOURCE_DSN='postgres://.../texture_provider'
 go run ./cmd/gravit-textures-import-02510 \
@@ -40,7 +40,7 @@ The dry run validates *real file bytes*, verifies source digest, decodes/normali
 **Since 0.44.5, live import requires explicit approval of the current dry-run fingerprint**; it will perform another complete read-only PNG/identity preflight before writing any texture. Review the entire report (including every `unmatched`, `blocked`, `skipped-existing`, `quarantined` entry) and then run:
 
 ```bash
-# Example: supply the approved SHA-256 after independently reviewing the report.
+# Пример: укажите утверждённый SHA-256 после независимой проверки отчёта.
 go run ./cmd/gravit-textures-import-02510 \
   --source-id gravit-prod-01 --source-dsn "$GRAVIT_SOURCE_DSN" \
   --source-root /srv/gravit/storage --source-template '%kind%/%hash%.png' \

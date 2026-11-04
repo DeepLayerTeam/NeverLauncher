@@ -58,7 +58,7 @@ Deletion semantics are different from a reset. `DELETE .../{kind}` removes the *
 ```sh
 cd services/api
 go test -count=1 ./internal/model ./internal/texturepng ./internal/storage ./internal/dbmigrate
-# Requires full Go module cache and a disposable PostgreSQL 17+ database:
+# Необходимы полный кэш модулей Go и одноразовая БД PostgreSQL 17+:
 TEST_PG_DSN_0255="$POSTGRES_TEST_DSN" go test -count=1 ./internal/repository -run 'TestTextureServiceOwnershipAndLifecyclePostgres0255'
 go test ./internal/httpapi ./internal/repository
 ```

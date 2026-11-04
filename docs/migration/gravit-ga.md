@@ -17,14 +17,14 @@ The executable checks are composed from the existing real implementations, not a
 On a protected, isolated, real Linux runner with a working Backend/PostgreSQL, 3 real Gravit source projects and game nodes, verified Microsoft account where required, HAProxy/systemd, three OS desktop runners, real test module services and signed published packages:
 
 ```bash
-# First run the existing three-project rehearsal and migration-ga certify
-# procedures documented in gravit-cohort-rehearsal.md and
-# gravit-migration-ga.md. Retain original unredacted results privately.
-# Compile the real Go verifier using pinned toolchain:
+# Сначала выполните существующие процедуры репетиции трёх проектов и сертификации migration-ga,
+# описанные в gravit-cohort-rehearsal.md и
+# gravit-migration-ga.md. Исходные результаты без скрытия данных храните закрыто.
+# Соберите настоящий проверяющий Go с закреплённой версией инструментов:
 go -C tools/migration-ga build -o /srv/gravit-ga/migration-ga .
 
-# Write /srv/gravit-ga/config-0500.json as 0600. See required fields below.
-# Create an EMPTY 0700 directory; do not reuse a prior acceptance run.
+# Создайте /srv/gravit-ga/config-0500.json с правами 0600. Обязательные поля перечислены ниже.
+# Создайте ПУСТОЙ каталог с правами 0700; не используйте прошлую операцию приёмки.
 install -d -m 700 /srv/gravit-ga/acceptance-0500
 export LAUNCHER_MIGRATION_GA_TOKEN='<short-lived-admin-token>'
 python3 tools/gravit-port/ga_acceptance_0500.py \

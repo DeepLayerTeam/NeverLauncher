@@ -142,11 +142,7 @@ pub async fn ensure_managed_java(
         .await
         .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
 
-    // When a trusted distribution bundle is configured, resolve its pinned
-    // SHA-256 first. A previously cached unpinned release is not equivalent.
-    // Bundled delivery archive is currently Java 21. An explicitly configured
-    // per-profile delivery manifest can contain any supported major; do not
-    // force the bundled Java 21 package onto a signed Java 8/16/17/25 profile.
+    // Если настроен доверенный пакет распространения, сначала проверьте его закреплённый SHA-256. Ранее закэшированный выпуск без закрепления не эквивалентен ему. Встроенный архив поставки сейчас содержит Java 21. Явно заданный манифест поставки профиля может содержать любую поддерживаемую основную версию; не навязывайте Java 21 подписанным профилям Java 8/16/17/25.
     let explicit_manifest = std::env::var("LAUNCHER_MANAGED_JRE_MANIFEST")
         .is_ok_and(|v| !v.trim().is_empty());
     if required_major == 21 || explicit_manifest {
@@ -158,9 +154,7 @@ pub async fn ensure_managed_java(
     if let Some(cached) = find_cached_runtime(&runtime_root, required_major, &distribution).await? {
         return Ok(cached);
     }
-    // When the installed JVM was damaged but its original hash-pinned archive
-    // survived, repair directly from the verified cache. In offline mode this
-    // must happen *before* rejecting network access or calling Adoptium.
+    // Если установленная JVM повреждена, но исходный архив с закреплённым хешем сохранился, восстанавливайте её непосредственно из проверенного кэша. В офлайн-режиме это нужно сделать ДО отклонения сетевого доступа или обращения к Adoptium.
     if let Some(recovered) = restore_cached_managed_java(&runtime_root, required_major, &distribution).await? {
         return Ok(recovered);
     }
@@ -168,8 +162,7 @@ pub async fn ensure_managed_java(
         return Err("Offline Managed Java requires a locally pinned distribution manifest or an already verified installed runtime".into());
     }
 
-    // Other supported majors are discovered from Adoptium releases after an
-    // existing verified installation and offline policy have been considered.
+    // Другие поддерживаемые основные версии ищутся в выпусках Adoptium после проверки существующей установки и автономной политики.
     let platform = adoptium_platform()?;
     let asset = resolve_adoptium_asset(required_major, &platform.0, &platform.1).await?;
     if asset.version.major != required_major {
@@ -505,13 +498,10 @@ async fn install_managed_java_archive(
         .await
         .map_err(|err| format!("не удалось создать platform runtime dir: {err}"))?;
 
-    // Bind installed runtime identity to the exact verified package digest.
-    // Different signed releases sharing a human-readable name must coexist,
-    // preserving the prior valid JVM as last-known-good for rollback.
+    // Привяжите идентичность установленного Runtime к точному проверенному дайджесту пакета. Разные подписанные выпуски с одинаковым читаемым именем должны сосуществовать, сохраняя предыдущую исправную JVM как последнюю работоспособную для отката.
     let release_component = format!("{}-{}", safe_release_component(release_name), &checksum[..16]);
     let final_dir = platform_dir.join(&release_component);
-    // Read-only fast path is safe; invalidation/rename is always performed
-    // under the inter-process install lock to avoid racing a second installer.
+    // Быстрый путь только для чтения безопасен; отмена действительности и переименование всегда выполняются под межпроцессной блокировкой установки, чтобы избежать гонки со вторым установщиком.
     if fs::metadata(&final_dir).await.is_ok() {
         if let Some(result) = validate_installed_runtime(&final_dir, required_major, distribution, true).await? {
             if result.archive_sha256.eq_ignore_ascii_case(&checksum) { return Ok(result); }
@@ -519,8 +509,7 @@ async fn install_managed_java_archive(
     }
 
     let _lock = acquire_install_lock(&platform_dir).await?;
-    // Hard termination does not run Rust Drop. Reclaim unfinished extraction
-    // directories only after acquiring the cross-process installation lock.
+    // Принудительное завершение не выполняет Rust Drop. Очищайте незавершённые каталоги распаковки только после получения межпроцессной блокировки установки.
     cleanup_interrupted_java_staging(&platform_dir).await?;
     if fs::metadata(&final_dir).await.is_ok() {
         if let Some(result) = validate_installed_runtime(&final_dir, required_major, distribution, true).await? {
@@ -654,7 +643,7 @@ fn managed_java_offline() -> bool {
 struct StagingCleanup(PathBuf);
 impl Drop for StagingCleanup {
     fn drop(&mut self) {
-        // If the rename has committed the directory no longer exists.
+        // Если переименование зафиксировано, каталог уже не существует.
         if self.0.exists() { let _ = std::fs::remove_dir_all(&self.0); }
     }
 }
@@ -685,9 +674,7 @@ fn safe_offline_archive(archive_name: &str, digest: &str, ext: &str) -> Result<O
     Ok(None)
 }
 
-/// The very same SHA-256 object store and Range/If-Range downloader used by
-/// Desktop and Repair. A cache lease serializes fetch/publish across processes.
-/// A verified archive can be installed without touching the network.
+/// Используются то же хранилище объектов SHA-256 и загрузчик Range/If-Range, что и в Desktop и Repair. Аренда кэша сериализует получение и публикацию между процессами. Проверенный архив можно установить без сети.
 async fn ensure_managed_archive(runtime_root: &Path, source_url: &str,
     archive_name: &str, checksum: &str, size: u64, os: &str,
     local_archive: Option<&Path>) -> Result<PathBuf, String> {
@@ -755,14 +742,11 @@ async fn ensure_managed_archive(runtime_root: &Path, source_url: &str,
     Ok(archive)
 }
 
-/// Re-verify the complete installed JVM immediately before creating the game
-/// process. A cached result from an earlier launch-plan validation is not a
-/// security decision: files may have been changed between plan and spawn.
+/// Непосредственно перед созданием игрового процесса повторно проверьте всю установленную JVM. Закэшированный результат прошлой проверки плана запуска не является решением безопасности: файлы могли измениться между планированием и созданием процесса.
 pub async fn revalidate_managed_java_before_spawn(java_executable: &str) -> Result<(), String> {
     let java = Path::new(java_executable);
     if !java.is_absolute() {
-        // "java" resolved from PATH is permitted only by the explicit signed
-        // profile policy; it is not represented as a managed JVM.
+        // Путь "java", найденный через PATH, разрешён только явной подписанной политикой профиля и не считается управляемой JVM.
         return Ok(());
     }
     for directory in java.ancestors().take(8) {
@@ -781,8 +765,7 @@ pub async fn revalidate_managed_java_before_spawn(java_executable: &str) -> Resu
         }
         return Ok(());
     }
-    // A managed runtime with a deleted metadata file must not silently become
-    // a trusted custom Java path.
+    // Управляемый Runtime с удалёнными метаданными не должен незаметно превращаться в доверенный пользовательский путь Java.
     if let Ok(root) = managed_runtime_root() {
         if java.starts_with(&root) {
             return Err("managed Java record missing before launch".into());
@@ -973,8 +956,7 @@ async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
 }
 
 async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> Result<bool, String> {
-    // Never follow an archive symlink: neither a warm-cache hit nor an
-    // operator-provided offline archive may resolve outside trusted storage.
+    // Никогда не переходите по символической ссылке архива: ни попадание в прогретый кэш, ни предоставленный оператором офлайн-архив не могут разрешаться за пределы доверенного Storage.
     let metadata = match fs::symlink_metadata(path).await {
         Ok(value) => value,
         Err(_) => return Ok(false),
@@ -1157,10 +1139,7 @@ async fn find_cached_runtime(root: &Path, major: u32, distribution: &str) -> Res
     Ok(None)
 }
 
-/// Recover a broken installation using its previously SHA-256-verified vendor
-/// archive, not by silently falling back to PATH or fetching a different JVM.
-/// The full install path re-runs extraction, the executable bytecode probe,
-/// the file inventory and atomic rename before making the repaired JVM visible.
+/// Восстанавливайте повреждённую установку из ранее проверенного SHA-256 архива поставщика, а не скрытым переходом к PATH или загрузкой другой JVM. Полная установка повторяет распаковку, проверку исполняемого байткода, инвентаризацию файлов и атомарное переименование до публикации восстановленной JVM.
 async fn restore_cached_managed_java(
     root: &Path, major: u32, distribution: &str,
 ) -> Result<Option<ManagedJavaResult>, String> {
@@ -1272,8 +1251,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
     }))
 }
 
-/// Hash every installed runtime file, not only bin/java. Corruption of
-/// libjvm or the security store must invalidate the cached runtime too.
+/// Вычисляйте хеш каждого файла установленного Runtime, а не только bin/java. Повреждение libjvm или хранилища безопасности тоже должно делать кэш недействительным.
 async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>, String> {
     let root = root.to_path_buf();
     tokio::task::spawn_blocking(move || -> Result<BTreeMap<String, String>, String> {
@@ -1297,9 +1275,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
                     if !resolved.starts_with(std::fs::canonicalize(&root).map_err(|e| e.to_string())?) {
                         return Err(format!("Java runtime symlink escapes installation: {relative}"));
                     }
-                    // A symlink to a directory cannot be opened as a file.
-                    // Hash its target verbatim instead; target contents are
-                    // independently covered by their actual inventory paths.
+                    // Символическую ссылку на каталог нельзя открывать как файл.
                     let link = std::fs::read_link(&path).map_err(|e| e.to_string())?;
                     let identity = format!("symlink:{}", link.to_string_lossy());
                     files.insert(relative, hex::encode(Sha256::digest(identity.as_bytes())));
@@ -1323,7 +1299,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
 
 async fn verify_runtime_inventory(root: &Path, expected: &BTreeMap<String, String>) -> Result<bool, String> {
     if expected.is_empty() { return Ok(false); }
-    // Exact-set check also rejects unexpected files added to a managed runtime.
+    // Проверка точного набора также отклоняет посторонние файлы, добавленные в управляемый Runtime.
     let actual = match inventory_runtime_files(root).await {
         Ok(files) => files,
         Err(_) => return Ok(false),
@@ -1331,9 +1307,7 @@ async fn verify_runtime_inventory(root: &Path, expected: &BTreeMap<String, Strin
     Ok(&actual == expected)
 }
 
-// Verify the physical executable format, not only a Java-reported os.arch
-// property. This detects Rosetta / QEMU / wrong-target JREs before Minecraft
-// loads native LWJGL, JNI or loader libraries.
+// Проверяйте физический формат исполняемого файла, а не только значение os.arch от Java. Так обнаруживаются Rosetta, QEMU и JRE неверной платформы до загрузки Minecraft нативных библиотек LWJGL, JNI или загрузчика.
 fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<(), String> {
     use std::io::{Read, Seek, SeekFrom};
     let expected_arch = normalize_adoptium_arch(arch);
@@ -1412,8 +1386,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
     }
 }
 
-/// Execute the actual JVM with bounded lifetime, verifying the architecture
-/// and OS reported by the runtime, not just its java -version major.
+/// Запускайте настоящую JVM с ограниченным временем жизни, проверяя сообщаемые Runtime архитектуру и ОС, а не только основную версию java -version.
 async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result<(), String> {
     let meta = std::fs::symlink_metadata(java).map_err(|e| format!("Java executable metadata: {e}"))?;
     if !meta.is_file() || meta.file_type().is_symlink() {
@@ -1427,7 +1400,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     let mut command = Command::new(java);
     command.args(["-XshowSettings:properties", "-version"])
         .stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
-    // Never inherit JAVA_TOOL_OPTIONS/JDK_JAVA_OPTIONS/_JAVA_OPTIONS when verifying a package.
+    // При проверке пакета никогда не наследуйте JAVA_TOOL_OPTIONS/JDK_JAVA_OPTIONS/_JAVA_OPTIONS.
     for key in ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "CLASSPATH"] {
         command.env_remove(key);
     }
@@ -1451,18 +1424,13 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
         _ => false,
     };
     if !os_ok { return Err(format!("Managed Java OS mismatch: {reported_os}, expected {os}")); }
-    // `java -version` alone is not evidence that a downloaded package can
-    // actually execute Java classes. In particular, a shell stub can mimic
-    // that output. Run Java 8 bytecode on the installed JVM and prove that
-    // java.home is inside the extracted package rather than a host JDK.
+    // Одного `java -version` недостаточно, чтобы доказать способность скачанного пакета выполнять классы Java: оболочечная заглушка может имитировать этот вывод. Запустите байткод Java 8 в установленной JVM и докажите, что java.home находится внутри распакованного пакета, а не у системной JDK.
     verify_java_bytecode_execution(java, major).await?;
     Ok(())
 }
 
 async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), String> {
-    // A random, exclusively created directory prevents a concurrent process
-    // from replacing the classpath probe. It is not written into the runtime
-    // installation, so integrity inventory remains immutable on cache reads.
+    // Случайный каталог, созданный с исключительным владением, препятствует замене теста classpath конкурентным процессом. Он не записывается в установку Runtime, поэтому инвентаризация целостности остаётся неизменной при чтении кэша.
     let temp = std::env::temp_dir().join(format!(
         "launcher-java-probe-{}-{:016x}", std::process::id(), rand::random::<u64>()
     ));
@@ -1497,8 +1465,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     if probed_major != major {
         return Err(format!("Managed Java bytecode major mismatch: {probed_major} vs {major}"));
     }
-    // The JVM must use the image's own runtime libraries. A wrapper that
-    // invokes an unrelated system Java is not a managed installation.
+    // JVM должна использовать собственные библиотеки среды выполнения образа. Обёртка, запускающая постороннюю системную Java, не является управляемой установкой.
     let packaged_home = java.parent().and_then(Path::parent)
         .ok_or_else(|| "Managed Java executable is not under bin/".to_string())?;
     let packaged_home = std::fs::canonicalize(packaged_home)
@@ -1706,8 +1673,7 @@ struct InstallLock { _file: std::fs::File }
 
 async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
     let path = dir.join(".install.lock");
-    // Keep the file permanently: deleting an active flock/LockFileEx inode
-    // permits a second process to create a new file and enter concurrently.
+    // Сохраняйте файл постоянно: удаление inode активной блокировки flock/LockFileEx позволяет второму процессу создать новый файл и войти одновременно.
     let file = std::fs::OpenOptions::new().read(true).write(true).create(true)
         .open(&path).map_err(|e| format!("Managed Java lock open: {e}"))?;
     for _ in 0..120 {
@@ -1891,8 +1857,7 @@ mod tests {
 
     #[tokio::test]
     async fn real_java_executes_bytecode_and_detects_corruption() {
-        // This uses a genuine installed JRE/JDK if present on a developer or
-        // native CI host. It requires no `javac` and works with Java 8+.
+        // При наличии настоящей JRE/JDK на машине разработчика или нативном CI-узле используется она. `javac` не требуется; поддерживается Java 8+.
         let check = Command::new("java").args(["-XshowSettings:properties", "-version"])
             .output().await;
         let Ok(output) = check else { eprintln!("No Java on test host: skipping native JVM probe"); return; };
@@ -1912,8 +1877,7 @@ mod tests {
         let _ = fs::remove_dir_all(root).await;
     }
 
-    // Full local installation and automatic restoration through the *same*
-    // archive cache and staging path as Desktop/CLI. Requires tar on Unix.
+    // Полная локальная установка и автоматическое восстановление используют тот же кэш архивов и путь подготовки, что Desktop/CLI. На Unix необходим tar.
     #[cfg(unix)]
     #[tokio::test]
     async fn version_spoofing_runtime_is_not_installed() {
@@ -1952,8 +1916,7 @@ mod tests {
         let error = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
             manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap_err();
         assert!(error.contains("bytecode") || error.contains("probe"), "{error}");
-        // An archive which spoofs a valid java -version must never publish
-        // an installed runtime or be reused as a verified cache entry.
+        // Архив, подделывающий допустимый java -version, никогда не должен публиковать установленный Runtime или повторно использоваться как проверенная запись кэша.
         let base = runtimes.join("temurin/21");
         let (_, arch) = adoptium_platform().unwrap();
         assert!(!base.join(format!("{}-{}", os, arch)).join(

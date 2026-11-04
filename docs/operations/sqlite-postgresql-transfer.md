@@ -2,17 +2,11 @@
 
 ## Важно: промышленное переключение в этой версии отсутствует
 
-The SQLite Core v326 and the native PostgreSQL HTTP Repository have different
-security/authentication, release, audit and lease schemas. Importing data by
-matching table names would silently lose or reinterpret revocation state and
-break Minecraft identity or one-use joins. **Version 0.32.11 implements the
-transactional, checked data-transfer stage, NOT an operable PostgreSQL Backend
-migration or a full DEP07 delivery. Do not shut down SQLite or route players
-to the imported schema.** `readyForBackendCutover` is always `false`.
+SQLite Core v326 и нативный HTTP Repository на PostgreSQL имеют разные схемы безопасности/аутентификации, выпусков, аудита и аренд. Импорт данных простым сопоставлением имён таблиц незаметно потеряет или неверно истолкует состояние отзывов и сломает идентичность Minecraft либо одноразовые подключения. **Версия 0.32.11 реализует транзакционный проверяемый этап передачи данных, а НЕ действующую миграцию Backend на PostgreSQL и НЕ полный выпуск DEP07. Не выключайте SQLite и не направляйте игроков на импортированную схему.** `readyForBackendCutover` всегда равно `false`.
 
 ## Поддерживаемая безопасная операция
 
-1. Keep the SQLite service running and create a fresh online snapshot:
+1. Оставьте службу SQLite работающей и создайте новый онлайн-снимок:
 
    ```sh
    launcher-sqlite backup --db /var/lib/launcher/state.db \
@@ -21,13 +15,9 @@ to the imported schema.** `readyForBackendCutover` is always `false`.
      --backup /var/lib/launcher/backups/dep07-03211.db
    ```
 
-2. Provision a dedicated PostgreSQL database with a role allowed to create
-   schemas. For remote connections require TLS certificate verification.
-   Store the connection string securely in `LAUNCHER_POSTGRES_DSN` (never
-   in CLI arguments, source control or logs).
+2. Подготовьте отдельную базу PostgreSQL с ролью, которой разрешено создавать схемы. Для удалённого подключения обязательна проверка сертификата TLS. Строку подключения храните безопасно в `LAUNCHER_POSTGRES_DSN`, **не** в аргументах CLI, репозитории или журналах.
 
-3. Run (requires sufficient PostgreSQL space, local filesystem for SQLite
-   restore validation and a deadline appropriate for the database size):
+3. Запустите команду при достаточном свободном месте PostgreSQL, локальной файловой системе для проверки восстановления SQLite и тайм-ауте, соответствующем размеру БД:
 
    ```sh
    launcher-sqlite sqlite-to-postgres \
@@ -35,47 +25,22 @@ to the imported schema.** `readyForBackendCutover` is always `false`.
      --ack-staging-only --timeout 60m > dep07-transfer-report.json
    ```
 
-4. Inspect the report and receipt in schema
-   `launcher_sqlite_import_03211.migration_receipt`. The importer verifies
-   the snapshot SHA-256 and `integrity_check`/`foreign_key_check`, restores an
-   isolated copy to run SQLite Core application checks, then transfers every
-   non-internal SQLite table to PostgreSQL as exactly typed SQL values.
-   All copied rows are reread from PostgreSQL and compared using per-row and
-   per-table SHA-256 digests, order, and row counts. Primary keys, nonpartial
-   unique indexes and explicit foreign keys are validated before COMMIT.
+4. Просмотрите отчёт и квитанцию в схеме `launcher_sqlite_import_03211.migration_receipt`. Импортёр сверяет SHA-256 снимка, `integrity_check` и `foreign_key_check`, восстанавливает изолированную копию для проверок SQLite Core на уровне приложения, затем переносит каждую внутренне неслужебную таблицу SQLite в PostgreSQL с точными типами значений SQL. Все строки заново читаются из PostgreSQL и сравниваются по хешам SHA-256 отдельных строк и таблиц, порядку и числу записей. До COMMIT проверяются первичные ключи, неполные уникальные индексы без условия и явные внешние ключи.
 
-## Properties
+## Свойства
 
-- **Atomic:** one PostgreSQL SERIALIZABLE transaction; no partially visible
-  imported schema when copy or verification fails. Transaction-scoped advisory
-  lock serializes importers; never overwrites a previous import.
-- **Complete staging:** all SQLite Core 326 application tables and columns,
-  including revoked token history, TOTP ciphertext, immutable Minecraft UUIDs,
-  bridge nonces/tickets, package blobs, idempotency keys, leases and fencing
-  high-water marks are preserved as-is. Timestamps remain signed nanosecond
-  integers; no timezone precision conversion in staging.
-- **Read-only after import:** triggers prevent INSERT/UPDATE/DELETE of copied
-  rows; a receipt records the snapshot and all table digests.
-- **Not a cutover:** native PostgreSQL Repository has different tables and
-  authentication guarantees. Staging rows are not activated in that repository.
-  The import is NOT a substitute for writing and proving adapters for auth,
-  runtime coordination, signed join redemption and full release semantics.
-- **No resume/overwrite:** a commit ambiguity must be resolved by checking for
-  the schema/receipt. Repeating the command into an existing schema fails closed.
-- **Rollback:** no live Backend changes are performed. To reverse the staging
-  action, a database administrator can drop ONLY the dedicated import schema,
-  after explicitly verifying no investigation/compliance need remains.
+- **Атомарность:** одна транзакция PostgreSQL SERIALIZABLE; при ошибке копирования или проверки частично видимой импортированной схемы нет. Консультативная блокировка в пределах транзакции синхронизирует импортёров; предыдущий импорт никогда не перезаписывается.
+- **Полнота промежуточного хранения:** все прикладные таблицы и столбцы SQLite Core 326, включая историю отозванных токенов, зашифрованные TOTP, неизменяемые UUID Minecraft, nonce/билеты моста, объекты пакетов, ключи идемпотентности, аренды и максимальные значения ограничителей, сохраняются без изменений. Временные метки остаются знаковыми наносекундными целыми числами; на промежуточном этапе точность часового пояса не преобразуется.
+- **Только чтение после импорта:** триггеры запрещают INSERT/UPDATE/DELETE скопированных строк; квитанция содержит сведения о снимке и дайджестах всех таблиц.
+- **Это не переключение:** у нативного PostgreSQL Repository другие таблицы и гарантии аутентификации. Промежуточные строки в нём не активируются. Импорт **не** заменяет написание и проверку адаптеров аутентификации, координации Runtime, погашения подписанных пропусков и полной семантики выпусков.
+- **Без возобновления/перезаписи:** при неопределённости коммита проверьте наличие схемы и квитанции. Повтор в существующую схему безопасно отклоняется.
+- **Откат:** действующий Backend не меняется. Чтобы отменить промежуточную операцию, администратор БД может удалить **только** специальную схему импорта после явного подтверждения, что она больше не нужна для расследований и соблюдения требований.
 
 ## Оставшиеся условия приёмки DEP07
 
-- Translate every SQLite 326 state machine into the native PostgreSQL runtime
-  schema and update the HTTP Repository to use it; do not rely on staging tables.
-- Validate replay protection, revoked sessions, MFA, identity UUID stability,
-  signed join redemption, worker fencing, packages and audit after conversion.
-- Perform a frozen-write final delta/cutover with actual Desktop/Guard/Runtime
-  clients using the same user and Minecraft UUID, followed by rollback rehearsal.
-- Pass PostgreSQL and SQLite integration tests on supported native filesystem
-  and Go toolchain, and provide an operator-approved cutover procedure.
+- Перевести каждую машину состояний SQLite 326 в нативную схему PostgreSQL Runtime и обновить HTTP Repository для её использования; не опираться на промежуточные таблицы.
+- После преобразования проверить защиту от повторов, отозванные сеансы, MFA, постоянство UUID, погашение подписанных пропусков, fencing обработчиков, пакеты и аудит.
+- Провести итоговое переключение с заморозкой записи и учётом последних изменений на настоящих клиентах Desktop/Guard/Runtime, сохранив тех же пользователей и UUID Minecraft; затем отрепетировать откат.
+- Пройти интеграционные тесты PostgreSQL и SQLite на поддерживаемой нативной файловой системе и с заданными инструментами Go; предоставить согласованную оператором процедуру переключения.
 
-The environment that produced this artifact did not have PostgreSQL server,
-Go 1.27.3 or the pinned SQLite driver available; CI must run the full tests.
+В среде, где создан этот артефакт, отсутствовали сервер PostgreSQL, Go 1.27.3 и закреплённый драйвер SQLite. Полные тесты должен выполнить CI.

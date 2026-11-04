@@ -1,23 +1,23 @@
 # 0.51.6 — совместимость N/N−1: API, обработчик, ServerBridge, PostgreSQL
 
-This release supports the **specific 0.51.5 ↔ 0.51.6 control-plane binary pair** on the same PostgreSQL database. It does **not** claim that arbitrary older or future versions are compatible.
+Этот выпуск поддерживает **конкретную пару бинарных файлов управляющей плоскости 0.51.5 ↔ 0.51.6** на одной БД PostgreSQL. Совместимость с произвольными более ранними или будущими версиями **не заявляется**.
 
-## исполняемое поведение и ограничения
+## Исполняемое поведение и ограничения
 
-- API and worker remain separate `network-ha` processes. The existing PostgreSQL durable jobs, outbox ownership, idempotency and ServerBridge fencing remain authoritative; no new writer or transport is introduced in 0.51.6.
-- Both binaries use the **same 117 immutable PostgreSQL migrations as 0.51.5**, with identical file names and SHA-256. Thus 0.51.5's strict migration checker does not encounter an unknown migration after deploying 0.51.6. **Do not run migrations or expand/contract DDL during the mixed period.** For later versions, add a separately verified compatibility route; never reinterpret unknown migrations as compatible by default.
-- `dbmigrate.StatusOf` in the new binary is read-only. The separate migration role still holds the existing PostgreSQL advisory lock and applies migrations transactionally. A missing tracking table, unsealed checksum, changed checksum, unknown migration or pending migration still rejects startup/readiness.
-- Existing HTTP API v1, ServerBridge v3 (and negotiated v2) and durable PostgreSQL jobs/outbox protocol are unchanged. The compatibility admission performs **real** `/ready` probes against API and worker on each host, followed by `/api/v1/status`, `/api/v1/loaders`, `/api/v1/runtime/requirements`, and signed ServerBridge capability-negotiation endpoint. It compares stable wire response fingerprints between the running versions, including trust signing key fingerprint and Bridge feature digest.
-- The production multi-host launcher still **rejects arbitrary mixed images**. During a 0.51.5→0.51.6 rolling deployment the dedicated verifier is the only supported multi-version admission. Never use `--skip-growth` or relax image immutability to turn a FAIL into PASS. Actual rollout/drain orchestration belongs to 0.51.7.
+- API и worker остаются отдельными процессами `network-ha`. Существующие устойчивые задачи PostgreSQL, владение outbox, идемпотентность и fencing ServerBridge сохраняют авторитетность; в 0.51.6 не добавляется новый писатель или транспорт.
+- Обе версии используют **те же 117 неизменяемых миграций PostgreSQL, что и 0.51.5**, с одинаковыми именами файлов и SHA-256. Поэтому строгая проверка миграций 0.51.5 не встречает неизвестных миграций после развёртывания 0.51.6. **Не выполняйте миграции или расширяющие/сужающие DDL во время смешанного режима.** Для следующих версий добавляйте отдельно проверенный маршрут совместимости; неизвестные миграции нельзя автоматически считать совместимыми.
+- `dbmigrate.StatusOf` в новой версии работает только на чтение. Отдельная роль миграции по-прежнему удерживает существующую консультативную блокировку PostgreSQL и применяет миграции транзакционно. Отсутствующая таблица учёта, незакреплённая или изменённая контрольная сумма, неизвестная или ожидающая миграция по-прежнему блокируют запуск и готовность.
+- Существующие HTTP API v1, ServerBridge v3 (и согласованный v2) и протокол устойчивых задач/outbox PostgreSQL не меняются. Проверка допуска совместимости выполняет **реальные** запросы `/ready` к API и worker каждого хоста, затем `/api/v1/status`, `/api/v1/loaders`, `/api/v1/runtime/requirements` и к подписанной точке согласования возможностей ServerBridge. Между работающими версиями сравниваются стабильные отпечатки ответов протокола, включая отпечаток ключа подписи доверия и хеш возможностей Bridge.
+- Production-лаунчер для нескольких хостов по-прежнему **отклоняет произвольную смесь образов**. Во время поэтапного развёртывания 0.51.5→0.51.6 специализированный верификатор — единственный поддерживаемый способ допуска нескольких версий. Не используйте `--skip-growth` и не ослабляйте неизменяемость образов ради превращения FAIL в PASS. Фактическое управление развёртыванием и осушением трафика относится к 0.51.7.
 
-## подготовка
+## Подготовка
 
-1. On **each host**, deploy the updated `ha_inventory_0511.py`, `multi_host_0512.py` tools and this version's source tree before changing the running containers. Old running binaries are supported: the script probes them through real HTTP readiness and public routes, not through `VERSION`, image tags or `go build` output.
-2. Ensure each Docker host uses its own pinned OCI backend digest shared by the *local* API and worker. During the window the two hosts may have different digests, **only** when the running versions are exactly `0.51.5` and `0.51.6`. Other images remain pinned, and each host must continue to reference the same PostgreSQL, Redis, S3 and public origin.
-3. Run from a trusted operator host with SSH host keys already pinned and `psql` installed. Put a **single** primary PostgreSQL URI (`postgresql://user:password@db.example/launcher?sslmode=verify-full`) into a private `0600` file. Do **not** pass the DSN on the command line or add it to reports; use an appropriate TLS root CA and host certificate.
-4. Ensure that all 117 expected migration rows with their sealed checksums are present in `schema_migrations` and that the DSN points to the primary (not an async read replica). The verifier reads actual PostgreSQL data inside a read-only transaction; it does not write data or change the schema.
+1. На **каждом хосте** разверните обновлённые инструменты `ha_inventory_0511.py`, `multi_host_0512.py` и исходное дерево этой версии до изменения работающих контейнеров. Старые бинарные файлы поддерживаются: скрипт проверяет их реальной HTTP-готовностью и публичными маршрутами, а не по `VERSION`, тегам образов или результату `go build`.
+2. Убедитесь, что на каждом Docker-хосте API и worker используют один локальный закреплённый OCI-хеш Backend. В этом окне у двух хостов могут быть разные хеши **только** для версий `0.51.5` и `0.51.6`. Остальные образы остаются закреплёнными, а все хосты продолжают использовать одинаковые PostgreSQL, Redis, S3 и публичный origin.
+3. Запускайте проверку с доверенного операторского хоста с заранее закреплёнными SSH-ключами хостов и установленным `psql`. Поместите URI **единственного основного** PostgreSQL (`postgresql://user:password@db.example/launcher?sslmode=verify-full`) в приватный файл `0600`. **Не** передавайте DSN в командной строке и не включайте его в отчёты; используйте подходящий корневой TLS CA и сертификат хоста.
+4. Убедитесь, что в `schema_migrations` присутствуют все 117 ожидаемых строк с закреплёнными контрольными суммами и что DSN указывает на основной сервер, а не на асинхронную читающую реплику. Верификатор читает реальные данные PostgreSQL внутри транзакции только для чтения; запись и изменение схемы не выполняются.
 
-## Run
+## Запуск
 
 ```sh
 python3 scripts/operations/nn1_compat_0516.py \
@@ -28,8 +28,8 @@ python3 scripts/operations/nn1_compat_0516.py \
   --require-mixed --output /run/launcher/nn1-mixed-0516.json
 ```
 
-Before and after the mixed period, omit `--require-mixed` to accept a uniform cluster of either supported version. The report file must not exist; create a private report directory and retain the result with the actual image digests and independent incident evidence. A nonzero exit code or an absent report blocks traffic promotion. The verifier rejects clocked-out or unsupported worker versions, mismatched real HTTP contracts, unhealthy dependencies, unexpected migrations, changed signing key fingerprint and mismatched host identity.
+До и после смешанного периода уберите `--require-mixed`, чтобы разрешить однородный кластер любой из двух поддерживаемых версий. Файл отчёта не должен существовать заранее; создайте приватный каталог отчётов и сохраните результат с фактическими хешами образов и независимыми свидетельствами инцидента. Ненулевой код выхода или отсутствие отчёта блокирует продвижение трафика. Верификатор отклоняет устаревшие по времени или неподдерживаемые версии worker, несоответствие действующих HTTP-контрактов, нездоровые зависимости, неожиданные миграции, изменение отпечатка ключа подписи и несоответствие идентичностей хостов.
 
-## границы приёмки
+## Границы приёмки
 
-The executable checks establish **live admission criteria**, not a completed rolling deployment or zero-downtime guarantee. Independently verify real idempotent command delivery/ACK across old/new workers and actual Minecraft + ServerBridge under load; validate PostgreSQL HA writer fencing and external LB during a physical failure. No native three-OS/gameplay or two-host fault-injection evidence is included in this source archive. No incompatible DB DDL, world snapshot migration, extension state upgrade or JVM agent hot swap is claimed as rolling-compatible.
+Исполняемые проверки задают **критерии допуска действующей системы**, а не доказывают завершённое поэтапное развёртывание или нулевой простой. Независимо подтвердите фактическую идемпотентную доставку команд/ACK между старым и новым worker и работу Minecraft + ServerBridge под нагрузкой; проверьте fencing пишущего PostgreSQL HA и внешний балансировщик при физическом отказе. Исходный архив не содержит свидетельств нативной проверки игры на трёх ОС или испытаний с отказом двух хостов. Совместимость для несовместимых DDL, миграций снимков миров, обновления состояния расширений и горячей замены JVM-агента не заявляется.

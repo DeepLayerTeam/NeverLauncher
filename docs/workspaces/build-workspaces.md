@@ -1,62 +1,25 @@
-# рабочие пространства сборки (0.22.6)
+# Рабочие пространства сборки (0.22.6)
 
-The Build Workspace handles real directory uploads, scans, per-file SHA-256,
-base-version diff, stage selection, publication validation, and creation of an
-actual release in the existing package pipeline. The old Release Workspace
-remains available to resume releases created before 0.22.6.
+Рабочее пространство сборки (Build Workspace) выполняет настоящую загрузку каталогов, сканирование, вычисление SHA-256 каждого файла, сравнение с базовой версией, выбор содержимого для подготовки, проверку публикации и создание действующего выпуска через существующий конвейер пакетов. Старое пространство Release Workspace остаётся доступным для возобновления выпусков, созданных до версии 0.22.6.
 
-## Workflow
+## Порядок работы
 
-1. `POST /api/v1/build-workspaces` with `projectId`, `profileId`, `channel`,
-   `version`, and `settings` containing `minecraft`, `runtime`, optional
-   `directories`, `fileRules`, and `toolVersions`. A v2 profile revision/digest
-   is pinned; the API's tool version is authoritative.
-2. Import each file with `POST /api/v1/build-workspaces/{id}/files` using
-   multipart `file`, `path`, `ownership`, and *current* `revision`. The Admin UI
-   accepts entire local directories via the browser's directory picker; no
-   server-side arbitrary directory paths can be supplied.
-3. `GET /scan` streams the stored source blobs and checks size and SHA-256.
-   `GET /diff?baseVersionId=<published-id>` compares against another published
-   version of the same project/profile.
-4. `POST /stage` with `revision` and `paths` selects the exact files to
-   include. Any import invalidates prior staging.
-5. `GET /validate` checks source content, profile revision, file rules,
-   Java constraints and launch metadata; reports a deterministic build digest.
-6. `POST /build` with the current `revision` materializes real package files
-   in configured Storage and creates/updates the corresponding draft Manifest
-   v2. A partial build may be resumed; it cannot claim someone else's package.
-7. Use existing `/packages/{id}/validate`, `/sign` (phishing-resistant step-up),
-   `/stage`, `/integrity-check`, signed runtime evidence, and the durable
-   `/operations/validate` → `/operations/execute` publish flow. **Build never
-   circumvents signature, validation policy, or MFA.**
+1. Отправьте `POST /api/v1/build-workspaces` с `projectId`, `profileId`, `channel`, `version` и `settings`, включающими `minecraft`, `runtime`, необязательные `directories`, `fileRules` и `toolVersions`. Закрепляются ревизия и дайджест профиля v2; авторитетным источником версии инструментов остаётся API.
+2. Импортируйте каждый файл через `POST /api/v1/build-workspaces/{id}/files` в формате multipart с полями `file`, `path`, `ownership` и **текущей** `revision`. Интерфейс Admin позволяет выбрать локальный каталог целиком через системный диалог браузера; произвольные пути к каталогам на сервере передать нельзя.
+3. `GET /scan` потоково читает сохранённые исходные объекты и сверяет размер и SHA-256. `GET /diff?baseVersionId=<published-id>` сравнивает содержимое с другой опубликованной версией того же проекта и профиля.
+4. `POST /stage` с `revision` и `paths` задаёт точный список включаемых файлов. Любой импорт отменяет предыдущую подготовку.
+5. `GET /validate` проверяет исходные данные, ревизию профиля, правила файлов, ограничения Java и метаданные запуска; возвращает воспроизводимый дайджест сборки.
+6. `POST /build` с актуальной `revision` создаёт реальные файлы пакета в настроенном Storage и создаёт или обновляет связанный черновик Manifest v2. Частично выполненную сборку можно возобновить; использовать чужой пакет запрещено.
+7. Используйте существующие `/packages/{id}/validate`, `/sign` (усиленная аутентификация с защитой от фишинга), `/stage`, `/integrity-check`, подписанные свидетельства Runtime и устойчивую последовательность публикации `/operations/validate` → `/operations/execute`. **Сборка не позволяет обойти подпись, политику проверки или MFA.**
 
-## воспроизводимость и безопасность
+## Воспроизводимость и безопасность
 
-The `buildDigest` is SHA-256 over canonical JSON of project/profile, frozen
-profile digest/revision, channel/version, settings, tool versions and sorted
-selected files, with path, SHA-256, size, ownership, executable and target OS.
-Release timestamps and signing timestamps are intentionally not part of this
-identity. JSON serialization uses the standard Go encoder (sorted map keys).
+`buildDigest` вычисляется как SHA-256 канонического JSON, содержащего проект/профиль, закреплённые дайджест и ревизию профиля, канал/версию, настройки, версии инструментов и отсортированный список выбранных файлов. Для файлов учитываются путь, SHA-256, размер, владелец, признак исполняемости и целевая ОС. Временные отметки выпуска и подписания намеренно не входят в идентичность сборки. Для сериализации JSON применяется стандартный кодировщик Go с сортировкой ключей карт.
 
-Sources live under per-workspace content-addressed AES-256-GCM encrypted
-object keys. Encryption is bound to project/workspace/content digest and uses
-a domain-separated key derived from the production manifest signing secret.
-Workspace paths are excluded from the public file delivery route. Rotating
-the signing key invalidates unbuilt workspace source objects; finish or recreate
-in-progress workspaces as part of key rotation. Only safe relative game paths are
-accepted; saves, screenshots, resource packs, allowed settings and other
-protected user-owned paths cannot be uploaded as managed content. API scopes
-`release:prepare` and `file:write` are checked separately. CAS revisions guard
-concurrent edits. SQL state persists across restarts with migration `0059`.
+Исходные объекты размещаются под ключами, адресуемыми по содержимому в пределах рабочего пространства, и шифруются AES-256-GCM. Шифрование привязано к проекту, пространству и дайджесту содержимого; ключ выводится с разделением доменов из производственного секрета подписи манифестов. Пути рабочих пространств исключены из общедоступного маршрута выдачи файлов. Ротация ключа подписи делает исходные объекты ещё не собранных рабочих пространств недействительными: при ротации завершите текущие сборки или создайте их заново. Допускаются только безопасные относительные игровые пути. Сохранения, снимки экрана, пакеты ресурсов, разрешённые настройки и другие защищённые пользовательские пути нельзя загружать как управляемое содержимое. Разрешения API `release:prepare` и `file:write` проверяются раздельно. Ревизии CAS защищают от конкурентного редактирования. Состояние SQL сохраняется между перезапусками с помощью миграции `0059`.
 
-Operational limits: 25,000 entries per workspace and configured per-file
-`StorageMaxUploadBytes` (default 512 MiB). Successful validation checks full
-SHA-256 of every staged object. Missing/changed objects block materialization.
-Workspaces themselves are not exposed to unauthenticated clients and cannot
-publish a signed release without the existing independent authorization flow.
+Эксплуатационные ограничения: до 25 000 записей на рабочее пространство и настроенный предел размера одного файла `StorageMaxUploadBytes` (по умолчанию 512 МиБ). Успешная проверка включает полный SHA-256 каждого подготовленного объекта. Отсутствующие или изменённые объекты блокируют создание пакета. Рабочие пространства недоступны неаутентифицированным клиентам и не могут опубликовать подписанный выпуск без существующей независимой процедуры авторизации.
 
-## совместимость
+## Совместимость
 
-Migration `0059` adds a new table and does not alter existing releases,
-profiles, manifests or their signatures. A new workspace does not mutate its
-pinned profile snapshot. Operators must run migrations before enabling routes.
+Миграция `0059` добавляет новую таблицу и не изменяет существующие выпуски, профили, манифесты или их подписи. Новое рабочее пространство не меняет закреплённый снимок профиля. Перед включением маршрутов операторы обязаны выполнить миграции.

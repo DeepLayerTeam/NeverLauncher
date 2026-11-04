@@ -22,13 +22,13 @@ Do **not** import into an already running/used PostgreSQL deployment.
 ## команды
 
 ```bash
-# On a disposable EMPTY PostgreSQL database, after applying the full schema:
+# На одноразовой ПУСТОЙ базе PostgreSQL после применения всей схемы:
 export LAUNCHER_POSTGRES_DSN='postgres://...'
 launcher-sqlite sqlite-to-postgres-live \
   --backup /private/backups/core-327.db --ack-live-import --timeout 30m
 
-# If staging was committed but the live phase failed, fix the cause and retry
-# without overwriting staging. This does NOT re-run the physical transfer.
+# Если подготовка зафиксирована, но действующий этап завершился ошибкой, устраните причину и повторите
+# без перезаписи подготовки. Физическая передача повторно НЕ выполняется.
 launcher-sqlite sqlite-to-postgres-live \
   --from-staging --ack-live-import --timeout 30m
 ```

@@ -1,66 +1,33 @@
 # Сетевые операции ServerBridge в Admin (0.41.11)
 
-Admin → project → ServerBridge provides a live overview, network admission controls,
-game commands, signed command ACKs, and a separate **Host Supervisor / JVM** panel.
-The new host panel is wired to the **existing real** Backend → pinned RemoteControl
-TLS → Host Supervisor / OS-JVM path; it never runs shell commands in the browser.
+Раздел **Admin → Проект → ServerBridge** показывает актуальное состояние сети, предоставляет управление допуском игроков, игровые команды, подписанные подтверждения команд (ACK) и отдельную панель **Host Supervisor / JVM**.
+Новая панель управления узлом использует **существующий работающий** канал Backend → RemoteControl с закреплённым TLS-сертификатом → Host Supervisor / OS-JVM. Команды оболочки из браузера не выполняются.
 
-## развёртывание
+## Развёртывание
 
-- Apply the existing PostgreSQL migration `0111_server_bridge_host_operations_0413.sql`
-  before deploying the Backend. A PostgreSQL-backed ServerBridge is mandatory.
-- Configure `LAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE` with explicitly provisioned
-  node IDs, pinned TLS root CA and private credentials readable only by Backend.
-  There is no caller-selected host URL and no fallback to an untrusted endpoint.
-- Provision and start a RemoteControl agent and Host Supervisor for each managed node.
-- Grant **global** `host:process` to trusted operators. Project-scoped `gameserver:*`
-  or `serverbridge:control` does not confer host process permissions. Every host
-  mutation requires fresh MFA enforced on the Backend (not only in Admin).
-- Deploy Admin and Backend of the same version and restart Admin to load the new UI.
+- Перед развёртыванием Backend примените миграцию PostgreSQL `0111_server_bridge_host_operations_0413.sql`. Для ServerBridge обязательно хранилище PostgreSQL.
+- Настройте `LAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE`: явно зарегистрированные идентификаторы узлов, закреплённый корневой сертификат TLS и закрытые учётные данные, доступные только Backend. Пользователь запроса не может указать произвольный URL узла; переход к недоверенному адресу запрещён.
+- На каждом управляемом узле подготовьте и запустите агент RemoteControl и Host Supervisor.
+- Выдавайте **глобальное** разрешение `host:process` только доверенным операторам. Проектные разрешения `gameserver:*` и `serverbridge:control` не предоставляют управление процессами узла. Для каждого изменения состояния узла Backend должен самостоятельно проверять актуальное прохождение MFA (проверки только в Admin недостаточно).
+- Разверните Admin и Backend одной версии. Перезапустите Admin, чтобы загрузился новый интерфейс.
 
-## реальная последовательность действий
+## Рабочая последовательность действий
 
-1. Select an existing registered ServerBridge node. A live read-only RemoteControl
-   status checks the actual supervisor and JVM state; a separate signed game
-   heartbeat determines game readiness.
-2. Select **Start JVM**, **Stop JVM**, or **Restart JVM**. The Admin asks for
-   confirmation and persists an idempotency key in session storage **before** POST.
-3. Backend persists an intent in PostgreSQL before calling RemoteControl once.
-   RemoteControl returns a durable receipt; Backend verifies the host process and
-   server heartbeat before marking a result `succeeded`. `accepted` is not success.
-4. Refresh status or watch the automatically refreshed operation history. An
-   `accepted` operation is reconciled via a read-only Backend GET with
-   `refresh=1`; no host action is dispatched from GET.
-5. A network error after POST is **indeterminate** until the original record is
-   recovered. The UI offers retry of the **same** action and key, not a new key.
-   Backend returns the prior journal record without executing the action again.
-   An `indeterminate` journal entry blocks new operations on that host.
+1. Выберите зарегистрированный узел ServerBridge. Статус RemoteControl запрашивается в режиме только чтения и отражает фактическое состояние супервизора и JVM; готовность игры определяется отдельным подписанным сигналом активности.
+2. Выберите **Запустить JVM**, **Остановить JVM** или **Перезапустить JVM**. Admin запрашивает подтверждение и **до** отправки POST сохраняет ключ идемпотентности в сессионном хранилище браузера.
+3. До единственного обращения к RemoteControl Backend фиксирует намерение в PostgreSQL. RemoteControl выдаёт устойчивую квитанцию; перед присвоением статуса `succeeded` Backend проверяет процесс узла и игровой сигнал активности. Статус `accepted` ещё не означает успешное завершение.
+4. Обновите статус или следите за автоматически обновляемой историей операций. Для операции в статусе `accepted` согласование выполняется через GET-запрос Backend только для чтения с `refresh=1`; GET не инициирует действий на узле.
+5. Сетевая ошибка после POST означает **неопределённый** результат до восстановления исходной записи. Интерфейс предлагает повторить **то же** действие с **тем же** ключом, а не создавать новый. Backend возвращает прежнюю запись журнала, не выполняя операцию повторно. Запись `indeterminate` блокирует новые операции на этом узле.
 
-If the host status or durable journal cannot be read, the UI disables new host
-mutations and shows **unknown**, not **stopped**, **healthy**, or **success**.
-History is loaded from PostgreSQL, not from local browser storage; session
-storage only keeps the exact unresolved HTTP request for safe recovery.
+Если состояние узла или устойчивый журнал недоступны, интерфейс запрещает новые изменения и показывает **неизвестное состояние**, а не **остановлен**, **исправен** или **успешно**. История загружается из PostgreSQL, а не из локального хранилища браузера; сессионное хранилище содержит лишь точный неразрешённый HTTP-запрос для безопасного восстановления.
 
-## существующие элементы управления
+## Существующие элементы управления
 
-- `server.save`, whitelisting, bans, moderation, maintenance/drain, broadcasts,
-  and allowlisted console commands use signed ServerBridge commands; result
-  statuses distinguish accepted, executed, verified, failed and indeterminate.
-- Admission capacity updates require an expected routing revision and the UI
-  checks both the API result and a fresh PostgreSQL overview before claiming
-  that the policy was applied.
-- Topology, routing state, node health, JVM/game telemetry and command history
-  remain available in the same project-scoped workspace.
-- **World backup/restore in 0.41.10 remains a host CLI operation**, not an
-  HTTP/RemoteControl operation. The platform Backup/Restore screen handles
-  Backend data, not Minecraft worlds. Do not label it a world backup or invoke
-  unaudited host shell commands from the web interface.
+- `server.save`, белые списки, блокировки, модерация, обслуживание/выведение из эксплуатации, широковещательные сообщения и разрешённые консольные команды используют подписанные команды ServerBridge. Статусы результатов различают принятие, выполнение, проверку, ошибку и неопределённое состояние.
+- При изменении доступной ёмкости для подключения требуется ожидаемая ревизия маршрутизации. Прежде чем показывать успешное применение политики, интерфейс проверяет ответ API и заново запрашивает состояние из PostgreSQL.
+- Топология, состояние маршрутизации, здоровье узлов, телеметрия JVM/игры и история команд остаются в том же проектном рабочем пространстве.
+- **Резервное копирование и восстановление мира в 0.41.10 выполняются через CLI узла**, а не через HTTP/RemoteControl. Экран резервного копирования платформы относится к данным Backend, а не к мирам Minecraft. Не называйте его резервной копией мира и не запускайте непроверенные команды оболочки узла из веб-интерфейса.
 
-## тестовое покрытие и ограничения
+## Тестовое покрытие и ограничения
 
-`node --experimental-strip-types --test apps/admin/tests/*.test.mjs` covers
-API clients, original-key replay, global host RBAC and freshness semantics. It
-cannot certify the RemoteControl integration or JVM runtime on a live host.
-Full Go Backend tests, a production Admin build with locked dependencies,
-PostgreSQL transactions, and an end-to-end RemoteControl + real JVM/agent test
-must pass on deployment infrastructure before production certification.
+Команда `node --experimental-strip-types --test apps/admin/tests/*.test.mjs` проверяет клиентов API, повторное применение исходного ключа, глобальные права RBAC для узла и требования к актуальности. Эти тесты не подтверждают работу интеграции RemoteControl или JVM на реальном узле. До сертификации для production должны успешно пройти полные тесты Go Backend, сборка Admin с зафиксированными зависимостями, проверки транзакций PostgreSQL и сквозной тест RemoteControl с настоящими JVM и агентом в инфраструктуре развёртывания.

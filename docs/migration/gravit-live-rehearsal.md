@@ -2,7 +2,7 @@
 
 The operator runs `nl migrate gravit rehearse` **on an isolated, disposable staging machine** that has a full Never client and a Minecraft Java server already running. The CLI checks an actual foreground client process and a new multiplayer join observed by the staging server through an authenticated loopback RCON connection. It **does not** run downloaded Gravit JARs, grant production permission or switch release channels.
 
-## Set up and run
+## Настройка и запуск
 
 1. Create an isolated stage with `.migration-stage.json`, `source-snapshot.json`, `target-snapshot.json` and seven **real test** executables (`probes/{launch,login,join,skins,loader,optional,admin}`) according to the existing MIG10 format. Source and target snapshots must come from actual isolated world, inventory, permission, economy, texture and optional-preset exports; do not type synthetic digests. Use a *test* Minecraft account. Only a successful live join does **not** establish licensing, session validity, visual rendering, permissions or worlds; the separate probes remain necessary.
 2. Start the migrated **test** Java server locally with RCON bound to `127.0.0.1`, `enable-rcon=true`, `broadcast-rcon-to-ops=false`, a strong unique password, and an RCON version supporting `/list uuids`. Do not expose the RCON port on a public interface, forward it to a production host or reuse production credentials. The player must be **offline** before the rehearsal starts.

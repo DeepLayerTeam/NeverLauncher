@@ -35,9 +35,9 @@ Run from `services/api` with the same environment as the API and `LAUNCHER_DATAB
 ```bash
 cd services/api
 go test ./internal/storage ./internal/texturepng ./internal/dbmigrate ./internal/model
-# Full backend test needs the project's Go module dependencies:
+# Полный тест Backend требует зависимости модулей Go проекта:
 go test ./internal/repository ./internal/httpapi
-# PostgreSQL integration fixture for 0.25.3 (separate test DB):
+# Интеграционная проверка PostgreSQL для 0.25.3 (отдельная тестовая БД):
 TEST_PG_DSN_0253='postgres://...' go test ./internal/repository -run TestTextureStorageQuota0253 -count=1
 ```
 

@@ -1,16 +1,16 @@
 # 0.49.1 — аудит работающих Backend / PostgreSQL / Java Host
 
-This is a **running integration test**, not a manifest or a status endpoint test. It does not migrate a Gravit project, publish a release or certify 0.50 GA on its own. It does not modify migration, user, world, extension or release data.
+Это **интеграционный тест работающих компонентов**, а не проверка манифеста или конечной точки статуса. Сам по себе он не переносит проект Gravit, не публикует выпуск и не сертифицирует GA 0.50. Тест не изменяет данные миграций, пользователей, миров, расширений или выпусков.
 
-## предварительные требования
+## Предварительные требования
 
-- A running **PostgreSQL** NeverLauncher Backend with current SQL migrations, an existing project and a previously created Gravit migration run (the run can still be in `source_assessment`).
-- A signed, enabled, **running** Java extension installed in `global` or `project` scope on this Backend. It must expose the already-supported Java Host `health` RPC. The expected host process must be the installation persisted in the same PostgreSQL database.
-- Backend admin token with `settings:manage` and `extension:manage` permissions (also the existing authorization policies). Never put the token on a command line.
-- An operator-trusted executable `psql` and a read-only PostgreSQL account with `SELECT` on `projects`, `migration_runs_0331`, `extension_installs`. The Backend's normal PostgreSQL DSN is **not** appropriate for a read-only audit account; use a separate least-privileged DSN pointing to the same database.
-- A fresh, private output directory. This command refuses to overwrite an existing receipt.
+- Работающий Backend NeverLauncher на **PostgreSQL** с актуальными SQL-миграциями, существующим проектом и ранее созданной операцией миграции Gravit (операция может оставаться на этапе `source_assessment`).
+- Подписанное, включённое и **работающее** расширение Java, установленное в глобальной (`global`) или проектной (`project`) области данного Backend. Оно должно предоставлять существующий RPC `health` Java Host. Ожидаемый процесс Host должен соответствовать установке, сохранённой в той же базе PostgreSQL.
+- Административный токен Backend с правами `settings:manage` и `extension:manage` (при соблюдении существующих политик авторизации). Никогда не указывайте токен в командной строке.
+- Доверенный оператором исполняемый файл `psql` и учётная запись PostgreSQL только для чтения с правом `SELECT` на `projects`, `migration_runs_0331` и `extension_installs`. Обычный DSN PostgreSQL для Backend **не** подходит для учётной записи аудита: используйте отдельный DSN с минимальными полномочиями, указывающий на ту же БД.
+- Новый закрытый каталог вывода. Команда отказывается перезаписывать существующую квитанцию.
 
-## Выполнение на настоящих установленных службах
+## Выполнение на реально установленных службах
 
 ```bash
 export LAUNCHER_POSTGRES_DSN='postgresql://audit_reader@db.example/launcher?sslmode=verify-full'
@@ -25,17 +25,17 @@ GOTOOLCHAIN=local go run . integration-audit \
   --output /private/evidence/live-audit-0491.json
 ```
 
-Use `--scope global` (without `--scope-id`) for global Java installations. `--dsn-env` selects a different variable name; `--psql` accepts an explicitly trusted PostgreSQL client binary. `psql` reads the connection string through its `PGDATABASE` environment, not argv. The tool sets read-only transactions and a connect timeout. The output is an **unsigned** local observation, not a substitute for independent receipts or final signed release acceptance.
+Для глобальных установок Java используйте `--scope global` (без `--scope-id`). Параметр `--dsn-env` выбирает другое имя переменной; `--psql` принимает явно доверенный исполняемый файл клиента PostgreSQL. `psql` получает строку подключения через переменную окружения `PGDATABASE`, а не через аргументы процесса. Инструмент использует транзакции только для чтения и ограничение времени подключения. Вывод представляет собой **неподписанное** локальное наблюдение и не заменяет независимые квитанции либо окончательную приёмку подписанного выпуска.
 
-## Выполненные проверки
+## Выполняемые проверки
 
-1. `/ready` returns HTTP 200 with PostgreSQL repository health and current SQL migrations. The CLI rejects SQLite, unavailable PostgreSQL and schema drift.
-2. The authenticated migration API returns the requested run and project, with `sourceKind=gravit`.
-3. PostgreSQL transaction reads the exact project, migration revision/status/step and enabled extension installation version/generation. No temporary table or shadow migration store is used.
-4. `POST /api/v1/admin/extension-hosts/{extensionId}/probe` executes a real Go → JVM `health` callback, with Backend authorization and **live trust revalidation**, and confirms `RUNNING`, the expected instance and generation.
-5. Independent repeat reads reject a concurrent change to a migration or installed Java extension. Failure produces no `passed` evidence file.
+1. `/ready` возвращает HTTP 200, подтверждает работоспособность репозитория PostgreSQL и актуальность SQL-миграций. CLI отклоняет SQLite, недоступный PostgreSQL и расхождения схемы.
+2. Авторизованный API миграции возвращает запрошенную операцию и проект со значением `sourceKind=gravit`.
+3. Транзакция PostgreSQL считывает точный проект, ревизию/статус/шаг миграции и версию/поколение включённой установки расширения. Временные таблицы или теневое хранилище миграции не используются.
+4. `POST /api/v1/admin/extension-hosts/{extensionId}/probe` действительно вызывает RPC `health` по цепочке Go → JVM, используя авторизацию Backend и **повторную проверку доверия в реальном времени**; подтверждаются статус `RUNNING`, ожидаемый экземпляр и поколение.
+5. Независимые повторные чтения выявляют конкурентное изменение миграции или установленного Java-расширения. При ошибке файл доказательства `passed` не создаётся.
 
-The check verifies one consistent observed state at two moments. It cannot provide an atomic distributed snapshot or guarantee that the state will never change after it returns. Use the existing fenced cutover procedures and independent production migration GA runner for that purpose.
+Проверка подтверждает согласованное наблюдаемое состояние в два момента времени. Она не создаёт атомарный распределённый снимок и не гарантирует неизменность состояния после завершения. Для этого используйте существующие процедуры контролируемого переключения и независимый production-исполнитель приёмки миграции GA.
 
 ## Граница локальной проверки
 
@@ -44,4 +44,4 @@ The check verifies one consistent observed state at two moments. It cannot provi
 sh sdk/java/core/build.sh test
 ```
 
-The tool's HTTP and `psql` mock regression tests prove **failure handling**, not that a real deployment passed. A real PostgreSQL server, Go 1.27.3 Backend, signed installed Java extension and live Gravit project are required before this milestone can be marked independently accepted. The new probe does not grant Java execution or bypass permissions: it permits only the existing health RPC on a running authorized host.
+Регрессионные тесты инструмента с имитациями HTTP и `psql` подтверждают **обработку ошибок**, а не успешное прохождение реального развёртывания. Для независимой приёмки этапа необходимы настоящий PostgreSQL, Backend на Go 1.27.3, подписанное установленное Java-расширение и действующий проект Gravit. Новая операция проверки не даёт дополнительных прав на выполнение Java и не обходит разрешения: она разрешает лишь существующий RPC `health` у работающего авторизованного Host.

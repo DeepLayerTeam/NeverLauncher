@@ -1,14 +1,10 @@
 # 0.31.12 — подписанный помощник App Sandbox для macOS
 
-Updated for 0.43.11: native macOS isolated execution is **not** a general-purpose sandbox for every
-extension package. This stage supports **self-contained, single-file Mach-O**
-`backend` and `cli` targets on macOS x86-64 / Apple Silicon. Java callback
-runtimes, scripts, bundled runtime files, universal Mach-O wrappers and other
-unsupported layouts are denied; no transition to `trusted` occurs.
+Обновлено для 0.43.11: нативное изолированное выполнение в macOS **не является** универсальной песочницей для любого пакета расширения. На этом этапе поддерживаются **самодостаточные однофайловые исполняемые образы Mach-O** для целей `backend` и `cli` на macOS x86-64 / Apple Silicon. Среды обратных вызовов Java, сценарии, дополнительные файлы среды выполнения, универсальные обёртки Mach-O и прочие неподдерживаемые варианты отклоняются; переход в состояние `trusted` не выполняется.
 
-## развёртывание
+## Развёртывание
 
-1. Build helper **on a Mac** with a trusted Developer ID Application certificate:
+1. Соберите вспомогательную программу **на Mac** с доверенным сертификатом Developer ID Application:
 
    ```sh
    export LAUNCHER_MACOS_SANDBOX_TEAM_ID='YOURTEAMID'
@@ -16,62 +12,28 @@ unsupported layouts are denied; no transition to `trusted` occurs.
    ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/launcher/libexec/NeverExtensionSandbox
    ```
 
-2. Configure the API service with `LAUNCHER_MACOS_SANDBOX_HELPER` and
-   `LAUNCHER_MACOS_SANDBOX_TEAM_ID`. The helper must remain in a trusted,
-   non-group-writable directory. Never ship an unsigned fallback.
-3. The server validates the helper's Developer ID chain, Team ID, strict code
-   signature and minimal entitlement set. Missing/overprivileged/unsigned helpers
-   cause an immediate refusal. The helper checks the actual sandbox in its own
-   process **before** accepting the image.
-4. The existing signed NeverExtension policy remains authoritative. Filesystem
-   `shared:<name>`, HTTPS and secrets are accessed through existing scoped Host
-   Protocol operations, never through new macOS entitlements.
+2. Укажите для сервиса API параметры `LAUNCHER_MACOS_SANDBOX_HELPER` и `LAUNCHER_MACOS_SANDBOX_TEAM_ID`. Вспомогательная программа должна находиться в доверенном каталоге без группового доступа на запись. Никогда не распространяйте неподписанный резервный вариант.
+3. Сервер проверяет цепочку Developer ID, Team ID, строгую подпись кода и минимальный набор разрешений. Отсутствие помощника, избыточные привилегии или отсутствие подписи приводят к немедленному отказу. Перед принятием образа помощник проверяет фактическую песочницу **в собственном процессе**.
+4. Действующая подписанная политика NeverExtension остаётся авторитетным источником правил. Доступ к файловой системе `shared:<name>`, HTTPS и секретам осуществляется через существующие операции Host Protocol с ограниченной областью действия, а не через новые разрешения macOS.
 
-## механизм изоляции
+## Механизм изоляции
 
-- Parent transfers the exact installed Mach-O image over a private FD; verifies
-  its Mach-O type/architecture; binds an SHA-256 digest to a bounded transfer.
-- Entitled helper stores it inside **its own** App Sandbox container, creates a
-  private scratch directory, then uses `posix_spawn`. The child inherits the
-  parent's static App Sandbox; it receives neither network entitlements nor
-  access to the Backend working directory. The extension SDK connects over a
-  single inherited Unix socketpair FD (4). No TCP/loopback or general-purpose
-  XPC service is made available to the child.
-- Host API validates exact one-instance IPC identity, normal authorization,
-  policy permissions, and child PID. Closed broker socket never falls back to
-  plain loopback for an isolated macOS instance.
-- The signed helper is identified by a *fixed code-signing identifier*,
-  Apple Team ID and Hardened Runtime, with a minimal App Sandbox entitlement.
-  The executable and all path ancestors must be non-writable by other users.
-- The helper checks the child's **actual** inherited App Sandbox via
-  `sandbox_check(childPID, ...)` before reporting readiness; all unsupported
-  policies and missing signatures fail closed.
-- 0.43.11 supports **maxProcesses=1 only**. Descendants are monitored with
-  libproc at 20 ms intervals and trigger termination. An additional FD owned
-  by the backend provides a liveness watchdog even when the backend crashes.
-  `RLIMIT_AS` and `RLIMIT_CPU` are inherited by the child. The deadline kills
-  its process group; the helper checks for descendants even if they detach.
-- **Process enumeration is detection, not a kernel-enforced hard cap.** A very
-  short-lived or deliberately detached grandchild may evade a sampling interval.
-  macOS has no equivalent of cgroup v2/Job Object in this unprivileged design,
-  and aggregate descendant CPU/memory guarantees are not claimed. Where strict
-  process-tree limits are mandatory, operators must use a different OS-level
-  isolation mechanism rather than relabel this policy as fully certified.
-  No absolute user-mode anti-tamper guarantees.
+- Родительский процесс передаёт точный установленный образ Mach-O через приватный файловый дескриптор, проверяет тип и архитектуру Mach-O и связывает SHA-256 с передачей ограниченного размера.
+- Помощник с необходимыми разрешениями помещает образ в **собственный** контейнер App Sandbox, создаёт приватный временный каталог и запускает `posix_spawn`. Дочерний процесс наследует статическую App Sandbox родителя и не получает ни сетевых разрешений, ни доступа к рабочему каталогу Backend. SDK расширения подключается через единственную унаследованную пару Unix-сокетов (дескриптор 4). Дочернему процессу не предоставляются TCP/loopback и универсальная служба XPC.
+- Host API проверяет точный идентификатор IPC единственного экземпляра, стандартную авторизацию, разрешения политики и PID дочернего процесса. При закрытии сокета брокера изолированный экземпляр macOS не переключается на обычный loopback.
+- Подписанный помощник идентифицируется по *фиксированному идентификатору подписи кода*, Apple Team ID и Hardened Runtime с минимальным разрешением App Sandbox. Исполняемый файл и все родительские каталоги пути не должны быть доступны другим пользователям на запись.
+- До сообщения о готовности помощник проверяет **фактически унаследованную** дочерним процессом App Sandbox через `sandbox_check(childPID, ...)`. Для неподдерживаемых политик и отсутствующих подписей действует принцип отказа по умолчанию.
+- Версия 0.43.11 поддерживает **только `maxProcesses=1`**. Дочерние процессы отслеживаются через libproc каждые 20 мс, а при их появлении выполнение прекращается. Дополнительный дескриптор, принадлежащий Backend, обеспечивает контроль живучести даже при аварийном завершении Backend. Дочерний процесс наследует `RLIMIT_AS` и `RLIMIT_CPU`. По истечении срока выполнения завершается группа процессов; помощник проверяет наличие потомков, даже если они отсоединились.
+- **Перечисление процессов служит обнаружению, а не жёсткому ограничению на уровне ядра.** Очень короткоживущий или намеренно отсоединённый дочерний процесс второго уровня может остаться незамеченным между проверками. В данной непривилегированной архитектуре macOS нет аналога cgroup v2/Job Object; гарантии общего потребления CPU/памяти всеми потомками не заявляются. Если необходимы строгие ограничения дерева процессов, операторы должны использовать другой механизм изоляции уровня ОС, а не объявлять эту политику полностью сертифицированной. Абсолютных гарантий защиты от вмешательства на уровне пользовательского пространства нет.
 
-## обязательная приёмка macOS
+## Обязательная приёмка macOS
 
-Do not label this release fully production-certified until a signed helper has
-been built and its child verified on actual macOS hardware, including:
+Нельзя объявлять выпуск полностью сертифицированным для production, пока подписанный помощник не собран и его дочерний процесс не проверен на реальном оборудовании macOS, включая:
 
-- `codesign --verify --strict`, correct Team ID and only App Sandbox entitlement.
-- A self-contained extension uses allowed Host Protocol operations; direct
-  connections, file reads/writes outside container and host environment are denied.
-- Child `exec`/`posix_spawn` retains App Sandbox. No direct host network fallback.
-- Malformed image, wrong digest, unsupported target, wrong signature, missing
-  App Sandbox, `sandbox_check` failure and invalid IPC all fail closed.
-- Timeouts, crash cleanup and behavior of spawned/detached children are measured.
+- `codesign --verify --strict`, правильный Team ID и только разрешение App Sandbox.
+- Самодостаточное расширение использует разрешённые операции Host Protocol; прямые подключения, чтение/запись за пределами контейнера и доступ к окружению хоста запрещены.
+- Дочерний `exec`/`posix_spawn` сохраняет App Sandbox. Резервного прямого доступа к сети хоста нет.
+- Некорректный образ, неправильный хеш, неподдерживаемая цель, неверная подпись, отсутствие App Sandbox, ошибка `sandbox_check` и недопустимый IPC приводят к отказу по умолчанию.
+- Измерены тайм-ауты, очистка после аварий и поведение созданных и отсоединённых дочерних процессов.
 
-Apple documents inherited static sandboxes for child processes and recommends
-XPC when process-level privilege separation is needed. This helper provides a
-sandbox boundary but **does not claim XPC-level privilege separation**.
+Документация Apple описывает наследование статических песочниц дочерними процессами и рекомендует XPC для разграничения привилегий на уровне процессов. Этот помощник создаёт границу песочницы, но **не заявляет разграничение привилегий уровня XPC**.

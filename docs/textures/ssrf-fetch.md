@@ -39,7 +39,7 @@ A strong deployment additionally restricts outbound API container egress with an
 ```bash
 cd services/api
 go test -count=1 ./internal/texturefetch ./internal/texturepng ./internal/storage ./internal/dbmigrate
-# Requires project's Go dependencies and a test PostgreSQL instance:
+# Требуются зависимости Go проекта и тестовый экземпляр PostgreSQL:
 go test ./internal/httpapi ./internal/repository
 ```
 

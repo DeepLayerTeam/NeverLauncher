@@ -1,27 +1,27 @@
 # NeverLauncher 0.48.4 — Java-сервисы Backend
 
-Java extensions call the existing authenticated Go Extension Host Broker through `ExtensionContext.runtime().backend()`; neither the Java SDK nor extensions connect to the database or obtain administrative tokens. No new public REST endpoints or untrusted classpath changes are necessary.
+Java-расширения обращаются к существующему авторизованному Go Extension Host Broker через `ExtensionContext.runtime().backend()`. Ни Java SDK, ни расширения не подключаются к базе данных и не получают административных токенов. Новые публичные REST-маршруты и изменения недоверенного classpath не требуются.
 
-This release adds **real read-only** services backed by `repository.Repository` and `repository.DurableControlPlane`:
+Этот выпуск добавляет **настоящие службы только для чтения** на базе `repository.Repository` и `repository.DurableControlPlane`:
 
-| SDK call | Host capability | Grant |
+| Вызов SDK | Возможность Host | Разрешение |
 | --- | --- | --- |
-| `projects(offset, limit)` | `project.list` | global `project:read` and global extension scope |
-| `project(projectId)` | `project.get` | `project:read` for project |
-| `profiles(projectId, offset, limit)`, `profile(projectId, id)` | `profile.list`, `profile.get` | `project:read` for project |
-| `channels(projectId, offset, limit)`, `channel(projectId, name)` | `channel.list`, `channel.get` | `release:read` for project |
-| `releases(projectId, offset, limit)`, `release(projectId, releaseId)` | `release.page`, `release.get` | `release:read` for project |
-| `job(projectId, jobId)` | `job.get` | `project:read` for project |
+| `projects(offset, limit)` | `project.list` | глобальное `project:read` и глобальная область расширения |
+| `project(projectId)` | `project.get` | `project:read` для проекта |
+| `profiles(projectId, offset, limit)`, `profile(projectId, id)` | `profile.list`, `profile.get` | `project:read` для проекта |
+| `channels(projectId, offset, limit)`, `channel(projectId, name)` | `channel.list`, `channel.get` | `release:read` для проекта |
+| `releases(projectId, offset, limit)`, `release(projectId, releaseId)` | `release.page`, `release.get` | `release:read` для проекта |
+| `job(projectId, jobId)` | `job.get` | `project:read` для проекта |
 
-A `HostSession` negotiates capabilities at hello. Permissions remain enforced **server-side on every call**, via `permissionAllowed0207` and live trust checks, and revalidated before a successful response is released (`revalidateCapability04312`). Extension scope is enforced independently of permission grants; foreign-project records are filtered again after repository lookup. Revoke is effective on the next call. A global extension requires global grants to enumerate project IDs; a project-scoped installation cannot list other projects.
+`HostSession` согласует возможности при hello. Разрешения по-прежнему проверяются **на сервере при каждом вызове** через `permissionAllowed0207` и действующие проверки доверия, а перед выдачей успешного ответа выполняется повторная проверка (`revalidateCapability04312`). Область расширения контролируется независимо от выданных разрешений; записи чужих проектов повторно фильтруются после поиска в репозитории. Отзыв начинает действовать при следующем вызове. Глобальному расширению необходимы глобальные права для перечисления ID проектов; установка в области проекта не может перечислить другие проекты.
 
-The job operation returns **status metadata only**; `payload`, `result`, `actorId`, `leaseToken`, `lastError`, and other potentially sensitive fields are never serialized. Jobs without the exact project ID requested return 404. No job creation, modification or cancellation authority is introduced.
+Операция получения задания возвращает **только метаданные состояния**; `payload`, `result`, `actorId`, `leaseToken`, `lastError` и другие потенциально конфиденциальные поля никогда не сериализуются. Для задания с ID проекта, не совпадающим с запрошенным, возвращается 404. Права создавать, изменять или отменять задания не добавлены.
 
-`release.page` returns release metadata without potentially large signed manifests; `release(projectId, releaseId)` returns the complete manifest through `release.get`.
+`release.page` возвращает метаданные выпуска без потенциально больших подписанных манифестов; `release(projectId, releaseId)` возвращает полный манифест через `release.get`.
 
-List requests use a bounded `offset` / `limit` (1–50, default 20 in Go; maximum offset 1,000,000), deterministic sort and an optional `nextOffset`. The SDK returns immutable typed Java records and checks project identity on decoded responses. All calls retain the existing 3-second client deadline, 1 MiB response bound, Host authentication, network policy, audit and execution deadline. This is not an efficient cursor-based SQL repository API for millions of rows; underlying repository enumeration is still in-memory and cannot yet be considered high-volume pagination.
+Списки запрашиваются с ограниченными `offset`/`limit` (1–50, значение Go по умолчанию 20; максимальное смещение 1 000 000), детерминированной сортировкой и необязательным `nextOffset`. SDK возвращает неизменяемые типизированные записи Java и проверяет идентичность проекта после декодирования ответа. Все вызовы сохраняют существующее ограничение клиента в 3 секунды, предел ответа 1 МиБ, аутентификацию Host, сетевую политику, аудит и время выполнения. Это пока не эффективный SQL API с постраничной курсорной выдачей для миллионов строк: базовый репозиторий всё ещё перечисляет объекты в памяти, поэтому большие объёмы не поддерживаются на заявленном уровне.
 
-Example (inside `Extension.start()`):
+Пример (внутри `Extension.start()`):
 
 ```java
 BackendServices backend = context.runtime().backend();
@@ -32,12 +32,12 @@ for (BackendServices.Profile profile : profiles.items()) {
 }
 ```
 
-Declare `project:read` / `release:read` in the signed extension manifest, grant them for the correct scope, then use the negotiated Host capabilities. Missing/revoked grants fail closed; they are **never** replaced by a backend service account. Data writes, job enqueue and privileged release operations are deliberately not exposed under read permissions.
+Объявите `project:read`/`release:read` в подписанном манифесте расширения, выдайте их для нужной области и используйте согласованные возможности Host. Отсутствующие/отозванные права вызывают отказ и **никогда** не заменяются правами служебной учётной записи Backend. Запись данных, постановка заданий и привилегированные операции с выпусками намеренно недоступны через разрешения чтения.
 
-## тесты и ограничения
+## Тесты и ограничения
 
-- `sh sdk/java/core/build.sh test` includes real HTTP calls from Java SDK to an authenticated loopback broker fixture, typed response decoding, permission denial, revoked grants and malformed cross-scope response rejection.
-- `go test -race ./internal/extensionhost -run TestJavaBackendServicesBroker0484` runs against the actual Go Host Broker, memory repository with real projects/profiles/channels/releases and durable job; verifies project boundaries, grant revocation and job redaction.
-- `.github/workflows/java-backend-services-0484.yml` runs Java 17/21 on Linux/macOS and Go 1.27.3 broker/security suites. External CI must actually execute before the corresponding matrix is claimed passed.
+- `sh sdk/java/core/build.sh test` включает настоящие HTTP-вызовы из Java SDK к аутентифицированному тестовому брокеру loopback, декодирование типизированного ответа, отказ в доступе, отзыв разрешений и отклонение ошибочного ответа из чужой области.
+- `go test -race ./internal/extensionhost -run TestJavaBackendServicesBroker0484` выполняется на настоящем Go Host Broker с репозиторием в памяти, содержащим реальные проекты/профили/каналы/выпуски и устойчивое задание; проверяет границы проектов, отзыв прав и скрытие полей задания.
+- `.github/workflows/java-backend-services-0484.yml` запускает Java 17/21 на Linux/macOS и наборы брокера/безопасности Go 1.27.3. Прежде чем объявлять соответствующую матрицу пройденной, внешний CI должен фактически выполниться.
 
-**Release certification:** feature-level Java tests alone do not certify production GA. Full Go 1.27.3 and Java 17/21 jobs, production PostgreSQL migration/upgrade, native signed artifacts and independent release gates inherited from 0.48.0 remain required. Keep the existing production admission gate closed until independently verified.
+**Сертификация выпуска:** отдельных Java-тестов функции недостаточно для production GA. По-прежнему обязательны полные задания Go 1.27.3 и Java 17/21, миграция/обновление production PostgreSQL, нативные подписанные артефакты и независимые проверки выпуска, унаследованные от 0.48.0. Сохраняйте закрытым существующий production-барьер допуска до независимого подтверждения.

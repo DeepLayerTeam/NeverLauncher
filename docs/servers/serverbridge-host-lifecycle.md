@@ -1,8 +1,8 @@
 # ServerBridge Host 0.41.4 — проверенный жизненный цикл JVM
 
-The Host Supervisor executes the real configured Java executable. Minecraft `stop` is sent to **stdin** of the verified child process, never to a historical PID. The service must own an exclusive host session before starting a JVM. The remote host API remains narrowly scoped to `start`, `stop`, `restart`, and `status` — it is not a shell interface.
+Host Supervisor запускает реально настроенный исполняемый файл Java. Команда Minecraft `stop` отправляется в **стандартный ввод (stdin)** проверенного дочернего процесса, а не процессу по устаревшему PID. До запуска JVM служба должна получить исключительное владение сеансом узла. Удалённый API узла ограничен операциями `start`, `stop`, `restart` и `status`; это **не** интерфейс командной оболочки.
 
-## установка, запуск и наблюдение
+## Установка, запуск и наблюдение
 
 ```bash
 nl server-bridge host configure --server-root /srv/minecraft/paper --platform paper \
@@ -16,17 +16,17 @@ nl server-bridge host restart --server-root /srv/minecraft/paper
 nl server-bridge host stop --server-root /srv/minecraft/paper
 ```
 
-The `start` exit code is zero only when the supervisor **and Java child** are alive with verified OS identities. `running` here means the JVM process is alive; it does **not** prove that Paper has finished loading worlds or that players can join. Game readiness is a separate ServerBridge heartbeat/readiness check. If startup times out, inspect `host status` and logs before issuing another action. Do **not** blindly retry an uncertain RemoteControl operation with a different idempotency key.
+Команда `start` завершается с нулевым кодом только тогда, когда работают **и супервизор, и дочерний процесс Java** с проверенными идентификаторами процессов ОС. Статус `running` означает, что процесс JVM жив; он **не** подтверждает завершение загрузки миров Paper или возможность подключения игроков. Готовность игры проверяется отдельно сигналом активности/готовности ServerBridge. Если запуск превысил время ожидания, сначала изучите `host status` и журналы, а затем решайте, нужно ли другое действие. **Не** повторяйте вслепую неопределённую операцию RemoteControl с новым ключом идемпотентности.
 
-## семантика завершения и аварий
+## Завершение работы и аварии
 
-- A normal `stop` delivers `stop\n` to the running Java process's stdin, waits for it to exit and persists the final runtime state. A SIGTERM sent to the Host Supervisor is handled through the same graceful child shutdown path.
-- When no graceful exit occurs within `stopTimeoutSeconds`, the supervisor escalates to the process group **only after** verifying the OS process identity; the stop method records `terminate` or `kill`. This is a last resort and is **not** equivalent to a confirmed Minecraft world save.
-- When the JVM terminates unexpectedly, the supervisor saves the exit code and crash count, and applies `restart-policy`, `max-restarts`, `restart-backoff-ms`, and `crash-window-seconds`. Stop or SIGTERM during backoff prevents the pending new Java process.
-- A supervisor that dies abruptly cannot safely adopt a still-running child from an earlier process session. The next start fails closed. Inspect/stop the orphan **manually**, verifying the process identity and its data, then start a new supervised JVM.
-- The RemoteControl idempotency receipt and Backend command journal still govern the action **at most once**; observed OS state is not proof that an arbitrary Minecraft command has executed. An uncertain receipt remains uncertain, and does not authorize automatic replay.
+- При обычной операции `stop` строка `stop\n` передаётся в stdin работающего процесса Java. Супервизор ожидает его завершения и сохраняет конечное состояние Runtime. Полученный супервизором SIGTERM обрабатывается через тот же путь корректного завершения дочернего процесса.
+- Если в течение `stopTimeoutSeconds` корректное завершение не произошло, супервизор переходит к принудительному завершению группы процессов **только после** проверки идентичности процесса ОС. Способ остановки фиксируется как `terminate` или `kill`. Это крайняя мера, **не** равнозначная подтверждённому сохранению мира Minecraft.
+- При неожиданном завершении JVM супервизор сохраняет код выхода и число сбоев, применяя настройки `restart-policy`, `max-restarts`, `restart-backoff-ms` и `crash-window-seconds`. Команда остановки или SIGTERM во время задержки перед перезапуском отменяет создание следующего процесса Java.
+- Супервизор, аварийно завершивший работу, не может безопасно принять под управление всё ещё работающий дочерний процесс из прежнего сеанса. Следующий запуск отклоняется. Проверьте и остановите осиротевший процесс **вручную**, удостоверившись в его идентичности и состоянии данных; затем запустите новую JVM под управлением супервизора.
+- Квитанция идемпотентности RemoteControl и журнал команд Backend по-прежнему гарантируют выполнение действия **не более одного раза**. Наблюдаемое состояние ОС не доказывает исполнение произвольной команды Minecraft. Неопределённая квитанция остаётся неопределённой и не разрешает автоматический повтор.
 
-## проверка в рабочей копии исходников
+## Проверка в рабочей копии исходников
 
 ```bash
 cd cli
@@ -34,4 +34,4 @@ GOTOOLCHAIN=local go test ./cmd/launcher -run 'TestHostLifecycle0414' -count=1 -
 GOTOOLCHAIN=local go test ./cmd/launcher -run 'TestHost0282|TestJVM0283' -count=1
 ```
 
-On Linux with `java`, `javac`, and `jar`, these tests compile and run an actual Java JAR, verify the OS executable (`/proc/<pid>/exe`), check Java-authored boot/exit/save markers, and test the **built CLI** rather than trusting mocked subprocesses. The integration fixtures use a small Java test server and do not claim to validate a commercial Paper/Folia server distribution. Full Minecraft-version compatibility and backend/host cross-node recovery require additional lab testing.
+В Linux при наличии `java`, `javac` и `jar` эти тесты компилируют и запускают настоящий Java JAR, проверяют исполняемый файл процесса ОС (`/proc/<pid>/exe`), проверяют записанные Java маркеры загрузки, завершения и сохранения и испытывают **собранный CLI**, а не имитации подпроцессов. Интеграционные тестовые данные используют небольшой Java-сервер и не подтверждают совместимость с коммерческой сборкой Paper/Folia. Полная проверка совместимости версий Minecraft и восстановления Backend/Host между узлами требует дополнительных лабораторных испытаний.

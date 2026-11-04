@@ -51,9 +51,9 @@ A `shared:<name>` grant does not grant direct mount access. Paths are slash-sepa
 ```sh
 cd services/api
 GOPROXY=off go test -race -tags launcher_nopgx -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
-# On CI with all external Go dependencies:
+# В CI со всеми внешними зависимостями Go:
 go test -race -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
-# Only on a deliberately provisioned, unprivileged Linux runner with delegated cgroups v2:
+# Только на специально подготовленном непривилегированном Linux-исполнителе с делегированными cgroups v2:
 NL_RUN_LIVE_LINUX_SANDBOX=1 go test -tags launcher_nopgx -v ./internal/linuxsandbox -run TestLinuxIsolationLive0319
 ```
 

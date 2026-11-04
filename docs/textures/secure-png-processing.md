@@ -1,41 +1,20 @@
 # 0.25.2 — безопасная обработка PNG
 
-## Implemented
+## Реализовано
 
-The authenticated `POST /api/v1/me/textures/{kind}/upload` accepts a **single**
-`file` multipart part with `expectedRevision`, optional `model`, `visibility`
-and optional `profileUuid` assertion. The Minecraft identity is **always**
-resolved from the user's authenticated session. The verified PNG is normalized,
-stored using SHA-256 as its key and assigned atomically in PostgreSQL.
-The existing `texture_blobs` metadata and revision system are used without
-creating a competing set of identities or overwriting legacy URLs.
+Авторизованный `POST /api/v1/me/textures/{kind}/upload` принимает **одну** часть multipart `file` с `expectedRevision`, необязательными `model`, `visibility` и подтверждением `profileUuid`. Идентичность Minecraft **всегда** определяется из аутентифицированного сеанса пользователя. Проверенный PNG нормализуется, сохраняется с ключом SHA-256 и атомарно назначается в PostgreSQL. Используются существующие метаданные `texture_blobs` и система ревизий, без создания конкурирующих идентичностей и перезаписи старых URL.
 
-- File body: <= 4 MiB; total multipart body: <= 4 MiB + 16 KiB.
-- Decoding: full PNG decoding **after** checking all chunks' CRCs, ordering,
-  completion and rejecting APNG and unknown critical chunks; no trailing bytes.
-- Memory and decompression bounds: <= 1,048,576 decoded pixels, <= 1024px on
-  either axis; geometry must be an integer scale of original Minecraft texture:
-  skin 64×64 (classic/slim), legacy skin 64×32 (classic only), cape 64×32,
-  or corresponding integer high-resolution multiples up to the pixel limits.
-- Normalization: deterministic NRGBA PNG encoding with ancillary metadata
-  discarded and fully transparent pixel color channels set to zero.
-- Storage: normalized content digest is the object key. Local writes use a
-  same-directory fsynced temp file followed by atomic hard-link, never exposing
-  partial PNGs; the configured existing S3 backend is also supported.
-- Database: only verified blobs are referenced; transaction enforces server-
-  proven UUID ownership, per-project upload policy, a single-object size
-  limit, and optimistic revision CAS (`0` means create-only; otherwise update
-  the current revision). Changes are recorded in history and audit events.
-- Reads: `GET /api/v1/me/textures/{kind}/image` previews an owner's managed
-  texture, even when private. `GET /api/v1/textures/blob/{sha256}` serves only
-  a referenced **active public** blob. Both verify bytes against SHA-256;
-  private views use `no-store`, public views revalidate after 60 seconds.
-  Content is served as PNG with `nosniff` and quoted ETag. The public endpoint
-  is only for published textures, not a way to enumerate private uploads.
+- Содержимое файла: не более 4 МиБ; весь multipart-запрос: не более 4 МиБ + 16 КиБ.
+- Декодирование: полное декодирование PNG **после** проверки CRC всех блоков, их порядка и полноты, с отклонением APNG и неизвестных критических блоков; дополнительные байты в конце запрещены.
+- Память и распаковка: не более 1 048 576 декодированных пикселей, не более 1024 пикселей по каждой оси. Геометрия должна быть целочисленным масштабом исходной текстуры Minecraft: скин 64×64 (обычный/узкий), старый скин 64×32 (только обычный), плащ 64×32 либо соответствующие кратные варианты высокого разрешения в пределах лимита пикселей.
+- Нормализация: детерминированное кодирование NRGBA PNG с удалением вспомогательных метаданных и обнулением цветовых каналов полностью прозрачных пикселей.
+- Хранилище: ключом объекта служит дайджест нормализованного содержимого. Локальная запись создаёт временный файл в том же каталоге, синхронизирует его и атомарно создаёт жёсткую ссылку, никогда не открывая доступ к неполному PNG. Поддерживается также существующий настроенный S3 Backend.
+- База данных: ссылки допускаются только на проверенные объекты. Транзакция подтверждает владение UUID на стороне сервера, проектную политику загрузки, предел размера одного объекта и оптимистическую ревизию CAS (`0` — только создание, иначе обновление текущей ревизии). Изменения фиксируются в истории и событиях аудита.
+- Чтение: `GET /api/v1/me/textures/{kind}/image` показывает управляемую текстуру владельцу, включая закрытые текстуры. `GET /api/v1/textures/blob/{sha256}` выдаёт лишь связанный **активный публичный** объект. Оба маршрута сверяют байты с SHA-256; закрытые ответы используют `no-store`, публичные перепроверяются через 60 секунд. Данные выдаются как PNG с `nosniff` и заключённым в кавычки ETag. Публичный маршрут предназначен только для опубликованных текстур, а не для перечисления закрытых загрузок.
 
-## пример
+## Пример
 
-Get the current CAS revision from `GET /api/v1/me/textures`, then:
+Получите текущую ревизию CAS из `GET /api/v1/me/textures`, затем выполните:
 
 ```bash
 curl -fS -X POST "$API/api/v1/me/textures/skin/upload" \
@@ -44,33 +23,15 @@ curl -fS -X POST "$API/api/v1/me/textures/skin/upload" \
   -F 'file=@skin.png;type=image/png'
 ```
 
-For replacement, use the `revision` returned by the previous upload or read.
-If a legacy URL-based assignment exists its revision starts at `1`, not `0`.
-A stale revision returns **409**, a disallowed cape returns **403**, malformed
-PNG returns **422**, and size-limit violations return **413**.
+Для замены используйте `revision` из предыдущей загрузки или чтения. Если уже существует назначение через старый URL, ревизия начинается с `1`, а не с `0`. Устаревшая ревизия возвращает **409**, запрещённый плащ — **403**, некорректный PNG — **422**, превышение размера — **413**.
 
-## развёртывание
+## Развёртывание
 
-1. Back up PostgreSQL and the existing storage root / S3 bucket. Configure a
-   **persistent** storage volume or bucket; loss of this data is not repaired
-   by only restoring database metadata.
-2. Apply immutable migration `0068_texture_upload_0252.sql` through the
-   ordinary migration engine before routing traffic to 0.25.2.
-3. Ensure `Config.PublicURL` is the correct public HTTPS API origin; the
-   canonical Yggdrasil texture URL points to `/api/v1/textures/blob/{sha256}`.
-4. Test a valid skin upload, read, replacement, stale CAS, foreign user,
-   denied/granted cape, malformed PNG, compression bomb, private preview,
-   and read from your **configured** local/S3 storage. Run PostgreSQL tests
-   with `TEST_PG_DSN_0252` in an isolated test database.
+1. Создайте резервные копии PostgreSQL и существующего корневого каталога Storage/бакета S3. Используйте **постоянный** том или бакет: восстановление одних метаданных БД не компенсирует утрату этих файлов.
+2. Примените неизменяемую миграцию `0068_texture_upload_0252.sql` штатным механизмом миграций до направления трафика на 0.25.2.
+3. Проверьте, что `Config.PublicURL` содержит правильный публичный HTTPS-источник API. Канонический адрес текстуры Yggdrasil указывает на `/api/v1/textures/blob/{sha256}`.
+4. Проверьте загрузку правильного скина, чтение, замену, устаревшую CAS-ревизию, постороннего пользователя, запрещённый/разрешённый плащ, некорректный PNG, архивную бомбу сжатия, закрытый просмотр и чтение из **настроенного** локального/S3 Storage. Запустите PostgreSQL-тесты с `TEST_PG_DSN_0252` в изолированной тестовой базе.
 
-## явно обозначенная незавершённая работа
+## Явно обозначенная незавершённая работа
 
-0.25.2 implements secure ingestion and delivery; it does **not** claim full
-T03 quotas, S3 object lifecycle/cleanup, backup restore certification,
-revocation of already cached public images, official Minecraft texture APIs,
-Yggdrasil RSA signatures, Desktop 3D preview or Admin entitlement UI.
-A failed DB commit can leave an unreferenced content-addressed object until
-T03 garbage collection. Public images may remain in an upstream cache for up
- to 60 seconds when changing visibility. Configure CDN rules accordingly.
-The 0.25.6 protocol-compatibility release must separately certify that the
-Minecraft client accepts the resulting texture property and signature format.
+Версия 0.25.2 реализует безопасный приём и выдачу текстур, но **не** заявляет полную поддержку квот T03, жизненного цикла/очистки объектов S3, сертифицированного восстановления резервных копий, отзыва уже закэшированных публичных изображений, официального API текстур Minecraft, подписей RSA Yggdrasil, трёхмерного предпросмотра Desktop или интерфейса прав в Admin. При неудачном коммите БД несвязанный объект с ключом по содержимому может остаться до сборки мусора T03. При изменении видимости публичные изображения могут сохраняться в вышестоящем кэше до 60 секунд. Настройте правила CDN с учётом этого. Выпуск совместимости протокола 0.25.6 должен отдельно подтвердить, что клиент Minecraft принимает полученный формат свойства текстуры и подписи.

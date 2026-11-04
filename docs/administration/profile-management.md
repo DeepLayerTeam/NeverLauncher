@@ -1,76 +1,40 @@
 # Launcher 0.22.5 — управление профилями
 
-## реальные промышленные сценарии
+## Реальные производственные сценарии
 
-The v2 profile is stored in the existing `profiles` table and append-only
-`profile_revisions_0221` history. Clone, import and preset creation all call
-`CreateProfileExclusive0225`: a separate insert transaction for PostgreSQL or
-one profile mutex critical section for MemoryRepository. A duplicate ID returns
-HTTP 409 **without modifying the existing profile**. A SQL transaction records
-profile head and revision 1 together, rolling both back on error. No schema
-migration is needed: published v1/v2 manifests remain intact.
+Профиль v2 хранится в существующей таблице `profiles` и истории `profile_revisions_0221`, доступной только для добавления. Клонирование, импорт и создание из шаблона вызывают `CreateProfileExclusive0225`: отдельную транзакцию INSERT в PostgreSQL либо критическую секцию с блокировкой профиля в MemoryRepository. Повторяющийся ID возвращает HTTP 409 **без изменения существующего профиля**. SQL-транзакция совместно записывает головную ревизию и ревизию 1, откатывая обе при ошибке. Миграция схемы не требуется: опубликованные манифесты v1/v2 сохраняются без изменений.
 
-Administration UI → **Profiles → Управление профилями** supports selecting a
-source profile in the grid, cloning a selected revision, downloading an export,
-importing a `.json` export, comparing revisions and creating a new profile from
-a preset. Permissions are checked server-side using project:write for all
-operations; each creation writes an audit event.
+В интерфейсе **Admin → Профили → Управление профилями** можно выбрать исходный профиль в таблице, клонировать выбранную ревизию, скачать экспорт, импортировать экспорт `.json`, сравнить ревизии и создать профиль из шаблона. Сервер проверяет `project:write` для всех операций, каждое создание записывает событие аудита.
 
-## примеры API
+## Примеры API
 
-For the following examples the operator must be authenticated and authorized
-for `project:write` on `demo-project`.
+В примерах оператор должен быть аутентифицирован и иметь право `project:write` для `demo-project`.
 
-- `POST /api/v1/admin/projects/demo-project/profiles/vanilla/clone`
-  JSON `{"id":"vanilla-copy","name":"Vanilla copy","sourceRevision":1}`.
-  Omit `sourceRevision` to clone the current immutable profile revision.
-- `GET /api/v1/admin/projects/demo-project/profiles/vanilla/export?revision=1`
-  downloads JSON containing `{"format":"launcher.profile.v1", "snapshot":{...}}`.
-- `POST /api/v1/admin/projects/demo-project/profiles/import`
-  JSON `{"id":"imported","name":"Imported","bundle":<exported JSON object>}`.
-- `GET /api/v1/admin/projects/demo-project/profiles/vanilla/diff?fromRevision=1&toRevision=2`
-  returns a field-by-field comparison. Without query parameters, compares
-  the penultimate revision with the latest; another profile can be selected with
-  `againstProfileId`.
-- `GET /api/v1/admin/profile-presets` lists supported preset metadata.
-- `POST /api/v1/admin/projects/demo-project/profiles/from-preset`
-  JSON `{"id":"forge-new","presetId":"forge"}`. An optional `name` overrides
-  the preset's displayed name.
+- `POST /api/v1/admin/projects/demo-project/profiles/vanilla/clone` с JSON `{"id":"vanilla-copy","name":"Vanilla copy","sourceRevision":1}`. Если `sourceRevision` не указана, клонируется текущая неизменяемая ревизия профиля.
+- `GET /api/v1/admin/projects/demo-project/profiles/vanilla/export?revision=1` загружает JSON с `{"format":"launcher.profile.v1", "snapshot":{...}}`.
+- `POST /api/v1/admin/projects/demo-project/profiles/import` с JSON `{"id":"imported","name":"Imported","bundle":<exported JSON object>}`.
+- `GET /api/v1/admin/projects/demo-project/profiles/vanilla/diff?fromRevision=1&toRevision=2` возвращает сравнение отдельных полей. Без параметров запроса сравниваются предпоследняя и последняя ревизии; другой профиль выбирается через `againstProfileId`.
+- `GET /api/v1/admin/profile-presets` возвращает список метаданных поддерживаемых шаблонов.
+- `POST /api/v1/admin/projects/demo-project/profiles/from-preset` с JSON `{"id":"forge-new","presetId":"forge"}`. Необязательное поле `name` переопределяет отображаемое имя шаблона.
 
-Presets initialize profile metadata and loader selection (`vanilla`, `fabric`,
-`quilt`, `forge`, `neoforge`, or `vanilla-lite`). They do not automatically
-install or publish a Minecraft build. Files and signatures are still supplied
-and checked by the existing release pipeline; workspace scanning/build is P06.
+Шаблоны инициализируют метаданные профиля и выбор загрузчика (`vanilla`, `fabric`, `quilt`, `forge`, `neoforge` или `vanilla-lite`). Они не устанавливают и не публикуют автоматически сборку Minecraft. Файлы и подписи по-прежнему передаются и проверяются существующим механизмом выпуска; сканирование/сборка в рабочем пространстве относится к P06.
 
-## безопасность и совместимость
+## Безопасность и совместимость
 
-- The export format is allowlisted to immutable `ProfileSpec` public metadata.
-  It cannot carry project roles, access grants, secrets, keys or signed releases.
-- Source snapshots and SHA-256 digests are validated before clone or import;
-  changing an exported spec without its digest is rejected.
-- Import copies loader/preset/description but assigns **new ID, project ID,
-  name, digest and revision**; `isDefault` is forced to `false` to prevent
-  silently overriding the project's default profile.
-- New profile IDs have a strict identifier grammar. Unknown JSON properties
-  are rejected. Invalid or missing source revisions return an error.
-- No old signed manifest is altered. Changes to the source after cloning do
-  not affect the destination; editing the destination creates its own history.
-- Restoring a previous revision does not rewrite history; copying it to a new
-  profile ID is supported with clone and `sourceRevision`.
+- Формат экспорта ограничен открытыми неизменяемыми метаданными `ProfileSpec`. Он не может содержать проектные роли, права доступа, секреты, ключи или подписанные выпуски.
+- Снимки источника и дайджесты SHA-256 проверяются до клонирования/импорта; изменение экспортированной спецификации без соответствующего дайджеста отклоняется.
+- Импорт копирует загрузчик, шаблон и описание, но назначает **новые ID, ID проекта, имя, дайджест и ревизию**. `isDefault` принудительно устанавливается в `false`, чтобы не подменить незаметно стандартный профиль проекта.
+- Новые ID профилей должны отвечать строгому синтаксису идентификаторов. Неизвестные свойства JSON отклоняются. Недействительная или отсутствующая ревизия источника приводит к ошибке.
+- Старые подписанные манифесты не изменяются. Изменение исходного профиля после клонирования не влияет на копию; редактирование копии создаёт собственную историю.
+- Восстановление прежней ревизии не переписывает историю: её можно скопировать в новый ID профиля через клонирование с `sourceRevision`.
 
-## проверка
+## Проверка
 
-With Go installed and dependencies available, run:
+При установленных Go и зависимостях выполните:
 
 ```bash
 cd services/api
 go test ./internal/model ./internal/repository ./internal/httpapi
 ```
 
-The isolated `model` and `repository` suites can run offline with
-`GOPROXY=off go test -tags launcher_nopgx ./internal/model ./internal/repository`.
-The nopgx build tag excludes the PostgreSQL driver; it cannot certify SQL
-behavior. Before declaring a production GA, additionally run full API tests,
-PostgreSQL integration tests (including parallel conflicting profile inserts),
-Admin `npm run build` and browser E2E against authenticated backend. Never use
-the offline build tag for production binaries.
+Изолированные наборы `model` и `repository` могут работать без сети с `GOPROXY=off go test -tags launcher_nopgx ./internal/model ./internal/repository`. Тег сборки nopgx исключает драйвер PostgreSQL и **не** подтверждает правильность SQL-поведения. До объявления production GA дополнительно запустите полные тесты API, интеграционные проверки PostgreSQL (включая конкурентное создание профилей с конфликтующими ID), `npm run build` для Admin и браузерные E2E с авторизованным Backend. Никогда не используйте офлайн-тег сборки для production-бинарников.

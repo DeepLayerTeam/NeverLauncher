@@ -22,10 +22,10 @@ This is a **working, deliberately limited source-port adapter** for GravitLaunch
 sh sdk/java/gravit-compat/build.sh test
 sh examples/extensions/gravit-compat/build.sh
 python3 examples/extensions/gravit-compat/test-runner.py
-# Generic real source-port builder and signed-package workflow:
+# Универсальная сборка действительно перенесённых исходников и создание подписанного пакета:
 python3 tools/gravit-port/port.py --help
-# See docs/releases/0.42.11-gravit-source-port.md for the production signing command.
-# Requires Launcher CLI and a pre-existing protected Ed25519 private key
+# Команда производственного подписания описана в docs/releases/0.42.11-gravit-source-port.md.
+# Требуются Launcher CLI и заранее созданный защищённый закрытый ключ Ed25519.
 nl extension pack examples/extensions/gravit-compat/build/package --output /tmp/gravit-port.nlext --private-key /secure/extension-private.pem
 nl extension verify /tmp/gravit-port.nlext --public-key /secure/extension-public.pem
 ```
