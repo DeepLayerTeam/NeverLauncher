@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Component catalog schema 3 extends the signed v2 snapshot, never the local
-// selection. Every dependency, conflict, constraint and exclusion is signed.
+// Схема каталога компонентов v3 расширяет подписанный снимок v2, а не локальный
+// выбор. Каждая зависимость, конфликт, ограничение и исключение подписываются.
 func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 	if c.SchemaVersion != ComponentCatalogSchema0243 && c.SchemaVersion != ComponentCatalogSchema0244 && c.SchemaVersion != ComponentCatalogSchema0245 {
 		return ComponentCatalogDigest0242(c)
@@ -20,7 +20,7 @@ func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 	var buf [4]byte
 	count := func(n int) { binary.BigEndian.PutUint32(buf[:], uint32(n)); _, _ = h.Write(buf[:]) }
 	write := func(s string) { count(len(s)); _, _ = h.Write([]byte(s)) }
-	// Domain-separated digest of the entire v2 topology is framed into v3.
+	// Дайджест всей топологии v2 с разделением доменов включается в формат v3.
 	write(ComponentCatalogDigest0242(c))
 	count(len(c.Components))
 	for _, component := range c.Components {
@@ -55,8 +55,8 @@ func NewComponentCatalog0243(c ComponentCatalog0241, revision uint64) ComponentC
 	return c
 }
 
-// ResolutionError0243 provides a stable machine-readable category and a
-// human-readable chain. It is returned before staging files or creating jobs.
+// ResolutionError0243 содержит стабильную машинно-читаемую категорию и понятную
+// человеку цепочку причин. Ошибка возвращается до подготовки файлов и создания заданий.
 type ResolutionError0243 struct {
 	Code      string
 	Component string
@@ -280,8 +280,8 @@ func matchRange0243(actual, expr string) (bool, error) {
 	return anyMatched, nil
 }
 
-// ValidateCatalogRules0243 checks the whole signed graph, not just currently
-// selected components. All declared presets must be satisfiable at publication.
+// ValidateCatalogRules0243 проверяет весь подписанный граф, а не только
+// выбранные компоненты. При публикации все объявленные пресеты должны быть выполнимы.
 func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	items := make(map[string]CatalogComponent0241, len(cat.Components))
 	for _, c := range cat.Components {
@@ -316,7 +316,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			}
 		}
 	}
-	// Global directed cycle detection, including optional branches not in presets.
+	// Глобальный поиск направленных циклов, включая необязательные ветви вне пресетов.
 	state := map[string]uint8{}
 	stack := []string{}
 	var visit func(string) error
@@ -350,9 +350,9 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			return err
 		}
 	}
-	// Conditions may filter implicit defaults differently on each player's OS,
-	// but a named preset always selects all its roots explicitly. A signed preset
-	// containing incompatible dependencies cannot become valid on another host.
+	// Условия могут по-разному отфильтровывать неявные значения по умолчанию
+	// на разных ОС игроков, но именованный пресет явно выбирает все корневые компоненты.
+	// Подписанный пресет с несовместимыми зависимостями не станет корректным на другом хосте.
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		if _, err := resolveCatalogGraph0243(cat, ""); err != nil {
 			return err
@@ -366,9 +366,9 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	return nil
 }
 
-// resolveCatalogGraph0243 is deterministic: component order follows signed
-// catalog order, dependency traversal follows signed reference order, outputs
-// are returned in catalog order. It never mutates the signed manifest.
+// resolveCatalogGraph0243 детерминирован: порядок компонентов соответствует
+// подписанному каталогу, обход зависимостей — подписанному порядку ссылок,
+// результат возвращается в порядке каталога. Подписанный манифест не изменяется.
 func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string, error) {
 	components := make(map[string]CatalogComponent0241, len(cat.Components))
 	for _, c := range cat.Components {
@@ -470,9 +470,9 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 	return result, nil
 }
 
-// PreviewCatalogGraph0248 uses the same signed-graph resolver as the installer
-// without claiming simulated OS/Java/permissions are real authorization.
-// This checks static preset conflicts, cycles and dependency version ranges.
+// PreviewCatalogGraph0248 использует тот же резолвер подписанного графа, что и
+// установщик, но не считает симуляцию ОС/Java/разрешений настоящей авторизацией.
+// Проверяются статические конфликты пресетов, циклы и диапазоны версий зависимостей.
 func PreviewCatalogGraph0248(cat ComponentCatalog0241, preset string) ([]string, error) {
 	if err := ValidateCatalogTopology0242(cat); err != nil {
 		return nil, err

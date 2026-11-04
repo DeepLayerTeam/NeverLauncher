@@ -2,19 +2,19 @@
 
 ## Реализовано в действующих сценариях
 
-- **Immutable pinned snapshot during editing and publication**: `UpdateVersionManifest` and `PublishVersionWithManifest` reject a change of schema, project/profile/release identity or a change of `profileSnapshot` (including changing only its revision while keeping a valid digest). A mutable profile may advance independently; previously created releases stay pinned to the original historical revision.
-- **PostgreSQL release constraints**: migration `0057_schema_evolution_integrity_0222` validates v2 snapshots against immutable `profile_revisions_0221`, prohibits snapshot substitutions and v1→v2 rewrites of existing drafts, and prevents published manifest/status modification or deletion. The migration does not alter existing signed Manifest JSON, v1 included.
-- **PostgreSQL profile head consistency**: deferred transaction constraint requires the current profile head to have an *exact* immutable history entry. This permits atomic head+history writes and rejects out-of-band changes that skip revision history.
-- **Consistent snapshot acquisition**: PostgreSQL `CurrentProfileSnapshot` selects the current revision from the immutable history, joined to the profile head in a single statement, rather than reading a potentially changed head without its history.
-- **Strict handling of invalid data**: reading a corrupt release fails instead of returning a partially initialized model; first-write revision CAS behavior now matches the in-memory repository.
-- **No implicit signature invalidation**: the older convenience `PublishVersion` is limited to an existing signed draft. It no longer rebuilds a signed manifest with a new `createdAt` and replacement files during publishing. Normal API publishes continue through the durable signed workflow.
-- **In-memory safety**: `ListVersions`, `GetManifest`, `CreateVersion`, draft update/publish and status updates isolate pointer/slice/map data from callers; a returned `ProfileSnapshot` cannot mutate the stored release by alias.
+- **Неизменяемый закреплённый снимок при редактировании и публикации**: `UpdateVersionManifest` и `PublishVersionWithManifest` отклоняют изменение версии схемы, идентификаторов проекта, профиля и выпуска, а также изменение `profileSnapshot` (в том числе одной лишь ревизии при корректном дайджесте). Изменяемый профиль может развиваться независимо; уже созданные выпуски остаются привязанными к исходной исторической ревизии.
+- **Ограничения выпусков PostgreSQL**: миграция `0057_schema_evolution_integrity_0222` проверяет снимки v2 по неизменяемой истории `profile_revisions_0221`, запрещает подмену снимков и переписывание существующих черновиков с v1 на v2, а также изменение или удаление опубликованного манифеста и статуса. Миграция не затрагивает существующие подписанные JSON-манифесты, в том числе v1.
+- **Согласованность текущей ревизии профиля в PostgreSQL**: отложенное транзакционное ограничение требует, чтобы текущей ревизии профиля точно соответствовала запись в неизменяемой истории. Это позволяет атомарно обновлять текущую запись и историю и отклоняет сторонние изменения с пропуском регистрации ревизии.
+- **Согласованное получение снимка**: `CurrentProfileSnapshot` выбирает текущую ревизию из неизменяемой истории PostgreSQL, соединяя её с текущей записью профиля одним запросом, вместо чтения потенциально изменившейся записи без истории.
+- **Строгая обработка некорректных данных**: чтение повреждённого выпуска завершается ошибкой вместо возврата частично инициализированной модели. Проверка CAS при первой записи ревизии теперь соответствует поведению репозитория в памяти.
+- **Отсутствие неявного нарушения подписи**: прежний вспомогательный `PublishVersion` теперь работает только с существующим подписанным черновиком. При публикации он больше не пересоздаёт подписанный манифест с новым `createdAt` и заменёнными файлами. Обычная публикация через API по-прежнему использует устойчивую процедуру с подписью.
+- **Безопасность данных в памяти**: `ListVersions`, `GetManifest`, `CreateVersion`, обновление и публикация черновиков, а также изменение статусов изолируют указатели, срезы и карты от вызывающего кода. Возвращённый `ProfileSnapshot` не может изменить сохранённый выпуск через общие ссылки.
 
-## Промышленная миграция
+## Миграция в промышленной среде
 
-1. Back up the production database, audit logs and released files. Run the 0.22.1→0.22.2 migration in a staging environment first. Stop publication workers during the upgrade.
-2. Deploy matching API/CLI binaries and apply migrations (PostgreSQL migration `0057`; the SQL file is mirrored in the CLI migration catalog). Existing migration `0056` must already be applied and must retain its original checksum.
-3. For preflight, confirm historical records match mutable profile heads and all stored v2 release snapshots. Example checks:
+1. Создайте резервные копии промышленной базы данных, журналов аудита и опубликованных файлов. Сначала выполните миграцию 0.22.1→0.22.2 в промежуточной среде. На время обновления остановите обработчики публикации.
+2. Разверните согласованные версии исполняемых файлов API и CLI и примените миграции (для PostgreSQL — `0057`; SQL-файл также включён в каталог миграций CLI). Миграция `0056` уже должна быть применена, а её исходная контрольная сумма — сохранена.
+3. Перед запуском проверьте соответствие исторических записей текущим версиям изменяемых профилей и всем сохранённым снимкам выпусков v2. Примеры запросов:
 
 ```sql
 SELECT count(*) AS invalid_profile_heads FROM profiles p LEFT JOIN profile_revisions_0221 h
@@ -32,11 +32,11 @@ WHERE v.manifest->>'schemaVersion'='2.0' AND NOT EXISTS(
  AND h.spec=v.manifest->'profileSnapshot'->'spec');
 ```
 
-Expected: zero for both. If the query fails on malformed stored revision, treat this as a data-integrity incident and investigate before proceeding; do not bypass the constraints.
+Ожидаемый результат обоих запросов — ноль. Если запрос не выполняется из-за неверного формата сохранённой ревизии, рассматривайте это как нарушение целостности данных: разберитесь в причине до продолжения и не обходите ограничения.
 
-4. Run staging E2E against live PostgreSQL: create a v2 profile and release; edit the profile; update the release metadata; sign and validate; publish through the durable flow; attempt to mutate the snapshot and delete the published release (both must be denied). Confirm old v1 signature still verifies with its original pinned key.
-5. Rollback should restore backups or use a forward fix. **Do not edit an already applied migration or downgrade the 0.22.2 binary to a version that doesn't maintain revision history**. Migration `0057` is intentionally additive and has no destructive down step.
+4. Проведите сквозной E2E-тест в промежуточной среде с настоящим PostgreSQL: создайте профиль и выпуск v2, измените профиль, обновите метаданные выпуска, подпишите и проверьте их, опубликуйте выпуск через устойчивую процедуру. Попытки изменить снимок и удалить опубликованный выпуск должны быть отклонены. Убедитесь, что подпись старого манифеста v1 по-прежнему проверяется исходным закреплённым ключом.
+5. Для отката восстанавливайте резервные копии либо вносите исправления последующей миграцией. **Не редактируйте уже применённую миграцию и не откатывайте исполняемый файл 0.22.2 до версии, не поддерживающей историю ревизий**. Миграция `0057` намеренно только добавляет ограничения и не содержит разрушающего обратного шага.
 
 ## Совместимость и область действия
 
-No Profile/Manifest wire-version change occurs: schema version remains `2.0`. This release completes production hardening of P01, **not** P02–P10: new per-server semantics, loader constraints and workspace management remain separate milestones. Production certification additionally requires live PostgreSQL migrations, API integration, Rust-client launch verification and signed release E2E. Passing the isolated Go model/migration tests alone does not certify these.
+Версия формата обмена Profile/Manifest не меняется: схема остаётся `2.0`. Выпуск завершает промышленное усиление P01, **но не** этапы P02–P10: новые правила для отдельных серверов, ограничения загрузчиков и управление рабочими пространствами выполняются отдельно. Для промышленной сертификации дополнительно нужны миграции в реальном PostgreSQL, интеграция API, проверка запуска Rust-клиента и E2E-тест подписанного выпуска. Одних модульных тестов Go для модели и миграций недостаточно.

@@ -37,11 +37,11 @@ type CatalogPreset0242 struct {
 	Components  []string `json:"components"`
 }
 
-// ComponentCatalog0241 is the immutable, content-addressed list of components
-// belonging to ONE signed release. Schema v1 installs all components.
-// Schema v2 supports signed topology; schema v3 binds executable dependency
-// and conflict constraints for the native and Go resolvers.
-// Never accept arbitrary file paths or executable actions from local selection.
+// ComponentCatalog0241 — неизменяемый список компонентов с адресацией по содержимому,
+// принадлежащих ОДНОМУ подписанному выпуску. Схема v1 устанавливает все компоненты.
+// Схема v2 поддерживает подписанную топологию; схема v3 связывает исполняемые ограничения
+// зависимостей и конфликтов для нативного резолвера и резолвера Go.
+// Никогда не принимайте произвольные пути и исполняемые действия из локального выбора.
 type ComponentCatalog0241 struct {
 	SchemaVersion string                 `json:"schemaVersion"`
 	Revision      uint64                 `json:"revision"`
@@ -77,9 +77,9 @@ type CatalogComponent0241 struct {
 	Metadata       map[string]string          `json:"metadata,omitempty"`
 }
 
-// Canonical framing is language-independent (Go/Rust) and unambiguous:
-// prefix, u32be component count, length-prefixed UTF-8 strings, u32be file
-// count and length-prefixed paths. Array order is significant and signed.
+// Каноническое кодирование независимо от языка (Go/Rust) и однозначно:
+// префикс, количество компонентов u32be, UTF-8 строки с префиксом длины,
+// количество файлов u32be и пути с префиксом длины. Порядок массивов значим и подписывается.
 func ComponentCatalogDigest0241(components []CatalogComponent0241) string {
 	h := sha256.New()
 	h.Write([]byte("launcher.component-catalog.v1\x00"))
@@ -175,8 +175,8 @@ func ValidateComponentCatalog0241(m Manifest) error {
 	return nil
 }
 
-// v2 uses explicit framing for ALL topology metadata: serialization order,
-// omitempty rules and local UI state cannot alter the catalog digest.
+// В v2 для ВСЕХ метаданных топологии используется явное кодирование: порядок
+// сериализации, правила omitempty и локальное состояние UI не меняют дайджест каталога.
 func ComponentCatalogDigest0242(cat ComponentCatalog0241) string {
 	if cat.SchemaVersion == ComponentCatalogSchema0241 {
 		return ComponentCatalogDigest0241(cat.Components)
@@ -306,7 +306,7 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 		}
 		groups[v.ID] = v
 	}
-	// Follow parent links, limiting depth and detecting cycles, not trusting input order.
+	// Переходить по родительским ссылкам с ограничением глубины и поиском циклов; не доверять порядку входных данных.
 	for id := range categories {
 		seen := map[string]bool{}
 		cur := id
@@ -402,8 +402,8 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	return nil
 }
 
-// ResolveCatalogPreset0242 preserves the legacy API while applying the
-// dependency/conflict resolver to signed catalog schema v3.
+// ResolveCatalogPreset0242 сохраняет прежний API, применяя резолвер
+// зависимостей и конфликтов к подписанной схеме каталога v3.
 func ResolveCatalogPreset0242(cat ComponentCatalog0241, preset string) ([]string, error) {
 	if err := ValidateCatalogTopology0242(cat); err != nil {
 		return nil, err

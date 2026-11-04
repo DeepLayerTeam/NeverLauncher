@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// Conditions are signed predicates, not client commands. In schema 1.0 every
-// nonempty field must match; arrays are OR sets, fields combine with AND.
-// Missing trusted context never means unrestricted access.
+// Условия — подписанные предикаты, а не команды клиента. В схеме 1.0 каждое
+// непустое поле должно совпадать; элементы массива объединяются через ИЛИ, поля — через И.
+// Отсутствие доверенного контекста никогда не означает неограниченный доступ.
 type ComponentConditions0244 struct {
 	SchemaVersion         string   `json:"schemaVersion"`
 	OS                    []string `json:"os,omitempty"`
@@ -32,8 +32,8 @@ type ComponentEnvironment0244 struct {
 	MinecraftVersion string
 	Loader           string
 	LoaderVersion    string
-	// This map MUST come from authenticated server-side authorization, never
-	// from a Desktop JSON payload or an unverified local account profile.
+	// Эта карта ОБЯЗАТЕЛЬНО должна поступать из авторизованного контекста сервера,
+	// а не из JSON Desktop или непроверенного локального профиля аккаунта.
 	VerifiedPermissions map[string]bool
 }
 
@@ -217,9 +217,9 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	return ""
 }
 
-// ResolveCatalogConditional0244 handles automatic defaults separately from
-// required, explicitly selected and dependency components. An unavailable
-// default is excluded, whereas an unavailable hard selection is a clear error.
+// ResolveCatalogConditional0244 обрабатывает автоматические значения по умолчанию
+// отдельно от обязательных, явно выбранных и зависимых компонентов. Недоступный
+// компонент по умолчанию исключается, а недоступный обязательный выбор вызывает ошибку.
 func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env ComponentEnvironment0244) ([]string, error) {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		return nil, fmt.Errorf("condition resolver requires catalog v4")

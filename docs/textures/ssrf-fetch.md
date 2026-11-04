@@ -1,12 +1,12 @@
-# Launcher 0.25.4 — загрузчик текстур с защитой от SSRF
+# Launcher 0.25.4 — загрузка текстур с защитой от SSRF
 
-**Scope:** authenticated, local Launcher Minecraft profiles only. Official Minecraft identities are not writable by this feature.
+**Область действия:** только локальные профили Launcher Minecraft с аутентификацией. Эта функция не позволяет изменять официальные учётные записи Minecraft.
 
-## HTTP-импорт (реализован в существующем Backend)
+## HTTP-импорт (реализован в Backend)
 
-`POST /api/v1/me/textures/{kind}/import` (`kind` = `skin` or `cape`) requires an authenticated Bearer session. Send one JSON object with `url`, `expectedRevision` (0 to create, latest revision to replace), optional `model` (`classic` or `slim`, capes must be `classic`), `visibility` (`public`, `unlisted`, `private`), and optional `profileUuid` owner assertion. An assertion for another player's UUID fails before any remote network request. No arbitrary player UUID is accepted as the authorization identity.
+Маршрут `POST /api/v1/me/textures/{kind}/import` (`kind` = `skin` или `cape`) требует аутентифицированной сессии Bearer. Передайте один JSON-объект с `url`, `expectedRevision` (0 для создания или последняя ревизия для замены), необязательным `model` (`classic` или `slim`; для плащей разрешён только `classic`), `visibility` (`public`, `unlisted`, `private`) и необязательным подтверждением владельца `profileUuid`. Если указан UUID другого игрока, запрос отклоняется до любого обращения к внешней сети. Произвольный UUID игрока не используется в качестве идентификатора для авторизации.
 
-Example (using your real HTTPS image URL and a valid token):
+Пример с настоящим HTTPS-адресом изображения и действительным токеном:
 
 ```bash
 curl -sS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/import" \
@@ -14,27 +14,27 @@ curl -sS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/import" \
   --data '{"url":"https://textures.example.org/skin.png","expectedRevision":0,"model":"classic","visibility":"public"}'
 ```
 
-The backend validates the request and imports a PNG into **immutable SHA-256 local/S3 storage**. It never redirects clients to the original remote URL. Both URL import and multipart upload share the same 0.25.3 staging, quota, ownership, CAS, checksum, and assignment logic. Imported assignments have `source=managed-url-import` and an immutable `event=import` revision; no original remote URL or remote response headers are stored in the assignment.
+Backend проверяет запрос и импортирует PNG в **неизменяемое локальное хранилище или S3 с адресацией по SHA-256**. Клиенты никогда не перенаправляются на исходный внешний URL. Импорт по URL и загрузка multipart совместно используют логику версии 0.25.3: промежуточное размещение, квоты, проверку владельца, CAS, контрольные суммы и назначение текстур. Импортированным назначениям задаются `source=managed-url-import` и неизменяемая ревизия `event=import`; исходный внешний URL и заголовки ответа не сохраняются в назначении.
 
-## безопасная загрузка с принудительной проверкой при исполнении
+## Безопасная загрузка с обязательными проверками во время выполнения
 
-- Only `https` with a DNS hostname and port 443; no literal IPs, credentials, fragments, host trailing dots, non-ASCII/invalid DNS labels, or alternate schemes and ports.
-- DNS is resolved by the server and **all** returned addresses are checked against private, loopback, link-local, unspecified, carrier NAT, documentation, reserved, IPv4-mapped IPv6 and transition/resolver-special prefixes. Requests with mixed public/private A or AAAA answers fail closed.
-- The TCP dial uses only a checked **numeric IP**, never the domain again. The TLS certificate is verified against the original hostname, using the normal system trust store. Proxy environment settings are ignored, so no `HTTP_PROXY`/`HTTPS_PROXY` forwarding can bypass validation.
-- Redirects are not followed, even to another HTTPS hostname. No source cookies, authorization, custom headers or remote credentials are forwarded. Encoded/compressed responses are rejected.
-- Max URL 2048 bytes, JSON request 4096 bytes, HTTP body 4 MiB, 1024×1024 maximum decoded PNG, 12 s total timeout, 3 s dial timeout, 4 s TLS handshake and 5 s response-header limit. Full PNG parsing/CRC/geometry validation and normalization reuses `texturepng.Process`.
-- Per-server instance controls: at most 8 concurrent remote fetches and at most 5 import attempts per account per minute. Configure equivalent **shared** ingress/rate limits for multi-replica deployments.
-- Remote response bodies and URL/network errors are not reflected to users. Rejection statuses: 400 unsafe URL, 413 too large, 422 invalid PNG or prohibited redirect/encoding, 429 capacity/rate limits, 502 upstream fetch failure. Ownership and policy failures use the existing 403/409 response conventions.
+- Разрешён только `https` с DNS-именем и портом 443. Запрещены буквальные IP-адреса, учётные данные в URL, фрагменты, точка в конце имени хоста, не-ASCII или недопустимые метки DNS, другие схемы и порты.
+- DNS разрешается сервером; **все** возвращённые адреса проверяются на принадлежность приватным, loopback, link-local, неопределённым, carrier NAT, документационным, зарезервированным диапазонам, IPv4-mapped IPv6 и специальным переходным/резолверным префиксам. Смешанные публичные и частные ответы A/AAAA отклоняются.
+- TCP-соединение устанавливается только с проверенным **числовым IP**, без повторного разрешения домена. Сертификат TLS проверяется по исходному имени хоста с системным хранилищем доверия. Переменные прокси игнорируются: пересылка через `HTTP_PROXY` или `HTTPS_PROXY` не может обойти проверку.
+- Перенаправления не выполняются, даже на другой HTTPS-хост. Cookies, заголовки авторизации, произвольные заголовки и удалённые учётные данные не передаются. Сжатые и закодированные ответы отклоняются.
+- Ограничения: URL — 2048 байт, JSON-запрос — 4096 байт, тело HTTP — 4 МиБ, распакованный PNG — максимум 1024×1024, общий тайм-аут — 12 с, подключение — 3 с, TLS-рукопожатие — 4 с, заголовки ответа — 5 с. Полная проверка структуры PNG, CRC, геометрии и нормализация выполняются через `texturepng.Process`.
+- Для одного экземпляра сервера разрешено не более 8 одновременных удалённых загрузок и не более 5 попыток импорта в минуту на аккаунт. Для развёртывания с несколькими репликами настройте эквивалентные **общие** ограничения на входном шлюзе.
+- Тела удалённых ответов и ошибки URL/сети не показываются пользователям. Коды отказов: 400 — небезопасный URL; 413 — превышен размер; 422 — неверный PNG либо запрещённое перенаправление/кодирование; 429 — ограничение мощности или частоты; 502 — ошибка удалённой загрузки. Для прав владельца и политик остаются действующие соглашения 403/409.
 
-## конфигурация и развёртывание
+## Конфигурация и развёртывание
 
-Optional variable: `LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST=textures.example.org,cdn.example.org`. Hosts match exactly, no wildcards or subdomain matching. An empty value permits public HTTPS DNS hosts; the blocklist and numeric-IP check **always** apply. A malformed configured allowlist disables all imports. Docker Compose passes this variable into the API container.
+Необязательная переменная: `LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST=textures.example.org,cdn.example.org`. Имена хостов совпадают строго: шаблоны и автоматическое совпадение поддоменов не поддерживаются. Пустое значение разрешает публичные HTTPS-хосты с DNS, но **всегда** сохраняет проверку запрещённых диапазонов и числового IP. Ошибка в настроенном списке полностью запрещает импорт. Docker Compose передаёт переменную контейнеру API.
 
-Apply migration `0070_texture_fetch_0254.sql` using the checksum-tracked migrator; it extends only the permitted assignment provenance and revision event enums (implemented as PostgreSQL CHECKs). Never modify previous migrations.
+Примените миграцию `0070_texture_fetch_0254.sql` через мигратор с проверкой контрольных сумм. Она расширяет только разрешённые значения происхождения назначения и событий ревизий (через ограничения CHECK PostgreSQL). Не изменяйте предыдущие миграции.
 
-A strong deployment additionally restricts outbound API container egress with an independent network firewall. A public-IP filter is not a substitute for network-layer egress rules, particularly if an upstream network translates traffic.
+Для более строгой защиты независимо ограничьте исходящий сетевой трафик контейнера API межсетевым экраном. Фильтрация публичных IP не заменяет сетевые правила исходящего доступа, особенно если внешняя сеть транслирует адреса.
 
-## тесты / релиз валидация
+## Тестирование и проверка выпуска
 
 ```bash
 cd services/api
@@ -43,4 +43,4 @@ go test -count=1 ./internal/texturefetch ./internal/texturepng ./internal/storag
 go test ./internal/httpapi ./internal/repository
 ```
 
-`texturefetch` tests include TLS hostname verification, actual HTTPS response/PNG normalization through a local TLS server with **controlled dial hooks**, DNS mixed-answer rebinding rejection, IP ranges, HTTP redirects, unsupported MIME/content-encoding, oversized streamed responses and malformed images. These local TLS simulations do **not** authorize loopback addresses in production. External DNS, deployment egress firewall, actual Postgres migration and real S3 remain integration release gates.
+Тесты `texturefetch` охватывают проверку имени в TLS-сертификате, реальный HTTPS-ответ и нормализацию PNG через локальный TLS-сервер с **контролируемыми перехватчиками подключения**, отклонение смешанных DNS-ответов при rebinding, диапазоны IP, HTTP-перенаправления, неподдерживаемые MIME/content-encoding, слишком большие потоковые ответы и повреждённые изображения. Такие локальные TLS-симуляции **не разрешают** использовать loopback-адреса в промышленной среде. Внешний DNS, сетевой экран исходящего трафика, фактическая миграция PostgreSQL и реальный S3 остаются обязательными интеграционными проверками выпуска.
