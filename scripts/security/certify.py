@@ -228,7 +228,7 @@ def assemble_release(paths):
     return {
         "status": "PASS" if not problems else "BLOCKED",
         "problems": problems,
-        "note": "Evidence ingestion is not cryptographically authenticated; use trusted CI artifacts and commit provenance in production",
+        "note": "Получаемые свидетельства не проходят криптографическую проверку подлинности; в рабочей среде используйте доверенные артефакты CI и подтверждение происхождения коммита",
     }
 
 

@@ -51,7 +51,7 @@ def load(path: Path) -> dict[str, Any]:
         raise SystemExit("ServerBridge targets protocolVersion: требуется «3»")
     rows = data.get("targets")
     if not isinstance(rows, list) or not rows:
-        raise SystemExit("ServerBridge targets: требуется «a non-empty array»")
+        raise SystemExit("ServerBridge targets: требуется непустой массив")
     allowed = {"id", "family", "role", "minecraft", "coverage", "required"}
     ids: list[str] = []
     for i, row in enumerate(rows, 1):

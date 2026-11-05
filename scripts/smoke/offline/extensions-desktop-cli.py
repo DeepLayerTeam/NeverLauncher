@@ -14,7 +14,7 @@ def require(ok, msg):
 
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 9), "VERSION must be >= 0.20.9")
+require(version >= (0, 20, 9), "Требуется VERSION не ниже 0.20.9")
 model = read("services/api/internal/model/extensions_0201.go")
 for token in (
     "ExtensionDesktopContributions",
@@ -24,10 +24,10 @@ for token in (
     "ExtensionCLIContributions",
     "ExtensionCLICommand",
 ):
-    require(token in model, f"model missing {token}")
+    require(token in model, f"В модели отсутствует: {token}")
 security = read("services/api/internal/extensionsecurity/security_0207.go")
 for token in ('"desktop:contribute"', '"desktop:bridge"', '"cli:contribute"'):
-    require(token in security, f"capability catalog missing {token}")
+    require(token in security, f"В каталоге разрешений отсутствует: {token}")
 host = read("services/api/internal/extensionhost/cli_0209.go")
 for token in (
     "RunCLI0209",
@@ -54,7 +54,7 @@ for token in (
     "RunCLI0209",
     "cli:contribute",
 ):
-    require(token in handler, f"Desktop/CLI HTTP host missing {token}")
+    require(token in handler, f"Отсутствует HTTP Host для Desktop/CLI: {token}")
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for path in (
     "/api/v1/desktop/extensions/catalog",
@@ -63,7 +63,7 @@ for path in (
     "/api/v1/admin/extension-cli/catalog",
     "/api/v1/admin/extension-cli/{extensionId}/invoke",
 ):
-    require(path in routes, f"route missing {path}")
+    require(path in routes, f"Отсутствует маршрут: {path}")
 desktop = read("apps/desktop/src/extensions_0209.tsx")
 for token in (
     'sandbox="allow-scripts"',
@@ -75,14 +75,14 @@ for token in (
     "tauri.openGameDirectory",
     "desktop_extension_platform_info",
 ):
-    require(token in desktop, f"Desktop runtime missing {token}")
+    require(token in desktop, f"В среде выполнения Desktop отсутствует: {token}")
 tauri = read("apps/desktop/src-tauri/src/main.rs")
 for token in (
     "desktop_extension_platform_info",
     "extensions.desktop-rpc.v1",
     "generate_handler",
 ):
-    require(token in tauri, f"Tauri limited bridge missing {token}")
+    require(token in tauri, f"Отсутствует ограниченный мост Tauri: {token}")
 cli = read("cli/cmd/launcher/extension_cli_0209.go")
 for token in (
     "handleExtensionNamespace0209",
@@ -102,13 +102,13 @@ for token in (
     "LAUNCHER_EXTENSION_HOST_URL",
     "/v1/hello",
 ):
-    require(token in scaffold, f"SDK scaffold missing {token}")
+    require(token in scaffold, f"Отсутствует шаблон SDK: {token}")
 schema = read("schemas/launcher-extension.schema.json")
 for token in ('"desktop"', '"cli"', '"namespace"', '"commands"'):
-    require(token in schema, f"extension schema missing {token}")
+    require(token in schema, f"В схеме расширения отсутствует: {token}")
 rpc_schema = read("schemas/launcher-desktop-extension-rpc.schema.json")
 require(
-    "extensions.desktop-rpc.v1" in rpc_schema, "Desktop RPC schema missing protocol"
+    "extensions.desktop-rpc.v1" in rpc_schema, "В схеме RPC для Desktop отсутствует протокол"
 )
 openapi = read("schemas/openapi.yaml")
 for path in (

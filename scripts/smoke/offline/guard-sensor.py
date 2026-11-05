@@ -41,7 +41,7 @@ def main() -> int:
     require(
         sensor_manifest,
         ['crate-type = ["cdylib"]', 'name = "guard_sensor"'],
-        "native DLL build",
+        "сборка нативной DLL",
     )
     require(
         sensor,
@@ -55,7 +55,7 @@ def main() -> int:
             ".write_all(&packet)",
             "return JNI_ERR",
         ],
-        "real JVM agent/HMAC startup proof",
+        "подтверждение запуска настоящего агента JVM с HMAC",
     )
     require(
         bootstrap,
@@ -71,7 +71,7 @@ def main() -> int:
             "loaded_before_main: true",
             "arm_module_guard",
         ],
-        "launcher-side fail-closed bootstrap",
+        "защищённый запуск лаунчера с запретом при ошибке",
     )
     for label, body, count in [
         ("direct runtime launch paths", runtime, 2),
@@ -91,7 +91,7 @@ def main() -> int:
     require(
         supervisor,
         ["pub windows_sensor: Option<crate::WindowsSensorReport>"],
-        "runtime status evidence",
+        "свидетельства состояния Runtime",
     )
     require(
         ipc,
@@ -100,7 +100,7 @@ def main() -> int:
             "verify_package_artifact(&manifest, &sensor_path)",
             "verify_windows_authenticode_trust(&sensor_path)",
         ],
-        "package/runtime signature boundary",
+        "граница проверки подписи пакета/Runtime",
     )
     require(
         windows_build,
@@ -114,9 +114,9 @@ def main() -> int:
             'component = "sensor"',
             "guard-sensor-windows-$Arch.dll",
         ],
-        "signed x64/ARM64 production delivery",
+        "поставка подписанных сборок x64/ARM64",
     )
-    require(updater, ['expected["sensor"] = false'], "transactional sensor update")
+    require(updater, ['expected["sensor"] = false'], "транзакционное обновление датчика")
     require(
         signing,
         [
@@ -125,7 +125,7 @@ def main() -> int:
             'packageEntries["sensor"] = "guard-sensor.dll"',
             "expectedComponentCount = 4",
         ],
-        "delivery verification",
+        "проверка поставки",
     )
     require(
         release,
@@ -142,7 +142,7 @@ def main() -> int:
             "let report = session.report()",
             "assert!(report.loaded_before_main)",
         ],
-        "real Java integration test",
+        "интеграционный тест на реальной Java",
     )
     require(
         ci,
@@ -153,7 +153,7 @@ def main() -> int:
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
         ],
-        "Windows compile/integration/clippy CI",
+        "CI компиляции и интеграции Windows / Clippy",
     )
     if "guard-sensor-0182.py" not in preflight:
         raise SystemExit(

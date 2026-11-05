@@ -146,7 +146,7 @@ require(
         "e2e/device-trust-migration-result/",
         "matrix.py aggregate",
     ],
-    "public Device Trust workflow",
+    "публичный workflow доверия устройств",
 )
 
 # Необязательные производственные инструкции и контрольный список не ограничивают безопасность миграций.

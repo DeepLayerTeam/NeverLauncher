@@ -16,7 +16,7 @@ def require(ok: bool, message: str) -> None:
 
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 6), "VERSION must be >= 0.20.6")
+require(version >= (0, 20, 6), "Требуется VERSION не ниже 0.20.6")
 
 migration = read(
     "services/api/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql"
@@ -35,13 +35,13 @@ for token in (
     "extension_event_delivery_lease_state",
     "payload_sha256",
 ):
-    require(token in migration, f"event migration missing {token}")
+    require(token in migration, f"Отсутствует миграция событий: {token}")
 dead = migration[
     migration.index("CREATE TABLE IF NOT EXISTS extension_event_dead_letters") :
 ]
 require(
     "REFERENCES extension_event_subscriptions" not in dead,
-    "DLQ must survive unsubscribe",
+    "Очередь недоставленных сообщений (DLQ) должна сохраняться после отмены подписки",
 )
 
 bus = read("services/api/internal/eventbus/bus_0206.go")
@@ -65,7 +65,7 @@ for token in (
     "IdempotencyKey",
     "OrderingKey",
 ):
-    require(token in bus, f"event bus missing {token}")
+    require(token in bus, f"В шине событий отсутствует: {token}")
 
 repo = read("services/api/internal/repository/extension_events_0206.go")
 for token in (
@@ -81,7 +81,7 @@ for token in (
     "status='processing'",
     "status='dead'",
 ):
-    require(token in repo, f"event repository missing {token}")
+    require(token in repo, f"В репозитории событий отсутствует: {token}")
 
 host = read("services/api/internal/extensionhost/host_0205.go")
 for token in (
@@ -97,7 +97,7 @@ for token in (
     "DeliverExtensionHook",
     "CheckRedirect",
 ):
-    require(token in host, f"Extension Host event protocol missing {token}")
+    require(token in host, f"В протоколе событий Extension Host отсутствует: {token}")
 
 for rel in (
     "services/api/internal/httpapi/admin_crud.go",
@@ -105,19 +105,19 @@ for rel in (
     "services/api/internal/httpapi/package_product.go",
 ):
     text = read(rel)
-    require("0206" in text, f"{rel} is not wired to event hooks")
+    require("0206" in text, f"{rel} не подключён к обработчикам событий")
 
 bridge = read("services/api/internal/httpapi/server_bridge_events_0194.go")
 require(
     "ServerBridgeReceived" in bridge and "appendEvents0194" in bridge,
-    "ServerBridge events are not bridged after verified append",
+    "События ServerBridge не передаются после подтверждённой записи",
 )
 
 memory = read("services/api/internal/repository/memory.go")
 postgres = read("services/api/internal/repository/postgres.go")
 require(
     "SetAuditEventSink" in memory and "SetAuditEventSink" in postgres,
-    "audit event sink missing",
+    "Отсутствует приёмник событий аудита",
 )
 
 main = read("services/api/cmd/launcher-api/main.go")
@@ -128,7 +128,7 @@ for token in (
     "SetDispatcher",
     "events.Start",
 ):
-    require(token in main, f"Backend Event Bus wiring missing {token}")
+    require(token in main, f"Отсутствует подключение шины событий Backend: {token}")
 
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for path in (
@@ -136,14 +136,14 @@ for path in (
     "/api/v1/admin/extension-events/subscriptions",
     "/api/v1/admin/extension-events/dead-letters",
 ):
-    require(path in routes, f"Admin event diagnostics route missing {path}")
+    require(path in routes, f"Admin event diagnostics Отсутствует маршрут: {path}")
 
 schema = read("schemas/launcher-extension-events.schema.json")
 require(
     "project.before-save" in schema
     and "serverbridge.event.received" in schema
     and "audit.event.created" in schema,
-    "event schema incomplete",
+    "Схема событий неполная",
 )
 
 openapi = read("schemas/openapi.yaml")
@@ -161,7 +161,7 @@ for table in (
     "extension_event_deliveries",
     "extension_event_dead_letters",
 ):
-    require(table in prod, f"productionTables missing {table}")
+    require(table in prod, f"Отсутствует запись в productionTables: {table}")
 
 for envfile in (
     "deploy/production/env.production.example",

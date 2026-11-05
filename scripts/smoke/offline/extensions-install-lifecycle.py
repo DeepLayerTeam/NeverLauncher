@@ -16,7 +16,7 @@ def require(ok: bool, message: str) -> None:
 
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 4), "VERSION must be >= 0.20.4")
+require(version >= (0, 20, 4), "Требуется VERSION не ниже 0.20.4")
 
 migration = read(
     "services/api/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql"
@@ -109,7 +109,7 @@ for token in (
 release = read("cli/cmd/launcher/release_commands.go")
 require(
     "extension_install_revisions" in release,
-    "productionTables missing extension_install_revisions",
+    "В перечне productionTables отсутствует extension_install_revisions",
 )
 
 openapi = read("scripts/contracts/generate_openapi.py")

@@ -217,7 +217,7 @@ def probe_minimal(root):
             raise AcceptanceError(name + ' не удалось прочитать') from exc
         finally:
             connection.close()
-        checked[name] = 'integrity + foreign keys ok'
+        checked[name] = 'целостность данных и внешние ключи проверены'
     for name in ('storage', 'factory', 'extensions', 'backups'):
         directory = root / name
         require(directory.is_dir() and not directory.is_symlink(), name + ' missing')

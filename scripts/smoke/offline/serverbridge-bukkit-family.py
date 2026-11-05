@@ -87,7 +87,7 @@ require(
         "ServerBuildInfo",
         "SpigotConfig",
     ],
-    "runtime platform discriminator",
+    "определение платформы Runtime",
 )
 
 wrappers = {

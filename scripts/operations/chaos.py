@@ -219,7 +219,7 @@ def dependency_fault(project: str, env_file: Path, service: str, url: str, endpo
             fault_detected = poll(lambda: s3_verify(endpoint, bucket, key, digest) == digest,
                                   False, limit, "Ошибка чтения объекта S3")
         else:
-            fault_detected = poll(lambda: public_ready(url), False, limit, "readiness fail-closed")
+            fault_detected = poll(lambda: public_ready(url), False, limit, "запрет готовности при ошибке")
     finally:
         dr.compose(project, env_file, "up", "-d", service, timeout=90)
     recovered_s = poll(lambda: public_ready(url), True, limit, "Восстановление готовности публичного сервиса")
@@ -302,7 +302,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
         result = {"schema": 1, "release": (dr.ROOT / "VERSION").read_text().strip(),
                   "status": "passed", "runId": token, "recordedUtc": stamp(),
                   "mode": "isolated-network-ha", "project": project,
-                  "scope": "acknowledged synthetic PostgreSQL row + S3 object; not a production RPO/SLA",
+                  "scope": "Подтверждены тестовая строка PostgreSQL и объект S3; это не гарантирует промышленный RPO/SLA",
                   "observedRpoSeconds": 0, "rtoSecondsMax": max(e["rtoSeconds"] for e in outcomes),
                   "durationSeconds": round(monotonic() - start, 3), "events": outcomes,
                   "limits": ["Лабораторное окружение на одном узле Docker; потеря узла не проверялась", "Нет подтверждения для реальных сеансов Minecraft или блокировки заданий",

@@ -16,7 +16,7 @@ def require(ok, msg):
 
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 11), "VERSION must be >= 0.20.11")
+require(version >= (0, 20, 11), "Требуется VERSION не ниже 0.20.11")
 required = [
     "services/api/internal/extensionresolver/semver_02011.go",
     "services/api/internal/extensionresolver/resolver_02011.go",
@@ -28,11 +28,11 @@ required = [
     "cli/cmd/launcher/extension_updates_02011.go",
 ]
 for rel in required:
-    require(resource_exists(ROOT, rel), f"missing production dependency/update file {rel}")
+    require(resource_exists(ROOT, rel), f"Отсутствует рабочий файл зависимостей/обновлений: {rel}")
 
 semver = read("services/api/internal/extensionresolver/semver_02011.go")
 for token in ("ParseVersion", "Matches", "^", "~", "||"):
-    require(token in semver, f"SemVer resolver missing {token}")
+    require(token in semver, f"Отсутствует обработчик версий SemVer: {token}")
 resolver = read("services/api/internal/extensionresolver/resolver_02011.go")
 for token in (
     "required",
@@ -49,7 +49,7 @@ for token in (
     "SupportedArchitectures",
     "ListExtensionUpdatePins",
 ):
-    require(token.lower() in resolver.lower(), f"resolver missing {token}")
+    require(token.lower() in resolver.lower(), f"Отсутствует обработчик зависимостей: {token}")
 updates = read("services/api/internal/extensionupdates/updates_02011.go")
 for token in (
     "AcquireExtensionUpdateLease",
@@ -63,7 +63,7 @@ for token in (
     "rollback_failed",
     "PackageIdentity",
 ):
-    require(token in updates, f"transaction engine missing {token}")
+    require(token in updates, f"Отсутствует движок транзакций: {token}")
 repo = read("services/api/internal/repository/extension_updates_02011.go")
 for token in (
     "SetExtensionUpdatePin",
@@ -72,7 +72,7 @@ for token in (
     "SaveExtensionUpdateTransaction",
     "GetExtensionUpdateTransaction",
 ):
-    require(token in repo, f"update repository missing {token}")
+    require(token in repo, f"Отсутствует репозиторий обновлений: {token}")
 migration = read(
     "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql"
 )
@@ -88,7 +88,7 @@ for token in (
 manifest = json.loads(read("schemas/launcher-extension.schema.json"))
 require(
     "conflicts" in manifest.get("properties", {}),
-    "canonical manifest schema missing conflicts",
+    "В канонической схеме манифеста отсутствует описание конфликтов",
 )
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for token in (
@@ -96,20 +96,20 @@ for token in (
     "/api/v1/admin/extension-updates/apply",
     "/api/v1/admin/extension-updates/pins/{extensionId}",
 ):
-    require(token in routes, f"update API route missing {token}")
+    require(token in routes, f"Отсутствует маршрут API обновлений: {token}")
 legacy = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
 require(
     "resolver02011" in legacy and "updateManager02011" in legacy,
-    "legacy update path bypasses dependency-aware transaction engine",
+    "Старый путь обновления обходит транзакционный механизм учёта зависимостей",
 )
 cli = read("cli/cmd/launcher/extension_updates_02011.go")
 for token in ("plan", "apply", "pins", "pin", "unpin", "transaction"):
-    require(token in cli, f"CLI update workflow missing {token}")
+    require(token in cli, f"Отсутствует сценарий обновления CLI: {token}")
 tables = read("cli/cmd/launcher/release_commands.go")
 for token in (
     "extension_update_pins",
     "extension_update_leases",
     "extension_update_transactions",
 ):
-    require(token in tables, f"productionTables missing {token}")
+    require(token in tables, f"Отсутствует запись в productionTables: {token}")
 print("Extensions 0.20.11: проверка зависимостей и обновлений: OK")

@@ -16,7 +16,7 @@ def require(ok: bool, message: str) -> None:
 
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 5), "VERSION must be >= 0.20.5")
+require(version >= (0, 20, 5), "Требуется VERSION не ниже 0.20.5")
 
 host = read("services/api/internal/extensionhost/host_0205.go")
 for token in (
@@ -41,7 +41,7 @@ for token in (
     "Restart(",
     "Reconcile(",
 ):
-    require(token in host, f"Extension Host runtime missing {token}")
+    require(token in host, f"Отсутствует среда выполнения Extension Host: {token}")
 
 linux = read("services/api/internal/extensionhost/process_linux_0205.go")
 for token in (
@@ -51,7 +51,7 @@ for token in (
     "PR_SET_DUMPABLE=0",
     "SYS_PRCTL",
 ):
-    require(token in linux, f"Linux host isolation missing {token}")
+    require(token in linux, f"Отсутствует изоляция Host на Linux: {token}")
 
 main = read("services/api/cmd/launcher-api/main.go")
 for token in (
@@ -61,7 +61,7 @@ for token in (
     "host.Reconcile(",
     "ExtensionHost:",
 ):
-    require(token in main, f"Backend Extension Host wiring missing {token}")
+    require(token in main, f"Отсутствует подключение Extension Host к Backend: {token}")
 
 lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
 for token in (
@@ -79,7 +79,7 @@ updates = (
 require(
     "failed host activation; payload/state rolled back" in lifecycle
     or ("waitHealthy" in updates and "m.rollback" in updates),
-    "lifecycle/host integration missing failed host activation rollback",
+    "Не реализован откат неудачной активации Host в жизненном цикле расширения",
 )
 
 routes = read("services/api/internal/httpapi/routes_packages.go")
@@ -93,7 +93,7 @@ for suffix in (
 ):
     require(
         "/api/v1/admin/extension-hosts" + suffix in routes,
-        f"host admin route missing {suffix}",
+        f"host admin Отсутствует маршрут: {suffix}",
     )
 
 cli = read("cli/cmd/launcher/extension_host_0205.go")
@@ -106,7 +106,7 @@ for token in (
     "restart",
     "/api/v1/admin/extension-hosts",
 ):
-    require(token in cli, f"host CLI missing {token}")
+    require(token in cli, f"Отсутствует интерфейс CLI для Host: {token}")
 
 admin = read("apps/admin/src/main.tsx")
 for token in (
@@ -118,7 +118,7 @@ for token in (
     "memoryBytes",
     "processCount",
 ):
-    require(token in admin, f"Admin Extension Host UI missing {token}")
+    require(token in admin, f"В интерфейсе Extension Host для Admin отсутствует: {token}")
 
 openapi = read("schemas/openapi.yaml")
 for path in (
@@ -136,7 +136,7 @@ for token in (
     "ExtensionHostMaxProcesses",
     "ExtensionHostCrashLimit",
 ):
-    require(token in config, f"host config missing {token}")
+    require(token in config, f"Отсутствует конфигурация Host: {token}")
 
 for envfile in (
     "deploy/production/env.production.example",

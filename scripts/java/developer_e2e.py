@@ -123,12 +123,12 @@ def main() -> None:
                    'authenticated Admin/Desktop RPC', 'settings storage/validation',
                    'denied unsigned action and bad token', 'CLI command', 'graceful shutdown'],
         'passed': True,
-        'note': 'Local authenticated JVM simulator; not a signed production install or native OS sandbox certification',
+        'note': 'Локальный аутентифицированный симулятор JVM; не подтверждает подписанную рабочую установку или нативную песочницу ОС',
     }
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
-    print('PASS: independent public SDK 0.48.12 Java 17 consumer, Host, Admin/Desktop RPC, CLI and security negatives')
+    print('ПРОЙДЕНО: независимая проверка публичного SDK 0.48.12 на Java 17, Host, RPC Admin/Desktop, CLI и негативных сценариев безопасности')
 
 
 if __name__ == '__main__':

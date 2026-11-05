@@ -74,7 +74,7 @@ require(
         "exact commit/run ID",
         "safe-basename",
     ],
-    "public Device Trust matrix aggregator",
+    "агрегатор публичной матрицы доверия устройств",
 )
 
 protocol = read("e2e/scripts/run-device-trust-e2e.sh")
@@ -131,7 +131,7 @@ require(
         ".upgrade.toMigration==$migration",
         ".upgrade.guardPurposeMigrationSealed==true",
     ],
-    "PostgreSQL Device Trust E2E",
+    "E2E-проверка доверия устройств с PostgreSQL",
 )
 
 crypto = read("e2e/scripts/device-trust-crypto.py")
@@ -142,7 +142,7 @@ require(
         "p256",
         "der_ecdsa_to_p1363",
     ],
-    "E2E crypto helper",
+    "криптографическая утилита E2E",
 )
 for command in ("pkeyutl", "dgst"):
     if not re.search(r'"openssl"\s*,\s*"' + command + r'"', crypto):
@@ -155,7 +155,7 @@ require(
         "test_p256_public_and_p1363_signature_verify",
         "p1363_to_der",
     ],
-    "E2E crypto helper tests",
+    "тесты криптографической утилиты E2E",
 )
 webauthn = read("e2e/scripts/webauthn-test-authenticator.py")
 require(
@@ -167,13 +167,13 @@ require(
         "assertion_auth_data",
         '"openssl", "dgst", "-sha256", "-sign"',
     ],
-    "E2E WebAuthn authenticator",
+    "аутентификатор WebAuthn для E2E",
 )
 webauthn_tests = read("e2e/scripts/test_webauthn_test_authenticator.py")
 require(
     webauthn_tests,
     ["test_registration_and_signed_assertion", "Verified OK"],
-    "E2E WebAuthn authenticator tests",
+    "тесты аутентификатора WebAuthn для E2E",
 )
 
 native_result = read("e2e/scripts/write-device-trust-native-result.py")
@@ -187,7 +187,7 @@ require(
         "headless-ci-does-not-prove-os-secure-storage-runtime",
         "hashlib.sha256",
     ],
-    "native Device Trust result writer",
+    "запись результатов проверки доверия устройств",
 )
 
 workflow = read(".github/workflows/device-trust.yml")
@@ -206,7 +206,7 @@ require(
         "GITHUB_RUN_ID",
         "GITHUB_STEP_SUMMARY",
     ],
-    "public Device Trust workflow",
+    "публичный workflow доверия устройств",
 )
 
 ci = read(".github/workflows/ci.yml")

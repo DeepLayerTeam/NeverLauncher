@@ -333,7 +333,7 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
         states = dr.compose_states(project, source)
         require(states.get('postgres') == 'running', 'Исходный PostgreSQL должен быть запущен')
         for service in ROLES:
-            require(states.get(service, 'exited') not in ('paused', 'restarting'), 'unhealthy writer: ' + service)
+            require(states.get(service, 'exited') not in ('paused', 'restarting'), 'служба записи находится в неработоспособном состоянии: ' + service)
         original = [s for s in ('nginx', 'admin', 'api', 'api-b', 'worker-a', 'worker-b') if states.get(s) == 'running']
         require('api' in original, 'Перед обновлением исходный API должен быть активен')
         require(not any(states.get(name) == 'running' for name in ('worker-a','worker-b','api-b')),

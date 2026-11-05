@@ -53,7 +53,7 @@ ci = read(".github/workflows/ci.yml")
 require(
     bridge_config,
     ["backend.urls", "LAUNCHER_BACKEND_URLS", "failoverCooldownMs"],
-    "multi-endpoint config",
+    "конфигурация нескольких конечных точек",
 )
 require(
     pool,
@@ -71,12 +71,12 @@ require(
         "channelId=",
         "resumeAfter=",
     ],
-    "bridge failover/resume",
+    "переключение и восстановление моста",
 )
 require(
     journal,
     ["_channel.id", "_channel.ackedSequence", "acknowledgeSequence"],
-    "durable channel cursor",
+    "сохраняемый указатель канала",
 )
 require(
     command,
@@ -86,7 +86,7 @@ require(
         "executionDigest",
         "deliberately excludes lease attempt/timestamps",
     ],
-    "stable exactly-once identity",
+    "устойчивый идентификатор однократной обработки",
 )
 require(
     migration,
@@ -108,7 +108,7 @@ require(
         "invalid control lease identity",
         "idempotent fenced commit",
     ],
-    "PostgreSQL ownership",
+    "владение в PostgreSQL",
 )
 require(
     coord,
@@ -129,7 +129,7 @@ require(
         "coordinator.Health",
         "ServerBridge HA coordinator is required but unavailable",
     ],
-    "runtime fail closed",
+    "запрет работы Runtime при ошибке",
 )
 require(
     observability,
@@ -138,7 +138,7 @@ require(
         "serverBridgeCoordinator",
         "ServerBridgeCoordinator.Health",
     ],
-    "HA readiness fail closed",
+    "запрет готовности HA при ошибке",
 )
 require(
     config,
@@ -159,7 +159,7 @@ require(
         "LeaseToken",
         "serverBridgeFeatureHAControlPlane",
     ],
-    "HA control handlers",
+    "обработчики управления HA",
 )
 require(
     redis_tests,
@@ -167,7 +167,7 @@ require(
         "TestRedisCoordinatorFencesCommandOwnership01911",
         "competing acquire must be fenced",
     ],
-    "Redis runtime tests",
+    "тесты Runtime с Redis",
 )
 require(
     pg_tests,
@@ -176,7 +176,7 @@ require(
         "expected one distributed owner",
         "cross-replica idempotent ACK",
     ],
-    "PostgreSQL multi-replica tests",
+    "тесты нескольких реплик PostgreSQL",
 )
 for forbidden in ["status == 401 ||", "status == 403 ||"]:
     if forbidden in client:

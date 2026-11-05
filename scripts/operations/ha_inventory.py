@@ -310,7 +310,7 @@ def node_inventory(project, samples, growth=True, source_root=None):
             if item["readiness"]["success"] != samples:
                 problems.append("%s: не пройдены все реальные проверки готовности" % service)
             if item["health"] not in ("healthy", "not-configured"):
-                problems.append("%s Docker health is %s" % (service, item["health"]))
+                problems.append("Состояние Docker для %s: %s" % (service, item["health"]))
             env = item["environment"]
             wanted_role = "api" if service in ("api", "api-b") else "worker"
             if env.get("LAUNCHER_PROCESS_ROLE") != wanted_role:
@@ -361,7 +361,7 @@ def node_inventory(project, samples, growth=True, source_root=None):
                                     "classification": classification,
                                     "mountType": mount["type"], "writable": mount["writable"]})
     for name, classification in (("Доменное хранилище PostgreSQL", "authoritative_metadata"),
-                                 ("S3 release objects", "authoritative_objects"),
+                                 ("Объекты релиза в S3", "authoritative_objects"),
                                  ("Аренды Redis и ограничения частоты запросов", "reconstructible_coordination_not_durable_authority"),
                                  ("Карты состояния Auth/MFA/ServerBridge в Runtime", "replica_local_state_cross_replica_consistency_unverified"),
                                  ("Игровые миры ServerBridge", "external_game_host_state_not_inspected")):
@@ -466,7 +466,7 @@ def assess_cluster(nodes, edge=None):
         record("redis", "UNVERIFIED", "Обнаружено несколько процессов Redis; эпоха, кворум и переключение при отказе не проверены")
     live = [i.get("dependencyRoundTrip") for _, i in replicas if i["service"] in ("api", "api-b")]
     if live and all(x and x.get("verified") and x.get("postgresql") and x.get("redisLease") and x.get("s3RoundTrip") for x in live):
-        record("s3_objects", "UNVERIFIED", "actual cross-client S3 write/read/hash/delete works; provider durability and failover not exercised")
+        record("s3_objects", "UNVERIFIED", "Реальные запись, чтение, проверка хеша и удаление в S3 из разных клиентов работают; отказоустойчивость провайдера и переключение при сбое не проверялись")
         record("durable_lease", "UNVERIFIED", "Транзакционная изоляция PostgreSQL и аренда Redis работают; безопасность при разделении сети не подтверждена")
     else:
         record("s3_objects", "UNVERIFIED", "Отсутствует подтверждение успешных операций записи, чтения, хеширования и удаления в работающем S3")

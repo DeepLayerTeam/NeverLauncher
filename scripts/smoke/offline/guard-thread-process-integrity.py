@@ -53,7 +53,7 @@ def main() -> int:
             "origin-set v1",
             "reconcile_and_verify",
         ],
-        "real thread enumeration/start-origin validation engine",
+        "проверка потоков и происхождения их запуска",
     )
     for forbidden in (
         "CreateRemoteThread",
@@ -94,7 +94,7 @@ def main() -> int:
             "process-tree v1",
             "breakaway_allowed: false",
         ],
-        "real Job Object process-tree verification",
+        "проверка дерева процессов через Job Object",
     )
     require(
         bootstrap,
@@ -103,7 +103,7 @@ def main() -> int:
             "bind_runtime_policy",
             "requires runtime Job Object policy binding",
         ],
-        "Sensor/runtime policy binding",
+        "привязка политики датчика к Runtime",
     )
     require(
         parent,
@@ -116,7 +116,7 @@ def main() -> int:
             "MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER",
             "fail_closed",
         ],
-        "authenticated parent evidence/process-tree enforcement",
+        "проверка аутентифицированного родителя и дерева процессов",
     )
     require(
         report,
@@ -133,7 +133,7 @@ def main() -> int:
             "thread_origin_set_sha256",
             "process_tree_sha256",
         ],
-        "runtime evidence report",
+        "отчёт о свидетельствах Runtime",
     )
     require(
         exports,
@@ -142,7 +142,7 @@ def main() -> int:
             "WindowsThreadProcessIntegrityReport",
             "RuntimeProcessTreeSnapshot",
         ],
-        "runtime exports",
+        "экспорт Runtime",
     )
     require(
         integration,
@@ -154,7 +154,7 @@ def main() -> int:
             "private executable thread start must be fail-closed",
             "bind_runtime_policy(&runtime_policy)",
         ],
-        "real Windows JVM process-tree/thread-tamper regressions",
+        "регрессионные тесты подмены потоков и дерева процессов JVM Windows",
     )
     require(
         probe,
@@ -176,7 +176,7 @@ def main() -> int:
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-thread-probe/Cargo.toml --all-targets -- -D warnings",
         ],
-        "Windows integration/adversarial/clippy CI",
+        "интеграционные и adversarial-проверки Windows / Clippy",
     )
     if "guard-thread-process-integrity-0186.py" not in preflight:
         raise SystemExit(

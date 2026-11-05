@@ -52,7 +52,7 @@ require(
         "repository=args.repository",
         "Guard CI matrix PASS",
     ],
-    "Guard CI matrix",
+    "матрица Guard CI",
 )
 stage = read("scripts/guard_ci/stage_release.py")
 require(
@@ -63,7 +63,7 @@ require(
         "certified artifact mismatch",
         "duplicate staged source",
     ],
-    "Guard artifact staging",
+    "подготовка артефактов Guard",
 )
 release_go = read("cli/cmd/launcher/guard_ci_release.go")
 require(
@@ -76,7 +76,7 @@ require(
         "verifyGuardCIArtifactsInDir",
         "all-required-cross-platform-guard-targets-pass-exact-commit-and-release-artifact-hashes",
     ],
-    "CLI Guard certification",
+    "сертификация Guard в CLI",
 )
 release_commands = read("cli/cmd/launcher/release_commands.go")
 require(
@@ -87,7 +87,7 @@ require(
         "cross-platform-guard-ci-certification",
         "guardCICertified",
     ],
-    "release publish-check wiring",
+    "подключение проверки публикации релиза",
 )
 build_release = read("scripts/release/build-release.sh")
 require(
@@ -99,7 +99,7 @@ require(
         "--guard-ci-matrix",
         "cross-platform Guard CI certification",
     ],
-    "release builder wiring",
+    "подключение сборщика релизов",
 )
 ci = read(".github/workflows/ci.yml")
 require(
@@ -112,13 +112,13 @@ require(
         "scripts/guard_ci/matrix.py aggregate",
         "launcher-guard-ci-matrix-",
     ],
-    "CI Guard certification matrix",
+    "матрица сертификации Guard в CI",
 )
 preflight = read("scripts/release/preflight.sh")
 require(
     preflight,
     ["guard-ci-release-certification-0139.py", "scripts/guard_ci/test_matrix.py"],
-    "preflight Guard certification",
+    "предварительная сертификация Guard",
 )
 
 subprocess.run(

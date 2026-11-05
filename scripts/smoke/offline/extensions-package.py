@@ -17,7 +17,7 @@ def require(condition: bool, message: str) -> None:
 
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 2), "VERSION must be >= 0.20.2")
+require(version >= (0, 20, 2), "Требуется VERSION не ниже 0.20.2")
 source = read("cli/cmd/launcher/extension_package_0202.go")
 for token in (
     "archive/zip",
@@ -33,21 +33,21 @@ for token in (
     "case-insensitive duplicate",
     "ensureExtensionEntrypointsPresent0202",
 ):
-    require(token in source, f"extension package implementation missing {token}")
+    require(token in source, f"Отсутствует реализация пакета расширения: {token}")
 
 commands = read("cli/cmd/launcher/extension_commands_0201.go")
 for command in ('"pack"', '"sign"', '"verify"', '"inspect"'):
-    require(command in commands, f"extension CLI missing {command}")
+    require(command in commands, f"Отсутствует команда расширений в CLI: {command}")
 
 package_schema = json.loads(read("schemas/launcher-extension-package.schema.json"))
 signature_schema = json.loads(read("schemas/launcher-extension-signature.schema.json"))
 require(
     package_schema["properties"]["formatVersion"]["const"] == "1.0",
-    "package schema formatVersion mismatch",
+    "В схеме пакета не совпадает версия формата formatVersion",
 )
 require(
     signature_schema["properties"]["algorithm"]["const"] == "Ed25519",
-    "signature schema algorithm mismatch",
+    "В схеме подписи не совпадает алгоритм",
 )
 
 print("Extensions Package 0.20.2: проверка готовности к эксплуатации: OK")

@@ -68,7 +68,7 @@ require(
         "previousCapabilitySignature",
         "activeSigningKeyFingerprint",
     ],
-    "signed capability negotiation",
+    "подписанное согласование возможностей",
 )
 require(
     identity,
@@ -89,7 +89,7 @@ require(
         "serverBridgeEventCanonical01912",
         "serverbridge_event_security_binding_invalid",
     ],
-    "event signatures",
+    "подписи событий",
 )
 require(
     control,
@@ -100,7 +100,7 @@ require(
         "serverBridgeControlCanonical01912",
         "legacyKey = *previousKey",
     ],
-    "command signatures/rotation",
+    "подписи команд и ротация ключей",
 )
 require(
     client,
@@ -111,7 +111,7 @@ require(
         "X-Launcher-Runtime-Id",
         "X-Launcher-Capability-Digest",
     ],
-    "bridge downgrade/runtime protection",
+    "защита моста от отката версии и угроз Runtime",
 )
 if (
     "LEGACY_PROTOCOL_VERSION)"
@@ -126,7 +126,7 @@ require(
         "previousPublicKey",
         "command endpoint can never bootstrap trust",
     ],
-    "online key rotation trust",
+    "доверие при оперативной ротации ключей",
 )
 require(
     event_record,
@@ -155,7 +155,7 @@ require(
         "securityCapabilityDigest",
         "BridgeProtocolSecurity.class",
     ],
-    "release certification",
+    "сертификация выпуска",
 )
 require(
     cli,
@@ -163,7 +163,7 @@ require(
         "serverBridgeSecurityCertificationRequired01912",
         "ServerBridge 3 release allowlist security metadata mismatch",
     ],
-    "CLI release verifier",
+    "проверка релиза в CLI",
 )
 require(
     contracts,
@@ -174,7 +174,7 @@ require(
         "previousCapabilitySignature",
         "nodeKeyFingerprint",
     ],
-    "OpenAPI v3 security contract",
+    "контракт безопасности OpenAPI v3",
 )
 require(
     tests,
@@ -185,12 +185,12 @@ require(
         "AllowlistRejectsTamperedBridge",
         "SecurityFeatureSetIsExact",
     ],
-    "Go adversarial tests",
+    "тесты противодействия атакам на Go",
 )
 require(
     event_tests,
     ["TestServerBridgeEventMemoryAckReplay0194"],
-    "event replay/idempotency regression",
+    "проверка повторов событий и идемпотентности",
 )
 require(
     e2e,
@@ -211,7 +211,7 @@ require(
         "LAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY",
         '"openssl", "pkey", "-inform", "DER", "-pubout", "-outform", "DER"',
     ],
-    "Minecraft E2E control key derivation",
+    "формирование ключей управления Minecraft E2E",
 )
 if (
     compose_e2e.count(

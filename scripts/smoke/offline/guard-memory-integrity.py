@@ -56,7 +56,7 @@ def main() -> int:
             "GetModuleHandleExW",
             "Sha256::digest",
         ],
-        "real executable-memory scan/code-page baseline/provenance engine",
+        "сканирование исполняемой памяти, контроль страниц и происхождения",
     )
     for forbidden in (
         "WriteProcessMemory",
@@ -75,7 +75,7 @@ def main() -> int:
             "crate::memory_integrity::record_virtual_alloc",
             "crate::memory_integrity::record_virtual_protect",
         ],
-        "real VirtualAlloc/VirtualProtect transition feed",
+        "отслеживание переходов VirtualAlloc/VirtualProtect",
     )
     require(
         sensor,
@@ -89,7 +89,7 @@ def main() -> int:
             "memory_integrity::shutdown()",
             "memory_event(MODULE_EVENT_REASON_MEMORY_READY",
         ],
-        "Sensor startup/continuous Memory Integrity lifecycle",
+        "запуск датчика и постоянный контроль целостности памяти",
     )
     require(
         parent,
@@ -102,7 +102,7 @@ def main() -> int:
             "Memory Integrity runtime tampering detected",
             "fail_closed",
         ],
-        "parent authenticated readiness/evidence/fail-closed enforcement",
+        "подтверждение родителя, свидетельств и запрета при ошибке",
     )
     require(
         report,
@@ -117,12 +117,12 @@ def main() -> int:
             "code_set_sha256",
             "executable_map_sha256",
         ],
-        "runtime Memory Integrity evidence",
+        "свидетельства целостности памяти Runtime",
     )
     require(
         exports,
         ["pub mod windows_memory_integrity;", "WindowsMemoryIntegrityReport"],
-        "runtime exports",
+        "экспорт Runtime",
     )
     require(
         integration,
@@ -133,12 +133,12 @@ def main() -> int:
             "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
             "executable image code-page drift must be fail-closed",
         ],
-        "real Windows JVM Memory Integrity regressions",
+        "регрессионные тесты целостности памяти JVM Windows",
     )
     require(
         probe,
         ["JNI_OnLoad", "VirtualProtect", "write_volatile", "guard_memory_probe_target"],
-        "adversarial in-process code-drift fixture",
+        "тестовый сценарий изменения кода внутри процесса",
     )
     require(
         ci,
@@ -149,7 +149,7 @@ def main() -> int:
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-memory-probe/Cargo.toml --all-targets -- -D warnings",
         ],
-        "Windows compilation/adversarial integration/clippy CI",
+        "CI сборки Windows, проверок атак и Clippy",
     )
     if "guard-memory-integrity-0185.py" not in preflight:
         raise SystemExit(

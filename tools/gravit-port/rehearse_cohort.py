@@ -319,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
             report["cases"].append(execute_project(cfg["launcher"], cfg["backend"], case, args.output_dir, cfg["launcherSha256"]))
         report["status"] = "isolated-stage-pass-not-production-GA"
         save_private(args.output_dir / "cohort-04910.json", report)
-        print("PASS: 3 isolated real-project import + Minecraft join + signed update + post-update join runs; GA NOT certified")
+        print("ПРОЙДЕНО: три изолированных прогона импорта реального проекта, входа в Minecraft, подписанного обновления и повторного входа; сертификация GA НЕ подтверждена")
         return 0
     except (Blocked, OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
         print("BLOCKED: " + str(exc), file=sys.stderr)

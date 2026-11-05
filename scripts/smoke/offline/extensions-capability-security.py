@@ -15,7 +15,7 @@ def require(ok: bool, message: str) -> None:
 
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 7), "VERSION must be >= 0.20.7")
+require(version >= (0, 20, 7), "Требуется VERSION не ниже 0.20.7")
 
 migration = read(
     "services/api/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql"
@@ -29,7 +29,7 @@ for token in (
     "octet_length(nonce) = 12",
     "AES-256-GCM",
 ):
-    require(token in migration, f"capability-security migration missing {token}")
+    require(token in migration, f"Отсутствует миграция защиты разрешений: {token}")
 
 security = read("services/api/internal/extensionsecurity/security_0207.go")
 for token in (
@@ -51,7 +51,7 @@ for token in (
     "Effective(",
     "extension secrets broker is not configured",
 ):
-    require(token in security, f"security manager missing {token}")
+    require(token in security, f"В менеджере безопасности отсутствует: {token}")
 
 host = read("services/api/internal/extensionhost/host_0205.go")
 for token in (
@@ -63,7 +63,7 @@ for token in (
     "capability policy unavailable",
     "validateEventPermission0206",
 ):
-    require(token in host, f"Extension Host capability security missing {token}")
+    require(token in host, f"В защите разрешений Extension Host отсутствует: {token}")
 http_broker = read("services/api/internal/extensionhost/http_broker_0207.go")
 for token in (
     "https",
@@ -73,7 +73,7 @@ for token in (
     "Proxy: nil",
     "MaxHTTPResponseBytes",
 ):
-    require(token in http_broker, f"secure HTTP broker missing {token}")
+    require(token in http_broker, f"В защищённом HTTP-брокере отсутствует: {token}")
 
 lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
 updates = (
@@ -84,7 +84,7 @@ updates = (
 require(
     ("AddedNotGranted" in lifecycle and "permissionDiff" in lifecycle)
     or ("AddedNotGranted" in updates and "PermissionDiff" in updates),
-    "update permission-diff gate missing",
+    "Отсутствует проверка изменения разрешений при обновлении",
 )
 
 routes = read("services/api/internal/httpapi/routes_packages.go")
@@ -93,7 +93,7 @@ for path in (
     "/api/v1/admin/extensions/{extensionId}/permissions",
     "/api/v1/admin/extensions/{extensionId}/secrets",
 ):
-    require(path in routes, f"Admin capability route missing {path}")
+    require(path in routes, f"Отсутствует маршрут разрешений Admin: {path}")
 
 cli = read("cli/cmd/launcher/extension_security_0207.go")
 for token in (
@@ -110,12 +110,12 @@ require(
     "handleExtensionSecurity0207" in routing
     and '"permission-grant"' in routing
     and '"secret-set"' in routing,
-    "CLI capability commands are not wired into nl extension",
+    "Команды управления разрешениями CLI не подключены к nl extension",
 )
 
 prod = read("cli/cmd/launcher/release_commands.go")
 for table in ("extension_permission_grants", "extension_secrets"):
-    require(table in prod, f"productionTables missing {table}")
+    require(table in prod, f"Отсутствует запись в productionTables: {table}")
 
 openapi = read("schemas/openapi.yaml")
 for path in (

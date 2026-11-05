@@ -41,7 +41,7 @@ class API:
         self.opener = build_opener(ProxyHandler({}), NoRedirect, HTTPHandler())
 
     def request(self, method, path, *, payload=None, token=None, expected=(200,)):
-        require(path.startswith("/api/v1/") or path == "/health", "invalid API route")
+        require(path.startswith("/api/v1/") or path == "/health", "некорректный маршрут API")
         headers = {"Accept": "application/json"}
         if token:
             headers["Authorization"] = "Bearer " + token
@@ -157,7 +157,7 @@ def run(base, email, password):
     )
     require(
         profile.get("data", {}).get("profile", {}).get("id") == "test-vanilla",
-        "profile create unsuccessful",
+        "не удалось создать профиль",
     )
     _, profiles = api.request("GET", "/api/v1/projects/" + project + "/profiles")
     require(
@@ -175,12 +175,12 @@ def run(base, email, password):
     )
     require(
         channel.get("data", {}).get("channel", {}).get("id") == "acceptance",
-        "channel not created",
+        "канал не создан",
     )
     _, channels = api.request("GET", "/api/v1/projects/" + project + "/channels")
     require(
         any(x.get("id") == "acceptance" for x in channels.get("items", [])),
-        "owner channel not visible to player",
+        "канал владельца не виден игроку",
     )
     record("owner-create-player-discover-channel")
 
@@ -207,7 +207,7 @@ def run(base, email, password):
         isinstance(new_access, str)
         and isinstance(new_refresh, str)
         and new_refresh != refresh,
-        "refresh tokens not rotated",
+        "токены обновления не были заменены",
     )
     api.request("POST", "/api/v1/auth/logout", token=new_access)
     api.request("GET", "/api/v1/auth/accounts", token=new_access, expected=(401, 403))
@@ -246,7 +246,7 @@ def main():
         url = urlsplit(args.backend)
         require(
             args.isolated_test_instance,
-            "requires explicit isolated test instance acknowledgment",
+            "требуется явное подтверждение использования изолированного тестового экземпляра",
         )
         require(
             url.scheme == "http"
@@ -256,18 +256,18 @@ def main():
             and not url.query
             and not url.fragment
             and not url.path.rstrip("/"),
-            "only a local HTTP test Backend is allowed",
+            "допускается только локальный тестовый Backend по HTTP",
         )
         email = os.environ.get("LAUNCHER_TEST_ADMIN_EMAIL", "")
         password = os.environ.get("LAUNCHER_TEST_ADMIN_PASSWORD", "")
         require(
             bool(email) and bool(password),
-            "test credentials must be supplied via environment",
+            "тестовые учётные данные должны передаваться через переменные окружения",
         )
         result = run(args.backend.rstrip("/"), email, password)
         atomic_report(args.output, result)
         print(
-            "Owner/player live Backend acceptance: PASS; Minecraft and native Desktop: NOT VERIFIED"
+            "Приёмка Backend для владельца и игрока: пройдена; Minecraft и нативный Desktop не проверялись"
         )
         return 0
     except (AuditError, OSError, ValueError, URLError, KeyError, TypeError) as e:

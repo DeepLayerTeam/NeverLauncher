@@ -174,7 +174,7 @@ require(
         "universalServerAdapters",
         "hybridCertificationPolicy",
     ],
-    "release certification",
+    "сертификация выпуска",
 )
 build = read("scripts/build/bridge-plugins.sh")
 require(

@@ -15,7 +15,7 @@ def require(cond, msg):
 
 
 version = tuple(int(x) for x in (ROOT / "VERSION").read_text().strip().split(".")[:3])
-require(version >= (0, 20, 12), "VERSION must be >= 0.20.12")
+require(version >= (0, 20, 12), "Требуется VERSION не ниже 0.20.12")
 mig = read(
     "services/api/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql"
 )
@@ -26,7 +26,7 @@ for token in [
     "revoked_at",
     "launcher_revoke_extension_key_02012",
 ]:
-    require(token in mig, f"migration missing {token}")
+    require(token in mig, f"Отсутствует миграция: {token}")
 repo = read("services/api/internal/repository/extension_trust_02012.go")
 for token in [
     "RevokeExtensionRegistryPublisherKey",
@@ -35,7 +35,7 @@ for token in [
     "SetExtensionEmergencyDisable",
     "ClearExtensionEmergencyDisable",
 ]:
-    require(token in repo, f"repository missing {token}")
+    require(token in repo, f"Отсутствует репозиторий: {token}")
 trust = read("services/api/internal/extensiontrust/trust_02012.go")
 for token in [
     "EvaluatePublisher",
@@ -51,7 +51,7 @@ for token in [
     "SetCrashLoopHandler",
     "crashloop",
 ]:
-    require(token in host, f"host missing {token}")
+    require(token in host, f"Отсутствует Host: {token}")
 main = read("services/api/cmd/launcher-api/main.go")
 for token in [
     "--no-extensions",
@@ -77,7 +77,7 @@ for token in [
     "/extension-recovery/backup",
     "/extension-recovery/restore",
 ]:
-    require(token in routes, f"route missing {token}")
+    require(token in routes, f"Отсутствует маршрут: {token}")
 mal = read("services/api/internal/extensionpackage/malicious_02012_test.go")
 for token in ["traversal", "windows-device", "symlink", "case-collision"]:
     require(token in mal, f"отсутствует тест вредоносного пакета {token}")
@@ -85,7 +85,7 @@ targets = json.loads(read("extensions/trust-recovery-targets-02012.json"))
 require(
     {x["os"] for x in targets["targets"] if x.get("required")}
     == {"linux", "windows", "macos"},
-    "cross-platform target set incomplete",
+    "Набор целевых платформ неполный",
 )
 workflow = read(".github/workflows/extensions-trust-recovery-02012.yml")
 for token in [
@@ -101,5 +101,5 @@ for token in [
     "/api/v1/admin/extension-trust/policy",
     "/api/v1/admin/extension-recovery/restore",
 ]:
-    require(token in openapi, f"OpenAPI missing {token}")
+    require(token in openapi, f"Отсутствует описание в OpenAPI: {token}")
 print("Extensions Trust, Recovery & Certification 0.20.12 offline gate OK")

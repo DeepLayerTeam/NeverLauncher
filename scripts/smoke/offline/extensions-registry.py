@@ -16,7 +16,7 @@ def require(condition: bool, message: str) -> None:
 
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
-require(version >= (0, 20, 3), "VERSION must be >= 0.20.3")
+require(version >= (0, 20, 3), "Требуется VERSION не ниже 0.20.3")
 
 migration = read(
     "services/api/internal/dbmigrate/sql/0043_extensions_registry_0203.sql"

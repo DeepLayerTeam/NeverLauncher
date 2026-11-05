@@ -182,7 +182,7 @@ def generate_haproxy(cfg):
     redis = cfg['redis_name']
     s3 = cfg['s3_name']
     lines = [
-        '# Generated from private config by dependency_ha_0513.py; mode 0600.',
+        '# Создано из закрытой конфигурации скриптом dependency_ha_0513.py; права 0600.',
         'global',
         '    log /dev/log local0',
         '    maxconn 20000',
@@ -700,7 +700,7 @@ def edge_drill(sock, edge_url, nodes, cfg, target, deadline):
                 recovery_observed = True
                 break
             time.sleep(2)
-    return {'schema': SCHEMA, 'version': VERSION, 'scenario': 'VRRP active LB outage',
+    return {'schema': SCHEMA, 'version': VERSION, 'scenario': 'отказ активного балансировщика VRRP',
             'disrupted': stopped, 'restartCommandSucceeded': restored,
             'vipTransferredToSurvivor': moved, 'restorationReadinessObserved': recovery_observed,
             'observations': checks, 'testPassed': stopped and restored and moved and recovery_observed,

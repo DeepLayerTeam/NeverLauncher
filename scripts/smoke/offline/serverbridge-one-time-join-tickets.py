@@ -53,7 +53,7 @@ require(
         "sha256.Sum256(nonce)",
         "ServerBridgeJoinRedemption",
     ],
-    "secure join ticket helper",
+    "защищённая утилита билетов подключения",
 )
 if "UnixNano" in helper or "time.Now" in helper:
     raise SystemExit(
@@ -76,7 +76,7 @@ require(
         "j.issued_identity_epoch=$3",
         "n.identity_epoch=$3",
     ],
-    "PostgreSQL ServerBridge one-time redemption",
+    "одноразовое погашение билета ServerBridge в PostgreSQL",
 )
 
 minecraft_repo = read("services/api/internal/repository/postgres.go")
@@ -89,7 +89,7 @@ require(
         "consumed_at=",
         "status='active'",
     ],
-    "PostgreSQL Yggdrasil consume-once repository",
+    "репозиторий одноразового использования Yggdrasil в PostgreSQL",
 )
 require(
     minecraft_http,
