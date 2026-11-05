@@ -28,7 +28,7 @@ case "$(uname -m)" in
   *) echo "Unsupported native Linux architecture: $(uname -m)" >&2; exit 2 ;;
 esac
 if [[ -n "${EXPECTED_ARCH}" && "${EXPECTED_ARCH}" != "${ARCH}" ]]; then
-  echo "Native runner architecture mismatch: expected ${EXPECTED_ARCH}, got ${ARCH}" >&2
+  echo "Архитектура нативного исполняемого компонента не совпадает: ожидалась ${EXPECTED_ARCH}, получена ${ARCH}" >&2
   exit 2
 fi
 

@@ -111,7 +111,7 @@ def metadata() -> dict:
         "totalMemoryBytes": psutil.virtual_memory().total if psutil else None,
         "psutil": psutil.__version__ if psutil else None,
         "fixtureType": "synthetic signed certification manifest; real native binary and actual bytes",
-        "disclaimer": "No competing launcher benchmark, real Minecraft game launch, or production capacity claim",
+        "disclaimer": "Нет сравнительного теста с другим лаунчером, подтверждения реального запуска Minecraft или заявлений о производительности рабочей среды",
     }
 
 
@@ -603,7 +603,7 @@ def benchmark_startup(
                         proc.wait(timeout=5)
     return {
         "startupDefinition": "process creation to React first double requestAnimationFrame, native marker",
-        "note": "Cold is first process run, NOT an OS page-cache drop or cold boot; subsequent runs reuse OS caches",
+        "note": "Холодный запуск — это первый запуск процесса, а НЕ очистка файлового кеша ОС или запуск компьютера после выключения; последующие запуски используют кеши ОС",
         "firstStart": rows[0],
         "subsequentStartMs": describe([r["elapsedMs"] for r in rows[1:]]),
         "runs": rows,
@@ -710,7 +710,7 @@ def benchmark_api(
         "runs": rows,
         "p95Ms": describe([r["latencyMs"]["p95"] for r in rows]),
         "p99Ms": describe([r["latencyMs"]["p99"] for r in rows]),
-        "note": "Measures specified endpoint, not all Admin pages, auth flows, or production DB latency",
+        "note": "Измеряется указанный адрес API, а не все страницы Admin, сценарии авторизации или задержка БД рабочей среды",
     }
 
 

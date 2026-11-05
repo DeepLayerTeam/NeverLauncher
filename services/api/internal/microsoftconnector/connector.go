@@ -48,7 +48,7 @@ func (c *Connector) BeginBrowserAuth(ctx context.Context, req authconnector.Brow
 	}
 	u, err := url.Parse(start.AuthorizationURL)
 	if err != nil {
-		return authconnector.BrowserAuthStart{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Microsoft authorization URL is invalid", err)
+		return authconnector.BrowserAuthStart{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый URL авторизации Microsoft", err)
 	}
 	q := u.Query()
 	if c.cfg.Prompt != "" {
@@ -94,7 +94,7 @@ func (c *Connector) normalizeAuthentication(auth authconnector.Authentication) (
 	tid := strings.ToLower(strings.TrimSpace(stringClaim(claims, "tid")))
 	oid := strings.ToLower(strings.TrimSpace(stringClaim(claims, "oid")))
 	if !validGUID(tid) || !validGUID(oid) {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Microsoft identity requires immutable tid and oid GUID claims")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Для учётной записи Microsoft необходимы неизменяемые GUID-поля tid и oid")
 	}
 	// Пара tid+oid устойчива между приложениями одного tenant
 	// и не заменяется изменяемым email/UPN. Она также

@@ -89,7 +89,7 @@ def role_plan(path, imported, users):
 
 
 class NoRedirect(HTTPRedirectHandler):
-    """A redirected Bearer request could otherwise disclose the operator token."""
+    """Запрос Bearer с перенаправлением может раскрыть токен оператора."""
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
 

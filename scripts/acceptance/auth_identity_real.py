@@ -242,7 +242,7 @@ def prepare(api, raw, output):
 
 def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     local, secondary, sql, oidc, official = check_input(raw)
-    require(isinstance(source_commit, str) and COMMIT.fullmatch(source_commit), 'exact source commit required')
+    require(isinstance(source_commit, str) and COMMIT.fullmatch(source_commit), 'Необходимо указать точный коммит исходников')
     require(isinstance(api_package_sha256, str) and SHA256.fullmatch(api_package_sha256), 'exact backend release package SHA-256 required')
     issued = proof.get('generatedAt')
     age = int(time.time()) - issued if isinstance(issued, int) else 1000000

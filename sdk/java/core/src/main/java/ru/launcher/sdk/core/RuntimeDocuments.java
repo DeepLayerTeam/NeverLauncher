@@ -12,7 +12,7 @@ public final class RuntimeDocuments {
         catch(HostSession.HostError e){if(e.status()==404)return Optional.empty();throw e;}
     }
     public void put(String key,Object value,JsonSchema schema)throws IOException,InterruptedException {
-        Objects.requireNonNull(value,"JSON null documents are not supported");if(schema!=null)schema.validate(value);
+        Objects.requireNonNull(value,"Документы с JSON null не поддерживаются");if(schema!=null)schema.validate(value);
         host.capability("runtime."+kind+".put",Map.of("key",key,"value",value));
     }
     public void delete(String key)throws IOException,InterruptedException {host.capability("runtime."+kind+".delete",Map.of("key",key));}

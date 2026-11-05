@@ -305,7 +305,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		out.Blockers = append(out.Blockers, "exact loader version required for "+loader)
 	}
 	if loader == "vanilla" && loaderVersion != "" {
-		out.Blockers = append(out.Blockers, "vanilla profile cannot declare loader version")
+		out.Blockers = append(out.Blockers, "Профиль Vanilla не может указывать версию загрузчика")
 	}
 	if normalized, normalizeErr := model.NormalizeProfileV2(converted.Profile); normalizeErr != nil {
 		out.Blockers = append(out.Blockers, "launch profile invalid: "+normalizeErr.Error())
@@ -385,14 +385,14 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		}
 		clientTree := strings.HasPrefix(f.Path, prefixes[0]) || strings.HasPrefix(f.Path, prefixes[1])
 		if clientTree && (matchesFileRule(target, ownerExcluded) || protectedClientFile(target) || hiddenClientFile(target)) {
-			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "player-owned or protected client path"})
+			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "Путь клиента принадлежит игроку или защищён"})
 			if classpath[target] {
 				out.Blockers = append(out.Blockers, "classpath references protected user data: "+target)
 			}
 			continue
 		}
 		if clientTree && !matchesFileRule(target, updateRules) && !classpath[target] && !optionalFiles[target] {
-			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "not listed in Gravit update or classpath"})
+			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "Отсутствует в обновлении Gravit и списке классов"})
 			continue
 		}
 		fold := strings.ToLower(target)
@@ -431,7 +431,7 @@ func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.I
 		}
 		out.Optional = &migrated
 		if !migrated.Ready {
-			out.Blockers = append(out.Blockers, "unsupported or unresolved optional actions")
+			out.Blockers = append(out.Blockers, "Дополнительные действия не поддерживаются или не разрешены")
 		}
 		optional := map[string]bool{}
 		for _, c := range migrated.Catalog.Components {

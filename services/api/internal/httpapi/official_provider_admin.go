@@ -177,5 +177,5 @@ func (s Server) officialProviderDiagnostics02611(w http.ResponseWriter, r *http.
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{Actor: actor.Sub, Action: "official-provider:diagnostics", Target: strings.Join(statuses, ","), CreatedAt: time.Now().UTC()})
 	}
-	writeJSON(w, 200, map[string]any{"checkedAt": time.Now().UTC(), "revision": current.Revision, "configured": current.Settings.ClientID != "" && current.Settings.Enabled, "issuer": current.Settings.Issuer, "checks": checks, "appApprovalStatus": "not_verified", "note": "Connectivity cannot validate registered redirect URIs, Xbox entitlement, Minecraft Services application admission or successful online-mode join. Run the authenticated 0.26.1 provider POC."})
+	writeJSON(w, 200, map[string]any{"checkedAt": time.Now().UTC(), "revision": current.Revision, "configured": current.Settings.ClientID != "" && current.Settings.Enabled, "issuer": current.Settings.Issuer, "checks": checks, "appApprovalStatus": "not_verified", "note": "Проверка связи не подтверждает зарегистрированные URI перенаправления, права Xbox, допуск приложения Minecraft Services или успешное подключение в онлайн-режиме. Выполните авторизованную проверку провайдера 0.26.1."})
 }

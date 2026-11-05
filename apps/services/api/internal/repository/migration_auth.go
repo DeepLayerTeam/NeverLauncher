@@ -196,7 +196,7 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 			// Текущие локальные учётные данные аккаунта принадлежат Never. Никогда не
 			// заменяйте их.
 			row.State = "existing_unchanged"
-			row.Reason = "Never identity already exists; source password not installed; operator must verify login"
+			row.Reason = "Учётная запись Never уже существует; пароль источника не перенесён — оператор должен проверить вход"
 			result.ExistingUnchanged++
 		} else if c.State != "importable" {
 			row.State = "manual_reset"

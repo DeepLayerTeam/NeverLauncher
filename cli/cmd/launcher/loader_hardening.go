@@ -158,7 +158,7 @@ func verifyLoaderPayloadCache(root, loader, minecraft, source, expectedSHA256 st
 	}
 	var record loaderPayloadCacheRecord
 	if jsonErr := json.Unmarshal(raw, &record); jsonErr != nil {
-		_, _ = quarantineCompatibilityArtifact(root, recordRel, "loader payload cache record JSON is corrupt")
+		_, _ = quarantineCompatibilityArtifact(root, recordRel, "Повреждена JSON-запись кеша данных загрузчика")
 		err = fmt.Errorf("Ошибка JSON записи кеша загрузчика: %w", jsonErr)
 		return
 	}

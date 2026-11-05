@@ -99,7 +99,7 @@ grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
-[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"
 [[ "$target_sealed" == "true" ]] || { echo "ServerBridge Protocol v2 migration is not sealed: 0021_serverbridge_protocol_v2_0141" >&2; exit 1; }
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT protocol_version,status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,project_id,profile_id FROM server_bridge_nodes_v2 WHERE id='legacy-paper'")"

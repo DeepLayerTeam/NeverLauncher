@@ -170,13 +170,13 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if raw, has := obj["groupFile"]; has && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			entries, err := gravitArray02411(raw)
 			if err != nil || len(entries) != 0 {
-				note(label+".groupFile", "blocked", "", "Gravit groupFile enforces at least one selected alternative; review exclusive groups manually")
+				note(label+".groupFile", "blocked", "", "Gravit groupFile требует выбора хотя бы одного варианта; проверьте взаимоисключающие группы вручную")
 			}
 		}
 		if raw, has := obj["isPreset"]; has {
 			b, ok := gravitBool02411(raw)
 			if !ok || b {
-				note(label+".isPreset", "blocked", "", "Gravit isPreset has selection semantics not equivalent to Never presets")
+				note(label+".isPreset", "blocked", "", "Семантика выбора Gravit isPreset отличается от пресетов Never")
 			}
 		}
 		for key := range obj {
@@ -269,7 +269,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					rn, ok := gravitString02411(r["name"])
 					rid := names[rn]
 					if !ok || rid == "" {
-						note(fld, "blocked", "", "dependency/conflict name is absent from this import")
+						note(fld, "blocked", "", "Название зависимости или конфликта отсутствует в этом импорте")
 						continue
 					}
 					if rel.dependency {
@@ -476,7 +476,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							}
 							exact := fileMap[strings.ToLower(sourcePath)]
 							if exact != sourcePath || owned[strings.ToLower(sourcePath)] {
-								note(fld+".files."+sourcePath, "blocked", "", "file not staged as unowned signed optional path in draft package")
+								note(fld+".files."+sourcePath, "blocked", "", "Файл не подготовлен как неподконтрольный подписанный дополнительный путь в черновике пакета")
 								continue
 							}
 							c.Files = append(c.Files, sourcePath)

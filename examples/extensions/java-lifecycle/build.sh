@@ -12,4 +12,4 @@ cp launcher-extension.json build/package/launcher-extension.json
 cp backend/bin/java-lifecycle build/package/backend/bin/java-lifecycle
 chmod 0755 build/package/backend/bin/java-lifecycle
 printf '%s\n' 'Compiled signable extension under examples/extensions/java-lifecycle/build/package/'
-printf '%s\n' 'Package it with existing nl extension package/registry tooling (signing is mandatory).'
+printf '%s\n' 'Упакуйте расширение существующими средствами nl extension package/registry (подпись обязательна).'

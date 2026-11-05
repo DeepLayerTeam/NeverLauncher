@@ -140,7 +140,7 @@ pub async fn collect_guard_inventory_0501(
                 format!("PID Guard {}; авторизован={}, политика процесса={}, усиленная защита={}, привязка к родителю={}",
                     status.pid, status.authenticated, status.process_policy_enforced, status.hardening_enforced, status.lifetime_job_enforced)));
             checks.push(check("guard.release-package", if status.package_manifest_verified { "PASS" } else { "BLOCKED" },
-                if status.package_manifest_verified { "Release package manifest verified" } else { "Release package verification not demonstrated (debug or unverified package)" }));
+                if status.package_manifest_verified { "Release package manifest verified" } else { "Проверка релизного пакета не подтверждена (отладочный или непроверенный пакет)" }));
             match supervisor.process_policy().await {
                 Ok(policy) if policy.enforced && policy.pid == status.pid =>
                     checks.push(check("guard.process-policy", "PASS", format!("Guard применил {} к PID {}", policy.schema, policy.pid))),
@@ -158,7 +158,7 @@ pub async fn collect_guard_inventory_0501(
             let challenge = hex::encode(rand::random::<[u8; 32]>());
             match supervisor.remote_attestation(&id, &challenge).await {
                 Ok(attestation) if attestation.challenge_id == id =>
-                    checks.push(check("guard.remote-attestation", "PASS", "Fresh challenge validated by authenticated Guard IPC; not server/game attestation")),
+                    checks.push(check("guard.remote-attestation", "PASS", "Одноразовый запрос проверен через аутентифицированный IPC Guard; это не аттестация сервера или игры")),
                 Ok(_) => checks.push(check("guard.remote-attestation", "BLOCKED", "Проверочный запрос удалённого подтверждения не совпадает")),
                 Err(err) => checks.push(check("guard.remote-attestation", "BLOCKED", err)),
             }
@@ -174,14 +174,14 @@ pub async fn collect_guard_inventory_0501(
         checks.push(check("sensor.jvm-awareness", "BLOCKED", "Требуются отчёты работающей JVM и нативного датчика"));
         checks.push(check("sensor.continuous", "BLOCKED", "Требуются наблюдения сторожевого процесса на протяжении игрового сеанса"));
     } else {
-        checks.push(check("sensor.windows.in-process", "UNSUPPORTED", "Windows-only native in-process Guard Sensor"));
-        checks.push(check("sensor.jvm-awareness", "UNSUPPORTED", "Windows-only native JVM-aware Guard Sensor in 0.50.1"));
-        checks.push(check("sensor.continuous", "UNSUPPORTED", "Windows-only native continuous Guard Sensor in 0.50.1"));
+        checks.push(check("sensor.windows.in-process", "UNSUPPORTED", "Нативный внутрипроцессный датчик Guard доступен только в Windows"));
+        checks.push(check("sensor.jvm-awareness", "UNSUPPORTED", "Нативный датчик Guard с контролем JVM в версии 0.50.1 доступен только в Windows"));
+        checks.push(check("sensor.continuous", "UNSUPPORTED", "Нативный датчик непрерывного контроля Guard в версии 0.50.1 доступен только в Windows"));
     }
     for name in ["vanilla", "fabric", "quilt", "forge", "neoforge"] {
         checks.push(check(&format!("loader.runtime.{name}"), "BLOCKED",
-            if loader.as_deref() == Some(name) { "Installed metadata detected; no native Minecraft launch/join certificate supplied" }
-            else { "No real runtime/game launch evidence for this loader" }));
+            if loader.as_deref() == Some(name) { "Найдены метаданные установки, но нет свидетельства нативного запуска Minecraft или подключения к серверу" }
+            else { "Для этого загрузчика отсутствует подтверждение реального запуска среды выполнения или игры" }));
     }
     checks.push(check("minecraft.real-join", "BLOCKED", "Требуются внешние доказательства реального запуска Minecraft и подключения к серверу; одних метаданных и обнаружения Java недостаточно"));
     checks.push(check("minecraft.authorized-javaagent", "BLOCKED", "Инвентаризация не подтверждает совместимость доверенного Java Agent и Guard; запланировано для 0.50.3"));

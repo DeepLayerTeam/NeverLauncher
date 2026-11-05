@@ -104,7 +104,7 @@ def main(argv=None):
         elif a.type == 'matching-game':
             minecraft(a.path, a.version, matching=True, mc=a.minecraft_version)
         elif a.type == 'owner':
-            require(bool(re.fullmatch(r'[0-9a-f]{40}', a.commit)), 'exact source commit required')
+            require(bool(re.fullmatch(r'[0-9a-f]{40}', a.commit)), 'Необходимо указать точный коммит исходников')
             owner(a.path, a.version, a.commit)
         else:
             legacy(a.path, a.version)

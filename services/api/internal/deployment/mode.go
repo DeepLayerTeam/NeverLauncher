@@ -76,7 +76,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.Reasons = append(p.Reasons, "SQLite repository configured")
 	case memory:
 		p.Mode = Development
-		p.Reasons = append(p.Reasons, "in-memory repository configured; development only")
+		p.Reasons = append(p.Reasons, "Настроено хранилище в памяти; только для разработки")
 	case postgres && sqliteCoord:
 		p.Mode = Standard
 		p.Reasons = append(p.Reasons, "PostgreSQL repository with local SQLite coordinator")
@@ -100,10 +100,10 @@ func Detect(cfg config.Config) (Plan, error) {
 		}
 	case SingleNode:
 		if !sqliteRepo {
-			problems = append(problems, "single-node requires SQLite HTTP repository")
+			problems = append(problems, "Для одноузлового режима требуется HTTP-хранилище SQLite")
 		}
 		if p.Storage != "local" {
-			problems = append(problems, "single-node requires local object storage")
+			problems = append(problems, "Для одноузлового режима необходимо локальное объектное хранилище")
 		}
 		if cfg.ServerBridgeHARequired {
 			problems = append(problems, "Одиночный узел не может обеспечить распределённую отказоустойчивость ServerBridge")
@@ -120,12 +120,12 @@ func Detect(cfg config.Config) (Plan, error) {
 			problems = append(problems, "Хранилище и координатор должны использовать разные файлы SQLite")
 		}
 		if cfg.RateLimitEnabled == false || !cfg.RateLimitFailClosed || cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
-			problems = append(problems, "single-node requires enabled fail-closed rate limiting with positive budgets")
+			problems = append(problems, "Для одноузлового режима необходимо включить ограничения частоты запросов с отказом при сбое и положительными лимитами")
 		}
 		p.Coordinator = "sqlite"
 		p.SingleInstance = true
 		p.requireLocalFS = true
-		p.Limitations = append(p.Limitations, "Допускается только один процесс Linux API; распределённая отказоустойчивость недоступна", "SQLite-to-PostgreSQL migration requires a separate verified procedure")
+		p.Limitations = append(p.Limitations, "Допускается только один процесс Linux API; распределённая отказоустойчивость недоступна", "Перенос с SQLite на PostgreSQL требует отдельной проверенной процедуры")
 		// Корневой каталог хранилища — каноническая точка привязки владения между
 		// развёртываниями.
 		p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
@@ -138,7 +138,7 @@ func Detect(cfg config.Config) (Plan, error) {
 			problems = append(problems, "Для standard/network-ha требуется HTTP-хранилище PostgreSQL")
 		}
 		if strings.ToLower(strings.TrimSpace(cfg.SQLDriver)) != "pgx" {
-			problems = append(problems, "PostgreSQL requires pgx driver")
+			problems = append(problems, "Для PostgreSQL требуется драйвер pgx")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == "" {
 			problems = append(problems, "Отсутствует строка подключения PostgreSQL (DSN)")
@@ -153,7 +153,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		}
 		if config.IsProductionEnvironment(cfg.Environment) {
 			if !cfg.RateLimitEnabled || !cfg.RateLimitFailClosed || cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
-				problems = append(problems, "production requires enabled, fail-closed rate limiting with positive budgets")
+				problems = append(problems, "Для рабочей среды необходимы включённые ограничения частоты запросов с отказом при сбое и положительными лимитами")
 			}
 		}
 		if p.Mode == NetworkHA {
@@ -162,7 +162,7 @@ func Detect(cfg config.Config) (Plan, error) {
 			// конфликтовать в клонированных контейнерах; отклоняйте его для Network-HA.
 			id := strings.TrimSpace(cfg.ServerBridgeReplicaID)
 			if id == "" {
-				problems = append(problems, "network-ha requires an explicitly configured stable LAUNCHER_REPLICA_ID for each API/worker")
+				problems = append(problems, "Для network-ha нужен явно настроенный постоянный LAUNCHER_REPLICA_ID каждого экземпляра API и обработчика")
 			} else if len(id) > 128 || strings.ContainsAny(id, " \t\r\n/\\") {
 				problems = append(problems, "Для network-ha LAUNCHER_REPLICA_ID должен быть устойчивым непустым идентификатором без пробелов длиной не более 128 байт")
 			}
@@ -170,36 +170,36 @@ func Detect(cfg config.Config) (Plan, error) {
 				problems = append(problems, "Режим network-ha не может использовать локальный координатор SQLite")
 			}
 			if !cfg.ServerBridgeHARequired {
-				problems = append(problems, "network-ha requires fenced ServerBridge HA")
+				problems = append(problems, "Для network-ha необходим ServerBridge HA с механизмом ограждения")
 			}
 			if !s3 {
-				problems = append(problems, "network-ha requires shared S3 storage; local files are not replicated")
+				problems = append(problems, "Для network-ha необходимо общее S3-хранилище; локальные файлы не реплицируются")
 			}
 			if strings.TrimSpace(cfg.RedisURL) == "" {
-				problems = append(problems, "network-ha requires Redis")
+				problems = append(problems, "Для режима network-ha требуется Redis")
 			}
 			p.Reasons = append(p.Reasons, "multi-replica topology requires independently verified lease/fencing/failover")
 		} else {
 			p.SingleInstance = true
 			p.requireLocalFS = config.IsProductionEnvironment(cfg.Environment)
-			p.Limitations = append(p.Limitations, "one API process; not HA", "PostgreSQL остаётся обязательным; координатор SQLite не заменяет HTTP-хранилище")
+			p.Limitations = append(p.Limitations, "Один процесс API; без высокой доступности", "PostgreSQL остаётся обязательным; координатор SQLite не заменяет HTTP-хранилище")
 			lock := strings.TrimSpace(cfg.DeploymentLockPath)
 			switch {
 			case p.Storage == "local" && strings.TrimSpace(cfg.StorageLocalPath) != "":
 				p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
-				p.Reasons = append(p.Reasons, "instance lock anchored to shared local storage")
+				p.Reasons = append(p.Reasons, "Блокировка экземпляра привязана к общему локальному хранилищу")
 				if lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
 					problems = append(problems, "Нельзя переопределять путь блокировки локального хранилища: все экземпляры должны блокировать один корневой каталог")
 				}
 			case sqliteCoord:
 				p.LockPath = cfg.SQLiteCoordinatorPath + ".api.owner.lock"
-				p.Reasons = append(p.Reasons, "instance lock anchored to SQLite coordinator volume")
+				p.Reasons = append(p.Reasons, "Блокировка экземпляра привязана к тому координатора SQLite")
 				if lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
 					problems = append(problems, "Нельзя переопределить путь блокировки координатора SQLite")
 				}
 			case lock != "":
 				p.LockPath = lock
-				p.Reasons = append(p.Reasons, "using explicit instance lock path")
+				p.Reasons = append(p.Reasons, "Используется явно заданный путь блокировки экземпляра")
 			default:
 				problems = append(problems, "standard with S3 requires LAUNCHER_DEPLOYMENT_LOCK_PATH on a shared, persistent local instance volume")
 			}

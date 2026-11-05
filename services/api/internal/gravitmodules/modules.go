@@ -192,7 +192,7 @@ func parseWrapper(raw []byte, p, sha string) Wrapper {
 				w.Mode = "inline"
 			}
 		}
-		w.Reason = "remove legacy environment and authlib flags; register a Never ServerBridge node with a new key"
+		w.Reason = "Удалите устаревшие переменные окружения и параметры authlib; зарегистрируйте узел Never ServerBridge с новым ключом"
 		return w
 	}
 	w.Mode = "config"
@@ -353,7 +353,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 				m.Reason = "Для конфигурации модуля в архиве нет соответствующего JAR; устраните недостающую зависимость или явно перенесите код"
 			} else {
 				m.Status = "manual"
-				m.Reason = "configuration verified; independently port settings and test new module behavior; legacy secrets are not adopted"
+				m.Reason = "Конфигурация проверена; перенесите настройки отдельно и проверьте работу новых модулей. Старые секреты не принимаются"
 			}
 			result.Modules = append(result.Modules, m)
 			if m.Status == "blocked" {

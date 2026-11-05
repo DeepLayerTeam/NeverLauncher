@@ -78,7 +78,7 @@ func (c *Connector) Metadata() authconnector.Metadata {
 }
 func (c *Connector) Health(ctx context.Context) error {
 	if c == nil || c.client == nil {
-		return authconnector.NewError(authconnector.ErrUnavailable, "OIDC provider client is unavailable")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Клиент провайдера OIDC недоступен")
 	}
 	c.mu.RLock()
 	fresh := time.Since(c.refreshedAt) < 5*time.Minute
@@ -90,17 +90,17 @@ func (c *Connector) Health(ctx context.Context) error {
 }
 func (c *Connector) BeginBrowserAuth(ctx context.Context, req authconnector.BrowserAuthRequest) (authconnector.BrowserAuthStart, error) {
 	if !c.cfg.RedirectAllowed(req.RedirectURI) {
-		return authconnector.BrowserAuthStart{}, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC redirect URI is not registered")
+		return authconnector.BrowserAuthStart{}, authconnector.NewError(authconnector.ErrMisconfigured, "URI перенаправления OIDC не зарегистрирован")
 	}
 	if len(req.State) < 32 || len(req.Nonce) < 32 || len(req.PKCEChallenge) < 43 {
-		return authconnector.BrowserAuthStart{}, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC state/nonce/PKCE challenge is invalid")
+		return authconnector.BrowserAuthStart{}, authconnector.NewError(authconnector.ErrMisconfigured, "Некорректное подтверждение state/nonce/PKCE для OIDC")
 	}
 	c.mu.RLock()
 	endpoint := c.discovery.AuthorizationEndpoint
 	c.mu.RUnlock()
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return authconnector.BrowserAuthStart{}, authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC authorization endpoint is invalid", err)
+		return authconnector.BrowserAuthStart{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Некорректный адрес авторизации OIDC", err)
 	}
 	q := u.Query()
 	q.Set("client_id", c.cfg.ClientID)
@@ -124,10 +124,10 @@ func (c *Connector) CompleteBrowserAuth(ctx context.Context, cb authconnector.Br
 	}
 	verified, err := c.verifyTokenWithRefresh(ctx, tok.IDToken, cb.Nonce, true)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrInvalidCredentials, "OIDC ID token validation failed", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrInvalidCredentials, "Не удалось проверить токен идентификации OIDC", err)
 	}
 	if err := validateAccessTokenHash(verified.Claims, verified.Header.Alg, tok.AccessToken); err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrInvalidCredentials, "OIDC access token hash validation failed", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrInvalidCredentials, "Не удалось проверить хеш токена доступа OIDC", err)
 	}
 	claims := cloneMap(verified.Claims)
 	if c.cfg.UserInfoMode != "disabled" && tok.AccessToken != "" {
@@ -137,7 +137,7 @@ func (c *Connector) CompleteBrowserAuth(ctx context.Context, cb authconnector.Br
 		}
 		if err == nil {
 			if sub, _ := extra["sub"].(string); sub == "" || sub != claimString(claims, "sub") {
-				return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC UserInfo sub does not match ID token")
+				return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Поле sub в OIDC UserInfo не совпадает с токеном идентификации")
 			}
 			for k, v := range extra {
 				if _, exists := claims[k]; !exists {
@@ -159,7 +159,7 @@ func (c *Connector) CompleteBrowserAuth(ctx context.Context, cb authconnector.Br
 func (c *Connector) Refresh(ctx context.Context, refreshToken string) (authconnector.Authentication, error) {
 	refreshToken = strings.TrimSpace(refreshToken)
 	if refreshToken == "" || len(refreshToken) > 16384 {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "OIDC refresh token is invalid")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Недействительный токен обновления OIDC")
 	}
 	c.mu.RLock()
 	endpoint := c.discovery.TokenEndpoint
@@ -170,11 +170,11 @@ func (c *Connector) Refresh(ctx context.Context, refreshToken string) (authconne
 		return authconnector.Authentication{}, err
 	}
 	if tok.IDToken == "" {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC refresh response did not contain id_token")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Ответ обновления OIDC не содержит id_token")
 	}
 	verified, err := c.verifyTokenWithRefresh(ctx, tok.IDToken, "", false)
 	if err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrInvalidCredentials, "OIDC refreshed ID token validation failed", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrInvalidCredentials, "Не удалось проверить обновлённый токен идентификации OIDC", err)
 	}
 	identity, methods, err := c.identityFromClaims(verified.Claims)
 	if err != nil {
@@ -244,7 +244,7 @@ func (c *Connector) doTokenRequest(ctx context.Context, endpoint string, form ur
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return tokenResponse{}, authconnector.WrapError(authconnector.ErrUnavailable, "OIDC token endpoint request failed", err)
+		return tokenResponse{}, authconnector.WrapError(authconnector.ErrUnavailable, "Ошибка запроса к адресу выдачи токенов OIDC", err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, c.cfg.MaxResponseBytes+1))
@@ -258,7 +258,7 @@ func (c *Connector) doTokenRequest(ctx context.Context, endpoint string, form ur
 	dec := json.NewDecoder(strings.NewReader(string(body)))
 	dec.UseNumber()
 	if err := dec.Decode(&out); err != nil {
-		return tokenResponse{}, authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC token endpoint returned invalid JSON", err)
+		return tokenResponse{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Адрес выдачи токенов OIDC вернул некорректный JSON", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 || out.Error != "" {
 		code := strings.TrimSpace(out.Error)
@@ -276,7 +276,7 @@ func (c *Connector) doTokenRequest(ctx context.Context, endpoint string, form ur
 		}
 	}
 	if !strings.EqualFold(out.TokenType, "Bearer") || out.AccessToken == "" {
-		return tokenResponse{}, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC token response is missing Bearer access_token")
+		return tokenResponse{}, authconnector.NewError(authconnector.ErrMisconfigured, "В ответе OIDC отсутствует Bearer access_token")
 	}
 	return out, nil
 }
@@ -377,7 +377,7 @@ func (c *Connector) userInfo(ctx context.Context, accessToken string) (map[strin
 	endpoint := c.discovery.UserInfoEndpoint
 	c.mu.RUnlock()
 	if endpoint == "" {
-		return nil, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC provider has no userinfo_endpoint")
+		return nil, authconnector.NewError(authconnector.ErrMisconfigured, "У провайдера OIDC отсутствует userinfo_endpoint")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -394,7 +394,7 @@ func (c *Connector) userInfo(ctx context.Context, accessToken string) (map[strin
 func (c *Connector) doJSON(req *http.Request, out any) error {
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return authconnector.WrapError(authconnector.ErrUnavailable, "OIDC upstream request failed", err)
+		return authconnector.WrapError(authconnector.ErrUnavailable, "Ошибка запроса к вышестоящему провайдеру OIDC", err)
 	}
 	defer resp.Body.Close()
 	limited := io.LimitReader(resp.Body, c.cfg.MaxResponseBytes+1)
@@ -415,7 +415,7 @@ func (c *Connector) doJSON(req *http.Request, out any) error {
 	dec := json.NewDecoder(strings.NewReader(string(body)))
 	dec.UseNumber()
 	if err := dec.Decode(out); err != nil {
-		return authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC upstream returned invalid JSON", err)
+		return authconnector.WrapError(authconnector.ErrMisconfigured, "Вышестоящий провайдер OIDC вернул некорректный JSON", err)
 	}
 	return nil
 }
@@ -432,22 +432,22 @@ func (c *Connector) validateDiscoveredURL(name, raw string) error {
 func (c *Connector) identityFromClaims(claims map[string]any) (authconnector.Identity, []string, error) {
 	subject := claimString(claims, c.cfg.Claims.Subject)
 	if subject == "" || len(subject) > 512 {
-		return authconnector.Identity{}, nil, authconnector.NewError(authconnector.ErrMisconfigured, "OIDC subject claim is missing or invalid")
+		return authconnector.Identity{}, nil, authconnector.NewError(authconnector.ErrMisconfigured, "Отсутствует или некорректно поле субъекта OIDC")
 	}
 	email := claimString(claims, c.cfg.Claims.Email)
 	if c.cfg.RequireVerifiedEmail && email != "" {
 		verified, _ := claimValue(claims, "email_verified").(bool)
 		if !verified {
-			return authconnector.Identity{}, nil, authconnector.NewError(authconnector.ErrIdentityDisabled, "OIDC email is not verified")
+			return authconnector.Identity{}, nil, authconnector.NewError(authconnector.ErrIdentityDisabled, "Адрес электронной почты OIDC не подтверждён")
 		}
 	}
 	groups, err := claimStrings(claims, c.cfg.Claims.Groups)
 	if err != nil {
-		return authconnector.Identity{}, nil, authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC groups claim is invalid", err)
+		return authconnector.Identity{}, nil, authconnector.WrapError(authconnector.ErrMisconfigured, "Некорректное поле групп OIDC", err)
 	}
 	roles, err := claimStrings(claims, c.cfg.Claims.Roles)
 	if err != nil {
-		return authconnector.Identity{}, nil, authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC roles claim is invalid", err)
+		return authconnector.Identity{}, nil, authconnector.WrapError(authconnector.ErrMisconfigured, "Некорректное поле ролей OIDC", err)
 	}
 	methods, _ := claimStrings(claims, "amr")
 	if len(methods) == 0 {

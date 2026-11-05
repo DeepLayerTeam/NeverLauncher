@@ -94,7 +94,7 @@ def evidence_inventory(root: Path) -> dict[str, str]:
 
 def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Path,
              commit: str, publisher: str, *, now=None) -> dict:
-    require(bool(COMMIT.fullmatch(commit)), 'exact source commit required')
+    require(bool(COMMIT.fullmatch(commit)), 'Необходимо указать точный коммит исходников')
     require(bool(IDENTITY.fullmatch(publisher)), 'publisher identity required')
     key = regular(key_file, 32)
     sig = regular(signature_file, 64)

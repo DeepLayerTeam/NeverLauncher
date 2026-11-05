@@ -68,7 +68,7 @@ for token in [
     "StateSHA256",
     "quarantineRejectedUpload02012",
 ]:
-    require(token in http, f"HTTP production implementation missing {token}")
+    require(token in http, f"В рабочей реализации HTTP отсутствует {token}")
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for token in [
     "/extension-trust/policy",

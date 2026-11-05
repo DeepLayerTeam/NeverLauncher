@@ -304,7 +304,7 @@ func migrationImportAll0493(args []string) error {
 		imported = append(imported, migrationImported0493{row.Destination.ProfilePath, row.Destination.ProfileID, row.FilesSHA256, stage.WorkspaceID, stage.TotalFiles})
 		progressed = true
 	}
-	result := map[string]any{"format": "launcher.gravit-content-stage.v1", "batchSha256": batch.BatchSHA256, "sourceSha256": batch.SourceSHA256, "runId": run, "profiles": imported, "status": "staged", "next": "build, apply optional catalogs to unsigned drafts, validate, sign and rehearse each client before cutover"}
+	result := map[string]any{"format": "launcher.gravit-content-stage.v1", "batchSha256": batch.BatchSHA256, "sourceSha256": batch.SourceSHA256, "runId": run, "profiles": imported, "status": "staged", "next": "Соберите клиенты, примените дополнительные каталоги к неподписанным черновикам, проверьте, подпишите и испытайте каждый клиент до переключения"}
 	if out := flagValue(args, "--output", ""); out != "" {
 		return writePrivateIdentityReport0334(out, result)
 	}

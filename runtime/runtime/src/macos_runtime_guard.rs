@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn checks_real_signed_jvm_child() {
         use std::{os::unix::process::CommandExt, process::{Command, Stdio}, time::Duration};
-        let home = std::env::var("JAVA_HOME").expect("macOS Guard integration requires signed JAVA_HOME");
+        let home = std::env::var("JAVA_HOME").expect("Интеграция Guard в macOS требует подписанного JAVA_HOME");
         let java = PathBuf::from(&home).join("bin/java");
         let javac = PathBuf::from(&home).join("bin/javac");
         let fixture = std::env::temp_dir().join(format!("nl-0509-mac-java-{}",std::process::id()));

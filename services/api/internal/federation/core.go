@@ -179,7 +179,7 @@ func (c *Core) LinkPasswordIdentity(ctx context.Context, userID, providerID stri
 		return model.AuthIdentity{}, authconnector.Authentication{}, err
 	}
 	if userID == "" || strings.TrimSpace(request.Identifier) == "" || request.Secret == "" {
-		return model.AuthIdentity{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "identity proof requires identifier and password")
+		return model.AuthIdentity{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Для подтверждения учётной записи требуются идентификатор и пароль")
 	}
 	connector, ok := c.Connector(providerID)
 	if !ok {
@@ -316,7 +316,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 		user, linked, err = c.provisionAuthenticatedIdentity(ctx, meta.ID, policy, auth.Identity)
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
-				return Result{}, authconnector.WrapError(authconnector.ErrConflict, "external identity cannot be provisioned automatically", err)
+				return Result{}, authconnector.WrapError(authconnector.ErrConflict, "Внешнюю учётную запись нельзя создать автоматически", err)
 			}
 			return Result{}, err
 		}
@@ -333,7 +333,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 		}
 	}
 	if user.Status == "disabled" {
-		return Result{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "canonical user is disabled")
+		return Result{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "Основная учётная запись пользователя отключена")
 	}
 	linked.Issuer = issuer
 	linked.Email = auth.Identity.Email
@@ -351,7 +351,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID string, policy ProviderPolicy, identity authconnector.Identity) (model.User, model.AuthIdentity, error) {
 	subject := strings.TrimSpace(identity.Subject)
 	if subject == "" {
-		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "authenticated identity subject is empty")
+		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Пустой субъект подтверждённой учётной записи")
 	}
 	issuer, err := model.CanonicalAuthIssuer(providerID, identity.Issuer)
 	if err != nil {
@@ -406,7 +406,7 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 		return model.AuthIdentity{}, err
 	}
 	if user.Status != "active" {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "canonical user cannot link identities")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "Основная учётная запись не может привязывать другие идентификаторы")
 	}
 	if err := authconnector.ValidateAuthentication(authentication); err != nil {
 		return model.AuthIdentity{}, err
@@ -414,7 +414,7 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	identity := authentication.Identity
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if identity.Subject == "" {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "authenticated identity subject is empty")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Пустой субъект подтверждённой учётной записи")
 	}
 	issuer, err := model.CanonicalAuthIssuer(providerID, identity.Issuer)
 	if err != nil {
@@ -424,7 +424,7 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	if issuer != legacyIssuer {
 		legacy, legacyErr := c.repo.GetAuthIdentityByIssuer(providerID, legacyIssuer, identity.Subject)
 		if legacyErr == nil && legacy.UserID != userID {
-			return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "legacy identity belongs to another canonical user")
+			return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "Устаревшая учётная запись принадлежит другому основному пользователю")
 		}
 		if legacyErr != nil && !errors.Is(legacyErr, repository.ErrNotFound) {
 			return model.AuthIdentity{}, legacyErr
@@ -553,7 +553,7 @@ func (c *Core) RevokeProviderCredential(ctx context.Context, providerID, subject
 	subject = strings.TrimSpace(subject)
 	providerToken = strings.TrimSpace(providerToken)
 	if subject == "" || providerToken == "" {
-		return authconnector.NewError(authconnector.ErrInvalidCredentials, "provider subject/token are required for revoke")
+		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Для отзыва необходимы субъект провайдера и токен")
 	}
 	return revoker.Revoke(ctx, authconnector.RevokeRequest{Subject: subject, ProviderToken: providerToken})
 }

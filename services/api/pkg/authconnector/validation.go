@@ -73,7 +73,7 @@ func ValidateAuthentication(auth Authentication) error {
 func ValidateIdentity(identity Identity) error {
 	if strings.TrimSpace(identity.Subject) == "" || len(identity.Subject) > 512 || len(identity.Issuer) > 2048 ||
 		len(identity.Email) > 512 || len(identity.Username) > 512 || len(identity.DisplayName) > 1024 {
-		return NewError(ErrMisconfigured, "provider returned invalid identity fields")
+		return NewError(ErrMisconfigured, "Провайдер вернул некорректные поля учётной записи")
 	}
 	if len(identity.Groups) > 256 || len(identity.Roles) > 256 {
 		return NewError(ErrMisconfigured, "provider returned oversized identity memberships")

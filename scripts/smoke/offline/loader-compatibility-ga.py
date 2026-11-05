@@ -140,7 +140,7 @@ blocked = {
 }
 if len(targets) != 292 or len(required) != 280 or len(unavailable) != len(blocked):
     raise SystemExit(
-        "Compatibility catalogue must contain 292 targets: 280 required, 12 explicitly upstream-unavailable"
+        "Каталог совместимости должен содержать 292 целевые конфигурации: 280 обязательных и 12 явно недоступных у поставщика"
     )
 if {
     (row.get("loader"), row.get("minecraft")): row.get("unavailableReason")

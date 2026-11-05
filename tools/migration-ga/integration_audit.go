@@ -57,7 +57,7 @@ func integrationAuditCommand0491(args []string) error {
 	scope := fs.String("scope", "global", "global or project")
 	scopeID := fs.String("scope-id", "", "project ID for a project-scoped extension")
 	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "environment variable containing PostgreSQL DSN")
-	psql := fs.String("psql", "psql", "path to psql executable")
+	psql := fs.String("psql", "psql", "Путь к исполняемому файлу psql")
 	output := fs.String("output", "", "new private JSON evidence file")
 	if err := fs.Parse(args); err != nil {
 		return err

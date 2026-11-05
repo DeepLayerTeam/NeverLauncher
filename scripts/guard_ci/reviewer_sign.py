@@ -23,7 +23,7 @@ def sign(root: Path, key_path: Path, reviewer: str, publisher: str, commit: str,
          output: Path, signature: Path) -> dict:
     require(bool(IDENTITY.fullmatch(reviewer)) and bool(IDENTITY.fullmatch(publisher))
             and reviewer != publisher, 'independent reviewer and different publisher required')
-    require(bool(COMMIT.fullmatch(commit)), 'exact source commit required')
+    require(bool(COMMIT.fullmatch(commit)), 'Необходимо указать точный коммит исходников')
     require(key_path.is_file() and not key_path.is_symlink(), 'independent PEM key missing')
     if os.name != 'nt':
         require(key_path.stat().st_mode & 0o077 == 0, 'reviewer private key permissions must be 0600')

@@ -17,7 +17,7 @@ public final class PortedModule extends LauncherModule implements AutoCloseable 
         if("backend".equals(System.getenv("LAUNCHER_EXTENSION_TARGET")))registerEvent(this::onRelease,ReleasePublishedEvent.class);
         modulesManager.getCommandHandler().registerCommand("status",new Command(){
             @Override public String getArgsDescription(){return "";}
-            @Override public String getUsageDescription(){return "Reports the latest release event";}
+            @Override public String getUsageDescription(){return "Сообщает о последнем событии релиза";}
             @Override public void invoke(String... args)throws Exception {
                 if(args.length!=0)throw new IllegalArgumentException("Команда status не принимает аргументов");
                 Object state=ctx.extension().runtime().storage().get("last-release",null).orElse(Map.of());

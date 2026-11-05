@@ -872,7 +872,7 @@ func remoteHandle0284(args []string) error {
 			"receipt": receipt, "observedHostStatus": json.RawMessage(remoteHostStatus0284(root)),
 			"inspectionTime":         time.Now().UTC().Format(time.RFC3339Nano),
 			"verifiedExternalEffect": false,
-			"operatorAction":         "compare game/application state and audit before issuing another idempotency key",
+			"operatorAction":         "Сравните состояние игры, приложения и журнал аудита до выдачи следующего ключа идемпотентности",
 		})
 	case "init":
 		id, err := remoteInit0284(root)

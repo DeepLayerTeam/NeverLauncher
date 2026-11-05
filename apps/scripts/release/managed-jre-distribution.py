@@ -49,7 +49,7 @@ def https_url(value: str) -> str:
         or parsed.username
         or parsed.password
     ):
-        die(f"HTTPS URL required: {value!r}")
+        die(f"Необходим HTTPS-адрес: {value!r}")
     return value
 
 
@@ -61,7 +61,7 @@ def request_json(url: str) -> object:
         if response.status != 200:
             die(f"{url}: HTTP {response.status}")
         if urllib.parse.urlparse(response.geturl()).scheme != "https":
-            die("Adoptium redirect downgraded from HTTPS")
+            die("Перенаправление Adoptium понизило защищённое соединение HTTPS")
         payload = response.read(16 * 1024 * 1024 + 1)
         if len(payload) > 16 * 1024 * 1024:
             die("Adoptium metadata response too large")
@@ -82,7 +82,7 @@ def resolve_asset(major: int, vendor_os: str, vendor_arch: str) -> dict:
     url = f"{API}/assets/latest/{major}/hotspot?{query}"
     payload = request_json(url)
     if not isinstance(payload, list):
-        die(f"Adoptium metadata for {vendor_os}/{vendor_arch} is not an array")
+        die(f"Метаданные Adoptium для {vendor_os}/{vendor_arch} должны быть массивом")
     for asset in payload:
         try:
             binary = asset["binary"]
@@ -149,10 +149,10 @@ def download_exact(
             part.open("xb") as out,
         ):
             if urllib.parse.urlparse(response.geturl()).scheme != "https":
-                die("JRE archive redirect downgraded from HTTPS")
+                die("Перенаправление архива JRE понизило защищённое соединение HTTPS")
             header_size = response.headers.get("Content-Length")
             if header_size is not None and int(header_size) != expected_size:
-                die(f"Content-Length={header_size}, expected {expected_size}")
+                die(f"Content-Length={header_size}, ожидалось {expected_size}")
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:

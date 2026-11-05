@@ -175,10 +175,10 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		if err = dec.Decode(&user); err != nil {
 			return nil, err
 		}
-		c := Credential{Account: account, State: "manual_reset", Reason: "FileAuth verifier format is not selected; account requires a verified reset"}
+		c := Credential{Account: account, State: "manual_reset", Reason: "Формат проверки пароля FileAuth не выбран; требуется подтверждённый сброс пароля"}
 		if format != "" {
 			if user.Password == "" {
-				c.Reason = "FileAuth password verifier is missing; account requires a verified reset"
+				c.Reason = "Отсутствует проверочный хеш пароля FileAuth; требуется подтверждённый сброс пароля"
 			} else {
 				c.PasswordHash, err = fileauth.EncodeCredential(format, user.Password)
 				if err != nil {
@@ -253,7 +253,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 				c.State = "importable"
 				c.Reason = ""
 			} else if hash != "" && c.Algorithm != "" {
-				c.Reason = "unsupported verifier; only this account requires transition or reset"
+				c.Reason = "Неподдерживаемый формат проверки; только эта учётная запись требует переноса или сброса"
 			}
 		}
 		out = append(out, c)

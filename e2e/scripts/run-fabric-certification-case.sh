@@ -103,7 +103,7 @@ if not (install.get('status') == 'installed-and-verified' and install.get('minec
 if not (install.get('loaderVersion') and install.get('profileId') and install.get('mainClass') and int(install.get('libraryCount') or 0) > 0):
     raise SystemExit('Fabric profile was not fully materialized')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):
-    raise SystemExit('invalid materialized package verification')
+    raise SystemExit('Ошибка проверки подготовленного пакета')
 if not (minecraft.get('version') == mc and minecraft.get('loader') == 'fabric' and minecraft.get('loaderVersion') == install.get('loaderVersion') and minecraft.get('mainClass') == install.get('mainClass')):
     raise SystemExit('Fabric package metadata mismatch')
 if not ((runtime.get('java') or {}).get('majorVersion') == java and (runtime.get('launch') or {}).get('classpathStrategy') == 'compatibility' and (runtime.get('launch') or {}).get('versionMetadataPath') == install.get('profilePath')):

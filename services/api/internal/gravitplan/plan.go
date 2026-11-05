@@ -129,7 +129,7 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 				row.Target = d.ProfileID
 				row.Reason = "Настройки профиля преобразованы действующим конвертером; сборка релиза и запуск игры ещё необходимы"
 			} else {
-				row.Reason = "profile not selected: configure and preview each profile before cutover"
+				row.Reason = "Профиль не выбран: настройте и предварительно проверьте каждый профиль до переключения"
 			}
 		case "asset", "client", "library":
 			if reason, ok := skipped[f.Path]; ok {
@@ -140,14 +140,14 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 				row.Target = t.TargetPath
 				row.Reason = "file SHA-256 pinned to source inventory"
 			} else {
-				row.Reason = "file not included in selected profile; inspect ownership and import separately"
+				row.Reason = "Файл не входит в выбранный профиль; отдельно проверьте принадлежность и импорт"
 			}
 		case "module", "module_config", "server_wrapper":
 			row.Reason = "Проверьте замену модуля или регистрацию ServerBridge; сторонний JAR не запускается"
 		case "authentication":
-			row.Reason = "identity, UUID and password verifier mapping requires a separate verified preview"
+			row.Reason = "Сопоставление учётных записей, UUID и проверочных хешей паролей требует отдельной подтверждённой предварительной проверки"
 		case "texture":
-			row.Reason = "texture requires validated source/provider import and Minecraft rendering check"
+			row.Reason = "Для текстуры необходимы проверенный импорт источника или провайдера и проверка отображения в Minecraft"
 		case "key":
 			row.Status = "excluded"
 			row.Reason = "Старые закрытые ключи и доверенные учётные данные нельзя импортировать; замените их в целевой системе"
@@ -196,12 +196,12 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 	}
 	p.Checklist = []Checklist{
 		{"verify_source", "При импорте повторно загрузите исходный ZIP; SHA-256 источника и манифест должны совпадать", true},
-		{"resolve_manual", "Review unselected profiles, unknown files, optional conditions and module replacements", true},
-		{"verify_uuid", "Reconcile every account UUID with playerdata, permissions and inventory; handle conflicting UUIDs manually", true},
+		{"resolve_manual", "Проверьте невыбранные профили, неизвестные файлы, дополнительные условия и замены модулей", true},
+		{"verify_uuid", "Сопоставьте UUID каждой учётной записи с данными игрока, правами и инвентарём; конфликты UUID устраните вручную", true},
 		{"reset_credentials", "Замените ключи лаунчера, устройств, ServerBridge и прокси; предусмотрите сброс неподдерживаемых хешей паролей", true},
-		{"textures", "Re-import validated skins/capes and confirm rendering for the selected authentication mode", true},
-		{"rehearse", "Build a signed target release and prove real client launch, server join and data continuity", true},
-		{"backup_and_rollback", "Take and restore-test source/world backups; agree on downtime, writer fencing and rollback point", true},
+		{"textures", "Повторно импортируйте проверенные скины и плащи и убедитесь в корректном отображении при выбранном способе авторизации", true},
+		{"rehearse", "Соберите подписанный целевой релиз и подтвердите настоящий запуск клиента, подключение к серверу и сохранность данных", true},
+		{"backup_and_rollback", "Создайте резервные копии источника и миров, проверьте восстановление, согласуйте простой, блокировку записи и точку отката", true},
 	}
 	sort.Slice(p.Items, func(i, j int) bool { return p.Items[i].Source < p.Items[j].Source })
 	sort.Strings(p.Blockers)

@@ -261,10 +261,10 @@ func (r *SQLRepository) ClearTexture0255(ctx context.Context, p model.MinecraftP
 	if _, err = tx.ExecContext(ctx, `UPDATE texture_assignments SET blob_digest=NULL,external_url='',active=false,visibility='private',revision=$2,updated_at=$3 WHERE id=$1`, a.ID, a.Revision, a.UpdatedAt); err != nil {
 		return zero, err
 	}
-	event, reason := "reset", "reset to project defaults"
+	event, reason := "reset", "Восстановлены настройки проекта по умолчанию"
 	if deleteAsset {
 		event = "delete"
-		reason = "deleted selection and removed saved item"
+		reason = "Выбор отменён, сохранённый элемент удалён"
 	}
 	if err = recordTextureRevision0255(ctx, tx, a, p.UserID, event, reason); err != nil {
 		return zero, err

@@ -238,7 +238,7 @@ func parseCOSEPublicKey(raw []byte) (int64, crypto.PublicKey, error) {
 		}
 		crv, _ := intValue(m[int64(-1)])
 		if crv != 1 {
-			return 0, nil, errors.New("only P-256 is accepted")
+			return 0, nil, errors.New("Допускается только P-256")
 		}
 		x, _ := m[int64(-2)].([]byte)
 		y, _ := m[int64(-3)].([]byte)

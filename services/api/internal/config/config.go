@@ -351,23 +351,23 @@ func ValidateProduction(cfg Config) error {
 	sqliteMinimal := driver == "sqlite" && strings.EqualFold(strings.TrimSpace(cfg.DeploymentMode), "single-node")
 	if sqliteMinimal {
 		if cfg.StorageDriver != "local" || strings.TrimSpace(cfg.DatabaseDSN) == "" || !filepath.IsAbs(cfg.DatabaseDSN) || filepath.Clean(cfg.DatabaseDSN) != cfg.DatabaseDSN {
-			problems = append(problems, "SQLite minimal requires local storage and absolute clean database path")
+			problems = append(problems, "Для минимального режима SQLite нужны локальное хранилище и абсолютный безопасный путь к базе данных")
 		}
 		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" || !filepath.IsAbs(cfg.SQLiteCoordinatorPath) || filepath.Clean(cfg.SQLiteCoordinatorPath) != cfg.SQLiteCoordinatorPath {
-			problems = append(problems, "SQLite minimal requires absolute clean coordinator path")
+			problems = append(problems, "Для минимального режима SQLite необходим абсолютный безопасный путь координатора")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == strings.TrimSpace(cfg.SQLiteCoordinatorPath) {
 			problems = append(problems, "Хранилище SQLite и координатор не могут использовать один файл")
 		}
 		if cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.RedisURL) != "" {
-			problems = append(problems, "SQLite minimal forbids ServerBridge HA and Redis")
+			problems = append(problems, "Минимальный режим SQLite не допускает ServerBridge HA и Redis")
 		}
 	} else {
 		if driver != "postgres" && driver != "postgresql" && driver != "sql" {
-			problems = append(problems, "production requires PostgreSQL or explicit SQLite single-node repository")
+			problems = append(problems, "Для рабочей среды нужен PostgreSQL или явно настроенный одноузловой SQLite")
 		}
 		if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), "pgx") {
-			problems = append(problems, "production PostgreSQL requires pgx driver")
+			problems = append(problems, "Для PostgreSQL в рабочей среде требуется драйвер pgx")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == "" {
 			problems = append(problems, "Требуется LAUNCHER_DATABASE_DSN")

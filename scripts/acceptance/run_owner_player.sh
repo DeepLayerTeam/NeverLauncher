@@ -35,7 +35,7 @@ PID=$!
 BASE="http://127.0.0.1:$PORT"
 for _ in $(seq 1 100); do
   if ! kill -0 "$PID" 2>/dev/null; then
-    echo 'Disposable Backend failed to start (logs retained only during this run)' >&2
+    echo 'Временный Backend не запустился (журналы сохраняются только во время текущего запуска)' >&2
     exit 1
   fi
   if curl --noproxy '*' -fsS "$BASE/health" >/dev/null 2>&1; then break; fi

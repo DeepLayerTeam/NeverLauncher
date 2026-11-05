@@ -167,7 +167,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	}
 	typ, err := q.u16()
 	if err != nil || magic != tpmMagic || typ != tpmQuote {
-		return fail("not a TPM2 quote")
+		return fail("Не является свидетельством TPM2 Quote")
 	}
 	_, err = q.tpm2b(128)
 	if err != nil {

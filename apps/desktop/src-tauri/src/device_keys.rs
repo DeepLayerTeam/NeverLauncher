@@ -1101,7 +1101,7 @@ pub fn windows_tpm_certify_0313(
     #[cfg(not(target_os="windows"))]
     {
         let _ = (backend_url,user_id,device_id,tpm_extra_data_sha256,ak_key_name,ak_certificate_pem,intermediates_pem);
-        Err("TPM2_Certify is supported by this native producer only on Windows".into())
+        Err("Данный нативный поставщик поддерживает TPM2_Certify только в Windows".into())
     }
     #[cfg(target_os="windows")]
     {

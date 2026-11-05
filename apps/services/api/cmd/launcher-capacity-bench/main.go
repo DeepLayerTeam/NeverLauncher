@@ -185,7 +185,7 @@ func main() {
 	tr := &http.Transport{MaxIdleConnsPerHost: *maxWorkers, MaxConnsPerHost: *maxWorkers, IdleConnTimeout: 5 * time.Second, DisableKeepAlives: false}
 	defer tr.CloseIdleConnections()
 	client := &http.Client{Transport: tr, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	out := Response{Endpoint: target, Warning: "Measurements are endpoint-specific, hardware-specific and time-specific. Not a certified whole-product throughput limit."}
+	out := Response{Endpoint: target, Warning: "Замеры относятся к конкретным запросам, оборудованию и моменту времени. Они не подтверждают предельную производительность продукта в целом."}
 	for _, n := range []int{1, 2, 4, 8, 16, 32, 64} {
 		if n > *maxWorkers {
 			break

@@ -727,7 +727,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		msg := st.lastError
 		st.mu.Unlock()
 		if msg == "" {
-			msg = "extension process exited before authenticated hello"
+			msg = "Процесс расширения завершился до подтверждённого приветствия"
 		}
 		return errors.New(msg)
 	case <-timer.C:

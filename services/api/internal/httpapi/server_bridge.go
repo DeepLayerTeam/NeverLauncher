@@ -407,7 +407,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	if planPolicyRequired02412() && join.ProtocolVersion != serverBridgeProtocolV3 {
 		s.State.ServerBridge.invalidateJoin(join.Username, join.ServerID)
-		writeError(w, http.StatusUpgradeRequired, "Guard Session requires ServerBridge Protocol v3")
+		writeError(w, http.StatusUpgradeRequired, "Для сеанса Guard требуется протокол ServerBridge v3")
 		return
 	}
 	if planPolicyRequired02412() {
@@ -416,13 +416,13 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		if err := s.storeGuardBoundJoin0507(r, join, req.PlanEvidence, verifiedGuardTicket); err != nil {
 			s.State.ServerBridge.invalidateJoin(join.Username, join.ServerID)
 			_ = s.flushPersistenceState950("server-bridge-guard-session-issue-failed")
-			writeError(w, http.StatusServiceUnavailable, "Guard Session PostgreSQL binding failed")
+			writeError(w, http.StatusServiceUnavailable, "Не удалось привязать сеанс Guard к PostgreSQL")
 			return
 		}
 	}
 	_ = s.flushPersistenceState950("server-bridge-join-created")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("join-created"), Actor: user.Email, Action: "serverbridge:session:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed negotiated ServerBridge request", "a replay, expired ticket, or rotated node identity is denied"}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed negotiated ServerBridge request", "Повтор запроса, просроченный билет или сменившаяся учётная запись узла приводят к отказу"}}})
 }
 
 func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
@@ -463,11 +463,11 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if join.IdentityRealm == "official" {
-		writeError(w, http.StatusForbidden, "official identity requires online-mode validate-join with observed UUID")
+		writeError(w, http.StatusForbidden, "Официальная учётная запись требует validate-join в онлайн-режиме с наблюдаемым UUID")
 		return
 	}
 	if err := planJoinEpochValid02412(join.CreatedAt); err != nil {
-		writeError(w, http.StatusPreconditionFailed, "verified plan policy changed or unavailable")
+		writeError(w, http.StatusPreconditionFailed, "Проверенная политика плана изменилась или недоступна")
 		return
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)
@@ -619,7 +619,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "Автоматическое обнаружение узлов и сред выполнения", "Идентификатор JVM, подтверждённый подписью Ed25519", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "revisioned local texture identity and URL assignments (PNG service pending)", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "Подтверждения передачи между источником и целью с привязкой к Runtime", "maintenance/drain/stale admission blocking"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
-		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop отправляет запрос входа в сессию с проектом, профилем и каналом; Backend фиксирует привязку устройства", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
+		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop или игрок входит в систему и привязывает подтверждённое доверенное устройство", "Desktop отправляет запрос входа в сессию с проектом, профилем и каналом; Backend фиксирует привязку устройства", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend повторно проверяет родительский сеанс, устройство, эпоху привязки и политику рисков", "Backend возвращает метаданные профиля и текстур либо конкретную причину отказа в доверии", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags launcher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}

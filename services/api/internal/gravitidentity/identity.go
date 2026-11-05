@@ -377,7 +377,7 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 			nameOwners := byName[strings.ToLower(a.Username)]
 			if len(uuidOwners) > 1 || len(nameOwners) > 1 {
 				m.Status = "blocked"
-				m.Reason = "multiple Never identities claim UUID or username"
+				m.Reason = "Несколько учётных записей Never претендуют на один UUID или имя пользователя"
 			} else if len(uuidOwners) == 1 {
 				owner := uuidOwners[0]
 				if !strings.EqualFold(owner.Username, a.Username) || (len(nameOwners) == 1 && nameOwners[0].UserID != owner.UserID) {

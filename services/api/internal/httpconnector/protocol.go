@@ -174,14 +174,14 @@ func (c *signedClient) verifyResponse(resp *http.Response, expectedNonce string,
 	}
 	delta := time.Since(time.Unix(unix, 0)).Abs()
 	if delta > c.cfg.MaxClockSkewDuration {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response timestamp is outside replay window")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Временная метка ответа HTTP-провайдера авторизации вне допустимого интервала")
 	}
 	if !strings.HasPrefix(signatureRaw, "v1=") {
 		return authconnector.NewError(authconnector.ErrUnavailable, "Неподдерживаемая версия подписи ответа HTTP-провайдера")
 	}
 	provided, err := hex.DecodeString(strings.TrimPrefix(signatureRaw, "v1="))
 	if err != nil {
-		return authconnector.NewError(authconnector.ErrUnavailable, "HTTP auth provider response signature is malformed")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Некорректная подпись ответа HTTP-провайдера авторизации")
 	}
 	expected := sign(c.cfg.HMACSecret, responseCanonical(resp.StatusCode, timestampRaw, nonce, body))
 	if !hmac.Equal(expected, provided) {
@@ -222,7 +222,7 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	case http.StatusUnauthorized:
 		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	case http.StatusForbidden:
-		return authconnector.NewError(authconnector.ErrIdentityDisabled, "HTTP identity is disabled")
+		return authconnector.NewError(authconnector.ErrIdentityDisabled, "Учётная запись HTTP отключена")
 	case http.StatusNotFound:
 		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP-учётная запись не найдена")
 	case http.StatusConflict:
@@ -237,7 +237,7 @@ func (c *signedClient) decodeRemoteError(status int, body []byte) error {
 	case "invalid_credentials":
 		return authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	case "identity_disabled":
-		return authconnector.NewError(authconnector.ErrIdentityDisabled, "HTTP identity is disabled")
+		return authconnector.NewError(authconnector.ErrIdentityDisabled, "Учётная запись HTTP отключена")
 	case "identity_not_found":
 		return authconnector.NewError(authconnector.ErrIdentityNotFound, "HTTP-учётная запись не найдена")
 	case "conflict":

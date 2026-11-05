@@ -3,9 +3,9 @@
 set -euo pipefail
 if [[ $# -ne 1 ]]; then echo "Usage: $0 <32-byte-ed25519-public-root-hex-file>" >&2; exit 2; fi
 ROOT_FILE="$1"
-[[ -f "$ROOT_FILE" && ! -L "$ROOT_FILE" ]] || { echo "Unsafe/missing root public key file" >&2; exit 2; }
+[[ -f "$ROOT_FILE" && ! -L "$ROOT_FILE" ]] || { echo "Файл корневого открытого ключа отсутствует или небезопасен" >&2; exit 2; }
 ROOT=$(tr -d '\r\n ' < "$ROOT_FILE")
-[[ "$ROOT" =~ ^[0-9a-fA-F]{64}$ ]] || { echo "Expected exactly 32-byte Ed25519 root (64 hex chars)" >&2; exit 2; }
+[[ "$ROOT" =~ ^[0-9a-fA-F]{64}$ ]] || { echo "Ожидается корневой ключ Ed25519 длиной ровно 32 байта (64 шестнадцатеричных символа)" >&2; exit 2; }
 ROOT=$(printf '%s' "$ROOT" | tr 'A-F' 'a-f')
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../../apps/desktop"

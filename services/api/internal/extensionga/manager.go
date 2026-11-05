@@ -52,14 +52,14 @@ type installationKey struct{ scope, scopeID, id string }
 
 func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionInstall, all map[installationKey]model.ExtensionInstall) (string, string) {
 	if install.CurrentVersion == "" {
-		return "state.version", "active installation has no current version"
+		return "state.version", "У активной установки отсутствует текущая версия"
 	}
 	version, err := m.Repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
 		return "manifest.missing", "persisted manifest unavailable: " + err.Error()
 	}
 	if version.Manifest.ID != install.ExtensionID || version.Manifest.Version != install.CurrentVersion {
-		return "manifest.identity", "persisted manifest identity does not match installation"
+		return "manifest.identity", "Сохранённый идентификатор манифеста не совпадает с установленной версией"
 	}
 	if _, err := extensioncontract.CanonicalAPIVersion(version.Manifest.API); err != nil {
 		return "contract.api", err.Error()
@@ -77,7 +77,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 	}
 	if _, err := m.Repo.GetExtensionEmergencyDisable(ctx, install.ExtensionID, install.Scope, install.ScopeID); err == nil {
 		if install.CurrentState == model.ExtensionInstallStateEnabled || install.Enabled {
-			return "trust.emergency-disabled", "enabled state conflicts with persistent emergency-disable"
+			return "trust.emergency-disabled", "Включённое состояние противоречит сохранённой аварийной блокировке"
 		}
 	} else if !errors.Is(err, repository.ErrNotFound) {
 		return "trust.emergency", err.Error()
@@ -88,7 +88,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 			return "trust.quarantine", err.Error()
 		}
 		if quarantined {
-			return "trust.quarantined", "current package is quarantined"
+			return "trust.quarantined", "Текущий пакет помещён на карантин"
 		}
 	}
 	if strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") {
@@ -97,7 +97,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 			return "registry.missing", "registry publication unavailable: " + err.Error()
 		}
 		if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
-			return "registry.identity", "registry package identity does not match active installation"
+			return "registry.identity", "Идентификатор пакета в реестре не совпадает с активной установкой"
 		}
 		if _, err := extensiontrust.EvaluatePublication(ctx, m.Repo, publication); err != nil {
 			return "trust.publication", err.Error()

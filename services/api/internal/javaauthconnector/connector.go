@@ -89,7 +89,7 @@ func (c *Connector) Health(ctx context.Context) error {
 	}
 	var available bool
 	if json.Unmarshal(response["available"], &available) != nil || !available {
-		return authconnector.NewError(authconnector.ErrUnavailable, "Java identity provider not selected")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Провайдер учётных записей Java не выбран")
 	}
 	return nil
 }
@@ -198,7 +198,7 @@ func (c *Connector) Revoke(ctx context.Context, req authconnector.RevokeRequest)
 	}
 	var revoked bool
 	if json.Unmarshal(response["revoked"], &revoked) != nil || !revoked {
-		return authconnector.NewError(authconnector.ErrUnavailable, "provider did not confirm revocation")
+		return authconnector.NewError(authconnector.ErrUnavailable, "Провайдер не подтвердил отзыв")
 	}
 	return nil
 }

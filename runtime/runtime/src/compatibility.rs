@@ -1522,7 +1522,7 @@ mod tests {
         let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("resolve NeoForge");
         assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
-        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base client must remain legacy classpath, not a BootstrapLauncher module: {ignore}");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "Базовый клиент должен оставаться в исходном списке классов, а не становиться модулем BootstrapLauncher: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
 
@@ -1555,7 +1555,7 @@ mod tests {
         let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("resolve Forge");
         assert!(result.classpath.iter().any(|value| value == "versions/1.19.4/1.19.4.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge ignoreList");
-        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base vanilla client must not become an additional Forge module: {ignore}");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "Базовый клиент Vanilla не должен становиться дополнительным модулем Forge: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
 
@@ -1588,7 +1588,7 @@ mod tests {
         let result = resolve_compatibility(&root, "1.20.2-forge-48.1.0", None, &ctx).await.expect("resolve Forge 1.20.2");
         assert_eq!(result.main_class, "net.minecraftforge.bootstrap.BootstrapLauncher");
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge 1.20.2 ignoreList");
-        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|prefix| "1.20.2.jar".starts_with(prefix.trim()) && !prefix.trim().is_empty()), "base Minecraft JAR must not be added as a duplicate module: {ignore}");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|prefix| "1.20.2.jar".starts_with(prefix.trim()) && !prefix.trim().is_empty()), "Базовый JAR Minecraft нельзя добавлять как дублирующий модуль: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
 

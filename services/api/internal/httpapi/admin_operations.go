@@ -36,7 +36,7 @@ func (s Server) adminOpsDiagnostics(w http.ResponseWriter, r *http.Request) {
 func (s Server) adminOpsBackup(w http.ResponseWriter, r *http.Request) {
 	payload := s.adminOps9100Payload("backup")
 	payload["commands"] = []string{"nl backup status", "nl backup create", "nl backup inspect", "nl backup restore-dry-run", "nl backup restore --confirm <backupId> --database true|--storage true", "nl backup diagnostics-bundle"}
-	payload["policy"] = []string{"SHA-256 для архива и каждого файла", "pg_dump/pg_restore для PostgreSQL", "проверка restore-dry-run перед восстановлением", "точное подтверждение backupId для destructive restore", "отдельный backup root", "redacted diagnostics by default"}
+	payload["policy"] = []string{"SHA-256 для архива и каждого файла", "pg_dump/pg_restore для PostgreSQL", "проверка restore-dry-run перед восстановлением", "точное подтверждение backupId для destructive restore", "отдельный backup root", "По умолчанию конфиденциальные данные скрыты в диагностике"}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": adminOpsSchema9100, "data": payload})
 }
 

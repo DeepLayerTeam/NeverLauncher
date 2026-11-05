@@ -213,7 +213,7 @@ func Evaluate(v Report) (Report, error) {
 			}
 		}
 		if !matched {
-			add("live join UUID not in migrated player identities")
+			add("UUID подключившегося игрока отсутствует среди перенесённых учётных записей")
 		}
 		for _, name := range []string{"login", "join"} {
 			found := false

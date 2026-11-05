@@ -39,7 +39,7 @@ func VerifyTexture02511(ctx context.Context, store Storage, obj TextureBackupObj
 	}
 	defer f.Close()
 	if size >= 0 && size != obj.ByteSize {
-		result.Detail = "object length differs from database"
+		result.Detail = "Размер объекта не совпадает с записью в базе данных"
 		return result
 	}
 	h := sha256.New()
@@ -50,7 +50,7 @@ func VerifyTexture02511(ctx context.Context, store Storage, obj TextureBackupObj
 		return result
 	}
 	if n != obj.ByteSize || hex.EncodeToString(h.Sum(nil)) != obj.Digest {
-		result.Detail = "SHA-256 or byte length differs from database"
+		result.Detail = "SHA-256 или размер в байтах не совпадает с записью в базе данных"
 		return result
 	}
 	result.Result = "ok"

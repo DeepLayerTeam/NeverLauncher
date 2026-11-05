@@ -275,7 +275,7 @@ func (c *LiveConnector) ResolveIdentity(ctx context.Context, req authconnector.R
 	}
 	a, exists := current.byUUID[strings.ToLower(req.Subject)]
 	if !exists {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "FileAuth identity not found")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "Учётная запись FileAuth не найдена")
 	}
 	return liveIdentity(a), nil
 }

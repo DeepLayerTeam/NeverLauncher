@@ -136,7 +136,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 			blockers = nil
 			mode = "reconciled"
 		} else {
-			blockers = append(blockers, "source reconciliation differs from destination")
+			blockers = append(blockers, "Сверка источника не совпадает с целевой системой")
 			blockers = append(blockers, verified.Blockers...)
 		}
 	}

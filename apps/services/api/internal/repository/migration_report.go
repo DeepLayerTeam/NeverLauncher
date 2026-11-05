@@ -83,13 +83,13 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 			return v, e
 		}
 		if i.SourceSHA256 != v.SourceSHA256 || i.ManifestSHA256 != v.InventorySHA256 || compSource != "" && compSource != v.SourceSHA256 {
-			v.Blockers = append(v.Blockers, "source digests differ between MIG02 and MIG03")
+			v.Blockers = append(v.Blockers, "Контрольные суммы источника различаются между MIG02 и MIG03")
 		}
 		if len(i.Files) > 30000 {
 			return v, mw.ErrConflict
 		}
 		for _, f := range i.Files {
-			v.Items = append(v.Items, rr.Item{Kind: f.Kind, Source: f.Path, Status: "manual", SHA256: f.SHA256, Reason: "source inventory; destination not yet independently verified"})
+			v.Items = append(v.Items, rr.Item{Kind: f.Kind, Source: f.Path, Status: "manual", SHA256: f.SHA256, Reason: "Опись источника готова; целевая система ещё не проверена независимо"})
 		}
 		add("inventory", "verified", v.InventorySHA256, fmt.Sprintf("files=%d bytes=%d", len(i.Files), i.TotalBytes))
 	}
@@ -157,7 +157,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 				status, reason = "transferred", ""
 			}
 			if row.State == "manual_reset" {
-				reason = "unsupported password verifier; reset required"
+				reason = "Неподдерживаемый формат проверки пароля; требуется сброс"
 			}
 			v.Items = append(v.Items, rr.Item{Kind: "account", Source: row.Provider + "/" + row.SourceID, Target: row.UUID, Status: status, Reason: reason})
 		}
@@ -178,7 +178,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		if !s.Verified || s.ManualResets > 0 || !s.RequiresLogin || !s.RequiresDeviceEnrollment || !s.RequiresGuardAttestation {
 			st = "blocked"
 		}
-		add("security", st, secHash, "new Never trust chain; legacy sessions not migrated")
+		add("security", st, secHash, "Новая цепочка доверия Never; старые сеансы не переносятся")
 	}
 	rows, qe := tx.QueryContext(ctx, `SELECT c.profile_path,c.files_sha256,c.report,w.data FROM migration_content_0337 c JOIN build_workspaces_0226 w ON w.id=c.workspace_id WHERE c.run_id=$1 ORDER BY c.profile_path`, run)
 	if qe != nil {
@@ -209,7 +209,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 			saved, exists := target[f.TargetPath]
 			ok := exists && saved.SHA256 == f.SHA256 && saved.Size == f.Size
 			st := "manual"
-			reason := "not verified in Build Workspace"
+			reason := "Не проверено в рабочей области сборки"
 			if ok {
 				st = "transferred"
 				reason = ""
@@ -224,7 +224,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		reason := ""
 		if !ready {
 			profileState = "manual"
-			reason = "workspace files incomplete or changed"
+			reason = "Файлы рабочей области неполные или изменены"
 		}
 		coveredSources[profile] = true
 		v.Items = append(v.Items, rr.Item{Kind: "client_profile", Source: profile, Target: ws.ProfileID, Status: profileState, SHA256: hash, Reason: reason})
@@ -286,7 +286,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 			v.Items = append(v.Items, rr.Item{Kind: "server_wrapper", Source: wrapper.Path, Status: status, SHA256: wrapper.SHA256, Reason: wrapper.Reason})
 		}
 	}
-	add("player_assistant", "manual", "", "desktop adoption and signed installer must be independently tested on supported OS; no server receipt")
+	add("player_assistant", "manual", "", "Установку Desktop и подписанного установщика нужно независимо проверить на поддерживаемой ОС; подтверждения сервера нет")
 	var rehearsalJSON []byte
 	var rehearsalHash string
 	e = tx.QueryRowContext(ctx, `SELECT report_sha256,report FROM migration_rehearsals_03310 WHERE run_id=$1 ORDER BY recorded_at DESC,stage_id DESC LIMIT 1`, run).Scan(&rehearsalHash, &rehearsalJSON)
@@ -382,7 +382,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		return v, qe
 	}
 	if rollbackCount == 0 {
-		add("rollback", "missing", "", "no rollback rehearsal receipt; real cutover rollback not assumed")
+		add("rollback", "missing", "", "Нет подтверждения тестового отката; возможность отката после переключения не подтверждена")
 	} else {
 		add("rollback", "verified", "", fmt.Sprintf("receipts=%d", rollbackCount))
 	}
@@ -411,7 +411,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		v.RunRevision = v.Decisions[len(v.Decisions)-1].Revision
 	}
 	if len(v.Decisions) > 10000 {
-		v.Blockers = append(v.Blockers, "audit event limit exceeded; export and verify complete history")
+		v.Blockers = append(v.Blockers, "Превышен лимит событий аудита; экспортируйте и проверьте полную историю")
 	}
 	// Записи замены содержат фактическое целевое сопоставление и состояние.
 	filtered := make([]rr.Item, 0, len(v.Items))

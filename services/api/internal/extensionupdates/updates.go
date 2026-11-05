@@ -651,7 +651,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 	}
 	tx.Status = "rolled_back"
 	if tx.Failure == "" {
-		tx.Failure = "automatically rolled back after interrupted update transaction"
+		tx.Failure = "Автоматический откат после прерванной операции обновления"
 	} else {
 		tx.Failure += "; automatically rolled back after interrupted update transaction"
 	}

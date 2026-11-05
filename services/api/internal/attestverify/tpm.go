@@ -290,7 +290,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 	case tpmECDSA:
 		pub, ok := public.(*ecdsa.PublicKey)
 		if !ok || pub.Curve != elliptic.P256() {
-			return errors.New("AK certificate is not P-256 ECDSA")
+			return errors.New("Сертификат AK не использует ECDSA P-256")
 		}
 		r, e := c.tpm2b(66)
 		if e != nil {

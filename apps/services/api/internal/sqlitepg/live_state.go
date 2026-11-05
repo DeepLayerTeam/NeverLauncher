@@ -432,7 +432,7 @@ func job0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		fence++
 		available = time.Now().UTC()
 		updated = available
-		lastError = "SQLite worker fenced at migration"
+		lastError = "Обработчик SQLite заблокирован на время миграции"
 		completed = nil
 	}
 	_, e = tx.Exec(ctx, `INSERT INTO durable_jobs(id,kind,actor_type,actor_id,action,project_id,resource_type,resource_id,idempotency_key,payload,payload_digest,status,lease_owner,lease_token,lease_fence,lease_expires_at,attempt_count,max_attempts,available_at,last_error,result,created_at,updated_at,completed_at)
@@ -514,7 +514,7 @@ func outbox0474(ctx context.Context, tx pgx.Tx, s map[string]any) error {
 		fence++
 		available = time.Now().UTC()
 		updated = available
-		lastError = "SQLite delivery fenced at migration"
+		lastError = "Доставка через SQLite заблокирована на время миграции"
 		delivered = nil
 	}
 	_, e = tx.Exec(ctx, `INSERT INTO event_outbox(id,event_type,project_id,aggregate_type,aggregate_id,actor_id,idempotency_key,payload,status,lease_owner,lease_token,lease_fence,lease_expires_at,attempt_count,max_attempts,available_at,last_error,created_at,updated_at,delivered_at,core_payload_digest_0474)

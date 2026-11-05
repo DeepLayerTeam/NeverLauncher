@@ -29,7 +29,7 @@ func (s Server) registerMigrationRoutes0331(mux *http.ServeMux) {
 func (s Server) migrationStore0331(w http.ResponseWriter) (mw.Store, bool) {
 	v, ok := s.Repo.(mw.Store)
 	if !ok {
-		writeError(w, 503, "durable migration requires PostgreSQL SQLRepository")
+		writeError(w, 503, "Для надёжной миграции требуется PostgreSQL SQLRepository")
 		return nil, false
 	}
 	return v, true

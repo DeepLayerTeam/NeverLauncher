@@ -76,7 +76,7 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
   fi
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   if [[ -n "${SOURCE_COMMIT}" && "${SOURCE_COMMIT}" != "${HEAD_COMMIT}" ]]; then
-    echo "GA source commit does not equal git HEAD" >&2
+    echo "Коммит исходников GA не совпадает с git HEAD" >&2
     exit 2
   fi
   SOURCE_COMMIT="${HEAD_COMMIT}"

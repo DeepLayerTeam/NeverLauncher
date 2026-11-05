@@ -42,7 +42,7 @@ func DiagnoseHost() DeviceDiagnostics {
 		MeasuredBootVerifier:     Capability{"unsupported", "pcr-quote-verifier-unavailable"},
 		StandardProfile:          "available-with-verified-device-session",
 		StrictProfile:            "unavailable-without-verified-provenance-and-guard",
-		Notes:                    []string{"This is the server host, not the player's device; TPM presence does not verify any remote key."},
+		Notes:                    []string{"Это сервер, а не устройство игрока; наличие TPM не подтверждает какой-либо удалённый ключ."},
 	}
 	switch runtime.GOOS {
 	case "linux":

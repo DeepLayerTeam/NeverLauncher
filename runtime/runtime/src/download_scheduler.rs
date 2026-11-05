@@ -359,7 +359,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
         }
         match invalid {
             None => {
-                let host = sources.first().expect("manifest always has a primary source").host.clone();
+                let host = sources.first().expect("У манифеста всегда должен быть основной источник").host.clone();
                 jobs.push(Job { file: file.clone(), target, host, sources,
                     priority: priority(file), order });
             },

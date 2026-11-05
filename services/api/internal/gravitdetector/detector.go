@@ -169,16 +169,16 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 			r.inspectRuntime(n, obj)
 		case strings.Contains(lower, "/modules/") && strings.HasSuffix(lower, ".jar") || strings.HasPrefix(lower, "modules/") && strings.HasSuffix(lower, ".jar"):
 			r.Components = append(r.Components, Component{Kind: "module", Path: n, Status: "manual", Type: "jar"})
-			r.finding("MODULE_REVIEW_REQUIRED", "manual", "module", n, "custom module requires semantic analysis; JAR is never executed")
+			r.finding("MODULE_REVIEW_REQUIRED", "manual", "module", n, "Пользовательский модуль требует анализа поведения; JAR при этом не запускается")
 		case (base == ".env" || strings.HasSuffix(lower, "/serverwrapper.env")) && f.UncompressedSize64 <= maxConfigBytes:
 			data, e := readBounded(f, maxConfigBytes)
 			if e != nil {
-				r.finding("WRAPPER_ENV_UNREADABLE", "blocked", "server_wrapper", n, "unable to read wrapper environment")
+				r.finding("WRAPPER_ENV_UNREADABLE", "blocked", "server_wrapper", n, "Не удалось прочитать окружение оболочки")
 				continue
 			}
 			if bytes.Contains(data, []byte("SERVERWRAPPER_ADDRESS=")) || bytes.Contains(data, []byte("SERVERWRAPPER_CHECK_SERVER_TOKEN=")) {
 				r.Components = append(r.Components, Component{Kind: "server_wrapper", Path: n, Status: "manual", Type: "environment"})
-				r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", n, "ServerWrapper environment contains legacy integration settings; secrets and keys are not imported")
+				r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", n, "Окружение ServerWrapper содержит устаревшие настройки интеграции; секреты и ключи не импортируются")
 			}
 		case strings.Contains(lower, "serverwrapper/") && base == "config.json":
 			obj, e := readObject(f)
@@ -205,13 +205,13 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 			}
 			version, ok, e := jarManifestVersionFile(ctx, f)
 			if e != nil {
-				r.finding("SERVER_JAR_INVALID", "blocked", "version", n, "server JAR could not be verified or inspected")
+				r.finding("SERVER_JAR_INVALID", "blocked", "version", n, "Не удалось проверить или изучить серверный JAR")
 				continue
 			}
 			if ok {
 				manifestVersions = append(manifestVersions, version)
 			} else {
-				r.finding("SERVER_VERSION_UNREADABLE", "manual", "version", n, "cannot establish Gravit release from server JAR manifest")
+				r.finding("SERVER_VERSION_UNREADABLE", "manual", "version", n, "Нельзя определить релиз Gravit по манифесту серверного JAR")
 			}
 		case strings.HasSuffix(lower, ".json") && (strings.Contains(lower, "/modules/") || strings.HasPrefix(lower, "modules/")):
 			if _, e := readObject(f); e != nil {
@@ -232,28 +232,28 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 		r.finding("MULTIPLE_RUNTIMES", "blocked", "runtime", "", "multiple runtime configs make source identity ambiguous")
 	}
 	if !foundLaunch {
-		r.finding("LAUNCHSERVER_MISSING", "blocked", "launchserver", "", "LaunchServer.json is required")
+		r.finding("LAUNCHSERVER_MISSING", "blocked", "launchserver", "", "Необходим файл LaunchServer.json")
 	}
 	if profileCount == 0 {
-		r.finding("PROFILES_MISSING", "manual", "client_profile", "", "no ClientProfile JSON found in profiles/")
+		r.finding("PROFILES_MISSING", "manual", "client_profile", "", "В каталоге profiles/ не найден JSON-файл ClientProfile")
 	}
 	if !foundRuntime {
-		r.finding("RUNTIME_MISSING", "manual", "runtime", "", "no LaunchServerRuntime.json found; inspect runtime settings separately")
+		r.finding("RUNTIME_MISSING", "manual", "runtime", "", "Файл LaunchServerRuntime.json не найден; проверьте настройки среды выполнения отдельно")
 	}
 	// Для настоящей миграции отдельно обязательны содержимое и идентичность.
 	// Отсутствие не считается успехом: внешняя авторизация и удалённые
 	// Vanilla-ресурсы могут быть законными, но требуют явного решения оператора.
 	if snapshot.Categories["client"] == 0 {
-		r.finding("CLIENT_FILES_NOT_IN_SOURCE", "manual", "client", "", "no clients/updates files in archive; external client content must be accounted for")
+		r.finding("CLIENT_FILES_NOT_IN_SOURCE", "manual", "client", "", "В архиве нет файлов clients/updates; необходимо отдельно учесть внешнее содержимое клиента")
 	}
 	if snapshot.Categories["asset"] == 0 || snapshot.Categories["library"] == 0 {
-		r.finding("SHARED_CONTENT_NOT_IN_SOURCE", "manual", "content", "", "assets or libraries absent; verify external mirrors and dependencies")
+		r.finding("SHARED_CONTENT_NOT_IN_SOURCE", "manual", "content", "", "Отсутствуют ресурсы или библиотеки; проверьте внешние зеркала и зависимости")
 	}
 	if snapshot.Categories["authentication"] == 0 {
-		r.finding("AUTH_EXPORT_NOT_IN_SOURCE", "manual", "auth", "", "account database may be external; export and UUID mapping are required separately")
+		r.finding("AUTH_EXPORT_NOT_IN_SOURCE", "manual", "auth", "", "База учётных записей может быть внешней; экспорт и сопоставление UUID выполняются отдельно")
 	}
 	if snapshot.Categories["texture"] == 0 {
-		r.finding("TEXTURE_FILES_NOT_IN_SOURCE", "manual", "texture", "", "texture data absent; verify external TextureProvider or intentionally empty source")
+		r.finding("TEXTURE_FILES_NOT_IN_SOURCE", "manual", "texture", "", "Данные текстур отсутствуют; проверьте внешний TextureProvider или подтвердите намеренно пустой источник")
 	}
 	if len(manifestVersions) > 0 {
 		v := manifestVersions[0]
@@ -265,25 +265,25 @@ func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, clai
 		}
 		r.DetectedVersion = v
 		r.VersionEvidence = "jar-manifest"
-		r.finding("BINARY_PROVENANCE_NOT_ATTESTED", "manual", "version", "", "JAR manifest is not a signed upstream provenance certificate; compare serverJarSha256 to an approved release artifact")
+		r.finding("BINARY_PROVENANCE_NOT_ATTESTED", "manual", "version", "", "Манифест JAR не подтверждает подписанное происхождение; сравните serverJarSha256 с утверждённым артефактом релиза")
 		if !consistent || (r.ClaimedVersion != "" && strings.TrimPrefix(r.ClaimedVersion, "v") != v) {
 			r.VersionStatus = "conflict"
-			r.finding("VERSION_CONFLICT", "blocked", "version", "", "conflicting source and declared Gravit versions")
+			r.finding("VERSION_CONFLICT", "blocked", "version", "", "Версия Gravit в источнике не совпадает с объявленной версией")
 		} else if recognizedVersion(v) {
 			r.VersionStatus = "recognized"
 		} else {
 			r.VersionStatus = "unsupported"
-			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "detected server version is outside recognized 5.7.0..5.7.13 range")
+			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "Обнаруженная версия сервера находится вне поддерживаемого диапазона 5.7.0–5.7.13")
 		}
 	} else if r.ClaimedVersion != "" {
 		r.VersionEvidence = "operator-claim"
-		r.finding("VERSION_NOT_VERIFIED", "manual", "version", "", "operator-supplied version is not proof of source binary identity")
+		r.finding("VERSION_NOT_VERIFIED", "manual", "version", "", "Указанная оператором версия не подтверждает идентичность исходного исполняемого файла")
 		if !recognizedVersion(strings.TrimPrefix(r.ClaimedVersion, "v")) {
 			r.VersionStatus = "unsupported"
-			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "claimed version is outside recognized 5.7.0..5.7.13 range")
+			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "Заявленная версия находится вне поддерживаемого диапазона 5.7.0–5.7.13")
 		}
 	} else {
-		r.finding("VERSION_NOT_VERIFIED", "manual", "version", "", "no verifiable server version; supply LaunchServer.jar from the same installation")
+		r.finding("VERSION_NOT_VERIFIED", "manual", "version", "", "Не удалось подтвердить версию сервера; укажите LaunchServer.jar из той же установки")
 	}
 	r.Summary = map[string]int{"recognized": 0, "manual": 0, "blocked": 0}
 	for _, c := range r.Components {
@@ -363,7 +363,7 @@ func readType(obj map[string]json.RawMessage) string {
 func (r *Report) inspectLaunch(p string, obj map[string]json.RawMessage) {
 	auth, ok := rawObject(obj["auth"])
 	if !ok || len(auth) == 0 {
-		r.finding("AUTH_INVALID", "blocked", "launchserver", p, "auth providers absent or not a provider map")
+		r.finding("AUTH_INVALID", "blocked", "launchserver", p, "Провайдеры авторизации отсутствуют или заданы не в виде карты")
 	} else {
 		keys := make([]string, 0, len(auth))
 		for k := range auth {
@@ -399,11 +399,11 @@ func (r *Report) inspectLaunch(p string, obj map[string]json.RawMessage) {
 			if t, exists := pair["textureProvider"]; exists {
 				provider, valid := rawObject(t)
 				if !valid {
-					r.finding("TEXTURE_INVALID", "blocked", "texture", p, "texture provider must be an object")
+					r.finding("TEXTURE_INVALID", "blocked", "texture", p, "Провайдер текстур должен быть объектом")
 				} else if kind := readType(provider); kind == "" {
-					r.finding("TEXTURE_TYPE_MISSING", "blocked", "texture", p, "texture provider type missing")
+					r.finding("TEXTURE_TYPE_MISSING", "blocked", "texture", p, "Не указан тип провайдера текстур")
 				} else if kind != "void" && kind != "request" && kind != "json" && kind != "database" && kind != "local" && kind != "none" && kind != "mojang" {
-					r.finding("TEXTURE_UNKNOWN", "manual", "texture", p, "texture provider requires a compatibility adapter")
+					r.finding("TEXTURE_UNKNOWN", "manual", "texture", p, "Для провайдера текстур требуется адаптер совместимости")
 				}
 			}
 		}
@@ -453,11 +453,11 @@ func (r *Report) inspectProfile(p string, obj map[string]json.RawMessage) {
 }
 func (r *Report) inspectRuntime(p string, obj map[string]json.RawMessage) {
 	if len(obj) == 0 {
-		r.finding("EMPTY_RUNTIME", "manual", "runtime", p, "runtime config is empty")
+		r.finding("EMPTY_RUNTIME", "manual", "runtime", p, "Конфигурация среды выполнения пуста")
 	}
 	for _, k := range []string{"secretKey", "accessToken", "refreshToken", "privateKey"} {
 		if _, found := obj[k]; found {
-			r.finding("RUNTIME_CREDENTIALS", "manual", "runtime", p, "runtime trust material is never imported")
+			r.finding("RUNTIME_CREDENTIALS", "manual", "runtime", p, "Материалы доверия среды выполнения не импортируются")
 		}
 	}
 }
@@ -465,7 +465,7 @@ func (r *Report) inspectWrapper(p string, obj map[string]json.RawMessage) {
 	if len(obj) == 0 {
 		r.finding("WRAPPER_EMPTY", "manual", "server_wrapper", p, "empty wrapper config")
 	}
-	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "ServerWrapper credentials and trust anchors must be replaced by Never ServerBridge")
+	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "Учётные данные и корневые ключи доверия ServerWrapper необходимо заменить средствами Never ServerBridge")
 }
 
 // jarManifestVersionFile сбрасывает ограниченный вложенный JAR в закрытый файл на
@@ -568,7 +568,7 @@ func parseJarManifest(data []byte) (string, bool, error) {
 func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 	var options []json.RawMessage
 	if err := json.Unmarshal(raw, &options); err != nil || options == nil {
-		r.finding("OPTIONALS_INVALID", "blocked", "client_profile", p, "optional tree must be an array")
+		r.finding("OPTIONALS_INVALID", "blocked", "client_profile", p, "Дерево дополнительных элементов должно быть массивом")
 		return
 	}
 	if len(options) > 4096 {
@@ -578,7 +578,7 @@ func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 	for _, entry := range options {
 		option, ok := rawObject(entry)
 		if !ok {
-			r.finding("OPTIONAL_INVALID", "blocked", "client_profile", p, "optional element must be an object")
+			r.finding("OPTIONAL_INVALID", "blocked", "client_profile", p, "Дополнительный элемент должен быть объектом")
 			continue
 		}
 		actions, ok := option["actions"]
@@ -587,20 +587,20 @@ func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 		}
 		var list []json.RawMessage
 		if err := json.Unmarshal(actions, &list); err != nil || list == nil || len(list) > 64 {
-			r.finding("OPTIONAL_ACTIONS_INVALID", "blocked", "client_profile", p, "optional actions must be an array of up to 64 elements")
+			r.finding("OPTIONAL_ACTIONS_INVALID", "blocked", "client_profile", p, "Дополнительные действия должны быть массивом не более чем из 64 элементов")
 			continue
 		}
 		for _, entry := range list {
 			act, ok := rawObject(entry)
 			if !ok {
-				r.finding("OPTIONAL_ACTION_INVALID", "blocked", "client_profile", p, "invalid optional action object")
+				r.finding("OPTIONAL_ACTION_INVALID", "blocked", "client_profile", p, "Некорректный объект дополнительного действия")
 				continue
 			}
 			switch readType(act) {
 			case "file", "classpath", "jvmargs", "clientargs":
-				r.finding("OPTIONAL_ACTION_REVIEW", "manual", "client_profile", p, "recognized optional action requires signed-file conversion")
+				r.finding("OPTIONAL_ACTION_REVIEW", "manual", "client_profile", p, "Известное дополнительное действие требует преобразования в подписанный файл")
 			default:
-				r.finding("UNKNOWN_OPTIONAL_ACTION", "blocked", "client_profile", p, "unsupported or missing optional action type")
+				r.finding("UNKNOWN_OPTIONAL_ACTION", "blocked", "client_profile", p, "Неизвестный или отсутствующий тип дополнительного действия")
 			}
 		}
 	}

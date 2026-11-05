@@ -9,7 +9,7 @@ public final class RuntimeExample implements Extension {
     private static final JsonSchema RELEASE=JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"version\":{\"type\":\"string\",\"minLength\":1}},\"required\":[\"version\"],\"additionalProperties\":false}");
     record VersionEvent(String version){}
     @Override public void start(ExtensionContext ctx)throws Exception {
-        RuntimeServices runtime=Objects.requireNonNull(ctx.runtime(),"Java Runtime APIs are required");
+        RuntimeServices runtime=Objects.requireNonNull(ctx.runtime(),"Необходимы API среды выполнения Java");
         RuntimeDocuments config=runtime.config();
         if(config.get("settings",SETTINGS).isEmpty())config.put("settings",Map.of("enabled",true),SETTINGS);
         runtime.commands().register("status",JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"args\":{\"type\":\"array\",\"maxItems\":0}}}"),

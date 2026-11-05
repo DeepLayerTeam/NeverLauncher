@@ -197,7 +197,7 @@ public final class LauncherForgeBridge {
         Connection connection = event.getConnection();
         PacketListener listener = connection.getPacketListener();
         if (!(listener instanceof ServerCommonPacketListenerImpl serverListener)) {
-            connection.disconnect(Component.literal("Launcher could not resolve the login listener"));
+            connection.disconnect(Component.literal("Launcher не удалось найти обработчик входа"));
             return;
         }
 

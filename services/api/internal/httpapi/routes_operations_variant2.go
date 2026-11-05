@@ -238,23 +238,23 @@ func writeOperationError0217(w http.ResponseWriter, err error) {
 	case errors.Is(err, repository.ErrNotFound):
 		status = http.StatusNotFound
 		code = "resource-not-found"
-		advice = "Check project permissions and resource ID"
+		advice = "Проверьте права проекта и идентификатор ресурса"
 	case errors.Is(err, repository.ErrLeaseBusy):
 		status = http.StatusConflict
 		code = "operation-busy"
-		advice = "Wait for the active operation and refresh its status"
+		advice = "Дождитесь завершения текущей операции и обновите её состояние"
 	case errors.Is(err, repository.ErrImmutable):
 		status = http.StatusConflict
 		code = "already-finalized"
-		advice = "Open the saved job instead of repeating a completed mutation"
+		advice = "Откройте сохранённое задание вместо повторения уже выполненной операции"
 	case errors.Is(err, repository.ErrConflict):
 		status = http.StatusConflict
 		code = "idempotency-conflict"
-		advice = "Reuse a key only for exactly the same operation, or start a new operation with a new key"
+		advice = "Повторно используйте ключ только для той же операции; для новой операции создайте новый ключ"
 	case strings.HasPrefix(err.Error(), "authorization-denied:"):
 		status = http.StatusForbidden
 		code = "permission-denied"
-		advice = "Request project permission or sign in again"
+		advice = "Запросите доступ к проекту или войдите повторно"
 	}
 	writeJSON(w, status, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": code, "reasonCode": code, "message": err.Error(), "action": advice}})
 }

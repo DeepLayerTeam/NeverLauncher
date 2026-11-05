@@ -36,7 +36,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 			return denied(http.StatusForbidden, "project scope denied")
 		}
 	} else if st.key.Scope != "global" || strings.TrimSpace(req.ProjectID) != "" {
-		return denied(http.StatusForbidden, "global project listing requires a global extension scope")
+		return denied(http.StatusForbidden, "Для списка всех проектов расширению необходим глобальный уровень доступа")
 	}
 	permitted, err := s.permissionAllowed0207(ctx, st, permission, projectID)
 	if err != nil {
@@ -162,7 +162,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 			"updatedAt": job.UpdatedAt, "completedAt": job.CompletedAt}
 		return capabilityResult0205{value: map[string]any{"job": view}, status: http.StatusOK}
 	}
-	return denied(http.StatusNotFound, "backend capability not supported")
+	return denied(http.StatusNotFound, "Возможность Backend не поддерживается")
 }
 
 // Детерминированные ограниченные страницы не дают одному расширению запросить

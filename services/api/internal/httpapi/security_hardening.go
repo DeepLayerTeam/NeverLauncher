@@ -110,7 +110,7 @@ func (s Server) securityHardeningPayload902(kind string) map[string]any {
 			"TOTP enforcement during admin/player login when enabled",
 			"WebAuthn Level 3 passkey registration and passwordless authentication with user verification",
 			"MFA 2.0 policies: optional, required, phishing-resistant",
-			"fresh step-up authentication for critical operations",
+			"Для критических операций необходимо повторное подтверждение личности",
 			"single-use recovery codes with SHA-256 hashing",
 			"single-use password reset tokens with session revocation",
 			"single-use email verification tokens",

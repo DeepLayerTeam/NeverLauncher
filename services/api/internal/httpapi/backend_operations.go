@@ -167,7 +167,7 @@ func (s Server) backendConnectedClients0289(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, 200, map[string]any{"adminSessions": admins, "launcherSessions": launchers,
 		"adminCount": len(admins), "launcherCount": len(launchers), "sampledAt": now, "freshnessSeconds": 300,
 		"source":     "auth_sessions.last_seen_at / minecraft_sessions.last_seen_at",
-		"limitation": "recently observed authorization sessions, not guaranteed connected sockets or online Minecraft players", "limitPerType": 100})
+		"limitation": "Недавно наблюдавшиеся сеансы авторизации; это не подтверждение активных сокетов или присутствия игроков Minecraft в сети", "limitPerType": 100})
 }
 
 type backendRestartRequest0289 struct {
@@ -302,7 +302,7 @@ func (s Server) backendSendNotice0289(w http.ResponseWriter, r *http.Request) {
 	if created {
 		s.audit(r, claims.Email, "backend:notice:queued", notice.ID)
 	}
-	writeJSON(w, 200, map[string]any{"notice": notice, "queued": created, "delivery": "recipient polls authenticated inbox and acknowledges"})
+	writeJSON(w, 200, map[string]any{"notice": notice, "queued": created, "delivery": "Получатель опрашивает защищённый входящий канал и подтверждает получение"})
 }
 func (s Server) backendInbox0289(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.BackendNoticeStore0289)

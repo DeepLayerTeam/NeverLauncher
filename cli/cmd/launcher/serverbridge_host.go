@@ -813,7 +813,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			restartEvents = append(restartEvents, time.Now())
 			state.RestartCount++
 			state.Status = "restarting"
-			hostServiceStatus02811("Minecraft restarting after exit")
+			hostServiceStatus02811("Minecraft перезапускается после завершения")
 			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 				return err
 			}

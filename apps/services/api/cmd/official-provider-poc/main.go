@@ -234,7 +234,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		defer cancel()
 		_ = server.Shutdown(shutdownCtx)
 	}()
-	fmt.Fprintln(output, "Microsoft personal-account login URL (open in your system browser):")
+	fmt.Fprintln(output, "URL для входа в личную учётную запись Microsoft (откройте в системном браузере):")
 	fmt.Fprintln(output, authURL)
 	fmt.Fprintln(output, "Redirect registration: http://localhost/minecraft-poc/callback (native/public client; loopback port is dynamic).")
 	if opt.OpenBrowser {
@@ -274,8 +274,8 @@ func deviceGrant(ctx context.Context, c providerClient, opt options, output io.W
 		return officialminecraft.OAuthTokens{}, err
 	}
 	fmt.Fprintln(output, "Microsoft device verification URL:", code.VerificationURI)
-	fmt.Fprintln(output, "Enter this one-time user code:", code.UserCode)
-	fmt.Fprintln(output, "Never enter your Microsoft password into Launcher.")
+	fmt.Fprintln(output, "Введите этот одноразовый код пользователя:", code.UserCode)
+	fmt.Fprintln(output, "Никогда не вводите пароль Microsoft в Launcher.")
 	expiry := time.NewTimer(time.Duration(code.ExpiresIn) * time.Second)
 	defer expiry.Stop()
 	interval := time.Duration(code.Interval) * time.Second

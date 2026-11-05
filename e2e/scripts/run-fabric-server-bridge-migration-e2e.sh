@@ -84,7 +84,7 @@ SQL
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
-[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0026_fabric_server_bridge_0146'")"
 [[ "$target_sealed" == "true" ]] || { echo "Fabric ServerBridge migration is not sealed: 0026_fabric_server_bridge_0146" >&2; exit 1; }
 

@@ -69,9 +69,9 @@ lock = json.loads(raw.decode("utf-8"))
 lock_sha = hashlib.sha256(raw).hexdigest()
 for key in ("resolutionLockSha256", "resolutionSourceSha256", "reproducibilitySha256"):
     if not re.fullmatch(r"[0-9a-f]{64}", str(install.get(key) or "")):
-        raise SystemExit(f"invalid loader pin {key}")
+        raise SystemExit(f"Некорректная фиксация версии загрузчика {key}")
 if install.get("resolutionPinned") is not True:
-    raise SystemExit("second materialization did not reuse loader resolution lock")
+    raise SystemExit("При повторной подготовке пакета не использована сохранённая фиксация версии загрузчика")
 if lock_sha != install.get("resolutionLockSha256") or lock_sha != first_lock:
     raise SystemExit("loader resolution lock SHA-256 changed between materializations")
 if install.get("reproducibilitySha256") != first_repro or lock.get("reproducibilitySha256") != first_repro:
@@ -79,7 +79,7 @@ if install.get("reproducibilitySha256") != first_repro or lock.get("reproducibil
 if lock.get("resolvedVersion") != install.get("loaderVersion"):
     raise SystemExit("loader lock resolvedVersion mismatch")
 if lock.get("selector") in ("", None) or lock.get("resolvedVersion") in ("latest", "latest-stable", "stable", "recommended"):
-    raise SystemExit("loader lock is not immutable")
+    raise SystemExit("Фиксация версии загрузчика допускает изменения")
 PY
 
 bash "$ROOT/e2e/scripts/run-loader-hardening-probe.sh" "neoforge" "$NL_BIN" "$RUNTIME_DIR"
@@ -115,7 +115,7 @@ for key in ('installerSha256', 'profileSha256'):
 if int(install.get('libraryCount') or 0) <= 0:
     raise SystemExit('NeoForge runtime libraries were not materialized')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):
-    raise SystemExit('invalid materialized package verification')
+    raise SystemExit('Ошибка проверки подготовленного пакета')
 if not (minecraft.get('version') == mc and minecraft.get('loader') == 'neoforge' and minecraft.get('loaderVersion') == install.get('loaderVersion') and minecraft.get('mainClass') == install.get('mainClass')):
     raise SystemExit('NeoForge package metadata mismatch')
 if not ((runtime.get('java') or {}).get('majorVersion') == java and (runtime.get('launch') or {}).get('classpathStrategy') == 'compatibility' and (runtime.get('launch') or {}).get('versionMetadataPath') == install.get('profilePath')):

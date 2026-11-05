@@ -883,7 +883,7 @@ func runMain(args []string) error {
 		}
 		return executeStateAudit(*source, *target, *out)
 	case "certify":
-		evidenceDir := fs.String("evidence-dir", "", "new private directory for complete check evidence")
+		evidenceDir := fs.String("evidence-dir", "", "Новый закрытый каталог для всех свидетельств проверки")
 		p := fs.String("plan", "", "operator check plan JSON")
 		out := fs.String("output", "", "Подписанный сертификат (создаётся с правами 0600)")
 		if e := fs.Parse(args[1:]); e != nil {

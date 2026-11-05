@@ -306,7 +306,7 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, err.Error())
 			return nil, err
 		}
-		_, _ = cp.FailDurableJob(ctx, job.ID, job.LeaseToken, "waiting for durable publish job", time.Second)
+		_, _ = cp.FailDurableJob(ctx, job.ID, job.LeaseToken, "Ожидание надёжного задания публикации", time.Second)
 		return nil, repository.ErrLeaseBusy
 	}
 	release, err = s.lookupRollbackRelease0217(release.ID)

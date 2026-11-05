@@ -37,7 +37,7 @@ func (c *Collector) Latest() Report {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if !c.sampled {
-		return Report{Mode: c.Opt.Mode, Verified: false, Errors: []string{"sampling not yet completed"}}
+		return Report{Mode: c.Opt.Mode, Verified: false, Errors: []string{"Сбор измерений ещё не завершён"}}
 	}
 	out := c.last
 	out.Disks = append([]Disk(nil), out.Disks...)
@@ -46,7 +46,7 @@ func (c *Collector) Latest() Report {
 	out.Limitations = append([]string(nil), out.Limitations...)
 	if out.At.Add(90 * time.Second).Before(time.Now()) {
 		out.Verified = false
-		out.Errors = append(out.Errors, "capacity sample is stale (>90s)")
+		out.Errors = append(out.Errors, "Данные о загрузке устарели (более 90 с)")
 	}
 	return out
 }

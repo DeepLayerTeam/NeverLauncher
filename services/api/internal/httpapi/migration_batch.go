@@ -153,7 +153,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 			identities.Reason = "Повторяющиеся учётные записи источника"
 		} else {
 			identities.State = "review_required"
-			identities.Reason = "UUID and password verifiers need target reconciliation"
+			identities.Reason = "UUID и проверочные хеши паролей необходимо согласовать с целевой системой"
 		}
 	}
 	target, existing, err := s.migrationTargetSnapshot0442(run.ProjectID)

@@ -24,10 +24,10 @@ func (c *Core) RefreshLinkedIdentity(userID, providerID, expectedID string, auth
 		return model.AuthIdentity{}, err
 	}
 	if user.Status != "active" {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "canonical user is disabled")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "Основная учётная запись пользователя отключена")
 	}
 	if strings.TrimSpace(expectedID) == "" {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "expected linked identity ID is required")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "Необходим идентификатор ожидаемой привязанной учётной записи")
 	}
 	if err := authconnector.ValidateAuthentication(authentication); err != nil {
 		return model.AuthIdentity{}, err
@@ -40,7 +40,7 @@ func (c *Core) RefreshLinkedIdentity(userID, providerID, expectedID string, auth
 	}
 	linked, err := c.repo.GetAuthIdentityByIssuer(providerID, issuer, identity.Subject)
 	if errors.Is(err, repository.ErrNotFound) {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "provider refresh changed or unlinked identity")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "Обновление провайдера изменило или отвязало учётную запись")
 	}
 	if err != nil {
 		return model.AuthIdentity{}, err

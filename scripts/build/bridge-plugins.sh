@@ -5,7 +5,7 @@ VERSION="$(tr -d '\r\n' < "$ROOT/VERSION")"
 OUT="$ROOT/artifacts/plugins"
 
 if ! command -v gradle >/dev/null 2>&1; then
-  echo "[Launcher] production bridge build requires Gradle on PATH; API-stub fallback is forbidden" >&2
+  echo "[Launcher] Для рабочей сборки моста требуется Gradle в PATH; подмена заглушкой API запрещена" >&2
   exit 1
 fi
 
@@ -45,10 +45,10 @@ copy_artifact paper-bridge "launcher-paper-bridge-${VERSION}.jar"
 copy_artifact purpur-bridge "launcher-purpur-bridge-${VERSION}.jar"
 copy_artifact folia-bridge "launcher-folia-bridge-${VERSION}.jar"
 FABRIC_SRC="$ROOT/plugins/fabric-bridge/build/libs/launcher-fabric-bridge-${VERSION}.jar"
-[[ -s "$FABRIC_SRC" ]] || { echo "[Launcher] missing remapped Fabric artifact" >&2; exit 1; }
+[[ -s "$FABRIC_SRC" ]] || { echo "[Launcher] Отсутствует преобразованный артефакт Fabric" >&2; exit 1; }
 cp "$FABRIC_SRC" "$OUT/launcher-fabric-bridge-${VERSION}.jar"
 QUILT_SRC="$ROOT/plugins/quilt-bridge/build/libs/launcher-quilt-bridge-${VERSION}.jar"
-[[ -s "$QUILT_SRC" ]] || { echo "[Launcher] missing remapped Quilt artifact" >&2; exit 1; }
+[[ -s "$QUILT_SRC" ]] || { echo "[Launcher] Отсутствует преобразованный артефакт Quilt" >&2; exit 1; }
 cp "$QUILT_SRC" "$OUT/launcher-quilt-bridge-${VERSION}.jar"
 copy_artifact sponge-bridge "launcher-sponge-bridge-${VERSION}.jar"
 copy_artifact vanilla-bridge "launcher-vanilla-bridge-${VERSION}.jar"
@@ -88,11 +88,11 @@ for platform in bukkit spigot paper purpur folia; do
   }
 done
 jar tf "$OUT/launcher-folia-bridge-${VERSION}.jar" | grep -q '^plugin.yml$' || {
-  echo "[Launcher] Folia descriptor is missing" >&2
+  echo "[Launcher] Отсутствует дескриптор Folia" >&2
   exit 1
 }
 unzip -p "$OUT/launcher-folia-bridge-${VERSION}.jar" plugin.yml | grep -q '^folia-supported: true$' || {
-  echo "[Launcher] Folia artifact is not explicitly marked folia-supported" >&2
+  echo "[Launcher] Артефакт Folia не помечен явно как folia-supported" >&2
   exit 1
 }
 
@@ -108,7 +108,7 @@ for entry in \
   }
 done
 jar tf "$FABRIC_ARTIFACT" | grep -Eq '^META-INF/jars/bridge-common-[^/]+\.jar$' || {
-  echo "[Launcher] Fabric artifact does not embed bridge-common runtime" >&2
+  echo "[Launcher] Артефакт Fabric не содержит встроенную среду bridge-common" >&2
   exit 1
 }
 python3 - "$FABRIC_ARTIFACT" <<'PY_FABRIC_META'
@@ -135,7 +135,7 @@ QUILT_ARTIFACT="$OUT/launcher-quilt-bridge-${VERSION}.jar"
 for entry in 'fabric.mod.json' 'quilt.mod.json' 'launcher.quilt.mixins.json' 'ru/launcher/bridge/quilt/LauncherQuiltBridge.class'; do
   jar tf "$QUILT_ARTIFACT" | grep -q "^${entry}$" || { echo "[Launcher] Quilt artifact missing ${entry}" >&2; exit 1; }
 done
-jar tf "$QUILT_ARTIFACT" | grep -Eq '^META-INF/jars/bridge-common-[^/]+\.jar$' || { echo "[Launcher] Quilt artifact does not embed bridge-common runtime" >&2; exit 1; }
+jar tf "$QUILT_ARTIFACT" | grep -Eq '^META-INF/jars/bridge-common-[^/]+\.jar$' || { echo "[Launcher] Артефакт Quilt не содержит встроенную среду bridge-common" >&2; exit 1; }
 python3 - "$QUILT_ARTIFACT" <<'PY_QUILT_META'
 import json, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as zf:
@@ -154,11 +154,11 @@ for platform in forge neoforge; do
   }
 done
 jar tf "$OUT/launcher-forge-bridge-${VERSION}.jar" | grep -q '^META-INF/mods.toml$' || {
-  echo "[Launcher] Forge mods.toml missing" >&2
+  echo "[Launcher] Отсутствует mods.toml для Forge" >&2
   exit 1
 }
 jar tf "$OUT/launcher-neoforge-bridge-${VERSION}.jar" | grep -q '^META-INF/neoforge.mods.toml$' || {
-  echo "[Launcher] NeoForge neoforge.mods.toml missing" >&2
+  echo "[Launcher] Отсутствует neoforge.mods.toml для NeoForge" >&2
   exit 1
 }
 jar tf "$OUT/launcher-sponge-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/sponge/LauncherSpongeBridge.class$' || { echo "[Launcher] Sponge runtime class missing" >&2; exit 1; }

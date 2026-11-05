@@ -186,7 +186,7 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         print(
-            f"Upload failed: {exc}; debug artifacts were retained for retry",
+            f"Загрузка не удалась: {exc}; диагностические артефакты сохранены для повторной попытки",
             file=sys.stderr,
         )
         raise SystemExit(1)

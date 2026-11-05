@@ -72,7 +72,7 @@ internal_os = 'osx' if os_name == 'macos' else os_name
 if {'os': internal_os, 'arch': arch} not in (install.get('targets') or []):
     raise SystemExit(f'vanilla install target mismatch: expected {internal_os}/{arch}')
 if not (verify.get('status') == 'valid' and (verify.get('verify') or {}).get('valid') is True and (verify.get('verify') or {}).get('missing') == [] and (verify.get('verify') or {}).get('corrupted') == []):
-    raise SystemExit('invalid materialized package verification')
+    raise SystemExit('Ошибка проверки подготовленного пакета')
 settings = package.get('manifestSettings') or {}
 minecraft = settings.get('minecraft') or {}
 runtime = settings.get('runtime') or {}

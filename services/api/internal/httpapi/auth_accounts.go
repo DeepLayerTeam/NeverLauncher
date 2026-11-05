@@ -177,7 +177,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		"user":          sanitizeUserAccount(user),
 		"session":       sanitizeSessionRecord(session),
 		"tokens":        map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true},
-		"next":          []string{"store refresh token in secure storage", "use access token for protected endpoints", "refresh before expiry", "re-login after revoke"},
+		"next":          []string{"store refresh token in secure storage", "Используйте токен доступа для защищённых адресов API", "refresh before expiry", "Повторный вход после отзыва"},
 	}})
 }
 
@@ -282,7 +282,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authRefreshPlan(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "implemented", "endpoint": "POST /api/v1/auth/refresh", "steps": []string{"verify refresh token hash", "load server-side session/device binding", "verify bound device key proof when present", "detect revoked/expired session", "rotate refresh token", "recompute session risk", "issue new access token", "write session audit event"}, "ttl": map[string]any{"accessTokenMinutes": int(accessTokenTTL.Minutes()), "refreshTokenDays": int(refreshTokenTTL.Hours() / 24)}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "implemented", "endpoint": "POST /api/v1/auth/refresh", "steps": []string{"verify refresh token hash", "load server-side session/device binding", "При наличии проверьте подтверждение привязанного ключа устройства", "detect revoked/expired session", "rotate refresh token", "recompute session risk", "issue new access token", "write session audit event"}, "ttl": map[string]any{"accessTokenMinutes": int(accessTokenTTL.Minutes()), "refreshTokenDays": int(refreshTokenTTL.Hours() / 24)}}})
 }
 
 func (s Server) authLogout(w http.ResponseWriter, r *http.Request) {

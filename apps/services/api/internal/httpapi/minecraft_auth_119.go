@@ -507,7 +507,7 @@ func (s Server) yggdrasilSignout119(w http.ResponseWriter, r *http.Request) {
 	result, err := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: strings.TrimSpace(req.Username), Secret: req.Password})
 	if err != nil {
 		if errors.Is(err, federation.ErrCapabilityUnsupported) {
-			writeYggdrasilError119(w, http.StatusForbidden, "Provider does not support password signout")
+			writeYggdrasilError119(w, http.StatusForbidden, "Провайдер не поддерживает выход с помощью пароля")
 			return
 		}
 		writeYggdrasilError119(w, http.StatusForbidden, "Неверные учётные данные")

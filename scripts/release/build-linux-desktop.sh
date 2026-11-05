@@ -5,7 +5,7 @@ VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 OUT_DIR="${1:-${ROOT_DIR}/dist/release-${VERSION}}"
 PACKAGE_DIR="${OUT_DIR}/linux-desktop-package"
 ARCH="$(uname -m)"
-[[ "${ARCH}" == "x86_64" ]] || { echo "Linux production package currently requires x86_64, got ${ARCH}" >&2; exit 2; }
+[[ "${ARCH}" == "x86_64" ]] || { echo "Для рабочего пакета Linux сейчас требуется x86_64, получено ${ARCH}" >&2; exit 2; }
 [[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
   echo "Linux Guard production build requires the compile-time Ed25519 public key" >&2; exit 2;
 }
@@ -16,7 +16,7 @@ cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.
 cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bin guard
 DESKTOP_SRC="${ROOT_DIR}/apps/desktop/src-tauri/target/release/launcher-desktop"
 GUARD_SRC="${ROOT_DIR}/runtime/runtime/target/release/guard"
-[[ -x "${DESKTOP_SRC}" && -x "${GUARD_SRC}" ]] || { echo "Desktop/Guard release binaries missing" >&2; exit 1; }
+[[ -x "${DESKTOP_SRC}" && -x "${GUARD_SRC}" ]] || { echo "Отсутствуют релизные исполняемые файлы Desktop/Guard" >&2; exit 1; }
 
 rm -rf "${PACKAGE_DIR}"
 mkdir -p "${PACKAGE_DIR}" "${OUT_DIR}"

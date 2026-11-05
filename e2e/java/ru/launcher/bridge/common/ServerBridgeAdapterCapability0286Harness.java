@@ -31,7 +31,7 @@ public final class ServerBridgeAdapterCapability0286Harness {
             System.out.println("CAPABILITY_POLICY_OK platform=" + id + " caps=" + profile.capabilities().size());
         }
         BridgeAdapterProfile vanilla = BridgeAdapterProfiles.require("vanilla");
-        require(!vanilla.supports(BridgeAdapterCapability.LOGIN_GATE), "Vanilla RCON is not a pre-login gate");
+        require(!vanilla.supports(BridgeAdapterCapability.LOGIN_GATE), "Vanilla RCON не проверяет доступ до входа");
         require(vanilla.supports(BridgeAdapterCapability.SIDECAR_RCON), "Vanilla sidecar needs RCON");
         BridgeAdapterProfile sponge = BridgeAdapterProfiles.require("sponge");
         for (BridgeAdapterCapability cap : List.of(BridgeAdapterCapability.CONTROL_WHITELIST,

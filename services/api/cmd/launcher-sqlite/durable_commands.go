@@ -121,7 +121,7 @@ func runDurableAction(args []string) int {
 		output = map[string]any{"failed": err == nil}
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "durable operation failed closed:", err)
+		fmt.Fprintln(os.Stderr, "Надёжная операция завершилась отказом:", err)
 		return 1
 	}
 	if err = json.NewEncoder(os.Stdout).Encode(output); err != nil {

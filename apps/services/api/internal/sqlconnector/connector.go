@@ -141,7 +141,7 @@ func (c *Connector) AuthenticatePassword(ctx context.Context, request authconnec
 		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый статус SQL-учётной записи", err)
 	}
 	if !active {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "SQL identity is disabled")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "Учётная запись SQL отключена")
 	}
 	valid, err := verifyPassword(request.Secret, identity.passwordHash, c.cfg.Password)
 	if err != nil {
@@ -174,7 +174,7 @@ func (c *Connector) ResolveIdentity(ctx context.Context, request authconnector.R
 		return authconnector.Identity{}, authconnector.WrapError(authconnector.ErrMisconfigured, "Недопустимый статус SQL-учётной записи", err)
 	}
 	if !active {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "SQL identity is disabled")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "Учётная запись SQL отключена")
 	}
 	return c.mapIdentity(row)
 }
@@ -238,7 +238,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 		}
 		found = append(found, rowIdentity{subject: values[0].String, username: values[1].String, email: values[2].String, passwordHash: values[3].String, status: values[4].String, displayName: values[5].String, groupsRaw: values[6].String, rolesRaw: values[7].String, minecraftUUID: values[8].String})
 		if len(found) > 1 {
-			return rowIdentity{}, authconnector.NewError(authconnector.ErrConflict, "SQL identifier resolves to multiple identities")
+			return rowIdentity{}, authconnector.NewError(authconnector.ErrConflict, "Идентификатор SQL соответствует нескольким учётным записям")
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -249,7 +249,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 		return rowIdentity{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	if strings.TrimSpace(found[0].subject) == "" || strings.TrimSpace(found[0].passwordHash) == "" {
-		return rowIdentity{}, authconnector.NewError(authconnector.ErrMisconfigured, "SQL identity has empty subject or password hash")
+		return rowIdentity{}, authconnector.NewError(authconnector.ErrMisconfigured, "У учётной записи SQL отсутствует субъект или хеш пароля")
 	}
 	if err := tx.Commit(); err != nil {
 		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "Не удалось зафиксировать транзакцию SQL-провайдера только для чтения", err)

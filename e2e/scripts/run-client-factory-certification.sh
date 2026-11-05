@@ -14,7 +14,7 @@ case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "Unsupported l
 [[ "$MC" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,95}$ ]] || { echo "Invalid version" >&2; exit 2; }
 [[ "$DURATION" =~ ^[0-9]+$ ]] || { echo "Invalid duration" >&2; exit 2; }
 [[ "$TARGET" =~ ^(linux|windows|osx|macos)/(x86|x86_64|aarch64)$ ]] || { echo "Invalid target" >&2; exit 2; }
-[[ -f "$JAVA" ]] || { echo "Java executable not found: $JAVA" >&2; exit 2; }
+[[ -f "$JAVA" ]] || { echo "Исполняемый файл Java не найден: $JAVA" >&2; exit 2; }
 mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd -P)"
 BIN="$DEST/launcher"
@@ -47,7 +47,7 @@ if [[ "${LAUNCHER_CERT_PROCESSOR_SANDBOX:-process}" == required ]]; then PROCESS
 "$BIN" runtime client-factory verify --client-dir "$CLIENT" --output "$DEST/install-verified.json"
 KEY="${LAUNCHER_CERT_SIGNING_KEY:-$DEST/ci-only-private.key}"; PUB="${LAUNCHER_CERT_PUBLIC_KEY:-$DEST/certification.pub}"
 if [[ ! -f "$KEY" ]]; then
- [[ -z "${LAUNCHER_CERT_SIGNING_KEY:-}" ]] || { echo "Protected signing key is missing" >&2; exit 2; }
+ [[ -z "${LAUNCHER_CERT_SIGNING_KEY:-}" ]] || { echo "Отсутствует защищённый ключ подписи" >&2; exit 2; }
  "$BIN" runtime client-factory certify-keygen --private-key "$KEY" --public-key "$PUB"
 fi
 CERT="$DEST/runtime-certificate.json"

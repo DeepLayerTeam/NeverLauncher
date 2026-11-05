@@ -153,7 +153,7 @@ func (s Server) componentCatalogSave0248(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if lookup.Release.Status != "draft" {
-		writeError(w, http.StatusConflict, "signed/staged/published package is immutable")
+		writeError(w, http.StatusConflict, "Подписанный, подготовленный или опубликованный пакет нельзя изменять")
 		return
 	}
 	req, err := readCatalogRequest0248(w, r)

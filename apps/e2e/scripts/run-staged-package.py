@@ -440,7 +440,7 @@ def execute(args):
             )
         report["stages"][stage_name] = {
             "status": "passed",
-            "detail": "CLI install/verify and Runtime offline transactional adoption passed",
+            "detail": "Установка и проверка через CLI, а также автономное транзакционное применение через Runtime прошли успешно",
             "evidenceSha256": sha_file(verify_path),
         }
         # V08: случай матрицы Runtime — реально установленный выбор, а не дополнительная метка запуска с пресетом
@@ -567,7 +567,7 @@ def execute(args):
         if args.execution_mode == "headless":
             report["stages"]["materialization"] = {
                 "status": "passed",
-                "detail": "Production CLI installed and verified every staged file by SHA-256",
+                "detail": "Рабочая версия CLI установила и проверила каждый подготовленный файл по SHA-256",
                 "evidenceSha256": sha_file(verify_path),
             }
             # Headless подтверждает ТОЛЬКО поставку и материализацию пакета. Не представляйте отсутствие графического
@@ -583,7 +583,7 @@ def execute(args):
             ):
                 report["stages"][name] = {
                     "status": "blocked",
-                    "detail": "GUI/runtime target not executed by headless worker",
+                    "detail": "Целевая конфигурация GUI/Runtime не выполнялась обработчиком без графического интерфейса",
                 }
             raise RuntimeError(
                 "Заблокировано: тест без интерфейса проверил только манифест, файлы и подготовку данных"
@@ -674,7 +674,7 @@ def execute(args):
             }
             report["stages"]["loader-readiness"] = {
                 "status": "blocked",
-                "detail": "GUI runtime did not start",
+                "detail": "Среда выполнения GUI не запустилась",
             }
             raise RuntimeError("Проверка интерфейса подготовленного пакета заблокирована: " + observer.blocked)
         try:
@@ -790,7 +790,7 @@ def execute(args):
         if not args.auth_mode or not args.credentials_file:
             report["stages"][stage_name] = {
                 "status": "blocked",
-                "detail": "V07 live provider credentials not supplied; offline gameplay is not authentication certification",
+                "detail": "Не предоставлены учётные данные настоящего провайдера V07; автономный игровой процесс не подтверждает сертификацию авторизации",
             }
             raise RuntimeError(
                 "Для сертификации подготовленного пакета требуется реальная авторизация через провайдера"
@@ -1056,7 +1056,7 @@ def execute(args):
         ):
             report["stages"][stage_name] = {
                 "status": "blocked",
-                "detail": "V09 requires host-pinned prior release, different Java, and signed distribution-managed Java recovery",
+                "detail": "Для V09 нужны закреплённый на узле предыдущий релиз, другая версия Java и восстановление подписанной Java, управляемой поставкой",
             }
             raise RuntimeError(
                 "Отсутствует базовая версия V09 или замена Java; сертификация Runtime заблокирована"

@@ -466,7 +466,7 @@ public final class LauncherQuiltBridge implements ModInitializer {
             boolean heartbeatStopped = heartbeatExecutor.awaitTermination(2, TimeUnit.SECONDS);
             boolean validationStopped = validationExecutor.awaitTermination(2, TimeUnit.SECONDS);
             if (!heartbeatStopped || !validationStopped) {
-                LOGGER.warn("Launcher Quilt ServerBridge workers did not terminate within shutdown window");
+                LOGGER.warn("Обработчики Launcher Quilt ServerBridge не завершились за отведённое время остановки");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

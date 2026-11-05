@@ -523,13 +523,13 @@ mod game_guard_lifetime_0438_tests {
             guard_violation: None,
         });
         let result = supervisor.stop_for_guard_violation_0438(&id, "Связь с аутентифицированным Guard потеряна")
-            .await.expect("guard loss must terminate game");
+            .await.expect("При потере Guard игра должна завершаться");
         assert_eq!(result.state, "trust-blocked");
         assert_eq!(result.success, Some(false));
         assert!(result.message.contains("Связь с аутентифицированным Guard потеряна"));
         let mut locked = child.lock().await;
         let exit = timeout(Duration::from_secs(3), locked.as_mut().unwrap().wait())
             .await.expect("child exit timeout").expect("child wait failed");
-        assert!(!exit.success(), "guard loss must kill game");
+        assert!(!exit.success(), "При потере Guard игра должна принудительно завершаться");
     }
 }

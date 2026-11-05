@@ -86,7 +86,7 @@ from certification_run import identity
 root = pathlib.Path.cwd()
 assets = sorted(p for p in (root / 'apps/admin/dist').rglob('*') if p.is_file())
 if not assets or not (root / 'apps/admin/dist/index.html').is_file():
-    raise SystemExit('Vite did not produce a deployable Admin bundle')
+    raise SystemExit('Vite не создал пакет Admin, пригодный для развёртывания')
 hash_of = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 payload = {
     'status': 'passed', 'productVersion': (root / 'VERSION').read_text().strip(), 'commit': sys.argv[1],

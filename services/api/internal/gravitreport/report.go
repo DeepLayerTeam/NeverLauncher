@@ -198,7 +198,7 @@ func Finalize(v Report) (Report, error) {
 		v.Blockers = append(v.Blockers, "unverified source/inventory digests")
 	}
 	if len(v.Identities) == 0 {
-		v.Blockers = append(v.Blockers, "no verified player identities")
+		v.Blockers = append(v.Blockers, "Нет подтверждённых учётных записей игроков")
 	}
 	if v.Counts["blocked"] > 0 {
 		v.Blockers = append(v.Blockers, "inventory contains blocked components")

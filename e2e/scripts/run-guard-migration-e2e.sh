@@ -67,7 +67,7 @@ SQL
 done
 
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_before" == "0019_minecraft_serverbridge_integrity_0135" ]] || { echo "unexpected pre-upgrade migration: $latest_before" >&2; exit 1; }
+[[ "$latest_before" == "0019_minecraft_serverbridge_integrity_0135" ]] || { echo "Неожиданная миграция до обновления: $latest_before" >&2; exit 1; }
 
 printf '[guard-migration-e2e] seed valid 0.13.9 state plus an ambiguous partial Guard snapshot\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
@@ -127,7 +127,7 @@ grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
-[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0020_guard_migration_compatibility_stabilization_01310'")"
 [[ "$sealed" == "true" ]]
 serverbridge_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"

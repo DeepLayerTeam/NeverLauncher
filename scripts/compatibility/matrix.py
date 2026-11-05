@@ -967,7 +967,7 @@ def load_targets(path: Path) -> dict[str, Any]:
     }
     for index, raw in enumerate(rows):
         if not isinstance(raw, dict):
-            die(f"target #{index + 1} must be an object")
+            die(f"Целевая конфигурация №{index + 1} должна быть объектом")
         unknown = sorted(set(raw) - allowed_target_keys)
         if unknown:
             die(

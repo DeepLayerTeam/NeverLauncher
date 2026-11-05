@@ -51,5 +51,5 @@ func VerifyTextureGA0260(ctx context.Context, store Storage, obj TextureBackupOb
 	if errors.Is(ctx.Err(), context.Canceled) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return TextureVerification02511{Digest: obj.Digest, Result: "cancelled", Detail: ctx.Err().Error()}
 	}
-	return TextureVerification02511{Digest: obj.Digest, Result: "corrupt", Detail: "not a valid canonical Minecraft skin/cape PNG"}
+	return TextureVerification02511{Digest: obj.Digest, Result: "corrupt", Detail: "Некорректный PNG скина или плаща Minecraft"}
 }

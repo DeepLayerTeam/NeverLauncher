@@ -326,12 +326,12 @@ MC_ACCESS="$(jq -er '.data.accessToken' <<<"$MC_SESSION")"
 MC_USERNAME="$(jq -er '.data.profile.name' <<<"$MC_SESSION")"
 jq -e --arg v "$GUARD_E2E_VERSION" --arg gh "$(printf 'a%.0s' {1..64})" --arg lh "$(printf 'b%.0s' {1..64})" '.data.integrity.verified==true and .data.integrity.launcherVersion==$v and .data.integrity.guardSha256==$gh and .data.integrity.launcherSha256==$lh' <<<"$MC_SESSION" >/dev/null
 code="$(request_code POST "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" "$(jq -cn --arg ticket "$GUARD_TICKET" '{clientToken:"device-trust-e2e-guard-replay",guardAttestationTicket:$ticket}')" "$RUNTIME_DIR/guard-ticket-replay.json")"
-expect_code 412 "$code" 'Guard launch ticket replay was accepted'
+expect_code 412 "$code" 'Повторное использование билета запуска Guard ошибочно принято'
 GUARD_JOIN_BODY="$(jq -cn --arg username "$MC_USERNAME" --arg token "$MC_ACCESS" '{username:$username,serverId:"dt-e2e-paper",projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable",minecraftAccessToken:$token}')"
 json_post "$API/api/v1/session/join" "$HW_ACCESS_ATTESTED" "$GUARD_JOIN_BODY" > "$RUNTIME_DIR/guard-bound-join.json"
 BRIDGE_VALIDATE_BODY="$(jq -cn --arg username "$MC_USERNAME" --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{protocolVersion:2,serverId:"dt-e2e-paper",username:$username,projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable",pluginVersion:$version,pluginSha256:$sha}')"
 code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-guard-bound-allowed.json")"
-expect_code 200 "$code" 'Guard-bound ServerBridge join was rejected'
+expect_code 200 "$code" 'Подключение ServerBridge, связанное с Guard, отклонено'
 jq -e '.data.allowed==true' "$RESULT_DIR/bridge-guard-bound-allowed.json" >/dev/null
 jq '{data:{verified:.data.verified,platform:.data.platform,guardProtocolVersion:.data.guardProtocolVersion,oneTime:.data.oneTime}}' <<<"$GUARD_OK" > "$RESULT_DIR/guard-attestation.json"
 jq '{data:{profile:.data.profile,integrity:.data.integrity}}' <<<"$MC_SESSION" > "$RESULT_DIR/minecraft-integrity-session.json"
