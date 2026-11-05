@@ -23,7 +23,7 @@ api = read(
 )
 cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql")
 if api != cli:
-    raise SystemExit("0.14.9 API/CLI migrations differ")
+    raise SystemExit("Миграции API/CLI 0.14.9 различаются")
 require(
     api,
     [
@@ -137,4 +137,4 @@ require(
     ],
     "CI wiring",
 )
-print(f"Launcher 0.14.9 Public ServerBridge Matrix + HA/hardening gate: OK ({version})")
+print(f"Launcher 0.14.9: проверка публичной матрицы ServerBridge и HA/защиты: OK ({version})")

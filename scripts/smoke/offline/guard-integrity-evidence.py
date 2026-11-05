@@ -117,9 +117,9 @@ require(
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "guard-integrity-evidence-0132.py" not in ci:
-    raise SystemExit("Guard 0.13.2 integrity gate is not wired into CI")
+    raise SystemExit("Guard 0.13.2: проверка целостности не подключена к CI")
 if "guard-integrity-evidence-0132.py" not in preflight:
-    raise SystemExit("Guard 0.13.2 integrity gate is not wired into release preflight")
+    raise SystemExit("Guard 0.13.2: проверка целостности не подключена к предварительной проверке выпуска")
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[Launcher] Guard Windows Integrity Evidence v1 gate OK: {version}")
+print(f"[Launcher] Проверка свидетельств целостности Guard Windows v1: OK; версия={version}")

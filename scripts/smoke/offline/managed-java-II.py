@@ -83,4 +83,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} Managed Java II gate: OK")
+print(f"Launcher {VERSION}: проверка Managed Java II: OK")

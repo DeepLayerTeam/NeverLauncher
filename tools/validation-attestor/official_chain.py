@@ -67,7 +67,7 @@ def request_live(url, payload=None, bearer="", form=False):
     try:
         with client.open(request, timeout=18) as resp:
             if resp.status != 200:
-                raise AccountRejected("real authentication returned non-success")
+                raise AccountRejected("Реальная аутентификация завершилась неуспешно")
             raw = resp.read(1024 * 1024 + 1)
             if len(raw) > 1024 * 1024:
                 raise AccountRejected("Ответ провайдера превышает допустимый размер")
@@ -92,7 +92,7 @@ def request_live(url, payload=None, bearer="", form=False):
 def require_token(response, name):
     token = response.get(name)
     if not isinstance(token, str) or not (8 <= len(token) <= 8192) or "\n" in token:
-        raise AccountRejected("real provider did not issue a valid token")
+        raise AccountRejected("Реальный провайдер не выдал действительный токен")
     return token
 
 
@@ -161,7 +161,7 @@ def issue_minecraft_credentials(client_id, refresh_token_file, output):
     xbl_token = require_token(xbl, "Token")
     xui = xbl.get("DisplayClaims", {}).get("xui", [])
     if len(xui) != 1 or not isinstance(xui[0].get("uhs"), str) or not xui[0]["uhs"]:
-        raise AccountRejected("XBL user identity not established")
+        raise AccountRejected("Не удалось установить идентификатор пользователя XBL")
     uhs = xui[0]["uhs"]
     xsts = request_live(
         XSTS,
@@ -174,7 +174,7 @@ def issue_minecraft_credentials(client_id, refresh_token_file, output):
     xsts_token = require_token(xsts, "Token")
     xsts_users = xsts.get("DisplayClaims", {}).get("xui", [])
     if len(xsts_users) != 1 or xsts_users[0].get("uhs") != uhs:
-        raise AccountRejected("XSTS identity not bound to Xbox Live user")
+        raise AccountRejected("Идентификатор XSTS не связан с пользователем Xbox Live")
     game = request_live(
         MINECRAFT + "/authentication/login_with_xbox",
         {"identityToken": f"XBL3.0 x={uhs};{xsts_token}"},
@@ -185,7 +185,7 @@ def issue_minecraft_credentials(client_id, refresh_token_file, output):
         or not isinstance(game.get("expires_in"), int)
         or game["expires_in"] < 300
     ):
-        raise AccountRejected("short-lived/invalid Minecraft services access token")
+        raise AccountRejected("Краткоживущий или недействительный токен доступа Minecraft Services")
     profile = request_live(MINECRAFT + "/minecraft/profile", bearer=minecraft_token)
     username = profile.get("name")
     uuid = profile.get("id")

@@ -134,4 +134,4 @@ for example in ("backend-health", "cli-status", "admin-dashboard", "desktop-tool
     root = ROOT / "examples/extensions" / example
     require((root / "launcher-extension.json").is_file(), f"missing example {example}")
 
-print("Extensions SDK 0.20.10 production gate: OK")
+print("Extensions SDK 0.20.10: проверка готовности к эксплуатации: OK")

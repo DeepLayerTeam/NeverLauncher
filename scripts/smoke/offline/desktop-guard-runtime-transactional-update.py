@@ -145,7 +145,7 @@ if (
     "desktop-guard-runtime-transactional-update-0157.py" not in ci
     or ci.count("update component-self-test") < 4
 ):
-    raise SystemExit("0.15.7 component updater native CI coverage is incomplete")
+    raise SystemExit("0.15.7: нативное покрытие CI обновления компонентов неполное")
 preflight = read("scripts/release/preflight.sh")
 if "desktop-guard-runtime-transactional-update-0157.py" not in preflight:
     raise SystemExit("Отсутствует: «0.15.7 component updater preflight gate»")
@@ -163,4 +163,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} Desktop/Guard/Runtime transactional update gate: OK")
+print(f"Launcher {VERSION}: проверка транзакционного обновления Desktop/Guard/Runtime пройдена: OK")

@@ -135,9 +135,9 @@ ci = read(".github/workflows/ci.yml")
 workflow = read(".github/workflows/device-trust.yml")
 for text, label in [(preflight, "preflight"), (ci, "main CI")]:
     if "device-trust-migration-stabilization-01210.py" not in text:
-        raise SystemExit(f"0.12.10 release gate is not wired into {label}")
+        raise SystemExit(f"0.12.10: проверка выпуска не подключена к {label}")
     if "run-device-trust-migration-e2e.sh" not in text:
-        raise SystemExit(f"0.12.10 upgrade E2E is not wired into {label}")
+        raise SystemExit(f"0.12.10: E2E-проверка обновления не подключена к {label}")
 require(
     workflow,
     [
@@ -185,4 +185,4 @@ subprocess.run(
 subprocess.run(
     [sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True
 )
-print(f"[Launcher] Device Trust migration + stabilization 0.12.10 gate OK ({version})")
+print(f"[Launcher] Device Trust: миграция и стабилизация 0.12.10 проверены: OK ({version})")

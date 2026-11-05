@@ -50,4 +50,4 @@ require(
     "signature schema algorithm mismatch",
 )
 
-print("Extensions Extension Package 0.20.2 production gate: OK")
+print("Extensions Package 0.20.2: проверка готовности к эксплуатации: OK")

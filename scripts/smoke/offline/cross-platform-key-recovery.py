@@ -95,7 +95,7 @@ require(
     "device replacement model",
 )
 if migration_api != migration_cli:
-    raise SystemExit("API and CLI migration 0017 differ")
+    raise SystemExit("Миграции 0017 для API и CLI различаются")
 require(
     migration_api,
     [
@@ -175,4 +175,4 @@ subprocess.run(
     check=True,
 )
 subprocess.run(["go", "test", "./internal/dbmigrate"], cwd=ROOT / "cli", check=True)
-print("[Launcher] Cross-platform hardening + key recovery/rotation 0.12.8 gate OK")
+print("[Launcher] Кроссплатформенная защита и восстановление/ротация ключей 0.12.8: OK")

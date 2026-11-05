@@ -145,7 +145,7 @@ def main() -> int:
                     f"[Launcher] Windows Protection Core II 0.18.1 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[Launcher] Windows Protection Core II 0.18.1 gate: OK")
+    print("[Launcher] Windows Protection Core II 0.18.1: проверка: OK")
     return 0
 
 

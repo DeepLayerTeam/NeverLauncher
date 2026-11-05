@@ -283,7 +283,7 @@ def main() -> int:
             + "\n",
             encoding="utf-8",
         )
-        print(f"0.26.0 GA NOT CERTIFIED: {exc}", file=sys.stderr)
+        print(f"0.26.0: GA НЕ СЕРТИФИЦИРОВАНА: {exc}", file=sys.stderr)
         return 1
 
 

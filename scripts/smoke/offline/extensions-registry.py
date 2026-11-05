@@ -136,4 +136,4 @@ for token in (
         token in openapi_generator, f"OpenAPI generator missing registry token {token}"
     )
 
-print("Extensions Registry 0.20.3 production gate: OK")
+print("Extensions Registry 0.20.3: проверка готовности к эксплуатации: OK")

@@ -21,9 +21,9 @@ CASES = ("java-host", "java-runtime", "java-lifecycle", "gravit-port")
 
 def validate(folder, source_commit, version, run_id, run_attempt):
     if not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", source_commit):
-        raise ValueError("invalid source commit")
+        raise ValueError("Некорректный коммит исходного кода")
     if not version or not run_id or not run_attempt:
-        raise ValueError("version, CI run ID and attempt are mandatory")
+        raise ValueError("Версия, идентификатор запуска CI и номер попытки обязательны")
     folder = Path(folder)
     present = {p.stem for p in folder.glob("*.json")}
     # Итоговый сертификат скачивается Actions в тот же каталог. Не считайте его
@@ -60,15 +60,15 @@ def validate(folder, source_commit, version, run_id, run_attempt):
                 or audit.get("modules") != 19
                 or audit.get("sha256") != matrix_sha
             ):
-                raise ValueError(f"{name}: Gravit 19-module executable audit missing")
+                raise ValueError(f"{name}: отсутствует исполняемая проверка 19 модулей Gravit")
         checks = report.get("checks")
         if not isinstance(checks, dict) or set(checks) != set(CASES):
-            raise ValueError(f"{name}: incomplete executable tests")
+            raise ValueError(f"{name}: исполняемые тесты завершены не полностью")
         for case, check in checks.items():
             if check.get("runtime") != "pass" or not re.fullmatch(
                 "[0-9a-f]{64}", check.get("jarSha256", "")
             ):
-                raise ValueError(f"{name}/{case}: unverified JVM execution")
+                raise ValueError(f"{name}/{case}: выполнение JVM не подтверждено")
             if case in ("java-host", "gravit-port"):
                 signature = check.get("signing", {})
                 if (
@@ -114,7 +114,7 @@ def main():
             args.evidence_dir, args.commit, args.version, args.run_id, args.run_attempt
         )
     except (ValueError, KeyError, OSError, json.JSONDecodeError) as error:
-        print(f"extension E2E certification BLOCKED: {error}", file=sys.stderr)
+        print(f"E2E-сертификация расширений заблокирована: {error}", file=sys.stderr)
         return 1
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")

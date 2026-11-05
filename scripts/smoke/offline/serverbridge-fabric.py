@@ -257,4 +257,4 @@ for text, label in ((preflight, "preflight"), (ci, "CI")):
         f"0.14.6 {label} wiring",
     )
 
-print(f"Launcher 0.14.6 Fabric Server Bridge gate: OK ({version})")
+print(f"Launcher 0.14.6: проверка Fabric ServerBridge: OK ({version})")

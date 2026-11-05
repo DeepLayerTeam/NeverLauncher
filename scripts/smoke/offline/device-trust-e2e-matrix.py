@@ -246,4 +246,4 @@ subprocess.run(
 subprocess.run(
     [sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True
 )
-print(f"[Launcher] Device Trust E2E + public trust matrix 0.12.9+ gate OK ({version})")
+print(f"[Launcher] Device Trust: E2E и публичная матрица доверия 0.12.9+ проверены: OK ({version})")

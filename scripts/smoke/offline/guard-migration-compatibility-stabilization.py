@@ -6,7 +6,7 @@ import json
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 13, 10):
-    raise SystemExit("VERSION is older than 0.13.10")
+    raise SystemExit("VERSION ниже 0.13.10")
 
 
 def read(path: str) -> str:
@@ -24,7 +24,7 @@ api_migration = read(
 )
 cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.13.10 API/CLI migration copies differ")
+    raise SystemExit("Миграции API/CLI 0.13.10 различаются")
 require(
     api_migration,
     [

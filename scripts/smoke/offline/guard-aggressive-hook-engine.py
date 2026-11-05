@@ -190,7 +190,7 @@ def main() -> int:
                     f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[Launcher] Aggressive Hook Engine I 0.18.4 gate: OK")
+    print("[Launcher] Aggressive Hook Engine I 0.18.4: проверка: OK")
     return 0
 
 

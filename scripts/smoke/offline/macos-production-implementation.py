@@ -140,4 +140,4 @@ require(
 )
 preflight = read("scripts/release/preflight.sh")
 require(preflight, ["macos-production-implementation-0138.py"], "preflight macOS gate")
-print("Launcher 0.13.8 macOS production implementation gate: OK")
+print("Launcher 0.13.8: проверка готовности macOS: OK")

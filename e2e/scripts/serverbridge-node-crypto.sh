@@ -5,7 +5,7 @@
 serverbridge_node_public() {
   local key="$1"
   openssl pkey -in "$key" -pubout -outform DER 2>/dev/null | python3 -c 'import base64,sys; d=sys.stdin.buffer.read();
-if len(d) < 32: raise SystemExit("invalid Ed25519 public key")
+if len(d) < 32: raise SystemExit("Некорректный открытый ключ Ed25519")
 print(base64.urlsafe_b64encode(d[-32:]).decode().rstrip("="))'
 }
 
@@ -26,7 +26,7 @@ import base64, hashlib, pathlib, sys
 private_der = pathlib.Path(sys.argv[1]).read_bytes()
 public_der = pathlib.Path(sys.argv[2]).read_bytes()
 if len(public_der) < 32:
-    raise SystemExit("invalid Ed25519 X.509 public key")
+    raise SystemExit("Некорректный открытый ключ Ed25519 X.509")
 raw = public_der[-32:]
 b64 = lambda data: base64.urlsafe_b64encode(data).decode().rstrip("=")
 out = pathlib.Path(sys.argv[3])
@@ -65,7 +65,7 @@ serverbridge_node_sign() {
 import base64, pathlib, sys
 sig = pathlib.Path(sys.argv[1]).read_bytes()
 if len(sig) != 64:
-    raise SystemExit(f"invalid Ed25519 signature length: {len(sig)}")
+    raise SystemExit(f"Некорректная длина подписи Ed25519: {len(sig)}")
 print(base64.urlsafe_b64encode(sig).decode().rstrip("="))
 PY
   )"; then

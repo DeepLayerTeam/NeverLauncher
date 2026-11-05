@@ -67,7 +67,7 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
       .post(&dest.ingest).header("Content-Type","application/x-sentry-envelope")
       .header("X-Sentry-Auth",format!("Sentry sentry_version=7,sentry_client=launcher.desktop/0.30.9,sentry_key={}",dest.key))
       .body(envelope).send().await.map_err(|_|"Ошибка: транспорт диагностики")?;
-    if !response.status().is_success() {return Err(format!("Sentry HTTP {}",response.status().as_u16()))}
+    if !response.status().is_success() {return Err(format!("Ошибка HTTP Sentry: {}",response.status().as_u16()))}
     Ok(())
 }
 #[tauri::command]

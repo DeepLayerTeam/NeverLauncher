@@ -114,4 +114,4 @@ require(
 )
 preflight = read("scripts/release/preflight.sh")
 require(preflight, ["linux-production-implementation-0137.py"], "preflight Linux gate")
-print("Launcher 0.13.7 Linux production implementation gate: OK")
+print("Launcher 0.13.7: проверка готовности Linux: OK")

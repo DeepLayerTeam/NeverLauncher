@@ -142,4 +142,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} Signed Windows x64 + ARM64 gate: OK")
+print(f"Launcher {VERSION}: проверка подписанных пакетов Windows x64 и ARM64: OK")

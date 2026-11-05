@@ -137,7 +137,7 @@ def validate() -> None:
         if needle not in tests:
             fail(f"Отсутствует сертификационный тест: {needle}")
 
-    print("Durable Boundaries & Certification 0.21.3 gate OK")
+    print("Проверка границ долговременного хранения и сертификации 0.21.3 пройдена: OK")
 
 
 def main() -> None:

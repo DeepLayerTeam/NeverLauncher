@@ -212,7 +212,7 @@ def main() -> int:
     tmp = target.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     tmp.replace(target)
-    print(f"[live] observed JVM + authenticated login/revocation: {args.service}")
+    print(f"[live] обнаружены JVM и подтверждённый вход/отзыв доступа: {args.service}")
     return 0
 
 

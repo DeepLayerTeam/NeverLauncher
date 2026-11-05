@@ -138,4 +138,4 @@ for envfile in (
     ):
         require(key in env, f"{envfile} missing {key}")
 
-print("Extensions Permissions & Capability Security 0.20.7 production gate: OK")
+print("Extensions 0.20.7: проверка разрешений и безопасности возможностей: OK")

@@ -156,6 +156,6 @@ with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:
         text=True,
     )
     if tampered.returncode == 0:
-        raise SystemExit("delivery verification accepted a tampered artifact")
+        raise SystemExit("Проверка поставки приняла изменённый артефакт")
 
-print(f"Launcher {VERSION} Delivery Manifest + platform/architecture gate: OK")
+print(f"Launcher {VERSION}: проверка манифеста поставки и платформ/архитектур пройдена: OK")

@@ -52,10 +52,10 @@ def main() -> int:
     try:
         created = prepare(args.client_root, args.minecraft)
     except (OSError, ValueError) as error:
-        print(f"[forge-cert] cannot prepare legacy FML config: {error}", file=sys.stderr)
+        print(f"[forge-cert] не удалось подготовить конфигурацию устаревшего FML: {error}", file=sys.stderr)
         return 1
     if created:
-        print("[forge-cert] seeded Forge 1.14.4 FML first-launch configuration")
+        print("[forge-cert] подготовлена конфигурация первого запуска Forge 1.14.4 FML")
     return 0
 
 

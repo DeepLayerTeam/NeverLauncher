@@ -83,4 +83,4 @@ for text, want, label in [
         raise SystemExit(f"{label}: отсутствует {want!r}")
 if any(x in client for x in ["ProcessBuilder(", "Runtime.getRuntime().exec"]):
     raise SystemExit("«routing/control client»: запрещено «execute OS shell»")
-print("ServerBridge 0.19.6 Topology & Routing 2 production gate: PASS")
+print("ServerBridge 0.19.6: проверка топологии и маршрутизации 2: PASS")

@@ -133,4 +133,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} Linux x64 + ARM64 production packages gate: OK")
+print(f"Launcher {VERSION}: проверка производственных пакетов Linux x64 и ARM64: OK")

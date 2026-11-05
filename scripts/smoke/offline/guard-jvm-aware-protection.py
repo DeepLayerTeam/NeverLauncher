@@ -8,7 +8,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(f"[Launcher] JVM-Aware Protection 0.18.8 gate: missing {rel}")
+        raise SystemExit(f"[Launcher] JVM-Aware Protection 0.18.8: отсутствует {rel}")
     return path.read_text(encoding="utf-8")
 
 
@@ -170,4 +170,4 @@ for rel, text in [
                 f"[Launcher] JVM-Aware Protection 0.18.8 gate: placeholder {placeholder!r} in {rel}"
             )
 
-print("[Launcher] JVM-Aware Protection 0.18.8 gate: OK")
+print("[Launcher] JVM-Aware Protection 0.18.8: проверка: OK")

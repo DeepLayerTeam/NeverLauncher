@@ -121,14 +121,14 @@ try:
     with zipfile.ZipFile(artifact) as zf:
         metadata = json.loads(zf.read("fabric.mod.json"))
 except (OSError, KeyError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
-    raise SystemExit(f"[Launcher] Fabric metadata is unreadable: {exc}")
+    raise SystemExit(f"[Launcher] Не удалось прочитать метаданные Fabric: {exc}")
 
 if metadata.get("environment") != "server":
-    raise SystemExit("[Launcher] Fabric artifact must be server-only")
+    raise SystemExit("[Launcher] Артефакт Fabric должен быть предназначен только для сервера")
 custom = metadata.get("custom")
 launcher = custom.get("launcher") if isinstance(custom, dict) else None
 if not isinstance(launcher, dict) or launcher.get("clientModRequired") is not False:
-    raise SystemExit("[Launcher] Fabric artifact must not require a client mod")
+    raise SystemExit("[Launcher] Артефакт Fabric не должен требовать клиентский мод")
 PY_FABRIC_META
 
 QUILT_ARTIFACT="$OUT/launcher-quilt-bridge-${VERSION}.jar"

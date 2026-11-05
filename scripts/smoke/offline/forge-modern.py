@@ -53,7 +53,7 @@ by_version: dict[str, dict] = {}
 for row in forge_rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
-        raise SystemExit(f"Forge Modern 0.17.3 duplicate Minecraft target: {minecraft}")
+        raise SystemExit(f"Forge Modern 0.17.3: повторяющаяся цель Minecraft: {minecraft}")
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(

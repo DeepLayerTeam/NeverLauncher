@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 5):
-    raise SystemExit("VERSION is older than 0.14.5")
+    raise SystemExit("VERSION ниже 0.14.5")
 
 
 def read(path: str) -> str:
@@ -21,7 +21,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 api_migration = read("services/api/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
 cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.5 API/CLI proxy-family migrations differ")
+    raise SystemExit("Миграции семейства прокси API/CLI 0.14.5 различаются")
 require(
     api_migration,
     [
@@ -291,4 +291,4 @@ for text, label in ((preflight, "preflight"), (ci, "CI")):
         f"0.14.5 {label} wiring",
     )
 
-print(f"Launcher 0.14.5 Proxy family gate: OK ({version})")
+print(f"Launcher 0.14.5: проверка семейства прокси: OK ({version})")

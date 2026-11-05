@@ -1097,14 +1097,14 @@ def execute(args):
         try:
             request_json(args.backend, base_path + "/results", grant, report)
         except Exception as exc:
-            print(f"report upload failed: {exc}", file=sys.stderr)
+            print(f"Не удалось загрузить отчёт: {exc}", file=sys.stderr)
             if error is None:
                 error = "cannot persist execution report"
         for file in ("worker.key",):
             (work / file).unlink(missing_ok=True)
     if error:
         raise RuntimeError(error)
-    print("completed staged runtime:", report_path)
+    print("Поэтапный запуск Runtime завершён:", report_path)
 
 
 def main():
@@ -1225,7 +1225,7 @@ def main():
     try:
         execute(args)
     except Exception as exc:
-        print("staged runtime failed:", str(exc), file=sys.stderr)
+        print("Ошибка поэтапного запуска Runtime:", str(exc), file=sys.stderr)
         return 1
     return 0
 

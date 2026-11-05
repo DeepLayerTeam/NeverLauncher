@@ -31,7 +31,7 @@ def validate_targets(path: Path):
         raise SystemExit(
             f"required cross-platform OS set must be linux/windows/macos, got {sorted(required)}"
         )
-    print(f"Extensions 0.20.12 targets OK: {len(rows)} required platforms")
+    print(f"Extensions 0.20.12: проверено обязательных платформ — {len(rows)}: OK")
     return doc
 
 
@@ -86,7 +86,7 @@ def aggregate(targets: Path, evidence_dir: Path, out_json: Path, out_md: Path):
         "",
     ]
     out_md.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Extensions public matrix certified: {len(results)}/{len(results)}")
+    print(f"Публичная матрица расширений сертифицирована: {len(results)}/{len(results)}")
 
 
 def main():

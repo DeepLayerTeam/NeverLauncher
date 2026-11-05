@@ -128,4 +128,4 @@ subprocess.run(
     cwd=ROOT / "cli",
     check=True,
 )
-print(f"Launcher {VERSION} Production Delivery Release 0.16.0 gate: OK")
+print(f"Launcher {VERSION}: проверка производственной поставки 0.16.0: OK")

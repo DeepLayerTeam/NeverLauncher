@@ -79,7 +79,7 @@ if targets.get("productVersion") != version:
     )
 for t in targets["targets"]:
     if "deviceTrustRelease0130" not in t.get("requiredChecks", []):
-        raise SystemExit(f"target {t.get('id')} missing deviceTrustRelease0130")
+        raise SystemExit(f"Для цели {t.get('id')} отсутствует deviceTrustRelease0130")
 build = read("scripts/release/build-release.sh")
 req(
     build,
@@ -109,4 +109,4 @@ subprocess.run(
 subprocess.run(
     [sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True
 )
-print(f"[Launcher] Device Trust Release gate OK: {version}")
+print(f"[Launcher] Проверка выпуска Device Trust пройдена: OK ({version})")

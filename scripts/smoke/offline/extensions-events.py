@@ -180,4 +180,4 @@ for envfile in (
     ):
         require(key in env, f"{envfile} missing {key}")
 
-print("Extensions Events & Hooks 0.20.6 production gate: OK")
+print("Extensions 0.20.6: проверка событий и хуков: OK")

@@ -23,8 +23,8 @@ for bad in (event("TestA", "skip"), event("TestOther", "pass"), event("TestA", "
     except ValueError:
         pass
     else:
-        raise AssertionError("unsafe GA evidence accepted")
-print("GA evidence validation: PASS (skipped/missing/failed tests rejected)")
+        raise AssertionError("Небезопасное свидетельство GA было принято")
+print("Проверка свидетельств GA: PASS (пропущенные, отсутствующие и упавшие тесты отклонены)")
 
 # Последующий PASS никогда не должен стирать предыдущий FAIL или SKIP для
 # того же теста.

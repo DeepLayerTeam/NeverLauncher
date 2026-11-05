@@ -386,11 +386,11 @@ def main() -> int:
     if not (3 <= len(args.username) <= 16) or not all(
         c.isalnum() or c == "_" for c in args.username
     ):
-        raise SystemExit("username must match Minecraft Java rules: 3-16 [A-Za-z0-9_]")
+        raise SystemExit("Имя игрока должно соответствовать правилам Minecraft Java: 3–16 символов [A-Za-z0-9_]")
     if args.login_timeout_seconds <= 0:
-        raise SystemExit("--login-timeout-seconds must be positive")
+        raise SystemExit("Параметр --login-timeout-seconds должен быть положительным")
     if args.configuration_hold_seconds < 0:
-        raise SystemExit("--configuration-hold-seconds cannot be negative")
+        raise SystemExit("Параметр --configuration-hold-seconds не может быть отрицательным")
     if args.drive_neoforge_configuration and not args.enter_configuration:
         raise SystemExit(
             "--drive-neoforge-configuration requires --enter-configuration"
@@ -455,7 +455,7 @@ def main() -> int:
                 ConnectionResetError,
                 ProtocolError,
             ) as exc:
-                raise SystemExit(f"configuration login probe failed: {exc}") from exc
+                raise SystemExit(f"Проверка входа с конфигурацией завершилась ошибкой: {exc}") from exc
             print(
                 f"probe host={args.host} port={args.port} username={args.username} "
                 f"mode=configuration loginAcknowledged={str(login_acknowledged).lower()} packetsSeen={packets_seen} "

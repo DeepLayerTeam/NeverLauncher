@@ -71,7 +71,7 @@ async def main():
         finally:
             await request.dispose()
     if project == other:
-        raise SystemExit("E2E_PROJECT_ID and E2E_FOREIGN_PROJECT_ID must differ")
+        raise SystemExit("E2E_PROJECT_ID и E2E_FOREIGN_PROJECT_ID должны различаться")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         try:

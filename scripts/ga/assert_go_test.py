@@ -52,7 +52,7 @@ def verify(path: Path, required: list[str]) -> None:
         raise ValueError(f"GA не сертифицирован: тесты без PASS={incomplete}, пакеты с ошибками или пропусками={failed_packages}")
     if not packages or not any(v == "pass" for v in packages.values()):
         raise ValueError("Отсутствует: «successful Go package result»")
-    print(f"verified {len(wanted)} mandatory Go tests passed; packages={len(packages)}")
+    print(f"Подтверждено прохождение обязательных тестов Go: {len(wanted)}; пакетов={len(packages)}")
 
 
 def main() -> int:

@@ -21,14 +21,14 @@ import subprocess
 import sys
 seed = bytes.fromhex(sys.argv[1])
 if len(seed) != 32:
-    raise SystemExit("invalid E2E Ed25519 signing seed")
+    raise SystemExit("Некорректный исходный ключ Ed25519 для подписи E2E")
 private_der = bytes.fromhex("302e020100300506032b657004220420") + seed
 public_der = subprocess.run(
     ["openssl", "pkey", "-inform", "DER", "-pubout", "-outform", "DER"],
     input=private_der, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
 ).stdout
 if len(public_der) != 44 or not public_der.startswith(bytes.fromhex("302a300506032b6570032100")):
-    raise SystemExit("unexpected Ed25519 public key encoding")
+    raise SystemExit("Неожиданный формат открытого ключа Ed25519")
 print(base64.urlsafe_b64encode(public_der[-32:]).decode("ascii").rstrip("="))
 PYKEY
 )"

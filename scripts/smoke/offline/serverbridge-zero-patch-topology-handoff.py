@@ -142,4 +142,4 @@ require(
     ],
     "0.14.7 -> 0.14.8 migration E2E",
 )
-print(f"Launcher 0.14.8 zero-patch topology + handoff gate: OK ({version})")
+print(f"Launcher 0.14.8: проверка топологии без патчей и передачи управления: OK ({version})")

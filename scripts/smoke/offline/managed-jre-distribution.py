@@ -144,4 +144,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} Managed JRE Distribution gate: OK")
+print(f"Launcher {VERSION}: проверка распространения управляемой JRE: OK")

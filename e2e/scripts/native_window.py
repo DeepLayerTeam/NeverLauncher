@@ -162,7 +162,7 @@ def _capture(wid, destination):
     from PIL import ImageGrab, ImageStat
 
     if not _foreground(wid):
-        raise GUIUnavailable("Minecraft window not foreground; no safe GUI observation")
+        raise GUIUnavailable("Окно Minecraft не находится на переднем плане; безопасное наблюдение GUI невозможно")
     bbox = _native_bounds(wid)
     if bbox[2] - bbox[0] < 640 or bbox[3] - bbox[1] < 400:
         raise RuntimeError("Размеры окна Minecraft слишком малы")
@@ -230,12 +230,12 @@ def screenshot_world(wid, path):
 def move_forward(wid, seconds=2):
     # Не отправляйте клавиши в фоновое окно или процесс, личность которого не установлена.
     if not _foreground(wid):
-        raise GUIUnavailable("Minecraft not focused; refusing gameplay input")
+        raise GUIUnavailable("Окно Minecraft не в фокусе; отправка игровых команд отклонена")
     if sys.platform == "darwin":
         import Quartz
 
         if not Quartz.AXIsProcessTrusted():
-            raise GUIUnavailable("macOS Accessibility permission absent for game input")
+            raise GUIUnavailable("Нет разрешения macOS Accessibility для управления игрой")
     from pynput.keyboard import Controller, KeyCode
 
     keyboard = Controller()

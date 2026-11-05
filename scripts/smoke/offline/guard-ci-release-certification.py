@@ -27,7 +27,7 @@ rows = targets.get("targets")
 if not isinstance(rows, list) or {
     row.get("os") for row in rows if row.get("required")
 } != {"linux", "windows", "macos"}:
-    raise SystemExit("Guard CI targets must require linux/windows/macos")
+    raise SystemExit("Целевые платформы Guard CI должны включать linux/windows/macos")
 for row in rows:
     checks = set(row.get("requiredChecks", []))
     for required in {

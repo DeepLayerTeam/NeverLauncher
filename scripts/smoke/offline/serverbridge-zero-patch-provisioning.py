@@ -18,7 +18,7 @@ def require(text, needles, label):
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 9):
-    raise SystemExit(f"expected VERSION >= 0.19.9, got {version}")
+    raise SystemExit(f"Ожидалась VERSION >= 0.19.9, получено {version}")
 main = read("cli/cmd/launcher/main.go")
 prov = read("cli/cmd/launcher/serverbridge_provisioning_0199.go")
 tests = read("cli/cmd/launcher/serverbridge_provisioning_0199_test.go")
@@ -101,4 +101,4 @@ if hybrid.get("productVersion") != version or any(
     x.get("status") != "not-certified" for x in hybrid.get("targets", [])
 ):
     raise SystemExit("Несовпадение: «0.19.9+ hybrid certification metadata»")
-print("ServerBridge Zero-Patch Provisioning 0.19.9+ production gate: OK")
+print("ServerBridge Zero-Patch Provisioning 0.19.9+: проверка готовности к эксплуатации: OK")

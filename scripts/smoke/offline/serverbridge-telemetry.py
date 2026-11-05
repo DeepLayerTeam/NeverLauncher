@@ -87,6 +87,6 @@ version = tuple(
     map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3])
 )
 if version < (0, 19, 3):
-    raise SystemExit("VERSION is older than the telemetry-compatible 0.19.3 release")
+    raise SystemExit("VERSION ниже выпуска 0.19.3 с поддержкой телеметрии")
 
-print("ServerBridge 0.19.3 telemetry production gate: PASS")
+print("ServerBridge 0.19.3: проверка телеметрии для эксплуатации: PASS")

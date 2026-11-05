@@ -131,4 +131,4 @@ for envfile in (
         f"{envfile} missing backup retention",
     )
 
-print("Extensions Install Lifecycle 0.20.4 production gate: OK")
+print("Extensions 0.20.4: проверка жизненного цикла установки: OK")

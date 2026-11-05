@@ -135,7 +135,7 @@ for kind, (java_rel, expected) in wrappers.items():
 if "folia-supported: true" not in read(
     "plugins/folia-bridge/src/main/resources/plugin.yml"
 ):
-    raise SystemExit("Folia plugin.yml must explicitly declare folia-supported: true")
+    raise SystemExit("В plugin.yml для Folia необходимо явно задать folia-supported: true")
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
@@ -423,4 +423,4 @@ require(
     "pinned Folia build dependency CI evidence",
 )
 
-print(f"Launcher 0.14.4 Bukkit family gate: OK ({version})")
+print(f"Launcher 0.14.4: проверка семейства Bukkit: OK ({version})")

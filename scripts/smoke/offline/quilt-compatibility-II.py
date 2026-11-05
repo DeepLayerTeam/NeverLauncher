@@ -35,7 +35,7 @@ if (
     or expected.get("1.20.5") != 21
     or expected.get("26.3") != 25
 ):
-    raise SystemExit("Quilt 0.17.2 canonical release grid is incomplete")
+    raise SystemExit("Quilt 0.17.2: каноническая матрица выпуска неполная")
 
 target_doc = json.loads(read("compatibility/targets.json"))
 quilt_rows = [
@@ -53,7 +53,7 @@ by_version: dict[str, dict] = {}
 for row in quilt_rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
-        raise SystemExit(f"Quilt 0.17.2 duplicate Minecraft target: {minecraft}")
+        raise SystemExit(f"Quilt 0.17.2: повторяющаяся цель Minecraft: {minecraft}")
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
@@ -81,7 +81,7 @@ for minecraft, java_major in expected.items():
                 f"Quilt {minecraft} must be NOT CERTIFIED: upstream-missing"
             )
     elif row.get("required") is not True or row.get("unavailableReason") is not None:
-        raise SystemExit(f"Quilt {minecraft} must require real client certification")
+        raise SystemExit(f"Quilt {minecraft}: требуется реальная сертификация клиента")
 
 loader_runtime = read("cli/cmd/launcher/loader_runtime.go")
 require(

@@ -98,7 +98,7 @@ for minecraft, java_major in expected.items():
                 f"NeoForge {minecraft} must be NOT CERTIFIED: upstream-prerelease-only"
             )
     elif row.get("required") is not True or row.get("unavailableReason") is not None:
-        raise SystemExit(f"NeoForge {minecraft} must require real client certification")
+        raise SystemExit(f"NeoForge {minecraft}: требуется реальная сертификация клиента")
 
 runtime = read("cli/cmd/launcher/forge_runtime.go")
 require(

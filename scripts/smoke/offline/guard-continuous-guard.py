@@ -8,7 +8,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(f"[Launcher] Continuous Guard 0.18.9 gate: missing {rel}")
+        raise SystemExit(f"[Launcher] Continuous Guard 0.18.9: отсутствует {rel}")
     return path.read_text(encoding="utf-8")
 
 
@@ -25,7 +25,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (
     18,
     9,
 ):
-    raise SystemExit(f"[Launcher] Continuous Guard 0.18.9 gate: VERSION is {VERSION}")
+    raise SystemExit(f"[Launcher] Continuous Guard 0.18.9: VERSION={VERSION}")
 
 sensor = read("runtime/guard-sensor/src/continuous_guard.rs")
 stream = read("runtime/guard-sensor/src/lib.rs")
@@ -131,4 +131,4 @@ for rel, text in [
                 f"[Launcher] Continuous Guard 0.18.9 gate: placeholder {placeholder!r} in {rel}"
             )
 
-print("[Launcher] Continuous Guard 0.18.9 gate: OK")
+print("[Launcher] Continuous Guard 0.18.9: проверка: OK")

@@ -377,7 +377,7 @@ def main() -> None:
     validate_hashes(doc)
     if args.command == "validate" and args.online:
         validate_upstream(doc)
-    print("Launcher 0.21.1 authorization/frozen coverage: PASS")
+    print("Launcher 0.21.1: проверка авторизации и неизменности покрытия пройдена: PASS")
 
 
 if __name__ == "__main__":

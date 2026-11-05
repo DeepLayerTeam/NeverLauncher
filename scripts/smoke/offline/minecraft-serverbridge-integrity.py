@@ -34,7 +34,7 @@ api_mig = read(
 )
 cli_mig = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql")
 if api_mig != cli_mig:
-    raise SystemExit("0.13.5 API/CLI migration 0019 differs")
+    raise SystemExit("Миграции 0019 API/CLI 0.13.5 различаются")
 require(
     api_mig,
     [
@@ -264,9 +264,9 @@ require(
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "minecraft-serverbridge-integrity-0135.py" not in ci:
-    raise SystemExit("0.13.5 integrity gate is not wired into CI")
+    raise SystemExit("0.13.5: проверка целостности не подключена к CI")
 if "minecraft-serverbridge-integrity-0135.py" not in preflight:
-    raise SystemExit("0.13.5 integrity gate is not wired into preflight")
+    raise SystemExit("0.13.5: проверка целостности не подключена к предварительной проверке")
 
 print(
     f"[Launcher] Minecraft/ServerBridge integrity enforcement 0.13.5 gate OK: {version}"

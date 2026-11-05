@@ -55,7 +55,7 @@ def actual_platform():
     arch = ('arm64' if machine in ('aarch64', 'arm64') else
             'x64' if machine in ('amd64', 'x86_64') else None)
     if not system or not arch:
-        raise RuntimeError(f"unsupported actual host: {platform.platform()}")
+        raise RuntimeError(f"Неподдерживаемая платформа текущего узла: {platform.platform()}")
     return f'{system}-{arch}'
 
 
@@ -68,7 +68,7 @@ def check_java_arch(expected):
     actual = ('arm64' if arch in ('aarch64', 'arm64') else
               'x64' if arch in ('amd64', 'x86_64') else None)
     if actual != expected.split('-')[1]:
-        raise RuntimeError(f"Java architecture mismatch: JVM={arch}, target={expected}")
+        raise RuntimeError(f"Несовпадение архитектуры Java: JVM={arch}, целевая архитектура={expected}")
     return proc.stderr.strip().splitlines()[-1]
 
 
@@ -113,9 +113,9 @@ def main():
               'runAttempt': os.getenv('GITHUB_RUN_ATTEMPT') or None, 'checks': {}}
     try:
         if not re.fullmatch(r'\d+\.\d+\.\d+', report['version']) or tuple(map(int, report['version'].split('.'))) < (0, 42, 12):
-            raise RuntimeError(f"unsupported source version: {report['version']}")
+            raise RuntimeError(f"Неподдерживаемая версия исходного пакета: {report['version']}")
         if actual_platform() != args.target:
-            raise RuntimeError(f"host architecture/OS mismatch: {actual_platform()} != {args.target}")
+            raise RuntimeError(f"Несовпадение архитектуры/ОС узла: {actual_platform()} != {args.target}")
         report['javaRuntime'] = check_java_arch(args.target)
         run([sys.executable, 'scripts/version/manage.py', 'check'])
         cli = args.cli.resolve(strict=True)
@@ -142,10 +142,10 @@ def main():
         for key, script, jar in CASES:
             executable = ROOT / jar
             if not executable.is_file():
-                raise RuntimeError(f"build missing executable fixture: {jar}")
+                raise RuntimeError(f"В сборке отсутствует исполняемый тестовый артефакт: {jar}")
             completed = run([sys.executable, ROOT / script])
             if 'PASS:' not in completed.stdout:
-                raise RuntimeError(f"test runner {script} returned without PASS")
+                raise RuntimeError(f"Запуск тестов {script} завершился без отметки PASS")
             report['checks'][key] = {'runtime': 'pass', 'jarSha256': sha(executable)}
             print(f'{key}: {completed.stdout.strip().splitlines()[-1]}', flush=True)
         with tempfile.TemporaryDirectory(prefix='nl-ext-04212-') as folder:

@@ -112,4 +112,4 @@ for token in (
     "extension_update_transactions",
 ):
     require(token in tables, f"productionTables missing {token}")
-print("Extensions Dependencies & Updates 0.20.11 production gate: OK")
+print("Extensions 0.20.11: проверка зависимостей и обновлений: OK")

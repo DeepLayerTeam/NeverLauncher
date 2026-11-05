@@ -219,7 +219,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		select {
 		case result <- cb:
 			if cb.Err != nil {
-				fmt.Fprint(w, "Sign-in declined. Return to the terminal.\n")
+				fmt.Fprint(w, "Вход отклонён. Вернитесь в терминал.\n")
 			} else {
 				fmt.Fprint(w, "Авторизация получена. Вернитесь в терминал.\n")
 			}
@@ -234,12 +234,12 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 		defer cancel()
 		_ = server.Shutdown(shutdownCtx)
 	}()
-	fmt.Fprintln(output, "Microsoft personal-account login URL (open in your system browser):")
+	fmt.Fprintln(output, "Ссылка для входа в личную учётную запись Microsoft (откройте в системном браузере):")
 	fmt.Fprintln(output, authURL)
-	fmt.Fprintln(output, "Redirect registration: http://localhost/minecraft-poc/callback (native/public client; loopback port is dynamic).")
+	fmt.Fprintln(output, "Адрес перенаправления: http://localhost/minecraft-poc/callback (нативный/публичный клиент; порт loopback назначается динамически).")
 	if opt.OpenBrowser {
 		if err := openBrowser(authURL); err != nil {
-			fmt.Fprintln(output, "Не удалось открыть «browser automatically; use the URL above.»")
+			fmt.Fprintln(output, "Не удалось автоматически открыть браузер. Используйте ссылку выше.")
 		}
 	}
 	select {
@@ -273,9 +273,9 @@ func deviceGrant(ctx context.Context, c providerClient, opt options, output io.W
 	if err != nil {
 		return officialminecraft.OAuthTokens{}, err
 	}
-	fmt.Fprintln(output, "Microsoft device verification URL:", code.VerificationURI)
-	fmt.Fprintln(output, "Enter this one-time user code:", code.UserCode)
-	fmt.Fprintln(output, "Never enter your Microsoft password into Launcher.")
+	fmt.Fprintln(output, "Ссылка для подтверждения устройства Microsoft:", code.VerificationURI)
+	fmt.Fprintln(output, "Введите этот одноразовый код пользователя:", code.UserCode)
+	fmt.Fprintln(output, "Никогда не вводите пароль от Microsoft непосредственно в Launcher.")
 	expiry := time.NewTimer(time.Duration(code.ExpiresIn) * time.Second)
 	defer expiry.Stop()
 	interval := time.Duration(code.Interval) * time.Second

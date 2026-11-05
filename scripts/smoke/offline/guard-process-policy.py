@@ -142,7 +142,7 @@ require(
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "guard-process-policy-0133.py" not in ci:
-    raise SystemExit("Guard 0.13.3 process policy gate is not wired into CI")
+    raise SystemExit("Guard 0.13.3: проверка политики процессов не подключена к CI")
 if "guard-process-policy-0133.py" not in preflight:
     raise SystemExit(
         "Guard 0.13.3 process policy gate is not wired into release preflight"
@@ -158,4 +158,4 @@ require(
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[Launcher] Guard Windows runtime/process policy 0.13.3 gate OK: {version}")
+print(f"[Launcher] Проверка политики Runtime/процессов Guard Windows 0.13.3: OK; версия={version}")

@@ -132,4 +132,4 @@ require(
     ["guard-release-0140.py", '"guard-release"'],
 )
 
-print(f"Launcher 0.14.0 Guard Release gate: OK ({version})")
+print(f"Launcher 0.14.0: проверка выпуска Guard: OK ({version})")

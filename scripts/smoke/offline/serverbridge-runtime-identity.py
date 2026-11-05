@@ -74,7 +74,7 @@ require(
 if read(
     "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"
 ) != resource_read_text(root, "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"):
-    raise SystemExit("API/CLI 0.19.2 ServerBridge runtime migrations differ")
+    raise SystemExit("Миграции Runtime ServerBridge API/CLI 0.19.2 различаются")
 
 for path, platform in [
     (
@@ -134,4 +134,4 @@ require(
     "services/api/internal/httpapi/server_bridge_runtime_0192_test.go",
     ["VerifiesNodeBoundProcessIdentity", "DetectsReplacementAndRestart"],
 )
-print(f"Launcher {version} ServerBridge Node Discovery & Runtime Identity gate: OK")
+print(f"Launcher {version}: проверка обнаружения узлов ServerBridge и идентичности Runtime: OK")

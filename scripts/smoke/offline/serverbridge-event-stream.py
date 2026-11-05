@@ -8,7 +8,7 @@ version = tuple(
     map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3])
 )
 if version < (0, 19, 4):
-    raise SystemExit("VERSION is older than the event-stream 0.19.4 release")
+    raise SystemExit("VERSION ниже выпуска потока событий 0.19.4")
 
 required_files = [
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeEventRecord.java",
@@ -138,4 +138,4 @@ for event_type in sorted(required_types):
     if f'"{event_type}"' not in event_source:
         raise SystemExit(f"Отсутствует: «event type» {event_type}")
 
-print("ServerBridge 0.19.4 ordered event-stream production gate: PASS")
+print("ServerBridge 0.19.4: проверка последовательного потока событий: PASS")

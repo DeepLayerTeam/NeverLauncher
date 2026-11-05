@@ -68,19 +68,19 @@ def public_key(algorithm: str, key: Path) -> str:
     der = run_bytes("openssl", "pkey", "-in", str(key), "-pubout", "-outform", "DER")
     if algorithm == "ed25519":
         if len(der) < 32:
-            raise SystemExit("Ed25519 SPKI is too short")
+            raise SystemExit("Слишком короткое значение Ed25519 SPKI")
         raw = der[-32:]
         if len(raw) != 32:
-            raise SystemExit("invalid Ed25519 raw public key")
+            raise SystemExit("Некорректный исходный открытый ключ Ed25519")
         return b64url(raw)
     if algorithm == "p256":
         if len(der) < 65:
-            raise SystemExit("P-256 SPKI is too short")
+            raise SystemExit("Слишком короткое значение P-256 SPKI")
         raw = der[-65:]
         if len(raw) != 65 or raw[0] != 0x04:
-            raise SystemExit("invalid P-256 uncompressed public key")
+            raise SystemExit("Некорректный несжатый открытый ключ P-256")
         return b64url(raw)
-    raise SystemExit(f"unsupported algorithm: {algorithm}")
+    raise SystemExit(f"Неподдерживаемый алгоритм: {algorithm}")
 
 
 def sign(algorithm: str, key: Path, payload: Path) -> str:
@@ -96,7 +96,7 @@ def sign(algorithm: str, key: Path, payload: Path) -> str:
             str(payload),
         )
         if len(raw) != 64:
-            raise SystemExit(f"unexpected Ed25519 signature length: {len(raw)}")
+            raise SystemExit(f"Недопустимая длина подписи Ed25519: {len(raw)}")
         return b64url(raw)
     if algorithm == "p256":
         with tempfile.NamedTemporaryFile(
@@ -122,7 +122,7 @@ def sign(algorithm: str, key: Path, payload: Path) -> str:
             return b64url(der_ecdsa_to_p1363(tmp_path.read_bytes()))
         finally:
             tmp_path.unlink(missing_ok=True)
-    raise SystemExit(f"unsupported algorithm: {algorithm}")
+    raise SystemExit(f"Неподдерживаемый алгоритм: {algorithm}")
 
 
 def main() -> int:

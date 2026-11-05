@@ -260,7 +260,7 @@ def main():
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
-        raise SystemExit("capability report must be written into a fresh job directory")
+        raise SystemExit("Отчёт о возможностях необходимо записать в новый каталог задания")
     path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(
         json.dumps(

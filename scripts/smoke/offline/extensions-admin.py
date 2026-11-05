@@ -97,4 +97,4 @@ for path in (
     '"/api/v1/admin/extensions/{extensionId}/rpc"',
 ):
     require(path in openapi, f"В OpenAPI отсутствует {path}")
-print("Extensions Admin Extensions 0.20.8 production gate: OK")
+print("Extensions Admin 0.20.8: проверка готовности к эксплуатации: OK")

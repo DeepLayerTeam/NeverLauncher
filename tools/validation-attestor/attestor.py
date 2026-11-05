@@ -1348,7 +1348,7 @@ def main():
     p.add_argument(
         "--operator-token-file",
         required=True,
-        help="0600 host-only credential file; enters worker",
+        help="Файл учётных данных только для узла с правами 0600; передаётся воркеру",
     )
     p.add_argument(
         "--signing-key",
@@ -1356,7 +1356,7 @@ def main():
         help="Host-only Ed25519 PKCS8 PEM, permission 0600",
     )
     p.add_argument(
-        "--image", required=True, help="Trusted fully pinned image name@sha256:..."
+        "--image", required=True, help="Доверенный образ, полностью закреплённый по имени@sha256:..."
     )
     p.add_argument("--auth-mode", choices=("official", "custom"), required=True)
     p.add_argument(
@@ -1365,50 +1365,50 @@ def main():
     p.add_argument(
         "--official-client-id",
         default="",
-        help="Dedicated Microsoft public-client app ID",
+        help="Отдельный идентификатор публичного клиентского приложения Microsoft",
     )
     p.add_argument(
         "--official-refresh-token-file",
         default="",
-        help="Host-only authorized test account refresh token, 0600",
+        help="Токен обновления разрешённой тестовой учётной записи только для узла, права 0600",
     )
     p.add_argument(
         "--negative-credentials-file",
         default="",
-        help="Separate live session for custom revocation",
+        help="Отдельная действующая сессия для пользовательского отзыва доступа",
     )
     p.add_argument(
         "--guard-denied-credentials-file",
         default="",
-        help="Real live policy-denied session",
+        help="Реальная действующая сессия с запретом по политике",
     )
     p.add_argument(
         "--previous-bundle-file",
         required=True,
-        help="Host-approved actual previous signed release ZIP",
+        help="Предыдущий подписанный ZIP выпуска, одобренный администратором узла",
     )
     p.add_argument(
-        "--previous-sha", required=True, help="SHA-256 of prior-release bundle"
+        "--previous-sha", required=True, help="SHA-256 пакета предыдущего выпуска"
     )
     p.add_argument(
         "--replacement-java-home",
         required=True,
-        help="Host-approved different JDK/JRE directory",
+        help="Другой каталог JDK/JRE, одобренный администратором узла",
     )
     p.add_argument(
         "--managed-java-manifest-file",
         required=True,
-        help="Pinned production Temurin distribution manifest; archive in same directory",
+        help="Манифест производственной поставки Temurin с зафиксированной версией; архив в том же каталоге",
     )
     p.add_argument(
         "--managed-java-sha",
         required=True,
-        help="SHA-256 of pinned Managed JRE manifest",
+        help="SHA-256 зафиксированного манифеста Managed JRE",
     )
     p.add_argument(
         "--server-bundle-file",
         default="",
-        help="Host-pinned complete matching server ZIP",
+        help="Полный соответствующий ZIP сервера, закреплённый администратором узла",
     )
     p.add_argument("--server-sha", default="")
     p.add_argument("--server-entry", default="")
@@ -1422,12 +1422,12 @@ def main():
     p.add_argument(
         "--diagnostics-dir",
         required=True,
-        help="Host-only 0700 redacted worker diagnostic spool",
+        help="Каталог диагностики воркера с удалёнными секретами, доступный только узлу (0700)",
     )
     p.add_argument("--diagnostics-ttl-hours", type=int, default=168)
     p.add_argument("--engine", choices=("podman",), default="podman")
     p.add_argument(
-        "--package-id", help="One-shot attestation; omit for the mTLS service"
+        "--package-id", help="Однократная аттестация; пропустить для службы mTLS"
     )
     p.add_argument("--listen", default="127.0.0.1:8845")
     p.add_argument("--tls-cert", default="")
@@ -1515,5 +1515,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print("attestor error:", redact_diagnostics(str(e)), file=sys.stderr)
+        print("Ошибка аттестатора:", redact_diagnostics(str(e)), file=sys.stderr)
         sys.exit(1)

@@ -141,4 +141,4 @@ for forbidden in ["ProcessBuilder(", "Runtime.getRuntime().exec"]:
         raise SystemExit(
             f"player session integration must not invoke OS shell: {forbidden}"
         )
-print("ServerBridge 0.19.7 Player Session Integration 3 production gate: PASS")
+print("ServerBridge 0.19.7: проверка интеграции игровых сессий 3: PASS")

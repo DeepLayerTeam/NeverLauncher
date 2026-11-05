@@ -9,7 +9,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 2):
-    raise SystemExit("VERSION is older than 0.14.2")
+    raise SystemExit("VERSION ниже 0.14.2")
 
 
 def read(path: str) -> str:
@@ -27,7 +27,7 @@ api_migration = read(
 )
 cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.2 API/CLI cryptographic node identity migrations differ")
+    raise SystemExit("Криптографические миграции идентичности узлов API/CLI 0.14.2 различаются")
 require(
     api_migration,
     [
@@ -103,7 +103,7 @@ require(
     "identity rotation route",
 )
 if "rotate-token" in routes or "serverBridgeRotateToken" in bridge:
-    raise SystemExit("legacy bearer token rotation is still exposed")
+    raise SystemExit("Ротация устаревшего bearer-токена по-прежнему доступна")
 
 java_identity = read(
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/NodeIdentity.java"
@@ -347,4 +347,4 @@ if "X-Launcher-Server-Token" in main_e2e or ".data.serverToken" in main_e2e:
         "Minecraft E2E still uses legacy ServerBridge bearer authentication"
     )
 
-print(f"Launcher 0.14.2 Cryptographic Node Identities gate: OK ({version})")
+print(f"Launcher 0.14.2: проверка криптографических идентификаторов узлов: OK ({version})")

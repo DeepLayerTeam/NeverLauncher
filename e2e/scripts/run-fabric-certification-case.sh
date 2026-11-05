@@ -68,17 +68,17 @@ lock = json.loads(raw.decode("utf-8"))
 lock_sha = hashlib.sha256(raw).hexdigest()
 for key in ("resolutionLockSha256", "resolutionSourceSha256", "reproducibilitySha256"):
     if not re.fullmatch(r"[0-9a-f]{64}", str(install.get(key) or "")):
-        raise SystemExit(f"invalid loader pin {key}")
+        raise SystemExit(f"Некорректно закреплённая версия загрузчика: {key}")
 if install.get("resolutionPinned") is not True:
-    raise SystemExit("second materialization did not reuse loader resolution lock")
+    raise SystemExit("При повторной подготовке не использован существующий файл фиксации разрешения загрузчика")
 if lock_sha != install.get("resolutionLockSha256") or lock_sha != first_lock:
-    raise SystemExit("loader resolution lock SHA-256 changed between materializations")
+    raise SystemExit("Хеш SHA-256 файла фиксации загрузчика изменился между подготовками")
 if install.get("reproducibilitySha256") != first_repro or lock.get("reproducibilitySha256") != first_repro:
-    raise SystemExit("loader reproducibility identity changed between materializations")
+    raise SystemExit("Идентификатор воспроизводимости загрузчика изменился между подготовками")
 if lock.get("resolvedVersion") != install.get("loaderVersion"):
-    raise SystemExit("loader lock resolvedVersion mismatch")
+    raise SystemExit("Несовпадение resolvedVersion в файле фиксации загрузчика")
 if lock.get("selector") in ("", None) or lock.get("resolvedVersion") in ("latest", "latest-stable", "stable", "recommended"):
-    raise SystemExit("loader lock is not immutable")
+    raise SystemExit("Файл фиксации загрузчика допускает изменения")
 PY
 
 bash "$ROOT/e2e/scripts/run-loader-hardening-probe.sh" "fabric" "$NL_BIN" "$RUNTIME_DIR"

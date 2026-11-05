@@ -75,6 +75,6 @@ require(
 if "registry_entries" in read(
     "cli/cmd/launcher/release_commands.go"
 ) or "desktop_packages" in read("cli/cmd/launcher/release_commands.go"):
-    raise SystemExit("productionTables still contains nonexistent extension-era tables")
+    raise SystemExit("productionTables по-прежнему содержит несуществующие таблицы устаревшей системы расширений")
 
-print("Extensions Core 0.20.1 production gate: OK")
+print("Extensions Core 0.20.1: проверка готовности к эксплуатации: OK")

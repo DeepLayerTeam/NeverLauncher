@@ -99,7 +99,7 @@ for node in tree.body:
     if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "ARCHES" for t in node.targets):
         arches = ast.literal_eval(node.value)
 if not isinstance(arches, dict) or {name: arches.get(name, {}).get("cpu") for name in ("x64", "arm64")} != {"x64": 0x01000007, "arm64": 0x0100000C}:
-    raise SystemExit("macOS packager lost mandatory Mach-O CPU architecture constants")
+    raise SystemExit("Упаковщик macOS утратил обязательные константы архитектуры CPU Mach-O")
 require(
     packager,
     [
@@ -218,4 +218,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} notarized macOS x64 + ARM64 gate: OK")
+print(f"Launcher {VERSION}: проверка нотариально заверенных пакетов macOS x64 и ARM64: OK")

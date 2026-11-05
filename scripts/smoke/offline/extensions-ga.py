@@ -127,4 +127,4 @@ for token in [
     "npm ci",
 ]:
     require(token in workflow, f"GA workflow missing {token}")
-print("Extensions GA 0.21.0 offline gate OK")
+print("Extensions GA 0.21.0: офлайн-проверка: OK")

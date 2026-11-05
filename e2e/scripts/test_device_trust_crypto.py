@@ -36,10 +36,10 @@ def der_int(value: bytes) -> bytes:
 
 def p1363_to_der(raw: bytes) -> bytes:
     if len(raw) != 64:
-        raise ValueError("P-256 P1363 signature must be 64 bytes")
+        raise ValueError("Подпись P-256 в формате P1363 должна занимать 64 байта")
     body = der_int(raw[:32]) + der_int(raw[32:])
     if len(body) >= 128:
-        raise ValueError("unexpected P-256 DER body length")
+        raise ValueError("Недопустимая длина тела подписи P-256 DER")
     return b"\x30" + bytes([len(body)]) + body
 
 

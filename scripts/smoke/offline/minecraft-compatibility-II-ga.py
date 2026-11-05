@@ -34,7 +34,7 @@ if len(vanilla) < 109 or len({row["minecraft"] for row in vanilla}) < 104:
         "GA 0.17.0v3 Vanilla base is narrower than 109 targets / 104 unique releases"
     )
 if {8, 16, 17, 21, 25} - {row["javaMajor"] for row in vanilla}:
-    raise SystemExit("GA JRE base does not cover Java 8/16/17/21/25")
+    raise SystemExit("Базовый набор JRE для GA не покрывает Java 8/16/17/21/25")
 
 legacy_0170v1 = {
     "1.2.1",

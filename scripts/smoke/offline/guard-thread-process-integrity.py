@@ -200,7 +200,7 @@ def main() -> int:
                     f"[Launcher] Thread & Process Integrity 0.18.6 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[Launcher] Thread & Process Integrity 0.18.6 gate: OK")
+    print("[Launcher] Thread & Process Integrity 0.18.6: проверка: OK")
     return 0
 
 

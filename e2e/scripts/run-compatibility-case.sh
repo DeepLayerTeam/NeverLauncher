@@ -62,7 +62,7 @@ matched = actual_os == expected_os and actual_arch == expected_arch
 payload = {"expectedOS":expected_os,"expectedArch":expected_arch,"detectedOS":actual_os,"detectedArch":actual_arch,"matched":matched}
 print(json.dumps(payload, indent=2))
 if not matched:
-    raise SystemExit(f"runner mismatch: expected {expected_os}/{expected_arch}, detected {actual_os}/{actual_arch}")
+    raise SystemExit(f"Несовпадение среды запуска: ожидалось {expected_os}/{expected_arch}, обнаружено {actual_os}/{actual_arch}")
 PY
 if [[ $? -ne 0 ]]; then
   exit 2

@@ -146,7 +146,7 @@ if {
     (row.get("loader"), row.get("minecraft")): row.get("unavailableReason")
     for row in unavailable
 } != blocked:
-    raise SystemExit("Upstream-unavailable target set or reason drift")
+    raise SystemExit("Набор целей или причина недоступности источника не соответствует ожидаемым")
 if any((row.get("os"), row.get("arch")) != ("linux", "x86_64") for row in unavailable):
     raise SystemExit("Неожиданное значение: «unavailable platform»")
 family_counts = Counter(row.get("loader") for row in targets)

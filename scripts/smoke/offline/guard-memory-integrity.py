@@ -172,7 +172,7 @@ def main() -> int:
                     f"[Launcher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[Launcher] Memory Integrity 0.18.5 gate: OK")
+    print("[Launcher] Memory Integrity 0.18.5: проверка: OK")
     return 0
 
 

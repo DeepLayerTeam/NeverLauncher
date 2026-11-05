@@ -131,4 +131,4 @@ for text, needle, label in [
 ]:
     if needle not in text:
         raise SystemExit(f"{label}: отсутствует {needle!r}")
-print("ServerBridge Host 0.19.10+ production gate: OK")
+print("ServerBridge Host 0.19.10+: проверка готовности к эксплуатации: OK")

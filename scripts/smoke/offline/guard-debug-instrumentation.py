@@ -169,4 +169,4 @@ for rel, text in [
                 f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: placeholder {placeholder!r} in {rel}"
             )
 
-print("[Launcher] Debug & Instrumentation Guard 0.18.7 gate: OK")
+print("[Launcher] Debug & Instrumentation Guard 0.18.7: проверка: OK")

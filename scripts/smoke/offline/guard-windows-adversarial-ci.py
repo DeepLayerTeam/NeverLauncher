@@ -47,7 +47,7 @@ required_scenarios = (
 for name, kind in required_scenarios:
     expression = r'Scenario\(\s*"' + re.escape(name) + r'"\s*,\s*"' + kind + r'"'
     if not re.search(expression, runner):
-        raise SystemExit(f"Windows Adversarial CI: missing {kind} scenario: {name}")
+        raise SystemExit(f"Windows Adversarial CI: отсутствует сценарий {kind}: {name}")
 require(runner, "scripts/guard_ci/windows_adversarial.py", [
     "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
     '"evidenceRootSha256"',

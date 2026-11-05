@@ -448,7 +448,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, verify-jre, public-matrix, verify-public-matrix, public-e2e, resolve")
+		return errors.New("Доступные подкоманды поставки: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, verify-jre, public-matrix, verify-public-matrix, public-e2e, resolve")
 	}
 	switch args[0] {
 	case "target":

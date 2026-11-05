@@ -91,7 +91,7 @@ def execute(api: str, server: str, token: str, kind: str, payload: dict[str, str
             "Повторный запрос команды ServerBridge вызвал дополнительное побочное действие"
         )
     await_ack(api, path, token, command_id, time.monotonic() + 185)
-    print(f"[admin-ga-0220] {kind} executed with Bridge ACK, command={command_id}")
+    print(f"[admin-ga-0220] {kind} выполнено с подтверждением Bridge ACK, команда={command_id}")
 
 
 def main() -> None:
@@ -150,7 +150,7 @@ def main() -> None:
                 "server.drain",
                 {"enabled": "false", "reason": "Launcher GA 0.22.0 probe cleanup"},
             )
-    print("[admin-ga-0220] real Bridge save/drain/undrain ACK and replay PASS")
+    print("[admin-ga-0220] операции Bridge save/drain/undrain и повтор прошли проверку ACK: PASS")
 
 
 if __name__ == "__main__":

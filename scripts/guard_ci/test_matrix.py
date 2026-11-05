@@ -34,7 +34,7 @@ def run(*args: str, ok: bool = True) -> subprocess.CompletedProcess[str]:
     if ok and proc.returncode != 0:
         raise SystemExit(proc.stdout + proc.stderr)
     if not ok and proc.returncode == 0:
-        raise SystemExit("expected command failure")
+        raise SystemExit("Ожидалась ошибка выполнения команды")
     return proc
 
 
@@ -212,7 +212,7 @@ def main() -> int:
         )
         matrix = json.loads((out / "matrix.json").read_text())
         if matrix.get("status") != "passed" or len(matrix.get("targets", [])) != 3:
-            raise SystemExit("valid cross-platform Guard matrix did not pass")
+            raise SystemExit("Корректная кроссплатформенная матрица Guard не прошла проверку")
 
         staged = root / "staged"
         stage_proc = subprocess.run(
@@ -262,7 +262,7 @@ def main() -> int:
             capture_output=True,
         )
         if tampered_stage.returncode == 0:
-            raise SystemExit("tampered certified artifact unexpectedly staged")
+            raise SystemExit("Изменённый после подписи артефакт неожиданно прошёл подготовку")
 
         # Восстанавливайте пакет до проверки подмены метаданных.
         write(linux_package, b"package-guard-linux-amd64\n")
@@ -334,7 +334,7 @@ def main() -> int:
             REPOSITORY,
             ok=False,
         )
-    print("Guard CI matrix tests: OK")
+    print("Тесты матрицы Guard CI: OK")
     return 0
 
 

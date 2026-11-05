@@ -285,4 +285,4 @@ for text, needle, label in [
 ]:
     if needle not in text:
         raise SystemExit(f"{label}: missing {needle}")
-print("ServerBridge Security & Certification 0.19.12+ production gate: OK")
+print("ServerBridge 0.19.12+: проверка безопасности и сертификации: OK")

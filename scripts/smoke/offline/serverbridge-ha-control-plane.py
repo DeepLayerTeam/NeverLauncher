@@ -187,4 +187,4 @@ for text, needle, label in [
 ]:
     if needle not in text:
         raise SystemExit(f"{label}: отсутствует {needle!r}")
-print("ServerBridge HA Control Plane 0.19.11+ production gate: OK")
+print("ServerBridge HA Control Plane 0.19.11+: проверка готовности к эксплуатации: OK")

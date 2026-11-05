@@ -37,7 +37,7 @@ def main() -> int:
     native_arch = platform.machine().lower()
     arch_aliases = {"x86_64": {"x86_64", "amd64"}, "arm64": {"arm64", "aarch64"}}
     if native_os != args.os or native_arch not in arch_aliases.get(args.arch, set()):
-        raise SystemExit(f"native Device Trust platform mismatch: {native_os}/{native_arch} vs {args.os}/{args.arch}")
+        raise SystemExit(f"Несовпадение платформы нативного Device Trust: {native_os}/{native_arch} и {args.os}/{args.arch}")
     checks = {"tauriCompile": "test result: ok." in text}
     for check, markers in TEST_MARKERS.items():
         checks[check] = all(marker in text for marker in markers)
@@ -79,7 +79,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if failed:
-        raise SystemExit("native Device Trust evidence missing checks: " + ", ".join(failed))
+        raise SystemExit("В свидетельствах нативного Device Trust отсутствуют проверки: " + ", ".join(failed))
     print(json.dumps(payload, ensure_ascii=False))
     return 0
 

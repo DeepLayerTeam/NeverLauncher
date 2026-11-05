@@ -127,4 +127,4 @@ require(
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[Launcher] Guard Windows authenticated IPC gate OK: {version}")
+print(f"[Launcher] Guard Windows: проверка аутентифицированного IPC: OK; версия={version}")

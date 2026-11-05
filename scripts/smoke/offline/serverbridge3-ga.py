@@ -87,4 +87,4 @@ require(
 require(
     "scripts/serverbridge/matrix.py", ["3 GA (frozen)", "deprecated; migrate to v3"]
 )
-print("ServerBridge 3 GA 0.20.0 production gate: OK")
+print("ServerBridge 3 GA 0.20.0: проверка готовности к эксплуатации: OK")

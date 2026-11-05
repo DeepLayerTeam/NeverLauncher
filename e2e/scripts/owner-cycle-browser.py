@@ -336,7 +336,7 @@ async def main():
     output.write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    print(f"Owner 0.39.0 real browser cycle PASS: {receipt['finalReleaseId']}")
+    print(f"Цикл владельца 0.39.0 в реальном браузере пройден: PASS; выпуск={receipt['finalReleaseId']}")
 
 
 if __name__ == "__main__":

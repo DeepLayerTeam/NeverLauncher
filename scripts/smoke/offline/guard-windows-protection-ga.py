@@ -174,4 +174,4 @@ for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
             f"[Launcher] Windows Protection GA 0.19.0 gate: placeholder {marker!r} in implementation"
         )
 
-print(f"[Launcher] Guard Windows Protection GA 0.19.0 production gate: OK ({version})")
+print(f"[Launcher] Guard Windows Protection GA 0.19.0: проверка готовности к эксплуатации: OK ({version})")

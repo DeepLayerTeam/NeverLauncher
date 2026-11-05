@@ -22,7 +22,7 @@ def main() -> int:
     if tuple(
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 2):
-        raise SystemExit(f"[Launcher] Guard Sensor 0.18.2 gate: VERSION is {version}")
+        raise SystemExit(f"[Launcher] Guard Sensor 0.18.2: VERSION={version}")
 
     sensor = read("runtime/guard-sensor/src/lib.rs")
     sensor_manifest = read("runtime/guard-sensor/Cargo.toml")
@@ -176,7 +176,7 @@ def main() -> int:
                     f"[Launcher] Guard Sensor 0.18.2 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[Launcher] Guard Sensor 0.18.2 gate: OK")
+    print("[Launcher] Guard Sensor 0.18.2: проверка: OK")
     return 0
 
 

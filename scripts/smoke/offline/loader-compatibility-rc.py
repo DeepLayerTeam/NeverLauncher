@@ -155,7 +155,7 @@ if platforms != expected_platforms:
         f"Loader Compatibility RC platform coverage mismatch: {sorted(platforms)}"
     )
 if {row.get("javaMajor") for row in targets} != {8, 16, 17, 21, 25}:
-    raise SystemExit("Loader Compatibility RC must cover Java 8/16/17/21/25")
+    raise SystemExit("Кандидат совместимости загрузчиков должен покрывать Java 8/16/17/21/25")
 
 print(
     "Loader Compatibility RC 0.17.11 gate: OK (292 catalogue targets, 280 required, 12 NOT CERTIFIED, full evidence root, family/platform/Java coverage, signed release certificate)"

@@ -172,4 +172,4 @@ require(
     "OpenAPI one-time join documentation",
 )
 
-print(f"Launcher 0.14.3 One-Time Join Tickets gate: OK ({version})")
+print(f"Launcher 0.14.3: проверка одноразовых билетов входа: OK ({version})")

@@ -18,7 +18,7 @@ def require(text, needles, label):
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 8):
-    raise SystemExit(f"expected VERSION >= 0.19.8, got {version}")
+    raise SystemExit(f"Ожидалась VERSION >= 0.19.8, получено {version}")
 targets = json.loads(read("serverbridge/targets.json"))
 expected = [
     "velocity",
@@ -160,10 +160,10 @@ for hybrid in [
     "'cardboard'",
 ]:
     if hybrid in migration:
-        raise SystemExit(f"hybrid leaked into canonical DB kind set: {hybrid}")
+        raise SystemExit(f"Гибридный тип попал в канонический набор видов БД: {hybrid}")
 hybrid = json.loads(read("serverbridge/hybrid-targets.json"))
 if any(x.get("status") != "not-certified" for x in hybrid["targets"]):
-    raise SystemExit("hybrid target unexpectedly certified")
+    raise SystemExit("Гибридная цель неожиданно прошла сертификацию")
 cert = read("serverbridge/certify_release.py")
 require(
     cert,

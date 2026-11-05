@@ -185,14 +185,14 @@ with tempfile.TemporaryDirectory(prefix="nl-release-layout-") as td:
     flat.mkdir()
     (flat / "marker").write_bytes(b"ok")
     if resolve_layout(flat, "marker", expect_ok=True) != bash_path(flat):
-        raise SystemExit("flat artifact payload resolved to unexpected directory")
+        raise SystemExit("Артефакт с плоской структурой распакован в неожиданный каталог")
 
     nested = base / "nested"
     expected = nested / f"release-{VERSION}"
     expected.mkdir(parents=True)
     (expected / "marker").write_bytes(b"ok")
     if resolve_layout(nested, "marker", expect_ok=True) != bash_path(expected):
-        raise SystemExit("versioned artifact payload resolved to unexpected directory")
+        raise SystemExit("Версионированный артефакт распакован в неожиданный каталог")
 
     wrong = base / "wrong"
     (wrong / "release-0.0.0").mkdir(parents=True)
@@ -235,4 +235,4 @@ subprocess.run(
     cwd=ROOT / "cli",
     check=True,
 )
-print(f"Launcher {VERSION} Production release candidate 0.15.11 gate: OK")
+print(f"Launcher {VERSION}: проверка производственного кандидата 0.15.11: OK")

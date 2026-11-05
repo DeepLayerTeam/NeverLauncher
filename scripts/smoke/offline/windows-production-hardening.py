@@ -141,9 +141,9 @@ require(
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "windows-production-hardening-0136.py" not in ci:
-    raise SystemExit("0.13.6 hardening gate is not wired into CI")
+    raise SystemExit("0.13.6: проверка защиты не подключена к CI")
 if "windows-production-hardening-0136.py" not in preflight:
-    raise SystemExit("0.13.6 hardening gate is not wired into release preflight")
+    raise SystemExit("0.13.6: проверка защиты не подключена к предварительной проверке выпуска")
 require(
     ci,
     [
@@ -156,4 +156,4 @@ require(
 )
 
 # Документация безопасности Markdown необязательна; соблюдение требований проверено выше.
-print(f"[Launcher] Windows production hardening 0.13.6 gate OK: {version}")
+print(f"[Launcher] Проверка производственной защиты Windows 0.13.6: OK; версия={version}")

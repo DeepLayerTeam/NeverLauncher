@@ -228,7 +228,7 @@ def validate(online: bool) -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         module.validate_upstream(doc)
-    print("Honest Validation & Trust Boundaries 0.21.2 gate OK")
+    print("Проверка достоверности валидации и границ доверия 0.21.2 пройдена: OK")
 
 
 def main() -> None:

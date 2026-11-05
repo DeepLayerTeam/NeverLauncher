@@ -106,4 +106,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION} Release Verification v2 + trust/key lifecycle gate: OK")
+print(f"Launcher {VERSION}: проверка верификации выпуска v2 и жизненного цикла ключей доверия: OK")

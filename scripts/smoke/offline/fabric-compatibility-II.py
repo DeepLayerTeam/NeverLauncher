@@ -89,7 +89,7 @@ by_version: dict[str, dict] = {}
 for row in fabric_rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
-        raise SystemExit(f"Fabric 0.17.1 duplicate Minecraft target: {minecraft}")
+        raise SystemExit(f"Fabric 0.17.1: повторяющаяся цель Minecraft: {minecraft}")
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(

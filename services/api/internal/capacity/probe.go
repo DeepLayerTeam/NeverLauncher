@@ -136,13 +136,13 @@ func Probe(ctx context.Context, opt Options) Report {
 	}
 	if r.Traffic.Requests >= 20 {
 		if r.Traffic.P95Seconds > HTTPP95Warning.Seconds() {
-			r.issue("warning", "http.p95", fmt.Sprintf("%.3fs", r.Traffic.P95Seconds), "p95 > 1s in last 60s", "Profile hot handlers and DB queries; scale Backend only after checking shared dependencies")
+			r.issue("warning", "http.p95", fmt.Sprintf("%.3fs", r.Traffic.P95Seconds), "p95 > 1s in last 60s", "Проверьте профили горячих обработчиков и запросы к БД; масштабируйте Backend только после проверки общих зависимостей")
 		}
 		if r.Traffic.ErrorRatio >= .05 {
 			r.issue("critical", "http.5xx", fmt.Sprintf("%.1f%%", 100*r.Traffic.ErrorRatio), "5xx >= 5% in last 60s", "Examine logs and readiness before adding replicas")
 		}
 		if r.Traffic.ThrottleRatio >= .10 {
-			r.issue("warning", "http.429", fmt.Sprintf("%.1f%%", 100*r.Traffic.ThrottleRatio), "429 >= 10% in last 60s", "Inspect abusive traffic and legitimate client retries; increase rate limits only after evidence")
+			r.issue("warning", "http.429", fmt.Sprintf("%.1f%%", 100*r.Traffic.ThrottleRatio), "429 >= 10% in last 60s", "Изучите подозрительный трафик и легитимные повторы запросов; увеличивайте лимиты только при наличии подтверждений")
 		}
 	}
 	return r
@@ -152,16 +152,16 @@ func (r *Report) evaluatePostgres(p PostgreSQL) {
 		r.issue("warning", "postgres.connections", fmt.Sprintf("%d/%d", p.ActiveConnections, p.MaxConnections), ">= 80% max_connections", "Reduce leaked/idle connections, tune bounded pools; consider PgBouncer before more API replicas")
 	}
 	if p.PendingJobs >= QueueWarningSize {
-		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), ">= 500 pending jobs", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")
+		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), ">= 500 ожидающих заданий", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")
 	}
 	if p.OldestPendingJobSeconds > OldestJobWarning.Seconds() && p.PendingJobs > 0 {
-		r.issue("warning", "jobs.oldest_pending", fmt.Sprintf("%.0fs", p.OldestPendingJobSeconds), "> 60s oldest pending job", "Inspect worker health, DB throughput and job retry policy")
+		r.issue("warning", "jobs.oldest_pending", fmt.Sprintf("%.0fs", p.OldestPendingJobSeconds), "> 60 с для самого старого ожидающего задания", "Проверьте состояние воркеров, пропускную способность БД и политику повторов заданий")
 	}
 	if p.ExpiredJobLeases > 0 {
-		r.issue("warning", "jobs.expired_leases", fmt.Sprint(p.ExpiredJobLeases), "> 0 просроченных аренд выполняющихся заданий", "Check worker crashes and fencing; do not blindly replay non-idempotent operations")
+		r.issue("warning", "jobs.expired_leases", fmt.Sprint(p.ExpiredJobLeases), "> 0 просроченных аренд выполняющихся заданий", "Проверьте сбои воркеров и механизм fencing; не повторяйте автоматически неидемпотентные операции")
 	}
 	if p.PendingOutbox >= QueueWarningSize {
-		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), ">= 500 pending events", "Inspect outbox dispatcher and downstream acknowledgements; retain at-least-once idempotency")
+		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), ">= 500 ожидающих событий", "Проверьте диспетчер outbox и подтверждения потребителей; сохраните идемпотентность для доставки не реже одного раза")
 	}
 }
 func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {

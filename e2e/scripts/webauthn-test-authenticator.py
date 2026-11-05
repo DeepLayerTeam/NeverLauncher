@@ -100,7 +100,7 @@ def p256_coordinates(key_path: Path) -> tuple[bytes, bytes]:
     der = run("openssl", "pkey", "-in", str(key_path), "-pubout", "-outform", "DER")
     # SubjectPublicKeyInfo для несжатого ключа P-256 заканчивается на 0x04 || X || Y.
     if len(der) < 65 or der[-65] != 0x04:
-        raise SystemExit("unexpected P-256 SubjectPublicKeyInfo encoding")
+        raise SystemExit("Неожиданный формат P-256 SubjectPublicKeyInfo")
     point = der[-65:]
     return point[1:33], point[33:65]
 
@@ -137,7 +137,7 @@ def registration_auth_data(rp_id: str, credential_id: bytes, key_path: Path) -> 
 
 def assertion_auth_data(rp_id: str, sign_count: int) -> bytes:
     if sign_count < 0 or sign_count > 0xFFFFFFFF:
-        raise SystemExit("sign count must fit uint32")
+        raise SystemExit("Счётчик подписей должен помещаться в uint32")
     return (
         hashlib.sha256(rp_id.encode("utf-8")).digest()
         + bytes([0x05])
@@ -149,7 +149,7 @@ def command_register(args: argparse.Namespace) -> None:
     state_path = Path(args.state)
     key_path = Path(args.key)
     if state_path.exists() or key_path.exists():
-        raise SystemExit("refusing to overwrite existing WebAuthn test credential")
+        raise SystemExit("Перезапись существующих тестовых учётных данных WebAuthn отклонена")
     generate_p256_key(key_path)
     credential_id = os.urandom(32)
     user_handle = b64u_decode(args.user_handle)
@@ -194,7 +194,7 @@ def command_assert(args: argparse.Namespace) -> None:
     state = json.loads(Path(args.state).read_text(encoding="utf-8"))
     key_path = Path(state["keyPath"])
     if not key_path.is_file():
-        raise SystemExit("WebAuthn private key is unavailable")
+        raise SystemExit("Закрытый ключ WebAuthn недоступен")
     client = client_data("webauthn.get", args.challenge, state["origin"])
     auth_data = assertion_auth_data(state["rpId"], args.sign_count)
     signed = auth_data + hashlib.sha256(client).digest()

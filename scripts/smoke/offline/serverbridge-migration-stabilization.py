@@ -73,4 +73,4 @@ require(
     ],
     "CI wiring",
 )
-print(f"Launcher 0.14.10 ServerBridge migration + stabilization gate: OK ({version})")
+print(f"Launcher 0.14.10: проверка миграции и стабилизации ServerBridge: OK ({version})")

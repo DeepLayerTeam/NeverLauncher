@@ -209,7 +209,7 @@ require(
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "guard-guard-attestation-0134.py" not in ci:
-    raise SystemExit("Guard 0.13.4 Guard Attestation gate is not wired into CI")
+    raise SystemExit("Guard 0.13.4: проверка аттестации не подключена к CI")
 if "guard-guard-attestation-0134.py" not in preflight:
     raise SystemExit(
         "Guard 0.13.4 Guard Attestation gate is not wired into release preflight"

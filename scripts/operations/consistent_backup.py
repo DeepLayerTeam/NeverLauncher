@@ -201,7 +201,7 @@ def thaw(directory, project, run_id):
 
 def stream_volume(directory, project, run_id, logical, image):
     assert_frozen(directory, project, run_id)
-    require(logical in VOLUMES, "unknown local state volume")
+    require(logical in VOLUMES, "Неизвестный локальный том состояния")
     require(bool(multi.DIGEST_REGEX.fullmatch(image)), "Образ tar должен быть закреплён по хешу")
     volume = project + "_" + logical
     out = subprocess.Popen(["docker", "run", "--rm", "--network", "none", "--read-only",
