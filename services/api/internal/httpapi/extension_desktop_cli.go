@@ -106,7 +106,7 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension is not enabled")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("Расширение не включено")
 	}
 	ver, err := s.Repo.GetExtensionVersion(r.Context(), id, install.CurrentVersion)
 	if err != nil {
@@ -409,7 +409,7 @@ func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.ExtensionHost == nil {
-		writeError(w, 503, "extension host unavailable")
+		writeError(w, 503, "Хост расширений недоступен")
 		return
 	}
 	var req cliInvokeRequest0209

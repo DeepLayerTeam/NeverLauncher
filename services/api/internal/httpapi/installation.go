@@ -225,7 +225,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 			BootstrapMinimalAdmin0375(context.Context, model.User, model.AuthIdentity, string, string) (model.User, error)
 		})
 		if !ok {
-			return model.User{}, errors.New("SQLite repository missing atomic installation bootstrap")
+			return model.User{}, errors.New("В хранилище SQLite отсутствует атомарная первоначальная инициализация")
 		}
 		identity := model.AuthIdentity{ID: "identity-local-" + user.ID, UserID: user.ID, Provider: "local", Issuer: "launcher", Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, CreatedAt: now, UpdatedAt: now}
 		return store.BootstrapMinimalAdmin0375(ctx, user, identity, token, firstNonEmpty(actor, "installer"))

@@ -144,7 +144,7 @@ func validateLoaderGASupportPolicy0180() error {
 	for _, entry := range entries {
 		key := entry.Loader + "\x00" + entry.MinecraftVersion
 		if seen[key] {
-			return fmt.Errorf("Loader Compatibility GA duplicate support entry %s/%s", entry.Loader, entry.MinecraftVersion)
+			return fmt.Errorf("Повторяющаяся запись поддержки Loader Compatibility GA %s/%s", entry.Loader, entry.MinecraftVersion)
 		}
 		seen[key] = true
 		counts[entry.Loader]++
@@ -152,12 +152,12 @@ func validateLoaderGASupportPolicy0180() error {
 			legacy[entry.MinecraftVersion] = true
 		}
 		if entry.JavaMajor != 8 && entry.JavaMajor != 16 && entry.JavaMajor != 17 && entry.JavaMajor != 21 && entry.JavaMajor != 25 {
-			return fmt.Errorf("Loader Compatibility GA invalid Java major %d for %s/%s", entry.JavaMajor, entry.Loader, entry.MinecraftVersion)
+			return fmt.Errorf("Loader Compatibility GA: некорректная основная версия Java %d для %s/%s", entry.JavaMajor, entry.Loader, entry.MinecraftVersion)
 		}
 	}
 	for loader, want := range wantCounts {
 		if counts[loader] != want {
-			return fmt.Errorf("Loader Compatibility GA %s support count=%d want=%d", loader, counts[loader], want)
+			return fmt.Errorf("Loader Compatibility GA %s: число поддерживаемых конфигураций=%d, ожидалось=%d", loader, counts[loader], want)
 		}
 	}
 	if !legacy["1.7.10"] || !legacy["1.12.2"] || len(legacy) != 2 {

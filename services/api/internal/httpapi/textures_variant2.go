@@ -43,7 +43,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartTexture0252)
 	multipart, err := r.MultipartReader()
 	if err != nil {
-		writeError(w, http.StatusUnsupportedMediaType, "multipart/form-data required")
+		writeError(w, http.StatusUnsupportedMediaType, "Требуется формат multipart/form-data")
 		return
 	}
 	fields := make(map[string]string, 4)

@@ -41,7 +41,7 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 		}
 		rc, err := entry.Open()
 		if err != nil {
-			return nil, path, fmt.Errorf("open embedded template %s: %w", name, err)
+			return nil, path, fmt.Errorf("Не удалось открыть встроенный шаблон %s: %w", name, err)
 		}
 		data, readErr := io.ReadAll(io.LimitReader(rc, 4<<20+1))
 		closeErr := rc.Close()

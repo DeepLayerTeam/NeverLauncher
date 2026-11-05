@@ -727,7 +727,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		event.Outcome = "receipt-read"
 		if remoteAuditLog0284(a.dir, event) != nil {
-			write(http.StatusServiceUnavailable, map[string]string{"error": "audit unavailable"})
+			write(http.StatusServiceUnavailable, map[string]string{"error": "Аудит недоступен"})
 			return
 		}
 		write(http.StatusOK, receipt)
@@ -736,7 +736,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if action == "" {
 		event.Outcome = "read"
 		if err = remoteAuditLog0284(a.dir, event); err != nil {
-			write(http.StatusServiceUnavailable, map[string]string{"error": "audit unavailable"})
+			write(http.StatusServiceUnavailable, map[string]string{"error": "Аудит недоступен"})
 			return
 		}
 		write(http.StatusOK, map[string]any{"nodeId": identity.NodeID, "status": json.RawMessage(remoteHostStatus0284(a.root))})
@@ -794,7 +794,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	event.Outcome = "accepted"
 	if err = remoteAuditLog0284(a.dir, event); err != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "audit unavailable"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Аудит недоступен"})
 		return
 	}
 	receipt := remoteReceipt0284{SchemaVersion: "1.0", KeyHash: strings.TrimSuffix(filepath.Base(path), ".json"), Digest: digest, Subject: claims.Subject, Action: action, State: "indeterminate", CreatedAt: a.now().UTC().Format(time.RFC3339Nano)}

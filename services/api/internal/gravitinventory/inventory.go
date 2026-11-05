@@ -524,7 +524,7 @@ func copyLimited(ctx context.Context, dst io.Writer, src io.Reader, max int64) (
 		if r > 0 {
 			n += int64(r)
 			if n > max {
-				return n, errors.New("source ZIP exceeds 512 MiB")
+				return n, errors.New("Исходный ZIP превышает 512 МиБ")
 			}
 			if _, w := dst.Write(buf[:r]); w != nil {
 				return n, w

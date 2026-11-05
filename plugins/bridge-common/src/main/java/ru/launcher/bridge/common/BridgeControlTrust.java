@@ -27,7 +27,7 @@ final class BridgeControlTrust {
         this.trustFile = config.identityFile.resolveSibling("control-backend-key.properties").toAbsolutePath().normalize();
         this.configuredPublicKey = normalize(config.controlBackendPublicKey);
         if (!configuredPublicKey.isBlank() && !validPublicKey(configuredPublicKey)) {
-            throw new IOException("control.backendPublicKey must be an unpadded base64url 32-byte Ed25519 public key");
+            throw new IOException("control.backendPublicKey должен содержать открытый ключ Ed25519 длиной 32 байта в base64url без заполнения");
         }
         this.backends = config.backendUrls.stream().map(URI::create).toList();
         this.pinnedPublicKeys = loadPinned();
@@ -126,7 +126,7 @@ final class BridgeControlTrust {
     private synchronized void persistPins(Set<String> publicKeys) throws IOException {
         LinkedHashSet<String> clean = new LinkedHashSet<>();
         for (String key : publicKeys) if (validPublicKey(normalize(key))) clean.add(normalize(key));
-        if (clean.isEmpty() || clean.size() > 2) throw new IOException("invalid ServerBridge control trust set");
+        if (clean.isEmpty() || clean.size() > 2) throw new IOException("Некорректный набор доверенных ключей управления ServerBridge");
         Path parent = trustFile.getParent(); if (parent != null) Files.createDirectories(parent);
         Path tmp = trustFile.resolveSibling(trustFile.getFileName() + ".tmp");
         ArrayList<String> fingerprints = new ArrayList<>();

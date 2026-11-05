@@ -214,7 +214,7 @@ func existingFileMatchesSHA256(path, expected string) (bool, string, int64) {
 func fetchLoaderProfileWithCache(ctx context.Context, client *http.Client, root, loader, minecraft, source string, pinned *loaderResolutionLock, cacheOnly bool, max int64) ([]byte, bool, bool, error) {
 	if pinned != nil {
 		if pinned.PayloadURL != source {
-			return nil, false, false, fmt.Errorf("loader resolution lock payload URL mismatch: pinned %s got %s", pinned.PayloadURL, source)
+			return nil, false, false, fmt.Errorf("Адрес зафиксированных данных загрузчика не совпадает: ожидался %s, получен %s", pinned.PayloadURL, source)
 		}
 		if data, err := loadLoaderPayloadCacheBytes(root, loader, minecraft, source, pinned.PayloadSHA256, max); err == nil {
 			return data, true, cacheOnly, nil

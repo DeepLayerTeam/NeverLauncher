@@ -281,7 +281,7 @@ func executeStateAudit(source, target, output string) error {
 func validateStateAuditEvidence(data []byte, probe Probe) error {
 	var a StateAudit
 	if err := decodeStrict(data, &a); err != nil {
-		return fmt.Errorf("state audit evidence: %w", err)
+		return fmt.Errorf("Доказательства аудита состояния: %w", err)
 	}
 	if a.Format != stateAuditFormat || !a.Matched || a.WorldFiles < 1 || a.PluginFiles < 0 ||
 		!digest(a.SourceWorldSHA256) || !digest(a.SourcePluginSHA256) ||
@@ -299,7 +299,7 @@ func validateStateAuditEvidence(data []byte, probe Probe) error {
 		sort.Strings(right)
 		for i := range left {
 			if !canonicalUUID.MatchString(left[i]) || (i > 0 && left[i] == left[i-1]) || left[i] != right[i] {
-				return errors.New("state audit player roster disagrees with receipt")
+				return errors.New("Список игроков в аудите состояния не соответствует квитанции")
 			}
 		}
 	}
@@ -328,16 +328,16 @@ func ensureSnapshotStillMatches(p Plan, evidenceDir string) error {
 		expected.WorldFiles != actual.WorldFiles || expected.PluginFiles != actual.PluginFiles ||
 		len(expected.SourceUUIDs) != len(actual.SourceUUIDs) || len(expected.TargetUUIDs) != len(actual.TargetUUIDs) ||
 		len(expected.Excluded) != len(actual.Excluded) {
-		return errors.New("native snapshot state changed after the signed audit")
+		return errors.New("Состояние исходного снимка изменилось после подписанного аудита")
 	}
 	for i := range actual.SourceUUIDs {
 		if actual.SourceUUIDs[i] != expected.SourceUUIDs[i] || actual.TargetUUIDs[i] != expected.TargetUUIDs[i] {
-			return errors.New("player roster changed after audit")
+			return errors.New("Список игроков изменился после аудита")
 		}
 	}
 	for i := range actual.Excluded {
 		if actual.Excluded[i] != expected.Excluded[i] {
-			return errors.New("snapshot exclusions changed after audit")
+			return errors.New("Исключения снимка изменились после аудита")
 		}
 	}
 	return nil

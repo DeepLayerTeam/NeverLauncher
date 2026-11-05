@@ -200,7 +200,7 @@ func validateManagedJREBinary0155(platform, arch string, data []byte) error {
 			return fmt.Errorf("bin/java ELF validation: %w", err)
 		}
 		if info.Architecture != arch {
-			return fmt.Errorf("bin/java architecture=%s, expected %s", info.Architecture, arch)
+			return fmt.Errorf("Архитектура bin/java=%s, ожидалась %s", info.Architecture, arch)
 		}
 	case "macos":
 		info, err := inspectMacOSMachOBytes0154(data)
@@ -208,7 +208,7 @@ func validateManagedJREBinary0155(platform, arch string, data []byte) error {
 			return fmt.Errorf("bin/java Mach-O validation: %w", err)
 		}
 		if info.Architecture != arch {
-			return fmt.Errorf("bin/java architecture=%s, expected %s", info.Architecture, arch)
+			return fmt.Errorf("Архитектура bin/java=%s, ожидалась %s", info.Architecture, arch)
 		}
 	default:
 		return fmt.Errorf("Не поддерживается: «Managed JRE platform» %q", platform)

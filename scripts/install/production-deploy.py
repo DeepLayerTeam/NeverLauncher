@@ -57,7 +57,7 @@ def execute(argv, *, capture=False, check=True):
     )
     if check and result.returncode:
         fail(
-            f"{argv[0]} {argv[1] if len(argv) > 1 else ''} failed (exit {result.returncode})"
+            f"Ошибка {argv[0]} {argv[1] if len(argv) > 1 else ''} (код выхода {result.returncode})"
         )
     return result
 
@@ -66,11 +66,11 @@ def safe_file(path, *, private=False, executable=False):
     path = Path(path)
     info = path.lstat()
     if not stat.S_ISREG(info.st_mode):
-        fail(f"not a regular file: {path}")
+        fail(f"Объект не является обычным файлом: {path}")
     if info.st_mode & (0o077 if private else 0o022):
-        fail(f"unsafe permissions: {path}")
+        fail(f"Небезопасные права доступа: {path}")
     if executable and not info.st_mode & 0o111:
-        fail(f"not executable: {path}")
+        fail(f"Файл не является исполняемым: {path}")
     return info
 
 
@@ -78,7 +78,7 @@ def safe_directory(path):
     path = Path(path)
     info = path.lstat()
     if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o022:
-        fail(f"unsafe directory permissions: {path}")
+        fail(f"Небезопасные права доступа к каталогу: {path}")
 
 
 def write_exclusive(path, data, mode=0o600):
@@ -120,14 +120,14 @@ def atomic_text(path, content, perm=0o644):
 def read_env(path):
     safe_file(path, private=True)
     if path.stat().st_size > 256 * 1024:
-        fail("environment file is too large")
+        fail("Файл переменных окружения слишком велик")
     values = {}
     for line in path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         if "=" not in line:
-            fail("invalid env file line")
+            fail("Некорректная строка файла переменных окружения")
         key, value = line.split("=", 1)
         if not ENV_KEY_RE.fullmatch(key) or key in values or "\x00" in value:
             fail("invalid or duplicate env key")
@@ -169,7 +169,7 @@ def preflight(values, mode, *, docker, tls_required=True):
         or values[key].upper().startswith(("CHANGE_ME", "REPLACE_ME"))
     ]
     if missing:
-        fail("missing or placeholder production configuration: " + ", ".join(missing))
+        fail("Промышленная конфигурация отсутствует или содержит шаблонные значения: " + ", ".join(missing))
     public = values["LAUNCHER_PUBLIC_URL"]
     url = urllib.parse.urlsplit(public)
     if (
@@ -182,17 +182,17 @@ def preflight(values, mode, *, docker, tls_required=True):
         or url.fragment
         or any(c.isspace() for c in public)
     ):
-        fail("production PUBLIC_URL must be an HTTPS origin")
+        fail("Промышленное значение PUBLIC_URL должно быть базовым HTTPS-адресом")
     if docker and url.port not in (None, 443):
-        fail("direct production Compose requires public HTTPS on port 443")
+        fail("Для прямого промышленного развёртывания Compose требуется публичный HTTPS на порту 443")
     if values["LAUNCHER_WEBAUTHN_ORIGINS"] != public or public not in values[
         "LAUNCHER_CORS_ALLOWED_ORIGINS"
     ].split(","):
-        fail("WebAuthn origins and CORS must contain the exact HTTPS public origin")
+        fail("Разрешённые источники WebAuthn и CORS должны точно содержать публичный базовый HTTPS-адрес")
     rp = values["LAUNCHER_WEBAUTHN_RP_ID"].lower()
     hostname = url.hostname.lower()
     if not (hostname == rp or hostname.endswith("." + rp)):
-        fail("WebAuthn relying-party ID does not match public hostname")
+        fail("Идентификатор доверяющей стороны WebAuthn не соответствует публичному имени хоста")
     for key in (
         "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
         "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
@@ -200,15 +200,15 @@ def preflight(values, mode, *, docker, tls_required=True):
         try:
             policy = json.loads(values[key])
         except ValueError:
-            fail(f"{key} must contain a nonempty JSON policy")
+            fail(f"{key} должен содержать непустую политику JSON")
         if not isinstance(policy, (list, dict)) or not policy:
-            fail(f"{key} must contain a nonempty JSON policy")
+            fail(f"{key} должен содержать непустую политику JSON")
     if len(values["LAUNCHER_AUTH_TOKEN_SECRET"]) < 32:
-        fail("authentication signing secret is too short")
+        fail("Секрет подписи аутентификации слишком короткий")
     if not re.fullmatch(
         r"[0-9a-fA-F]{64}", values["LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY"]
     ):
-        fail("manifest signing key must be a 32-byte hex Ed25519 seed")
+        fail("Ключ подписи манифеста должен содержать 32-байтное зерно Ed25519 в формате hex")
     if docker:
         compose_project(values)
         for key in ("POSTGRES_PASSWORD", "REDIS_PASSWORD"):
@@ -218,19 +218,19 @@ def preflight(values, mode, *, docker, tls_required=True):
                 fail(f"{key} must be URL-safe and at least 24 characters")
     if not docker and values.get("LAUNCHER_REPOSITORY_DRIVER") != "postgres":
         fail(
-            "native Backend must use PostgreSQL; SQLite-only HTTP repository is unsupported"
+            "Нативный Backend должен использовать PostgreSQL; HTTP-хранилище только на SQLite не поддерживается"
         )
     if not docker and not values.get("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"):
-        fail("native Standard requires a durable SQLite coordinator")
+        fail("Для нативного режима Standard требуется постоянный координатор SQLite")
     if (
         mode == "standard"
         and values.get("LAUNCHER_SERVERBRIDGE_HA_REQUIRED", "").lower() == "true"
     ):
-        fail("Standard mode cannot require HA")
+        fail("В режиме Standard нельзя требовать высокую доступность HA")
     if values.get("LAUNCHER_DEPLOYMENT_MODE", mode) not in ("", mode):
-        fail("env deployment mode conflicts with selected mode")
+        fail("Режим развёртывания в окружении противоречит выбранному режиму")
     if mode == "network-ha" and not docker:
-        fail("native HA provisioning is not supported by this local-service installer")
+        fail("Этот установщик локальной службы не поддерживает настройку нативного HA")
 
 
 
@@ -240,29 +240,29 @@ def host_preflight(*, fresh):
     if sys.platform != "linux" or os.uname().machine.lower() not in (
         "x86_64", "amd64", "aarch64", "arm64"
     ):
-        fail("production Compose requires Linux x64 or ARM64")
+        fail("Для промышленного Compose необходим Linux x64 или ARM64")
     if os.geteuid() != 0:
-        fail("production Compose preflight must run as root to read TLS keys")
+        fail("Предварительная проверка промышленного Compose должна выполняться от root для чтения TLS-ключей")
     if not shutil.which("docker"):
-        fail("Docker Engine and Compose v2 are required")
+        fail("Требуются Docker Engine и Compose v2")
     result = execute(["docker", "info", "--format", "{{.DockerRootDir}}"], capture=True)
     docker_root = (result.stdout or "").strip()
     if not docker_root or not Path(docker_root).is_absolute() or not Path(docker_root).is_dir():
-        fail("cannot determine an accessible Docker data directory")
+        fail("Не удалось определить доступный каталог данных Docker")
     execute(["docker", "compose", "version"], capture=True)
     meminfo = Path("/proc/meminfo").read_text()
     match = re.search(r"^MemTotal:\s+(\d+) kB$", meminfo, re.M)
     if not match or int(match.group(1)) < 2 * 1024 * 1024:
-        fail("production host requires at least 2 GiB RAM")
+        fail("Промышленному хосту требуется не менее 2 ГиБ ОЗУ")
     if shutil.disk_usage(docker_root).free < 8 * 1024 ** 3:
-        fail("Docker filesystem needs at least 8 GiB free for first-run builds")
+        fail("Для первых сборок в файловой системе Docker необходимо не менее 8 ГиБ свободного места")
     if fresh:
         for port in (80, 443):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 try:
                     sock.bind(("0.0.0.0", port))
                 except OSError:
-                    fail(f"port {port} is already occupied; clean-host preflight failed")
+                    fail(f"Порт {port} уже занят; предварительная проверка чистого хоста не пройдена")
 
 
 def tls_paths(values):
@@ -270,15 +270,15 @@ def tls_paths(values):
     cert = Path(values["LAUNCHER_TLS_CERT_PATH"])
     key = Path(values["LAUNCHER_TLS_KEY_PATH"])
     if not cert.is_absolute() or not key.is_absolute() or cert == key:
-        fail("TLS certificate and key must have different absolute host paths")
+        fail("TLS-сертификат и ключ должны находиться по разным абсолютным путям на хосте")
     if cert.is_symlink() or key.is_symlink():
-        fail("TLS files must not be symlinks (copy the ACME files with install)")
+        fail("TLS-файлы не должны быть символическими ссылками (скопируйте файлы ACME командой install)")
     for path, private in ((cert, False), (key, True)):
         safe_file(path, private=private)
         if path.stat().st_size > 1024 * 1024 or path.stat().st_size == 0:
-            fail("TLS file is empty or too large")
+            fail("TLS-файл пуст или слишком велик")
     if key.stat().st_uid != 0:
-        fail("TLS private key must be root-owned")
+        fail("Закрытый TLS-ключ должен принадлежать root")
     hostname = urllib.parse.urlsplit(values["LAUNCHER_PUBLIC_URL"]).hostname
 
     def openssl(*argv):
@@ -288,7 +288,7 @@ def tls_paths(values):
         except (OSError, subprocess.TimeoutExpired):
             fail("openssl is required and must complete certificate validation")
         if proc.returncode:
-            fail("TLS certificate is invalid, untrusted, expired, mismatched or has the wrong hostname")
+            fail("TLS-сертификат некорректен, недоверенный, просрочен, не совпадает с ключом или относится к другому хосту")
         return proc.stdout
 
     openssl("x509", "-in", cert, "-noout", "-checkhost", hostname)
@@ -297,13 +297,13 @@ def tls_paths(values):
     leaf_public = openssl("x509", "-in", cert, "-pubkey", "-noout")
     key_public = openssl("pkey", "-in", key, "-pubout")
     if hashlib.sha256(leaf_public).digest() != hashlib.sha256(key_public).digest():
-        fail("TLS private key does not match the certificate")
+        fail("Закрытый TLS-ключ не соответствует сертификату")
 
 
 def public_json(url, *, payload=None, headers=None, expected_status=None):
     """Без прокси, перенаправлений, небезопасного TLS, неявных повторов и вывода учётных данных."""
     if urllib.parse.urlsplit(url).scheme != "https":
-        fail("refusing public operation without HTTPS")
+        fail("Публичная операция без HTTPS запрещена")
 
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *unused):
@@ -323,16 +323,16 @@ def public_json(url, *, payload=None, headers=None, expected_status=None):
     try:
         with opener.open(request, timeout=12) as response:
             if response.status != (expected_status if expected_status is not None else (201 if body is not None else 200)):
-                fail(f"public endpoint rejected operation (HTTP {response.status})")
+                fail(f"Публичный API отклонил операцию (HTTP {response.status})")
             content = response.read(1024 * 1024 + 1)
             if len(content) > 1024 * 1024:
-                fail("unexpectedly large public API response")
+                fail("Ответ публичного API неожиданно велик")
             return json.loads(content)
     except urllib.error.HTTPError as exc:
         # Никогда не печатайте тела ответов: они могут отражать секреты.
-        fail(f"public API returned HTTP {exc.code}; inspect server audit securely")
+        fail(f"Публичный API вернул HTTP {exc.code}; проверьте закрытый журнал аудита сервера")
     except (urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
-        fail(f"public HTTPS unavailable or untrusted ({type(exc).__name__})")
+        fail(f"Публичный HTTPS недоступен или не является доверенным ({type(exc).__name__})")
     except (UnicodeError, json.JSONDecodeError):
         fail("public API returned invalid JSON")
 
@@ -341,9 +341,9 @@ def verify_public_ready(values, expected_version=None):
     public = values["LAUNCHER_PUBLIC_URL"].rstrip("/")
     status = public_json(public + "/ready")
     if status.get("status") != "ready":
-        fail("public HTTPS /ready is not ready")
+        fail("Публичная проверка готовности HTTPS /ready не пройдена")
     if expected_version is not None and status.get("version") != expected_version:
-        fail("live API version does not match selected release image")
+        fail("Версия работающего API не соответствует выбранному образу релиза")
     return status
 
 
@@ -356,31 +356,31 @@ def bootstrap_first_admin(args):
     preflight(values, "standard", docker=True)
     tls_paths(values)
     if not values.get("LAUNCHER_BOOTSTRAP_TOKEN") or len(values["LAUNCHER_BOOTSTRAP_TOKEN"]) < 32:
-        fail("first admin requires a strong LAUNCHER_BOOTSTRAP_TOKEN in private env")
+        fail("Для создания первого администратора требуется надёжный LAUNCHER_BOOTSTRAP_TOKEN в закрытом файле окружения")
     address = email.utils.parseaddr(args.email)
     if address[1] != args.email or "@" not in args.email or len(args.email) > 254 or any(c.isspace() for c in args.email):
-        fail("invalid administrator email")
+        fail("Некорректный адрес электронной почты администратора")
     password_file = Path(args.password_file)
     info = safe_file(password_file, private=True)
     if info.st_uid != os.geteuid() or info.st_size > 4096 or info.st_size < 12:
-        fail("admin password file must be owned by invoking user and have 12-4096 bytes")
+        fail("Файл пароля администратора должен принадлежать текущему пользователю и содержать от 12 до 4096 байт")
     password = password_file.read_text(encoding="utf-8").rstrip("\r\n")
     if len(password) < 12 or any(c in password for c in "\r\n\x00"):
-        fail("administrator password must be at least 12 characters, single-line")
+        fail("Пароль администратора должен содержать не менее 12 символов в одной строке")
     public = values["LAUNCHER_PUBLIC_URL"].rstrip("/")
     with exclusive_lock(env.parent / ".launcher-compose.lock"):
         state_file = env.parent / ".launcher-compose-state.json"
         safe_file(state_file, private=True)
         state = json.loads(state_file.read_text())
         if state != {"mode": "standard", "version": values["LAUNCHER_IMAGE_TAG"]}:
-            fail("first-admin requires matching locally installed Standard Compose state")
+            fail("Для создания первого администратора требуется совпадающее состояние локальной установки Standard Compose")
         verify_public_ready(values, values["LAUNCHER_IMAGE_TAG"])
         before = public_json(public + "/api/v1/install/readiness").get("data", {})
         if before.get("bootstrapTokenConsumed") or any(
             c.get("id") == "admin-user" and c.get("status") == "ready"
             for c in before.get("checks", [])
         ):
-            fail("bootstrap already consumed or administrator exists; not retrying")
+            fail("Одноразовый токен уже использован или администратор существует; повторная попытка отменена")
         response = public_json(
             public + "/api/v1/install/bootstrap-admin",
             payload={"email": args.email, "displayName": args.display_name,
@@ -388,18 +388,18 @@ def bootstrap_first_admin(args):
             headers={"X-Launcher-Bootstrap-Token": values["LAUNCHER_BOOTSTRAP_TOKEN"]},
         )
         if response.get("data", {}).get("status") != "admin-created" or response.get("data", {}).get("email") != args.email:
-            fail("API did not confirm creation of the requested administrator")
+            fail("API не подтвердил создание указанного администратора")
         after = public_json(public + "/api/v1/install/readiness").get("data", {})
         if not after.get("bootstrapTokenConsumed") or not any(
             c.get("id") == "admin-user" and c.get("status") == "ready"
             for c in after.get("checks", [])
         ):
-            fail("administrator creation is not durable in installation status")
+            fail("Создание администратора не сохранено в состоянии установки")
         # Настоящий аутентифицированный вход доказывает работу пароля и локального механизма авторизации.
         login = public_json(public + "/api/v1/admin/login", payload={"email": args.email, "password": password}, expected_status=200)
         if not login.get("token") or login.get("user", {}).get("email") != args.email:
-            fail("administrator was created but a real password login did not succeed")
-        print("First administrator created, bootstrap token consumed, login verified over trusted HTTPS")
+            fail("Администратор создан, но фактический вход по паролю не удался")
+        print("Первый администратор создан; одноразовый токен использован; вход через доверенный HTTPS проверен")
         print("Remove the password file securely; log in to Admin and create the first project")
 
 
@@ -407,13 +407,13 @@ def bootstrap_first_admin(args):
 def exclusive_lock(path):
     path = Path(path)
     if path.is_symlink():
-        fail("refusing symlink lock path")
+        fail("Путь блокировки через символическую ссылку отклонён")
     fd = os.open(
         str(path), os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600
     )
     try:
         if os.fstat(fd).st_mode & 0o077:
-            fail("lock file must be private")
+            fail("Файл блокировки должен иметь закрытые права доступа")
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         yield
     finally:
@@ -425,7 +425,7 @@ def compose_project(values):
     # сетей и именованных томов обычного производственного проекта.
     project = values.get("LAUNCHER_COMPOSE_PROJECT", "launcher")
     if not re.fullmatch(r"[a-z][a-z0-9_-]{2,40}", project):
-        fail("invalid LAUNCHER_COMPOSE_PROJECT (lowercase Docker Compose project)")
+        fail("Некорректный LAUNCHER_COMPOSE_PROJECT (имя проекта Docker Compose должно быть в нижнем регистре)")
     return project
 
 
@@ -446,11 +446,11 @@ def compose_args(env, mode):
     values = read_env(env)
     if any(key.startswith("LAUNCHER_0523_HOST_") for key in values):
         if mode != "standard" or not re.fullmatch(r"nl0523[a-z0-9]{8,20}", project):
-            fail("0523 host-control integration may only run in an isolated Standard project")
+            fail("Интеграция управления хостом 0523 разрешена только в изолированном проекте Standard")
         for key in ("LAUNCHER_0523_HOST_TARGETS_FILE", "LAUNCHER_0523_HOST_CA_FILE", "LAUNCHER_0523_HOST_TOKEN_FILE"):
             value = values.get(key, "")
             if not value or not Path(value).is_absolute():
-                fail("missing absolute 0523 host-control trust file: " + key)
+                fail("Отсутствует файл доверия управления хостом 0523 с абсолютным путём: " + key)
             safe_file(value, private=True)
         args += ["-f", str(ROOT / "deploy/production/docker-compose.owner-e2e-0523.yml")]
     return args
@@ -472,7 +472,7 @@ def compose_run(args):
             safe_file(state_file, private=True)
             state = json.loads(state_file.read_text())
         if state and state.get("mode") != mode:
-            fail("deployment mode changed; uninstall old mode first (volumes retained)")
+            fail("Режим развёртывания изменён; сначала удалите прежнюю установку (тома будут сохранены)")
         if args.action in ("check", "up"):
             host_preflight(fresh=not bool(state))
         if (
@@ -485,11 +485,11 @@ def compose_run(args):
                 "upgrade requires --backup-confirmed after verified database and blob backups"
             )
         if args.action == "up" and not state and len(values.get("LAUNCHER_BOOTSTRAP_TOKEN", "")) < 32:
-            fail("fresh production deployment requires a strong one-time LAUNCHER_BOOTSTRAP_TOKEN")
+            fail("Для новой промышленной установки требуется надёжный одноразовый LAUNCHER_BOOTSTRAP_TOKEN")
         base = compose_args(env, mode)
         if args.action == "check":
             execute(base + ["config", "--quiet"])
-            print(f"Compose {mode} configuration valid")
+            print(f"Конфигурация Compose для режима {mode} корректна")
         elif args.action == "up":
             execute(base + ["config", "--quiet"])
             execute(
@@ -503,13 +503,13 @@ def compose_run(args):
                 + "\n",
                 0o600,
             )
-            print("Compose started: real backend ready through trusted public HTTPS; first administrator still needs bootstrap")
+            print("Compose запущен: реальный Backend доступен через доверенный публичный HTTPS; первого администратора ещё нужно создать")
         elif args.action == "status":
             execute(base + ["ps"])
         elif args.action in ("down", "uninstall"):
             if args.action == "uninstall" and args.purge_data:
                 if args.confirm != "PURGE-LAUNCHER-VOLUMES":
-                    fail("purge requires --confirm PURGE-LAUNCHER-VOLUMES")
+                    fail("Для удаления томов требуется --confirm PURGE-LAUNCHER-VOLUMES")
                 execute(base + ["down", "--remove-orphans", "--volumes"])
             else:
                 execute(base + ["down", "--remove-orphans"])
@@ -517,22 +517,22 @@ def compose_run(args):
                 state_file.unlink(missing_ok=True)
                 sync_directory(env.parent)
                 print(
-                    "Compose application removed; configuration and secrets retained; "
+                    "Приложение Compose удалено; конфигурация и секреты сохранены; "
                     + (
-                        "project volumes purged"
+                        "Тома проекта удалены"
                         if args.purge_data
-                        else "project volumes retained"
+                        else "Тома проекта сохранены"
                     )
                 )
         else:
-            fail("unknown compose action")
+            fail("Неизвестная операция Compose")
 
 
 def require_root():
     if os.geteuid() != 0:
-        fail("native service operations require root")
+        fail("Для операций с нативной службой требуются права root")
     if sys.platform != "linux" or not Path("/run/systemd/system").exists():
-        fail("native service operations require Linux with running systemd")
+        fail("Для операций с нативной службой требуется Linux с работающим systemd")
 
 
 def no_symlinks_or_mounts(path):
@@ -541,7 +541,7 @@ def no_symlinks_or_mounts(path):
     if not path.exists() and not path.is_symlink():
         return
     if path.is_symlink() or path.is_mount():
-        fail("refusing linked/mounted removal target")
+        fail("Удаление объекта со ссылкой или точкой монтирования отклонено")
     for current, dirs, files in os.walk(path, followlinks=False):
         for name in dirs + files:
             target = Path(current) / name
@@ -556,14 +556,14 @@ def managed_dir(path, marker, *, create=False):
     owner_marker = path / marker
     if not owner_marker.exists():
         if not create:
-            fail(f"missing ownership marker: {path}")
+            fail(f"Отсутствует маркер владельца: {path}")
         # Не присваивайте посторонний существующий непустой каталог.
         if any(path.iterdir()):
-            fail(f"nonempty unmanaged installation directory: {path}")
+            fail(f"Каталог установки не пуст и не управляется установщиком: {path}")
         write_exclusive(owner_marker, MARKER_VALUE)
     safe_file(owner_marker, private=True)
     if owner_marker.read_text() != MARKER_VALUE:
-        fail("ownership marker mismatch")
+        fail("Маркер владельца не совпадает")
 
 
 def atomic_symlink(target, link):
@@ -581,18 +581,18 @@ def existing_release():
     if not link.exists() and not link.is_symlink():
         return None
     if not link.is_symlink():
-        fail("current release pointer is not a symlink")
+        fail("Указатель текущего релиза не является символической ссылкой")
     target = os.readlink(link)
     if not re.fullmatch(r"releases/[A-Za-z0-9][A-Za-z0-9._-]{0,63}", target):
-        fail("current release pointer is outside managed releases")
+        fail("Указатель текущего релиза расположен за пределами управляемых релизов")
     if not (INSTALL_ROOT / target).is_dir():
-        fail("current release pointer is broken")
+        fail("Указатель текущего релиза повреждён")
     return target
 
 
 def service_unit(env_path):
     if any(c in str(env_path) for c in "\r\n %\\\"'"):
-        fail("unsafe native environment path")
+        fail("Небезопасный путь к окружению нативной службы")
     return f"""{UNIT_MARKER}
 [Unit]
 Description=Launcher API (DEP09 managed)
@@ -628,7 +628,7 @@ WantedBy=multi-user.target
 
 def health_check(url):
     if url != "http://127.0.0.1:8080/ready":
-        fail("native health check only supports fixed loopback /ready endpoint")
+        fail("Нативная проверка состояния поддерживает только фиксированный локальный адрес /ready")
 
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *unused):
@@ -643,13 +643,13 @@ def health_check(url):
         except (OSError, urllib.error.URLError):
             pass
         time.sleep(1)
-    fail("native readiness check failed; refusing successful activation")
+    fail("Проверка готовности нативной службы не пройдена; успешная активация отклонена")
 
 
 def native_install(args):
     require_root()
     if safe_file(args.env, private=True).st_uid != 0:
-        fail("native environment must be root-owned")
+        fail("Окружение нативной службы должно принадлежать root")
     values = read_env(Path(args.env))
     preflight(values, "standard", docker=False)
     binary_info = safe_file(args.installer, executable=True)
@@ -660,7 +660,7 @@ def native_install(args):
     with exclusive_lock(Path("/run/launcher-deploy.lock")):
         # Не заменяйте неуправляемые unit-файлы systemd.
         if UNIT.exists() and UNIT_MARKER not in UNIT.read_text():
-            fail("systemd unit is not managed by DEP09")
+            fail("Служба systemd не управляется DEP09")
         managed_dir(INSTALL_ROOT, OWNER, create=True)
         releases = INSTALL_ROOT / "releases"
         releases.mkdir(mode=0o755, exist_ok=True)
@@ -668,7 +668,7 @@ def native_install(args):
         old = existing_release()
         if old and (not args.upgrade or not args.backup_confirmed):
             fail(
-                "upgrade requires --upgrade and --backup-confirmed (verify backups independently)"
+                "Для обновления требуются --upgrade и --backup-confirmed (проверьте резервные копии независимо)"
             )
         verified = execute(
             [
@@ -683,19 +683,19 @@ def native_install(args):
         )
         matched = VERSION_RE.search(verified.stdout or "")
         if not matched:
-            fail("trusted installer did not report signed bundle version")
+            fail("Доверенный установщик не сообщил версию подписанного пакета")
         version = matched.group(1)
         if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) or tuple(
             map(int, version.split("."))
         ) < (0, 32, 13):
-            fail("DEP09 requires a signed release version 0.32.13 or later")
+            fail("DEP09 требует подписанный релиз версии 0.32.13 или новее")
         if old and tuple(map(int, version.split("."))) <= tuple(
             map(int, old.split("/")[1].split("."))
         ):
-            fail("native upgrade version must increase monotonically")
+            fail("Версия нативного обновления должна строго возрастать")
         target = releases / version
         if target.exists() or target.is_symlink():
-            fail("signed release directory already exists (no overwrite)")
+            fail("Каталог подписанного релиза уже существует (перезапись запрещена)")
         execute(
             [
                 args.installer,
@@ -716,10 +716,10 @@ def native_install(args):
             write_exclusive(STATE_ROOT / DATA_MARKER, MARKER_VALUE)
         safe_directory(STATE_ROOT)
         if not (STATE_ROOT / DATA_MARKER).exists():
-            fail("refusing unmanaged state directory")
+            fail("Неуправляемый каталог состояния отклонён")
         safe_file(STATE_ROOT / DATA_MARKER, private=True)
         if (STATE_ROOT / DATA_MARKER).read_text() != MARKER_VALUE:
-            fail("state marker mismatch")
+            fail("Маркер состояния не совпадает")
         if execute(["id", "-u", "launcher"], capture=True, check=False).returncode:
             execute(
                 [
@@ -753,7 +753,7 @@ def native_install(args):
                 directory = Path(value)
                 if not directory.is_absolute() or STATE_ROOT not in directory.parents:
                     fail(
-                        f"{name} must be inside managed state root for native installation"
+                        f"{name} должен находиться внутри управляемого корневого каталога состояния нативной установки"
                     )
                 data_paths.append(directory)
         for directory in data_paths:
@@ -765,13 +765,13 @@ def native_install(args):
             if cursor != STATE_ROOT and not (
                 cursor.is_dir() and STATE_ROOT in cursor.parents
             ):
-                fail("unsafe runtime path")
+                fail("Небезопасный путь Runtime")
             for path in reversed(missing):
                 path.mkdir(mode=0o700)
                 os.chown(path, identity.pw_uid, identity.pw_gid)
             safe_directory(directory)
             if directory.stat().st_uid != identity.pw_uid:
-                fail(f"runtime directory not owned by service user: {directory}")
+                fail(f"Каталог Runtime не принадлежит пользователю службы: {directory}")
         # Управляемая первичная установка не должна конфликтовать со сторонним unit.
         old_unit = UNIT.read_text() if UNIT.exists() else None
         if (
@@ -802,7 +802,7 @@ def native_install(args):
                 execute(["systemctl", "start", UNIT_NAME], check=False)
             raise
         print(
-            "Launcher 0.32.13 native service activated; old release retained for rollback"
+            "Нативная служба Launcher 0.32.13 активирована; предыдущий релиз сохранён для отката"
         )
 
 
@@ -814,12 +814,12 @@ def native_uninstall(args):
             safe_directory(STATE_ROOT)
             safe_file(STATE_ROOT / DATA_MARKER, private=True)
             if (STATE_ROOT / DATA_MARKER).read_text() != MARKER_VALUE:
-                fail("state marker mismatch")
+                fail("Маркер состояния не совпадает")
             no_symlinks_or_mounts(STATE_ROOT)
         if UNIT.exists():
             safe_file(UNIT)
             if UNIT_MARKER not in UNIT.read_text():
-                fail("refusing to remove foreign systemd unit")
+                fail("Удаление сторонней службы systemd отклонено")
             execute(["systemctl", "disable", "--now", UNIT_NAME])
             UNIT.unlink()
             execute(["systemctl", "daemon-reload"])
@@ -837,14 +837,14 @@ def native_uninstall(args):
             INSTALL_ROOT.rmdir()
         if args.purge_data:
             if args.confirm != "PURGE-LAUNCHER-NATIVE-DATA":
-                fail("purge requires --confirm PURGE-LAUNCHER-NATIVE-DATA")
+                fail("Для удаления данных требуется --confirm PURGE-LAUNCHER-NATIVE-DATA")
             shutil.rmtree(STATE_ROOT)
         print(
-            "Native service removed; external PostgreSQL and /etc secrets untouched; "
+            "Нативная служба удалена; внешняя PostgreSQL и секреты /etc не затронуты; "
             + (
-                "local application data deleted"
+                "Локальные данные приложения удалены"
                 if args.purge_data
-                else "local application data retained"
+                else "Локальные данные приложения сохранены"
             )
         )
 
@@ -879,10 +879,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.provider == "compose":
         if args.purge_data and args.action != "uninstall":
-            fail("--purge-data allowed only with uninstall")
+            fail("Параметр --purge-data разрешён только при удалении установки")
         if args.action == "first-admin":
             if args.mode != "standard" or not args.email or not args.password_file:
-                fail("compose first-admin requires --mode standard, --email and --password-file")
+                fail("Для создания первого администратора через Compose требуются --mode standard, --email и --password-file")
             bootstrap_first_admin(args)
         else:
             compose_run(args)
@@ -893,7 +893,7 @@ def main(argv=None):
     else:
         # Проверяйте подтверждение разрушительного действия ДО изменения файлов или служб.
         if args.purge_data and args.confirm != "PURGE-LAUNCHER-NATIVE-DATA":
-            fail("purge requires --confirm PURGE-LAUNCHER-NATIVE-DATA")
+            fail("Для удаления данных требуется --confirm PURGE-LAUNCHER-NATIVE-DATA")
         native_uninstall(args)
 
 

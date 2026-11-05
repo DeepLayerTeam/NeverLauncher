@@ -22,35 +22,35 @@ final class VanillaRconClient implements AutoCloseable {
         int id = ids.incrementAndGet();
         send(id, 3, password == null ? "" : password);
         Packet response = read();
-        if (response.id == -1 || response.id != id) throw new IOException("Minecraft RCON authentication failed");
+        if (response.id == -1 || response.id != id) throw new IOException("Ошибка аутентификации Minecraft RCON");
     }
 
     synchronized String command(String command) throws IOException {
         String value = command == null ? "" : command.replace('\r', ' ').replace('\n', ' ').trim();
-        if (value.isBlank() || value.length() > 8192) throw new IOException("invalid RCON command length");
+        if (value.isBlank() || value.length() > 8192) throw new IOException("Некорректная длина команды RCON");
         int id = ids.incrementAndGet();
         send(id, 2, value);
         Packet response = read();
-        if (response.id != id) throw new IOException("RCON response id mismatch");
+        if (response.id != id) throw new IOException("Идентификатор ответа RCON не совпадает");
         return response.body;
     }
 
     private void send(int id, int type, String body) throws IOException {
         byte[] payload = body.getBytes(StandardCharsets.UTF_8);
         int length = 4 + 4 + payload.length + 2;
-        if (length > MAX_PACKET) throw new IOException("RCON packet too large");
+        if (length > MAX_PACKET) throw new IOException("Пакет RCON слишком велик");
         writeLEInt(out, length); writeLEInt(out, id); writeLEInt(out, type);
         out.write(payload); out.writeByte(0); out.writeByte(0); out.flush();
     }
 
     private Packet read() throws IOException {
         int length = readLEInt(in);
-        if (length < 10 || length > MAX_PACKET) throw new IOException("invalid RCON packet length");
+        if (length < 10 || length > MAX_PACKET) throw new IOException("Некорректная длина пакета RCON");
         byte[] packet = in.readNBytes(length);
-        if (packet.length != length) throw new EOFException("truncated RCON packet");
+        if (packet.length != length) throw new EOFException("Неполный пакет RCON");
         int id = leInt(packet, 0); int type = leInt(packet, 4);
         int bodyLen = length - 10;
-        if (packet[length - 2] != 0 || packet[length - 1] != 0) throw new IOException("invalid RCON terminator");
+        if (packet[length - 2] != 0 || packet[length - 1] != 0) throw new IOException("Некорректный завершающий символ RCON");
         return new Packet(id, type, new String(packet, 8, bodyLen, StandardCharsets.UTF_8));
     }
 

@@ -184,11 +184,11 @@ func assertPinnedPayload(lock *loaderResolutionLock, payloadURL string, payload 
 		return nil
 	}
 	if lock.PayloadURL != payloadURL {
-		return fmt.Errorf("loader resolution lock payload URL mismatch: pinned %s got %s", lock.PayloadURL, payloadURL)
+		return fmt.Errorf("Адрес зафиксированных данных загрузчика не совпадает: ожидался %s, получен %s", lock.PayloadURL, payloadURL)
 	}
 	actual := sha256HexBytes(payload)
 	if !strings.EqualFold(lock.PayloadSHA256, actual) {
-		return fmt.Errorf("loader resolution lock payload SHA-256 mismatch: pinned %s got %s", lock.PayloadSHA256, actual)
+		return fmt.Errorf("Несовпадение SHA-256 зафиксированных данных загрузчика: ожидалось %s, получено %s", lock.PayloadSHA256, actual)
 	}
 	return nil
 }
@@ -198,10 +198,10 @@ func assertPinnedPayloadSHA256(lock *loaderResolutionLock, payloadURL, actualSHA
 		return nil
 	}
 	if lock.PayloadURL != payloadURL {
-		return fmt.Errorf("loader resolution lock payload URL mismatch: pinned %s got %s", lock.PayloadURL, payloadURL)
+		return fmt.Errorf("Адрес зафиксированных данных загрузчика не совпадает: ожидался %s, получен %s", lock.PayloadURL, payloadURL)
 	}
 	if !strings.EqualFold(lock.PayloadSHA256, strings.TrimSpace(actualSHA256)) {
-		return fmt.Errorf("loader resolution lock payload SHA-256 mismatch: pinned %s got %s", lock.PayloadSHA256, actualSHA256)
+		return fmt.Errorf("Несовпадение SHA-256 зафиксированных данных загрузчика: ожидалось %s, получено %s", lock.PayloadSHA256, actualSHA256)
 	}
 	return nil
 }

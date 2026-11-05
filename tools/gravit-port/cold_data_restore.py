@@ -67,7 +67,7 @@ def entries(root: Path):
 
 
 def write_manifest(root: Path, output: Path, run_id: str):
-    co.require(bool(co.ROUTE.fullmatch(run_id)), "valid run ID required")
+    co.require(bool(co.ROUTE.fullmatch(run_id)), "Требуется корректный идентификатор запуска")
     co.require(output.is_absolute() and not output.exists(), "new absolute manifest path required")
     manifest = {"format":FORMAT, "runId":run_id, "files":entries(root)}
     co.require(manifest["files"], "empty backup not accepted")
@@ -138,7 +138,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
     old = target.with_name(target.name + ".before-" + run_id)
     co.require(not old.exists() and not old.is_symlink(), "retained old directory already exists")
     journal = directory / "file-restore-state.json"
-    co.require(not journal.exists(), "file restore already attempted; inspect journal")
+    co.require(not journal.exists(), "Попытка восстановления файлов уже предпринималась; проверьте журнал")
     staged = Path(tempfile.mkdtemp(prefix=".never-restoring-", dir=target.parent))
     state = {"format":FORMAT,"runId":run_id,"phase":"staging","target":str(target),
              "retained":str(old),"stage":str(staged),"manifestSha256":co.digest(json.dumps(manifest,sort_keys=True).encode())}
@@ -176,7 +176,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
                 final = os.fstat(f.fileno())
                 co.require(final.st_size == st.st_size and final.st_mtime_ns == st.st_mtime_ns,
                            "source backup file changed during restore")
-            co.require(sha.hexdigest() == item["sha256"], "backup content SHA-256 differs")
+            co.require(sha.hexdigest() == item["sha256"], "SHA-256 содержимого резервной копии не совпадает")
         co.require(entries(staged) == files, "staged restore differs from sealed manifest")
         # A root-operated restore must not leave the world unreadable by the
         # dedicated game service user. Preserve original target ownership and
@@ -212,7 +212,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
         try: os.fsync(dfd)
         finally: os.close(dfd)
         record("installed")
-        co.require(entries(target) == files, "post-restore data checksum mismatch: keep traffic closed")
+        co.require(entries(target) == files, "После восстановления контрольная сумма данных не совпадает: оставьте входящий трафик закрытым")
         record("verified_installed")
     except BaseException:
         # A crash in the rename window is recoverable using the retained old folder.
@@ -247,7 +247,7 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
                    "unsafe leftover journal file")
         nextfile.unlink()
     if target.is_dir() and old.is_dir():
-        co.require(entries(target) == files, "installed files do not match backup; manual recovery required")
+        co.require(entries(target) == files, "Установленные файлы не соответствуют резервной копии; требуется ручное восстановление")
         state["phase"] = "verified_installed"
     elif not target.exists() and old.is_dir():
         os.replace(old, target)
@@ -302,7 +302,7 @@ def main(argv=None):
                 if args.command == "restore":
                     restore(source, Path(args.target), co.document(mf, 16 << 20), directory, args.run)
                 else:
-                    print("restore recovery: " + recover(Path(args.target), co.document(mf, 16 << 20), directory, args.run))
+                    print("Восстановление после сбоя: " + recover(Path(args.target), co.document(mf, 16 << 20), directory, args.run))
             finally:
                 os.close(fd)
         return 0

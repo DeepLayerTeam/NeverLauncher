@@ -131,14 +131,14 @@ impl GuardSupervisor {
         let mut command=Command::new(&executable);
         command.arg("--socket").arg(&endpoint).arg("--parent-pid").arg(parent_pid.to_string()).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true);
         prepare_guard_command(&mut command);
-        let mut child=command.spawn().map_err(|e|format!("failed to spawn Guard {}: {e}",executable.display()))?;
-        let guard_pid=child.id().ok_or_else(||"Guard PID unavailable".to_string())?;
-        let mut stdin=child.stdin.take().ok_or_else(||"Guard bootstrap stdin unavailable".to_string())?;
+        let mut child=command.spawn().map_err(|e|format!("Не удалось запустить Guard {}: {e}",executable.display()))?;
+        let guard_pid=child.id().ok_or_else(||"PID процесса Guard недоступен".to_string())?;
+        let mut stdin=child.stdin.take().ok_or_else(||"Стандартный ввод для запуска Guard недоступен".to_string())?;
         if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("Ошибка: запись начальных данных Guard: {e}")); }
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
         let (stream,session_key,_handshake_status)=match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),client_authenticate(stream,&endpoint,parent_pid,guard_pid,&secret)).await {
-            Ok(Ok(v))=>v, Ok(Err(e))=>{secret.zeroize();let _=child.kill().await;return Err(e)}, Err(_)=>{secret.zeroize();let _=child.kill().await;return Err("Guard macOS authenticated IPC handshake timeout".into())}
+            Ok(Ok(v))=>v, Ok(Err(e))=>{secret.zeroize();let _=child.kill().await;return Err(e)}, Err(_)=>{secret.zeroize();let _=child.kill().await;return Err("Guard macOS: истекло время ожидания аутентифицированного IPC-соединения".into())}
         };
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
@@ -151,8 +151,8 @@ impl GuardSupervisor {
     /// Работающая защищённая игра никогда не должна незаметно перезапускать свой контролирующий Guard.
     pub async fn ping_running(&self)->Result<(),String>{
         let mut s=self.inner.lock().await;
-        let h=s.as_mut().ok_or("macOS Guard disappeared during game")?;
-        if h.child.try_wait().map_err(|e|e.to_string())?.is_some(){return Err("macOS Guard exited during game".into())}
+        let h=s.as_mut().ok_or("Guard macOS пропал во время игры")?;
+        if h.child.try_wait().map_err(|e|e.to_string())?.is_some(){return Err("Guard macOS завершил работу во время игры".into())}
         let v=send_command(h,"ping","").await?;
         if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("Некорректное значение: сигнал активности Guard в macOS".into())}
     }
@@ -177,29 +177,29 @@ fn runtime_dir()->Result<PathBuf,String>{
     std::fs::create_dir_all(&dir).map_err(|e|format!("Ошибка: создание каталога среды выполнения macOS: {e}"))?;
     std::fs::set_permissions(&dir,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?;
     let dm=std::fs::metadata(&dir).map_err(|e|e.to_string())?;
-    if dm.uid()!=uid||(dm.mode()&0o077)!=0{return Err("macOS Launcher runtime directory permissions are unsafe".into())}
+    if dm.uid()!=uid||(dm.mode()&0o077)!=0{return Err("Небезопасные права доступа к каталогу Runtime лаунчера в macOS".into())}
     Ok(dir)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{
     let mut r=[0u8;8];OsRng.fill_bytes(&mut r);
     let endpoint=runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)));
-    if endpoint.as_os_str().len()>100{return Err("macOS Guard Unix socket path exceeds sockaddr_un limit".into())}
+    if endpoint.as_os_str().len()>100{return Err("Путь Unix-сокета Guard macOS превышает предел sockaddr_un".into())}
     Ok(endpoint)
 }
 fn validate_endpoint(path:&Path)->Result<(),String>{
     let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?;
-    let parent=path.parent().ok_or("socket parent missing")?.canonicalize().map_err(|e|e.to_string())?;
-    if parent!=base{return Err("Guard socket outside private macOS runtime directory".into())}
-    let name=path.file_name().and_then(|v|v.to_str()).ok_or("socket filename invalid")?;
-    if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Guard socket name malformed".into())}
+    let parent=path.parent().ok_or("Родительский каталог сокета отсутствует")?.canonicalize().map_err(|e|e.to_string())?;
+    if parent!=base{return Err("Сокет Guard расположен за пределами закрытого каталога Runtime macOS".into())}
+    let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное имя файла сокета")?;
+    if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Некорректное имя сокета Guard".into())}
     Ok(())
 }
 fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{
-    let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} failed: {e}",path.display()))?;
-    if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} must be a regular non-symlink file",path.display()))}
+    let sm=std::fs::symlink_metadata(path).map_err(|e|format!("Не удалось получить сведения о файле {}: {e}",path.display()))?;
+    if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} должен быть обычным файлом, а не символической ссылкой",path.display()))}
     let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}
-    if sm.mode()&0o022!=0{return Err(format!("{} must not be group/world writable",path.display()))}
-    if executable&&sm.mode()&0o111==0{return Err(format!("{} is not executable",path.display()))}
+    if sm.mode()&0o022!=0{return Err(format!("{} не должен разрешать запись группе или всем пользователям",path.display()))}
+    if executable&&sm.mode()&0o111==0{return Err(format!("{} не является исполняемым файлом",path.display()))}
     Ok(())
 }
 
@@ -217,16 +217,16 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 }
 
 fn bundle_root(desktop:&Path)->Result<PathBuf,String>{
-    let macos=desktop.parent().ok_or("desktop MacOS directory missing")?;
+    let macos=desktop.parent().ok_or("Каталог Desktop для macOS отсутствует")?;
     if macos.file_name().and_then(|v|v.to_str())!=Some("MacOS"){return Err("Desktop must run from a signed .app/Contents/MacOS bundle".into())}
-    let contents=macos.parent().ok_or("app Contents directory missing")?;
+    let contents=macos.parent().ok_or("В приложении отсутствует каталог Contents")?;
     if contents.file_name().and_then(|v|v.to_str())!=Some("Contents"){return Err("Desktop must run from a signed .app Contents directory".into())}
-    contents.parent().map(Path::to_path_buf).ok_or_else(||"app bundle root missing".to_string())
+    contents.parent().map(Path::to_path_buf).ok_or_else(||"Корневой каталог пакета приложения отсутствует".to_string())
 }
 fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
-    let desktop_dir=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?;
-    let guard_dir=guard.parent().ok_or("guard parent missing")?.canonicalize().map_err(|e|e.to_string())?;
+    let desktop_dir=desktop.parent().ok_or("Родительский процесс Desktop отсутствует")?.canonicalize().map_err(|e|e.to_string())?;
+    let guard_dir=guard.parent().ok_or("Родительский процесс Guard отсутствует")?.canonicalize().map_err(|e|e.to_string())?;
     let app=bundle_root(&desktop)?;
     let manifest_path=app.join("Contents/Resources").join(PACKAGE_MANIFEST);
     validate_secure_file(&manifest_path,false)?;
@@ -252,17 +252,17 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
             ("desktop-launcher",desktop.as_path(),"Launcher.app/Contents/MacOS/launcher-desktop"),
             ("guard",guard,"Launcher.app/Contents/Helpers/guard"),
         ] {
-            let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
-            if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
+            let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("Артефакт пакета macOS отсутствует: {component}"))?;
+            if artifact.bundle_path!=expected_bundle_path{return Err(format!("Путь компонента {component} в пакете macOS не совпадает"))}
             if !external_hash_binding {
-                let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
+                let metadata=std::fs::metadata(path).map_err(|e|format!("Ошибка получения метаданных {}: {e}",path.display()))?;
                 if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("Ошибка: проверка артефактов пакета macOS: {component}"))}
             }
             if signing_team.is_empty(){signing_team=artifact.team_id.clone()} else if !artifact.team_id.is_empty()&&!artifact.team_id.eq_ignore_ascii_case(&signing_team){return Err("macOS package signing team is inconsistent".into())}
         }
     } else if !external_hash_binding {
         for (path, expected_size, expected_sha256) in [(desktop.as_path(), manifest.desktop_size, manifest.desktop_sha256.as_str()), (guard, manifest.guard_size, manifest.guard_sha256.as_str())] {
-            let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
+            let metadata=std::fs::metadata(path).map_err(|e|format!("Ошибка получения метаданных {}: {e}",path.display()))?;
             if metadata.len()!=expected_size{return Err(format!("macOS package size mismatch for {}",path.display()))}
             let actual=sha256_file(path)?;
             if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("macOS package SHA-256 mismatch for {}",path.display()))}
@@ -283,7 +283,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{
     let exe=std::env::current_exe().map_err(|e|e.to_string())?;
-    let macos=exe.parent().ok_or("desktop MacOS directory missing")?;
+    let macos=exe.parent().ok_or("Каталог Desktop для macOS отсутствует")?;
     let contents=macos.parent().ok_or("desktop Contents directory missing")?;
     let helper=contents.join("Helpers").join("guard");
     if helper.is_file(){return Ok(helper)}
@@ -324,7 +324,7 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"Превышено время ожидания записи в IPC Guard".to_string())??;
     let response_timeout = if matches!(command, "integrity-evidence" | "guard-attestation") { EVIDENCE_COMMAND_TIMEOUT_SECS } else { COMMAND_TIMEOUT_SECS };
     let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("Превышено время ожидания ответа IPC Guard на команду {command}"))??;
-    if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Несовпадение: привязка ответа Guard".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"Некорректный MAC ответа")?){return Err("Некорректное значение: код аутентичности ответа Guard".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Некорректное значение: JSON-ответ Guard: {e}"))
+    if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Несовпадение: привязка ответа Guard".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"Некорректный MAC ответа")?){return Err("Некорректное значение: код аутентичности ответа Guard".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("Исчерпан диапазон номеров сообщений IPC")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Некорректное значение: JSON-ответ Guard: {e}"))
 }
 fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Некорректное значение: состояние Guard: {e}"))?;validate_release_identity(&s)?;Ok(s)}
 fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Несовпадение версий релиза Guard и Desktop: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Guard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Несовпадение протоколов Guard и Desktop: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Состояние Guard не прошло обязательную проверку доверия среды выполнения".into())}Ok(())}
@@ -335,10 +335,10 @@ fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAtte
 pub async fn run_macos_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
     validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("Guard macOS parent mismatch expected={parent_pid} observed={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
     let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("Ошибка: чтение секрета начальной инициализации: {e}"))?; }
-    if endpoint.exists(){return Err("Unix-сокет Guard уже существует".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
+    if endpoint.exists(){return Err("Unix-сокет Guard уже существует".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("Не удалось привязать сокет {}: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
     let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("Ошибка: проверка прав доступа к Unix-сокету Guard".into())}
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
-    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Истёк срок ожидания аутентификации Guard при запуске".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Guard accept timeout".to_string())?.map_err(|e|e.to_string())?;
+    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Истёк срок ожидания аутентификации Guard при запуске".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Истекло время ожидания подключения Guard".to_string())?.map_err(|e|e.to_string())?;
         if verify_peer(&stream,parent_pid,current_uid()).is_err(){continue}
         match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),server_authenticate(stream,&endpoint,parent_pid,started,&secret,&policy,&hard)).await {Ok(Ok((stream,key)))=>{secret.zeroize();let r=serve_commands(stream,key,parent_pid,started,policy,hard).await;let _=std::fs::remove_file(&endpoint);return r},_=>continue}
     }
@@ -463,7 +463,7 @@ async fn serve_commands(
                     Ok(attestation) => (
                         true,
                         serde_json::to_string(&attestation).map_err(|err| {
-                            format!("Guard attestation serialization failed: {err}")
+                            format!("Не удалось сериализовать подтверждение Guard: {err}")
                         })?,
                         false,
                     ),
@@ -471,7 +471,7 @@ async fn serve_commands(
                 }
             }
             "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
-            _ => (false, "unsupported command".into(), false),
+            _ => (false, "Команда не поддерживается".into(), false),
         };
 
         let mac = response_mac(&key, sequence, &request.request_id, ok, &payload);
@@ -490,13 +490,13 @@ async fn serve_commands(
         if shutdown {
             return Ok(());
         }
-        sequence = sequence.checked_add(1).ok_or("sequence exhausted")?;
+        sequence = sequence.checked_add(1).ok_or("Исчерпан диапазон номеров последовательности")?;
     }
 }
 
 async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
 async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(one[0]);}if b.is_empty(){return Err("Пустое значение: кадр IPC".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
-fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} invalid hex"))?;if b.len()!=32{return Err(format!("{n} invalid length"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
+fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} invalid hex"))?;if b.len()!=32{return Err(format!("{n}: некорректная длина"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
 #[derive(Clone, Copy)]
 struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,started:u64,client_nonce:&'a [u8;32],server_nonce:&'a [u8;32]}
 #[derive(Clone, Copy)]

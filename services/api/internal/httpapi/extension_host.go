@@ -33,7 +33,7 @@ func (s Server) extensionHostDetail0205(w http.ResponseWriter, r *http.Request) 
 	}
 	item, err := s.ExtensionHost.Get(extensionHostKey0205(r))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "extension host runtime not found")
+		writeError(w, 404, "Среда выполнения хоста расширений не найдена")
 		return
 	}
 	if err != nil {
@@ -50,7 +50,7 @@ func (s Server) extensionHostLogs0205(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	items, err := s.ExtensionHost.Logs(extensionHostKey0205(r), limit)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "extension host runtime not found")
+		writeError(w, 404, "Среда выполнения хоста расширений не найдена")
 		return
 	}
 	if err != nil {
@@ -121,22 +121,22 @@ func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request)
 // и отзыв Java перед возвратом результата.
 func (s Server) extensionHostProbe0491(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil || s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "extension host unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Хост расширений недоступен")
 		return
 	}
 	key := extensionHostKey0205(r)
 	before, err := s.ExtensionHost.Get(key)
 	if err != nil {
-		writeError(w, http.StatusConflict, "extension host not running")
+		writeError(w, http.StatusConflict, "Хост расширений не запущен")
 		return
 	}
 	if before.Runtime != "java-jvm" || before.State != "running" || !before.Healthy || before.InstanceID == "" {
-		writeError(w, http.StatusConflict, "Java extension host not healthy")
+		writeError(w, http.StatusConflict, "Хост Java-расширений находится в неработоспособном состоянии")
 		return
 	}
 	payload, err := s.ExtensionHost.CallJavaRPC0304(r.Context(), key, "health", json.RawMessage(`{}`))
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "Java extension host RPC failed")
+		writeError(w, http.StatusServiceUnavailable, "Ошибка RPC хоста Java-расширений")
 		return
 	}
 	var result struct {
@@ -144,14 +144,14 @@ func (s Server) extensionHostProbe0491(w http.ResponseWriter, r *http.Request) {
 		Responsive bool   `json:"responsive"`
 	}
 	if err := json.Unmarshal(payload, &result); err != nil || result.State != "RUNNING" || !result.Responsive {
-		writeError(w, http.StatusServiceUnavailable, "Java extension host did not acknowledge RUNNING")
+		writeError(w, http.StatusServiceUnavailable, "Хост Java-расширений не подтвердил состояние RUNNING")
 		return
 	}
 	after, err := s.ExtensionHost.Get(key)
 	if err != nil || after.Runtime != "java-jvm" || after.State != "running" || !after.Healthy ||
 		before.Generation != after.Generation || before.InstanceID != after.InstanceID ||
 		before.Version != after.Version || after.InstanceID == "" {
-		writeError(w, http.StatusConflict, "Java host changed during live probe")
+		writeError(w, http.StatusConflict, "Хост Java изменился во время проверки работающей системы")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

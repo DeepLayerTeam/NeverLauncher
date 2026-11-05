@@ -20,7 +20,7 @@ func (s Server) eventBusStatus0206(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) eventSubscriptions0206(w http.ResponseWriter, r *http.Request) {
 	if s.EventBus == nil {
-		writeError(w, http.StatusServiceUnavailable, "event bus disabled")
+		writeError(w, http.StatusServiceUnavailable, "Шина событий отключена")
 		return
 	}
 	items, err := s.EventBus.Subscriptions(r.Context(), strings.ToLower(strings.TrimSpace(r.URL.Query().Get("extensionId"))), strings.ToLower(strings.TrimSpace(r.URL.Query().Get("scope"))), strings.TrimSpace(r.URL.Query().Get("scopeId")))
@@ -32,7 +32,7 @@ func (s Server) eventSubscriptions0206(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) eventDeadLetters0206(w http.ResponseWriter, r *http.Request) {
 	if s.EventBus == nil {
-		writeError(w, http.StatusServiceUnavailable, "event bus disabled")
+		writeError(w, http.StatusServiceUnavailable, "Шина событий отключена")
 		return
 	}
 	limit := 100

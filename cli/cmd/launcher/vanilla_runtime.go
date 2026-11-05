@@ -1991,7 +1991,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.6 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Java не соответствует метаданным Mojang (ожидалось %d, получено %d)", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
@@ -2000,7 +2000,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.7 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Java не соответствует метаданным Mojang (ожидалось %d, получено %d)", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
@@ -2009,7 +2009,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.8 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Java не соответствует метаданным Mojang (ожидалось %d, получено %d)", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}

@@ -414,7 +414,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует внешний current trust policy через --trust-policy или LAUNCHER_RELEASE_TRUST_POLICY_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, currentPolicyPath); err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("Текущая политика доверия: %w", err)
 	}
 
 	now := time.Now().UTC()
@@ -428,11 +428,11 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	}
 	currentPolicy, err := loadReleaseTrustPolicy0158(currentPolicyPath)
 	if err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("Текущая политика доверия: %w", err)
 	}
 	currentRootFP, err := verifyReleaseTrustPolicy0158(currentPolicy, resolvedRoot, now, true)
 	if err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("Текущая политика доверия: %w", err)
 	}
 	if !strings.EqualFold(rootFP, currentRootFP) {
 		return releaseVerificationV2Context{}, errors.New("embedded/current trust policies используют разные root anchors")

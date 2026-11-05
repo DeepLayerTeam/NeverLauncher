@@ -7,17 +7,17 @@ use sha2::{Digest,Sha256};
 use std::{collections::BTreeMap,fs::{self,File},io::Read,path::{Component,Path}};
 
 fn pin_file(root:&Path, path:&Path, expected:&str)->Result<(),String>{
-    let relative=path.strip_prefix(root).map_err(|_|format!("Guard runtime executable outside installation: {}",path.display()))?;
+    let relative=path.strip_prefix(root).map_err(|_|format!("Guard: исполняемый файл Runtime находится за пределами установки: {}",path.display()))?;
     if !expected.len().eq(&64) || !expected.bytes().all(|c|c.is_ascii_digit() || (b'a'..=b'f').contains(&c)) {
         return Err("Некорректный SHA-256 инвентаризации среды выполнения Guard".into());
     }
     let mut cursor=root.to_path_buf();
     for part in relative.components(){
-        if let Component::Normal(segment)=part {cursor.push(segment);} else {return Err("Guard runtime inventory unsafe path".into());}
+        if let Component::Normal(segment)=part {cursor.push(segment);} else {return Err("Guard: небезопасный путь в перечне файлов Runtime".into());}
         if fs::symlink_metadata(&cursor).map_err(|e|e.to_string())?.file_type().is_symlink(){return Err("Символическая ссылка в инвентаризации среды выполнения Guard отклонена".into())}
     }
     let meta=fs::metadata(path).map_err(|e|e.to_string())?;
-    if !meta.is_file() || meta.len()>512*1024*1024 {return Err("Guard runtime inventory invalid file".into())}
+    if !meta.is_file() || meta.len()>512*1024*1024 {return Err("Guard: некорректный файл в перечне Runtime".into())}
     let mut f=File::open(path).map_err(|e|e.to_string())?;
     let mut sha=Sha256::new();let mut buf=[0u8;65536];
     loop {let n=f.read(&mut buf).map_err(|e|e.to_string())?;if n==0{break}sha.update(&buf[..n]);}
@@ -32,7 +32,7 @@ fn insert_pin(pins:&mut BTreeMap<String,(String,&'static str)>,root:&Path,path:&
     pin_file(root,path,hash)?;
     let key=path.to_string_lossy().to_string();
     if let Some(old)=pins.get(&key) {
-        if old.0!=hash || old.1!=kind{return Err(format!("Guard runtime contradictory signed file identity: {key}"))}
+        if old.0!=hash || old.1!=kind{return Err(format!("Guard: противоречивый идентификатор подписанного файла Runtime: {key}"))}
     } else {pins.insert(key,(hash.to_owned(),kind));}
     if pins.len()>8192{return Err("Инвентаризация среды выполнения Guard превышает ограничение 8192 файлов".into())}
     Ok(())
@@ -71,12 +71,12 @@ pub fn from_verified_launch(manifest:&Manifest,plan:&LaunchPlan,root:&Path,guard
         crate::transactional_release::active_preset_for_manifest(manifest,root).as_deref())?;
     for path in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
         let absolute=fs::canonicalize(path).map_err(|e|format!("Отсутствует: путь классов среды выполнения Guard: {e}"))?;
-        let rel=absolute.strip_prefix(root).map_err(|_|"Guard runtime classpath outside signed root")?;
+        let rel=absolute.strip_prefix(root).map_err(|_|"Guard: путь classpath находится за пределами подписанного каталога")?;
         let name=rel.to_string_lossy().replace('\\',"/");
         let file=manifest.files.iter().find(|f|f.path.replace('\\',"/")==name && super::manifest_file_applies(f) &&
                 (f.required || (manifest.schema_version=="3.0" && selected.contains(name.as_str()))))
-            .ok_or_else(||format!("Guard runtime classpath not required in signed release: {name}"))?;
-        if !name.to_ascii_lowercase().ends_with(".jar") {return Err("Guard runtime classpath entry is not a signed JAR".into())}
+            .ok_or_else(||format!("Guard: элемент classpath {name} не предусмотрен подписанным релизом"))?;
+        if !name.to_ascii_lowercase().ends_with(".jar") {return Err("Guard: элемент classpath не является подписанным JAR".into())}
         insert_pin(&mut pins,root,&absolute,&file.sha256.to_ascii_lowercase(),"code")?;
     }
     for file in &manifest.files {

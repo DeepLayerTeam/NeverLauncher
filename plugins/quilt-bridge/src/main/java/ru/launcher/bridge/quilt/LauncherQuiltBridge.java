@@ -79,7 +79,7 @@ public final class LauncherQuiltBridge implements ModInitializer {
         try {
             state = loadState();
         } catch (Exception e) {
-            throw new IllegalStateException("Launcher Quilt ServerBridge initialization failed", e);
+            throw new IllegalStateException("Ошибка инициализации Launcher Quilt ServerBridge", e);
         }
 
         ServerLoginConnectionEvents.QUERY_START.register(this::onLoginQueryStart);
@@ -184,7 +184,7 @@ public final class LauncherQuiltBridge implements ModInitializer {
         BridgeConfig config = BridgeConfig.load(configPath, "fabric-main");
         String pluginSha256 = BridgeIntegrity.artifactSha256(getClass());
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) {
-            throw new IllegalStateException("cannot measure running Quilt bridge JAR SHA-256");
+            throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR моста Quilt");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         String loaderVersion = BridgeRuntimeProbe.packageVersion("org.quiltmc.loader.api.QuiltLoader");
@@ -410,7 +410,7 @@ public final class LauncherQuiltBridge implements ModInitializer {
 
     private static String safeUsername(String value) {
         String username = value == null ? "" : value.trim();
-        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("Некорректное имя игрока Minecraft");
         return username;
     }
 

@@ -47,7 +47,7 @@ func preserveEvidence(dir, name, source, expected string, receipt []byte) error 
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 128<<20 {
-		return errors.New("GA evidence is not a bounded regular file")
+		return errors.New("Файл доказательств GA не является обычным файлом допустимого размера")
 	}
 	input, err := os.Open(source)
 	if err != nil {
@@ -71,7 +71,7 @@ func preserveEvidence(dir, name, source, expected string, receipt []byte) error 
 	}
 	if written != info.Size() || hex.EncodeToString(hasher.Sum(nil)) != expected {
 		temp.Close()
-		return errors.New("evidence mutated during copy")
+		return errors.New("Доказательства изменились во время копирования")
 	}
 	if err = temp.Sync(); err != nil {
 		temp.Close()
@@ -159,12 +159,12 @@ func verifyEvidence(b Bundle, dir string) error {
 			return err
 		}
 		if hash(canonical) != check.SHA256 || !probe.Passed || probe.Name != check.Name || probe.RunID != b.RunID || probe.ReportSHA256 != b.ReportSHA256 || probe.SourceSHA256 != b.SourceSHA256 || probe.SourceVersion != b.SourceVersion || probe.TargetReleaseSHA256 != b.TargetReleaseSHA256 || probe.EvidenceSHA256 != check.EvidenceSHA256 {
-			return fmt.Errorf("%s receipt not bound to certificate", check.Name)
+			return fmt.Errorf("Квитанция %s не привязана к сертификату", check.Name)
 		}
 		evidence := filepath.Join(dir, check.Name+".evidence")
 		info, err := os.Lstat(evidence)
 		if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > 128<<20 {
-			return fmt.Errorf("%s evidence absent or nonregular", check.Name)
+			return fmt.Errorf("Доказательства %s отсутствуют или представлены не обычным файлом", check.Name)
 		}
 		sum, err := shaFile(evidence, 128<<20)
 		if err != nil || sum != check.EvidenceSHA256 {
@@ -176,7 +176,7 @@ func verifyEvidence(b Bundle, dir string) error {
 				return errors.New("сохранённый аудит состояния не совпадает с подписанное подтверждение")
 			}
 			if len(probe.SourceUUIDs) == 0 || len(probe.SourceUUIDs) != len(probe.TargetUUIDs) || !digest(probe.SourceWorldSHA256) || probe.SourceWorldSHA256 != probe.TargetWorldSHA256 || !digest(probe.SourcePluginSHA256) || probe.SourcePluginSHA256 != probe.TargetPluginSHA256 {
-				return errors.New("incomplete world/identity cross-check")
+				return errors.New("Сверка миров и учётных записей выполнена не полностью")
 			}
 			source := append([]string(nil), probe.SourceUUIDs...)
 			target := append([]string(nil), probe.TargetUUIDs...)
@@ -207,7 +207,7 @@ func loadTrustedKey(filename string) (ed25519.PublicKey, error) {
 	}
 	block, trailing := pem.Decode(data)
 	if block == nil || block.Type != "PUBLIC KEY" || len(bytes.TrimSpace(trailing)) > 0 {
-		return nil, errors.New("expected a single PEM public key")
+		return nil, errors.New("Ожидался один открытый ключ в формате PEM")
 	}
 	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
@@ -256,19 +256,19 @@ func verifyCohort(keyFile string, cohort map[string]CohortInput) error {
 			return fmt.Errorf("%s: %w", class, err)
 		}
 		if b.ReferenceClass != class {
-			return fmt.Errorf("%s: incorrect certified reference class", class)
+			return fmt.Errorf("%s: неверный сертифицированный эталонный класс", class)
 		}
 		if err = verifyEvidence(b, input.EvidenceDir); err != nil {
 			return fmt.Errorf("%s: %w", class, err)
 		}
 		if seenProject[b.ProjectID] || seenSource[b.SourceSHA256] || seenRun[b.RunID] {
-			return errors.New("cohort reused a project, archive or migration run")
+			return errors.New("В наборе эталонных проверок повторно использован проект, архив или запуск миграции")
 		}
 		seenProject[b.ProjectID], seenSource[b.SourceSHA256], seenRun[b.RunID] = true, true, true
 		if commit == "" {
 			commit = b.CommitSHA
 		} else if commit != b.CommitSHA {
-			return errors.New("cohort mixes source commits")
+			return errors.New("В наборе эталонных проверок смешаны разные исходные коммиты")
 		}
 	}
 	return nil

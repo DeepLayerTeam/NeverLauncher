@@ -62,7 +62,7 @@ func (s Server) extensionInstallDetail0204(w http.ResponseWriter, r *http.Reques
 	scopeID := r.URL.Query().Get("scopeId")
 	item, err := s.Repo.GetExtensionInstallState(r.Context(), r.PathValue("extensionId"), scope, scopeID)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "extension installation not found")
+		writeError(w, http.StatusNotFound, "Установка расширения не найдена")
 		return
 	}
 	if err != nil {
@@ -167,7 +167,7 @@ func (s Server) restoreExtensionHostAfterLifecycleFailure0205(before model.Exten
 		return
 	}
 	if err := s.ExtensionHost.StartInstallation(context.Background(), before); err != nil && !errors.Is(err, extensionhost.ErrNoBackendTarget) {
-		log.Printf("extension host compensation restart failed %s/%s/%s: %v", before.Scope, before.ScopeID, before.ExtensionID, err)
+		log.Printf("Не удалось повторно запустить хост расширений при компенсации %s/%s/%s: %v", before.Scope, before.ScopeID, before.ExtensionID, err)
 	}
 }
 
@@ -185,7 +185,7 @@ func (s Server) startEnabledExtensionHost0205(ctx context.Context, install model
 func (s Server) extensionInstall0204(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeLifecycleWrite0204(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid install payload: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректные данные установки: "+err.Error())
 		return
 	}
 	item, err := s.resolveLifecycleRegistryVersion0204(r, r.PathValue("extensionId"), req.Version, req.Channel)
@@ -230,7 +230,7 @@ func (s Server) extensionEnable0204(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "extension host start failed and disable compensation failed: "+err.Error()+"; "+compErr.Error())
 			return
 		}
-		writeError(w, http.StatusConflict, "extension host start failed; enable was compensated to disabled: "+err.Error()+" generation="+strconv.FormatInt(compensated.Generation, 10))
+		writeError(w, http.StatusConflict, "Не удалось запустить хост расширений; включение отменено, расширение отключено: "+err.Error()+" generation="+strconv.FormatInt(compensated.Generation, 10))
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:enable", install.ExtensionID+":"+install.Scope+":"+install.ScopeID)

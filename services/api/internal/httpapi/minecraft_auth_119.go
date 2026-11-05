@@ -354,7 +354,7 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	}
 	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {
-		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
@@ -379,7 +379,7 @@ func (s Server) minecraftProfileCurrent119(w http.ResponseWriter, r *http.Reques
 	}
 	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {
-		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
@@ -408,7 +408,7 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 		if status < 400 || status >= 500 {
 			status = http.StatusForbidden
 		}
-		writeYggdrasilError119(w, status, "Invalid credentials")
+		writeYggdrasilError119(w, status, "Неверные учётные данные")
 		return
 	}
 	if !s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.BeforeAuth, UserID: result.User.ID, DeviceID: "minecraft-authlib", RoleID: result.User.RoleID}).Allowed() {
@@ -510,7 +510,7 @@ func (s Server) yggdrasilSignout119(w http.ResponseWriter, r *http.Request) {
 			writeYggdrasilError119(w, http.StatusForbidden, "Provider does not support password signout")
 			return
 		}
-		writeYggdrasilError119(w, http.StatusForbidden, "Invalid credentials")
+		writeYggdrasilError119(w, http.StatusForbidden, "Неверные учётные данные")
 		return
 	}
 	s.State.AuthSessions.revokeUser(result.User.ID, "yggdrasil-signout")
@@ -560,7 +560,7 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 	}
 	repo, err := s.minecraftRepo119()
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Minecraft repository unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Хранилище Minecraft недоступно")
 		return
 	}
 	join, err := repo.GetMinecraftJoin(username, serverID)
@@ -600,7 +600,7 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 	}
 	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
 		return
 	}
 	if _, err := repo.ConsumeMinecraftJoin(username, serverID, join.MinecraftSessionID, time.Now().UTC()); err != nil {
@@ -634,12 +634,12 @@ func (s Server) yggdrasilProfile119(w http.ResponseWriter, r *http.Request) {
 	}
 	texture, lookupErr := s.localTextureRecord0394(r.Context(), profile.UUID, profile.Name)
 	if lookupErr != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil texture database unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "База текстур Yggdrasil недоступна")
 		return
 	}
 	property, propertyErr := s.textureProperty0256(texture, unsigned == "false")
 	if propertyErr != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
@@ -662,7 +662,7 @@ func (s Server) yggdrasilProfileByName119(w http.ResponseWriter, r *http.Request
 func (s Server) yggdrasilMetadata119(w http.ResponseWriter, r *http.Request) {
 	signer, err := s.yggdrasilSigner0256()
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
 		return
 	}
 	domains, err := s.textureDomains0256()

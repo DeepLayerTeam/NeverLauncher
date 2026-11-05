@@ -354,7 +354,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 	}
 	writer, ok := s.Repo.(stagedRunWriter0342)
 	if !ok {
-		writeError(w, 503, "runtime report repository unavailable")
+		writeError(w, 503, "Хранилище отчётов Runtime недоступно")
 		return
 	}
 	var p stagedRunReport0342
@@ -411,7 +411,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 func (s Server) stagedRunList0342(w http.ResponseWriter, r *http.Request) {
 	writer, ok := s.Repo.(stagedRunWriter0342)
 	if !ok {
-		writeError(w, 503, "runtime report repository unavailable")
+		writeError(w, 503, "Хранилище отчётов Runtime недоступно")
 		return
 	}
 	rows, err := writer.ListStagedRuns0342(r.Context(), r.PathValue("packageId"))

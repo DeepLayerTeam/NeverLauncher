@@ -36,17 +36,17 @@ def sha_file(path: Path, *, limit=8 << 20):
 
 
 def validate(cfg: dict, cutover: dict):
-    require(cfg.get("format") == FORMAT, "unknown rollback configuration format")
+    require(cfg.get("format") == FORMAT, "Неизвестный формат конфигурации отката")
     require(cfg.get("runId") == cutover["runId"] and cfg.get("profileId") == cutover["profileId"]
             and cfg.get("channel") == cutover["channel"], "rollback scope differs from cutover")
-    require(cfg.get("cutoverConfigSha256") == cutover["_hash"], "cutover config digest mismatch")
+    require(cfg.get("cutoverConfigSha256") == cutover["_hash"], "Хеш конфигурации переключения не совпадает")
     require(isinstance(cfg.get("units"), dict) and set(cfg["units"]) == {"source", "target"},
             "both source and target service units must be checked")
     units = cfg["units"]
     for side in ("source", "target"):
         values = units[side]
         require(isinstance(values, list) and values and all(isinstance(x, str) and UNIT.fullmatch(x) for x in values)
-                and len(values) == len(set(values)), "invalid systemd unit list: " + side)
+                and len(values) == len(set(values)), "Некорректный список служб systemd: " + side)
     require(not set(units["source"]).intersection(units["target"]), "same unit cannot be both source and target")
     for name in ("currentSnapshot", "sourceSnapshot"):
         require(isinstance(cfg.get(name), str) and Path(cfg[name]).is_absolute(), "absolute " + name + " required")
@@ -55,7 +55,7 @@ def validate(cfg: dict, cutover: dict):
                  "currentSnapshot", "sourceSnapshot", "reconciliationEvidenceSha256"}
     require(set(cfg) <= permitted, "unknown or unsafe rollback configuration fields")
     if "reconciliationEvidenceSha256" in cfg:
-        require(bool(co.HEX.fullmatch(str(cfg["reconciliationEvidenceSha256"]))), "invalid reconciliation evidence")
+        require(bool(co.HEX.fullmatch(str(cfg["reconciliationEvidenceSha256"]))), "Некорректные доказательства сверки")
 
 
 def systemd_state(unit: str) -> dict:
@@ -66,7 +66,7 @@ def systemd_state(unit: str) -> dict:
         raise co.Blocked("Не удалось проверить служба systemd" + unit) from exc
     result = dict(line.split("=", 1) for line in out.stdout.decode("utf-8", "replace").splitlines() if "=" in line)
     require(all(result.get(field) for field in ("ActiveState", "SubState", "UnitFileState")),
-            "incomplete systemd response for " + unit)
+            "Неполный ответ systemd для " + unit)
     return result
 
 
@@ -76,21 +76,21 @@ def check_writers(cfg: dict):
             values = systemd_state(unit)
             require(values["ActiveState"] == "inactive" and values["UnitFileState"] in
                     ("masked", "masked-runtime"),
-                    "writer is not stopped AND masked: " + unit)
+                    "Записывающий процесс не остановлен и не заблокирован через systemd mask: " + unit)
 
 
 def capture_snapshot(path: Path, after: float | None = None) -> tuple[str, dict]:
-    require(path.is_absolute(), "absolute snapshot path required")
+    require(path.is_absolute(), "Требуется абсолютный путь к снимку")
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and st.st_mode & 0o077 == 0 and st.st_nlink == 1,
-            "snapshot must be a private ordinary file with one link")
+            "Снимок должен быть закрытым обычным файлом с одной жёсткой ссылкой")
     if after is not None:
-        require(st.st_mtime >= after, "snapshot must be exported after ingress/writers were fenced")
+        require(st.st_mtime >= after, "Снимок необходимо экспортировать после блокировки входящего трафика и записывающих процессов")
     raw = co.strict_file(path, 8 << 20)
     decoder = json.loads(raw)
     require(isinstance(decoder, dict) and isinstance(decoder.get("worldSha256"), str)
             and co.HEX.fullmatch(decoder["worldSha256"])
-            and isinstance(decoder.get("players"), list), "invalid Gravit snapshot structure")
+            and isinstance(decoder.get("players"), list), "Некорректная структура снимка Gravit")
     return hashlib.sha256(raw).hexdigest(), decoder
 
 
@@ -107,7 +107,7 @@ def verify_rolled_back(cutover: dict, route: dict):
             and route.get("channel") == cutover["channel"] and route.get("stageId") == cutover["stageId"]
             and route.get("releaseId") == cutover["releaseId"] and route.get("targetDigest") == cutover["targetDigest"]
             and route.get("state") == "rolled_back" and route.get("revision") == cutover["expectedRevision"] + 2,
-            "Backend route not confirmed rolled back")
+            "Не подтверждено восстановление прежнего маршрута Backend")
 
 
 def journal_path(directory: Path):
@@ -117,7 +117,7 @@ def journal_path(directory: Path):
 def write_journal(directory: Path, doc: dict, new=False):
     path = journal_path(directory)
     raw = (json.dumps(doc, sort_keys=True, indent=2) + "\n").encode()
-    require(len(raw) < 16384, "rollback journal too large")
+    require(len(raw) < 16384, "Журнал отката слишком велик")
     if new:
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "wb") as f:
@@ -125,7 +125,7 @@ def write_journal(directory: Path, doc: dict, new=False):
             f.flush()
             os.fsync(f.fileno())
     else:
-        require(path.exists() and not path.is_symlink(), "rollback journal missing")
+        require(path.exists() and not path.is_symlink(), "Журнал отката отсутствует")
         tmp = directory / "rollback-state.json.next"
         fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "wb") as f:
@@ -144,7 +144,7 @@ def state_load(directory: Path, cfg_hash: str, cut_hash: str):
     state = co.document(journal_path(directory), 16384)
     require(state.get("format") == FORMAT and state.get("configSha256") == cfg_hash
             and state.get("cutoverConfigSha256") == cut_hash and state.get("phase") in PHASES,
-            "rollback journal mismatch")
+            "Журнал отката не соответствует ожидаемому")
     return state
 
 
@@ -157,22 +157,22 @@ def change(directory: Path, state: dict, phase: str, **props):
 
 def assert_proxy(proxy: co.Proxy, cutover: dict, state: dict):
     require(proxy.instance() == state["haproxyPid"],
-            "HAProxy restarted: reload may have reopened source traffic")
+            "HAProxy перезапущен: перезагрузка могла возобновить трафик к исходной системе")
     co.inspect_proxy(proxy, cutover, "closed")
 
 
 def fence(cfg, cut, directory, cfg_hash, proxy):
-    require(not journal_path(directory).exists(), "existing rollback journal: run status/reconcile, never restart blindly")
+    require(not journal_path(directory).exists(), "Журнал отката уже существует: проверьте состояние и выполните сверку; не повторяйте запуск вслепую")
     cutstate = co.load_phase(directory, cut["_hash"])
     require(cutstate["phase"] in ("complete", "blocked", "route_activated", "target_open"),
-            "cutover not in post-activation state")
+            "Переключение не находится в состоянии после активации")
     route = get_route(cut, directory, "rollback-before.json")
     verify_active(cut, route)
     pid = proxy.instance()
     # First cut public ingress, then stop/mask ALL known independent writers externally.
     # If close fails no false readiness journal is created.
     co.close_ingress(proxy, cut)
-    require(proxy.instance() == pid, "HAProxy restarted while closing ingress")
+    require(proxy.instance() == pid, "HAProxy перезапущен во время закрытия входящего трафика")
     state = {"format": FORMAT, "configSha256": cfg_hash, "cutoverConfigSha256": cut["_hash"],
              "phase": "fenced", "haproxyPid": pid, "routeRevision": route["revision"],
              "fencedAtUnix": int(time.time()), "updatedAtUnix": int(time.time()), "trafficOpen": False}
@@ -184,13 +184,13 @@ def typed_digest(snapshot: dict) -> str:
     """Match Go gravitrehearsal.SnapshotDigest's field order and JSON encoding."""
     required = ("worldSha256", "loader", "optionalPresetSha256", "players")
     pfields = ("sourceId", "uuid", "inventorySha256", "permissionsSha256", "economy", "skinSha256", "admin")
-    require(set(snapshot) == set(required) and isinstance(snapshot["players"], list), "unexpected snapshot fields")
+    require(set(snapshot) == set(required) and isinstance(snapshot["players"], list), "Неожиданные поля снимка")
     players = []
     for p in snapshot["players"]:
         require(isinstance(p, dict) and set(p) == set(pfields) and isinstance(p["admin"], bool)
-                and all(isinstance(p[x], str) for x in pfields if x != "admin"), "invalid player in snapshot")
+                and all(isinstance(p[x], str) for x in pfields if x != "admin"), "Некорректная запись игрока в снимке")
         players.append({k: p[k] for k in pfields})
-    require(all(isinstance(snapshot[k], str) for k in required if k != "players"), "invalid snapshot string")
+    require(all(isinstance(snapshot[k], str) for k in required if k != "players"), "Некорректная строка в снимке")
     canonical = {k: players if k == "players" else snapshot[k] for k in required}
     return co.digest(json.dumps(canonical, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
 
@@ -200,9 +200,9 @@ def validate_source_against_target(current: dict, source: dict, has_reconciliati
     # into the QUARANTINED source FIRST, then independently re-export BOTH. The
     # Backend performs further domain-specific semantic verification.
     if has_reconciliation:
-        require(current == source, "source is not exactly reconciled to current Never world/player state")
+        require(current == source, "Исходная система не приведена в точное соответствие с текущим состоянием миров и игроков Never")
     else:
-        require(typed_digest(source) == baseline, "source Gravit snapshot no longer matches MIG10 baseline; reconcile first")
+        require(typed_digest(source) == baseline, "Снимок Gravit больше не совпадает с базовым состоянием MIG10; сначала выполните сверку")
 
 
 def snapshots(cfg, state, cut, *, fresh=None):
@@ -214,7 +214,7 @@ def snapshots(cfg, state, cut, *, fresh=None):
 
 
 def plan(cfg, cut, directory, state, proxy):
-    require(state["phase"] == "fenced", "rollback already planned/attempted")
+    require(state["phase"] == "fenced", "Откат уже запланирован или предпринималась попытка отката")
     assert_proxy(proxy, cut, state)
     check_writers(cfg)
     verify_active(cut, get_route(cut, directory, "rollback-route-plan.json"))
@@ -234,7 +234,7 @@ def plan(cfg, cut, directory, state, proxy):
             and bool(co.HEX.fullmatch(str(report.get("planSha256", ""))))
             and report.get("evidenceSha256") == sha
             and report.get("mode") == ("reconciled" if cfg.get("reconciliationEvidenceSha256") else "unchanged"),
-            "Backend did not approve exact rollback plan")
+            "Backend не одобрил конкретный план отката")
     change(directory, state, "planned", planSha256=report["planSha256"],
            snapshotSha256=sha, sourceSnapshotFileSha256=source_sha, plannedAtUnix=int(time.time()))
     return state
@@ -244,28 +244,28 @@ def verify_completed(cut, directory, state):
     suffix = next((f"-{n:03d}" for n in range(1, 1000)
                    if not (directory / f"rollback-status-final-{n:03d}.json").exists()
                    and not (directory / f"rollback-route-after-{n:03d}.json").exists()), None)
-    require(suffix is not None, "rollback reconciliation evidence exhausted")
+    require(suffix is not None, "Исчерпаны доказательства сверки отката")
     status = co.run_cli(cut, ["rollback-status", "--backend", cut["backend"], "--run", cut["runId"],
                               "--profile-id", cut["profileId"], "--channel", cut["channel"]],
                         directory / ("rollback-status-final" + suffix + ".json"))
     require(status.get("state") == "completed" and status.get("ready") is True
             and status.get("planSha256") == state["planSha256"]
             and status.get("routeRevision") == state["routeRevision"],
-            "Backend rollback status not completed for this plan")
+            "Backend не подтвердил завершение отката по этому плану")
     verify_rolled_back(cut, get_route(cut, directory, "rollback-route-after" + suffix + ".json"))
 
 
 def commit(cfg, cut, directory, state, proxy, fresh: Path):
-    require(state["phase"] == "planned", "only approved rollback may commit")
-    require(time.time() - state["plannedAtUnix"] < 540, "rollback plan expired; do not retry old plan")
+    require(state["phase"] == "planned", "Применять разрешено только одобренный откат")
+    require(time.time() - state["plannedAtUnix"] < 540, "Срок действия плана отката истёк; не используйте старый план повторно")
     assert_proxy(proxy, cut, state)
     check_writers(cfg)
     verify_active(cut, get_route(cut, directory, "rollback-route-precommit.json"))
     current, sha, source_sha = snapshots(cfg, state, cut, fresh=fresh)
-    require(current != Path(cfg["currentSnapshot"]), "fresh snapshot must be a distinct post-plan export")
-    require(current.stat().st_mtime >= state["plannedAtUnix"], "fresh Never snapshot predates rollback plan")
+    require(current != Path(cfg["currentSnapshot"]), "Свежий снимок должен быть отдельным экспортом, выполненным после составления плана")
+    require(current.stat().st_mtime >= state["plannedAtUnix"], "Снимок Never создан раньше плана отката")
     require(sha == state["snapshotSha256"] and source_sha == state["sourceSnapshotFileSha256"],
-            "world/player state changed after approval; new plan required")
+            "Состояние миров или игроков изменилось после одобрения; требуется новый план")
     args = ["rollback-commit", "--backend", cut["backend"], "--run", cut["runId"],
             "--confirm", cut["runId"], "--profile-id", cut["profileId"], "--channel", cut["channel"],
             "--expected-revision", str(state["routeRevision"]), "--writer-fenced", "true",
@@ -278,7 +278,7 @@ def commit(cfg, cut, directory, state, proxy, fresh: Path):
     try:
         report = co.run_cli(cut, args, directory / "rollback-commit-result.json")
         require(report.get("state") == "completed" and report.get("planSha256") == state["planSha256"],
-                "Backend did not confirm rollback commit")
+                "Backend не подтвердил применение отката")
         verify_completed(cut, directory, state)
         assert_proxy(proxy, cut, state)
         change(directory, state, "committed_fenced", trafficOpen=False)
@@ -293,7 +293,7 @@ def commit(cfg, cut, directory, state, proxy, fresh: Path):
 
 def reconcile(cut, directory, state, proxy):
     require(state["phase"] in ("committing", "uncertain", "committed_fenced"),
-            "only a commit attempt may be reconciled")
+            "Сверять можно только фактически предпринятую попытку применения")
     assert_proxy(proxy, cut, state)
     # Do NOT retry COMMIT after a timeout. Read authoritative PostgreSQL state.
     verify_completed(cut, directory, state)
@@ -320,10 +320,10 @@ def main(argv=None):
         cfg = json.loads(cfgraw)
         validate(cfg, cut)
         cfg_hash = co.digest(cfgraw)
-        require(args.command == "status" or args.confirm == cut["runId"], "exact run confirmation required")
-        require(args.command == "commit" or not args.fresh_snapshot, "--fresh-snapshot only for commit")
+        require(args.command == "status" or args.confirm == cut["runId"], "Требуется точное подтверждение идентификатора запуска")
+        require(args.command == "commit" or not args.fresh_snapshot, "Параметр --fresh-snapshot разрешён только при применении")
         if args.command == "commit":
-            require(args.fresh_snapshot and Path(args.fresh_snapshot).is_absolute(), "independent fresh snapshot required")
+            require(args.fresh_snapshot and Path(args.fresh_snapshot).is_absolute(), "Требуется независимый свежий снимок")
         lock = os.open(directory / ".cutover.lock", os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -343,7 +343,7 @@ def main(argv=None):
                         commit(cfg, cut, directory, state, proxy, Path(args.fresh_snapshot))
                     else:
                         reconcile(cut, directory, state, proxy)
-                print("rollback phase: " + state_load(directory, cfg_hash, cut["_hash"])["phase"])
+                print("Этап отката: " + state_load(directory, cfg_hash, cut["_hash"])["phase"])
         finally:
             os.close(lock)
         return 0

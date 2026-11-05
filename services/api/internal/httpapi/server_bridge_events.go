@@ -295,12 +295,12 @@ func (b *serverBridgeStore) appendEvents0194(server bridgeServerRecord, events [
 		fingerprint := strings.ToLower(event.PayloadSHA256) + "|" + event.Type + "|" + event.Signature
 		if event.Sequence <= ack {
 			if b.eventDigests[rowKey] != fingerprint || b.eventIDs[rowKey] != event.EventID {
-				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", repository.ErrConflict)
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: конфликт повторного воспроизведения событий", repository.ErrConflict)
 			}
 			continue
 		}
 		if event.Sequence != ack+1 {
-			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event sequence gap", repository.ErrConflict)
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: обнаружен пропуск в последовательности событий", repository.ErrConflict)
 		}
 		b.eventDigests[rowKey] = fingerprint
 		b.eventIDs[rowKey] = event.EventID

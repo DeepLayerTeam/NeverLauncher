@@ -122,7 +122,7 @@ func trustedRegular0306(p string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() {
-		return fmt.Errorf("not a regular trusted file: %s", p)
+		return fmt.Errorf("Объект не является обычным доверенным файлом: %s", p)
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		}
 		totalBytes += int64(len(b))
 		if totalBytes > 128<<20 {
-			return record, nil, errors.New("trusted JVM package exceeds 128 MiB expanded JAR limit")
+			return record, nil, errors.New("Пакет доверенной JVM превышает предел распакованного JAR в 128 МиБ")
 		}
 		allowed[rel] = b
 		if rel == "agent.jar" {
@@ -202,7 +202,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 				}
 			}
 			if !found {
-				return record, nil, errors.New("trusted agent must use Launcher premain")
+				return record, nil, errors.New("Доверенный агент должен использовать premain лаунчера")
 			}
 			record.AgentSHA256 = trustedDigest0306(b)
 		} else {
@@ -425,7 +425,7 @@ func handleTrustedJVM0306(args []string) error {
 	switch args[0] {
 	case "trusted-install":
 		if flagValue(args[1:], "--approve-full-jvm-access", "") != "true" {
-			return errors.New("explicit --approve-full-jvm-access true required: agents have unrestricted access to Minecraft JVM")
+			return errors.New("Требуется явный параметр --approve-full-jvm-access true: агенты получают неограниченный доступ к JVM Minecraft")
 		}
 		archive := flagValue(args[1:], "--package", "")
 		if archive == "" || key == "" {

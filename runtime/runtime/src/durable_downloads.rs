@@ -113,7 +113,7 @@ async fn erase(root: &Path) {
 }
 
 fn register(root: &Path) -> Result<(ActiveGuard, watch::Receiver<Directive>), String> {
-    let mut guard = active().lock().map_err(|_| "active download registry poisoned")?;
+    let mut guard = active().lock().map_err(|_| "Блокировка реестра активных загрузок повреждена")?;
     if guard.contains_key(root) { return Err("a download or repair operation is already active for this install directory".into()); }
     let (sender, receiver) = watch::channel(Directive::Running);
     guard.insert(root.to_path_buf(), sender);
@@ -223,7 +223,7 @@ pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<Progres
 pub async fn control(root: &Path, action: &str) -> Result<(), String> {
     if !matches!(action, "pause" | "cancel") { return Err("Некорректное значение: «download control action»".into()); }
     let root = normalized(root).await?;
-    let sender = active().lock().map_err(|_| "active download registry poisoned")?
+    let sender = active().lock().map_err(|_| "Блокировка реестра активных загрузок повреждена")?
         .get(&root).cloned();
     let directive = if action == "pause" { Directive::Paused } else { Directive::Cancelled };
     if let Some(sender) = sender {

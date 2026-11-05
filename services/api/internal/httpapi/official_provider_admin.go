@@ -47,7 +47,7 @@ func (s Server) officialProviderPolicy02611(w http.ResponseWriter, r *http.Reque
 func (s Server) officialProviderGet02611(w http.ResponseWriter, r *http.Request) {
 	v, err := s.officialProviderSettings02611(r.Context())
 	if err != nil {
-		writeError(w, 503, "provider configuration unavailable")
+		writeError(w, 503, "Конфигурация провайдера недоступна")
 		return
 	}
 	writeJSON(w, 200, v)
@@ -55,12 +55,12 @@ func (s Server) officialProviderGet02611(w http.ResponseWriter, r *http.Request)
 func (s Server) officialProviderHistory02611(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(repository.OfficialProviderStore02611)
 	if !ok {
-		writeError(w, 503, "provider history unavailable")
+		writeError(w, 503, "История провайдера недоступна")
 		return
 	}
 	records, err := store.ListOfficialProviderHistory02611(r.Context(), 50)
 	if err != nil {
-		writeError(w, 503, "provider history unavailable")
+		writeError(w, 503, "История провайдера недоступна")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"items": records})
@@ -155,7 +155,7 @@ func probeOfficialProvider02611(ctx context.Context, client *http.Client, servic
 func (s Server) officialProviderDiagnostics02611(w http.ResponseWriter, r *http.Request) {
 	current, err := s.officialProviderSettings02611(r.Context())
 	if err != nil {
-		writeError(w, 503, "provider configuration unavailable")
+		writeError(w, 503, "Конфигурация провайдера недоступна")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)

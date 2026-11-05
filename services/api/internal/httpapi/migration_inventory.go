@@ -80,7 +80,7 @@ func (s Server) migrationInventoryUpload0333(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes {
-		writeError(w, 413, "source ZIP exceeds 512 MiB")
+		writeError(w, 413, "Исходный ZIP превышает 512 МиБ")
 		return
 	}
 	src, n, digest, e := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))

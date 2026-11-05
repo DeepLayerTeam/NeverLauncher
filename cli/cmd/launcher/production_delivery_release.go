@@ -378,7 +378,7 @@ func verifyProductionDeliveryRelease0160(dir, ver string, strict bool) error {
 		return fmt.Errorf("production candidate prerequisite: %w", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
-		return fmt.Errorf("delivery manifest: %w", err)
+		return fmt.Errorf("Манифест доставки: %w", err)
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, strict); err != nil {
 		return fmt.Errorf("Windows signing: %w", err)

@@ -264,14 +264,14 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if trustErr := s.enforcePublisherTrust02012(r.Context(), publisherID); trustErr != nil {
-		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "registry trust policy rejected publisher: "+trustErr.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
-		writeError(w, http.StatusForbidden, "registry trust policy rejected publisher: "+trustErr.Error())
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Политика доверия реестра отклонила издателя: "+trustErr.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
+		writeError(w, http.StatusForbidden, "Политика доверия реестра отклонила издателя: "+trustErr.Error())
 		return
 	}
 	key, err := s.Repo.GetExtensionRegistryPublisherKey(r.Context(), publisherID, inspected.KeyFingerprint)
 	if errors.Is(err, repository.ErrNotFound) {
-		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "artifact signing key is not trusted for publisher", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
-		writeError(w, http.StatusForbidden, "artifact signing key is not trusted for publisher")
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Ключ подписи артефакта не является доверенным для издателя", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
+		writeError(w, http.StatusForbidden, "Ключ подписи артефакта не является доверенным для издателя")
 		return
 	}
 	if err != nil {
@@ -286,8 +286,8 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	}
 	verified, err := extensionpackage.VerifyFile(tmpPath, publicKey)
 	if err != nil {
-		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "artifact signature verification failed: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
-		writeError(w, http.StatusBadRequest, "artifact signature verification failed: "+err.Error())
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Не удалось проверить подпись артефакта: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
+		writeError(w, http.StatusBadRequest, "Не удалось проверить подпись артефакта: "+err.Error())
 		return
 	}
 	if verified.SHA256 != uploadSHA || verified.Size != uploadSize {
@@ -497,7 +497,7 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 	var request registryInstallWrite0203
 	if r.ContentLength != 0 {
 		if err := decodeSingleJSON0203(r, &request); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid install payload: "+err.Error())
+			writeError(w, http.StatusBadRequest, "Некорректные данные установки: "+err.Error())
 			return
 		}
 	}

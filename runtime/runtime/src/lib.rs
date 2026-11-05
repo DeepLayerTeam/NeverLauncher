@@ -1218,7 +1218,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     // Терминальное состояние: никогда не продолжайте игру с JVM без мониторинга.
     #[cfg(target_os = "linux")]
     if let Err(reason) = live_guard.bind_linux_process(
-        child.id().ok_or("Linux Guard JVM PID unavailable")?,
+        child.id().ok_or("Linux Guard: PID процесса JVM недоступен")?,
         Path::new(&plan.java_executable),
     ) {
         if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }
@@ -1229,7 +1229,7 @@ pub async fn launch_with_timeout_matching_authenticated(
 
     #[cfg(target_os = "macos")]
     if let Err(reason) = live_guard.bind_macos_process(
-        child.id().ok_or("macOS Guard JVM PID unavailable")?,
+        child.id().ok_or("macOS Guard: PID процесса JVM недоступен")?,
         Path::new(&plan.java_executable),
     ) {
         if let Some(pid) = child.id() { let _ = macos_policy::terminate_runtime_process_group(pid); }
@@ -2402,13 +2402,13 @@ mod tests {
         let root=std::env::temp_dir().join(format!("nl-v1-ownership-{}-{}",std::process::id(),now_unix().unwrap()));
         let _=std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
-        std::fs::write(root.join("options.txt"),b"modified user options").unwrap();
+        std::fs::write(root.join("options.txt"),b"Изменённые пользовательские параметры").unwrap();
         let mut manifest=sample_manifest();
         manifest.files[0].path="options.txt".into();
         let key=sign_manifest(&mut manifest,"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f","2026-10-18T00:00:00Z").unwrap();
         let result=repair_client(&manifest,&root,&key).await.unwrap();
         assert_eq!(result.repaired,0);
-        assert_eq!(std::fs::read(root.join("options.txt")).unwrap(),b"modified user options");
+        assert_eq!(std::fs::read(root.join("options.txt")).unwrap(),b"Изменённые пользовательские параметры");
         let _=std::fs::remove_dir_all(root);
     }
 

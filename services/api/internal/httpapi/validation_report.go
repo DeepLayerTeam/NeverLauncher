@@ -85,7 +85,7 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 	}
 	runStore, ok := s.Repo.(stagedRunWriter0342)
 	if !ok {
-		writeError(w, 503, "execution reports unavailable")
+		writeError(w, 503, "Отчёты о выполнении недоступны")
 		return
 	}
 	runQuery := r.URL.Query().Get("runId")
@@ -111,7 +111,7 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 	} else {
 		runs, err = runStore.ListStagedRuns0342(r.Context(), pkg)
 		if err != nil {
-			writeError(w, 503, "execution reports unavailable")
+			writeError(w, 503, "Отчёты о выполнении недоступны")
 			return
 		}
 	}
@@ -128,7 +128,7 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 	}
 	attestStore, ok := s.Repo.(validationAttestationRepository0345)
 	if !ok {
-		writeError(w, 503, "attestations unavailable")
+		writeError(w, 503, "Подтверждения подлинности недоступны")
 		return
 	}
 	var attestations []model.ValidationAttestation0345
@@ -137,20 +137,20 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 			GetValidationEvidence03412(context.Context, string, string) (model.ValidationAttestation0345, error)
 		})
 		if !ok {
-			writeError(w, 503, "evidence history unavailable")
+			writeError(w, 503, "История подтверждающих данных недоступна")
 			return
 		}
 		value, getErr := history.GetValidationEvidence03412(r.Context(), pkg, runQuery)
 		if getErr == nil {
 			attestations = []model.ValidationAttestation0345{value}
 		} else if getErr != repository.ErrNotFound {
-			writeError(w, 503, "evidence history unavailable")
+			writeError(w, 503, "История подтверждающих данных недоступна")
 			return
 		}
 	} else {
 		attestations, err = attestStore.ListValidationAttestations0345(r.Context(), pkg)
 		if err != nil {
-			writeError(w, 503, "attestations unavailable")
+			writeError(w, 503, "Подтверждения подлинности недоступны")
 			return
 		}
 	}

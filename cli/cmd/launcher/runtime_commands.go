@@ -332,10 +332,10 @@ func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
 		"metadataSources": []map[string]any{
 			{"id": "mojang-version-manifest", "requiredFor": []string{"vanilla", "fabric", "quilt", "forge", "neoforge"}, "input": "--version-json", "resolves": []string{"client.jar", "mainClass", "libraries", "natives", "arguments", "javaVersion"}},
 			{"id": "mojang-asset-index", "requiredFor": []string{"all"}, "input": "--asset-index", "resolves": []string{"assets/objects", "asset total size", "asset object paths"}},
-			{"id": "fabric-meta-profile", "requiredFor": []string{"fabric"}, "input": "Fabric Meta v2", "resolves": []string{"pinned loader version", "KnotClient", "fabric-loader", "intermediary", "loader arguments", "verified Maven libraries"}},
-			{"id": "quilt-meta-profile", "requiredFor": []string{"quilt"}, "input": "Quilt Meta v3", "resolves": []string{"pinned loader version", "Quilt KnotClient", "quilt-loader", "intermediary", "loader arguments", "verified Maven libraries"}},
-			{"id": "forge-installer", "requiredFor": []string{"forge"}, "input": "Forge Maven installer.jar", "resolves": []string{"legacy V1 universal installer", "install_profile.json", "version.json", "embedded Maven", "client processors", "verified outputs"}},
-			{"id": "neoforge-installer", "requiredFor": []string{"neoforge"}, "input": "NeoForge Maven installer.jar", "resolves": []string{"install_profile.json", "version.json", "embedded Maven", "client processors", "verified outputs"}},
+			{"id": "fabric-meta-profile", "requiredFor": []string{"fabric"}, "input": "Fabric Meta v2", "resolves": []string{"Зафиксированная версия загрузчика", "KnotClient", "fabric-loader", "intermediary", "Параметры загрузчика", "Проверенные библиотеки Maven"}},
+			{"id": "quilt-meta-profile", "requiredFor": []string{"quilt"}, "input": "Quilt Meta v3", "resolves": []string{"Зафиксированная версия загрузчика", "Quilt KnotClient", "quilt-loader", "intermediary", "Параметры загрузчика", "Проверенные библиотеки Maven"}},
+			{"id": "forge-installer", "requiredFor": []string{"forge"}, "input": "Forge Maven installer.jar", "resolves": []string{"legacy V1 universal installer", "install_profile.json", "version.json", "embedded Maven", "Обработчики клиента", "Проверенные выходные файлы"}},
+			{"id": "neoforge-installer", "requiredFor": []string{"neoforge"}, "input": "NeoForge Maven installer.jar", "resolves": []string{"install_profile.json", "version.json", "embedded Maven", "Обработчики клиента", "Проверенные выходные файлы"}},
 		},
 		"pipeline": []string{"load-version-json", "resolve-java-constraints", "filter-libraries-by-rules", "resolve-natives-for-current-os", "resolve-assets", "merge-loader-metadata", "build-classpath", "build-jvm-args", "build-game-args", "validate-launch-plan"},
 		"commands": []string{

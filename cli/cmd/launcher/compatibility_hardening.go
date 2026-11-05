@@ -45,7 +45,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 			cached.Recovered = true
 			return cached, nil
 		}
-		return vanillaResolvedMetadata{}, fmt.Errorf("Mojang version manifest: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Манифест версий Mojang: %w", err)
 	}
 	var manifest MojangVersionManifest
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
@@ -67,7 +67,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 		return vanillaResolvedMetadata{}, fmt.Errorf("Mojang manifest entry %s не содержит URL/SHA1", selectedID)
 	}
 	if err := validateSHA1Hex(selected.SHA1); err != nil {
-		return vanillaResolvedMetadata{}, fmt.Errorf("Mojang manifest entry %s: %w", selectedID, err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Запись %s манифеста Mojang: %w", selectedID, err)
 	}
 	versionBytes, err := fetchBytesVerified(ctx, client, selected.URL, selected.SHA1, 0, 32<<20, true)
 	if err != nil {
@@ -78,7 +78,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 		return vanillaResolvedMetadata{}, fmt.Errorf("version.json %s: %w", selectedID, err)
 	}
 	if err := saveVanillaMetadataCache(root, manifestURL, requestedVersion, manifestBytes, selected, versionBytes); err != nil {
-		return vanillaResolvedMetadata{}, fmt.Errorf("Mojang metadata cache: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Кеш метаданных Mojang: %w", err)
 	}
 	return vanillaResolvedMetadata{Selected: selected, Bytes: versionBytes}, nil
 }
@@ -164,7 +164,7 @@ func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaReso
 	}
 	var record vanillaMetadataCacheRecord
 	if err := json.Unmarshal(raw, &record); err != nil {
-		return vanillaResolvedMetadata{}, fmt.Errorf("metadata cache record JSON: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("JSON-запись кеша метаданных: %w", err)
 	}
 	if record.SchemaVersion != compatibilityMetadataCacheSchema || record.ResolvedVersion != resolved || strings.TrimSpace(record.ManifestURL) != strings.TrimSpace(manifestURL) {
 		return vanillaResolvedMetadata{}, errors.New("Идентификатор кеша метаданных не совпадает")
@@ -176,7 +176,7 @@ func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaReso
 		return vanillaResolvedMetadata{}, errors.New("Некорректное значение: поля целостности кеша метаданных")
 	}
 	if err := validateRemoteURL(record.VersionURL); err != nil {
-		return vanillaResolvedMetadata{}, fmt.Errorf("metadata cache version URL: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Адрес версии в кеше метаданных: %w", err)
 	}
 	payload, err := os.ReadFile(payloadPath)
 	if err != nil {
@@ -248,7 +248,7 @@ func quarantineCompatibilityArtifact(root, relative, reason string) (bool, error
 	name := fmt.Sprintf("%d-%s-%s.broken", time.Now().UnixNano(), hex.EncodeToString(digest[:8]), base)
 	target := filepath.Join(quarantineDir, name)
 	if err := os.Rename(destination, target); err != nil {
-		return false, fmt.Errorf("cache quarantine %s: %w", relative, err)
+		return false, fmt.Errorf("Помещение кеша %s в карантин: %w", relative, err)
 	}
 	_ = os.WriteFile(target+".reason", []byte(strings.TrimSpace(reason)+"\n"), 0o600)
 	pruneCompatibilityQuarantine(quarantineDir, 32)
@@ -298,7 +298,7 @@ func fetchVerifiedBytesWithLocalCache(ctx context.Context, client *http.Client, 
 	}
 	quarantined := false
 	if _, err := os.Lstat(destination); err == nil {
-		quarantined, err = quarantineCompatibilityArtifact(root, relative, "cached metadata failed pinned SHA-1/size verification")
+		quarantined, err = quarantineCompatibilityArtifact(root, relative, "Метаданные из кеша не прошли проверку зафиксированного SHA-1 или размера")
 		if err != nil {
 			return nil, false, false, err
 		}

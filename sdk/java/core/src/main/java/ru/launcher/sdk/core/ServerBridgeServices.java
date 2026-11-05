@@ -100,7 +100,7 @@ public final class ServerBridgeServices {
      * Требуются одновременно serverbridge:read и project:read.
      */
     public boolean pendingJoinTicket(String projectId,String serverId,String username)throws IOException,InterruptedException {
-        if(username==null||!username.matches("[A-Za-z0-9_]{3,16}"))throw new IllegalArgumentException("invalid Minecraft username");
+        if(username==null||!username.matches("[A-Za-z0-9_]{3,16}"))throw new IllegalArgumentException("Некорректное имя игрока Minecraft");
         Map<String,Object> req=new LinkedHashMap<>(scope(projectId));
         req.put("serverId",id(serverId,"serverId"));req.put("username",username);
         Object pending=call("bridge.access.ticket",req).get("pendingTicket");
@@ -115,7 +115,7 @@ public final class ServerBridgeServices {
         id(projectId,"projectId");id(serverId,"serverId");
         if(type==null||!Set.of("message.broadcast","player.kick","whitelist.add","whitelist.remove","whitelist.enable",
                 "whitelist.disable","ban.add","ban.remove","server.save","server.maintenance","server.drain").contains(type))
-            throw new IllegalArgumentException("unsupported command");
+            throw new IllegalArgumentException("Команда не поддерживается");
         if(payload==null||payload.size()>16)throw new IllegalArgumentException("invalid payload");
         if(idempotencyKey==null||idempotencyKey.length()<8||idempotencyKey.length()>128||
                 idempotencyKey.indexOf('\n')>=0||idempotencyKey.indexOf('\r')>=0)

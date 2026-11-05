@@ -158,7 +158,7 @@ public final class BridgeAuthResponse0287 {
     }
     @SuppressWarnings("unchecked")
     private static Map<String, Object> object(Object value) {
-        if (!(value instanceof Map<?, ?>)) throw new IllegalArgumentException("JSON object missing");
+        if (!(value instanceof Map<?, ?>)) throw new IllegalArgumentException("Отсутствует объект JSON");
         return (Map<String, Object>) value;
     }
 
@@ -183,10 +183,10 @@ public final class BridgeAuthResponse0287 {
             return input.charAt(index++);
         }
         private void expect(char expected) {
-            if (next() != expected) throw new IllegalArgumentException("invalid JSON punctuation");
+            if (next() != expected) throw new IllegalArgumentException("Некорректные разделители JSON");
         }
         private Object value(int depth) {
-            if (depth > 24) throw new IllegalArgumentException("JSON nesting limit");
+            if (depth > 24) throw new IllegalArgumentException("Превышена допустимая вложенность JSON");
             space();
             if (index >= input.length()) throw new IllegalArgumentException("empty JSON");
             return switch (input.charAt(index)) {
@@ -206,7 +206,7 @@ public final class BridgeAuthResponse0287 {
             if (index < input.length() && input.charAt(index) == '}') { index++; return output; }
             while (true) {
                 space();
-                if (index >= input.length() || input.charAt(index) != '"') throw new IllegalArgumentException("object key missing");
+                if (index >= input.length() || input.charAt(index) != '"') throw new IllegalArgumentException("Отсутствует ключ объекта");
                 String key = string();
                 space(); expect(':');
                 Object val = value(depth);
@@ -215,7 +215,7 @@ public final class BridgeAuthResponse0287 {
                 space();
                 char sep = next();
                 if (sep == '}') return output;
-                if (sep != ',') throw new IllegalArgumentException("object separator invalid");
+                if (sep != ',') throw new IllegalArgumentException("Некорректный разделитель объекта");
             }
         }
         private List<Object> arrayValue(int depth) {
@@ -228,7 +228,7 @@ public final class BridgeAuthResponse0287 {
                 space();
                 char sep = next();
                 if (sep == ']') return output;
-                if (sep != ',') throw new IllegalArgumentException("array separator invalid");
+                if (sep != ',') throw new IllegalArgumentException("Некорректный разделитель массива");
             }
         }
         private String string() {
@@ -237,7 +237,7 @@ public final class BridgeAuthResponse0287 {
             while (true) {
                 char ch = next();
                 if (ch == '"') return out.toString();
-                if (ch < 0x20) throw new IllegalArgumentException("control char in JSON");
+                if (ch < 0x20) throw new IllegalArgumentException("Управляющий символ в JSON");
                 if (ch != '\\') { out.append(ch); continue; }
                 char escape = next();
                 switch (escape) {

@@ -55,7 +55,7 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
     let mut report = json!({"event_id":uuid,"platform":platform,"level":"error",
       "release":option_env!("LAUNCHER_RELEASE_ID").map(str::to_string).unwrap_or_else(|| format!("launcher@{}",env!("CARGO_PKG_VERSION"))),"message":category,
       "sdk":{"name":"launcher.desktop","version":"0.30.9"}});
-    if !stack.is_empty() { report["exception"] = json!({"values":[{"type":category,"value":"Desktop runtime error","stacktrace":{"frames":stack}}]}); }
+    if !stack.is_empty() { report["exception"] = json!({"values":[{"type":category,"value":"Ошибка среды выполнения Desktop","stacktrace":{"frames":stack}}]}); }
     let head = json!({"event_id":uuid,"dsn":dest.dsn});
     let item = json!({"type":"event"});
     let envelope = format!("{}\n{}\n{}\n", head, item, report);

@@ -122,12 +122,12 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 12*1024))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&input); err != nil {
-		writeError(w, 400, "invalid official identity link request")
+		writeError(w, 400, "Некорректный запрос привязки официальной учётной записи")
 		return
 	}
 	var extra any
 	if dec.Decode(&extra) != io.EOF {
-		writeError(w, 400, "invalid official identity link request")
+		writeError(w, 400, "Некорректный запрос привязки официальной учётной записи")
 		return
 	}
 	if !input.Confirm {
@@ -179,7 +179,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 	}
 	uuid, valid := canonicalMinecraftUUID0268(r.PathValue("minecraftUuid"))
 	if !valid {
-		writeError(w, 400, "invalid Minecraft UUID")
+		writeError(w, 400, "Некорректный UUID Minecraft")
 		return
 	}
 	store, ok := s.officialLinkStore0268()

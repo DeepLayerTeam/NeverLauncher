@@ -404,10 +404,10 @@ fn matches_range_0243(actual:&str,expression:&str)->Result<bool,String>{
                 "<"=>cmp==Ordering::Less,"<="=>cmp!=Ordering::Greater,
                 "^"|"~"=>{
                     let mut upper=b.clone();upper.pre.clear();
-                    if op=="~"{upper.minor=upper.minor.checked_add(1).ok_or("version range overflow")?;upper.patch=0;}
-                    else if upper.major>0{upper.major=upper.major.checked_add(1).ok_or("version range overflow")?;upper.minor=0;upper.patch=0;}
-                    else if upper.minor>0{upper.minor=upper.minor.checked_add(1).ok_or("version range overflow")?;upper.patch=0;}
-                    else {upper.patch=upper.patch.checked_add(1).ok_or("version range overflow")?;}
+                    if op=="~"{upper.minor=upper.minor.checked_add(1).ok_or("Переполнение диапазона версий")?;upper.patch=0;}
+                    else if upper.major>0{upper.major=upper.major.checked_add(1).ok_or("Переполнение диапазона версий")?;upper.minor=0;upper.patch=0;}
+                    else if upper.minor>0{upper.minor=upper.minor.checked_add(1).ok_or("Переполнение диапазона версий")?;upper.patch=0;}
+                    else {upper.patch=upper.patch.checked_add(1).ok_or("Переполнение диапазона версий")?;}
                     cmp!=Ordering::Less&&compare_semver_0243(&a,&upper)==Ordering::Less
                 },_=>false
             };

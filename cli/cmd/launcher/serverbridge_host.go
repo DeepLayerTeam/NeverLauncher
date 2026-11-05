@@ -861,11 +861,11 @@ func serverBridgeHostCommand01910(config serverBridgeHostConfig01910) ([]string,
 		userJVM := filepath.Join(config.ServerRoot, "user_jvm_args.txt")
 		if _, err := os.Lstat(userJVM); err == nil {
 			if _, err = hostResolveInsideRoot01910(config.ServerRoot, userJVM, true); err != nil {
-				return nil, fmt.Errorf("user JVM argfile: %w", err)
+				return nil, fmt.Errorf("Файл параметров пользовательской JVM: %w", err)
 			}
 			approvedArgs, readErr := hostReadUserJVMArgs0283(userJVM)
 			if readErr != nil {
-				return nil, fmt.Errorf("user JVM argfile: %w", readErr)
+				return nil, fmt.Errorf("Файл параметров пользовательской JVM: %w", readErr)
 			}
 			args = append(args, approvedArgs...)
 		} else if !errors.Is(err, os.ErrNotExist) {

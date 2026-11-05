@@ -264,7 +264,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		HTTPClient:       opts.HTTPClient,
 	})
 	if err != nil {
-		return loaderMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
+		return loaderMaterializeResult{}, fmt.Errorf("%s: базовая версия Vanilla: %w", loader, err)
 	}
 	if opts.EnforceGASupport && compatibilityLoaderGA0180Required(version) {
 		if _, err := enforceLoaderGASupport0180(loader, vanilla.MinecraftVersion, vanilla.JavaMajorVersion); err != nil {
@@ -603,7 +603,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 			return nil, fmt.Errorf("loader library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
 		}
 		if err := validateVanillaRelativePath(rel); err != nil {
-			return nil, fmt.Errorf("library %s path: %w", lib.Name, err)
+			return nil, fmt.Errorf("Путь к библиотеке %s: %w", lib.Name, err)
 		}
 		artifactURL := strings.TrimSpace(artifact.URL)
 		if artifactURL == "" {

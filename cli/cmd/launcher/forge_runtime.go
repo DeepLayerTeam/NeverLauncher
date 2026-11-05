@@ -350,7 +350,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		HTTPClient:       opts.HTTPClient,
 	})
 	if err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
+		return forgeMaterializeResult{}, fmt.Errorf("%s: базовая версия Vanilla: %w", loader, err)
 	}
 	if opts.EnforceGASupport && compatibilityLoaderGA0180Required(version) {
 		if _, err := enforceLoaderGASupport0180(loader, vanilla.MinecraftVersion, vanilla.JavaMajorVersion); err != nil {
@@ -430,7 +430,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 
 	if pinned != nil {
 		if pinned.PayloadURL != installerURL {
-			return forgeMaterializeResult{}, fmt.Errorf("loader resolution lock payload URL mismatch: pinned %s got %s", pinned.PayloadURL, installerURL)
+			return forgeMaterializeResult{}, fmt.Errorf("Адрес зафиксированных данных загрузчика не совпадает: ожидался %s, получен %s", pinned.PayloadURL, installerURL)
 		}
 		if ok, sha256sum, size := existingFileMatchesSHA256(installerPath, pinned.PayloadSHA256); ok {
 			sha1sum, _, _, hashErr := hashFileSHA1SHA256(installerPath)
@@ -1637,7 +1637,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			return nil, fmt.Errorf("library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
 		}
 		if err := validateVanillaRelativePath(rel); err != nil {
-			return nil, fmt.Errorf("library %s path: %w", lib.Name, err)
+			return nil, fmt.Errorf("Путь к библиотеке %s: %w", lib.Name, err)
 		}
 		dstRel := "libraries/" + rel
 		dst, err := secureClientDestination(clientDir, dstRel)

@@ -60,7 +60,7 @@ def canonical_uuid(raw: object) -> str:
         require(all(raw[i] == '-' for i in (8,13,18,23)), 'malformed Minecraft UUID')
         raw = raw.replace('-', '')
     raw = raw.lower()
-    require(HEX32.fullmatch(raw) is not None, 'invalid Minecraft UUID')
+    require(HEX32.fullmatch(raw) is not None, 'Некорректный UUID Minecraft')
     return raw
 
 

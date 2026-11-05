@@ -44,19 +44,19 @@ def require(ok: bool, reason: str):
 
 
 def strict_file(path: Path, limit: int = 1 << 20) -> bytes:
-    require(path.is_absolute(), "absolute file path required")
+    require(path.is_absolute(), "Требуется абсолютный путь к файлу")
     st = path.lstat()
     require(stat.S_ISREG(st.st_mode) and 0 < st.st_size <= limit and st.st_mode & 0o077 == 0,
-            "missing, symlinked, oversized or nonprivate file: " + str(path))
+            "Файл отсутствует, является символической ссылкой, слишком велик или доступен посторонним: " + str(path))
     with path.open("rb") as f:
         data = f.read(limit + 1)
-    require(len(data) <= limit, "file exceeds size bound")
+    require(len(data) <= limit, "Размер файла превышает допустимый предел")
     return data
 
 
 def document(path: Path, limit: int = 1 << 20) -> dict:
     value = json.loads(strict_file(path, limit))
-    require(isinstance(value, dict), "JSON object expected")
+    require(isinstance(value, dict), "Ожидается объект JSON")
     return value
 
 
@@ -73,62 +73,62 @@ def safe_url(uri: str) -> bool:
 
 
 def validate(config: dict, journal_dir: Path):
-    require(config.get("format") == FORMAT, "unsupported config format")
+    require(config.get("format") == FORMAT, "Формат конфигурации не поддерживается")
     for name in ("runId", "profileId", "channel", "stageId", "releaseId"):
         value = config.get(name)
         require(isinstance(value, str) and bool(NAME.fullmatch(value) if name in ("profileId", "channel") else ROUTE.fullmatch(value) if name in ("runId", "stageId") else len(value) >= 8), "invalid " + name)
-    require(isinstance(config.get("expectedRevision"), int) and config["expectedRevision"] >= 1, "expected route revision required")
-    require(isinstance(config.get("inventorySha256"), str) and HEX.fullmatch(config["inventorySha256"]), "inventory digest required")
-    require(isinstance(config.get("targetDigest"), str) and HEX.fullmatch(config["targetDigest"]), "exact signed target manifest digest required")
-    require(isinstance(config.get("baselineRevision"), int) and config["baselineRevision"] >= 0, "baseline channel revision required")
-    require(safe_url(config.get("backend", "")), "Backend must use verified HTTPS")
-    require(isinstance(config.get("launcher"), str) and Path(config["launcher"]).is_absolute(), "absolute CLI required")
+    require(isinstance(config.get("expectedRevision"), int) and config["expectedRevision"] >= 1, "Требуется ожидаемая редакция маршрута")
+    require(isinstance(config.get("inventorySha256"), str) and HEX.fullmatch(config["inventorySha256"]), "Требуется хеш перечня файлов")
+    require(isinstance(config.get("targetDigest"), str) and HEX.fullmatch(config["targetDigest"]), "Требуется точный хеш подписанного целевого манифеста")
+    require(isinstance(config.get("baselineRevision"), int) and config["baselineRevision"] >= 0, "Требуется исходная редакция канала")
+    require(safe_url(config.get("backend", "")), "Backend должен использовать проверенный HTTPS")
+    require(isinstance(config.get("launcher"), str) and Path(config["launcher"]).is_absolute(), "Требуется абсолютный путь к CLI")
     launcher = Path(config["launcher"])
-    require(launcher.is_file() and not launcher.is_symlink() and os.access(launcher, os.X_OK), "launcher executable unavailable")
-    require(isinstance(config.get("launcherSha256"), str) and HEX.fullmatch(config["launcherSha256"]), "CLI digest required")
+    require(launcher.is_file() and not launcher.is_symlink() and os.access(launcher, os.X_OK), "Исполняемый файл лаунчера недоступен")
+    require(isinstance(config.get("launcherSha256"), str) and HEX.fullmatch(config["launcherSha256"]), "Требуется хеш исполняемого CLI")
     with launcher.open("rb") as f:
-        require(digest(f.read()) == config["launcherSha256"], "launcher CLI changed")
-    require(isinstance(config.get("proxySocket"), str) and Path(config["proxySocket"]).is_absolute(), "HAProxy Unix socket path required")
+        require(digest(f.read()) == config["launcherSha256"], "Исполняемый CLI лаунчера изменился")
+    require(isinstance(config.get("proxySocket"), str) and Path(config["proxySocket"]).is_absolute(), "Требуется путь к Unix-сокету HAProxy")
     sock_stat = Path(config["proxySocket"]).lstat()
     require(stat.S_ISSOCK(sock_stat.st_mode) and sock_stat.st_uid in (0, os.geteuid()),
-            "HAProxy admin socket must be real and owned by root or operator")
+            "Административный сокет HAProxy должен реально существовать и принадлежать root или оператору")
     require(journal_dir.is_dir() and not journal_dir.is_symlink() and journal_dir.stat().st_mode & 0o077 == 0,
-            "journal directory must be existing, private (0700), non-linked")
+            "Каталог журнала должен существовать, быть закрытым (0700) и не являться ссылкой")
     routes = config.get("routes")
     require(isinstance(routes, dict) and set(routes) == {"auth", "game"}, "both auth and game ingress backends required")
     pairs = []
     for kind in ("auth", "game"):
         route = routes[kind]
-        require(isinstance(route, dict) and set(route) == {"backend", "source", "target"}, "invalid proxy route")
-        require(all(isinstance(v, str) and SERVER.fullmatch(v) for v in route.values()), "invalid HAProxy backend/server")
-        require(route["source"] != route["target"], "different HAProxy source and target required")
+        require(isinstance(route, dict) and set(route) == {"backend", "source", "target"}, "Некорректный маршрут прокси")
+        require(all(isinstance(v, str) and SERVER.fullmatch(v) for v in route.values()), "Некорректный Backend или сервер HAProxy")
+        require(route["source"] != route["target"], "Источник и цель HAProxy должны различаться")
         pairs.extend([(route["backend"], route["source"]), (route["backend"], route["target"])])
     require(len(pairs) == len(set(pairs)) and routes["auth"]["backend"] != routes["game"]["backend"], "auth and game must have distinct dedicated proxy backends")
     require(5 <= config.get("drainSeconds", 0) <= 600, "drainSeconds must be 5..600")
-    require(isinstance(config.get("postSwitchStage"), str) and Path(config["postSwitchStage"]).is_absolute(), "post-switch real Minecraft stage required")
+    require(isinstance(config.get("postSwitchStage"), str) and Path(config["postSwitchStage"]).is_absolute(), "После переключения требуется этап фактического запуска Minecraft")
     require(isinstance(config.get("gamePublicAddress"), str) and bool(re.fullmatch(r"[A-Za-z0-9.-]+:[0-9]{1,5}", config["gamePublicAddress"])),
-            "explicit public Minecraft host:port required")
+            "Необходимо явно указать публичный адрес Minecraft в формате host:port")
     live = document(Path(config["postSwitchStage"]) / "live-session.json", 16384)
     require(isinstance(live.get("clientArgs"), list) and any(isinstance(arg, str) and config["gamePublicAddress"] in arg for arg in live["clientArgs"]),
-            "post-switch client launch does not reference the configured public Minecraft ingress")
-    require(isinstance(config.get("authCanary"), dict), "actual auth canary required")
+            "После переключения клиент запускается без указанной публичной точки входа Minecraft")
+    require(isinstance(config.get("authCanary"), dict), "Требуется реальная контрольная проверка авторизации")
     p = config["authCanary"]
     require(safe_url(p.get("url", "")) and p.get("method") == "POST" and
             isinstance(p.get("requestBodyFile"), str) and Path(p["requestBodyFile"]).is_absolute() and
             isinstance(p.get("expectedPlayerUuid"), str) and bool(re.fullmatch(r"[a-f0-9-]{36}", p["expectedPlayerUuid"])) and
             p.get("uuidJSONField") in ("uuid", "playerUuid", "id") and safe_url(p.get("frontendUrl", "")), "invalid authenticated canary configuration")
-    require(isinstance(p.get("requestSha256"), str) and HEX.fullmatch(p["requestSha256"]), "auth canary request digest required")
-    require(digest(strict_file(Path(p["requestBodyFile"]), 8192)) == p["requestSha256"], "auth canary request changed")
-    require(os.environ.get("LAUNCHER_TOKEN", "").strip() != "", "LAUNCHER_TOKEN must be set in environment")
+    require(isinstance(p.get("requestSha256"), str) and HEX.fullmatch(p["requestSha256"]), "Требуется хеш запроса контрольной проверки авторизации")
+    require(digest(strict_file(Path(p["requestBodyFile"]), 8192)) == p["requestSha256"], "Запрос контрольной проверки авторизации изменился")
+    require(os.environ.get("LAUNCHER_TOKEN", "").strip() != "", "Переменная окружения LAUNCHER_TOKEN должна быть задана")
 
 
 class Proxy:
-    """Real HAProxy runtime socket. No shell and no network-admin credentials."""
+    """Реальный сокет Runtime HAProxy. Без командной оболочки и учётных данных сетевого администратора."""
     def __init__(self, path: str):
         self.path = path
 
     def command(self, command: str) -> str:
-        require("\n" not in command and "\r" not in command and len(command) < 256, "unsafe HAProxy command")
+        require("\n" not in command and "\r" not in command and len(command) < 256, "Небезопасная команда HAProxy")
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
             sock.settimeout(4)
             sock.connect(self.path)
@@ -141,11 +141,11 @@ class Proxy:
                 if not piece:
                     break
                 size += len(piece)
-                require(size <= 4 << 20, "HAProxy response too large")
+                require(size <= 4 << 20, "Ответ HAProxy превышает допустимый размер")
                 chunks.append(piece)
         data = b"".join(chunks).decode("utf-8", "replace")
         require(not data.lstrip().startswith(("Unknown", "Error", "Permission denied", "No such")),
-                "HAProxy rejected command")
+                "HAProxy отклонил команду")
         return data
 
     def instance(self) -> str:
@@ -155,7 +155,7 @@ class Proxy:
                 key, value = line.split(": ", 1)
                 info[key.strip()] = value.strip()
         pid = info.get("Pid", "")
-        require(pid.isdigit() and int(pid) > 0, "HAProxy process identity unavailable")
+        require(pid.isdigit() and int(pid) > 0, "Идентификатор процесса HAProxy недоступен")
         return pid
 
     def stats(self) -> dict[tuple[str, str], dict]:
@@ -170,21 +170,21 @@ class Proxy:
                 values = next(csv.reader([line]))
                 item = dict(zip(headers, values))
                 result[(item.get("pxname", ""), item.get("svname", ""))] = item
-        require(bool(result), "HAProxy returned no valid server stats")
+        require(bool(result), "HAProxy не вернул корректные сведения о серверах")
         return result
 
     def state(self, backend: str, server: str, state: str):
-        require(state in ("ready", "drain", "maint"), "invalid server state")
+        require(state in ("ready", "drain", "maint"), "Некорректное состояние сервера")
         self.command(f"set server {backend}/{server} state {state}")
         stats = self.stats()
         row = stats.get((backend, server))
-        require(row is not None, "HAProxy server vanished")
+        require(row is not None, "Сервер HAProxy исчез")
         if state == "maint":
-            require(row.get("status", "").startswith("MAINT"), "HAProxy did not apply maintenance")
+            require(row.get("status", "").startswith("MAINT"), "HAProxy не применил режим обслуживания")
         if state == "drain":
-            require(row.get("status", "").startswith("DRAIN"), "HAProxy did not apply drain")
+            require(row.get("status", "").startswith("DRAIN"), "HAProxy не применил режим завершения соединений")
         if state == "ready":
-            require(row.get("status") == "UP", "HAProxy target is not healthy/UP")
+            require(row.get("status") == "UP", "Целевой сервер HAProxy неработоспособен или не находится в состоянии UP")
 
 
 def inspect_proxy(proxy: Proxy, cfg: dict, phase: str):
@@ -193,20 +193,20 @@ def inspect_proxy(proxy: Proxy, cfg: dict, phase: str):
         r = cfg["routes"][kind]
         source = stats.get((r["backend"], r["source"]))
         target = stats.get((r["backend"], r["target"]))
-        require(source is not None and target is not None, "missing configured ingress server " + kind)
+        require(source is not None and target is not None, "Отсутствует настроенный сервер входящего трафика " + kind)
         expected = {r["source"], r["target"]}
         for (backend, server), row in stats.items():
             if backend == r["backend"] and server not in expected and server not in ("FRONTEND", "BACKEND"):
-                require(row.get("status", "").startswith("MAINT"), "third active ingress server in " + kind)
+                require(row.get("status", "").startswith("MAINT"), "Третий активный сервер входящего трафика в " + kind)
         if phase == "prepare":
             require(source.get("status") == "UP" and target.get("status", "").startswith("MAINT"),
-                    "expected source UP and target MAINT before drain")
+                    "Перед завершением соединений источник должен быть UP, а цель — MAINT")
         elif phase == "closed":
             require(source.get("status", "").startswith("MAINT") and target.get("status", "").startswith("MAINT"),
-                    "ingress is not fully closed")
+                    "Входящий трафик перекрыт не полностью")
         elif phase == "open":
             require(source.get("status", "").startswith("MAINT") and target.get("status") == "UP",
-                    "target not UP or source not MAINT")
+                    "Цель не находится в состоянии UP или источник не находится в MAINT")
 
 
 def close_ingress(proxy: Proxy, cfg: dict):
@@ -219,7 +219,7 @@ def close_ingress(proxy: Proxy, cfg: dict):
             except Exception as exc:
                 errors.append(kind + ":" + name + ":" + type(exc).__name__)
     if errors:
-        raise Blocked("could not prove ingress closed (manual HAProxy maintenance required): " + ", ".join(errors))
+        raise Blocked("Не удалось подтвердить закрытие входящего трафика (требуется ручное обслуживание HAProxy): " + ", ".join(errors))
     inspect_proxy(proxy, cfg, "closed")
 
 
@@ -256,7 +256,7 @@ def new_phase(cfg_hash: str, phase: str) -> dict:
 
 def load_phase(directory: Path, cfg_hash: str) -> dict:
     result = document(directory / "cutover-state.json", 16384)
-    require(result.get("format") == FORMAT and result.get("configSha256") == cfg_hash, "journal/config mismatch")
+    require(result.get("format") == FORMAT and result.get("configSha256") == cfg_hash, "Журнал не соответствует конфигурации")
     return result
 
 
@@ -268,10 +268,10 @@ def update_phase(directory: Path, state: dict, phase: str, **extras):
 
 
 def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
-    require(not output.exists(), "refusing to overwrite cutover evidence")
+    require(not output.exists(), "Перезапись доказательств переключения запрещена")
     launcher = Path(cfg["launcher"])
     with launcher.open("rb") as f:
-        require(digest(f.read()) == cfg["launcherSha256"], "CLI changed during cutover")
+        require(digest(f.read()) == cfg["launcherSha256"], "CLI изменился во время переключения")
     with open(os.devnull, "wb") as sink:
         env = dict(os.environ)
         # The bearer token is environment-only, never stored or placed in argv.
@@ -281,7 +281,7 @@ def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
                            stdin=sink, stdout=sink, stderr=sink, env=env,
                            timeout=timeout, check=True)
         except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            raise Blocked("NeverLauncher migration CLI command failed: " + args[0]) from exc
+            raise Blocked("Ошибка команды CLI миграции NeverLauncher: " + args[0]) from exc
     require(output.exists(), "CLI did not create result " + args[0])
     result = document(output, 1 << 20)
     return result.get("data", result)
@@ -289,9 +289,9 @@ def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
 
 def route_list(cfg: dict, directory: Path, name: str) -> dict:
     doc = run_cli(cfg, ["cutover-list", "--backend", cfg["backend"], "--run", cfg["runId"]], directory / name)
-    require(isinstance(doc, list), "invalid cutover-list result")
+    require(isinstance(doc, list), "Некорректный результат списка переключений")
     matching = [v for v in doc if isinstance(v, dict) and v.get("profileId") == cfg["profileId"] and v.get("channel") == cfg["channel"]]
-    require(len(matching) == 1, "exactly one matching route required")
+    require(len(matching) == 1, "Требуется ровно один соответствующий маршрут")
     return matching[0]
 
 
@@ -302,7 +302,7 @@ def assert_route(route: dict, cfg: dict, active: bool):
             route.get("baselineRevision") == cfg["baselineRevision"] and
             route.get("state") == ("active" if active else "staged"), "cutover route differs from approved target")
     want_rev = cfg["expectedRevision"] + (1 if active else 0)
-    require(route.get("revision") == want_rev, "cutover route revision changed")
+    require(route.get("revision") == want_rev, "Редакция маршрута переключения изменилась")
     if active:
         require(route.get("activatedRevision") == cfg["baselineRevision"] + 1, "activated channel head differs from approved baseline")
 
@@ -313,7 +313,7 @@ def receipt_check(cfg: dict) -> None:
             all(receipt.get(field) == cfg[cfgfield] for field, cfgfield in
                 (("runId", "runId"), ("profileId", "profileId"), ("channel", "channel"), ("stageId", "stageId"))) and
             receipt.get("unitState") == "inactive" and receipt.get("unitFileState") in ("masked", "masked-runtime") and
-            receipt.get("snapshotSha256") == cfg.get("sourceSnapshotSha256"), "source fence receipt not bound to approved source")
+            receipt.get("snapshotSha256") == cfg.get("sourceSnapshotSha256"), "Квитанция блокировки источника не привязана к одобренному источнику")
     # Backend/CLI independently checks the receipt hash and its freshness.
     from datetime import datetime, timezone
     checked = datetime.fromisoformat(receipt["checkedAt"].replace("Z", "+00:00"))
@@ -344,7 +344,7 @@ def auth_canary(cfg: dict, *, public: bool = False):
     require(len(data) <= 8192, "oversized auth canary result")
     result = json.loads(data)
     require(isinstance(result, dict) and result.get(canary["uuidJSONField"]) == canary["expectedPlayerUuid"],
-            "auth canary authenticated wrong Minecraft UUID")
+            "Контрольная проверка авторизации подтвердила неверный UUID Minecraft")
     # Intentionally do not persist session cookies, token, password or body.
 
 
@@ -352,16 +352,16 @@ def live_canary(cfg: dict, directory: Path) -> dict:
     report = run_cli(cfg, ["rehearse-local", "--run", cfg["runId"], "--stage", cfg["postSwitchStage"],
                            "--inventory-sha256", cfg["inventorySha256"]], directory / "post-switch-minecraft.json", 1000)
     require(report.get("ready") is False and report.get("cutoverAllowed") is False,
-            "local witness must not claim Backend certification")
+            "Локальное подтверждение не должно заявлять о сертификации Backend")
     live = report.get("liveSession")
     require(isinstance(live, dict) and live.get("joinedAt") and HEX.fullmatch(str(live.get("clientSha256", "")))
             and live.get("playerUuid") == cfg["authCanary"]["expectedPlayerUuid"],
-            "post-switch Minecraft join not observed for authenticated UUID")
+            "После переключения не обнаружено подключение Minecraft с подтверждённым UUID")
     probes = report.get("probes")
     require(isinstance(probes, list) and len(probes) == len(PROBES)
             and [p.get("name") for p in probes] == list(PROBES)
             and all(p.get("passed") is True and HEX.fullmatch(str(p.get("evidenceSha256", ""))) for p in probes),
-            "post-switch Minecraft probes did not pass")
+            "Проверки Minecraft после переключения не пройдены")
     return report
 
 
@@ -385,14 +385,14 @@ def prepare(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
             for kind in ("auth", "game"):
                 r = cfg["routes"][kind]
                 scur = stats[(r["backend"], r["source"])].get("scur", "")
-                require(scur.isdigit(), "invalid HAProxy session count")
+                require(scur.isdigit(), "Некорректное число сессий HAProxy")
                 remaining += int(scur)
             if remaining == 0:
                 break
             require(time.monotonic() < deadline, "source game/auth sessions did not drain")
             time.sleep(1)
         close_ingress(proxy, cfg)
-        require(proxy.instance() == proxy_pid, "HAProxy restarted during cutover prepare")
+        require(proxy.instance() == proxy_pid, "HAProxy перезапустился во время подготовки переключения")
         update_phase(directory, state, "traffic_fenced")
     except BaseException:
         try:
@@ -404,9 +404,9 @@ def prepare(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
 
 def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
     state = load_phase(directory, config_sha)
-    require(state["phase"] == "traffic_fenced", "only prepared, closed ingress may activate")
+    require(state["phase"] == "traffic_fenced", "Активировать можно только подготовленную систему с закрытым входящим трафиком")
     inspect_proxy(proxy, cfg, "closed")
-    require(proxy.instance() == state.get("haproxyPid"), "HAProxy restarted after ingress was fenced; manual reconciliation required")
+    require(proxy.instance() == state.get("haproxyPid"), "HAProxy перезапустился после блокировки входящего трафика; требуется ручная сверка")
     route = route_list(cfg, directory, "route-pre-activate.json")
     assert_route(route, cfg, False)
     receipt_check(cfg)
@@ -432,7 +432,7 @@ def activate(cfg: dict, directory: Path, config_sha: str, proxy: Proxy):
         route = route_list(cfg, directory, "route-final.json")
         assert_route(route, cfg, True)
         inspect_proxy(proxy, cfg, "open")
-        require(proxy.instance() == state["haproxyPid"], "HAProxy restarted before cutover verification")
+        require(proxy.instance() == state["haproxyPid"], "HAProxy перезапустился до проверки переключения")
         update_phase(directory, state, "complete", trafficOpen=True)
     except BaseException as exc:
         state["errorClass"] = type(exc).__name__
@@ -460,7 +460,7 @@ def main(argv=None) -> int:
         cfg = json.loads(config_raw)
         directory = Path(args.journal_dir)
         validate(cfg, directory)
-        require(args.command == "status" or args.confirm == cfg["runId"], "exact runId confirmation required")
+        require(args.command == "status" or args.confirm == cfg["runId"], "Требуется точное подтверждение runId")
         lock_path = directory / ".cutover.lock"
         fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
@@ -476,7 +476,7 @@ def main(argv=None) -> int:
                     prepare(cfg, directory, cfg_hash, proxy)
                 else:
                     activate(cfg, directory, cfg_hash, proxy)
-                print("cutover phase: " + load_phase(directory, cfg_hash)["phase"])
+                print("Этап переключения: " + load_phase(directory, cfg_hash)["phase"])
         finally:
             os.close(fd)
         return 0

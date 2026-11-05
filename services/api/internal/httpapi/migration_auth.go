@@ -24,7 +24,7 @@ func (s Server) registerMigrationAuthRoutes0335(mux *http.ServeMux) {
 func (s Server) migrationAuthGet0335(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(migrationAuthStore0335)
 	if !ok {
-		writeError(w, 503, "auth migration requires PostgreSQL")
+		writeError(w, 503, "Для миграции авторизации требуется PostgreSQL")
 		return
 	}
 	report, e := store.GetMigrationCredentials0335(r.Context(), r.PathValue("runId"))
@@ -44,7 +44,7 @@ func (s Server) migrationAuthImport0335(w http.ResponseWriter, r *http.Request) 
 func (s Server) migrationAuthUpload0335(w http.ResponseWriter, r *http.Request, dryRun bool) {
 	store, ok := s.Repo.(migrationAuthStore0335)
 	if !ok {
-		writeError(w, 503, "auth migration requires PostgreSQL")
+		writeError(w, 503, "Для миграции авторизации требуется PostgreSQL")
 		return
 	}
 	flow, ok := s.migrationStore0331(w)

@@ -327,7 +327,7 @@ pub fn parse_pcr_selection_0315(selection:&str)->Result<Vec<u8>,String>{
         if index>23 || out.last().map_or(false,|previous|*previous>=index){return Err("Индексы PCR должны строго возрастать в диапазоне 0–23".into());}
         out.push(index);
     }
-    if out.is_empty() || out.len()>24{return Err("empty/oversized PCR selection".into());}
+    if out.is_empty() || out.len()>24{return Err("Выбран пустой или слишком большой набор PCR".into());}
     Ok(out)
 }
 

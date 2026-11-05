@@ -7,7 +7,7 @@ import java.util.Locale;
 public enum BungeeFamilyPlatform {
     BUNGEECORD("bungeecord", "BungeeCord"),
     WATERFALL("waterfall", "Waterfall"),
-    UNKNOWN("unknown", "Unknown Bungee-compatible proxy");
+    UNKNOWN("unknown", "Неизвестный прокси, совместимый с Bungee");
 
     private final String id;
     private final String displayName;

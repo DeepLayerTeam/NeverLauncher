@@ -376,7 +376,7 @@ public final class LauncherNeoForgeBridge {
 
     private static String safeUsername(String value) {
         String username = value == null ? "" : value.trim();
-        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("Некорректное имя игрока Minecraft");
         return username;
     }
 

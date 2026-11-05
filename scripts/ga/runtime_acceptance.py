@@ -62,7 +62,7 @@ def assess(package, validations, report, package_id, version, source_sha, now=No
         "wrong package ID",
     )
     require(package.get("version") == version, "wrong release version")
-    require(package.get("channel") == "stable", "not a stable release")
+    require(package.get("channel") == "stable", "Релиз не является стабильным")
     require(
         package.get("status") == "integrity-passed",
         "release not staged with current integrity PASS",

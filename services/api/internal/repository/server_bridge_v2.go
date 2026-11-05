@@ -363,7 +363,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 	now = now.UTC()
 	if currentRuntimeID == runtime.RuntimeID {
 		if currentDigest == "" || !strings.EqualFold(currentDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime identity mutated for existing runtime id", ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: идентификатор среды выполнения изменён для существующего runtime id", ErrConflict)
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET
 			fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,
@@ -395,7 +395,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 
 	previousRuntimeID := currentRuntimeID
 	if previousRuntimeID != "" && currentStartedAt.Valid && !runtime.StartedAt.After(currentStartedAt.Time) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime instance is older than active runtime", ErrConflict)
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: экземпляр Runtime старше активного", ErrConflict)
 	}
 	replacementDetected := previousRuntimeID != "" && currentLastSeenAt.Valid && currentLastSeenAt.Time.After(now.Add(-serverBridgeFreshness0149))
 	transition := "started"
@@ -588,12 +588,12 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 			var storedDigest, storedEventID, storedType, storedSignature string
 			err = tx.QueryRowContext(ctx, `SELECT payload_sha256,event_id,event_type,signature FROM server_bridge_events_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND sequence=$3`, serverID, runtimeEpoch, event.Sequence).Scan(&storedDigest, &storedEventID, &storedType, &storedSignature)
 			if err != nil || !strings.EqualFold(storedDigest, event.PayloadSHA256) || storedEventID != event.EventID || storedType != event.Type || storedSignature != event.Signature {
-				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", ErrConflict)
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: конфликт повторного воспроизведения событий", ErrConflict)
 			}
 			continue
 		}
 		if event.Sequence != ack+1 {
-			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event sequence gap", ErrConflict)
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: обнаружен пропуск в последовательности событий", ErrConflict)
 		}
 		payload, marshalErr := json.Marshal(event.Payload)
 		if marshalErr != nil {
@@ -610,7 +610,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		if rows != 1 {
 			var storedDigest, storedEventID, storedType, storedSignature string
 			if err = tx.QueryRowContext(ctx, `SELECT payload_sha256,event_id,event_type,signature FROM server_bridge_events_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND sequence=$3`, serverID, runtimeEpoch, event.Sequence).Scan(&storedDigest, &storedEventID, &storedType, &storedSignature); err != nil || !strings.EqualFold(storedDigest, event.PayloadSHA256) || storedEventID != event.EventID || storedType != event.Type || storedSignature != event.Signature {
-				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", ErrConflict)
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: конфликт повторного воспроизведения событий", ErrConflict)
 			}
 		} else {
 			inserted++
@@ -1541,7 +1541,7 @@ func (r *SQLRepository) reconcileControlLeases0285(ctx context.Context, tx *sql.
 	_, err := tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
 SET status='indeterminate', updated_at=$2, completed_at=$2,
     error=CASE WHEN expires_at<=$2 THEN 'delivered command expired without proof of completion'
-               WHEN lease_until IS NOT NULL AND lease_until>$2 THEN 'delivery belongs to a superseded runtime identity'
+               WHEN lease_until IS NOT NULL AND lease_until>$2 THEN 'Доставка привязана к устаревшему идентификатору Runtime'
                ELSE 'delivery lease expired without proof of completion' END,
     lease_until=NULL
 WHERE server_id=$1 AND status='leased' AND ((lease_until IS NULL OR lease_until<=$2) OR expires_at<=$2
@@ -1553,7 +1553,7 @@ WHERE server_id=$1 AND status='leased' AND ((lease_until IS NULL OR lease_until<
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
 SET status='expired',updated_at=$2,completed_at=$2,
-    error='expired before delivery',lease_until=NULL
+    error='Срок действия истёк до доставки',lease_until=NULL
 WHERE server_id=$1 AND status='pending' AND expires_at<=$2`, serverID, now.UTC())
 	return err
 }
@@ -1731,7 +1731,7 @@ func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
 func (r *SQLRepository) reconcileControlRead0285(ctx context.Context, serverID, commandID string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET
 status=CASE WHEN status='leased' THEN 'indeterminate' ELSE 'expired' END,
-error=CASE WHEN status='leased' THEN 'delivered command lost lease/runtime before ACK' ELSE 'expired before delivery' END,
+error=CASE WHEN status='leased' THEN 'delivered command lost lease/runtime before ACK' ELSE 'Срок действия истёк до доставки' END,
 updated_at=now(),completed_at=now(),lease_until=NULL
 WHERE ($1='' OR server_id=$1) AND ($2='' OR id=$2) AND (status='pending' AND expires_at<=now() OR status='leased' AND ((lease_until IS NULL OR lease_until<=now()) OR expires_at<=now()
 OR NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=server_id AND n.status='active' AND n.runtime_epoch=server_bridge_control_commands_v3.runtime_epoch AND n.runtime_id=server_bridge_control_commands_v3.runtime_id)))`, serverID, commandID)

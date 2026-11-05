@@ -80,8 +80,8 @@ public final class LauncherVelocityBridge {
             next.startControlChannel(this::executeControl);
             scheduleTelemetry(next);
         } catch (Exception e) {
-            logger.severe("Launcher Velocity Bridge initialization failed: " + e.getMessage());
-            throw new IllegalStateException("Launcher Velocity Bridge failed closed", e);
+            logger.severe("Ошибка инициализации моста Launcher Velocity: " + e.getMessage());
+            throw new IllegalStateException("Мост Launcher Velocity безопасно заблокировал работу", e);
         }
     }
 
@@ -258,7 +258,7 @@ public final class LauncherVelocityBridge {
 
     private static String safeUsername(String value) {
         String username = value == null ? "" : value.trim();
-        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("Некорректное имя игрока Minecraft");
         return username;
     }
 

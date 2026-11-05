@@ -21,7 +21,7 @@ func (s Server) registerMigrationRehearsalRoutes03310(mux *http.ServeMux) {
 func (s Server) migrationRehearsalGet03310(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(migrationRehearsalStore03310)
 	if !ok {
-		writeError(w, 503, "rehearsal requires PostgreSQL")
+		writeError(w, 503, "Для пробного запуска требуется PostgreSQL")
 		return
 	}
 	run, e := s.migrationStoreRead03310(w, r)
@@ -47,7 +47,7 @@ func (s Server) migrationRehearsalGet03310(w http.ResponseWriter, r *http.Reques
 func (s Server) migrationRehearsalPost03310(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(migrationRehearsalStore03310)
 	if !ok {
-		writeError(w, 503, "rehearsal requires PostgreSQL")
+		writeError(w, 503, "Для пробного запуска требуется PostgreSQL")
 		return
 	}
 	run, e := s.migrationStoreRead03310(w, r)

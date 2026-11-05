@@ -23,7 +23,7 @@ import (
 // публикации клиента.
 func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.Repo.(migrationPlanStore0442); !ok {
-		writeError(w, 503, "migration requires PostgreSQL")
+		writeError(w, 503, "Для миграции требуется PostgreSQL")
 		return
 	}
 	runs, ok := s.migrationStore0331(w)
@@ -56,17 +56,17 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "expected application/zip")
+		writeError(w, 415, "Ожидается тип содержимого application/zip")
 		return
 	}
 	encoded := r.Header.Get("X-Gravit-Profiles")
 	if len(encoded) < 2 || len(encoded) > 16384 {
-		writeError(w, 400, "bounded X-Gravit-Profiles mapping required")
+		writeError(w, 400, "Требуется сопоставление X-Gravit-Profiles допустимого размера")
 		return
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil || len(raw) > 12288 {
-		writeError(w, 400, "invalid profile mapping encoding")
+		writeError(w, 400, "Некорректная кодировка сопоставления профилей")
 		return
 	}
 	var destinations []gp.Destination
@@ -79,19 +79,19 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&destinations) != nil {
-		writeError(w, 400, "unknown profile mapping field")
+		writeError(w, 400, "Неизвестное поле сопоставления профилей")
 		return
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
-		writeError(w, 400, "trailing profile mapping data")
+		writeError(w, 400, "Лишние данные после сопоставления профилей")
 		return
 	}
 	select {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "inventory upload capacity reached")
+		writeError(w, 429, "Достигнут предел загрузки перечня файлов")
 		return
 	}
 	saved, err := inventoryStore.GetMigrationInventory0333(r.Context(), run.ID)
@@ -110,7 +110,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	f, n, sha, err := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if err != nil {
-		writeError(w, 413, "unable to stage source")
+		writeError(w, 413, "Не удалось подготовить исходные данные")
 		return
 	}
 	defer func() { f.Close(); os.Remove(f.Name()) }()
@@ -120,7 +120,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	actual, err := inv.Inspect(r.Context(), f, n, sha)
 	if err != nil {
-		writeError(w, 422, "invalid source ZIP: "+err.Error())
+		writeError(w, 422, "Некорректный исходный ZIP: "+err.Error())
 		return
 	}
 	if actual.ManifestSHA256 != saved.ManifestSHA256 {
@@ -129,7 +129,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	compatibility, err := gd.AssessReader(r.Context(), f, n, sha, previous.ClaimedVersion)
 	if err != nil {
-		writeError(w, 422, "compatibility check failed: "+err.Error())
+		writeError(w, 422, "Проверка совместимости завершилась ошибкой: "+err.Error())
 		return
 	}
 	if compatibility.FilesSHA256 != previous.FilesSHA256 || compatibility.VersionStatus != previous.VersionStatus || compatibility.DetectedVersion != previous.DetectedVersion {
@@ -138,10 +138,10 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	modules, err := gm.Analyze(r.Context(), f, n, saved)
 	if err != nil {
-		writeError(w, 422, "module inspection failed: "+err.Error())
+		writeError(w, 422, "Не удалось проверить модуль: "+err.Error())
 		return
 	}
-	identities := gp.IdentityPreview{State: "blocked", Reason: "no supported identity snapshot"}
+	identities := gp.IdentityPreview{State: "blocked", Reason: "Не найден поддерживаемый снимок учётных записей"}
 	accounts, err := gi.Extract(r.Context(), f, n, saved)
 	if err != nil {
 		identities.Reason = err.Error()
@@ -150,7 +150,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 		identities.SourceAccounts = len(accounts)
 		identities.DuplicateOrConflicting = summary["blocked"]
 		if identities.DuplicateOrConflicting != 0 {
-			identities.Reason = "duplicate source account identities"
+			identities.Reason = "Повторяющиеся учётные записи источника"
 		} else {
 			identities.State = "review_required"
 			identities.Reason = "UUID and password verifiers need target reconciliation"
@@ -158,12 +158,12 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	target, existing, err := s.migrationTargetSnapshot0442(run.ProjectID)
 	if err != nil {
-		writeError(w, 503, "target snapshot unavailable")
+		writeError(w, 503, "Целевой снимок недоступен")
 		return
 	}
 	report, err := gp.BuildBatch0492(r.Context(), f, n, run.ID, run.ProjectID, target, existing, saved, compatibility, modules, identities, destinations)
 	if err != nil {
-		writeError(w, 422, "multi-profile dry-run rejected: "+err.Error())
+		writeError(w, 422, "Пробная миграция нескольких профилей отклонена: "+err.Error())
 		return
 	}
 	latest, _, err := s.migrationTargetSnapshot0442(run.ProjectID)

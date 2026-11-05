@@ -57,7 +57,7 @@ def role_plan(path, imported, users):
         return []
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, dict) or set(raw) != {"projectId", "grants"}:
-        raise MigrationError("role map needs projectId and grants")
+        raise MigrationError("Для карты ролей требуются projectId и grants")
     project = raw["projectId"]
     grants = raw["grants"]
     if not isinstance(project, str) or not project or project == "*" or not isinstance(grants, list) or len(grants) > 200000:
@@ -73,7 +73,7 @@ def role_plan(path, imported, users):
         u = canonical_uuid(g["uuid"])
         role = g["roleId"]
         if u in seen or u not in rows or not isinstance(role, str) or role not in allowed:
-            raise MigrationError("duplicate, unsupported, or non-imported Gravit role approval")
+            raise MigrationError("Разрешение роли Gravit повторяется, не поддерживается или относится к неперенесённой роли")
         seen.add(u)
         row = rows[u]
         user_id = "gravit-" + row["provider"] + "-" + u.replace("-", "")
@@ -120,9 +120,9 @@ class Backend:
                 # Do NOT echo a server error body (may contain secrets).
                 raise MigrationError("Backend rejected %s %s (HTTP %d)" % (method, path, exc.code)) from None
             except (OSError, URLError) as exc:
-                raise MigrationError("Backend transport error: %s" % type(exc).__name__) from None
+                raise MigrationError("Ошибка передачи данных Backend: %s" % type(exc).__name__) from None
             if len(raw) > MAX_RESPONSE:
-                raise MigrationError("Backend response exceeds 4 MiB")
+                raise MigrationError("Ответ Backend превышает 4 МиБ")
             try:
                 obj = json.loads(raw)
             except (ValueError, UnicodeError):
@@ -136,7 +136,7 @@ class Backend:
             with open(source, "rb") as reader:
                 response = call(reader)
             if source_hash(source) != (size, before):
-                raise MigrationError("source ZIP changed while uploading")
+                raise MigrationError("Исходный ZIP изменился во время загрузки")
             return response
         if payload is not None:
             req_headers["Content-Type"] = "application/json"
@@ -146,11 +146,11 @@ class Backend:
 
 def verify_preview(inventory, identity, auth, run_id, digest):
     if inventory.get("sourceSha256") != digest or identity.get("sourceSha256") != digest or auth.get("sourceSha256") != digest:
-        raise MigrationError("source digest differs across inventory, identity and credentials")
+        raise MigrationError("Хеш источника различается в перечне, учётных записях и учётных данных")
     if identity.get("runId") != run_id or auth.get("runId") != run_id:
         raise MigrationError("incorrect migration run in response")
     if identity.get("summary", {}).get("blocked") != 0:
-        raise MigrationError("blocked or conflicting UUID identity mapping")
+        raise MigrationError("Сопоставление UUID заблокировано или содержит конфликты")
     rows = auth.get("rows")
     if not isinstance(rows, list) or len(rows) != len(identity.get("rows", [])) or not rows:
         raise MigrationError("credential preview does not cover all mapped identities")
@@ -171,7 +171,7 @@ def atomic_receipt(target, receipt):
     output = Path(target)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
-        raise MigrationError("receipt already exists; choose a new path")
+        raise MigrationError("Квитанция уже существует; выберите другой путь")
     fd, temporary = tempfile.mkstemp(prefix=".migration-users-", dir=output.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as out:
@@ -199,7 +199,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     h = {"X-Gravit-Password-Format": password_format}
     preview = api.request("POST", root + "/credentials/preview", source=source, headers=h)
     if preview.get("dryRun") is not True:
-        raise MigrationError("Backend did not perform credential preview")
+        raise MigrationError("Backend не выполнил предварительную проверку учётных данных")
     counts = verify_preview(inventory, verified, preview, run_id, digest)
     receipt = {"version": "0.49.4", "runId": run_id, "sourceSha256": digest, "sourceBytes": size, "identitySHA256": verified.get("entriesSha256"), "credentialCounts": counts, "mode": mode, "status": "prepared"}
     if mode == "prepare":
@@ -254,11 +254,11 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--backend", required=True, help="HTTPS origin of running NeverLauncher API")
+    p.add_argument("--backend", required=True, help="Базовый HTTPS-адрес работающего API NeverLauncher")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-zip", required=True)
     p.add_argument("--mode", choices=["prepare", "import"], default="prepare")
-    p.add_argument("--password-format", default="", help="explicit supported FileAuth verifier format")
+    p.add_argument("--password-format", default="", help="Явно указанный поддерживаемый формат проверки FileAuth")
     p.add_argument("--allow-manual-resets", action="store_true")
     p.add_argument("--fresh-keys-confirmed", action="store_true", help="operator confirms independently provisioned Never signing/JWT keys")
     p.add_argument("--roles-file", help="approved explicit UUID->project role grants (import only, recent passkey MFA required)")
@@ -277,7 +277,7 @@ def main(argv=None):
         atomic_receipt(args.receipt, result)
     except (MigrationError, OSError, ValueError, KeyError) as exc:
         # Never print password hashes, tokens, response bodies or source paths.
-        print("migration failed (%s)" % type(exc).__name__, file=sys.stderr)
+        print("Миграция завершилась ошибкой (%s)" % type(exc).__name__, file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))
     return 0

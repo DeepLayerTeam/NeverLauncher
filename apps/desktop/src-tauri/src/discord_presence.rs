@@ -131,7 +131,7 @@ impl Connection {
                 return Ok(session);
             }
         }
-        Err("Discord IPC READY was not received".into())
+        Err("Не получено сообщение READY от Discord IPC".into())
     }
 
     async fn set_activity(&mut self, activity: Option<Value>) -> Result<(), String> {
@@ -150,7 +150,7 @@ impl Connection {
                 return Ok(());
             }
         }
-        Err("Discord SET_ACTIVITY acknowledgement not received".into())
+        Err("Не получено подтверждение SET_ACTIVITY от Discord".into())
     }
 }
 
@@ -206,7 +206,7 @@ mod tests {
     fn transport_retry_never_retries_explicit_rpc_error() {
         assert!(transport_failure("Превышено время ожидания заголовка IPC Discord"));
         assert!(transport_failure("IPC-соединение с Discord закрыто"));
-        assert!(!transport_failure("Discord rejected activity: invalid client"));
+        assert!(!transport_failure("Discord отклонил обновление активности: некорректный клиент"));
     }
     #[test]
     fn activity_needs_valid_snowflake_and_action() {

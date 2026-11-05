@@ -122,7 +122,7 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Settings.ToolVersions["launcher-api"] = s.Version
 	if req.Settings.Minecraft.Version == "" {
-		writeError(w, 400, "Minecraft version required")
+		writeError(w, 400, "Необходимо указать версию Minecraft")
 		return
 	}
 	if req.Settings.Minecraft.Loader == "" {

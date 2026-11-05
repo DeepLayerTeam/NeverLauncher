@@ -683,10 +683,10 @@ func (b *serverBridgeStore) createControl0195(c model.ServerBridgeControlCommand
 func reconcileControlInMemory0285(c model.ServerBridgeControlCommand, now time.Time) model.ServerBridgeControlCommand {
 	if c.Status == "leased" && (!c.LeaseUntil.After(now) || !c.ExpiresAt.After(now)) {
 		c.Status = "indeterminate"
-		c.Error = "delivered command lost lease without proof of completion"
+		c.Error = "Выданная команда потеряла аренду без подтверждения завершения"
 	} else if c.Status == "pending" && !c.ExpiresAt.After(now) {
 		c.Status = "expired"
-		c.Error = "expired before delivery"
+		c.Error = "Срок действия истёк до доставки"
 	} else {
 		return c
 	}
@@ -725,7 +725,7 @@ func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runti
 			continue
 		}
 		if c.Status == "leased" && (c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID)) {
-			c.Status, c.Error = "indeterminate", "delivery belongs to a superseded runtime identity"
+			c.Status, c.Error = "indeterminate", "Доставка привязана к устаревшему идентификатору Runtime"
 			c.CompletedAt, c.UpdatedAt, c.LeaseUntil = now, now, time.Time{}
 			b.controlCommands[id] = c
 		}
@@ -815,8 +815,8 @@ func recoverableControlLease0412(c model.ServerBridgeControlCommand) bool {
 		return false
 	}
 	switch c.Error {
-	case "delivered command lost lease without proof of completion",
-		"delivery belongs to a superseded runtime identity":
+	case "Выданная команда потеряла аренду без подтверждения завершения",
+		"Доставка привязана к устаревшему идентификатору Runtime":
 		return true
 	}
 	return false

@@ -93,7 +93,7 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension is not enabled")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("Расширение не включено")
 	}
 	ver, err := s.Repo.GetExtensionVersion(r.Context(), id, install.CurrentVersion)
 	if err != nil {

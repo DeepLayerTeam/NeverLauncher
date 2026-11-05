@@ -208,7 +208,7 @@ func (s Server) profileDiff0225(w http.ResponseWriter, r *http.Request) {
 	if fromRevision == 0 && other == id {
 		reader, ok := s.Repo.(profileRevisionReader0221)
 		if !ok {
-			writeError(w, 503, "profile history unavailable")
+			writeError(w, 503, "История профиля недоступна")
 			return
 		}
 		history, err := reader.ListProfileRevisions(project, id)

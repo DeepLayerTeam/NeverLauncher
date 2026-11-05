@@ -87,7 +87,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         try {
             runtime = loadRuntime();
         } catch (Exception e) {
-            getLogger().severe("Launcher ServerBridge initialization failed: " + e.getMessage());
+            getLogger().severe("Ошибка инициализации Launcher ServerBridge: " + e.getMessage());
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -235,7 +235,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     return true;
                 }
                 triggerHeartbeat();
-                sender.sendMessage("Launcher heartbeat queued; last=" + heartbeatStatus());
+                sender.sendMessage("Отправка сигнала активности Launcher поставлена в очередь; последний=" + heartbeatStatus());
                 return true;
             }
             case "reload" -> {
@@ -254,7 +254,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     next.api.startControlChannel(this::executeControl);
                     next.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id(), "reason", "reload"));
                     triggerHeartbeat();
-                    sender.sendMessage("Launcher bridge configuration reloaded; serverId=" + next.config.serverId + " nodeKeyFingerprint=" + next.identity.fingerprint());
+                    sender.sendMessage("Конфигурация моста Launcher обновлена; serverId=" + next.config.serverId + " nodeKeyFingerprint=" + next.identity.fingerprint());
                 } catch (Exception e) {
                     sender.sendMessage("Не удалось перезагрузить Launcher; предыдущая среда Runtime продолжает работать: " + e.getMessage());
                 }
@@ -782,7 +782,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
 
     private static String safeUsername(String value) {
         String username = value == null ? "" : value.trim();
-        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("Некорректное имя игрока Minecraft");
         return username;
     }
 

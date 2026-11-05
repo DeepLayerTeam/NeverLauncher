@@ -59,10 +59,10 @@ public final class LauncherVanillaBridge implements AutoCloseable {
         rconHost = first(System.getenv("LAUNCHER_VANILLA_RCON_HOST"), "127.0.0.1");
         rconPort = parseInt(first(System.getenv("LAUNCHER_VANILLA_RCON_PORT"), serverProperties.getProperty("rcon.port"), "25575"), 25575);
         rconPassword = first(System.getenv("LAUNCHER_VANILLA_RCON_PASSWORD"), serverProperties.getProperty("rcon.password"), "");
-        if (rconPassword.isBlank()) throw new IllegalStateException("Vanilla RCON password is empty");
+        if (rconPassword.isBlank()) throw new IllegalStateException("Пароль Vanilla RCON не задан");
 
         artifactSha256 = BridgeIntegrity.artifactSha256(getClass());
-        if (config.requireIntegrity && !BridgeIntegrity.isSha256(artifactSha256)) throw new IllegalStateException("cannot measure running Vanilla bridge JAR SHA-256");
+        if (config.requireIntegrity && !BridgeIntegrity.isSha256(artifactSha256)) throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR моста Vanilla");
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = BridgeRuntimeDescriptor.of(
             discoverMinecraftVersion(), "vanilla", "Mojang Dedicated Server", "", "Vanilla dedicated server",
@@ -79,7 +79,7 @@ public final class LauncherVanillaBridge implements AutoCloseable {
         // реально не принял аутентифицированный подписанный heartbeat. Ранее этот
         // sidecar писал «ready» при недоступном Backend.
         if (!api.heartbeat("vanilla", BridgeDefaults.VERSION))
-            throw new IllegalStateException("authenticated Vanilla ServerBridge heartbeat was not accepted");
+            throw new IllegalStateException("Подписанный сигнал активности Vanilla ServerBridge не принят");
         api.setRoutingModes(false, false);
         api.startControlChannel(this::executeControl);
         api.publishEvent("server.startup", Map.of("platform", "vanilla", "adapter", "sidecar"));

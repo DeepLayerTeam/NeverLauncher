@@ -27,7 +27,7 @@ func worldBackupPersistCohortHold0518(root, holdID, backupID string) error {
 	gate := worldBackupHostGatePath04110(root)
 	var owner worldHostGate04110
 	if err := worldBackupReadJSON02810(filepath.Join(gate, "owner.json"), &owner); err != nil {
-		return fmt.Errorf("unverifiable cohort gate owner: %w", err)
+		return fmt.Errorf("Не удалось проверить владельца блокировки набора: %w", err)
 	}
 	if owner.Purpose != "backup" || owner.PID != os.Getpid() || owner.ProcessIdentity != hostOwnIdentity0282() {
 		return errors.New("Блокировка группы перехода должна принадлежать текущему владельцу блокировки резервного копирования миров")
@@ -53,7 +53,7 @@ func worldBackupPersistCohortHold0518(root, holdID, backupID string) error {
 	if err != nil {
 		// Никогда не удаляйте барьер, если длительное удержание могло сохраниться на диске;
 		// прерванное развёртывание требует отдельного расследования.
-		return fmt.Errorf("cohort hold may be partially committed; gate must remain fenced: %w", err)
+		return fmt.Errorf("Операция удержания набора могла быть частично применена; блокировка должна сохраняться: %w", err)
 	}
 	return nil
 }
@@ -72,10 +72,10 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	}
 	var owner worldHostGate04110
 	if err = worldBackupReadJSON02810(filepath.Join(gate, "owner.json"), &owner); err != nil {
-		return fmt.Errorf("unverifiable gate owner: %w", err)
+		return fmt.Errorf("Не удалось проверить владельца блокировки: %w", err)
 	}
 	if owner.Purpose != "backup" || owner.PID <= 0 || owner.ProcessIdentity == "" {
-		return errors.New("cohort gate does not belong to a trusted backup")
+		return errors.New("Блокировка набора не относится к доверенной резервной копии")
 	}
 	holdPath := filepath.Join(gate, worldCohortHoldFile0518)
 	fd, err := os.Open(holdPath)
@@ -105,14 +105,14 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	}
 	text := string(buf)
 	if !strings.HasPrefix(text, holdID+"\n") || !worldBackupID02810.MatchString(strings.TrimSpace(text[33:])) {
-		return errors.New("cohort operation ID mismatch; refusing release")
+		return errors.New("Идентификатор операции набора не совпадает; разблокировка отклонена")
 	}
 	entries, err := os.ReadDir(gate)
 	if err != nil {
 		return err
 	}
 	if len(entries) != 2 || entries[0].Name() != worldCohortHoldFile0518 || entries[1].Name() != "owner.json" {
-		return errors.New("cohort gate contains unexpected entries")
+		return errors.New("Блокировка набора содержит неожиданные записи")
 	}
 	// Нельзя освобождать барьер, пока управляемая JVM работает или запускается.
 	if err = worldBackupQuiesce02810(root, "stopped"); err != nil {

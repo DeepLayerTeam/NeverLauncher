@@ -178,8 +178,8 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         return Err("Несовпадение: граница процесса для данных о целостности Guard".to_string());
     }
     if evidence.schema == GUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA {
-        let guard = evidence.guard.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
-        let launcher = evidence.launcher.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing launcher security state".to_string())?;
+        let guard = evidence.guard.linux.as_ref().ok_or_else(|| "В подтверждении целостности Linux отсутствует состояние защиты Guard".to_string())?;
+        let launcher = evidence.launcher.linux.as_ref().ok_or_else(|| "В подтверждении целостности Linux отсутствует состояние защиты лаунчера".to_string())?;
         if !guard.no_new_privs || !guard.dumpable_disabled || !guard.parent_death_signal {
             return Err("Состояние защиты Guard в Linux не обеспечивается".to_string());
         }
@@ -188,8 +188,8 @@ pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Resu
         }
     }
     if evidence.schema == GUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA {
-        let guard = evidence.guard.macos.as_ref().ok_or_else(|| "macOS integrity evidence missing guard security state".to_string())?;
-        let launcher = evidence.launcher.macos.as_ref().ok_or_else(|| "macOS integrity evidence missing launcher security state".to_string())?;
+        let guard = evidence.guard.macos.as_ref().ok_or_else(|| "В подтверждении целостности macOS отсутствует состояние защиты Guard".to_string())?;
+        let launcher = evidence.launcher.macos.as_ref().ok_or_else(|| "В подтверждении целостности macOS отсутствует состояние защиты лаунчера".to_string())?;
         if !guard.code_signature_valid || !guard.hardened_runtime || !guard.library_validation
             || !launcher.code_signature_valid || !launcher.hardened_runtime || !launcher.library_validation {
             return Err("Подпись кода и Hardened Runtime в macOS не подтверждены".to_string());
@@ -256,7 +256,7 @@ mod windows_impl {
             };
             if handle.is_null() {
                 return Err(format!(
-                    "Guard cannot open process {pid}: {}",
+                    "Guard не может открыть процесс {pid}: {}",
                     std::io::Error::last_os_error()
                 ));
             }
@@ -282,7 +282,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "Guard process snapshot failed: {}",
+                "Guard: не удалось получить снимок процессов: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -299,7 +299,7 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.raw(), &mut entry) } != 0;
         }
         Err(format!(
-            "Guard process {process_id} not found in process snapshot"
+            "Guard: процесс {process_id} не найден в снимке процессов"
         ))
     }
 
@@ -310,7 +310,7 @@ mod windows_impl {
         let observed_parent_pid = observed_parent_pid(guard_pid)?;
         if observed_parent_pid != expected_parent_pid {
             return Err(format!(
-                "Guard actual parent PID mismatch: expected {expected_parent_pid}, observed {observed_parent_pid}"
+                "Guard: PID родительского процесса не совпадает (ожидался {expected_parent_pid}, обнаружен {observed_parent_pid})"
             ));
         }
 
@@ -344,7 +344,7 @@ mod windows_impl {
         let image_path = process_image_path(process.raw())?;
         let metadata = std::fs::metadata(&image_path).map_err(|err| {
             format!(
-                "Guard cannot stat process image {}: {err}",
+                "Guard: не удалось получить сведения об исполняемом файле процесса {}: {err}",
                 image_path.display()
             )
         })?;
@@ -378,7 +378,7 @@ mod windows_impl {
         };
         if ok == 0 || size == 0 {
             return Err(format!(
-                "Guard QueryFullProcessImageNameW failed: {}",
+                "Guard: ошибка QueryFullProcessImageNameW: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -396,7 +396,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard GetProcessTimes failed: {}",
+                "Guard: ошибка GetProcessTimes: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -495,7 +495,7 @@ mod windows_impl {
         };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "Guard module snapshot failed for PID {pid}: {}",
+                "Guard: не удалось получить снимок модулей процесса PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -507,7 +507,7 @@ mod windows_impl {
         let mut has_entry = unsafe { Module32FirstW(snapshot.raw(), &mut entry) } != 0;
         if !has_entry {
             return Err(format!(
-                "Guard module enumeration failed for PID {pid}: {}",
+                "Guard: не удалось перечислить модули процесса PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -522,7 +522,7 @@ mod windows_impl {
                 let normalized = normalize_path(&path);
                 let metadata = std::fs::metadata(&path).map_err(|err| {
                     format!(
-                        "Guard cannot stat loaded module {} for PID {pid}: {err}",
+                        "Guard: не удалось получить сведения о загруженном модуле {} процесса PID {pid}: {err}",
                         path.display()
                     )
                 })?;
@@ -662,7 +662,7 @@ pub fn verify_windows_authenticode_trust(path: &std::path::Path) -> Result<(), S
         Ok(())
     } else {
         Err(format!(
-            "Authenticode trust verification failed for {}: {}",
+            "Проверка доверия Authenticode для {} не пройдена: {}",
             path.display(),
             result.status
         ))
@@ -773,9 +773,9 @@ mod linux_impl {
     const MAX_REPORTED_NON_SYSTEM_MODULES: usize = 64;
 
     fn sha256_file(path: &Path) -> Result<String, String> {
-        let file = File::open(path).map_err(|e| format!("open {} failed: {e}", path.display()))?;
+        let file = File::open(path).map_err(|e| format!("Не удалось открыть {}: {e}", path.display()))?;
         let mut reader = BufReader::new(file); let mut hasher = Sha256::new(); let mut buf=[0u8;64*1024];
-        loop { let n=reader.read(&mut buf).map_err(|e| format!("read {} failed: {e}", path.display()))?; if n==0 { break; } hasher.update(&buf[..n]); }
+        loop { let n=reader.read(&mut buf).map_err(|e| format!("Не удалось прочитать {}: {e}", path.display()))?; if n==0 { break; } hasher.update(&buf[..n]); }
         Ok(hex::encode(hasher.finalize()))
     }
 
@@ -785,11 +785,11 @@ mod linux_impl {
     fn status_u32(status: &str, key: &str) -> Option<u32> {
         status.lines().find_map(|l| l.strip_prefix(key)).and_then(|v| v.split_whitespace().next()).and_then(|v| v.parse().ok())
     }
-    fn observed_parent_pid(pid: u32) -> Result<u32, String> { status_u32(&proc_status(pid)?, "PPid:").ok_or_else(|| "PPid missing in /proc status".into()) }
+    fn observed_parent_pid(pid: u32) -> Result<u32, String> { status_u32(&proc_status(pid)?, "PPid:").ok_or_else(|| "В статусе /proc отсутствует PPid".into()) }
     fn process_start_ticks(pid: u32) -> Result<u64, String> {
         let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("Ошибка: чтение /proc/{pid}/stat: {e}"))?;
-        let end=stat.rfind(')').ok_or_else(|| "malformed /proc stat".to_string())?;
-        let rest=stat.get(end+2..).ok_or_else(|| "malformed /proc stat".to_string())?;
+        let end=stat.rfind(')').ok_or_else(|| "Неверный формат статистики /proc".to_string())?;
+        let rest=stat.get(end+2..).ok_or_else(|| "Неверный формат статистики /proc".to_string())?;
         rest.split_whitespace().nth(19).ok_or_else(|| "Отсутствует время запуска процесса".to_string())?.parse().map_err(|_| "Некорректное значение: время запуска процесса".to_string())
     }
     fn pdeathsig(pid: u32) -> bool {
@@ -834,7 +834,7 @@ mod linux_impl {
     }
     fn process(pid:u32)->Result<ProcessIntegrityEvidence,String>{
         let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("Ошибка: чтение ссылки на исполняемый файл: {e}"))?;
-        let meta=std::fs::metadata(&image).map_err(|e|format!("metadata {} failed: {e}",image.display()))?;
+        let meta=std::fs::metadata(&image).map_err(|e|format!("Ошибка получения метаданных {}: {e}",image.display()))?;
         let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
         Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), macos:None, })
     }
@@ -908,7 +908,7 @@ mod macos_impl {
         let size = std::mem::size_of::<ProcBsdInfo>();
         let read = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0, &mut info as *mut _ as *mut c_void, size as libc::c_int) };
         if read < size as libc::c_int {
-            return Err(format!("macOS proc_pidinfo({pid}) failed: {}", std::io::Error::last_os_error()));
+            return Err(format!("macOS: ошибка proc_pidinfo({pid}): {}", std::io::Error::last_os_error()));
         }
         Ok(info)
     }
@@ -916,7 +916,7 @@ mod macos_impl {
     fn image_path(pid: u32) -> Result<PathBuf, String> {
         let mut buffer = vec![0u8; PROC_PIDPATHINFO_MAXSIZE];
         let len = unsafe { proc_pidpath(pid as libc::c_int, buffer.as_mut_ptr() as *mut c_void, buffer.len() as u32) };
-        if len <= 0 { return Err(format!("macOS proc_pidpath({pid}) failed: {}", std::io::Error::last_os_error())); }
+        if len <= 0 { return Err(format!("macOS: ошибка proc_pidpath({pid}): {}", std::io::Error::last_os_error())); }
         let len = len as usize;
         buffer.truncate(len);
         if buffer.last() == Some(&0) { buffer.pop(); }
@@ -950,7 +950,7 @@ mod macos_impl {
     fn process(pid: u32) -> Result<ProcessIntegrityEvidence, String> {
         let info = bsd_info(pid)?;
         let path = image_path(pid)?;
-        let metadata = std::fs::metadata(&path).map_err(|err| format!("metadata {} failed: {err}", path.display()))?;
+        let metadata = std::fs::metadata(&path).map_err(|err| format!("Ошибка получения метаданных {}: {err}", path.display()))?;
         if !metadata.is_file() { return Err(format!("образ процесса macOS {}: требуется обычный файл", path.display())); }
         let image_sha256 = sha256_file(&path)?;
         let modified = metadata.modified().ok().and_then(|value| value.duration_since(UNIX_EPOCH).ok()).map(|value| value.as_millis() as u64).unwrap_or(0);

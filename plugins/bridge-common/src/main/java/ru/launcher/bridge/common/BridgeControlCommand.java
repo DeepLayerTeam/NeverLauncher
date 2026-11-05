@@ -111,7 +111,7 @@ public record BridgeControlCommand(
     }
 
     private static String readString(String text, int[] p) {
-        if (p[0] >= text.length() || text.charAt(p[0]++) != '"') throw new IllegalArgumentException("JSON string required");
+        if (p[0] >= text.length() || text.charAt(p[0]++) != '"') throw new IllegalArgumentException("Требуется строка JSON");
         StringBuilder out = new StringBuilder();
         while (p[0] < text.length()) {
             char c = text.charAt(p[0]++);

@@ -60,14 +60,14 @@ def check_path(path, *, directory=False, owner=True):
     st = path.lstat()
     require(
         (stat.S_ISDIR(st.st_mode) if directory else stat.S_ISREG(st.st_mode)),
-        f"unsafe path type: {path}",
+        f"Небезопасный тип объекта по пути: {path}",
     )
-    require(not stat.S_ISLNK(st.st_mode), f"symlinks forbidden: {path}")
+    require(not stat.S_ISLNK(st.st_mode), f"Символические ссылки запрещены: {path}")
     if owner:
-        require(st.st_uid == os.geteuid(), f"path not owned by service user: {path}")
-    require((st.st_mode & 0o022) == 0, f"group/world writable path: {path}")
+        require(st.st_uid == os.geteuid(), f"Путь не принадлежит пользователю службы: {path}")
+    require((st.st_mode & 0o022) == 0, f"Путь доступен для записи группе или другим пользователям: {path}")
     if not directory:
-        require(st.st_nlink == 1, f"hardlinked file forbidden: {path}")
+        require(st.st_nlink == 1, f"Файл с несколькими жёсткими ссылками запрещён: {path}")
     return st
 
 
@@ -90,7 +90,7 @@ def publish_new_directory(source, destination):
 
 def private_directory(path):
     st = check_path(path, directory=True)
-    require((st.st_mode & 0o077) == 0, f"private directory must be 0700: {path}")
+    require((st.st_mode & 0o077) == 0, f"Закрытый каталог должен иметь права 0700: {path}")
 
 
 def safe_absolute(path):
@@ -99,7 +99,7 @@ def safe_absolute(path):
     # Проверяйте все существующие сегменты пути, включая родительские каталоги назначения.
     for parent in reversed((p, *p.parents)):
         if parent.is_symlink():
-            raise BackupError(f"symlinked path component: {parent}")
+            raise BackupError(f"Символическая ссылка в компоненте пути: {parent}")
     return p
 
 
@@ -107,7 +107,7 @@ def read_install(root):
     private_directory(root)
     env = root / "config/backend.env"
     st = check_path(env)
-    require(st.st_mode & 0o077 == 0, "backend.env must be mode 0600")
+    require(st.st_mode & 0o077 == 0, "Файл backend.env должен иметь права 0600")
     values = {}
     for line in env.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("#"):
@@ -123,20 +123,20 @@ def read_install(root):
         values.get("LAUNCHER_DEPLOYMENT_MODE") == "single-node"
         and values.get("LAUNCHER_REPOSITORY_DRIVER") == "sqlite"
         and values.get("LAUNCHER_STORAGE_DRIVER") == "local",
-        "not a minimal SQLite installation",
+        "Установка не соответствует минимальному варианту SQLite",
     )
     for key, suffix in RELOCATED.items():
         require(
             values.get(key) == str(root / suffix),
-            f"nonstandard path {key}: backup must be self-contained",
+            f"Нестандартный путь {key}: резервная копия должна быть самодостаточной",
         )
     for key, suffix in OPTIONAL_RELOCATED.items():
         if key in values:
             require(
                 values[key] == str(root / suffix),
-                f"nonstandard path {key}: cannot make complete backup",
+                f"Нестандартный путь {key}: невозможно создать полную резервную копию",
             )
-    require(not values.get("LAUNCHER_REDIS_URL"), "minimal cannot have Redis")
+    require(not values.get("LAUNCHER_REDIS_URL"), "Минимальная установка не должна использовать Redis")
     return values
 
 
@@ -161,13 +161,13 @@ def offline_locks(root):
                 and fd_stat.st_uid == os.geteuid()
                 and fd_stat.st_nlink == 1
                 and fd_stat.st_mode & 0o077 == 0,
-                f"unsafe lock: {lock}",
+                f"Небезопасная блокировка: {lock}",
             )
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:
                 raise BackupError(
-                    f"API or SQLite is running; stop every writer before backup: {lock}"
+                    f"API или SQLite работает; перед резервным копированием остановите все записывающие процессы: {lock}"
                 ) from exc
             require(
                 os.path.samestat(os.stat(lock, follow_symlinks=False), fd_stat),
@@ -186,11 +186,11 @@ def sqlite_integrity(path):
     ) as conn:
         require(
             conn.execute("PRAGMA integrity_check").fetchone() == ("ok",),
-            f"SQLite integrity failed: {path}",
+            f"Проверка целостности SQLite не пройдена: {path}",
         )
         require(
             conn.execute("PRAGMA foreign_key_check").fetchone() is None,
-            f"SQLite FK check failed: {path}",
+            f"Проверка внешних ключей SQLite не пройдена: {path}",
         )
 
 
@@ -220,7 +220,7 @@ def file_copy(source, target):
     require(
         (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
         == (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns),
-        f"file changed during backup: {source}",
+        f"Файл изменился во время резервного копирования: {source}",
     )
 
 
@@ -294,7 +294,7 @@ def validate_relative(raw):
         not path.is_absolute()
         and all(p not in ("", ".", "..") for p in raw.split("/"))
         and path.as_posix() == raw,
-        f"non-canonical bundle path: {raw}",
+        f"Неканонический путь в пакете: {raw}",
     )
     return path
 
@@ -325,7 +325,7 @@ def verify(bundle):
     for d in declared_dirs:
         if d != ".":
             validate_relative(d)
-            require(not d.startswith("backups/"), "backup recursion forbidden")
+            require(not d.startswith("backups/"), "Рекурсивное резервное копирование запрещено")
     filepaths = []
     for record in declared_files:
         require(
@@ -337,7 +337,7 @@ def verify(bundle):
         validate_relative(rel)
         require(
             rel != "backups" and not rel.startswith("backups/"),
-            "backup recursion forbidden",
+            "Рекурсивное резервное копирование запрещено",
         )
         require(
             record["kind"] in ("sqlite", "file")
@@ -351,27 +351,27 @@ def verify(bundle):
         )
         path = payload / rel
         st = check_path(path)
-        require(st.st_mode & 0o077 == 0, f"bundle file is not private: {path}")
+        require(st.st_mode & 0o077 == 0, f"Файл пакета доступен посторонним: {path}")
         actual = file_record(path, rel, record["kind"])
         require(
             actual["bytes"] == record["bytes"] and actual["sha256"] == record["sha256"],
-            f"backup file corrupt: {rel}",
+            f"Файл резервной копии повреждён: {rel}",
         )
         if rel in DB_NAMES:
             require(
-                record["kind"] == "sqlite", f"required database must be SQLite: {rel}"
+                record["kind"] == "sqlite", f"Обязательная база данных должна быть SQLite: {rel}"
             )
         if record["kind"] == "sqlite":
             sqlite_integrity(path)
         filepaths.append(rel)
     require(filepaths == sorted(set(filepaths)), "duplicate/out-of-order paths")
     require(
-        all(name in filepaths for name in DB_NAMES), "required SQLite database missing"
+        all(name in filepaths for name in DB_NAMES), "Обязательная база данных SQLite отсутствует"
     )
     actual_dirs, actual_files = paths_payload(payload)
     require(
         declared_dirs == actual_dirs and filepaths == actual_files,
-        f"unexpected/missing bundle contents: expected dirs {declared_dirs}, actual dirs {actual_dirs}; expected files {filepaths}, actual files {actual_files}",
+        f"Неполное или неожиданное содержимое пакета: ожидались каталоги {declared_dirs}, обнаружены {actual_dirs}; ожидались файлы {filepaths}, обнаружены {actual_files}",
     )
     require("config/backend.env" in filepaths, "backup config missing")
     return manifest
@@ -397,7 +397,7 @@ def backup(root, destination=None):
     read_install(root)
     with offline_locks(root):
         for name in DB_NAMES:
-            require((root / name).is_file(), f"missing required database: {name}")
+            require((root / name).is_file(), f"Отсутствует обязательная база данных: {name}")
         directories, sources = paths_in(root)
         if destination is None:
             destination = (
@@ -472,7 +472,7 @@ def restore(bundle, target_root):
     root = safe_absolute(target_root)
     require(
         not root.exists() and not root.is_symlink(),
-        "restore only into a new, absent directory",
+        "Восстановление разрешено только в новый, ещё не существующий каталог",
     )
     private_directory(root.parent)
     require(
@@ -505,7 +505,7 @@ def restore(bundle, target_root):
         for key, suffix in RELOCATED.items():
             require(
                 values.get(key) == str(previous / suffix),
-                f"backup env does not match manifest: {key}",
+                f"Переменная окружения резервной копии не соответствует манифесту: {key}",
             )
         for key, suffix in RELOCATED.items():
             values[key] = str(root / suffix)
@@ -513,7 +513,7 @@ def restore(bundle, target_root):
             if key in values:
                 require(
                     values[key] == str(previous / suffix),
-                    f"backup env does not match manifest: {key}",
+                    f"Переменная окружения резервной копии не соответствует манифесту: {key}",
                 )
                 values[key] = str(root / suffix)
         require(
@@ -598,7 +598,7 @@ def main(argv=None):
         json.JSONDecodeError,
         UnicodeError,
     ) as exc:
-        print(f"minimal backup failed closed: {exc}", file=sys.stderr)
+        print(f"Резервное копирование минимальной установки безопасно прервано: {exc}", file=sys.stderr)
         return 1
 
 

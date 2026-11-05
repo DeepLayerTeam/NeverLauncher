@@ -59,7 +59,7 @@ func (s Server) registerMigrationSecurityRoutes0336(mux *http.ServeMux) {
 func (s Server) migrationSecurityGet0336(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(migrationSecurityStore0336)
 	if !ok {
-		writeError(w, 503, "migration security requires PostgreSQL")
+		writeError(w, 503, "Для безопасной миграции требуется PostgreSQL")
 		return
 	}
 	report, err := store.GetMigrationSecurity0336(r.Context(), r.PathValue("runId"))
@@ -79,7 +79,7 @@ func (s Server) migrationSecurityActivate0336(w http.ResponseWriter, r *http.Req
 func (s Server) migrationSecurityApply0336(w http.ResponseWriter, r *http.Request, preview bool) {
 	store, ok := s.Repo.(migrationSecurityStore0336)
 	if !ok {
-		writeError(w, 503, "migration security requires PostgreSQL")
+		writeError(w, 503, "Для безопасной миграции требуется PostgreSQL")
 		return
 	}
 	// Клиент не может предоставлять пользователей, ID сеансов, ключевой материал,

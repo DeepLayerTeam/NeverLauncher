@@ -81,7 +81,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
             next.startControlChannel(this::executeControl);
             scheduleTelemetry(proxy, next);
         } catch (Exception e) {
-            throw new IllegalStateException("Launcher ServerBridge initialization failed: " + e.getMessage(), e);
+            throw new IllegalStateException("Ошибка инициализации Launcher ServerBridge: " + e.getMessage(), e);
         }
         proxy.getPluginManager().registerListener(this, this);
         proxy.getPluginManager().registerCommand(this, new BridgeCommand());
@@ -235,7 +235,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                     if (!decision.allowed) {
                         inFlightHandoffs.remove(playerKey, token);
                         player.sendMessage(TextComponent.fromLegacyText(
-                            "Launcher handoff denied: " + decision.reason));
+                            "Передача игрока через Launcher отклонена: " + decision.reason));
                         getLogger().info("launcher.handoff.denied username=" + username +
                             " target=" + target + " reason=" + decision.reason);
                         return;
@@ -244,7 +244,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                     // пробуйте незаметно другой сервер с тем же билетом.
                     if (getProxy().getServerInfo(target) != serverInfo) {
                         inFlightHandoffs.remove(playerKey, token);
-                        player.sendMessage(TextComponent.fromLegacyText("Launcher target topology changed"));
+                        player.sendMessage(TextComponent.fromLegacyText("Топология целевого сервера Launcher изменилась"));
                         return;
                     }
                     preparedHandoffs.put(key, System.currentTimeMillis() + 30_000L);
@@ -326,7 +326,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
 
     private static String safeUsername(String value) {
         String username = value == null ? "" : value.trim();
-        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("Некорректное имя игрока Minecraft");
         return username;
     }
 
@@ -365,7 +365,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         return;
                     }
                     current.triggerHeartbeat();
-                    sender.sendMessage(TextComponent.fromLegacyText("Launcher heartbeat queued; last=" + current.heartbeatStatus()));
+                    sender.sendMessage(TextComponent.fromLegacyText("Отправка сигнала активности Launcher поставлена в очередь; последний=" + current.heartbeatStatus()));
                 }
                 case "reload" -> {
                     if (!sender.hasPermission("launcher.bridge.reload")) {
@@ -374,7 +374,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                     }
                     try {
                         current.reload();
-                        sender.sendMessage(TextComponent.fromLegacyText("Launcher bridge configuration reloaded; serverId=" + current.serverId() + " nodeKeyFingerprint=" + current.fingerprint()));
+                        sender.sendMessage(TextComponent.fromLegacyText("Конфигурация моста Launcher обновлена; serverId=" + current.serverId() + " nodeKeyFingerprint=" + current.fingerprint()));
                     } catch (Exception e) {
                         sender.sendMessage(TextComponent.fromLegacyText("Не удалось перезагрузить Launcher; предыдущая среда Runtime продолжает работать: " + e.getMessage()));
                     }
@@ -384,7 +384,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: launcher.bridge.diagnostics"));
                         return;
                     }
-                    sender.sendMessage(TextComponent.fromLegacyText("Launcher diagnostics: detected=" + BungeeFamilyPlatform.detect(getProxy()).id() + ", " + current.diagnostics()));
+                    sender.sendMessage(TextComponent.fromLegacyText("Диагностика Launcher: обнаружено=" + BungeeFamilyPlatform.detect(getProxy()).id() + ", " + current.diagnostics()));
                 }
                 default -> sender.sendMessage(TextComponent.fromLegacyText("Команды: /nlbridge status | test | reload | diagnostics"));
             }

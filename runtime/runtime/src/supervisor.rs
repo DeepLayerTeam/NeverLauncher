@@ -239,7 +239,7 @@ impl ProcessSupervisor {
 
         #[cfg(target_os = "linux")]
         if let Err(reason) = live_guard.bind_linux_process(
-            child.id().ok_or("Linux Guard JVM PID unavailable")?,
+            child.id().ok_or("Linux Guard: PID процесса JVM недоступен")?,
             Path::new(&plan.java_executable),
         ) {
             if let Some(pid) = child.id() { let _ = crate::linux_policy::terminate_runtime_process_group(pid); }
@@ -250,7 +250,7 @@ impl ProcessSupervisor {
 
         #[cfg(target_os = "macos")]
         if let Err(reason) = live_guard.bind_macos_process(
-            child.id().ok_or("macOS Guard JVM PID unavailable")?,
+            child.id().ok_or("macOS Guard: PID процесса JVM недоступен")?,
             Path::new(&plan.java_executable),
         ) {
             if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
@@ -379,7 +379,7 @@ impl ProcessSupervisor {
                         // всё равно считается отказом безопасности, а не успехом.
                         if let Some(reason) = process.guard_violation.as_ref() {
                             success = false;
-                            message = format!("NeverGuard trust revoked during gameplay: {reason}");
+                            message = format!("Доверие к NeverGuard отозвано во время игры: {reason}");
                         }
                         process.status.state = "exited".to_string();
                         process.status.finished_at = Some(finished_at.clone());
@@ -439,21 +439,21 @@ impl ProcessSupervisor {
             managed.guard_violation = Some(reason.clone());
             managed.status.state = "trust-blocked".to_string();
             managed.status.success = Some(false);
-            managed.status.message = format!("NeverGuard trust revoked during gameplay: {reason}");
+            managed.status.message = format!("Доверие к NeverGuard отозвано во время игры: {reason}");
             managed.child.clone()
         };
         let mut process = child.lock().await;
         if let Some(process) = process.as_mut() {
             #[cfg(target_os = "linux")]
             {
-                let pid = process.id().ok_or("runtime PID missing")?;
+                let pid = process.id().ok_or("PID процесса Runtime отсутствует")?;
                 if crate::linux_policy::terminate_runtime_process_group(pid).is_err() {
                     process.start_kill().map_err(|err| format!("Ошибка: завершение среды выполнения: {err}"))?;
                 }
             }
             #[cfg(target_os = "macos")]
             {
-                let pid = process.id().ok_or("runtime PID missing")?;
+                let pid = process.id().ok_or("PID процесса Runtime отсутствует")?;
                 if crate::macos_policy::terminate_runtime_process_group(pid).is_err() {
                     process.start_kill().map_err(|err| format!("Ошибка: завершение среды выполнения: {err}"))?;
                 }
@@ -522,11 +522,11 @@ mod game_guard_lifetime_0438_tests {
             client_release_lease: None,
             guard_violation: None,
         });
-        let result = supervisor.stop_for_guard_violation_0438(&id, "authenticated Guard lost")
+        let result = supervisor.stop_for_guard_violation_0438(&id, "Связь с аутентифицированным Guard потеряна")
             .await.expect("guard loss must terminate game");
         assert_eq!(result.state, "trust-blocked");
         assert_eq!(result.success, Some(false));
-        assert!(result.message.contains("authenticated Guard lost"));
+        assert!(result.message.contains("Связь с аутентифицированным Guard потеряна"));
         let mut locked = child.lock().await;
         let exit = timeout(Duration::from_secs(3), locked.as_mut().unwrap().wait())
             .await.expect("child exit timeout").expect("child wait failed");

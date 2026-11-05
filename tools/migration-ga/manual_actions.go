@@ -30,14 +30,14 @@ func renderManualWorklist(p Plan, r Report) ([]byte, error) {
 		return nil, err
 	}
 	if p.RunID != r.RunID || p.ProjectID != r.ProjectID {
-		return nil, errors.New("worklist belongs to another project")
+		return nil, errors.New("Список ручных операций относится к другому проекту")
 	}
 	items := append([]Item(nil), r.Items...)
 	sort.Slice(items, func(i, j int) bool { return items[i].Kind+items[i].Source < items[j].Kind+items[j].Source })
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Gravit → Never: manual migration and rollback worklist\n\n")
-	fmt.Fprintf(&b, "- Run: `%s`\n- Project: `%s`\n- Source SHA-256: `%s`\n- Report SHA-256: `%s`\n- Target release SHA-256: `%s`\n", markdownSafe(r.RunID), markdownSafe(r.ProjectID), r.SourceSHA256, r.ReportSHA256, p.TargetReleaseSHA256)
-	fmt.Fprintf(&b, "\n## Manual source actions (%d)\n\n", r.Counts["manual"])
+	fmt.Fprintf(&b, "# Gravit → Never: список ручных действий по миграции и откату\n\n")
+	fmt.Fprintf(&b, "- Запуск: `%s`\n- Проект: `%s`\n- SHA-256 источника: `%s`\n- SHA-256 отчёта: `%s`\n- SHA-256 целевого релиза: `%s`\n", markdownSafe(r.RunID), markdownSafe(r.ProjectID), r.SourceSHA256, r.ReportSHA256, p.TargetReleaseSHA256)
+	fmt.Fprintf(&b, "\n## Ручные действия с исходной системой (%d)\n\n", r.Counts["manual"])
 	n := 0
 	for _, item := range items {
 		if item.Status == "manual" {
@@ -53,28 +53,28 @@ func renderManualWorklist(p Plan, r Report) ([]byte, error) {
 		}
 	}
 	if n == 0 {
-		b.WriteString("No manual inventory items in this report. Operator checks below still apply.\n")
+		b.WriteString("В этом отчёте нет операций для ручной обработки. Указанные ниже проверки оператора по-прежнему обязательны.\n")
 	}
 	b.WriteString(`
-## Mandatory operator verification before switching
+## Обязательные проверки оператора перед переключением
 
-- [ ] Record exactly which Minecraft worlds, external SQL stores, proxy routes, DNS records and custom extensions are outside the automated migration scope.
-- [ ] Confirm ownership and password-reset workflow for any player unable to authenticate; do not reuse Gravit tokens, old keys or permissions.
-- [ ] Quiesce or fence **every** Gravit and Never writer; systemd unit masking alone is not proof other writers stopped.
-- [ ] Take independently restorable backups of worlds, inventory/economy data, databases, plugins, configuration and secrets.
-- [ ] Capture *two distinct* source/target snapshot directories with world/, plugins/, player-uuids.txt; use audit-state before the cutover and after the rollback drill.
-- [ ] Perform real Java/Minecraft login and server join with the migrated UUID for each configured reference class.
-- [ ] Recheck every manual item above; record responsible operator, completion timestamp and private evidence location in the migration change ticket.
+- [ ] Зафиксировать, какие именно миры Minecraft, внешние базы SQL, маршруты прокси, DNS-записи и пользовательские расширения находятся за пределами автоматической миграции.
+- [ ] Подтвердить владение учётной записью и процедуру сброса пароля для каждого игрока, который не может войти. Не использовать повторно токены Gravit, старые ключи и разрешения.
+- [ ] Остановить либо изолировать **все** процессы Gravit и Never, способные записывать данные. Одной маскировки служб systemd недостаточно для подтверждения остановки остальных процессов.
+- [ ] Создать независимые резервные копии миров, инвентаря, экономики, баз данных, плагинов, настроек и секретов, пригодные для восстановления.
+- [ ] Создать *два разных* каталога снимков источника и цели с файлами world/, plugins/, player-uuids.txt. Выполнить audit-state перед переключением и после учебного отката.
+- [ ] Проверить реальный вход Java/Minecraft и подключение к серверу с перенесённым UUID для каждого настроенного эталонного класса.
+- [ ] Повторно проверить каждое ручное действие из списка выше. Записать ответственного оператора, время завершения и расположение закрытых доказательств в заявку на изменение.
 
-## Rollback limits and point of no return
+## Ограничения отката и точка невозврата
 
-- [ ] Set a bounded cutover window, record original proxy/DNS/route and signed release revisions.
-- [ ] Verify the Never writer is fenced before returning traffic to Gravit.
-- [ ] If players changed worlds, inventory, economy, privileges or plugin SQL state after cutover, **do not** restore a stale Gravit copy. Reconcile the changed data and independently verify it first.
-- [ ] Recheck fresh snapshots, the exact rollback authorization digest and the routing revision before committing rollback.
-- [ ] Verify player UUID/login, world and plugin data, and connectivity *after* the rollback. Record any unavailable or manually replaced modules.
+- [ ] Назначить ограниченное окно переключения и зафиксировать исходные редакции маршрутов прокси/DNS и подписанного релиза.
+- [ ] Подтвердить блокировку записывающего процесса Never до возврата трафика к Gravit.
+- [ ] Если после переключения игроки изменили миры, инвентарь, экономику, привилегии или данные плагинов в SQL, **нельзя** восстанавливать устаревшую копию Gravit. Сначала необходимо согласовать изменённые данные и независимо проверить результат.
+- [ ] Проверить свежие снимки, точный хеш разрешения на откат и редакцию маршрутизации перед применением отката.
+- [ ] **После** отката проверить UUID и вход игроков, данные миров и плагинов, а также подключение. Зафиксировать недоступные или заменённые вручную модули.
 
-This checklist is generated from an authoritative report, not proof of completed actions. Migration GA requires signed private E2E evidence and an independent live verification of the complete three-reference cohort.
+Этот контрольный список создан на основе авторитетного отчёта и сам по себе не доказывает выполнения действий. Для приёмки Migration GA необходимы подписанные закрытые доказательства сквозных проверок (E2E) и независимая проверка работающих систем по всем трём эталонным классам.
 `)
 	return []byte(b.String()), nil
 }

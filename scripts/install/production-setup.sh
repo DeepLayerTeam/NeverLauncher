@@ -58,8 +58,8 @@ cat > "${REPORT}" <<JSON
   },
   "checks": [
     {"id": "env.file", "status": "$( [[ -f "${ENV_FILE}" ]] && echo ok || echo failed )", "message": "${ENV_FILE}"},
-    {"id": "postgres.password", "status": "${POSTGRES_PASSWORD_SET}", "message": "replace default POSTGRES_PASSWORD before production"},
-    {"id": "token.secret", "status": "${TOKEN_SECRET_SET}", "message": "replace default LAUNCHER_AUTH_TOKEN_SECRET before production"},
+    {"id": "postgres.password", "status": "${POSTGRES_PASSWORD_SET}", "message": "Замените стандартный POSTGRES_PASSWORD перед промышленным запуском"},
+    {"id": "token.secret", "status": "${TOKEN_SECRET_SET}", "message": "Замените стандартный LAUNCHER_AUTH_TOKEN_SECRET перед промышленным запуском"},
     {"id": "guard.release.allowlist", "status": "${GUARD_ALLOWLIST_SET}", "message": "set LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON from merged Guard schema 2.0 production policy"},
     {"id": "serverbridge.release.allowlist", "status": "${BRIDGE_ALLOWLIST_SET}", "message": "set LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON from final ServerBridge release JAR hashes"},
     {"id": "compose.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/docker-compose.yml" ]] && echo ok || echo failed )", "message": "deploy/production/docker-compose.yml"},
@@ -74,4 +74,4 @@ cat > "${REPORT}" <<JSON
 }
 JSON
 
-echo "[Launcher] production first-run report: ${REPORT}"
+echo "[Launcher] отчёт первого промышленного запуска: ${REPORT}"

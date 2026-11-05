@@ -112,10 +112,10 @@ async fn handle_connection(mut stream: TcpStream, port: u16, state: &str) -> Cal
         std::str::from_utf8(&buf).map(|request| parse_callback(request,port,state)).unwrap_or(Callback::Reject)
     } else { Callback::Reject };
     let (status,message) = match &callback {
-        Callback::Code(_) => ("200 OK", "Microsoft sign-in received. Return to Launcher."),
-        Callback::Declined => ("200 OK", "Microsoft sign-in declined. Return to Launcher."),
-        Callback::Irrelevant => ("404 Not Found", "Not found"),
-        Callback::Reject => ("400 Bad Request", "Invalid sign-in callback"),
+        Callback::Code(_) => ("200 OK", "Вход через Microsoft выполнен. Вернитесь в лаунчер."),
+        Callback::Declined => ("200 OK", "Вход через Microsoft отклонён. Вернитесь в лаунчер."),
+        Callback::Irrelevant => ("404 Not Found", "Страница не найдена"),
+        Callback::Reject => ("400 Bad Request", "Некорректный ответ при входе"),
     };
     let response = format!("HTTP/1.1 {status}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'\r\nConnection: close\r\n\r\n{message}",message.len());
     let _ = timeout(Duration::from_secs(2), stream.write_all(response.as_bytes())).await;

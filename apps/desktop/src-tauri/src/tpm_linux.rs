@@ -60,7 +60,7 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
         let s=read_bounded_regular(&private,MAX_BLOB)?;
         found=Some((p,s));
     }
-    found.ok_or_else(||"Linux TPM-wrapped device blobs not found; software/keyring identity cannot be certified".into())
+    found.ok_or_else(||"В Linux не найдены данные устройства, защищённые TPM; идентификатор на основе ПО или связки ключей не может быть сертифицирован".into())
 }
 
 fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> {
@@ -102,7 +102,7 @@ impl TempTPMDir {
                 Err(e)=>return Err(format!("Не удалось создать рабочий каталог TPM: {e}")),
             }
         }
-        Err("cannot allocate unique TPM workspace".into())
+        Err("Не удалось создать отдельный рабочий каталог TPM".into())
     }
     fn file(&self, name: &str) -> PathBuf { self.0.join(name) }
     fn write(&self, name: &str, bytes: &[u8]) -> Result<PathBuf,String> {
@@ -125,7 +125,7 @@ fn tool(program: &str, args: &[String]) -> Result<(),String> {
         .env_remove("LD_PRELOAD").env_remove("LD_LIBRARY_PATH")
         .env_remove("TSS2_TCTI")
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-        .spawn().map_err(|e|format!("{program} unavailable: {e}"))?;
+        .spawn().map_err(|e|format!("Программа {program} недоступна: {e}"))?;
     let began=Instant::now();
     loop {
         match child.try_wait() {
@@ -153,7 +153,7 @@ fn attestation_with_size(input: Vec<u8>) -> Result<Vec<u8>,String> {
     if input.len()>=8 && input[..4]==0xff544347u32.to_be_bytes() {return to_tpm2b(&input,4096);}
     if input.len()>=10 && input[2..6]==0xff544347u32.to_be_bytes() &&
         u16::from_be_bytes([input[0],input[1]]) as usize==input.len()-2 {return Ok(input);}
-    Err("tpm2_certify did not return a TPM_ST_ATTEST payload".into())
+    Err("Команда tpm2_certify не вернула данные TPM_ST_ATTEST".into())
 }
 fn validate_outputs(public: &[u8], att: &[u8], sig: &[u8], registered: &[u8], extra: &[u8;32]) -> Result<(),String> {
     // Повторно используйте строгие проверки протокола Windows TPM:

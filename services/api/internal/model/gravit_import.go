@@ -136,7 +136,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		report("version", "mapped", "settings.minecraft.version", "Minecraft version")
 	}
 	if version == "" {
-		report("version", "blocked", "settings.minecraft.version", "Minecraft version required")
+		report("version", "blocked", "settings.minecraft.version", "Необходимо указать версию Minecraft")
 	}
 	out.Settings.Minecraft.Version = version
 	mainClass, ok := stringField("mainClass")

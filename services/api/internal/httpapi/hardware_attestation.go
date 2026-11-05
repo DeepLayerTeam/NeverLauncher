@@ -56,7 +56,7 @@ func (s Server) authTPMCertifyBegin0312(w http.ResponseWriter, r *http.Request) 
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "device not found")
+		writeError(w, http.StatusNotFound, "Устройство не найдено")
 		return
 	}
 	if err = attestationEligibleDevice0124(device); err != nil || normalizedTPMPlatform0312(device.Platform) == "" {
@@ -125,7 +125,7 @@ func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Reques
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, id)
 	if err != nil {
-		writeError(w, 404, "device not found")
+		writeError(w, 404, "Устройство не найдено")
 		return
 	}
 	if err = attestationEligibleDevice0124(device); err != nil {

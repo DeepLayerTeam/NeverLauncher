@@ -54,9 +54,9 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 fn read_proc(pid: u32, file: &str) -> Result<String, String> {
     let path = format!("/proc/{pid}/{file}");
     let meta = fs::metadata(&path).map_err(|e| format!("Guard для Linux: не удалось прочитать сведения о файле {path}: {e}"))?;
-    if meta.len() > MAX_PROC_BYTES { return Err(format!("Linux Guard oversized {path}")); }
+    if meta.len() > MAX_PROC_BYTES { return Err(format!("Linux Guard: превышен допустимый размер файла {path}")); }
     let bytes = fs::read(&path).map_err(|e| format!("Guard для Linux: не удалось прочитать {path}: {e}"))?;
-    if bytes.len() as u64 > MAX_PROC_BYTES { return Err(format!("Linux Guard oversized {path}")); }
+    if bytes.len() as u64 > MAX_PROC_BYTES { return Err(format!("Linux Guard: превышен допустимый размер файла {path}")); }
     String::from_utf8(bytes).map_err(|e| format!("Linux Guard invalid {path}: {e}"))
 }
 

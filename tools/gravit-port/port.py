@@ -76,7 +76,7 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
         for t in targets
     ):
         raise PortError(
-            "ported Java module must use its built JAR for backend/cli targets"
+            "Перенесённый модуль Java должен использовать собранный JAR для целей Backend/CLI"
         )
     if len({t["kind"] for t in targets}) != len(targets):
         raise PortError("Обнаружен дубликат: цель Java")
@@ -185,7 +185,7 @@ def build(args: argparse.Namespace) -> None:
             details,
         ):
             raise PortError(
-                "ported entrypoint must directly extend the supported LauncherModule class"
+                "Перенесённая точка входа должна напрямую наследовать поддерживаемый класс LauncherModule"
             )
         for p in classes.rglob("*.class"):
             rel = p.relative_to(classes).as_posix()
@@ -281,7 +281,7 @@ def build(args: argparse.Namespace) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Compile an explicitly ported Gravit Java module to executable Extension"
+        description="Собрать перенесённый вручную Java-модуль Gravit в исполняемое расширение"
     )
     parser.add_argument(
         "--source", type=Path, required=True, help="directory with ported .java sources"
@@ -293,19 +293,19 @@ def main() -> int:
         "--manifest",
         type=Path,
         required=True,
-        help="approved extension manifest, no implicit permissions",
+        help="Одобренный манифест расширения без неявных разрешений",
     )
     parser.add_argument(
-        "--output", type=Path, required=True, help="new package directory; overwritten"
+        "--output", type=Path, required=True, help="Каталог нового пакета; содержимое будет перезаписано"
     )
-    parser.add_argument("--nl", type=Path, help="compiled CLI executable for signing")
+    parser.add_argument("--nl", type=Path, help="Собранный исполняемый файл CLI для подписания")
     parser.add_argument(
-        "--private-key", type=Path, help="existing publisher private Ed25519 key"
+        "--private-key", type=Path, help="Существующий закрытый ключ Ed25519 издателя"
     )
     parser.add_argument(
-        "--public-key", type=Path, help="matching trusted publisher public key"
+        "--public-key", type=Path, help="Соответствующий доверенный открытый ключ издателя"
     )
-    parser.add_argument("--package", type=Path, help="new signed .nlext output")
+    parser.add_argument("--package", type=Path, help="Новый подписанный выходной файл .nlext")
     args = parser.parse_args()
     try:
         build(args)

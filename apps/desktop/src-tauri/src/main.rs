@@ -2074,7 +2074,7 @@ fn main() {
         std::process::exit(71);
     }
     tauri::Builder::default()
-        .manage(official_identity_0262::IdentityManager::new().expect("Native official identity HTTP client initialization failed"))
+        .manage(official_identity_0262::IdentityManager::new().expect("Не удалось инициализировать нативный HTTP-клиент официальной авторизации"))
         .manage(discord_presence_0308::DiscordPresence::default())
         .manage(diagnostics_bundle_03510::DiagnosticsSession03510::default())
         .manage(ProcessSupervisor::new())

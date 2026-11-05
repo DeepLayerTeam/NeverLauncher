@@ -53,7 +53,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 	if s.State != nil && s.State.ServerBridgeHARequired {
 		if s.State.ServerBridgeCoordinator == nil {
 			checks["serverBridgeCoordinator"] = "not configured"
-			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "serverbridge HA coordinator unavailable"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "Координатор высокой доступности ServerBridge недоступен"})
 			return
 		}
 		haCtx, haCancel := context.WithTimeout(r.Context(), 1500*time.Millisecond)
@@ -61,7 +61,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		haCancel()
 		if err != nil {
 			checks["serverBridgeCoordinator"] = err.Error()
-			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "serverbridge HA coordinator unavailable"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "Координатор высокой доступности ServerBridge недоступен"})
 			return
 		}
 		checks["serverBridgeCoordinator"] = s.State.ServerBridgeCoordinator.Backend()

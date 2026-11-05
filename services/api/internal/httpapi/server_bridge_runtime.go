@@ -223,7 +223,7 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 	}
 	if server.RuntimeID == runtime.RuntimeID {
 		if server.RuntimeIdentityDigest == "" || !strings.EqualFold(server.RuntimeIdentityDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime identity mutated for existing runtime id", repository.ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: идентификатор среды выполнения изменён для существующего runtime id", repository.ErrConflict)
 		}
 		server.ProtocolVersion = protocolVersion
 		server.LastHeartbeatAt = now
@@ -235,7 +235,7 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 	}
 	previous := server.RuntimeID
 	if previous != "" && !server.RuntimeStartedAt.IsZero() && !runtime.StartedAt.After(server.RuntimeStartedAt) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime instance is older than active runtime", repository.ErrConflict)
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: экземпляр Runtime старше активного", repository.ErrConflict)
 	}
 	replacement := previous != "" && !server.RuntimeLastSeenAt.IsZero() && server.RuntimeLastSeenAt.After(now.Add(-2*time.Minute))
 	transition := "started"

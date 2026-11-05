@@ -42,7 +42,7 @@ def json_file(path: Path, limit: int = 1024 * 1024) -> dict:
         value = json.loads(data)
     except (UnicodeError, ValueError) as exc:
         raise Blocked("Некорректное значение: файл JSON:" + str(path)) from exc
-    require(isinstance(value, dict), "expected JSON object: " + str(path))
+    require(isinstance(value, dict), "Ожидается объект JSON: " + str(path))
     return value
 
 
@@ -51,16 +51,16 @@ def _checked_open(path: Path, limit: int):
     try:
         st = path.lstat()
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,
-                "missing, linked, hardlinked or oversized file: " + str(path))
+                "Файл отсутствует, является ссылкой, имеет несколько жёстких ссылок или слишком велик: " + str(path))
         require(not any(parent.is_symlink() for parent in path.parents),
-                "symlinked parent in migration path: " + str(path))
+                "Символическая ссылка в родительском каталоге пути миграции: " + str(path))
         fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0))
         stream = os.fdopen(fd, "rb")
         opened = os.fstat(fd)
         try:
             require((opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns)
                     == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns),
-                    "file changed before reading: " + str(path))
+                    "Файл изменился до чтения: " + str(path))
         except BaseException:
             stream.close()
             raise
@@ -73,7 +73,7 @@ def _checked_finish(path: Path, stream, st) -> None:
     end = os.fstat(stream.fileno())
     require((end.st_dev, end.st_ino, end.st_size, end.st_mtime_ns)
             == (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns),
-            "migration file changed during read: " + str(path))
+            "Файл миграции изменился во время чтения: " + str(path))
 
 
 def regular_bytes(path: Path, limit: int) -> bytes:
@@ -81,7 +81,7 @@ def regular_bytes(path: Path, limit: int) -> bytes:
     with stream:
         data = stream.read(limit + 1)
         require(len(data) == st.st_size and len(data) <= limit,
-                "migration file changed or exceeds limit: " + str(path))
+                "Файл миграции изменился или превышает допустимый размер: " + str(path))
         _checked_finish(path, stream, st)
     return data
 
@@ -98,7 +98,7 @@ def sha(path: Path) -> str:
 
 def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) -> Path:
     require(isinstance(name, str) and name.startswith("/") and isinstance(digest, str)
-            and bool(HEX.fullmatch(digest)), "absolute file and expected SHA-256 required")
+            and bool(HEX.fullmatch(digest)), "Требуются абсолютный путь к файлу и ожидаемый SHA-256")
     path = Path(name)
     # Hash an inode-pinned stream; fail if input changed or is linked.
     stream, st = _checked_open(path, limit)
@@ -115,46 +115,46 @@ def real_dir(name: object) -> Path:
     require(isinstance(name, str) and name.startswith("/"), "absolute directory required")
     path = Path(name)
     require(path.is_dir() and not path.is_symlink() and path.resolve() == path,
-            "missing or linked directory: " + name)
+            "Каталог отсутствует или является символической ссылкой: " + name)
     return path
 
 
 def within(root: Path, child: object) -> Path:
     require(isinstance(child, str) and child and not child.startswith("/")
             and "\\" not in child and all(t not in ("", ".", "..") for t in child.split("/")),
-            "invalid relative installed component")
+            "Некорректный относительный путь установленного компонента")
     path = root / child
     require(path.resolve().is_relative_to(root) and not path.is_symlink(),
-            "component escapes installed root")
+            "Компонент расположен за пределами корня установки")
     return path
 
 
 def preflight(config: dict, output: Path) -> list[dict]:
-    require(config.get("format") == FORMAT, "wrong cohort format")
+    require(config.get("format") == FORMAT, "Некорректный формат набора эталонных проверок")
     backend = config.get("backend")
-    require(isinstance(backend, str), "HTTPS Backend origin required")
+    require(isinstance(backend, str), "Требуется базовый HTTPS-адрес Backend")
     origin = urlsplit(backend)
     require(origin.scheme == "https" and bool(origin.hostname) and origin.username is None
             and origin.password is None and origin.path in ("", "/")
             and not origin.query and not origin.fragment and backend.rstrip("/") == backend,
-            "rehearsal requires a clean HTTPS Backend origin")
+            "Для пробного запуска нужен HTTPS-адрес Backend без пути и параметров")
     checked_file(config.get("launcher"), config.get("launcherSha256"), 256 << 20)
-    require(os.access(config["launcher"], os.X_OK), "launcher CLI not executable")
+    require(os.access(config["launcher"], os.X_OK), "CLI лаунчера не является исполняемым файлом")
     require(isinstance(config.get("projects"), list) and len(config["projects"]) == 3,
-            "exactly three real Gravit projects are required")
+            "Требуются ровно три реальных проекта Gravit")
     output = real_dir(str(output))
-    require(output.stat().st_mode & 0o077 == 0, "private output directory must be chmod 0700")
-    require(bool(os.environ.get("LAUNCHER_TOKEN", "").strip()), "LAUNCHER_TOKEN required in environment")
+    require(output.stat().st_mode & 0o077 == 0, "Закрытый выходной каталог должен иметь права 0700")
+    require(bool(os.environ.get("LAUNCHER_TOKEN", "").strip()), "Требуется переменная окружения LAUNCHER_TOKEN")
     used: dict[str, set] = {name: set() for name in ("class", "run", "project", "source", "stage", "root")}
     result = []
     for p in config["projects"]:
-        require(isinstance(p, dict), "project must be an object")
+        require(isinstance(p, dict), "Описание проекта должно быть объектом")
         cls, run, project = p.get("referenceClass"), p.get("runId"), p.get("projectId")
         require(cls in CLASSES and isinstance(run, str) and bool(RUN.fullmatch(run))
                 and isinstance(project, str) and bool(RUN.fullmatch(project)),
-                "missing class, valid run ID or project ID")
+                "Отсутствует класс, корректный идентификатор запуска или проекта")
         source = checked_file(p.get("sourceZip"), p.get("sourceSha256"), 512 << 20)
-        require(zipfile.is_zipfile(source), "source is not a ZIP: " + str(source))
+        require(zipfile.is_zipfile(source), "Исходный файл не является ZIP: " + str(source))
         checked_file(p.get("mapping"), p.get("mappingSha256"), 12288)
         checked_file(p.get("dryRunReport"), p.get("dryRunReportSha256"), 16 << 20)
         report = json_file(Path(p["dryRunReport"]), 16 << 20)
@@ -163,23 +163,23 @@ def preflight(config: dict, output: Path) -> list[dict]:
                 and body.get("sourceSha256") == p["sourceSha256"]
                 and body.get("inventorySha256") == p.get("inventorySha256")
                 and body.get("status") == "manual" and body.get("blockers") == [],
-                "approved multi-profile plan missing, stale or blocked")
+                "Одобренный план нескольких профилей отсутствует, устарел или заблокирован")
         stage, root = real_dir(p.get("stage")), real_dir(p.get("installRoot"))
         marker = json_file(stage / ".migration-stage.json", 8192)
         require(marker.get("format") == "never/migration-stage/v1" and marker.get("runId") == run
-                and marker.get("isolated") is True, "not a marked isolated stage")
+                and marker.get("isolated") is True, "Каталог не обозначен как изолированный тестовый стенд")
         live = json_file(stage / "live-session.json", 16384)
         require(isinstance(live.get("rconAddress"), str) and
                 (live["rconAddress"].startswith("127.") or live["rconAddress"].startswith("[::1]:")),
-                "RCON must be bound to loopback")
+                "RCON должен быть привязан к локальному интерфейсу loopback")
         for file in ("source-snapshot.json", "target-snapshot.json", "rcon-password"):
             regular_bytes(stage / file, 4 << 20)
         require(stage.joinpath("rcon-password").stat().st_mode & 0o077 == 0,
-                "RCON password must be owner-only")
+                "Пароль RCON должен быть доступен только владельцу")
         for name in PROBES:
             probe = stage / "probes" / name
             regular_bytes(probe, 1 << 20)
-            require(os.access(probe, os.X_OK), "missing executable staging probe " + name)
+            require(os.access(probe, os.X_OK), "Отсутствует исполняемая проверка подготовленного окружения " + name)
         pkg = checked_file(p.get("updatePackage"), p.get("updateSha256"), 8 << 30)
         delivery = checked_file(p.get("deliveryManifest"), p.get("deliverySha256"), 16 << 20)
         require(pkg != source and delivery != source, "source and update package must differ")
@@ -189,22 +189,22 @@ def preflight(config: dict, output: Path) -> list[dict]:
         # A stable wrapper could otherwise launch an old client while a different
         # runtime file was successfully updated, creating false upgrade evidence.
         require(root.is_relative_to(stage) and isinstance(live.get("clientPath"), str),
-                "the real client install must be inside its isolated stage")
+                "Реальная установка клиента должна находиться внутри изолированного стенда")
         require(within(stage, live["clientPath"]) == component,
-                "live-session client must be the exact signed component being updated")
+                "Клиент работающей сессии должен совпадать с обновляемым подписанным компонентом")
         require(isinstance(p.get("expectedUpdatedVersion"), str)
                 and bool(re.fullmatch(r"[0-9]+(?:\.[0-9]+){2}(?:[-+][A-Za-z0-9.-]+)?", p["expectedUpdatedVersion"])),
-                "expected updated product version required")
+                "Необходимо указать ожидаемую версию продукта после обновления")
         for name, value in (("class", cls), ("run", run), ("project", project),
                             ("source", p["sourceSha256"]), ("stage", str(stage)), ("root", str(root))):
-            require(value not in used[name], "two projects share " + name)
+            require(value not in used[name], "Два проекта используют общий " + name)
             used[name].add(value)
         project_out = output / cls
         require(not project_out.exists() and not project_out.is_symlink(),
-                "existing project output: no partial replay without an operator review")
-        require(not Path(config["launcher"]).is_relative_to(root), "runner CLI may not be replaced by its own update")
+                "Результаты проекта уже существуют: частичный повтор без проверки оператора запрещён")
+        require(not Path(config["launcher"]).is_relative_to(root), "Исполняемый CLI нельзя заменять во время его собственного обновления")
         result.append(dict(p))
-    require(used["class"] == set(CLASSES), "all three distinct reference classes required")
+    require(used["class"] == set(CLASSES), "Требуются все три разных эталонных класса")
     return result
 
 
@@ -216,7 +216,7 @@ def cli(launcher: str, args: list[str], timeout: int = 1800) -> None:
             subprocess.run([launcher, *args], env=env, stdin=sink, stdout=sink,
                            stderr=sink, check=True, timeout=timeout)
         except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            raise Blocked("NeverLauncher command failed at " + " ".join(args[:3])) from exc
+            raise Blocked("Ошибка команды NeverLauncher на этапе " + " ".join(args[:3])) from exc
 
 
 def verify_rehearsal(path: Path, p: dict, *, authoritative: bool) -> dict:
@@ -229,15 +229,15 @@ def verify_rehearsal(path: Path, p: dict, *, authoritative: bool) -> dict:
     live = r.get("liveSession")
     require(isinstance(live, dict) and bool(HEX.fullmatch(str(live.get("clientSha256", ""))))
             and bool(live.get("joinedAt")) and live.get("playerUuid"),
-            "missing actual observed Minecraft join")
+            "Отсутствует подтверждённое фактическое подключение к Minecraft")
     probes = r.get("probes")
     require(isinstance(probes, list) and [x.get("name") for x in probes if isinstance(x, dict)] == list(PROBES)
             and all(x.get("passed") is True and HEX.fullmatch(str(x.get("evidenceSha256", ""))) for x in probes),
-            "missing required executable staging checks")
+            "Отсутствуют обязательные исполняемые проверки тестового стенда")
     require(r.get("ready") is authoritative,
-            "Backend did not certify pre-update run or local witness claimed authoritative status")
+            "Backend не сертифицировал запуск до обновления либо локальное подтверждение ошибочно заявляет статус авторитетного")
     if authoritative:
-        require(r.get("blockers") == [], "Backend rehearsal reported blockers")
+        require(r.get("blockers") == [], "Пробный запуск Backend выявил блокирующие проблемы")
     else:
         require(r.get("blockers") != [], "local-only witness must not be reported as certified")
     return r
@@ -262,9 +262,9 @@ def execute_project(launcher: str, backend: str, p: dict, root: Path, launcher_s
     def execute(name: str, command: list[str], limit: int = 1800) -> Path:
         target = out / (name + ".json")
         if launcher_sha is not None:
-            require(sha(Path(launcher)) == launcher_sha, "CLI executable changed during migration")
+            require(sha(Path(launcher)) == launcher_sha, "Исполняемый CLI изменился во время миграции")
         cli(launcher, command + ["--output", str(target)], limit)
-        require(target.is_file() and target.stat().st_size > 0, "missing result of " + name)
+        require(target.is_file() and target.stat().st_size > 0, "Отсутствует результат " + name)
         return target
     execute("verify-before-import", base + ["verify-dry-run-all", *common, "--source", p["sourceZip"],
              "--mapping", p["mapping"], "--report", p["dryRunReport"]])
@@ -275,7 +275,7 @@ def execute_project(launcher: str, backend: str, p: dict, root: Path, launcher_s
     certified = verify_rehearsal(certified_path, p, authoritative=True)
     old_hash = sha(within(Path(p["installRoot"]), p["installedComponent"]))
     require(certified["liveSession"]["clientSha256"] == old_hash,
-            "pre-update live Minecraft did not use the installed client executable")
+            "До обновления работающий Minecraft использовал не установленный исполняемый файл клиента")
     update_path = execute("signed-update", ["update", "components", "--package", p["updatePackage"],
              "--expected-sha256", p["updateSha256"], "--delivery-manifest", p["deliveryManifest"],
              "--root", p["installRoot"]], 1800)
@@ -284,16 +284,16 @@ def execute_project(launcher: str, backend: str, p: dict, root: Path, launcher_s
             update.get("toVersion") == p["expectedUpdatedVersion"] and
             update.get("packageSha256") == p["updateSha256"], "signed component update was not committed")
     new_hash = sha(within(Path(p["installRoot"]), p["installedComponent"]))
-    require(old_hash != new_hash, "expected installed runtime component did not change")
+    require(old_hash != new_hash, "Ожидаемый установленный компонент Runtime не изменился")
     post_path = execute("post-update-live", base + ["rehearse-local", *common_stage], 1200)
     after = verify_rehearsal(post_path, p, authoritative=False)
     require(after["liveSession"]["clientSha256"] == new_hash,
-            "post-update live Minecraft did not use the upgraded executable")
+            "После обновления работающий Minecraft использовал не обновлённый исполняемый файл")
     require(after["liveSession"]["playerUuid"] == certified["liveSession"]["playerUuid"],
-            "Minecraft UUID changed after client update")
+            "UUID Minecraft изменился после обновления клиента")
     require(after.get("sourceSnapshotSha256") == certified.get("sourceSnapshotSha256") and
             after.get("targetSnapshotSha256") == certified.get("targetSnapshotSha256"),
-            "world, inventory or permissions changed during update")
+            "Во время обновления изменились миры, инвентарь или разрешения")
     return {"referenceClass": p["referenceClass"], "runId": run, "projectId": p["projectId"],
             "sourceSha256": p["sourceSha256"], "updatePackageSha256": p["updateSha256"],
             "installedBeforeSha256": old_hash, "installedAfterSha256": new_hash,
@@ -311,7 +311,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg = json_file(args.config, 256 << 10)
         cases = preflight(cfg, args.output_dir)
         if args.preflight_only:
-            print("PREFLIGHT: 3 distinct sources, stages, hashes and signed update packages present (not E2E)")
+            print("ПРЕДВАРИТЕЛЬНАЯ ПРОВЕРКА: присутствуют три разных источника, стенда, хеша и подписанных пакета обновления (не E2E)")
             return 0
         report = {"format": FORMAT, "version": "0.49.10", "status": "BLOCKED",
                   "cases": [], "productionGA": False}

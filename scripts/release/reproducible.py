@@ -48,7 +48,7 @@ TARGETS = frozenset(('windows-x64', 'windows-arm64', 'linux-x64', 'linux-arm64',
 
 def sha256_file(path: Path) -> str:
     if path.is_symlink() or not path.is_file():
-        raise ValueError(f'not a regular file: {path}')
+        raise ValueError(f'Объект не является обычным файлом: {path}')
     digest = hashlib.sha256()
     with path.open('rb') as fh:
         for part in iter(lambda: fh.read(1024*1024), b''):

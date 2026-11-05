@@ -19,7 +19,7 @@ func TestManualWorklistDerivedFromReport0450(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := string(work)
-	for _, need := range []string{"old-module.jar", "requires source port", r.ReportSHA256, "[ ]", "Rollback limits"} {
+	for _, need := range []string{"old-module.jar", "requires source port", r.ReportSHA256, "[ ]", "Ограничения отката"} {
 		if !strings.Contains(content, need) {
 			t.Fatalf("missing %s", need)
 		}

@@ -123,7 +123,7 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if errors.Is(err, repository.ErrTextureCapeDenied0251) {
-		writeError(w, http.StatusForbidden, "cape selection is not permitted by project policy")
+		writeError(w, http.StatusForbidden, "Выбор плаща запрещён политикой проекта")
 		return
 	}
 	if errors.Is(err, repository.ErrTextureRevisionConflict0251) {

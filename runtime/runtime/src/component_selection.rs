@@ -167,7 +167,7 @@ mod tests{
     #[test]fn migration_rejects_other_profile(){
         let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
         let p=PortableSelection02410{schema_version:"1.0".into(),project_id:"different".into(),profile_id:m.profile_id.clone(),channel:m.channel.clone(),source_version:"0.24.9".into(),source_catalog_digest:"a".repeat(64),source_preset:"".into(),selected_ids:vec![]};
-        assert!(migrate_02410(&p,&m).unwrap_err().contains("different project"));
+        assert!(migrate_02410(&p,&m).unwrap_err().contains("Другой проект"));
     }
 }
 
@@ -223,6 +223,6 @@ mod signed_migration_tests {
         let portable=parse_import_02410(&export_from_installed_02410(&m,None).unwrap()).unwrap();
         let mut next=m;
         next.profile_id="another-profile".into();
-        assert!(migrate_02410(&portable,&next).unwrap_err().contains("different project"));
+        assert!(migrate_02410(&portable,&next).unwrap_err().contains("Другой проект"));
     }
 }

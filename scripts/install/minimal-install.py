@@ -22,7 +22,7 @@ def reject(message):
 
 def owned_directory(path: Path):
     if not path.is_absolute() or path.is_symlink():
-        reject(f"directory must be absolute and not a symlink: {path}")
+        reject(f"Каталог должен быть указан абсолютным путём и не должен быть символической ссылкой: {path}")
     if path.exists():
         info = path.lstat()
         if (
@@ -30,7 +30,7 @@ def owned_directory(path: Path):
             or info.st_uid != os.geteuid()
             or info.st_mode & 0o077
         ):
-            reject(f"directory must be owned by installer and private (0700): {path}")
+            reject(f"Каталог должен принадлежать пользователю установщика и иметь права 0700: {path}")
     else:
         path.mkdir(mode=0o700, parents=True)
         os.chmod(path, 0o700)
@@ -45,11 +45,11 @@ def policy(path: Path):
         or info.st_size > 1024 * 1024
     ):
         reject(
-            f"policy must be a regular, non-group-writable JSON file <= 1 MiB: {path}"
+            f"Политика должна быть обычным JSON-файлом размером до 1 МиБ без права записи для группы: {path}"
         )
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict) or not value:
-        reject(f"policy must be a nonempty JSON object: {path}")
+        reject(f"Политика должна содержать непустой объект JSON: {path}")
     return json.dumps(value, separators=(",", ":"), ensure_ascii=True)
 
 
@@ -60,9 +60,9 @@ def check_binary(path: Path):
         or not path.is_file()
         or not os.access(path, os.X_OK)
     ):
-        reject("--binary must point to an existing absolute executable (not a symlink)")
+        reject("Параметр --binary должен указывать на существующий исполняемый файл по абсолютному пути (не символическую ссылку)")
     if path.stat().st_mode & 0o022:
-        reject("API binary is writable by group or others")
+        reject("Исполняемый файл API доступен для записи группе или другим пользователям")
 
 
 def generate(
@@ -84,18 +84,18 @@ def generate(
             "public URL must be a clean HTTPS origin, without path, credentials or query"
         )
     if not listen.startswith("127.0.0.1:"):
-        reject("minimal API HTTP listener must bind to 127.0.0.1 behind HTTPS proxy")
+        reject("HTTP-сервер минимального API должен слушать 127.0.0.1 за HTTPS-прокси")
     port = listen.removeprefix("127.0.0.1:")
     if not port.isdecimal() or not (1 <= int(port) <= 65535):
-        reject("invalid HTTP listen port")
+        reject("Некорректный порт прослушивания HTTP")
     guard_policy = policy(guard)
     bridge_policy = policy(bridge)
     root = root.resolve(strict=False)
     if not root.is_absolute() or root == Path("/"):
-        reject("root must be an absolute private directory")
+        reject("Корневой каталог должен быть закрытым и указан абсолютным путём")
     envfile = root / "config" / "backend.env"
     if envfile.exists() or envfile.is_symlink():
-        reject("installation exists; refusing to overwrite secrets or state")
+        reject("Установка уже существует; перезапись секретов и состояния запрещена")
     if root.exists():
         owned_directory(root)
     else:
@@ -139,7 +139,7 @@ def generate(
     if any(
         "\n" in value or "\r" in value or "\x00" in value for value in config.values()
     ):
-        reject("configuration contains unsupported control characters")
+        reject("Конфигурация содержит неподдерживаемые управляющие символы")
     content = "".join(f"{key}={value}\n" for key, value in sorted(config.items()))
     fd = os.open(envfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
@@ -165,22 +165,22 @@ def read_env(file: Path):
         or info.st_uid != os.geteuid()
         or info.st_mode & 0o077
     ):
-        reject("configuration file must be owned by current user and mode 0600")
+        reject("Файл конфигурации должен принадлежать текущему пользователю и иметь права 0600")
     values = {}
     for line in file.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("#"):
             continue
         if "=" not in line:
-            reject("invalid config line")
+            reject("Некорректная строка конфигурации")
         key, value = line.split("=", 1)
         if not key.startswith("LAUNCHER_") or key in values:
-            reject("invalid config key")
+            reject("Некорректный ключ конфигурации")
         values[key] = value
     if (
         values.get("LAUNCHER_REPOSITORY_DRIVER") != "sqlite"
         or values.get("LAUNCHER_DEPLOYMENT_MODE") != "single-node"
     ):
-        reject("not a minimal SQLite config")
+        reject("Конфигурация не соответствует минимальному варианту SQLite")
     return values
 
 
@@ -199,9 +199,9 @@ def main(argv=None):
     for name in ("check", "run"):
         p = sub.add_parser(
             name,
-            help="verify deployment configuration"
+            help="Проверить конфигурацию развёртывания"
             if name == "check"
-            else "run API in foreground",
+            else "Запустить API на переднем плане",
         )
         p.add_argument("--env-file", type=Path, required=True)
         p.add_argument("--binary", type=Path, required=True)
@@ -270,9 +270,9 @@ def main(argv=None):
             args.bridge_policy,
             args.listen,
         )
-        print(f"Created private minimal install: {result}")
+        print(f"Создана закрытая минимальная установка: {result}")
         print(
-            "Keep backend.env safe, configure HTTPS reverse proxy, run check, then run the API and complete /api/v1/install/bootstrap-admin and /api/v1/install/first-project."
+            "Храните backend.env в защищённом месте, настройте обратный HTTPS-прокси, выполните проверку, запустите API и завершите /api/v1/install/bootstrap-admin и /api/v1/install/first-project."
         )
         return 0
     check_binary(args.binary)
@@ -299,5 +299,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (ValueError, OSError, json.JSONDecodeError) as exc:
-        print(f"minimal install: {exc}", file=sys.stderr)
+        print(f"Ошибка минимальной установки: {exc}", file=sys.stderr)
         sys.exit(2)

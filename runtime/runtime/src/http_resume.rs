@@ -40,7 +40,7 @@ static FILE_LOCKS: OnceLock<Mutex<HashMap<PathBuf, Weak<AsyncMutex<()>>>>> = Onc
 
 fn file_mutex(path: &Path) -> Arc<AsyncMutex<()>> {
     let mut locks = FILE_LOCKS.get_or_init(|| Mutex::new(HashMap::new()))
-        .lock().expect("partial transfer lock poisoned");
+        .lock().expect("Блокировка частичной передачи повреждена");
     locks.retain(|_, lock| lock.strong_count() > 0);
     let key = path.to_path_buf();
     if let Some(lock) = locks.get(&key).and_then(Weak::upgrade) { return lock }
@@ -52,7 +52,7 @@ fn file_mutex(path: &Path) -> Arc<AsyncMutex<()>> {
 fn partial_paths(root: &Path, target: &Path) -> Result<(PathBuf, PathBuf), String> {
     // Храните внутреннее состояние вне пользовательских каталогов, где пользователь
     // вправе иметь собственные файлы с именами *.part или *.json.
-    let relative = target.strip_prefix(root).map_err(|_| "target outside install root")?;
+    let relative = target.strip_prefix(root).map_err(|_| "Целевой путь расположен за пределами каталога установки")?;
     let id = hex::encode(Sha256::digest(relative.to_string_lossy().as_bytes()));
     let directory = root.join(".launcher").join("downloads").join(&id[..2]);
     Ok((directory.join(format!("{id}.part")), directory.join(format!("{id}.part.json"))))
@@ -73,7 +73,7 @@ fn response_etag(response: &reqwest::Response) -> Option<String> {
 fn check_identity_encoding(response: &reqwest::Response) -> Result<(), String> {
     if let Some(encoding) = response.headers().get(CONTENT_ENCODING) {
         if !encoding.as_bytes().eq_ignore_ascii_case(b"identity") {
-            return Err("non-identity Content-Encoding is forbidden for signed files".into());
+            return Err("Для подписанных файлов запрещено кодирование Content-Encoding, отличное от identity".into());
         }
     }
     Ok(())
@@ -81,7 +81,7 @@ fn check_identity_encoding(response: &reqwest::Response) -> Result<(), String> {
 
 fn content_length(response: &reqwest::Response) -> Result<Option<u64>, String> {
     response.headers().get(CONTENT_LENGTH).map(|value| {
-        value.to_str().map_err(|_| "non-UTF8 Content-Length".to_string())?
+        value.to_str().map_err(|_| "Заголовок Content-Length содержит данные не в UTF-8".to_string())?
             .parse::<u64>().map_err(|_| "Некорректное значение: Content-Length".to_string())
     }).transpose()
 }
@@ -91,9 +91,9 @@ fn expected_range(response: &reqwest::Response, start: u64, total: u64) -> Resul
     let value = response.headers().get(CONTENT_RANGE)
         .ok_or("206 response without Content-Range")?
         .to_str().map_err(|_| "Некорректное значение: кодирование заголовка Content-Range")?;
-    let range = value.strip_prefix("bytes ").ok_or("invalid Content-Range unit")?;
-    let (bounds, total_str) = range.split_once('/').ok_or("invalid Content-Range")?;
-    let (low, high) = bounds.split_once('-').ok_or("invalid Content-Range bounds")?;
+    let range = value.strip_prefix("bytes ").ok_or("Некорректная единица диапазона Content-Range")?;
+    let (bounds, total_str) = range.split_once('/').ok_or("Некорректный заголовок Content-Range")?;
+    let (low, high) = bounds.split_once('-').ok_or("Некорректные границы диапазона Content-Range")?;
     let first = low.parse::<u64>().map_err(|_| "Некорректное значение: начальная позиция Content-Range")?;
     let last = high.parse::<u64>().map_err(|_| "Некорректное значение: конечная позиция Content-Range")?;
     let complete = total_str.parse::<u64>().map_err(|_| "Некорректное значение: общий размер Content-Range")?;
@@ -108,9 +108,9 @@ fn expected_range(response: &reqwest::Response, start: u64, total: u64) -> Resul
 }
 
 fn check_full_response(response: &reqwest::Response, size: u64) -> Result<(), String> {
-    if response.status() != StatusCode::OK { return Err(format!("expected HTTP 200, got {}", response.status())) }
+    if response.status() != StatusCode::OK { return Err(format!("Ожидался ответ HTTP 200, получен {}", response.status())) }
     if response.headers().contains_key(CONTENT_RANGE) {
-        return Err("HTTP 200 unexpectedly includes Content-Range".into());
+        return Err("Ответ HTTP 200 неожиданно содержит Content-Range".into());
     }
     if content_length(response)?.is_some_and(|len| len != size) {
         return Err("Content-Length differs from signed manifest".into());
@@ -122,7 +122,7 @@ async fn remove_if_present(path: &Path) -> Result<(), String> {
     match fs::remove_file(path).await {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(format!("remove partial {}: {err}", path.display())),
+        Err(err) => Err(format!("Не удалось удалить частичный файл {}: {err}", path.display())),
     }
 }
 
@@ -138,32 +138,32 @@ async fn read_metadata(path: &Path) -> Option<PartialMetadata> {
 
 async fn store_metadata(root: &Path, meta_path: &Path, data: &PartialMetadata) -> Result<(), String> {
     let payload = serde_json::to_vec(data).map_err(|e| e.to_string())?;
-    let name = meta_path.file_name().ok_or("invalid metadata name")?.to_string_lossy();
+    let name = meta_path.file_name().ok_or("Некорректное имя файла метаданных")?.to_string_lossy();
     let tmp = meta_path.with_file_name(format!("{name}.tmp-{:016x}", rand::random::<u64>()));
     let outcome = async {
         let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&tmp).await
             .map_err(|e| format!("create partial metadata: {e}"))?;
-        file.write_all(&payload).await.map_err(|e| format!("write partial metadata: {e}"))?;
-        file.sync_all().await.map_err(|e| format!("fsync partial metadata: {e}"))?;
+        file.write_all(&payload).await.map_err(|e| format!("Не удалось записать метаданные частичного файла: {e}"))?;
+        file.sync_all().await.map_err(|e| format!("Не удалось синхронизировать метаданные частичного файла: {e}"))?;
         drop(file);
         // При смене зеркала сначала сохраните новую идентичность источника, затем дописывайте.
         // И в Windows выполняйте атомарную замену; нельзя оставлять валидатор отсутствующим.
         crate::platform_fs::replace_file(root, &tmp, meta_path)
-            .map_err(|e| format!("publish partial metadata: {e}"))
+            .map_err(|e| format!("Не удалось опубликовать метаданные частичного файла: {e}"))
     }.await;
     if outcome.is_err() { let _ = fs::remove_file(&tmp).await; }
     outcome
 }
 
 async fn digest_existing(path: &Path) -> Result<(u64, Sha256), String> {
-    let mut input = fs::File::open(path).await.map_err(|e| format!("open partial for hashing: {e}"))?;
+    let mut input = fs::File::open(path).await.map_err(|e| format!("Не удалось открыть частичный файл для вычисления хеша: {e}"))?;
     let mut digest = Sha256::new();
     let mut size = 0u64;
     let mut buffer = [0u8; 64 * 1024];
     loop {
-        let count = input.read(&mut buffer).await.map_err(|e| format!("hash partial: {e}"))?;
+        let count = input.read(&mut buffer).await.map_err(|e| format!("Не удалось вычислить хеш частичного файла: {e}"))?;
         if count == 0 { break }
-        size = size.checked_add(count as u64).ok_or("partial length overflow")?;
+        size = size.checked_add(count as u64).ok_or("Переполнение длины частичного файла")?;
         digest.update(&buffer[..count]);
     }
     Ok((size, digest))
@@ -177,9 +177,9 @@ async fn install_verified(root: &Path, file: &ManifestFile, target: &Path, part:
 }
 
 fn request_error(path: &str, error: String) -> String {
-    if error.starts_with("[retry:") || error == "download paused" || error == "download cancelled" {
+    if error.starts_with("[retry:") || error == "download paused" || error == "Загрузка отменена" {
         error
-    } else { format!("{path}: HTTP request: {error}") }
+    } else { format!("{path}: ошибка HTTP-запроса: {error}") }
 }
 
 async fn request_with_control(client: &reqwest::Client, url: &str,
@@ -196,8 +196,8 @@ async fn request_with_control(client: &reqwest::Client, url: &str,
         result = tokio::time::timeout(network_resilience::REQUEST_TIMEOUT, request.send()) => {
             match result {
                 Ok(Ok(response)) => response,
-                Ok(Err(error)) => return Err(network_resilience::transient(format!("HTTP connect/request: {error}"), None)),
-                Err(_) => return Err(network_resilience::transient("HTTP request timed out", None)),
+                Ok(Err(error)) => return Err(network_resilience::transient(format!("Ошибка соединения или HTTP-запроса: {error}"), None)),
+                Err(_) => return Err(network_resilience::transient("Превышено время ожидания HTTP-запроса", None)),
             }
         },
         state = network_resilience::interrupted(control) => return Err(state.error().into()),
@@ -232,7 +232,7 @@ pub(crate) async fn download_verified_controlled(
         }
     }
     Err(network_resilience::transient(
-        "server supplied too many bounded HTTP ranges; partial retained", None))
+        "Сервер вернул слишком много диапазонов HTTP; частичный файл сохранён", None))
 }
 
 /// Один полный ответ или ограниченный диапазон. Возвращает false только если
@@ -249,7 +249,7 @@ async fn download_verified_segment(
     let (part, meta) = partial_paths(root, target)?;
     file_ownership::ensure_no_symlinks(root, &part)?;
     file_ownership::ensure_no_symlinks(root, &meta)?;
-    fs::create_dir_all(part.parent().ok_or("invalid partial directory")?).await
+    fs::create_dir_all(part.parent().ok_or("Некорректный каталог частичных загрузок")?).await
         .map_err(|e| format!("{}: create partial storage: {e}", file.path))?;
     file_ownership::ensure_no_symlinks(root, &part)?;
     file_ownership::ensure_no_symlinks(root, &meta)?;
@@ -338,7 +338,7 @@ async fn download_verified_segment(
                 response = request_with_control(client, &file.url, None, &mut control).await
                     .map_err(|e| request_error(&file.path, e))?;
             }
-            status => return Err(format!("{}: resume HTTP {status}", file.path)),
+            status => return Err(format!("{}: возобновление загрузки, HTTP {status}", file.path)),
         }
     }
     if append {
@@ -359,19 +359,19 @@ async fn download_verified_segment(
     let mut digest = Sha256::new();
     if append {
         let (len, prefix_hash) = digest_existing(&part).await?;
-        if len != prefix_len { return Err(format!("{}: partial modified concurrently", file.path)) }
+        if len != prefix_len { return Err(format!("{}: частичный файл был одновременно изменён другим процессом", file.path)) }
         digest = prefix_hash;
     }
     let mut output = fs::OpenOptions::new().write(true).create(!append).append(append)
         .truncate(!append).open(&part).await
-        .map_err(|e| format!("{}: open partial: {e}", file.path))?;
+        .map_err(|e| format!("{}: не удалось открыть частичный файл: {e}", file.path))?;
     let mut body_len = 0u64;
     loop {
         let packet = tokio::select! {
             result = tokio::time::timeout(network_resilience::READ_TIMEOUT, response.chunk()) => result,
             state = network_resilience::interrupted(&mut control) => {
-                output.flush().await.map_err(|e| format!("flush partial on pause/cancel: {e}"))?;
-                output.sync_all().await.map_err(|e| format!("fsync partial on pause/cancel: {e}"))?;
+                output.flush().await.map_err(|e| format!("Не удалось сбросить буфер частичного файла при паузе или отмене: {e}"))?;
+                output.sync_all().await.map_err(|e| format!("Не удалось синхронизировать частичный файл при паузе или отмене: {e}"))?;
                 return Err(state.error().into());
             }
         };
@@ -379,35 +379,35 @@ async fn download_verified_segment(
             Ok(Ok(Some(chunk))) => chunk,
             Ok(Ok(None)) => break,
             Ok(Err(error)) => {
-                output.flush().await.map_err(|io| format!("{}: flush partial: {io}", file.path))?;
-                output.sync_all().await.map_err(|io| format!("{}: fsync partial: {io}", file.path))?;
-                return Err(network_resilience::transient(format!("{}: interrupted HTTP body: {error}", file.path), None));
+                output.flush().await.map_err(|io| format!("{}: ошибка сброса буфера частичного файла: {io}", file.path))?;
+                output.sync_all().await.map_err(|io| format!("{}: ошибка синхронизации частичного файла: {io}", file.path))?;
+                return Err(network_resilience::transient(format!("{}: передача тела HTTP-ответа прервана: {error}", file.path), None));
             },
             Err(_) => {
-                output.flush().await.map_err(|io| format!("{}: flush partial: {io}", file.path))?;
-                output.sync_all().await.map_err(|io| format!("{}: fsync partial: {io}", file.path))?;
-                return Err(network_resilience::transient(format!("{}: read timeout", file.path), None));
+                output.flush().await.map_err(|io| format!("{}: ошибка сброса буфера частичного файла: {io}", file.path))?;
+                output.sync_all().await.map_err(|io| format!("{}: ошибка синхронизации частичного файла: {io}", file.path))?;
+                return Err(network_resilience::transient(format!("{}: истекло время ожидания чтения", file.path), None));
             }
         };
         transferred(chunk.len() as u64);
         if chunk.len() as u64 > allowed_body_len.saturating_sub(body_len) {
             drop(output);
             discard(&part, &meta).await?;
-            return Err(format!("{}: HTTP body exceeds declared/signed size", file.path));
+            return Err(format!("{}: тело HTTP-ответа превышает заявленный или подписанный размер", file.path));
         }
         for piece in chunk.chunks(64 * 1024) {
-            output.write_all(piece).await.map_err(|e| format!("{}: write partial: {e}", file.path))?;
+            output.write_all(piece).await.map_err(|e| format!("{}: не удалось записать частичный файл: {e}", file.path))?;
             digest.update(piece);
             body_len += piece.len() as u64;
         }
     }
-    output.flush().await.map_err(|e| format!("{}: flush partial: {e}", file.path))?;
-    output.sync_all().await.map_err(|e| format!("{}: fsync partial: {e}", file.path))?;
+    output.flush().await.map_err(|e| format!("{}: не удалось сбросить буфер частичного файла: {e}", file.path))?;
+    output.sync_all().await.map_err(|e| format!("{}: не удалось синхронизировать частичный файл: {e}", file.path))?;
     drop(output);
     if body_len != allowed_body_len {
         // Короткое корректное HTTP-тело всё равно означает прерывание с возможностью
         // продолжения, пока закреплён сильный ETag; никогда не активируйте такой файл.
-        return Err(network_resilience::transient(format!("{}: truncated HTTP body ({body_len}/{allowed_body_len})", file.path), None));
+        return Err(network_resilience::transient(format!("{}: неполное тело HTTP-ответа ({body_len}/{allowed_body_len})", file.path), None));
     }
     if prefix_len + body_len != file.size {
         // Корректный ограниченный ответ 206 не является ошибкой. Его сильный ETag
@@ -420,9 +420,9 @@ async fn download_verified_segment(
             // Повреждение префикса или различающиеся байты зеркал нельзя активировать.
             // Повторите с этого источника с нулевого байта до отказа или переключения.
             return Err(network_resilience::transient(
-                format!("{}: resumed SHA-256 mismatch; retrying full file", file.path), None));
+                format!("{}: SHA-256 после возобновления не совпадает; повторная загрузка полного файла", file.path), None));
         }
-        return Err(format!("{}: complete SHA-256 verification failed", file.path));
+        return Err(format!("{}: полная проверка SHA-256 не пройдена", file.path));
     }
     network_resilience::check(&control)?;
     install_verified(root, file, target, &part, &meta).await?;
@@ -459,7 +459,7 @@ mod tests {
                     let count = stream.read(&mut buf).await.unwrap();
                     if count == 0 { return }
                     header.extend_from_slice(&buf[..count]);
-                    if header.len() > 16384 { panic!("oversized HTTP request") }
+                    if header.len() > 16384 { panic!("HTTP-запрос превышает допустимый размер") }
                     if header.windows(4).any(|w| w == b"\r\n\r\n") { break }
                 }
                 observed.lock().unwrap().push(String::from_utf8(header).unwrap());
@@ -505,7 +505,7 @@ mod tests {
         let result = download_verified(&client(), &root, &f, &target, |n| {
             transferred.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
         }).await;
-        assert!(result.is_err(), "truncated response was accepted");
+        assert!(result.is_err(), "Был принят неполный ответ");
         let (part, metadata) = partial_paths(&root, &target).unwrap();
         assert_eq!(fs::read(&part).await.unwrap(), &data[..8]);
         assert_eq!(read_metadata(&metadata).await.unwrap().etag.as_deref(), Some("\"v1\""));
@@ -605,10 +605,10 @@ mod tests {
         let root = workspace().await;
         let f = file(url, correct);
         let target = root.join(&f.path);
-        fs::write(&target, b"original client data").await.unwrap();
+        fs::write(&target, b"Исходные данные клиента").await.unwrap();
         let result = download_verified(&client(), &root, &f, &target, |_| {}).await;
         assert!(result.unwrap_err().contains("SHA-256"));
-        assert_eq!(fs::read(&target).await.unwrap(), b"original client data");
+        assert_eq!(fs::read(&target).await.unwrap(), b"Исходные данные клиента");
         let (part, meta) = partial_paths(&root, &target).unwrap();
         assert!(!fs::try_exists(part).await.unwrap());
         assert!(!fs::try_exists(meta).await.unwrap());
@@ -789,7 +789,7 @@ mod tests {
         let root = workspace().await;
         let f = file(url, data);
         let target = root.join(&f.path);
-        fs::write(&target, b"previous working client").await.unwrap();
+        fs::write(&target, b"Предыдущая работоспособная версия клиента").await.unwrap();
         assert!(download_verified(&client(), &root, &f, &target, |_| {}).await.is_err());
         let (part, meta) = partial_paths(&root, &target).unwrap();
         fs::write(&part, b"XXXXXXXX").await.unwrap();
@@ -797,7 +797,7 @@ mod tests {
         assert!(network_resilience::retry_delay(&error, 0).is_some());
         assert!(!fs::try_exists(&part).await.unwrap());
         assert!(!fs::try_exists(&meta).await.unwrap());
-        assert_eq!(fs::read(&target).await.unwrap(), b"previous working client");
+        assert_eq!(fs::read(&target).await.unwrap(), b"Предыдущая работоспособная версия клиента");
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         server.await.unwrap();

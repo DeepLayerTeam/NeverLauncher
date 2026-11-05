@@ -206,7 +206,7 @@ func (s Server) draftUpdate0218(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if d.Revision != old.Revision {
-		writeError(w, 409, "draft changed in another tab; reload before saving")
+		writeError(w, 409, "Черновик изменился в другой вкладке; обновите страницу перед сохранением")
 		return
 	}
 	if (d.ProjectID != "" && d.ProjectID != old.ProjectID) || (d.ID != "" && d.ID != old.ID) {
@@ -225,7 +225,7 @@ func (s Server) draftUpdate0218(w http.ResponseWriter, r *http.Request) {
 	saved, err := store.UpdateReleaseDraft(r.Context(), d)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			writeError(w, 409, "draft changed in another tab; reload before saving")
+			writeError(w, 409, "Черновик изменился в другой вкладке; обновите страницу перед сохранением")
 		} else {
 			writeError(w, 500, err.Error())
 		}

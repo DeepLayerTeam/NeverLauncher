@@ -281,16 +281,16 @@ public final class LauncherApiClient {
                 "&features=" + URLEncoder.encode(features, StandardCharsets.UTF_8);
             HttpResponse<String> response = sendUnsignedGetWithFailover(config.capabilitiesPath() + "?" + query);
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IOException("ServerBridge Protocol v3 capability negotiation failed with HTTP " + response.statusCode());
+                throw new IOException("Согласование возможностей ServerBridge Protocol v3 завершилось ошибкой HTTP " + response.statusCode());
             }
             String raw = response.body() == null ? "" : response.body();
             int selected = extractJsonInt(raw, "negotiatedProtocolVersion");
             List<String> enabled = extractJsonStringArray(raw, "features");
             if (selected != BridgeDefaults.PROTOCOL_VERSION) {
-                throw new IOException("ServerBridge Protocol v3 downgrade detected: backend selected " + selected);
+                throw new IOException("Обнаружено понижение версии ServerBridge Protocol v3: Backend выбрал " + selected);
             }
             for (String required : BridgeProtocolSecurity.REQUIRED_FEATURES) {
-                if (!enabled.contains(required)) throw new IOException("ServerBridge security capability downgrade detected: missing " + required);
+                if (!enabled.contains(required)) throw new IOException("Обнаружено снижение требований безопасности ServerBridge: отсутствует " + required);
             }
             String securityProfile = extractJsonString(raw, "securityProfile");
             String capabilityDigest = extractJsonString(raw, "securityCapabilityDigest");
@@ -302,7 +302,7 @@ public final class LauncherApiClient {
                 extractJsonString(raw, "activeSigningPublicKey"), extractJsonString(raw, "activeSigningKeyFingerprint"),
                 extractJsonString(raw, "previousSigningPublicKey"), extractJsonString(raw, "previousSigningKeyFingerprint"),
                 extractJsonString(raw, "capabilitySignature"), extractJsonString(raw, "previousCapabilitySignature"))) {
-                throw new IOException("ServerBridge capability signature or key-rotation trust failed");
+                throw new IOException("Не удалось проверить подпись возможностей ServerBridge или доверие после смены ключа");
             }
             current = new BridgeProtocolNegotiation(selected, enabled, false, now, securityProfile, capabilityDigest);
             negotiation = current;
@@ -316,7 +316,7 @@ public final class LauncherApiClient {
         boolean identityFeature = protocol.features().contains(BridgeDefaults.FEATURE_RUNTIME_IDENTITY);
         if (!discovery && !identityFeature) return "";
         if (!(discovery && identityFeature)) {
-            throw new IllegalStateException("ServerBridge runtime discovery requires the runtime identity feature pair");
+            throw new IllegalStateException("Для обнаружения Runtime ServerBridge требуется пара функций идентификации среды выполнения");
         }
         return ",\"runtime\":" + runtimeIdentity.toJson();
     }
@@ -409,7 +409,7 @@ public final class LauncherApiClient {
 
     /** Запускайте аутентифицированный исполнитель управления Backend -> Bridge. Выполнение сериализовано, максимум один раз на команду по журналу. */
     public synchronized void startControlChannel(BridgeControlExecutor executor) {
-        if (executor == null) throw new IllegalArgumentException("control executor is required");
+        if (executor == null) throw new IllegalArgumentException("Необходимо указать исполнитель управляющих команд");
         if (runtimeIdentity == null || identity == null || controlJournal == null || controlTrust == null) return;
         this.controlHandler = executor;
         if (controlExecutor != null && !controlExecutor.isShutdown()) return;
@@ -457,7 +457,7 @@ public final class LauncherApiClient {
         if (response.statusCode() == 204) return;
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             if (isRetryableBackendStatus(response.statusCode())) return;
-            throw new IOException("control poll rejected with HTTP " + response.statusCode());
+            throw new IOException("Опрос управляющих команд отклонён с HTTP " + response.statusCode());
         }
         String raw = response.body() == null ? "" : response.body();
         String serverId = extractJsonString(raw, "serverId");
@@ -488,19 +488,19 @@ public final class LauncherApiClient {
         }
         long now = System.currentTimeMillis();
         if (issuedAt <= 0 || expiresAt <= now || issuedAt > now + 120_000L || expiresAt - issuedAt > 660_000L) {
-            throw new IOException("control command outside accepted time window");
+            throw new IOException("Управляющая команда поступила вне допустимого временного интервала");
         }
         byte[] payloadRaw = payloadEncoded.isBlank() ? "{}".getBytes(StandardCharsets.UTF_8) : Base64.getUrlDecoder().decode(payloadEncoded);
-        if (payloadRaw.length > 4096) throw new IOException("control payload too large");
+        if (payloadRaw.length > 4096) throw new IOException("Данные управляющей команды слишком велики");
         String actualPayloadHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payloadRaw));
         if (!MessageDigest.isEqual(actualPayloadHash.getBytes(StandardCharsets.US_ASCII), payloadSha256.toLowerCase().getBytes(StandardCharsets.US_ASCII))) {
-            throw new GeneralSecurityException("control payload digest mismatch");
+            throw new GeneralSecurityException("Хеш данных управляющей команды не совпадает");
         }
         Map<String,String> payload = BridgeControlCommand.decodePayload(payloadEncoded);
         BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, identityEpoch, type, payload, payloadSha256,
             deliverySequence, channelId, leaseToken, attempt, issuedAt, expiresAt, securityProfile, capabilityDigest,
             v3SigningPublicKey, v3SigningKeyFingerprint, v3Signature, previousV3SigningPublicKey, previousV3SigningKeyFingerprint, previousV3Signature);
-        if (!controlTrust.verify(command)) throw new GeneralSecurityException("control command signature or backend trust failed");
+        if (!controlTrust.verify(command)) throw new GeneralSecurityException("Не пройдена проверка подписи управляющей команды или доверия к Backend");
 
         BridgeControlJournal.State state = controlJournal.state(command);
         BridgeControlResult result;
@@ -514,16 +514,16 @@ public final class LauncherApiClient {
                 result = BridgeControlResult.unsupported("adapter_capability_not_advertised");
             } else {
                 try { result = executor.execute(command); }
-                catch (Exception e) { result = BridgeControlResult.indeterminate("executor threw after execution was admitted: " + e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
+                catch (Exception e) { result = BridgeControlResult.indeterminate("Исполнитель выдал исключение после допуска команды к выполнению: " + e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
             }
-            if (result == null) result = BridgeControlResult.indeterminate("platform executor returned no result after admission");
+            if (result == null) result = BridgeControlResult.indeterminate("Платформенный исполнитель не вернул результат после допуска команды");
             controlJournal.complete(command, result);
         } else if ("executing".equals(state.phase())) {
             result = BridgeControlResult.indeterminate("previous bridge process/reload stopped after execution began; command was not re-executed");
             controlJournal.complete(command, result);
         } else {
             result = state.result();
-            if (result == null) result = BridgeControlResult.indeterminate("control journal result unavailable");
+            if (result == null) result = BridgeControlResult.indeterminate("Результат в журнале управляющих команд недоступен");
         }
         // Переводите старую отметку исполнения в формат постоянной квитанции,
         // используя только первоначальную подтверждённую доставку. Не выполняйте её повторно.
@@ -546,7 +546,7 @@ public final class LauncherApiClient {
             ",\"result\":" + quote(BridgeControlCommand.encodeMap(result.result())) +
             ",\"error\":" + quote(result.error()) + "}";
         HttpResponse<String> response = sendSignedWithFailover("POST", config.controlAckPath(), body);
-        if (response.statusCode() < 200 || response.statusCode() >= 300) throw new IOException("control ACK rejected with HTTP " + response.statusCode());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) throw new IOException("Подтверждение управляющей команды отклонено с HTTP " + response.statusCode());
         controlJournal.acknowledge(receipt);
     }
 
@@ -558,7 +558,7 @@ public final class LauncherApiClient {
         // позволяя перезапущенному агенту параллельно выполнить команду.
         if (controlWorkerStopped) {
             try { if (controlJournal != null) controlJournal.close(); }
-            catch (IOException e) { throw new IllegalStateException("cannot release ServerBridge control journal", e); }
+            catch (IOException e) { throw new IllegalStateException("Не удалось разблокировать журнал управляющих команд ServerBridge", e); }
         }
         try { flushEventStream(); } catch (RuntimeException ignored) {}
         try { if (eventJournal != null) eventJournal.markClean(); } catch (IOException ignored) {}
@@ -602,7 +602,7 @@ public final class LauncherApiClient {
     static void requireEventStream0515(BridgeProtocolNegotiation protocol) throws IOException {
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION ||
             !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
-            throw new IOException("ServerBridge event stream unavailable on negotiated backend; retaining durable events");
+            throw new IOException("Поток событий ServerBridge недоступен на согласованном Backend; сохраняемые события оставлены в очереди");
         }
     }
 
@@ -625,17 +625,17 @@ public final class LauncherApiClient {
             try {
                 HttpResponse<String> response = sendSignedWithFailover("POST", config.eventStreamPath(), body);
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                    if (response.statusCode() >= 500) { last = new IOException("event stream backend HTTP " + response.statusCode()); continue; }
-                    throw new IOException("event stream rejected with HTTP " + response.statusCode());
+                    if (response.statusCode() >= 500) { last = new IOException("Поток событий Backend: HTTP " + response.statusCode()); continue; }
+                    throw new IOException("Поток событий отклонён с HTTP " + response.statusCode());
                 }
                 long ack = extractJsonLong(response.body() == null ? "" : response.body(), "ackSequence");
-                if (ack < 0) throw new IOException("event stream response missing ACK");
+                if (ack < 0) throw new IOException("В ответе потока событий отсутствует ACK");
                 return ack;
             } catch (IOException e) {
                 last = e;
             }
         }
-        throw last == null ? new IOException("event stream delivery failed") : last;
+        throw last == null ? new IOException("Ошибка доставки потока событий") : last;
     }
 
     private String telemetryFields(BridgeProtocolNegotiation protocol) {
@@ -690,7 +690,7 @@ public final class LauncherApiClient {
                 last = e;
             }
         }
-        throw last == null ? new IOException("no ServerBridge backend endpoint available") : last;
+        throw last == null ? new IOException("Нет доступного адреса Backend ServerBridge") : last;
     }
 
     private HttpResponse<String> sendUnsignedGetWithFailover(String relative) throws IOException, InterruptedException {
@@ -712,7 +712,7 @@ public final class LauncherApiClient {
                 last = e;
             }
         }
-        throw last == null ? new IOException("no ServerBridge backend endpoint available") : last;
+        throw last == null ? new IOException("Нет доступного адреса Backend ServerBridge") : last;
     }
 
     private static boolean isRetryableBackendStatus(int status) {
@@ -720,7 +720,7 @@ public final class LauncherApiClient {
     }
 
     private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {
-        if (runtimeIdentity == null) throw new GeneralSecurityException("ServerBridge runtime identity unavailable");
+        if (runtimeIdentity == null) throw new GeneralSecurityException("Идентификатор Runtime ServerBridge недоступен");
         String timestamp = Long.toString(Instant.now().getEpochSecond());
         String nonce = identity.newNonce();
         String target = uri.getRawPath();

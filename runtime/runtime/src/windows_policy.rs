@@ -278,7 +278,7 @@ mod windows_impl {
             .windows
             .as_ref()
             .map(|details| details.profile)
-            .ok_or_else(|| "Guard Windows policy is missing Protection Core details".to_string())?;
+            .ok_or_else(|| "В политике Guard для Windows отсутствуют сведения о ядре защиты".to_string())?;
         if actual_profile != profile {
             return Err(format!(
                 "Guard Windows Protection Core already initialized with profile {actual_profile}, requested {profile}"
@@ -300,7 +300,7 @@ mod windows_impl {
                 .windows
                 .as_ref()
                 .map(|details| details.profile)
-                .ok_or_else(|| "Guard Windows policy is missing Protection Core details".to_string())?;
+                .ok_or_else(|| "В политике Guard для Windows отсутствуют сведения о ядре защиты".to_string())?;
             let hardening = ensure_windows_production_hardening()?;
             return Ok(build_core_report(profile, process_policy, hardening));
         }

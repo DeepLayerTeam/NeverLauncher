@@ -501,12 +501,12 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	redemption.VerifiedAt = time.Now().UTC()
 	texture, lookupErr := s.localTextureRecord0394(r.Context(), join.UUID, join.Username)
 	if lookupErr != nil {
-		writeError(w, http.StatusServiceUnavailable, "Yggdrasil texture database unavailable")
+		writeError(w, http.StatusServiceUnavailable, "База текстур Yggdrasil недоступна")
 		return
 	}
 	property, propertyErr := s.textureProperty0256(texture, true)
 	if propertyErr != nil {
-		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Подпись Yggdrasil недоступна")
 		return
 	}
 	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
@@ -616,7 +616,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "revisioned local texture identity and URL assignments (PNG service pending)", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "runtime-bound source+target handoff proofs", "maintenance/drain/stale admission blocking"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "Автоматическое обнаружение узлов и сред выполнения", "Идентификатор JVM, подтверждённый подписью Ed25519", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "revisioned local texture identity and URL assignments (PNG service pending)", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "Подтверждения передачи между источником и целью с привязкой к Runtime", "maintenance/drain/stale admission blocking"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}

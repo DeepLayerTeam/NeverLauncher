@@ -375,7 +375,7 @@ func (s Server) rollbackExecute0217(w http.ResponseWriter, r *http.Request) {
 	if job.Status == model.DurableJobStatusSucceeded {
 		var result any
 		if json.Unmarshal(job.Result, &result) != nil {
-			writeError(w, 500, "corrupt stored rollback result")
+			writeError(w, 500, "Сохранённый результат отката повреждён")
 			return
 		}
 		writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": result})
@@ -399,7 +399,7 @@ func (s Server) rollbackExecute0217(w http.ResponseWriter, r *http.Request) {
 	if latest.Status == model.DurableJobStatusSucceeded {
 		var result any
 		if json.Unmarshal(latest.Result, &result) != nil {
-			writeError(w, 500, "corrupt stored rollback result")
+			writeError(w, 500, "Сохранённый результат отката повреждён")
 			return
 		}
 		status := 200

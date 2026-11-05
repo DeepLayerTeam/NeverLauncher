@@ -138,11 +138,11 @@ impl GuardSupervisor {
         }
         command.arg("--socket").arg(&endpoint).arg("--parent-pid").arg(parent_pid.to_string()).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true);
         prepare_guard_command(&mut command);
-        let mut child=command.spawn().map_err(|e|format!("failed to spawn Guard {}: {e}",executable.display()))?;
-        let guard_pid=child.id().ok_or_else(||"Guard PID unavailable".to_string())?;
+        let mut child=command.spawn().map_err(|e|format!("Не удалось запустить Guard {}: {e}",executable.display()))?;
+        let guard_pid=child.id().ok_or_else(||"PID процесса Guard недоступен".to_string())?;
         // Образ процесса уже привязан к проверенному открытому дескриптору.
         drop(pinned_image);
-        let mut stdin=child.stdin.take().ok_or_else(||"Guard bootstrap stdin unavailable".to_string())?;
+        let mut stdin=child.stdin.take().ok_or_else(||"Стандартный ввод для запуска Guard недоступен".to_string())?;
         if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("Ошибка: запись начальных данных Guard: {e}")); }
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
@@ -193,8 +193,8 @@ fn runtime_dir()->Result<PathBuf,String>{
     let d=p.join("launcher"); std::fs::create_dir_all(&d).map_err(|e|format!("Ошибка: «create runtime dir»: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{ let mut r=[0u8;8];OsRng.fill_bytes(&mut r);Ok(runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)))) }
-fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("Отсутствует: «socket parent»")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("Guard socket outside private runtime directory".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное значение: «socket filename»")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Guard socket name malformed".into())} Ok(()) }
-fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{ let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} failed: {e}",path.display()))?; if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} must be a regular non-symlink file",path.display()))}; let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}; if sm.mode()&0o022!=0{return Err(format!("{} must not be group/world writable",path.display()))}; if executable&&sm.mode()&0o111==0{return Err(format!("{} is not executable",path.display()))}; Ok(()) }
+fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("Отсутствует: «socket parent»")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("Guard socket outside private runtime directory".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное значение: «socket filename»")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Некорректное имя сокета Guard".into())} Ok(()) }
+fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{ let sm=std::fs::symlink_metadata(path).map_err(|e|format!("Не удалось получить сведения о файле {}: {e}",path.display()))?; if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} должен быть обычным файлом, а не символической ссылкой",path.display()))}; let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}; if sm.mode()&0o022!=0{return Err(format!("{} не должен разрешать запись группе или всем пользователям",path.display()))}; if executable&&sm.mode()&0o111==0{return Err(format!("{} не является исполняемым файлом",path.display()))}; Ok(()) }
 fn sha256_file(path:&Path)->Result<String,String>{let f=File::open(path).map_err(|e|e.to_string())?;let mut r=BufReader::new(f);let mut h=Sha256::new();let mut b=[0u8;65536];loop{let n=r.read(&mut b).map_err(|e|e.to_string())?;if n==0{break}h.update(&b[..n]);}Ok(hex::encode(h.finalize()))}
 fn sha256_open_file(file:&File)->Result<String,String>{
     let mut reader=BufReader::new(file.try_clone().map_err(|e|e.to_string())?);
@@ -232,7 +232,7 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
 
 fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
-    let dd=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует: «guard parent»")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and Guard: требуется «in same package directory»".into())}
+    let dd=desktop.parent().ok_or("Родительский процесс Desktop отсутствует")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует: «guard parent»")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and Guard: требуется «in same package directory»".into())}
     let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?;
     verify_linux_manifest_signature(&mp,&raw)?;
     let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Некорректное значение: «Linux package manifest JSON»: {e}"))?;
@@ -287,7 +287,7 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"Превышено время ожидания записи в IPC Guard".to_string())??;
     let response_timeout = if matches!(command, "integrity-evidence" | "guard-attestation") { EVIDENCE_COMMAND_TIMEOUT_SECS } else { COMMAND_TIMEOUT_SECS };
     let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("Превышено время ожидания ответа IPC Guard на команду {command}"))??;
-    if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Несовпадение: привязка ответа Guard".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"Некорректный MAC ответа")?){return Err("Некорректное значение: код аутентичности ответа Guard".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Некорректное значение: JSON-ответ Guard: {e}"))
+    if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Несовпадение: привязка ответа Guard".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"Некорректный MAC ответа")?){return Err("Некорректное значение: код аутентичности ответа Guard".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("Исчерпан диапазон номеров сообщений IPC")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Некорректное значение: JSON-ответ Guard: {e}"))
 }
 fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Некорректное значение: состояние Guard: {e}"))?;validate_release_identity(&s)?;Ok(s)}
 fn linux_platform() -> &'static str {

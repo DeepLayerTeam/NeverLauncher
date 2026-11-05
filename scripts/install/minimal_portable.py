@@ -36,8 +36,8 @@ MAX_ENTRIES = 200_000
 def passphrase(path):
     p = core.safe_absolute(path)
     st = core.check_path(p)
-    core.require(st.st_mode & 0o077 == 0, "passphrase file must be mode 0600")
-    core.require(st.st_size <= 4096, "passphrase file too large")
+    core.require(st.st_mode & 0o077 == 0, "Файл парольной фразы должен иметь права 0600")
+    core.require(st.st_size <= 4096, "Файл парольной фразы слишком велик")
     with p.open("rb") as handle:
         secret = handle.read(4097)
     # Удалите ровно один обычный завершающий перевод строки; секреты CLI и окружения не раскрываются.
@@ -45,7 +45,7 @@ def passphrase(path):
         secret = secret[:-2]
     elif secret.endswith(b"\n"):
         secret = secret[:-1]
-    core.require(24 <= len(secret) <= 4096, "passphrase must contain >=24 bytes")
+    core.require(24 <= len(secret) <= 4096, "Парольная фраза должна содержать не менее 24 байт")
     return secret
 
 
@@ -91,13 +91,13 @@ def _members(bundle, manifest):
 def export(bundle, output, secret_file):
     source = core.safe_absolute(bundle)
     core.require(not core.safe_absolute(secret_file).is_relative_to(source),
-                 "passphrase must not be stored in the exported snapshot")
+                 "Парольную фразу нельзя сохранять в экспортируемом снимке")
     manifest = core.verify(source)
     secret = passphrase(secret_file)
     output = core.safe_absolute(output)
     core.private_directory(output.parent)
-    core.require(not output.exists() and not output.is_symlink(), "portable output exists")
-    core.require(not output.is_relative_to(source), "output must be outside snapshot")
+    core.require(not output.exists() and not output.is_symlink(), "Выходной переносимый архив уже существует")
+    core.require(not output.is_relative_to(source), "Выходной файл должен находиться вне каталога снимка")
     salt, nonce = secrets.token_bytes(SALT_SIZE), secrets.token_bytes(NONCE_SIZE)
     header = MAGIC + salt + nonce
     encryptor = Cipher(algorithms.AES(derive(secret, salt)), modes.GCM(nonce)).encryptor()
@@ -110,7 +110,7 @@ def export(bundle, output, secret_file):
             with tarfile.open(fileobj=EncryptedWriter(stream, encryptor), mode="w|") as archive:
                 for path, name in _members(source, manifest):
                     info = archive.gettarinfo(str(path), arcname=name)
-                    core.require(info.isdir() or info.isfile(), "non-file in snapshot")
+                    core.require(info.isdir() or info.isfile(), "В снимке обнаружен объект, не являющийся файлом")
                     core.check_path(path, directory=info.isdir())
                     # Не допускайте утечки имён владельцев и временных меток при расшифровке архивов.
                     info.uid = info.gid = 0
@@ -136,7 +136,7 @@ def export(bundle, output, secret_file):
 def _decrypt_to(archive_path, target, secret):
     source = core.safe_absolute(archive_path)
     st = core.check_path(source, owner=False)
-    core.require(st.st_size > HEADER_SIZE + TAG_SIZE, "truncated portable archive")
+    core.require(st.st_size > HEADER_SIZE + TAG_SIZE, "Переносимый архив неполный")
     with source.open("rb") as stream:
         header = stream.read(HEADER_SIZE)
         core.require(header.startswith(MAGIC), "unsupported portable format")
@@ -152,7 +152,7 @@ def _decrypt_to(archive_path, target, secret):
         with os.fdopen(fd, "wb") as plaintext:
             while remaining:
                 data = stream.read(min(BLOCK, remaining))
-                core.require(bool(data), "truncated portable archive")
+                core.require(bool(data), "Переносимый архив неполный")
                 remaining -= len(data)
                 plaintext.write(decryptor.update(data))
             try:
@@ -239,7 +239,7 @@ def backup_portable(root, output, secret_file):
     output = core.safe_absolute(output)
     core.private_directory(output.parent)
     core.require(not output.exists() and not output.is_symlink(),
-                 "portable output exists")
+                 "Выходной переносимый архив уже существует")
     core.require(not output.is_relative_to(root) or output.parent == root / "backups",
                  "portable output inside live root must be in backups/")
     # Снимок остаётся закрытым; отключение питания может оставить временную копию в
@@ -282,7 +282,7 @@ def main(argv=None):
         print(json.dumps({"operation": args.command, **result, "status": "ok"}))
         return 0
     except (core.BackupError, OSError, tarfile.TarError, ValueError) as exc:
-        print(f"minimal portable backup failed closed: {exc}", file=sys.stderr)
+        print(f"Создание переносимой резервной копии завершилось с безопасной блокировкой: {exc}", file=sys.stderr)
         return 1
 
 

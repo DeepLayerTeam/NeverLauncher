@@ -123,9 +123,9 @@ func (s Server) persistenceSmoke(w http.ResponseWriter, r *http.Request) {
 	}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		if isProduction950(s.Config.Environment) {
-			add("repository", "failed", "production mode forbids memory repository")
+			add("repository", "failed", "В промышленном режиме запрещено хранилище в памяти")
 		} else {
-			add("repository", "ok", "memory repository accepted for dev/test smoke")
+			add("repository", "ok", "Хранилище в памяти разрешено для разработки и тестирования")
 		}
 	} else if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -189,9 +189,9 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			"normalized PostgreSQL auth core is source of truth for sessions and MFA in 0.11.1",
 			"JSON persistence snapshots remain for non-auth legacy state and 0.10.x migration bootstrap",
 			"startup migration from latest PostgreSQL persistence snapshot into normalized auth tables",
-			"production guard: memory repository is rejected when LAUNCHER_ENV=production",
+			"Защита промышленного режима: хранилище в памяти запрещено при LAUNCHER_ENV=production",
 			"persistence status/readiness/security/server-bridge/smoke endpoints",
-			"backup/restore manifests include 0.10.0 persistent state tables",
+			"Манифесты резервного копирования и восстановления включают таблицы сохраняемого состояния 0.10.0",
 		},
 		"endpoints": []string{
 			"GET /ready",
@@ -208,7 +208,7 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			"SQLite HTTP Repository 0.37.2 WAL state with private authentication and extension fields",
 			"SQLite Runtime 0.37.3 encrypted durable auth sessions, MFA, passkeys, and ServerBridge state",
 			"Persisted devices, durable jobs, extensions and trust policy in the SQLite HTTP Repository",
-			"Production SQLite-only deployment remains blocked until release admission parity is verified",
+			"Промышленное развёртывание только на SQLite заблокировано до подтверждения соответствия критериям выпуска",
 		}
 	}
 	if kind == "readiness" {

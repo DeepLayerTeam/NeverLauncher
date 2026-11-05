@@ -32,7 +32,7 @@ func (c localAuthConnector112) Health(ctx context.Context) error {
 }
 func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req authconnector.PasswordRequest) (authconnector.Authentication, error) {
 	if c.repo == nil {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local repository unavailable")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "Локальное хранилище недоступно")
 	}
 	identifier := strings.ToLower(strings.TrimSpace(req.Identifier))
 	if identifier == "" || req.Secret == "" {
@@ -61,7 +61,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		// сброс должен иметь приоритет над старым секретом, а не перезаписываться им.
 		replacement, hashErr := localpassword.Hash(req.Secret)
 		if hashErr != nil {
-			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local password upgrade failed")
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "Не удалось обновить локальный пароль")
 		}
 		cas, ok := c.repo.(repository.PasswordCAS0295)
 		if !ok {
@@ -69,7 +69,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		}
 		changed, casErr := cas.ReplacePasswordIfMatch0295(ctx, user.ID, user.PasswordHash, replacement)
 		if casErr != nil {
-			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local password upgrade failed")
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "Не удалось обновить локальный пароль")
 		}
 		if !changed {
 			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "local credential changed during authentication")
@@ -79,7 +79,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 }
 func (c localAuthConnector112) ResolveIdentity(ctx context.Context, req authconnector.ResolveRequest) (authconnector.Identity, error) {
 	if c.repo == nil {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrUnavailable, "local repository unavailable")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrUnavailable, "Локальное хранилище недоступно")
 	}
 	user, err := c.repo.GetUser(strings.TrimSpace(req.Subject))
 	if err != nil {

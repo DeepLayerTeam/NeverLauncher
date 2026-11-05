@@ -85,7 +85,7 @@ func (s Server) migrationTargetSnapshot0442(projectID string) (string, map[strin
 func (s Server) migrationPlanGet0442(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(migrationPlanStore0442)
 	if !ok {
-		writeError(w, 503, "durable migration plan requires PostgreSQL")
+		writeError(w, 503, "Для сохраняемого плана миграции требуется PostgreSQL")
 		return
 	}
 	run, e := s.migrationStoreRead03310(w, r)
@@ -119,7 +119,7 @@ func (s Server) migrationPlanGet0442(w http.ResponseWriter, r *http.Request) {
 func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(migrationPlanStore0442)
 	if !ok {
-		writeError(w, 503, "durable migration plan requires PostgreSQL")
+		writeError(w, 503, "Для сохраняемого плана миграции требуется PostgreSQL")
 		return
 	}
 	runs, ok := s.migrationStore0331(w)
@@ -152,7 +152,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "expected application/zip")
+		writeError(w, 415, "Ожидается тип содержимого application/zip")
 		return
 	}
 	path, id, name, loader, channel, version := migrationContentHeaders0337(r)
@@ -164,7 +164,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "inventory upload capacity reached")
+		writeError(w, 429, "Достигнут предел загрузки перечня файлов")
 		return
 	}
 	saved, e := invStore.GetMigrationInventory0333(r.Context(), run.ID)
@@ -211,7 +211,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	modules, e := gm.Analyze(r.Context(), f, n, saved)
 	if e != nil {
-		writeError(w, 422, "module inspection failed: "+e.Error())
+		writeError(w, 422, "Не удалось проверить модуль: "+e.Error())
 		return
 	}
 	content, e := gc.Prepare(r.Context(), f, n, saved, path, run.ProjectID, id, name, loader, strings.TrimSpace(r.Header.Get("X-Loader-Version")))
@@ -236,7 +236,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	target, existing, e := s.migrationTargetSnapshot0442(run.ProjectID)
 	if e != nil {
-		writeError(w, 503, "target snapshot unavailable")
+		writeError(w, 503, "Целевой снимок недоступен")
 		return
 	}
 	d := gp.Destination{ProfilePath: path, ProfileID: id, ProfileName: name, Loader: loader, LoaderVersion: strings.TrimSpace(r.Header.Get("X-Loader-Version")), Channel: channel, Version: version}

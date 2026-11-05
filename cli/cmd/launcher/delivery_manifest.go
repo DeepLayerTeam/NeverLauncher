@@ -128,7 +128,7 @@ func canonicalDeliveryTarget(platform, arch string) (DeliveryTarget, error) {
 		return DeliveryTarget{}, errors.New("platform=any: требуется «architecture=any»")
 	}
 	if a == "universal" && p != "macos" {
-		return DeliveryTarget{}, errors.New("architecture=universal is valid only for macos")
+		return DeliveryTarget{}, errors.New("Значение architecture=universal разрешено только для macos")
 	}
 	return DeliveryTarget{Platform: p, Architecture: a}, nil
 }
@@ -294,7 +294,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 		}
 	}
 	if len(manifest.Artifacts) == 0 {
-		return DeliveryManifest{}, errors.New("delivery bundle contains no artifacts")
+		return DeliveryManifest{}, errors.New("Пакет доставки не содержит артефактов")
 	}
 	for _, target := range targets {
 		manifest.PublishedTargets = append(manifest.PublishedTargets, target)
@@ -353,17 +353,17 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 		return errors.New("Некорректное значение: заголовок манифеста доставки")
 	}
 	if strings.TrimSpace(expectedVersion) != "" && manifest.Version != strings.TrimSpace(expectedVersion) {
-		return fmt.Errorf("delivery manifest version mismatch: manifest=%s expected=%s", manifest.Version, expectedVersion)
+		return fmt.Errorf("Версия манифеста доставки не совпадает: manifest=%s, ожидалось=%s", manifest.Version, expectedVersion)
 	}
 	if len(manifest.Artifacts) == 0 {
-		return errors.New("delivery manifest has no artifacts")
+		return errors.New("В манифесте доставки отсутствуют артефакты")
 	}
 
 	seenNames := map[string]struct{}{}
 	actualTargets := map[string]DeliveryTarget{}
 	for _, artifact := range manifest.Artifacts {
 		if artifact.Name == deliveryManifestFile0151 || artifact.Name == publicProductionDeliveryMatrixFile0159 || artifact.Name == "RELEASE_MANIFEST.json" || artifact.Name == "SHA256SUMS" || artifact.Name == "SHA256SUMS.sig" || artifact.Name == "PROVENANCE.json.sig" {
-			return fmt.Errorf("delivery manifest contains circular/control artifact %s", artifact.Name)
+			return fmt.Errorf("Манифест доставки содержит циклический или управляющий артефакт %s", artifact.Name)
 		}
 		if _, exists := seenNames[artifact.Name]; exists {
 			return fmt.Errorf("Обнаружен дубликат: артефакт поставки %s", artifact.Name)
@@ -374,7 +374,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 		}
 		target, err := canonicalDeliveryTarget(artifact.Platform, artifact.Architecture)
 		if err != nil || target.Platform != artifact.Platform || target.Architecture != artifact.Architecture {
-			return fmt.Errorf("delivery artifact target is not canonical for %s: %s/%s", artifact.Name, artifact.Platform, artifact.Architecture)
+			return fmt.Errorf("Целевой путь артефакта доставки не канонический для %s: %s/%s", artifact.Name, artifact.Platform, artifact.Architecture)
 		}
 		path, err := safeDeliveryArtifactPath(dir, artifact.Name)
 		if err != nil {

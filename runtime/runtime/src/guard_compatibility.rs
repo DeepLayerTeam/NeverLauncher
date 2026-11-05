@@ -72,7 +72,7 @@ fn safe_file(root:&Path,relative_name:&str,max:u64)->Result<Vec<u8>,String>{
  fs::read(&path).map_err(|e|e.to_string())
 }
 fn external_key(root:&Path)->Result<([u8;32],String),String>{
- let key_path=std::env::var(PUBLIC_KEY).map_err(|_|format!("external {PUBLIC_KEY} required"))?;
+ let key_path=std::env::var(PUBLIC_KEY).map_err(|_|format!("Требуется внешний ключ {PUBLIC_KEY}"))?;
  let path=Path::new(&key_path);
  let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
  if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>1024 {return Err("Небезопасный файл публичного ключа совместимости Guard".into())}
@@ -83,7 +83,7 @@ fn external_key(root:&Path)->Result<([u8;32],String),String>{
  let text=source.trim();
  let raw=hex::decode(text).ok().filter(|b|b.len()==32)
   .or_else(||STANDARD.decode(text).ok().filter(|b|b.len()==32))
-  .ok_or("Guard compatibility Ed25519 public key must be 32-byte hex/base64")?;
+  .ok_or("Guard: открытый ключ Ed25519 должен содержать 32 байта в кодировке hex/base64")?;
  let digest=sha(&raw);
  Ok((raw.try_into().map_err(|_|"Недопустимый размер ключа совместимости Guard".to_string())?,digest))
 }
@@ -179,20 +179,20 @@ impl GamePolicy0503 {
  pub fn external_native_modules(&self,root:&Path)->Result<std::collections::BTreeMap<std::path::PathBuf,String>,String> {
   let mut result=std::collections::BTreeMap::new();
   for entry in &self.policy.external_native_modules {
-   if self.policy.revoked_digests.contains(&entry.sha256) {return Err("Guard external module revoked".into())}
+   if self.policy.revoked_digests.contains(&entry.sha256) {return Err("Guard: доверие к внешнему модулю отозвано".into())}
    let path=std::path::PathBuf::from(&entry.path);
-   if path.starts_with(root) {return Err("Guard external module inside game root".into())}
+   if path.starts_with(root) {return Err("Guard: внешний модуль расположен внутри каталога игры".into())}
    let hash=verified_external_native_hash(&path)?;
-   if hash!=entry.sha256 {return Err(format!("Guard external overlay modified: {}",path.display()))}
-   if result.insert(path,entry.sha256.clone()).is_some(){return Err("Guard duplicate external overlay".into())}
+   if hash!=entry.sha256 {return Err(format!("Guard: внешний оверлей изменён: {}",path.display()))}
+   if result.insert(path,entry.sha256.clone()).is_some(){return Err("Guard: обнаружен повторяющийся внешний оверлей".into())}
   }
   Ok(result)
  }
  pub fn digest(&self)->&str { &self.digest }
  pub fn authorize(&self,root:&Path,kind:&str,relative_path:&str,digest:&str)->Result<(),String> {
   let artifact=self.policy.artifacts.iter().find(|a|a.kind==kind && a.path==relative_path && a.sha256==digest)
-   .ok_or_else(||format!("Guard compatibility {kind} not signed for this game: {relative_path}"))?;
-  if self.policy.revoked_digests.contains(&artifact.sha256){return Err("Guard compatibility trusted code revoked".into())}
+   .ok_or_else(||format!("Guard: объект {kind} не подписан для этой игры: {relative_path}"))?;
+  if self.policy.revoked_digests.contains(&artifact.sha256){return Err("Guard: доверие к доверенному коду отозвано".into())}
   validate_safe_path(root,&artifact.path,512*1024*1024)?;
   if actual_sha(&root.join(&artifact.path))?!=artifact.sha256{return Err("Обнаружено изменение: хеш доверенного кода совместимости Guard".into())}
   Ok(())
@@ -205,11 +205,11 @@ impl GamePolicy0503 {
  pub fn loader_libraries(&self,root:&Path,loader:&str)->Result<Vec<(std::path::PathBuf,String)>,String>{
   let kind=loader.to_ascii_lowercase().replace('-', "").replace('_', "");
   if !["vanilla","fabric","quilt","forge","neoforge"].contains(&kind.as_str()) {
-   return Err("Guard unsupported loader identity for trusted JVM".into())
+   return Err("Guard: идентификатор загрузчика не поддерживается доверенной JVM".into())
   }
   let mut result=Vec::new();
   for a in self.policy.artifacts.iter().filter(|a|a.kind=="loader-library") {
-   if self.policy.revoked_digests.contains(&a.sha256) {return Err("Guard loader library revoked".into())}
+   if self.policy.revoked_digests.contains(&a.sha256) {return Err("Guard: доверие к библиотеке загрузчика отозвано".into())}
    validate_safe_path(root,&a.path,512*1024*1024)?;
    if actual_sha(&root.join(&a.path))?!=a.sha256 {return Err("Обнаружено изменение: библиотека загрузчика Guard".into())}
    if !a.path.to_ascii_lowercase().ends_with(".jar") {return Err("Библиотека загрузчика Guard должна иметь формат JAR".into())}
@@ -217,14 +217,14 @@ impl GamePolicy0503 {
   }
   if kind!="vanilla" && result.is_empty(){return Err("Для доверенной JVM Guard с модами требуются подписанные JAR-библиотеки загрузчика".into())}
   if kind=="vanilla" && !result.is_empty(){return Err("Для профиля Vanilla Guard запрещено разрешать библиотеки загрузчика".into())}
-  if result.len()>128 {return Err("Guard too many loader libraries".into())}
+  if result.len()>128 {return Err("Guard: слишком много библиотек загрузчика".into())}
   Ok(result)
  }
  pub fn transforms(&self,owners:&HashSet<String>)->Result<Vec<(String,String)>,String>{
   let mut allowed=Vec::new();
   for t in &self.policy.transformations {
    if self.policy.revoked_transformations.contains(&t.id) || self.policy.revoked_digests.contains(&t.owner_sha256) || !owners.contains(&t.owner_sha256){
-    return Err(format!("Guard compatibility unapproved/revoked trusted transformation: {}",t.id))
+    return Err(format!("Guard: преобразование JVM не одобрено или его доверие отозвано: {}",t.id))
    }
    allowed.push((t.id.clone(),t.owner_sha256.clone()));
   }
@@ -248,20 +248,20 @@ fn valid_external_native_path(name:&str)->bool {
  lower.ends_with(".so") || lower.contains(".so.")
 }
 pub(crate) fn verified_external_native_hash(path:&Path)->Result<String,String>{
- let name=path.to_str().ok_or("Guard external module path is not UTF-8")?;
- if !valid_external_native_path(name){return Err("Guard external overlay unsafe absolute library path".into())}
+ let name=path.to_str().ok_or("Guard: путь к внешнему модулю не соответствует UTF-8")?;
+ if !valid_external_native_path(name){return Err("Guard: небезопасный абсолютный путь к библиотеке внешнего оверлея".into())}
  let mut cursor=std::path::PathBuf::from("/");
  for segment in path.components().skip(1) {
-  let Component::Normal(part)=segment else{return Err("Guard external overlay non-normal path".into())};
+  let Component::Normal(part)=segment else{return Err("Guard: некорректный нормализованный путь внешнего оверлея".into())};
   cursor.push(part);
   if fs::symlink_metadata(&cursor).map_err(|e|e.to_string())?.file_type().is_symlink(){
-   return Err("Guard external overlay symlink rejected".into())
+   return Err("Guard: символическая ссылка внешнего оверлея отклонена".into())
   }
  }
  actual_sha(path)
 }
 fn validate_safe_path(root:&Path,rel:&str,max:u64)->Result<(),String>{
- if !relative(rel){return Err("Guard compatibility invalid path".into())}
+ if !relative(rel){return Err("Guard: некорректный путь".into())}
  let mut path=root.to_path_buf();
  for component in rel.split('/') {
   path.push(component);
@@ -269,7 +269,7 @@ fn validate_safe_path(root:&Path,rel:&str,max:u64)->Result<(),String>{
   if meta.file_type().is_symlink(){return Err("Символическая ссылка в совместимости Guard отклонена".into())}
  }
  let st=fs::symlink_metadata(&path).map_err(|e|e.to_string())?;
- if !st.is_file() || st.len()>max{return Err("Guard compatibility unsafe artifact".into())}
+ if !st.is_file() || st.len()>max{return Err("Guard: небезопасный артефакт".into())}
  Ok(())
 }
 fn actual_sha(path:&Path)->Result<String,String>{
@@ -285,7 +285,7 @@ fn normalize_relative(root:&Path,path:&Path)->Result<String,String>{
  let canonical_root=fs::canonicalize(root).map_err(|e|e.to_string())?;
  let absolute=if path.is_absolute(){path.to_path_buf()}else{root.join(path)};
  let canonical_path=fs::canonicalize(&absolute).map_err(|e|e.to_string())?;
- let relative_path=canonical_path.strip_prefix(&canonical_root).map_err(|_|"Guard compatibility agent outside client root")?;
+ let relative_path=canonical_path.strip_prefix(&canonical_root).map_err(|_|"Guard: агент расположен за пределами каталога клиента")?;
  let parts=relative_path.components().map(|c|match c{Component::Normal(s)=>s.to_string_lossy().to_string(),_=>String::new()}).collect::<Vec<_>>();
  let result=parts.join("/");if !relative(&result){return Err("Guard compatibility invalid agent path".into())}Ok(result)
 }
@@ -295,13 +295,13 @@ fn require_candidates(root:&Path,dir:&Path,kind:&str,extensions:&[&str],approved
  while let Some(current)=stack.pop(){
   for item in fs::read_dir(&current).map_err(|e|e.to_string())? {
    let item=item.map_err(|e|e.to_string())?;let meta=fs::symlink_metadata(item.path()).map_err(|e|e.to_string())?;
-   if meta.file_type().is_symlink(){return Err("Guard compatibility symlink inside executable tree".into())}
+   if meta.file_type().is_symlink(){return Err("Guard: символическая ссылка внутри дерева исполняемых файлов".into())}
    if meta.is_dir(){stack.push(item.path());continue}
    let name=item.file_name().to_string_lossy().to_ascii_lowercase();
    if extensions.iter().any(|ext|name.ends_with(ext)) {
     let rel=normalize_relative(root,&item.path())?;
     if !approved.contains_key(&format!("{}:{}",kind,rel.to_ascii_lowercase())) {
-     return Err(format!("Guard compatibility unauthorized {kind} {rel}"))
+     return Err(format!("Guard: неразрешённый объект {kind} {rel}"))
     }
    }
   }
@@ -333,11 +333,11 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
  if p.project_id!=project || p.minecraft!=minecraft || !p.loader.eq_ignore_ascii_case(loader){return Err("Несовпадение: область запуска в политике совместимости Guard".into())}
  let mut approved=HashMap::new();
  for a in &p.artifacts {
-  if p.revoked_digests.contains(&a.sha256){return Err(format!("Guard compatibility artifact revoked: {}",a.path))}
+  if p.revoked_digests.contains(&a.sha256){return Err(format!("Guard: доверие к артефакту отозвано: {}",a.path))}
   let path=root.join(&a.path);
   // Проверяйте не только конечный inode, но и каждый промежуточный компонент пути.
   validate_safe_path(root,&a.path,512*1024*1024)?;
-  if actual_sha(&path)?!=a.sha256{return Err(format!("Guard compatibility digest mismatch: {}",a.path))}
+  if actual_sha(&path)?!=a.sha256{return Err(format!("Guard: контрольная сумма не совпадает: {}",a.path))}
   approved.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase()),a.sha256.clone());
  }
  for m in &p.external_native_modules {
@@ -345,19 +345,19 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
    return Err("Guard external overlay missing, revoked or modified".into())
   }
  }
- for tr in &p.transformations {if p.revoked_transformations.contains(&tr.id) || p.revoked_digests.contains(&tr.owner_sha256){return Err("Guard compatibility transformation revoked".into())}}
+ for tr in &p.transformations {if p.revoked_transformations.contains(&tr.id) || p.revoked_digests.contains(&tr.owner_sha256){return Err("Guard: доверие к преобразованию отозвано".into())}}
  require_candidates(root,&root.join("mods"),"mod",&[".jar"],&approved)?;
  require_candidates(root,&root.join("natives"),"native-library",&[".dll",".so",".dylib",".jnilib"],&approved)?;
  for arg in jvm_args {
   let lower=arg.to_ascii_lowercase();
   if ["-agentpath:","-agentlib:","-xrunjdwp:","-xdebug", "-xx:+startattachlistener"].iter().any(|token|lower.starts_with(token)) {
-   return Err("Guard compatibility rejected unapproved JVM instrumentation option".into())
+   return Err("Guard: неразрешённый параметр инструментирования JVM отклонён".into())
   }
   if let Some(agent)=arg.strip_prefix("-javaagent:") {
-   let file=agent.split('=').next().ok_or("empty Guard agent path")?;
+   let file=agent.split('=').next().ok_or("Не указан путь к агенту Guard")?;
    let rel=normalize_relative(root,Path::new(file))?;
    if !approved.contains_key(&format!("java-agent:{}",rel.to_ascii_lowercase())){
-    return Err("Guard compatibility unauthorized Java agent".into())
+    return Err("Guard: неразрешённый Java-агент".into())
    }
   }
  }
@@ -368,7 +368,7 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
 pub fn authorize_agent(root:&Path,argument:&str)->Result<bool,String>{
  let Some(v)=load(root)? else{return Ok(false)};
  let Some(value)=argument.strip_prefix("-javaagent:") else{return Ok(false)};
- let file=value.split('=').next().ok_or("empty Java agent")?;
+ let file=value.split('=').next().ok_or("Не указан Java-агент")?;
  let rel=normalize_relative(root,Path::new(file))?;
  for a in &v.policy.artifacts {
   if a.kind=="java-agent" && a.path.eq_ignore_ascii_case(&rel) && !v.policy.revoked_digests.contains(&a.sha256) {

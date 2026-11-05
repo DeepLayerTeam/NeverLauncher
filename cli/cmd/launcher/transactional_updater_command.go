@@ -88,7 +88,7 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 		}
 		for _, rel := range remove {
 			if _, err := os.Lstat(filepath.Join(targetRoot, filepath.FromSlash(rel))); err == nil {
-				return fmt.Errorf("obsolete file still exists after update: %s", rel)
+				return fmt.Errorf("Устаревший файл остался после обновления: %s", rel)
 			} else if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
@@ -172,13 +172,13 @@ func runUpdaterSelfTest0156() (map[string]any, error) {
 		Remove: []string{"obsolete.bin"},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("commit self-test: %w", err)
+		return nil, fmt.Errorf("Самопроверка применения изменений: %w", err)
 	}
 	if raw, _ := os.ReadFile(oldPath); string(raw) != "new-launcher" {
 		return nil, errors.New("Несовпадение: «commit self-test: launcher bytes»")
 	}
 	if _, err := os.Stat(obsoletePath); !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.New("commit self-test: obsolete file was not removed")
+		return nil, errors.New("Самопроверка применения изменений: устаревший файл не удалён")
 	}
 
 	rollbackSource := filepath.Join(source, "rollback.bin")
@@ -192,13 +192,13 @@ func runUpdaterSelfTest0156() (map[string]any, error) {
 	_, rollbackErr := updater.apply(updaterRequest0156{
 		Root: live, Namespace: "self-test-rollback", FromVersion: "new", ToVersion: "broken",
 		Files:  []updaterFileSpec0156{rollbackSpec},
-		Verify: func() error { return errors.New("intentional self-test rollback") },
+		Verify: func() error { return errors.New("Преднамеренный откат при самопроверке") },
 	})
 	if rollbackErr == nil {
-		return nil, errors.New("rollback self-test unexpectedly committed")
+		return nil, errors.New("Во время самопроверки отката изменения неожиданно были применены")
 	}
 	if raw, _ := os.ReadFile(oldPath); string(raw) != "new-launcher" {
-		return nil, errors.New("rollback self-test did not restore committed bytes")
+		return nil, errors.New("Самопроверка отката не восстановила ранее записанные данные")
 	}
 	status, err := updater.status()
 	if err != nil {

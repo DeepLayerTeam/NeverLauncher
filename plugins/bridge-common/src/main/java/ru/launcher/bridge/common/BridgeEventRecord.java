@@ -32,14 +32,14 @@ public record BridgeEventRecord(
     public static BridgeEventRecord signed(long sequence, String serverId, String runtimeId, String type,
                                            long occurredAtUnixMillis, Map<String, String> payload, NodeIdentity identity)
         throws GeneralSecurityException {
-        if (sequence < 1) throw new IllegalArgumentException("event sequence must be positive");
+        if (sequence < 1) throw new IllegalArgumentException("Номер последовательности событий должен быть положительным");
         String cleanType = normalized(type);
-        if (cleanType.isEmpty() || cleanType.length() > 96 || cleanType.indexOf('\n') >= 0 || cleanType.indexOf('\r') >= 0) throw new IllegalArgumentException("invalid event type");
+        if (cleanType.isEmpty() || cleanType.length() > 96 || cleanType.indexOf('\n') >= 0 || cleanType.indexOf('\r') >= 0) throw new IllegalArgumentException("Некорректный тип события");
         String cleanRuntime = normalized(runtimeId).toLowerCase();
-        if (cleanRuntime.length() != 64) throw new IllegalArgumentException("runtimeId must be sha256 hex");
+        if (cleanRuntime.length() != 64) throw new IllegalArgumentException("runtimeId должен содержать SHA-256 в формате hex");
         TreeMap<String, String> sorted = sanitizePayload(payload);
         String payloadJson = payloadJson(sorted);
-        if (payloadJson.getBytes(StandardCharsets.UTF_8).length > 4096) throw new IllegalArgumentException("event payload exceeds 4096 bytes");
+        if (payloadJson.getBytes(StandardCharsets.UTF_8).length > 4096) throw new IllegalArgumentException("Данные события превышают 4096 байт");
         String digest = sha256Hex(payloadJson);
         String eventId = cleanRuntime + "-" + sequence;
         String capabilityDigest = BridgeProtocolSecurity.expectedCapabilityDigest();
@@ -79,11 +79,11 @@ public record BridgeEventRecord(
     private static TreeMap<String, String> sanitizePayload(Map<String, String> payload) {
         TreeMap<String, String> out = new TreeMap<>();
         if (payload == null) return out;
-        if (payload.size() > 32) throw new IllegalArgumentException("event payload has too many keys");
+        if (payload.size() > 32) throw new IllegalArgumentException("В данных события слишком много ключей");
         for (Map.Entry<String, String> entry : payload.entrySet()) {
             String key = normalized(entry.getKey()); String value = normalized(entry.getValue());
-            if (key.isEmpty() || key.length() > 64 || key.indexOf('\n') >= 0 || key.indexOf('\r') >= 0 || key.indexOf('\0') >= 0) throw new IllegalArgumentException("invalid event payload key");
-            if (value.length() > 1024 || value.indexOf('\0') >= 0) throw new IllegalArgumentException("event payload value too large");
+            if (key.isEmpty() || key.length() > 64 || key.indexOf('\n') >= 0 || key.indexOf('\r') >= 0 || key.indexOf('\0') >= 0) throw new IllegalArgumentException("Некорректный ключ данных события");
+            if (value.length() > 1024 || value.indexOf('\0') >= 0) throw new IllegalArgumentException("Значение в данных события слишком велико");
             out.put(key, value);
         }
         return out;

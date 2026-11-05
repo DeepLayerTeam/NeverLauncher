@@ -51,7 +51,7 @@ public final class LauncherSpongeBridge {
             Path configPath = Path.of(System.getProperty("user.dir", "."), "config", "launcher-sponge-bridge", "config.yml").toAbsolutePath().normalize();
             config = BridgeConfig.load(configPath, "sponge-main");
             String sha = BridgeIntegrity.artifactSha256(getClass());
-            if (config.requireIntegrity && !BridgeIntegrity.isSha256(sha)) throw new IllegalStateException("cannot measure running Sponge bridge JAR SHA-256");
+            if (config.requireIntegrity && !BridgeIntegrity.isSha256(sha)) throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR моста Sponge");
             NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
             String spongeVersion = BridgeRuntimeProbe.packageVersion("org.spongepowered.api.Sponge");
             String minecraftVersion = BridgeRuntimeProbe.minecraftVersion();
@@ -66,14 +66,14 @@ public final class LauncherSpongeBridge {
             workers.scheduleWithFixedDelay(this::sampleAndHeartbeat, 0, Math.max(5, Math.min(config.heartbeatIntervalSeconds, config.telemetrySampleIntervalSeconds)), TimeUnit.SECONDS);
             logger.info("Launcher Sponge ServerBridge {} ready; serverId={}; runtimeId={}", BridgeDefaults.VERSION, config.serverId, api.runtimeId());
         } catch (Exception e) {
-            throw new IllegalStateException("Launcher Sponge ServerBridge initialization failed", e);
+            throw new IllegalStateException("Ошибка инициализации Launcher Sponge ServerBridge", e);
         }
     }
 
     @Listener(order = Order.FIRST)
     public void onAuth(Auth event) {
         LauncherApiClient current=api;
-        if(current==null || stopping.get()){ deny(event,"Launcher ServerBridge unavailable"); return; }
+        if(current==null || stopping.get()){ deny(event,"Launcher ServerBridge недоступен"); return; }
         if(maintenance.get() || draining.get()){ deny(event, maintenance.get()?"На сервере проводятся технические работы":"Сервер завершает обслуживание подключений"); return; }
         String username = profileString(event.profile(), "name");
         String uuid = profileString(event.profile(), "uniqueId");

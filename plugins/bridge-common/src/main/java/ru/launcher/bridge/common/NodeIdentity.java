@@ -47,7 +47,7 @@ public final class NodeIdentity {
         Signature verifier = Signature.getInstance("Ed25519");
         verifier.initVerify(publicKey);
         verifier.update("Launcher-ServerBridge-NodeIdentity-self-test-v1".getBytes(StandardCharsets.UTF_8));
-        if (!verifier.verify(proof)) throw new GeneralSecurityException("node identity keypair self-test failed");
+        if (!verifier.verify(proof)) throw new GeneralSecurityException("Самопроверка пары ключей идентификатора узла не пройдена");
     }
 
     public static NodeIdentity loadOrCreate(Path path) throws IOException, GeneralSecurityException {
@@ -56,7 +56,7 @@ public final class NodeIdentity {
         if (parent != null) Files.createDirectories(parent);
         if (Files.exists(absolute, LinkOption.NOFOLLOW_LINKS)) {
             if (Files.isSymbolicLink(absolute) || !Files.isRegularFile(absolute, LinkOption.NOFOLLOW_LINKS)) {
-                throw new IOException("node identity must be a regular non-symlink file: " + absolute);
+                throw new IOException("Идентификатор узла должен храниться в обычном файле, не в символической ссылке: " + absolute);
             }
             return load(absolute);
         }
@@ -70,7 +70,7 @@ public final class NodeIdentity {
 
     private static NodeIdentity load(Path path) throws IOException, GeneralSecurityException {
         if (Files.isSymbolicLink(path) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-            throw new IOException("node identity must be a regular non-symlink file: " + path);
+            throw new IOException("Идентификатор узла должен храниться в обычном файле, не в символической ссылке: " + path);
         }
         enforcePrivatePermissions(path);
         Properties properties = new Properties();
@@ -78,7 +78,7 @@ public final class NodeIdentity {
             properties.load(in);
         }
         if (!"1".equals(properties.getProperty("formatVersion")) || !"ed25519".equals(properties.getProperty("keyAlgorithm"))) {
-            throw new GeneralSecurityException("unsupported node identity format");
+            throw new GeneralSecurityException("Формат идентификатора узла не поддерживается");
         }
         byte[] privateEncoded = decodeRequired(properties, "privateKeyPkcs8");
         byte[] publicEncoded = decodeRequired(properties, "publicKeyX509");
@@ -89,11 +89,11 @@ public final class NodeIdentity {
         );
         byte[] expectedRawPublicKey = decodeRequired(properties, "publicKey");
         if (!MessageDigest.isEqual(expectedRawPublicKey, identity.rawPublicKey)) {
-            throw new GeneralSecurityException("node identity raw public key mismatch");
+            throw new GeneralSecurityException("Открытый ключ идентификатора узла не совпадает");
         }
         String expected = properties.getProperty("keyFingerprint", "").trim().toLowerCase();
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), identity.fingerprint.getBytes(StandardCharsets.US_ASCII))) {
-            throw new GeneralSecurityException("node identity fingerprint mismatch");
+            throw new GeneralSecurityException("Отпечаток идентификатора узла не совпадает");
         }
         return identity;
     }
@@ -112,7 +112,7 @@ public final class NodeIdentity {
         try {
             setPrivatePermissions(temp);
             try (OutputStream out = Files.newOutputStream(temp)) {
-                properties.store(out, "Launcher ServerBridge node identity - PRIVATE KEY, do not share");
+                properties.store(out, "Идентификатор узла Launcher ServerBridge — ЗАКРЫТЫЙ КЛЮЧ, не передавайте третьим лицам");
             }
             try {
                 Files.move(temp, path, StandardCopyOption.ATOMIC_MOVE);
@@ -147,18 +147,18 @@ public final class NodeIdentity {
 
     private static byte[] decodeRequired(Properties properties, String key) throws GeneralSecurityException {
         String value = properties.getProperty(key, "").trim();
-        if (value.isEmpty()) throw new GeneralSecurityException("node identity is missing " + key);
+        if (value.isEmpty()) throw new GeneralSecurityException("Отсутствует идентификатор узла " + key);
         try {
             return Base64.getUrlDecoder().decode(value);
         } catch (IllegalArgumentException e) {
-            throw new GeneralSecurityException("node identity has invalid " + key, e);
+            throw new GeneralSecurityException("Идентификатор узла содержит некорректное значение " + key, e);
         }
     }
 
     private static byte[] rawEd25519PublicKey(byte[] encoded) throws GeneralSecurityException {
-        if (encoded.length != ED25519_SPKI_PREFIX.length + 32) throw new GeneralSecurityException("unexpected Ed25519 public key encoding");
+        if (encoded.length != ED25519_SPKI_PREFIX.length + 32) throw new GeneralSecurityException("Неожиданная кодировка открытого ключа Ed25519");
         byte[] prefix = Arrays.copyOf(encoded, ED25519_SPKI_PREFIX.length);
-        if (!MessageDigest.isEqual(prefix, ED25519_SPKI_PREFIX)) throw new GeneralSecurityException("unexpected Ed25519 SubjectPublicKeyInfo prefix");
+        if (!MessageDigest.isEqual(prefix, ED25519_SPKI_PREFIX)) throw new GeneralSecurityException("Неожиданный префикс SubjectPublicKeyInfo Ed25519");
         return Arrays.copyOfRange(encoded, ED25519_SPKI_PREFIX.length, encoded.length);
     }
 
@@ -167,7 +167,7 @@ public final class NodeIdentity {
             Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
             for (PosixFilePermission permission : permissions) {
                 if (permission != PosixFilePermission.OWNER_READ && permission != PosixFilePermission.OWNER_WRITE) {
-                    throw new IOException("node identity file permissions must be 0600: " + path);
+                    throw new IOException("Права доступа к файлу идентификатора узла должны быть 0600: " + path);
                 }
             }
         } catch (UnsupportedOperationException ignored) {

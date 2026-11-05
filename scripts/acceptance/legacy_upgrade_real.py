@@ -68,7 +68,7 @@ def private_json(path):
 
 
 def sha_file(name, *, max_size=8 << 30):
-    require(type(name) is str and name.startswith('/'), 'absolute file path required')
+    require(type(name) is str and name.startswith('/'), 'Требуется абсолютный путь к файлу')
     path = Path(name)
     require(not any(p.is_symlink() for p in (path, *path.parents)), 'linked file path')
     st = path.lstat()

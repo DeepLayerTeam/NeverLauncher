@@ -84,7 +84,7 @@ func (s Server) migrationModulesAnalyze0338(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "expected application/zip")
+		writeError(w, 415, "Ожидается тип содержимого application/zip")
 		return
 	}
 	select {

@@ -197,7 +197,7 @@ func (s Server) officialBegin0257(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(s.Config.AuthTokenSecret) < 24 {
-		writeError(w, 503, "official Minecraft login is not configured")
+		writeError(w, 503, "Официальная авторизация Minecraft не настроена")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
@@ -270,7 +270,7 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if policy.ClientID == "" {
-		writeError(w, 503, "official Minecraft login is not configured")
+		writeError(w, 503, "Официальная авторизация Minecraft не настроена")
 		return
 	}
 	st, actor, err := s.officialRead0257(r, "pending")
@@ -450,7 +450,7 @@ func (s Server) officialSkinUpload0257(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, bound)
 	mp, err := r.MultipartReader()
 	if err != nil {
-		writeError(w, 415, "multipart/form-data required")
+		writeError(w, 415, "Требуется формат multipart/form-data")
 		return
 	}
 	variant := ""

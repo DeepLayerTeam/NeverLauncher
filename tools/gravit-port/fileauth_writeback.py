@@ -202,7 +202,7 @@ def main():
                             password_file=args.password_file, stopped_writers=args.writers_stopped,
                             allow_legacy=args.allow_weak_legacy_hash, password_format=args.password_format)
     except (WritebackError, OSError) as exc:
-        parser.exit(2, f"FileAuth writeback rejected: {exc}\n")
+        parser.exit(2, f"Обратная запись FileAuth отклонена: {exc}\n")
     print(json.dumps(receipt, sort_keys=True))
 
 

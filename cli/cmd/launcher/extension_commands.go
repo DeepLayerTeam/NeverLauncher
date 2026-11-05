@@ -152,14 +152,14 @@ func handleExtension0201(args []string) error {
 		if target == "admin" {
 			manifest.Permissions = []string{"ui:contribute", "project:read"}
 			manifest.Admin = &CanonicalExtensionAdminContributions0208{
-				Pages:            []CanonicalExtensionAdminPage0208{{ID: "main", Title: "Example extension"}},
-				Navigation:       []CanonicalExtensionAdminNavigation0208{{ID: "main-nav", Label: "Example extension", PageID: "main"}},
-				DashboardWidgets: []CanonicalExtensionAdminWidget0208{{ID: "summary", Title: "Example extension", PageID: "main", Height: 280}},
+				Pages:            []CanonicalExtensionAdminPage0208{{ID: "main", Title: "Пример расширения"}},
+				Navigation:       []CanonicalExtensionAdminNavigation0208{{ID: "main-nav", Label: "Пример расширения", PageID: "main"}},
+				DashboardWidgets: []CanonicalExtensionAdminWidget0208{{ID: "summary", Title: "Пример расширения", PageID: "main", Height: 280}},
 			}
 		}
 		if target == "desktop" {
 			manifest.Permissions = []string{"desktop:contribute", "project:read"}
-			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: "Example Desktop extension"}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: "Example extension", PageID: "main"}}}
+			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: "Example Desktop extension"}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: "Пример расширения", PageID: "main"}}}
 		}
 		if target == "cli" {
 			manifest.Permissions = []string{"cli:contribute"}

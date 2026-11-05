@@ -186,10 +186,10 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 		return fmt.Errorf("Minecraft Compatibility certification: %w", err)
 	}
 	if err := verifyDeviceTrustCertificationInBundle(dir, ver); err != nil {
-		return fmt.Errorf("Device Trust certification: %w", err)
+		return fmt.Errorf("Сертификация доверия к устройствам: %w", err)
 	}
 	if err := verifyGuardCICertificationInBundle(dir, ver); err != nil {
-		return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
+		return fmt.Errorf("Межплатформенная сертификация Guard в CI: %w", err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
 		return fmt.Errorf("ServerBridge certification: %w", err)
@@ -202,12 +202,12 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	}
 	if windowsProtectionReleaseRequired01812(ver) {
 		if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
-			return fmt.Errorf("Windows Protection RC certification: %w", err)
+			return fmt.Errorf("Сертификация RC защиты Windows: %w", err)
 		}
 	}
 	if windowsProtectionGARequired0190(ver) {
 		if err := verifyWindowsProtectionGA0190(dir, ver); err != nil {
-			return fmt.Errorf("Windows Protection GA certification: %w", err)
+			return fmt.Errorf("Сертификация GA защиты Windows: %w", err)
 		}
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
@@ -217,13 +217,13 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 		return fmt.Errorf("macOS production notarization: %w", err)
 	}
 	if err := verifyManagedJREDistribution0155(dir, ver, true); err != nil {
-		return fmt.Errorf("Managed JRE Distribution: %w", err)
+		return fmt.Errorf("Доставка управляемой JRE: %w", err)
 	}
 	if err := verifyPublicProductionDeliveryMatrix0159(dir, ver); err != nil {
-		return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		return fmt.Errorf("Публичная матрица промышленной доставки: %w", err)
 	}
 	if _, err := loadReleaseTrustPolicy0158(filepath.Join(dir, releaseTrustPolicyFile0158)); err != nil {
-		return fmt.Errorf("Release Verification v2 trust policy: %w", err)
+		return fmt.Errorf("Политика доверия проверки релиза v2: %w", err)
 	}
 	return nil
 }

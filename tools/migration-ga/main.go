@@ -239,7 +239,7 @@ func decodeStrict(data []byte, v any) error {
 	}
 	var extra any
 	if e := d.Decode(&extra); !errors.Is(e, io.EOF) {
-		return errors.New("trailing JSON document")
+		return errors.New("После JSON-документа обнаружены дополнительные данные")
 	}
 	return nil
 }
@@ -288,7 +288,7 @@ func reportVerified(r Report) error {
 	}
 	for _, n := range []string{"compatibility", "inventory", "identity", "authentication", "security", "content", "modules", "rehearsal", "cutover", "rollback"} {
 		if stages[n] != "verified" {
-			return fmt.Errorf("migration stage %s not verified", n)
+			return fmt.Errorf("Этап миграции %s не прошёл проверку", n)
 		}
 	}
 	active := false
@@ -306,7 +306,7 @@ func reportVerified(r Report) error {
 	}
 	for _, id := range r.Identities {
 		if id.Status != "imported" && id.Status != "matched" || id.TargetUserID == "" {
-			return errors.New("unresolved migrated identity")
+			return errors.New("Перенесённая учётная запись не сопоставлена")
 		}
 	}
 	return nil
@@ -346,14 +346,14 @@ func checkBackendURL(raw string) error {
 		return e
 	}
 	if u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || u.Host == "" {
-		return errors.New("backend URL must contain only its origin")
+		return errors.New("Адрес Backend должен содержать только схему, хост и порт")
 	}
 	if u.Scheme == "https" {
 		return nil
 	}
 	ip := net.ParseIP(u.Hostname())
 	if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-		return errors.New("HTTPS required except for numeric loopback")
+		return errors.New("Требуется HTTPS, кроме обращения к числовому адресу loopback")
 	}
 	return nil
 }
@@ -757,7 +757,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		}
 	}
 	if !foundTarget {
-		return errors.New("target digest is not an active verified release")
+		return errors.New("Хеш целевого релиза не относится к активному проверенному выпуску")
 	}
 
 	var review Review
@@ -784,7 +784,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 	// Create the evidence directory only after the authoritative report and
 	// immutable operator review have been checked. No prior directory is reused.
 	if e = os.Mkdir(evidenceDir, 0700); e != nil {
-		return fmt.Errorf("new evidence directory: %w", e)
+		return fmt.Errorf("Создание каталога доказательств: %w", e)
 	}
 	for _, c := range p.Checks {
 		check, e := runProbe(ctx, c, p, r, uuids, evidenceDir)
@@ -794,7 +794,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		b.Checks = append(b.Checks, check)
 	}
 	if err := ensureSnapshotStillMatches(p, evidenceDir); err != nil {
-		return fmt.Errorf("snapshots changed during GA execution: %w", err)
+		return fmt.Errorf("Снимки изменились во время проверки GA: %w", err)
 	}
 	// A check must not change its own Gravit source bytes after the initial
 	// source verification while still receiving a signed certificate.
@@ -803,7 +803,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if again != source {
-		return errors.New("source archive changed during GA checks")
+		return errors.New("Исходный архив изменился во время проверок GA")
 	}
 	// Re-read the backend: a new source receipt, route or identity invalidates
 	// a previously successful check before its certificate can be written.
@@ -815,14 +815,14 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if after.ReportSHA256 != r.ReportSHA256 {
-		return errors.New("migration state changed during GA E2E; rerun")
+		return errors.New("Состояние миграции изменилось во время сквозной проверки GA; выполните её повторно")
 	}
 	var afterReview Review
 	if e = getJSON(ctx, client, endpoint+"/review", token, &afterReview); e != nil {
 		return e
 	}
 	if afterReview.Status != review.Status || afterReview.ReviewedBy != review.ReviewedBy || afterReview.ReviewedAt != review.ReviewedAt || afterReview.EvidenceReference != review.EvidenceReference || afterReview.EvidenceSHA256 != review.EvidenceSHA256 || afterReview.Report.ReportSHA256 != r.ReportSHA256 {
-		return errors.New("migration operator review changed during GA E2E; rerun")
+		return errors.New("Заключение оператора изменилось во время сквозной проверки GA; повторите проверку")
 	}
 	// Access independent audit signing material only after all untrusted
 	// probe commands have exited and the authoritative state was reread.
@@ -846,7 +846,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 }
 func main() {
 	if err := runMain(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "Migration Center GA verification blocked:", err)
+		fmt.Fprintln(os.Stderr, "Проверка GA центра миграции заблокирована:", err)
 		os.Exit(1)
 	}
 }
@@ -861,7 +861,7 @@ func runMain(args []string) error {
 		return integrationAuditCommand0491(args[1:])
 	case "manual-actions":
 		planFile := fs.String("plan", "", "migration operator plan")
-		out := fs.String("output", "", "new operator worklist Markdown file")
+		out := fs.String("output", "", "Новый файл Markdown со списком ручных действий оператора")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -885,7 +885,7 @@ func runMain(args []string) error {
 	case "certify":
 		evidenceDir := fs.String("evidence-dir", "", "new private directory for complete check evidence")
 		p := fs.String("plan", "", "operator check plan JSON")
-		out := fs.String("output", "", "signed certificate (created with 0600)")
+		out := fs.String("output", "", "Подписанный сертификат (создаётся с правами 0600)")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -899,7 +899,7 @@ func runMain(args []string) error {
 		}
 		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out, *evidenceDir)
 	case "verify":
-		evidenceDir := fs.String("evidence-dir", "", "preserved evidence directory (required)")
+		evidenceDir := fs.String("evidence-dir", "", "Сохранённый каталог доказательств (обязательно)")
 		file := fs.String("certificate", "", "signed evidence bundle")
 		pub := fs.String("public-key", "", "trusted Ed25519 PUBLIC KEY PEM")
 		if e := fs.Parse(args[1:]); e != nil {
@@ -919,7 +919,7 @@ func runMain(args []string) error {
 		}
 		block, _ := pem.Decode(pemData)
 		if block == nil || block.Type != "PUBLIC KEY" {
-			return errors.New("expected PEM public key")
+			return errors.New("Ожидался открытый ключ в формате PEM")
 		}
 		anyKey, e := x509.ParsePKIXPublicKey(block.Bytes)
 		if e != nil {
@@ -935,18 +935,18 @@ func runMain(args []string) error {
 		if e = verifyEvidence(b, *evidenceDir); e != nil {
 			return e
 		}
-		fmt.Println("GA evidence signature, matrix and stored artifacts verified:", b.RunID)
+		fmt.Println("Подпись доказательств GA, матрица и сохранённые артефакты проверены:", b.RunID)
 		return nil
 	case "verify-cohort", "verify-cohort-live":
-		key := fs.String("public-key", "", "trusted Ed25519 public key")
+		key := fs.String("public-key", "", "Доверенный открытый ключ Ed25519")
 		single := fs.String("fileauth-single", "", "fileauth certificate")
 		singleDir := fs.String("fileauth-single-evidence", "", "fileauth evidence directory")
-		modded := fs.String("sql-modded", "", "SQL/modded certificate")
-		moddedDir := fs.String("sql-modded-evidence", "", "SQL/modded evidence directory")
+		modded := fs.String("sql-modded", "", "Сертификат SQL/модифицированного клиента")
+		moddedDir := fs.String("sql-modded-evidence", "", "Каталог доказательств SQL/модифицированного клиента")
 		network := fs.String("proxy-network", "", "network certificate")
 		networkDir := fs.String("proxy-network-evidence", "", "network evidence directory")
 		singlePlan := fs.String("fileauth-single-plan", "", "fileauth live source plan")
-		moddedPlan := fs.String("sql-modded-plan", "", "SQL/modded live source plan")
+		moddedPlan := fs.String("sql-modded-plan", "", "План действующего источника SQL/модифицированного клиента")
 		networkPlan := fs.String("proxy-network-plan", "", "network live source plan")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e

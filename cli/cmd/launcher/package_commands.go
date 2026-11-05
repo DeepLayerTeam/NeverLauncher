@@ -168,7 +168,7 @@ func handlePipeline(args []string) error {
 		if err != nil {
 			return err
 		}
-		return writeOrPrintJSON(out, map[string]any{"legacyCommand": "smoke-test", "validationKind": "integrity", "runtimeExecuted": false, "warning": "legacy smoke-test performs integrity validation only; no Minecraft runtime was executed", "response": payload})
+		return writeOrPrintJSON(out, map[string]any{"legacyCommand": "smoke-test", "validationKind": "integrity", "runtimeExecuted": false, "warning": "Проверка старого формата подтверждает только целостность; Minecraft Runtime не запускался", "response": payload})
 	case "validations":
 		if packageID == "" {
 			return errors.New("pipeline validations требует --package-id")
@@ -191,7 +191,7 @@ func handlePipeline(args []string) error {
 		}
 		var evidence runtimeEvidenceCLI0212
 		if err := json.Unmarshal(raw, &evidence); err != nil {
-			return fmt.Errorf("runtime evidence JSON: %w", err)
+			return fmt.Errorf("JSON-доказательства Runtime: %w", err)
 		}
 		if evidence.SchemaVersion != "launcher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
 			return errors.New("runtime evidence missing canonical schema/package/manifest/target")
@@ -220,7 +220,7 @@ func handlePipeline(args []string) error {
 		}
 		var body map[string]any
 		if err := json.Unmarshal(raw, &body); err != nil {
-			return fmt.Errorf("runtime evidence JSON: %w", err)
+			return fmt.Errorf("JSON-доказательства Runtime: %w", err)
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/runtime-validations/evidence", body, token)
 		if err != nil {
@@ -322,7 +322,7 @@ func handleClient(args []string) error {
 		}
 		payload = map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": map[bool]string{true: "valid", false: "invalid"}[report.Valid], "verify": report}
 		if !report.Valid {
-			return fmt.Errorf("client verify failed: missing=%v corrupted=%v", report.Missing, report.Corrupted)
+			return fmt.Errorf("Проверка клиента завершилась ошибкой: отсутствуют=%v, повреждены=%v", report.Missing, report.Corrupted)
 		}
 	case "repair":
 		pkgPath := flagValue(args, "--package", manifestPath)
@@ -670,7 +670,7 @@ func clientPackageUpload(packagePath, clientDir, storageDir, prefix string) (map
 			return nil, fmt.Errorf("%s: %w", file.Path, err)
 		}
 		if sum != file.SHA256 || size != file.Size {
-			return nil, fmt.Errorf("%s: checksum/size mismatch before upload", file.Path)
+			return nil, fmt.Errorf("%s: контрольная сумма или размер не совпадает перед загрузкой", file.Path)
 		}
 		dst := filepath.Join(storageDir, filepath.FromSlash(prefix), filepath.FromSlash(file.Path))
 		if err := copyFileAtomic(src, dst); err != nil {

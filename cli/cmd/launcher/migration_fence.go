@@ -110,7 +110,7 @@ func readFenceFile0448(path string, max int64, dest any) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() > max || st.Size() == 0 {
-		return errors.New("fence input is not a regular bounded file")
+		return errors.New("Входной файл блокировки не является обычным файлом допустимого размера")
 	}
 	dec := json.NewDecoder(io.LimitReader(f, max+1))
 	dec.DisallowUnknownFields()
@@ -119,7 +119,7 @@ func readFenceFile0448(path string, max int64, dest any) error {
 	}
 	var trailing any
 	if dec.Decode(&trailing) != io.EOF {
-		return errors.New("trailing JSON in fence input")
+		return errors.New("Лишние данные JSON в файле блокировки")
 	}
 	return nil
 }
@@ -211,7 +211,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 	}
 	digest := sha256.Sum256(canonical)
 	if hex.EncodeToString(digest[:]) != expected {
-		return sourceFenceEvidence0448{}, errors.New("source state drift since MIG10: snapshot digest differs")
+		return sourceFenceEvidence0448{}, errors.New("Состояние источника изменилось после MIG10: хеш снимка не совпадает")
 	}
 	raw, err := os.ReadFile(snapshotPath)
 	if err != nil {

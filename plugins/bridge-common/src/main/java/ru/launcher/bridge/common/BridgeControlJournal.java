@@ -39,7 +39,7 @@ final class BridgeControlJournal implements AutoCloseable {
     BridgeControlJournal(Path path) throws IOException {
         this.path = path.toAbsolutePath().normalize();
         Path parent = this.path.getParent();
-        if (parent == null) throw new IOException("journal needs a parent directory");
+        if (parent == null) throw new IOException("Для журнала требуется родительский каталог");
         Files.createDirectories(parent);
         Path lockPath = this.path.resolveSibling(this.path.getFileName() + ".lock");
         if (Files.isSymbolicLink(lockPath) || Files.isSymbolicLink(this.path))
@@ -48,20 +48,20 @@ final class BridgeControlJournal implements AutoCloseable {
         FileLock acquired = null;
         try {
             try { acquired = opened.tryLock(); }
-            catch (OverlappingFileLockException e) { throw new IOException("control journal already owned by another agent", e); }
-            if (acquired == null) throw new IOException("control journal already owned by another agent");
+            catch (OverlappingFileLockException e) { throw new IOException("Журнал управляющих команд уже занят другим агентом", e); }
+            if (acquired == null) throw new IOException("Журнал управляющих команд уже занят другим агентом");
             setOwnerOnly(lockPath);
             if (Files.exists(this.path, LinkOption.NOFOLLOW_LINKS)) {
-                if (Files.size(this.path) == 0) throw new IOException("empty control journal: refuse to forget executed commands");
+                if (Files.size(this.path) == 0) throw new IOException("Журнал управляющих команд пуст: удалять историю выполненных команд запрещено");
                 try (var in = Files.newInputStream(this.path, LinkOption.NOFOLLOW_LINKS)) {
                     props.load(in);
                 } catch (IllegalArgumentException e) {
-                    throw new IOException("invalid control journal", e);
+                    throw new IOException("Некорректный журнал управляющих команд", e);
                 }
                 String expected = props.getProperty(CHECKSUM);
                 // Незапечатанный журнал 0.41.1 обновляется при следующей долговечной записи.
                 if (expected != null && !expected.equalsIgnoreCase(digest(props)))
-                    throw new IOException("control journal checksum mismatch: refuse to replay commands");
+                    throw new IOException("Контрольная сумма журнала управляющих команд не совпадает: повторное воспроизведение команд запрещено");
             }
         } catch (IOException | RuntimeException e) {
             if (acquired != null) acquired.release();
@@ -102,7 +102,7 @@ final class BridgeControlJournal implements AutoCloseable {
         String prefix = prefix(command.commandId());
         String saved = props.getProperty(prefix + "digest", "");
         if (saved.isBlank()) return null;
-        if (!saved.equals(command.digest())) throw new IllegalStateException("control command id reused with a different signed execution digest");
+        if (!saved.equals(command.digest())) throw new IllegalStateException("Идентификатор управляющей команды повторно использован с другим подписанным хешем выполнения");
         String phase = props.getProperty(prefix + "phase", "");
         if ("done".equals(phase)) return new State(saved, phase, readResult(prefix));
         return new State(saved, phase, null);
@@ -111,7 +111,7 @@ final class BridgeControlJournal implements AutoCloseable {
     synchronized void begin(BridgeControlCommand command) throws IOException {
         ensureOpen();
         String p = prefix(command.commandId());
-        if (props.containsKey(p + "digest")) throw new IOException("command already admitted to durable journal");
+        if (props.containsKey(p + "digest")) throw new IOException("Команда уже добавлена в сохраняемый журнал");
         props.setProperty(p + "digest", command.digest());
         props.setProperty(p + "phase", "executing");
         props.setProperty(p + "runtime", command.runtimeId());
@@ -126,7 +126,7 @@ final class BridgeControlJournal implements AutoCloseable {
         ensureOpen();
         String p = prefix(command.commandId());
         if (!command.digest().equals(props.getProperty(p + "digest")) || !"executing".equals(props.getProperty(p + "phase")))
-            throw new IOException("cannot complete command without matching durable execution marker");
+            throw new IOException("Нельзя завершить команду без соответствующего маркера выполнения в сохраняемом журнале");
         props.setProperty(p + "phase", "done");
         props.setProperty(p + "status", result.status());
         props.setProperty(p + "result", BridgeControlCommand.encodeMap(result.result()));
@@ -140,14 +140,14 @@ final class BridgeControlJournal implements AutoCloseable {
         ensureOpen();
         String p = prefix(command.commandId());
         if (!command.digest().equals(props.getProperty(p + "digest")))
-            throw new IOException("receipt does not match the durable execution digest");
+            throw new IOException("Квитанция не соответствует хешу выполнения из сохраняемого журнала");
         String savedRuntime = props.getProperty(p + "runtime", "");
         if (!savedRuntime.isBlank()) {
             if (!savedRuntime.equals(command.runtimeId()) ||
                 !Long.toString(command.deliverySequence()).equals(props.getProperty(p + "sequence")) ||
                 !command.channelId().equals(props.getProperty(p + "channel")) ||
                 !command.leaseToken().equals(props.getProperty(p + "lease")))
-                throw new IOException("replayed delivery changes the durable lease identity");
+                throw new IOException("Повторная доставка изменяет идентификатор аренды в сохраняемом журнале");
             return;
         }
         props.setProperty(p + "runtime", command.runtimeId());
@@ -170,8 +170,8 @@ final class BridgeControlJournal implements AutoCloseable {
             if (token.length() < 16) continue;
             long sequence;
             try { sequence = Long.parseLong(props.getProperty(p + "sequence", "")); }
-            catch (NumberFormatException ex) { throw new IOException("invalid durable command sequence", ex); }
-            if (sequence < 1) throw new IOException("invalid durable command sequence");
+            catch (NumberFormatException ex) { throw new IOException("Некорректная последовательность сохраняемых команд", ex); }
+            if (sequence < 1) throw new IOException("Некорректная последовательность сохраняемых команд");
             receipts.add(new Receipt(p.substring(0, p.length() - 1), runtimeId, sequence, channelId, token, readResult(p)));
         }
         receipts.sort(java.util.Comparator.comparingLong(Receipt::sequence));
@@ -184,7 +184,7 @@ final class BridgeControlJournal implements AutoCloseable {
         if (!"done".equals(props.getProperty(p + "phase")) || !receipt.runtimeId().equals(props.getProperty(p + "runtime")) ||
             !Long.toString(receipt.sequence()).equals(props.getProperty(p + "sequence")) ||
             !receipt.channelId().equals(props.getProperty(p + "channel")) || !receipt.leaseToken().equals(props.getProperty(p + "lease")))
-            throw new IOException("control receipt no longer matches durable execution");
+            throw new IOException("Квитанция управляющей команды больше не соответствует сохранённому выполнению");
         props.setProperty(p + "acked", "true");
         if (receipt.sequence() > acknowledgedSequence())
             props.setProperty("_channel.ackedSequence", Long.toString(receipt.sequence()));
@@ -199,10 +199,10 @@ final class BridgeControlJournal implements AutoCloseable {
 
     private void ensureOpen() throws IOException {
         if (closed || !lock.isValid() || poisoned)
-            throw new IOException("control journal is closed, corrupted or no longer writable");
+            throw new IOException("Журнал управляющих команд закрыт, повреждён или недоступен для записи");
     }
     private static String prefix(String id) {
-        if (id == null || !id.matches("[A-Za-z0-9_-]{1,128}")) throw new IllegalArgumentException("invalid command id for durable journal");
+        if (id == null || !id.matches("[A-Za-z0-9_-]{1,128}")) throw new IllegalArgumentException("Некорректный идентификатор команды для сохраняемого журнала");
         return id + ".";
     }
     private static String digest(Properties p) throws IOException {
@@ -247,7 +247,7 @@ final class BridgeControlJournal implements AutoCloseable {
     private static String encode(String s) { return Base64.getUrlEncoder().withoutPadding().encodeToString((s == null ? "" : s).getBytes(StandardCharsets.UTF_8)); }
     private static String decode(String s) {
         try { return new String(Base64.getUrlDecoder().decode(s), StandardCharsets.UTF_8); }
-        catch (IllegalArgumentException e) { throw new IllegalStateException("corrupt control journal error field", e); }
+        catch (IllegalArgumentException e) { throw new IllegalStateException("Повреждено поле ошибки журнала управляющих команд", e); }
     }
     private static void setOwnerOnly(Path p) throws IOException {
         try { Files.setPosixFilePermissions(p, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------")); }

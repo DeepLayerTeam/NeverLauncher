@@ -101,7 +101,7 @@ func splitLegacyArguments0278(s string) ([]string, error) {
 		started = true
 	}
 	if quote != 0 || escaped {
-		return nil, errors.New("unterminated quote/escape in legacy minecraftArguments")
+		return nil, errors.New("Незакрытая кавычка или экранирование в устаревшем параметре minecraftArguments")
 	}
 	if started {
 		out = append(out, b.String())
@@ -208,12 +208,12 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		return nil, errors.New("идентификатор исходного профиля прежней системы не совпадает с Minecraft")
 	}
 	if strings.TrimSpace(parent.MinecraftArgs) == "" && len(parent.Arguments.Game) == 0 {
-		return nil, errors.New("legacy parent profile has no game arguments")
+		return nil, errors.New("В родительском профиле старого формата отсутствуют параметры игры")
 	}
 	selected := parent
 	parentArgs, err := splitLegacyArguments0278(parent.MinecraftArgs)
 	if err != nil {
-		return nil, fmt.Errorf("legacy parent arguments: %w", err)
+		return nil, fmt.Errorf("Параметры родительского профиля старого формата: %w", err)
 	}
 	gameArgs := parentArgs
 	childHash := ""
@@ -236,10 +236,10 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 			return nil, e
 		}
 		if child.InheritsFrom != minecraft {
-			return nil, fmt.Errorf("Forge legacy profile must inherit %s", minecraft)
+			return nil, fmt.Errorf("Профиль Forge старого формата должен наследовать %s", minecraft)
 		}
 		if child.MainClass != "net.minecraft.launchwrapper.Launch" {
-			return nil, fmt.Errorf("Forge legacy must use LaunchWrapper, got %s", child.MainClass)
+			return nil, fmt.Errorf("Старый Forge должен использовать LaunchWrapper, получено %s", child.MainClass)
 		}
 		expected := "net.minecraftforge.fml.common.launcher.FMLTweaker"
 		if minecraft == "1.7.10" {
@@ -253,13 +253,13 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		selected.Libraries = legacyLibraryList0278(child.Libraries, parent.Libraries)
 		childArgs, parseErr := splitLegacyArguments0278(child.MinecraftArgs)
 		if parseErr != nil {
-			return nil, fmt.Errorf("Forge legacy child arguments: %w", parseErr)
+			return nil, fmt.Errorf("Дочерние параметры Forge старого формата: %w", parseErr)
 		}
 		gameArgs = mergeLegacyArgumentTokens0278(parentArgs, childArgs)
 	}
 	args := gameArgs
 	if len(args) == 0 {
-		return nil, errors.New("legacy launch has no arguments")
+		return nil, errors.New("Отсутствуют параметры запуска старого формата")
 	}
 	recipe := &legacyLaunch0278{Schema: "launcher.legacy-launch.v1", Family: loader + "/" + minecraft, ParentProfile: parentRel, ParentSHA256: parentHash, ChildProfile: childRel, ChildSHA256: childHash, JavaMajor: 8, MainClass: selected.MainClass, GameArguments: args}
 	if loader == "forge" {
@@ -323,7 +323,7 @@ func addLegacyClasspath0278(root string, target *legacyTarget0278, rel string) e
 		return fmt.Errorf("Отсутствует: артефакт пути классов %s: %w", rel, err)
 	}
 	if !st.Mode().IsRegular() {
-		return fmt.Errorf("classpath artifact is not regular %s", rel)
+		return fmt.Errorf("Артефакт classpath не является обычным файлом: %s", rel)
 	}
 	hash, size, err := hashFile(full)
 	if err != nil {
@@ -332,7 +332,7 @@ func addLegacyClasspath0278(root string, target *legacyTarget0278, rel string) e
 	for _, old := range target.Classpath {
 		if old.Path == rel {
 			if old.SHA256 != hash {
-				return fmt.Errorf("conflicting classpath artifact %s", rel)
+				return fmt.Errorf("Конфликтующий артефакт classpath %s", rel)
 			}
 			return nil
 		}
@@ -410,7 +410,7 @@ func currentLegacyTarget0278(recipe *legacyLaunch0278) (*legacyTarget0278, error
 			return v, nil
 		}
 	}
-	return nil, fmt.Errorf("legacy build has no runtime target %s/%s", t.OS, t.Arch)
+	return nil, fmt.Errorf("В сборке старого формата нет цели Runtime %s/%s", t.OS, t.Arch)
 }
 func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uuid string) error {
 	p, err := readFactoryPlan0271(root)
@@ -447,11 +447,11 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 	}
 	natives := filepath.Join(absRoot, filepath.FromSlash(t.Natives))
 	if st, e := os.Stat(natives); e != nil || !st.IsDir() {
-		return fmt.Errorf("legacy natives unavailable for %s/%s", t.OS, t.Arch)
+		return fmt.Errorf("Нативные библиотеки старого формата недоступны для %s/%s", t.OS, t.Arch)
 	}
 	token := os.Getenv("LAUNCHER_MINECRAFT_ACCESS_TOKEN")
 	if token != "" && uuid == "" {
-		return errors.New("--uuid required for authenticated legacy launch")
+		return errors.New("Для авторизованного запуска старого формата требуется --uuid")
 	}
 	gameAssets := filepath.Join(absRoot, "assets")
 	virtualAssets := filepath.Join(absRoot, "assets", "virtual", p.Launch.AssetIndex)
@@ -525,7 +525,7 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		}
 	}
 	if err := guardCompatValidateLaunch0502(root, p.ReproducibilitySHA256, p.MinecraftVersion, p.Loader, guardedAgents, guardedPlugins); err != nil {
-		return fmt.Errorf("Guard compatibility refused Java launch: %w", err)
+		return fmt.Errorf("Guard отклонил запуск Java из-за несовместимости: %w", err)
 	}
 	args = append(args, trustedJVM...)
 	args = append(args, "-cp", strings.Join(classpath, string(os.PathListSeparator)), trustedMain)
@@ -536,7 +536,7 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err = cmd.Run(); err != nil {
-		return fmt.Errorf("legacy Java process exited: %w", err)
+		return fmt.Errorf("Процесс Java старого формата завершился: %w", err)
 	}
 	return nil
 }
@@ -546,7 +546,7 @@ func verifyLegacyJava0278(ctx context.Context, executable string) error {
 	cmd := exec.CommandContext(check, executable, "-version")
 	raw, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("Java version check: %w", err)
+		return fmt.Errorf("Проверка версии Java: %w", err)
 	}
 	// Разрешайте форматы версии Java 8: 1.8.0_*** и 8.0.*.
 	if !regexp.MustCompile(`(?m)(?:version|openjdk)\s+"(?:1\.8\.|8(?:[.+-]|"))`).Match(raw) {
@@ -572,7 +572,7 @@ func handleRuntimeLegacy0278(args []string) error {
 			return err
 		}
 		if plan.Legacy == nil {
-			return errors.New("client is not a legacy target")
+			return errors.New("Клиент не относится к целям старого формата")
 		}
 		return writeOrPrintJSON(flagValue(args[1:], "--output", ""), plan.Legacy)
 	case "legacy-run":

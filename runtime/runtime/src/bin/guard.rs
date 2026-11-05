@@ -82,9 +82,9 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     }
     let parent_pid = required_flag(&args, "--parent-pid")?
         .parse::<u32>()
-        .map_err(|_| "--parent-pid must be a positive u32".to_string())?;
+        .map_err(|_| "Параметр --parent-pid должен быть положительным числом u32".to_string())?;
     if parent_pid == 0 {
-        return Err("--parent-pid must be a positive u32".to_string());
+        return Err("Параметр --parent-pid должен быть положительным числом u32".to_string());
     }
     #[cfg(windows)]
     {

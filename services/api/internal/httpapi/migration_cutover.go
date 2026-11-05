@@ -71,7 +71,7 @@ func (s Server) migrationCutoverStage03311(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if r.Header.Get("X-Migration-Cutover-Confirm") != id {
-		writeError(w, 400, "exact migration run confirmation required")
+		writeError(w, 400, "Требуется подтверждение точного запуска миграции")
 		return
 	}
 	input, ok := migrationRead0331[co.Stage](w, r)
@@ -156,7 +156,7 @@ func (s Server) migrationCutoverCancel03311(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if r.Header.Get("X-Migration-Cutover-Confirm") != id {
-		writeError(w, 400, "exact migration run confirmation required")
+		writeError(w, 400, "Требуется подтверждение точного запуска миграции")
 		return
 	}
 	input, ok := migrationRead0331[struct {

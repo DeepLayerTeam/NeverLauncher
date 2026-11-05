@@ -34,7 +34,7 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, http.StatusForbidden, "recent Never authentication required")
+		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Never")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
@@ -83,7 +83,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, http.StatusForbidden, "recent Never authentication required")
+		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Never")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))

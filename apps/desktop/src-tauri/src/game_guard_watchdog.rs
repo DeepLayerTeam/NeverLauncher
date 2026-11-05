@@ -168,7 +168,7 @@ pub(crate) fn start_game_watchdog_0438(
                 Ok(current) if current.state == "running" && current.pid == game.pid => {},
                 Ok(current) if current.state == "running" => {
                     let _ = supervisor.stop_for_guard_violation_0438(
-                        &game.id, "Game PID replaced while Guard was active",
+                        &game.id, "PID игрового процесса изменился во время работы Guard",
                     ).await;
                     break;
                 },

@@ -35,7 +35,7 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 	c := stableCoverage03411{TargetCoverage: map[string]bool{}, TargetBlockers: map[string]string{}, Runs: map[string]string{}}
 	block := func(reason string) stableCoverage03411 { c.TargetBlockers["release"] = reason; return c }
 	if !repository.IsStableChannel0341(lookup.Release.Channel) {
-		return block("not a stable release")
+		return block("Релиз не является стабильным")
 	}
 	md, e := manifestDigest0212(lookup.Release.Manifest)
 	if e != nil {

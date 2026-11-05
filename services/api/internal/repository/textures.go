@@ -24,7 +24,7 @@ type TextureRepository0251 interface {
 }
 
 var ErrTextureRevisionConflict0251 = errors.New("texture revision conflict")
-var ErrTextureCapeDenied0251 = errors.New("cape selection is not permitted by project policy")
+var ErrTextureCapeDenied0251 = errors.New("Выбор плаща запрещён политикой проекта")
 
 const textureAssignmentSelect0251 = `SELECT id,realm,profile_uuid,user_id,project_id,launcher_profile_id,kind,COALESCE(blob_digest,''),external_url,source,model,visibility,revision,active,updated_at FROM texture_assignments`
 

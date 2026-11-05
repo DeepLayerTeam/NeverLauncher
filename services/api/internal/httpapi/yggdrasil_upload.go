@@ -45,12 +45,12 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 	defer cancel()
 	selectionRepo, ok := s.textureRepository0251()
 	if !ok {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Texture database unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "База текстур недоступна")
 		return
 	}
 	assigned, err := selectionRepo.ListTextureAssignments0251(ctx, profile)
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Texture database unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "База текстур недоступна")
 		return
 	}
 	revision := int64(0)
@@ -84,7 +84,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartTexture0252)
 	mr, err := r.MultipartReader()
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusBadRequest, "multipart/form-data required")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Требуется формат multipart/form-data")
 		return
 	}
 	var file []byte
@@ -202,19 +202,19 @@ func writeYggdrasilTextureError0256(w http.ResponseWriter, err error) {
 func (s Server) yggdrasilBatchProfiles0256(w http.ResponseWriter, r *http.Request) {
 	repo, err := s.minecraftRepo119()
 	if err != nil {
-		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Minecraft repository unavailable")
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Хранилище Minecraft недоступно")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var names []string
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(&names); err != nil || len(names) > 100 {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid profile lookup request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос поиска профиля")
 		return
 	}
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
-		writeYggdrasilError119(w, http.StatusBadRequest, "Invalid profile lookup request")
+		writeYggdrasilError119(w, http.StatusBadRequest, "Некорректный запрос поиска профиля")
 		return
 	}
 	profiles := make([]map[string]string, 0, len(names))

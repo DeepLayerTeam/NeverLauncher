@@ -163,12 +163,12 @@ public final class BridgeConfig {
 
     private static String validateBackendUrl(String value) {
         java.net.URI uri;
-        try { uri = java.net.URI.create(value); } catch (Exception e) { throw new IllegalArgumentException("invalid ServerBridge backend URL: " + value, e); }
+        try { uri = java.net.URI.create(value); } catch (Exception e) { throw new IllegalArgumentException("Некорректный адрес Backend ServerBridge: " + value, e); }
         String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
         if (!(scheme.equals("http") || scheme.equals("https")) || uri.getHost() == null || uri.getRawQuery() != null || uri.getRawFragment() != null)
             throw new IllegalArgumentException("ServerBridge backend URL must be an http(s) origin: " + value);
         String path = uri.getRawPath();
-        if (path != null && !path.isEmpty() && !path.equals("/")) throw new IllegalArgumentException("ServerBridge backend URL must not contain a path: " + value);
+        if (path != null && !path.isEmpty() && !path.equals("/")) throw new IllegalArgumentException("Адрес Backend ServerBridge не должен содержать путь: " + value);
         return trimSlash(value);
     }
 

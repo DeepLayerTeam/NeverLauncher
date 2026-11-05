@@ -22,15 +22,15 @@ func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) er
 		return err
 	}
 	if p.ReferenceClass != b.ReferenceClass || p.ProjectID != b.ProjectID || p.RunID != b.RunID || p.CommitSHA != b.CommitSHA || p.SourceVersion != b.SourceVersion || p.TrustedGravitJarSHA256 != b.TrustedGravitJarSHA256 || p.TargetReleaseSHA256 != b.TargetReleaseSHA256 {
-		return errors.New("live plan differs from signed GA certificate")
+		return errors.New("Актуальный план не соответствует подписанному сертификату GA")
 	}
 	currentSource, err := shaFile(p.SourceArchive, 512<<20)
 	if err != nil || currentSource != b.SourceSHA256 {
-		return errors.New("source ZIP missing or changed since certification")
+		return errors.New("Исходный ZIP отсутствует или изменился после сертификации")
 	}
 	actualVersion, jarHash, err := sourceJarEvidence(p.SourceArchive)
 	if err != nil || actualVersion != b.SourceVersion || jarHash != b.TrustedGravitJarSHA256 {
-		return errors.New("pinned Gravit LaunchServer is no longer present")
+		return errors.New("Зафиксированный Gravit LaunchServer больше недоступен")
 	}
 	client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	endpoint := strings.TrimRight(p.Backend, "/") + "/api/v1/admin/migration-runs/" + url.PathEscape(b.RunID) + "/report"
@@ -42,7 +42,7 @@ func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) er
 		return err
 	}
 	if report.RunID != b.RunID || report.ProjectID != b.ProjectID || report.SourceSHA256 != b.SourceSHA256 || report.ReportSHA256 != b.ReportSHA256 {
-		return errors.New("migration run/revision changed after certification")
+		return errors.New("Выполнение или редакция миграции изменились после сертификации")
 	}
 	active := false
 	for _, ev := range report.Evidence {
@@ -51,14 +51,14 @@ func verifyLiveReference(ctx context.Context, b Bundle, p Plan, token string) er
 		}
 	}
 	if !active {
-		return errors.New("certified target release is no longer active")
+		return errors.New("Сертифицированный целевой релиз больше не активен")
 	}
 	var review Review
 	if err := getJSON(ctx, client, endpoint+"/review", token, &review); err != nil {
 		return err
 	}
 	if review.Status != "rc_reviewed_not_ga_certified" || review.Report.ReportSHA256 != b.ReportSHA256 || review.ReviewedBy != b.ReviewedBy || review.EvidenceSHA256 != b.ReviewEvidenceSHA256 || review.ReviewedAt == "" {
-		return errors.New("operator review no longer matches certified evidence")
+		return errors.New("Заключение оператора больше не соответствует сертифицированным доказательствам")
 	}
 	if err := reportVerified(review.Report); err != nil {
 		return err
