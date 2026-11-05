@@ -72,10 +72,10 @@ def load_attested_file(
     if not name or Path(name).name != name or name in {".", ".."}:
         raise ValueError(f"Небезопасное значение: путь к артефакту: {name!r}")
     if not SHA256.fullmatch(digest):
-        raise ValueError(f"Некорректное значение: «SHA-256 for» {name}")
+        raise ValueError(f"Некорректная контрольная сумма SHA-256 для {name}")
     path = folder / name
     if folder.is_symlink() or path.is_symlink() or not path.is_file():
-        raise ValueError(f"Отсутствует: «or symlinked file»: {path}")
+        raise ValueError(f"Файл отсутствует или является символической ссылкой: {path}")
     hasher = hashlib.sha256()
     raw = bytearray()
     total = 0
@@ -89,10 +89,10 @@ def load_attested_file(
             # небольшими; не держите многогигабайтные входы в памяти.
             if not binary:
                 if len(raw) + len(chunk) > 8 * 1024 * 1024:
-                    raise ValueError(f"Превышен допустимый размер: «evidence JSON»: {name}")
+                    raise ValueError(f"JSON со свидетельствами превышает допустимый размер: {name}")
                 raw.extend(chunk)
     if hasher.hexdigest() != digest:
-        raise ValueError(f"Несовпадение: «content digest»: {name}")
+        raise ValueError(f"Контрольная сумма содержимого не совпадает: {name}")
     return bytes(raw)
 
 
@@ -214,7 +214,7 @@ def check_report(
         if not SHA256.fullmatch(
             report.get("baselineExecutableSha256", "")
         ) or not SHA256.fullmatch(report.get("candidateExecutableSha256", "")):
-            raise ValueError("Отсутствует: «real compiled baseline/candidate hashes»")
+            raise ValueError("Отсутствуют контрольные суммы реально собранных базовой и кандидатной версий")
         if {r.get("implementation") for r in report["runs"]} != {
             "baseline",
             "candidate",
@@ -229,7 +229,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         raise ValueError("Подтверждение через символическую ссылку не принимается")
     raw = data.read_bytes()
     if len(raw) > 1024 * 1024:
-        raise ValueError("Превышен допустимый размер: «signed GA attestation»")
+        raise ValueError("Подписанная аттестация GA превышает допустимый размер")
     signature = bytes.fromhex(sig.read_text("ascii").strip())
     key.verify(
         signature, (COMPONENT_GA_DOMAIN if version == "0.25.0" else DOMAIN) + raw
@@ -237,14 +237,14 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
     doc = strict_json(raw)
     pair = (doc.get("platform"), doc.get("architecture"))
     if pair not in TARGETS or folder.name != "-".join(pair):
-        raise ValueError(f"Неожиданное значение: «platform/architecture» {pair}")
+        raise ValueError(f"Неожиданная комбинация платформы и архитектуры {pair}")
     schema = (
         COMPONENT_GA_SCHEMA if version == "0.25.0" else "launcher.ga.attestation.v1"
     )
     if doc.get("schemaVersion") != schema or doc.get("status") != "passed":
-        raise ValueError("Не поддерживается: «or incomplete signed attestation»")
+        raise ValueError("Подписанная аттестация не поддерживается или является неполной")
     if doc.get("commit") != commit or doc.get("productVersion") != version:
-        raise ValueError("Несовпадение: «attestation commit/version»")
+        raise ValueError("Commit или версия аттестации не совпадают")
     if doc.get("gitTreeClean") is not True:
         raise ValueError("Релиз должен собираться из чистого дерева исходников")
     checks = doc.get("checks")
@@ -303,7 +303,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         if components.get("installerSha256") != installer_sha:
             raise ValueError("Сертификация компонентов относится к другому установщику")
         if components["nativeEvidenceSha256"] != objects["nativeRun"]["sha256"]:
-            raise ValueError("«native run digest» не совпадает с «authenticated evidence»")
+            raise ValueError("Контрольная сумма нативного запуска не совпадает с проверенными свидетельствами")
         for section, object_name in (
             ("minecraftEvidence", "minecraftRun"),
             ("guardEvidence", "guardRun"),
@@ -337,7 +337,7 @@ def verify_all(root: Path, public_key_hex: str, commit: str, version="0.24.0") -
     if not GITSHA.fullmatch(commit):
         raise ValueError("Необходимо указать точный 40-байтовый идентификатор коммита Git")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", public_key_hex):
-        raise ValueError("trusted attestation key: требуется «32 raw bytes in hex»")
+        raise ValueError("Для доверенного ключа аттестации требуются 32 байта в шестнадцатеричном формате")
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex))
     results = []
     for platform, arch in sorted(TARGETS):

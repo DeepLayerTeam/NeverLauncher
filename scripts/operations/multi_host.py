@@ -95,7 +95,7 @@ def resolved_compose(directory, project, *, env_file=None):
         raise DeploymentError("В конфигурации Docker Compose отсутствуют службы")
     services = data["services"]
     if set(services) != set(ALL_SERVICES):
-        raise DeploymentError("Неожиданное значение: «Compose services; embedded database or other processes are prohibited»")
+        raise DeploymentError("Недопустимые службы Compose: встроенная база данных и посторонние процессы запрещены")
     api = services["api"]["environment"]
     worker = services["worker"]["environment"]
     for name, env in (("api", api), ("worker", worker)):
@@ -164,11 +164,11 @@ def resolved_compose(directory, project, *, env_file=None):
         raise DeploymentError("both host TLS certificate and key: требуется «bind-mounted»")
     for volume in tls_volumes:
         if volume.get("type") != "bind" or volume.get("read_only") is not True:
-            raise DeploymentError("host TLS credentials: требуется «read-only file binds»")
+            raise DeploymentError("Учётные данные TLS узла должны подключаться как файлы только для чтения")
         check_secure_file(Path(volume["source"]), strict=volume["target"].endswith("privkey.pem"))
     machine = inventory.machine_identity()
     if not machine:
-        raise DeploymentError("«OS machine-id missing;»: запрещено «prove independent Docker hosts»")
+        raise DeploymentError("Отсутствует machine-id ОС: невозможно подтвердить независимость узлов Docker")
     try:
         pgport = urlsplit(api["LAUNCHER_DATABASE_DSN"]).port or 5432
         redisport = urlsplit(api["LAUNCHER_REDIS_URL"]).port or 6379
@@ -243,7 +243,7 @@ def local_compat_observe_0516(directory, project):
     for role in ("api", "worker"):
         ready = (running.get(role) or {}).get("readiness") or {}
         if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6", "0.51.7")):
-            raise DeploymentError("Не поддерживается: «or unverified live /ready version for»" + role)
+            raise DeploymentError("Не поддерживается или не проверена действующая версия /ready для" + role)
     if running["api"]["readiness"]["version"] != running["worker"]["readiness"]["version"]:
         raise DeploymentError("На одном хосте версии работающих API и рабочего процесса не совпадают")
     container = running["api"]["containerId"]
@@ -312,7 +312,7 @@ def remote_call(target, installed_script, directory, project, mode, *, growth=Tr
     if not HOST_REGEX.fullmatch(target) or target.startswith("-"):
         raise DeploymentError("Некорректное значение: «SSH target»")
     if not installed_script.startswith("/") or not directory.startswith("/"):
-        raise DeploymentError("installed script and deployment directory: требуется «absolute paths»")
+        raise DeploymentError("Для установленного скрипта и каталога развёртывания требуются абсолютные пути")
     if any("\n" in s or "\r" in s for s in (installed_script, directory)):
         raise DeploymentError("Некорректное значение: «remote path»")
     args = ["python3", installed_script, mode, "--directory", directory, "--project", project,
@@ -349,7 +349,7 @@ def parse_nodes(specs):
             raise DeploymentError("Одна цель SSH указана несколько раз")
         nodes[name] = host
     if len(nodes) < 2:
-        raise DeploymentError("Требуется: «at least two independent SSH hosts are»")
+        raise DeploymentError("Требуются как минимум два независимых SSH-узла")
     return nodes
 
 
@@ -363,7 +363,7 @@ def assert_peer_config(reports):
         machine = report.get("machineIdentity")
         node_id = report.get("nodeId")
         if not machine or machine in seen_machine or not node_id or node_id in seen_node:
-            raise DeploymentError("«duplicate/missing machine ID or node ID;»: запрещено «treat as distinct hosts»")
+            raise DeploymentError("Идентификаторы machine ID или node ID отсутствуют либо повторяются: узлы нельзя считать независимыми")
         seen_machine.add(machine)
         seen_node.add(node_id)
         if report.get("imageDigestRefs") != first.get("imageDigestRefs"):
@@ -385,7 +385,7 @@ def validate_edge_url(url):
     except ValueError as exc:
         raise DeploymentError("Некорректное значение: «external load balancer URL»") from exc
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment or parsed.query or parsed.path not in ("", "/", "/ready"):
-        raise DeploymentError("external load balancer URL: требуется «an HTTPS origin or /ready without credentials»")
+        raise DeploymentError("Внешнему балансировщику требуется HTTPS-адрес или /ready без учётных данных")
     return url
 
 
@@ -502,7 +502,7 @@ def main(argv=None):
     try:
         directory = Path(args.directory)
         if not directory.is_absolute() or not PROJECT_REGEX.fullmatch(args.project):
-            raise DeploymentError("Некорректное значение: «absolute directory/project»")
+            raise DeploymentError("Некорректный абсолютный путь каталога или проекта")
         if args.mode.startswith("local-"):
             if args.mode == "local-check":
                 report = resolved_compose(directory, args.project)
@@ -549,7 +549,7 @@ def main(argv=None):
                                                      "local-observe", growth=not args.skip_growth), args.edge_url)
         else:
             if not args.allow_disruption or not args.edge_url or not args.failed_node:
-                raise DeploymentError("cluster-drill: требуется «--allow-disruption --failed-node and --edge-url»")
+                raise DeploymentError("Для cluster-drill необходимы --allow-disruption, --failed-node и --edge-url")
             validate_edge_url(args.edge_url)
             report = outage_drill(nodes, args.remote_script, args.directory, args.project,
                                   args.edge_url, args.failed_node)

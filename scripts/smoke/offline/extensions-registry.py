@@ -34,7 +34,7 @@ for token in (
     "launcher_registry_channel_guard_0203",
     "yank state is irreversible",
 ):
-    require(token in migration, f"registry migration missing {token}")
+    require(token in migration, f"Отсутствует миграция реестра расширений {token}")
 
 repo = read("services/api/internal/repository/extension_registry_0203.go")
 for token in (
@@ -47,7 +47,7 @@ for token in (
     "compatibilityMatches0203",
     "registry version already exists with different immutable publication metadata",
 ):
-    require(token in repo, f"registry repository missing {token}")
+    require(token in repo, f"Отсутствует репозиторий реестра расширений {token}")
 
 verifier = read("services/api/internal/extensionpackage/package_0203.go")
 for token in (
@@ -61,7 +61,7 @@ for token in (
     "symlink/special",
     "PackageIdentity",
 ):
-    require(token in verifier, f"server package verifier missing {token}")
+    require(token in verifier, f"Отсутствует серверная проверка пакетов {token}")
 
 http = read("services/api/internal/httpapi/extension_registry_0203.go")
 routes = read("services/api/internal/httpapi/routes_packages.go")
@@ -75,7 +75,7 @@ for token in (
     "artifact signature verification failed",
     "registry artifact verification failed",
 ):
-    require(token in http, f"registry HTTP implementation missing {token}")
+    require(token in http, f"Отсутствует HTTP-реализация реестра расширений {token}")
 for route in (
     "/api/v1/admin/extension-registry/publishers",
     "/api/v1/admin/extension-registry/publish",
@@ -85,7 +85,7 @@ for route in (
     "/versions/{version}/yank",
     "/channels/{channel}",
 ):
-    require(route in routes, f"registry route missing {route}")
+    require(route in routes, f"Отсутствует маршрут реестра расширений {route}")
 
 cli = read("cli/cmd/launcher/extension_registry_0203.go")
 for token in (
@@ -102,7 +102,7 @@ for token in (
     '"install"',
     "ETag",
 ):
-    require(token in cli, f"registry CLI missing {token}")
+    require(token in cli, f"Отсутствует команда CLI для реестра расширений {token}")
 
 admin = read("apps/admin/src/main.tsx")
 for token in (
@@ -112,7 +112,7 @@ for token in (
     "Установить verified artifact",
     "Registry yank",
 ):
-    require(token in admin, f"Admin Registry UI missing {token}")
+    require(token in admin, f"Отсутствует интерфейс реестра расширений в Admin {token}")
 
 release = read("cli/cmd/launcher/release_commands.go")
 for table in (
@@ -123,7 +123,7 @@ for table in (
     "extension_registry_artifacts",
     "extension_registry_channels",
 ):
-    require(table in release, f"productionTables missing {table}")
+    require(table in release, f"Отсутствует запись в productionTables {table}")
 
 openapi_generator = read("scripts/contracts/generate_openapi.py")
 for token in (
@@ -133,7 +133,7 @@ for token in (
     '"multipart/form-data"',
 ):
     require(
-        token in openapi_generator, f"OpenAPI generator missing registry token {token}"
+        token in openapi_generator, f"В генераторе OpenAPI отсутствует элемент реестра {token}"
     )
 
 print("Extensions Registry 0.20.3: проверка готовности к эксплуатации: OK")

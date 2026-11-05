@@ -89,7 +89,7 @@ class Operator0475Tests(unittest.TestCase):
         with sqlite3.connect(db_path) as db:
             data = b'{"projects":[],"projects":[]}'
             db.execute("UPDATE http_repository_state_0372 SET sha256=?,document=?", (sha256(data).hexdigest(), data))
-        with self.assertRaisesRegex(cutover.CutoverError, "duplicate"):
+        with self.assertRaisesRegex(cutover.CutoverError, "Обнаружен дубликат"):
             cutover.verify_http_snapshot(db_path)
 
     def test_bad_sqlite_backup_is_rejected(self):
@@ -138,7 +138,7 @@ class Operator0475Tests(unittest.TestCase):
         op.init_workdir()
         op.state["importOutcomeUnknown"] = True
         op.save()
-        with self.assertRaisesRegex(cutover.CutoverError, "unknown"):
+        with self.assertRaisesRegex(cutover.CutoverError, "Результат предыдущего импорта неизвестен"):
             self.operator().run()
 
     def test_cutover_rejected_without_complete_receipts(self):

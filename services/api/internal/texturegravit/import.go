@@ -132,7 +132,7 @@ func LoadMappings(data []byte) (map[string]string, error) {
 
 func LoadJSON(data []byte) ([]SourceRow, error) {
 	if len(data) == 0 || len(data) > 32<<20 {
-		return nil, errors.New("Экспорт источника: требуется «at most 32 MiB»")
+		return nil, errors.New("Размер экспорта источника не должен превышать 32 МиБ")
 	}
 	var rows []SourceRow
 	if err := json.Unmarshal(data, &rows); err != nil {
@@ -168,7 +168,7 @@ func ReadPostgres(ctx context.Context, db *sql.DB) ([]SourceRow, error) {
 
 func ValidateObjectKey(key string) error {
 	if key == "" || len(key) > 512 || strings.HasPrefix(key, "/") || strings.Contains(key, "\\") || strings.ContainsAny(key, "\x00\r\n") {
-		return errors.New("Некорректное значение: «relative object key»")
+		return errors.New("Некорректный относительный ключ объекта")
 	}
 	for _, v := range strings.Split(key, "/") {
 		if v == "" || v == "." || v == ".." {
@@ -189,7 +189,7 @@ func RenderKey(template, kind, hash string) (string, error) {
 	}
 	key := strings.NewReplacer("%hash%", hash, "%kind%", kind, "%KIND%", strings.ToUpper(kind)).Replace(template)
 	if strings.Contains(key, "%") {
-		return "", errors.New("Неизвестное значение: «object-key template placeholder»")
+		return "", errors.New("Неизвестный плейсхолдер шаблона ключа объекта")
 	}
 	return key, ValidateObjectKey(key)
 }
@@ -208,7 +208,7 @@ func VerifySourceHash(hash string, b []byte) error {
 		sum = hex.EncodeToString(v[:])
 	}
 	if sum != hash {
-		return errors.New("Несовпадение: «source PNG digest»")
+		return errors.New("Контрольная сумма исходного PNG не совпадает")
 	}
 	return nil
 }
@@ -248,7 +248,7 @@ func (r *Runner) PlanSHA256(rows []SourceRow) (string, error) {
 func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 	out := Report{Format: "launcher.gravit-texture-import.v1", SourceID: r.SourceID, DryRun: r.DryRun, StartedAt: time.Now().UTC(), Counts: map[string]int{}, Rows: make([]Record, 0, len(rows))}
 	if !sourceIDFormat.MatchString(r.SourceID) || r.Database == nil || r.Source == nil || r.Destination == nil {
-		return out, errors.New("Требуется: «source ID, source reader, destination and database»")
+		return out, errors.New("Необходимы идентификатор источника, средство чтения, назначение и база данных")
 	}
 	if len(rows) > 100000 {
 		return out, errors.New("Слишком много строк с текстурами")
@@ -306,7 +306,7 @@ func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error 
 	seenSource := make(map[string]string)
 	for _, row := range rows {
 		if _, ok := rowIDs[row.ID]; ok {
-			return fmt.Errorf("Обнаружен дубликат: «TextureProvider row ID %q; no textures were imported»", row.ID)
+			return fmt.Errorf("Обнаружен дубликат ID записи TextureProvider %q; текстуры не импортированы", row.ID)
 		}
 		rowIDs[row.ID] = struct{}{}
 		from, err := CanonicalUUID(row.UserUUID)
@@ -342,17 +342,17 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	rec := Record{ID: row.ID, UUID: row.UserUUID, Kind: strings.ToLower(row.TextureType), Status: "quarantined"}
 	fail := func(status string, err error) Record { rec.Status = status; rec.Reason = err.Error(); return rec }
 	if len(row.ID) < 1 || len(row.ID) > 150 {
-		return fail("quarantined", errors.New("Некорректное значение: «or missing upstream row ID»"))
+		return fail("quarantined", errors.New("Некорректный или отсутствующий ID исходной записи"))
 	}
 	if rec.Kind != "skin" && rec.Kind != "cape" {
-		return fail("quarantined", errors.New("Неизвестное значение: «TextureProvider texture type»"))
+		return fail("quarantined", errors.New("Неизвестный тип текстуры TextureProvider"))
 	}
 	normalizedUUID, err := CanonicalUUID(row.UserUUID)
 	if err != nil {
 		return fail("unmatched", err)
 	}
 	if seen[row.ID] {
-		return fail("quarantined", errors.New("Обнаружен дубликат: «upstream row ID»"))
+		return fail("quarantined", errors.New("Обнаружен повторяющийся ID исходной записи"))
 	}
 	seen[row.ID] = true
 	target := normalizedUUID
@@ -362,10 +362,10 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	rec.TargetUUID = target
 	profile, err := r.Database.GetMinecraftProfileByUUID(target)
 	if err != nil {
-		return fail("unmatched", errors.New("Отсутствует: «verified local Minecraft profile for source UUID; explicit mapping required»"))
+		return fail("unmatched", errors.New("Для исходного UUID не найден проверенный локальный профиль Minecraft; требуется явное сопоставление"))
 	}
 	if profile.Realm != "local" || profile.Issuer != "launcher" || profile.UUID == "" || profile.UserID == "" {
-		return fail("unmatched", errors.New("«official or non-local UUID»: запрещено «be imported»"))
+		return fail("unmatched", errors.New("Импорт официального или нелокального UUID запрещён"))
 	}
 	if canonical, err := CanonicalUUID(profile.UUID); err != nil || canonical != target {
 		return fail("unmatched", errors.New("UUID целевого профиля имеет неканонический формат"))
@@ -385,12 +385,12 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	if len(row.Metadata) > 0 && string(row.Metadata) != "null" {
 		var metadata map[string]json.RawMessage
 		if err := json.Unmarshal(row.Metadata, &metadata); err != nil {
-			return fail("quarantined", errors.New("Некорректное значение: «texture metadata JSON»"))
+			return fail("quarantined", errors.New("Некорректные метаданные текстуры в JSON"))
 		}
 		if raw, ok := metadata["model"]; ok {
 			var name string
 			if json.Unmarshal(raw, &name) != nil {
-				return fail("quarantined", errors.New("Некорректное значение: «model metadata»"))
+				return fail("quarantined", errors.New("Некорректные метаданные модели"))
 			}
 			if strings.EqualFold(name, "slim") {
 				if rec.Kind == "cape" {
@@ -404,7 +404,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	}
 	hash := strings.ToLower(strings.TrimSpace(row.FileHash))
 	if !shaHex.MatchString(hash) {
-		return fail("quarantined", errors.New("Не поддерживается: «or missing source hash»"))
+		return fail("quarantined", errors.New("Контрольная сумма источника отсутствует или не поддерживается"))
 	}
 	key := row.ObjectKey
 	if key == "" {
@@ -456,7 +456,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 		return fail("blocked", err)
 	}
 	if savedKey != expectedKey || n != input.Size {
-		return fail("blocked", errors.New("Ошибка: «storage key/size verification»"))
+		return fail("blocked", errors.New("Ошибка проверки ключа или размера объекта хранилища"))
 	}
 	_, err = r.Database.UploadTexture0252(ctx, profile, input)
 	if errors.Is(err, repository.ErrGravitAlreadyImported02510) {

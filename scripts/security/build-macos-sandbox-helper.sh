@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 : "${LAUNCHER_MACOS_SANDBOX_TEAM_ID:?required: ten-character Apple team ID}"
 : "${LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY:?required: Developer ID Application certificate identity}"
 [[ "$LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY" == Developer\ ID\ Application:* ]] || { echo "Необходим сертификат Developer ID Application" >&2; exit 1; }
-[[ "$LAUNCHER_MACOS_SANDBOX_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "invalid Team ID" >&2; exit 1; }
+[[ "$LAUNCHER_MACOS_SANDBOX_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "Некорректный Team ID" >&2; exit 1; }
 DEST="${1:?output path for signed helper required}"
 [[ "$DEST" = /* ]] || { echo "Выходной путь должен быть абсолютным" >&2; exit 1; }
 mkdir -p "$(dirname "$DEST")"

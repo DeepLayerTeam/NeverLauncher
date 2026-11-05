@@ -49,7 +49,7 @@ def file_matches(path, art):
         or path.stat().st_size != art["size"]
         or digest(path) != art["sha256"]
     ):
-        raise ValueError(f"Несовпадение: «object SHA-256/size»: {path}")
+        raise ValueError(f"Не совпадают SHA-256 или размер объекта: {path}")
 
 
 def verify_config(path, key, policy_path=None):
@@ -63,7 +63,7 @@ def verify_config(path, key, policy_path=None):
     if env.get("schemaVersion") == "2.0":
         policy_path = policy_path or path.with_name("trust-policy.signed.json")
         if not policy_path.is_file() or policy_path.is_symlink():
-            raise ValueError("delegated config: требуется «local signed trust policy»")
+            raise ValueError("Для делегированной конфигурации необходима локальная подписанная политика доверия")
         penv = json.loads(policy_path.read_text("utf-8"))
         if penv.get("schemaVersion") != "1.0":
             raise ValueError("Не поддерживается: конверт политики доверия")
@@ -77,7 +77,7 @@ def verify_config(path, key, policy_path=None):
             or policy.get("domain") != "launcher.trust.v1"
             or policy.get("epoch") != env.get("trustEpoch")
         ):
-            raise ValueError("Несовпадение: «trust policy domain/epoch»")
+            raise ValueError("Домен или эпоха политики доверия не совпадают")
         now = datetime.datetime.now(datetime.timezone.utc)
 
         def utc(t):
@@ -121,7 +121,7 @@ def verify_config(path, key, policy_path=None):
             bytes.fromhex(env["signature"]), payload
         )
     else:
-        raise ValueError("Некорректное значение: «signed configuration envelope»")
+        raise ValueError("Некорректный подписанный контейнер конфигурации")
     config = json.loads(payload)
     if config["schemaVersion"] != "1.0":
         raise ValueError("Не поддерживается: конфигурация")
@@ -197,7 +197,7 @@ def collect_bundle(args, stage):
         # попытки выхода за пределы каталога отклоняются без перехода по ним.
         for p in args.offline_source.rglob("*"):
             if p.is_symlink() or not (p.is_dir() or p.is_file()):
-                raise ValueError(f"Небезопасное значение: «offline source entry»: {p}")
+                raise ValueError(f"Небезопасная запись автономного источника: {p}")
             relative = p.relative_to(args.offline_source)
             target = stage / relative
             if p.is_dir():
@@ -208,7 +208,7 @@ def collect_bundle(args, stage):
                         "Автономный источник пытается заменить файлы подписанного установщика"
                     )
                 if p.stat().st_size > 3 << 30:
-                    raise ValueError("Превышен допустимый размер: «offline object»")
+                    raise ValueError("Автономный объект превышает допустимый размер")
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(p, target)
         target = next(
@@ -243,7 +243,7 @@ def apply_windows_brand_icon(executable, branding):
     if not asset:
         return
     if sys.platform != "win32":
-        raise RuntimeError("Windows icon resources: требуется «written on a Windows release runner»")
+        raise RuntimeError("Ресурсы значка Windows необходимо создавать на Windows runner для выпуска")
     import ctypes
     from ctypes import wintypes
 
@@ -252,7 +252,7 @@ def apply_windows_brand_icon(executable, branding):
         raise ValueError("signed brand icon: требуется PNG")
     width, height = struct.unpack_from(">II", png, 16)
     if not (1 <= width <= 256 and 1 <= height <= 256):
-        raise ValueError("Windows native icon: требуется «at most 256x256 PNG»")
+        raise ValueError("Для нативного значка Windows требуется PNG не более 256×256 пикселей")
     group = struct.pack("<HHHBBBBHHIH", 0, 1, 1, width % 256, height % 256, 0, 0, 1, 32, len(png), 1)
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     begin = kernel.BeginUpdateResourceW
@@ -283,7 +283,7 @@ def apply_windows_brand_icon(executable, branding):
 
 def package_windows(args, stage, key, out, version):
     if not shutil.which("go"):
-        raise RuntimeError("Требуется: «Go toolchain»")
+        raise RuntimeError("Требуется набор инструментов Go")
     # Используйте новую изолированную копию Go-модуля; дерево исходников не меняется ради идентичности
     # заказчика или его потенциально крупных автономных ресурсов.
     with tempfile.TemporaryDirectory() as tmp:
@@ -348,7 +348,7 @@ def package_windows(args, stage, key, out, version):
 
 def package_linux(args, stage, key, out, version):
     if not shutil.which("dpkg-deb"):
-        raise RuntimeError("Требуется: «dpkg-deb»")
+        raise RuntimeError("Требуется утилита dpkg-deb")
     with tempfile.TemporaryDirectory() as tmp:
         pkg = pathlib.Path(tmp) / "deb"
         bundled = pkg / "usr" / "lib" / "launcher" / "bundle"
@@ -434,7 +434,7 @@ def package_linux(args, stage, key, out, version):
 
 def package_macos(args, stage, key, out, version):
     if sys.platform != "darwin":
-        raise RuntimeError("macOS signed package: требуется «macOS runner»")
+        raise RuntimeError("Для подписанного пакета macOS требуется runner под macOS")
     with tempfile.TemporaryDirectory() as tmp:
         app = pathlib.Path(tmp) / "Launcher.app"
         macos = app / "Contents" / "MacOS"
@@ -474,7 +474,7 @@ def package_macos(args, stage, key, out, version):
             # iconutil создаёт фактическую иконку Finder/Dock; загрузка неподписанной иконки после установки как
             # запасной вариант не допускается.
             if not shutil.which("sips") or not shutil.which("iconutil"):
-                raise RuntimeError("macOS icon creation: требуется «sips and iconutil»")
+                raise RuntimeError("Для создания значка macOS необходимы sips и iconutil")
             source = pathlib.Path(tmp) / "brand-icon.png"
             source.write_bytes(base64.b64decode(branding["iconPng"], validate=True))
             iconset = pathlib.Path(tmp) / "Brand.iconset"
@@ -535,7 +535,7 @@ def package_macos(args, stage, key, out, version):
             # заверьте точный публикуемый пакет и прикрепите билет Apple до вычисления окончательного SHA-256 выпуска.
             profile = os.environ.get("LAUNCHER_MACOS_NOTARY_PROFILE", "")
             if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", profile):
-                raise RuntimeError("Требуется: «protected Apple notarytool keychain profile»")
+                raise RuntimeError("Требуется защищённый профиль Apple notarytool в связке ключей")
             notarized = subprocess.run(
                 ["xcrun", "notarytool", "submit", str(result),
                  "--keychain-profile", profile, "--wait", "--output-format", "json"],
@@ -579,9 +579,9 @@ def main():
     )
     args = p.parse_args()
     if not re.fullmatch("[a-z0-9][a-z0-9-]{1,45}", args.project):
-        p.error("Для проект требуется: «safe package ID»")
+        p.error("Для проекта требуется безопасный идентификатор пакета")
     if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
-        p.error("Некорректное значение: «semver»")
+        p.error("Некорректная версия SemVer")
     args.output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         stage = pathlib.Path(tmp) / "bundle"

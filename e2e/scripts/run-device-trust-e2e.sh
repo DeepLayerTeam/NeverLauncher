@@ -113,7 +113,7 @@ request_code() {
 }
 expect_code() {
   local expected="$1" actual="$2" context="$3"
-  [[ "$actual" == "$expected" ]] || { echo "[device-trust-e2e] $context: expected HTTP $expected, got $actual" >&2; exit 1; }
+  [[ "$actual" == "$expected" ]] || { echo "[device-trust-e2e] $context: ожидался HTTP $expected, получен $actual" >&2; exit 1; }
 }
 login() {
   local label="$1"
@@ -201,7 +201,7 @@ TRUST1="$(curl -fsS -H "Authorization: Bearer $ACCESS1" "$API/api/v1/auth/device
 jq -e --arg dev "$DEVICE1" '.data.deviceTrustState=="verified" and .data.trustedDeviceId==$dev' <<<"$TRUST1" >/dev/null
 jq '{data:{deviceTrustState:.data.deviceTrustState,trustedDeviceId:.data.trustedDeviceId,deviceAttestationState:.data.deviceAttestationState}}' <<<"$TRUST1" > "$RESULT_DIR/trust-after-registration.json"
 
-printf '[device-trust-e2e] bound refresh requires possession of the current key\n'
+printf '[device-trust-e2e] для обновления привязанной сессии требуется владение текущим ключом\n'
 code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH1" '{refreshToken:$refresh}')" "$RUNTIME_DIR/refresh-without-proof.json")"; expect_code 428 "$code" 'bound refresh without device proof'
 REFRESH_PAYLOAD1="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE1" "$EPOCH1" "$REFRESH1")"
 REFRESH_SIG1="$(sign_payload ed25519 "$KEY1" "$REFRESH_PAYLOAD1")"
@@ -223,7 +223,7 @@ code="$(request_code POST "$API/api/v1/session/join" "$ACCESS1R" '{"username":"D
 expect_code 412 "$code" 'software Linux device bypassed Guard-bound Minecraft integrity'
 jq -e '.error.code==412 and (.error.message|contains("minecraftAccessToken"))' "$RESULT_DIR/software-device-guard-required.json" >/dev/null
 
-printf '[device-trust-e2e] key rotation requires BOTH old/new proofs and burns failed challenge\n'
+printf '[device-trust-e2e] для смены ключа необходимы доказательства владения старым и новым ключами; неудачный запрос одноразовый\n'
 rotation_begin() {
   json_post "$API/api/v1/auth/devices/key-rotation/begin" "$ACCESS1R" "$(jq -cn --arg old "$DEVICE1" --arg pub "$PUB2" --arg v "$VERSION" '{oldDeviceId:$old,name:"Device Trust E2E rotated",platform:"linux",clientVersion:$v,publicKey:$pub,keyAlgorithm:"ed25519",keyBinding:"software"}')"
 }
@@ -249,7 +249,7 @@ jq -e '.data.oldFingerprintPermanentTombstone==true and .data.mode=="rotate"' <<
 printf '%s' "$ROT_OK" | sanitize_rotation > "$RESULT_DIR/rotation.json"
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS1R" '' "$RUNTIME_DIR/pre-rotation-access.json")"; expect_code 401 "$code" 'pre-rotation access survived binding epoch change'
 
-printf '[device-trust-e2e] same refresh family now requires replacement key and replacement device id\n'
+printf '[device-trust-e2e] для той же группы обновления теперь требуются новый ключ и новый идентификатор устройства\n'
 OLD_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE1" "$EPOCH1" "$REFRESH2")"
 OLD_REFRESH_SIG="$(sign_payload ed25519 "$KEY1" "$OLD_REFRESH_PAYLOAD")"
 code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH2" --arg device "$DEVICE1" --arg sig "$OLD_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/refresh-old-key-after-rotation.json")"; expect_code 428 "$code" 'old key refreshed rebound session'
@@ -422,7 +422,7 @@ EVIDENCE_FILES=(
 EVIDENCE_FILES_JSON="$(printf '%s\n' "${EVIDENCE_FILES[@]}" | jq -R . | jq -s -c .)"
 EVIDENCE_SHA_JSON='{}'
 for evidence_name in "${EVIDENCE_FILES[@]}"; do
-  [[ -f "$RESULT_DIR/$evidence_name" ]] || { echo "[device-trust-e2e] missing evidence file: $evidence_name" >&2; exit 1; }
+  [[ -f "$RESULT_DIR/$evidence_name" ]] || { echo "[device-trust-e2e] отсутствует файл свидетельства: $evidence_name" >&2; exit 1; }
   evidence_sha="$(sha256sum "$RESULT_DIR/$evidence_name" | awk '{print $1}')"
   EVIDENCE_SHA_JSON="$(jq -cn --argjson current "$EVIDENCE_SHA_JSON" --arg name "$evidence_name" --arg digest "$evidence_sha" '$current + {($name):$digest}')"
 done

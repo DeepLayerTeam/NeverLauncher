@@ -130,7 +130,7 @@ class DR03512Tests(unittest.TestCase):
             with (
                 patch.object(dr, "docker_volume_exists", return_value=True),
                 patch.object(dr, "compose") as compose,
-                self.assertRaisesRegex(dr.DrillError, "already has state"),
+                self.assertRaisesRegex(dr.DrillError, "В целевой системе уже есть данные"),
             ):
                 dr.restore_fresh("nl-dr-fresh", env, root, "nl-dr-fresh", ready_url="http://127.0.0.1:18080/ready")
             compose.assert_not_called()
@@ -191,7 +191,7 @@ class DR03512Tests(unittest.TestCase):
                 patch.object(dr, "s3_list_first", return_value=False),
                 patch.object(dr, "aws", return_value=""),
                 patch.object(dr, "s3_download", side_effect=emulate_download),
-                self.assertRaisesRegex(dr.DrillError, "readback differs"),
+                self.assertRaisesRegex(dr.DrillError, "Повторно прочитанные данные S3 не совпадают"),
             ):
                 dr.s3_upload_fresh("nl-dr-target", root, None, expected)
 

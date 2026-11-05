@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 OUT="${1:-$ROOT/dist/release-${VERSION}}"
-command -v go >/dev/null || { echo "Go 1.22+ is required" >&2; exit 2; }
+command -v go >/dev/null || { echo "Требуется Go версии 1.22 или новее" >&2; exit 2; }
 ROOT_KEY="${LAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY:-}"
 if [[ -z "$ROOT_KEY" && -n "${LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-}" ]]; then
   ROOT_KEY="$(tr -d '[:space:]' < "$LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE")"

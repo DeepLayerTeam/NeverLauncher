@@ -55,7 +55,7 @@ class Chaos0456(unittest.TestCase):
     def test_s3_port_cannot_be_other_tunnel(self):
         with patch.object(ch, "container_id", return_value="1" * 64), patch.object(dr, "run") as invoke:
             invoke.return_value.stdout = b"127.0.0.1:19001\n"
-            with self.assertRaisesRegex(dr.DrillError, "loopback port"):
+            with self.assertRaisesRegex(dr.DrillError, "локальный порт"):
                 ch.check_lab_endpoint("nl-dr-test", Path("/tmp/env"), "http://127.0.0.1:19000")
             invoke.return_value.stdout = b"127.0.0.1:19000\n"
             ch.check_lab_endpoint("nl-dr-test", Path("/tmp/env"), "http://127.0.0.1:19000")
@@ -68,7 +68,7 @@ class Chaos0456(unittest.TestCase):
             self.assertIn("INSERT INTO launcher_chaos_canaries_0456", execute.call_args_list[0].args[-1])
             self.assertIn("SELECT payload_sha256", execute.call_args_list[1].args[-1])
             execute.return_value = "wrong"
-            with self.assertRaisesRegex(dr.DrillError, "PostgreSQL canary"):
+            with self.assertRaisesRegex(dr.DrillError, "контрольный маркер PostgreSQL"):
                 ch.pg_verify("nl-dr-test", Path("/env"), "1" * 32, "a" * 64)
             with self.assertRaises(dr.DrillError):
                 ch.pg_write("nl-dr-test", Path("/env"), "bad';DROP TABLE users", "a" * 64)
@@ -82,7 +82,7 @@ class Chaos0456(unittest.TestCase):
             return b""
         with patch.object(ch, "s3_call", side_effect=fake_s3):
             self.assertEqual(ch.s3_verify("http://127.0.0.1:19000", "nl-dr-testbucket", "neverlauncher-chaos-0456/x", digest), digest)
-            with self.assertRaisesRegex(dr.DrillError, "S3 object"):
+            with self.assertRaisesRegex(dr.DrillError, "объект S3"):
                 ch.s3_verify("http://127.0.0.1:19000", "nl-dr-testbucket", "neverlauncher-chaos-0456/x", "1"*64)
 
     def test_dependency_stop_recovers_even_if_detection_fails(self):

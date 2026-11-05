@@ -127,7 +127,7 @@ def local_services(directory, project):
     try:
         values = json.loads(raw) if raw.lstrip().startswith("[") else [json.loads(x) for x in raw.splitlines() if x.strip()]
     except ValueError as exc:
-        raise BackupError("Некорректное значение: «Docker service inventory»") from exc
+        raise BackupError("Некорректный список служб Docker") from exc
     if isinstance(values, dict):
         values = [values]
     return {item["Service"]: str(item["State"]).lower() for item in values}
@@ -239,7 +239,7 @@ def pg_info(stanza):
     try:
         value = json.loads(pgbackrest(stanza, "info", "--output=json"))
     except (ValueError, UnicodeError) as exc:
-        raise BackupError("Некорректное значение: «pgBackRest inventory»") from exc
+        raise BackupError("Некорректные сведения pgBackRest") from exc
     require(isinstance(value, list) and len(value) == 1 and value[0].get("name") == stanza,
             "Конфигурация pgBackRest stanza не найдена")
     require(value[0].get("status", {}).get("code") == 0, "Репозиторий pgBackRest неисправен")
@@ -321,7 +321,7 @@ def read_private_json(path):
     try:
         return json.loads(safe_file(path, max_size=512 * 1024))
     except (ValueError, UnicodeError) as exc:
-        raise BackupError("Некорректное значение: «private JSON document»") from exc
+        raise BackupError("Некорректный приватный документ JSON") from exc
 
 
 def world_spec(path):
@@ -354,7 +354,7 @@ def local_world_create(cli, server_root, backup_root, world, run_id):
     try:
         data = json.loads(out)
     except (ValueError, UnicodeError) as exc:
-        raise BackupError("Некорректное значение: «world CLI response»") from exc
+        raise BackupError("Некорректный ответ CLI для игрового мира") from exc
     m = data.get("manifest", {})
     require(m.get("consistency") == "confirmed-stopped" and bool(dr.WORLD_BACKUP_ID.fullmatch(str(m.get("id", "")))),
             "Реальная остановка мира или резервное копирование не подтверждены")
@@ -428,7 +428,7 @@ def local_agent(args):
         return None
     if args.action == "local-world-release":
         return local_world_release(args.world_cli, args.server_root, args.run_id)
-    raise BackupError("Неизвестное значение: «local operation»")
+    raise BackupError("Неизвестная локальная операция")
 
 
 def remote_json(target, script, action, *, directory, project, run_id, extras=(), timeout=240):
@@ -437,7 +437,7 @@ def remote_json(target, script, action, *, directory, project, run_id, extras=()
     try:
         return json.loads(raw)
     except (ValueError, UnicodeError) as exc:
-        raise BackupError("Некорректное значение: «remote agent receipt»") from exc
+        raise BackupError("Некорректная квитанция удалённого агента") from exc
 
 
 def validate_backup(folder, *, stanza=None):
@@ -446,7 +446,7 @@ def validate_backup(folder, *, stanza=None):
     try:
         document = json.loads(safe_file(path, max_size=8 * 1024 * 1024))
     except (ValueError, UnicodeError, OSError) as exc:
-        raise BackupError("Некорректное значение: «backup manifest»") from exc
+        raise BackupError("Некорректный манифест резервной копии") from exc
     require(document.get("schema") == SCHEMA and bool(RUN_ID.fullmatch(str(document.get("runId", "")))),
             "Неподдерживаемый формат резервной копии")
     expected = document.get("files")

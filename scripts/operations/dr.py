@@ -130,7 +130,7 @@ def compose_states(project: str, env_file: Path) -> dict[str, str]:
     states = {}
     for item in decoded:
         if not isinstance(item, dict) or not isinstance(item.get("Service"), str):
-            raise DrillError("Некорректное значение: «Docker Compose service entry»")
+            raise DrillError("Некорректное описание службы Docker Compose")
         name, state = item["Service"], str(item.get("State", "")).lower()
         if name in states or not state:
             raise DrillError("Повторяющееся или неизвестное состояние Docker Compose")
@@ -141,7 +141,7 @@ def compose_states(project: str, env_file: Path) -> dict[str, str]:
 def assert_quiescent(project: str, env_file: Path) -> str:
     states = compose_states(project, env_file)
     if states.get("postgres") != "running":
-        raise DrillError("Для PostgreSQL требуется: «running to create a logical snapshot»")
+        raise DrillError("Для создания логического снимка PostgreSQL должен быть запущен")
     for name in (("api", "api-b", "worker-a", "worker-b", "admin", "nginx", "redis")
                  if "network-ha" in COMPOSE_PROFILES else ("api", "admin", "nginx")):
         if states.get(name) in ("running", "restarting", "paused"):
@@ -163,7 +163,7 @@ def assert_quiescent(project: str, env_file: Path) -> str:
     observation = result.stdout.decode("ascii", errors="replace").strip()
     match = re.fullmatch(r"(\d+)\|([0-9A-F]+/[0-9A-F]+)", observation)
     if not match:
-        raise DrillError("Некорректное значение: «PostgreSQL session/WAL observation»")
+        raise DrillError("Некорректные сведения о сессиях PostgreSQL или журнале WAL")
     if int(match.group(1)) != 0:
         raise DrillError("В PostgreSQL есть дополнительные активные клиентские сеансы; резервное копирование заблокировано")
     return match.group(2)
@@ -184,7 +184,7 @@ def verify_coordinator(archive_path: Path) -> None:
                 if not entry.isfile() or len(relative.parts) != 1 or relative.name not in parts:
                     continue
                 if relative.name in seen:
-                    raise DrillError("Обнаружен дубликат: «SQLite coordinator file»")
+                    raise DrillError("Обнаружен дубликат файла координатора SQLite")
                 seen.add(relative.name)
                 input_stream = archive.extractfile(entry)
                 if input_stream is None:
@@ -199,9 +199,9 @@ def verify_coordinator(archive_path: Path) -> None:
             )
             try:
                 if connection.execute("PRAGMA integrity_check").fetchone() != ("ok",):
-                    raise DrillError("Ошибка: «SQLite coordinator integrity check»")
+                    raise DrillError("Проверка целостности базы координатора SQLite завершилась ошибкой")
                 if connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
-                    raise DrillError("Ошибка: «SQLite coordinator FK check»")
+                    raise DrillError("Проверка внешних ключей базы координатора SQLite завершилась ошибкой")
                 version = connection.execute(
                     "SELECT value FROM coord_meta WHERE key='version'"
                 ).fetchone()
@@ -210,12 +210,12 @@ def verify_coordinator(archive_path: Path) -> None:
             finally:
                 connection.close()
         except sqlite3.DatabaseError as exc:
-            raise DrillError("Некорректное значение: «SQLite coordinator database»") from exc
+            raise DrillError("Некорректная база данных координатора SQLite") from exc
 
 
 def volume_name(project: str, logical: str) -> str:
     if logical not in VOLUMES:
-        raise DrillError("Неизвестное значение: «volume»")
+        raise DrillError("Неизвестный том Docker")
     if not VALID_PROJECT.fullmatch(project):
         raise DrillError("Некорректное имя проекта Docker Compose")
     return project + "_" + logical
@@ -272,12 +272,12 @@ def safe_tar(path: Path) -> tuple[int, int]:
                 or ".." in name.parts
                 or "\x00" in entry.name
             ):
-                raise DrillError("Небезопасное значение: «archive member path»")
+                raise DrillError("Небезопасный путь элемента архива")
             if not (entry.isfile() or entry.isdir()):
-                raise DrillError("Небезопасное значение: «archive member type»")
+                raise DrillError("Небезопасный тип элемента архива")
             canonical = str(name)
             if canonical in seen and canonical != ".":
-                raise DrillError("Обнаружен дубликат: «archive path»")
+                raise DrillError("Обнаружен повторяющийся путь в архиве")
             seen.add(canonical)
             if entry.isfile():
                 count += 1
@@ -290,7 +290,7 @@ def stream_to_file(cmd: list[str], destination: Path, timeout: int = 1800) -> No
     with destination.open("xb") as out:
         run(cmd, stdout=out, timeout=timeout)
     if not destination.is_file() or destination.stat().st_size == 0:
-        raise DrillError("Пустое значение: «snapshot output»")
+        raise DrillError("Пустой результат создания снимка")
 
 
 def docker_tar_backup(volume: str, output: Path) -> None:
@@ -326,7 +326,7 @@ def tar_digests(path: Path) -> dict[str, dict]:
                 digest = hashlib.sha256()
                 contents = archive.extractfile(entry)
                 if contents is None:
-                    raise DrillError("Некорректное значение: «tar file entry»")
+                    raise DrillError("Некорректный элемент TAR-архива")
                 with contents:
                     for chunk in iter(lambda: contents.read(CHUNK), b""):
                         digest.update(chunk)
@@ -362,7 +362,7 @@ def docker_tar_restore(volume: str, archive: Path) -> None:
         actual = Path(work) / "readback.tar.gz"
         docker_tar_backup(volume, actual)
         if tar_digests(archive) != tar_digests(actual):
-            raise DrillError("Несовпадение: «restored Docker volume data»")
+            raise DrillError("Данные восстановленного тома Docker не совпадают с резервной копией")
 
 
 def compose_pg_dump(project: str, env_file: Path, dst: Path) -> None:
@@ -475,7 +475,7 @@ def s3_list_first(bucket: str, endpoint: str | None) -> bool:
         "text",
     ).strip()
     if value not in ("0", "1"):
-        raise DrillError("Неожиданное значение: «S3 inventory response»")
+        raise DrillError("Неожиданный ответ при получении списка объектов S3")
     return value == "1"
 
 
@@ -483,7 +483,7 @@ def s3_upload_fresh(
     bucket: str, root: Path, endpoint: str | None, expected: dict
 ) -> None:
     if s3_list_first(bucket, endpoint):
-        raise DrillError("«S3 restore bucket»: не должно быть пустым")
+        raise DrillError("Не указан бакет S3 для восстановления")
     aws(
         *s3_options(endpoint),
         "s3",
@@ -514,10 +514,10 @@ def parse_world_args(values: list[str]) -> dict[str, Path]:
     for entry in values:
         name, separator, path = entry.partition("=")
         if not separator or not WORLD_NAME.fullmatch(name) or name in result or not path:
-            raise DrillError("world option: требуется «unique NAME=/absolute/path»")
+            raise DrillError("Для каждого игрового мира укажите уникальное значение NAME=/абсолютный/путь")
         location = Path(path)
         if not location.is_absolute() or location.is_symlink():
-            raise DrillError("world path: требуется «an absolute real path»")
+            raise DrillError("Для игрового мира требуется существующий абсолютный путь")
         result[name] = Path(os.path.abspath(location))
     return result
 
@@ -525,14 +525,14 @@ def parse_world_args(values: list[str]) -> dict[str, Path]:
 def safe_world_backup(folder: Path) -> dict:
     """Независимо сверять по байтам настоящий формат Go world-backup/v1."""
     if not folder.is_dir() or folder.is_symlink() or not WORLD_BACKUP_ID.fullmatch(folder.name):
-        raise DrillError("world backup: требуется «an ID directory, without symlinks»")
+        raise DrillError("Для резервной копии игрового мира требуется каталог с идентификатором без символических ссылок")
     manifest = folder / "manifest.json"
     if manifest.is_symlink() or not manifest.is_file() or manifest.stat().st_size > 32 * 1024 * 1024:
-        raise DrillError("Отсутствует: «or unsafe world manifest»")
+        raise DrillError("Манифест игрового мира отсутствует или небезопасен")
     try:
         data = json.loads(manifest.read_text(encoding="utf8"))
     except (ValueError, UnicodeError) as exc:
-        raise DrillError("Некорректное значение: «world backup manifest»") from exc
+        raise DrillError("Некорректный манифест резервной копии игрового мира") from exc
     if (not isinstance(data, dict) or data.get("schema") != "launcher-world-backup/v1"
             or data.get("id") != folder.name or data.get("consistency") != "confirmed-stopped"
             or not isinstance(data.get("entries"), list) or not data["entries"]):
@@ -542,18 +542,18 @@ def safe_world_backup(folder: Path) -> dict:
         raise DrillError("Манифест игрового мира превышает допустимое число записей")
     for item in data["entries"]:
         if not isinstance(item, dict):
-            raise DrillError("Некорректное значение: «world entry»")
+            raise DrillError("Некорректная запись игрового мира")
         name = item.get("path")
         if (not isinstance(name, str) or not name or name.startswith("/") or "\\" in name
                 or "\x00" in name or any(part in ("", ".", "..") for part in name.split("/"))
                 or name in expected or item.get("type") not in ("dir", "file")):
-            raise DrillError("Некорректное значение: «or duplicate world path»")
+            raise DrillError("Некорректный или повторяющийся путь игрового мира")
         if item["type"] == "file" and (not isinstance(item.get("size"), int) or item["size"] < 0
                 or not isinstance(item.get("sha256"), str) or not re.fullmatch("[0-9a-f]{64}", item["sha256"])):
-            raise DrillError("Некорректное значение: «world file digest»")
+            raise DrillError("Некорректная контрольная сумма файла игрового мира")
         mode = item.get("mode")
         if not isinstance(mode, int) or mode < 0 or mode > 0o777:
-            raise DrillError("Некорректное значение: «world file mode»")
+            raise DrillError("Некорректные права доступа к файлу игрового мира")
         if "/" in name:
             parent = name.rsplit("/", 1)[0]
             if parent not in expected or expected[parent]["type"] != "dir":
@@ -561,28 +561,28 @@ def safe_world_backup(folder: Path) -> dict:
         expected[name] = item
     root = folder / "payload"
     if root.is_symlink() or not root.is_dir():
-        raise DrillError("Отсутствует: «world payload»")
+        raise DrillError("Отсутствуют данные игрового мира")
     actual = {}
     for path in root.rglob("*"):
         relative = path.relative_to(root).as_posix()
         entry = expected.get(relative)
         mode = path.lstat().st_mode
         if entry is None or stat.S_ISLNK(mode) or not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
-            raise DrillError("Небезопасное значение: «or unexpected world backup file»")
+            raise DrillError("Обнаружен небезопасный или неожиданный файл резервной копии игрового мира")
         if (entry["type"] == "dir") != stat.S_ISDIR(mode):
-            raise DrillError("Несовпадение: «world file type»")
+            raise DrillError("Тип файла игрового мира не совпадает с манифестом")
         if entry["type"] == "file" and (path.stat().st_size != entry["size"] or sha256_file(path) != entry["sha256"]):
-            raise DrillError("Несовпадение: «world backup checksum»")
+            raise DrillError("Контрольная сумма резервной копии игрового мира не совпадает")
         actual[relative] = True
     if set(actual) != set(expected):
-        raise DrillError("Отсутствует: «world backup files»")
+        raise DrillError("Отсутствуют файлы резервной копии игрового мира")
     if not isinstance(data.get("worlds"), list) or not data["worlds"] or any(
         not isinstance(w, str) or w not in expected or expected[w]["type"] != "dir"
         for w in data["worlds"]
     ):
-        raise DrillError("Отсутствует: «world backup selection»")
+        raise DrillError("Не выбрана резервная копия игрового мира")
     if data.get("totalBytes") != sum(v["size"] for v in expected.values() if v["type"] == "file"):
-        raise DrillError("Несовпадение: «world backup totalBytes»")
+        raise DrillError("Общий размер файлов игрового мира не совпадает с манифестом (totalBytes)")
     return data
 
 
@@ -605,7 +605,7 @@ def archive_world_backups(stage: Path, sources: dict[str, Path]) -> list[dict]:
 
 def validate_world_receipts(folder: Path, receipts: object) -> None:
     if not isinstance(receipts, list) or not receipts:
-        raise DrillError("Пустое значение: «network-ha world inventory»")
+        raise DrillError("Список игровых миров Network-HA пуст")
     seen = set()
     for r in receipts:
         if (not isinstance(r, dict) or not WORLD_NAME.fullmatch(str(r.get("name", "")))
@@ -622,10 +622,10 @@ def validate_world_receipts(folder: Path, receipts: object) -> None:
         raise DrillError("Корневой каталог списка игровых миров небезопасен")
     for name in worlds.iterdir():
         if name.is_symlink() or not name.is_dir() or name.name not in seen:
-            raise DrillError("Неожиданное значение: «world inventory»")
+            raise DrillError("Неожиданное содержимое списка игровых миров")
         expected_id = next(r["backupId"] for r in receipts if r["name"] == name.name)
         if sorted(p.name for p in name.iterdir()) != [expected_id]:
-            raise DrillError("Неожиданное значение: «world backup content»")
+            raise DrillError("Неожиданное содержимое резервной копии игрового мира")
 
 
 def validate_world_destinations(worlds: list[dict], destinations: dict[str, Path], folder: Path) -> None:
@@ -634,7 +634,7 @@ def validate_world_destinations(worlds: list[dict], destinations: dict[str, Path
     targets = list(destinations.values())
     for name, path in destinations.items():
         if path.exists() or path.is_symlink():
-            raise DrillError(f"Требуется: «world destination for {name} exists; fresh destination»")
+            raise DrillError(f"Каталог назначения для мира {name} уже существует; требуется новый каталог")
         if not path.parent.is_dir() or path.parent.is_symlink():
             raise DrillError("Родительский каталог назначения игрового мира должен существовать")
         for parent in [path.parent, *path.parent.parents]:
@@ -691,9 +691,9 @@ def safe_world_restored(folder: Path, manifest: dict) -> None:
         path = folder / item["path"]
         if item["type"] == "file" and (not path.is_file() or path.is_symlink()
                 or path.stat().st_size != item["size"] or sha256_file(path) != item["sha256"]):
-            raise DrillError("Несовпадение: «restored world file»")
+            raise DrillError("Восстановленный файл игрового мира не совпадает с резервной копией")
         if item["type"] == "dir" and (not path.is_dir() or path.is_symlink()):
-            raise DrillError("Несовпадение: «restored world directory»")
+            raise DrillError("Восстановленный каталог игрового мира не совпадает с резервной копией")
 
 
 def ensure_empty_redis_volume(project: str) -> None:
@@ -793,7 +793,7 @@ def snapshot(
 ) -> dict:
     authorize_project(project, confirm, production=production, approved=approved)
     if "network-ha" in COMPOSE_PROFILES and not world_backups:
-        raise DrillError("network-ha: требуется «verified world backups»")
+        raise DrillError("Для Network-HA требуются проверенные резервные копии игровых миров")
     if dest.exists():
         raise DrillError("Каталог назначения снимка уже существует; перезапись запрещена")
     if not env_file.is_file() or env_file.is_symlink():
@@ -825,7 +825,7 @@ def snapshot(
         for item in required_volumes():
             name = volume_name(project, item)
             if not docker_volume_exists(name):
-                raise DrillError(f"Отсутствует: «volume»: {item}")
+                raise DrillError(f"Не найден том Docker: {item}")
             docker_tar_backup(name, stage / (item + ".tar.gz"))
             if item == "launcher_coordinator":
                 verify_coordinator(stage / (item + ".tar.gz"))
@@ -917,13 +917,13 @@ def verify_snapshot(folder: Path) -> dict:
         raise DrillError("snapshot: требуется настоящий каталог")
     manifest_file = folder / "manifest.json"
     if manifest_file.is_symlink() or not manifest_file.is_file() or manifest_file.stat().st_size > 16 * 1024 * 1024:
-        raise DrillError("Небезопасное значение: «or oversized snapshot manifest»")
+        raise DrillError("Манифест снимка небезопасен или превышает допустимый размер")
     data = json.loads(manifest_file.read_text())
     if data.get("schema") not in (1, 2, 3) or data.get("storage") not in (
         "local-volume",
         "s3-objects",
     ):
-        raise DrillError("Не поддерживается: «snapshot schema/storage»")
+        raise DrillError("Неподдерживаемая схема снимка или тип хранилища")
     volumes = data.get("volumes", [])
     if data.get("schema") == 3:
         if (data.get("mode") != "network-ha" or data.get("storage") != "s3-objects"
@@ -931,14 +931,14 @@ def verify_snapshot(folder: Path) -> dict:
             raise DrillError("При восстановлении Network-HA нельзя возвращать прежние блокировки Redis")
         validate_world_receipts(folder, data.get("worlds"))
     elif volumes not in (list(STANDARD_VOLUMES), list(VOLUMES)):
-        raise DrillError("Некорректное значение: «volume inventory»")
+        raise DrillError("Некорректные сведения о томах")
     expected = {"database.dump", *(v + ".tar.gz" for v in volumes)}
     if set(data.get("files", {})) != expected:
-        raise DrillError("Несовпадение: «snapshot files»")
+        raise DrillError("Файлы снимка не совпадают с манифестом")
     if data["storage"] == "s3-objects":
         s3_root = folder / "s3-objects"
         if not s3_root.is_dir() or s3_root.is_symlink():
-            raise DrillError("Отсутствует: «S3 object snapshot»")
+            raise DrillError("Отсутствует снимок объектов S3")
         actual = {}
         for obj in s3_root.rglob("*"):
             if obj.is_symlink() or (not obj.is_file() and not obj.is_dir()):
@@ -949,13 +949,13 @@ def verify_snapshot(folder: Path) -> dict:
                     "sha256": sha256_file(obj),
                 }
         if actual != data.get("s3Files"):
-            raise DrillError("Несовпадение: «S3 object snapshot checksum»")
+            raise DrillError("Контрольная сумма снимка объектов S3 не совпадает")
     for filename, meta in data["files"].items():
         path = folder / filename
         if not path.is_file() or path.is_symlink():
             raise DrillError("В снимке отсутствует файл")
         if path.stat().st_size != meta["size"] or sha256_file(path) != meta["sha256"]:
-            raise DrillError("Ошибка: «snapshot SHA-256 verification»")
+            raise DrillError("Ошибка проверки SHA-256 снимка")
         if filename.endswith(".tar.gz"):
             safe_tar(path)
     if data.get("schema") == 2 and data["storage"] == "local-volume":
@@ -968,7 +968,7 @@ def validate_ready_url(url: str) -> None:
     if (parsed.path != "/ready" or parsed.query or parsed.fragment
             or parsed.username or parsed.password or not parsed.hostname
             or parsed.scheme not in ("https", "http")):
-        raise DrillError("readiness URL: требуется «an HTTPS /ready or loopback HTTP /ready»")
+        raise DrillError("Для проверки готовности требуется HTTPS-адрес /ready или HTTP-адрес /ready на loopback-интерфейсе")
     if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
         raise DrillError("Отклонена небезопасная проверка готовности по адресу вне loopback")
 
@@ -1018,7 +1018,7 @@ def has_split_ha_roles_0455(version: str | None) -> bool:
 
 def check_restored_worker_0455(project: str, env_file: Path, service: str, timeout: int = 120) -> None:
     if service not in ("worker-a", "worker-b"):
-        raise DrillError("Некорректное значение: «HA worker service»")
+        raise DrillError("Некорректная служба рабочего узла HA")
     started = time.monotonic()
     while time.monotonic() - started < timeout:
         try:
@@ -1050,7 +1050,7 @@ def restore_fresh(
     manifest = verify_snapshot(folder)
     if "network-ha" in COMPOSE_PROFILES:
         if manifest.get("schema") != 3:
-            raise DrillError("«legacy Redis-bearing Network-HA snapshots»: запрещено «be restored safely»")
+            raise DrillError("Безопасное восстановление устаревших снимков Network-HA с Redis не поддерживается")
         validate_world_destinations(manifest["worlds"], world_destinations or {}, folder)
     elif manifest.get("schema") == 3:
         raise DrillError("network-ha snapshot: требуется --network-ha")
@@ -1059,17 +1059,17 @@ def restore_fresh(
     if not env_file.is_file() or env_file.is_symlink():
         raise DrillError("Файл окружения Docker Compose отсутствует либо является символической ссылкой")
     if not ready_url:
-        raise DrillError("restore-fresh: требуется «an actual application readiness endpoint»")
+        raise DrillError("Для restore-fresh требуется действующий endpoint готовности приложения")
     validate_ready_url(ready_url)
     if manifest.get("schema") in (2, 3) and target_release(env_file) != manifest.get("version"):
         raise DrillError("Версия целевого образа отличается от резервной копии; сначала восстановите точную версию")
     if manifest["volumes"] != list(required_volumes()):
-        raise DrillError("«restore mode» не совпадает с «snapshot volume topology»")
+        raise DrillError("Режим восстановления не соответствует топологии томов снимка")
     if manifest["storage"] == "s3-objects":
         if not target_s3_bucket or target_s3_bucket == manifest["s3SourceBucket"]:
-            raise DrillError("Для восстановление требуется «a distinct --target-s3-bucket»")
+            raise DrillError("Для восстановления укажите отдельный бакет через --target-s3-bucket")
         if s3_list_first(target_s3_bucket, s3_endpoint):
-            raise DrillError("«S3 target bucket»: не должно быть пустым")
+            raise DrillError("Не указан целевой бакет S3")
     for item in (VOLUMES if "network-ha" in COMPOSE_PROFILES else manifest["volumes"]):
         if docker_volume_exists(volume_name(project, item)):
             raise DrillError(
@@ -1203,7 +1203,7 @@ def chaos(
     if not (
         url.startswith("http://127.0.0.1:") or url.startswith("http://localhost:")
     ) or not url.endswith("/ready"):
-        raise DrillError("chaos readiness URL: требуется «loopback /ready»")
+        raise DrillError("Для проверки готовности в chaos-тесте требуется адрес /ready на loopback-интерфейсе")
     await_readiness(url, expected=True, limit=30)
     outcomes = []
     for svc in ("postgres", "redis") if network_ha else ("postgres",):
@@ -1295,14 +1295,14 @@ def main() -> int:
         if args.network_ha and args.action == "backup" and not args.s3_source_bucket:
             raise DrillError("network-ha backup: требуется --s3-source-bucket")
         if args.action == "restore-fresh" and not args.ready_url:
-            raise DrillError("restore-fresh: требуется «--ready-url to verify the actual backend»")
+            raise DrillError("Для restore-fresh укажите --ready-url для проверки фактического Backend")
         if args.action == "verify":
             verified = verify_snapshot(args.snapshot)
             pg_validate(args.snapshot / "database.dump")
             report = {"status": "verified", "postgresArchiveChecked": True, "manifest": verified}
         else:
             if not args.project or not args.env_file:
-                raise DrillError("Требуется: «project and env-file»")
+                raise DrillError("Требуются параметры проекта и файла окружения")
             if args.action == "backup":
                 report = snapshot(
                     args.project,

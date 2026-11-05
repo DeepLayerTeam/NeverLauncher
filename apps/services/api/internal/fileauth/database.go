@@ -46,7 +46,7 @@ type rawUser struct {
 // оператор.
 func Parse(r io.Reader, format string) ([]Account, error) {
 	if !SupportedFormat(format) {
-		return nil, errors.New("Не поддерживается: «or missing Gravit password format»")
+		return nil, errors.New("Формат пароля Gravit не поддерживается или отсутствует")
 	}
 	data, err := io.ReadAll(io.LimitReader(r, MaxDatabaseBytes+1))
 	if err != nil {
@@ -58,7 +58,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	startToken, err := decoder.Token()
 	if err != nil || startToken != json.Delim('{') {
-		return nil, errors.New("Файл Database.json системы FileAuth: требуется «a UUID-keyed JSON object»")
+		return nil, errors.New("Файл Database.json системы FileAuth должен содержать объект JSON с ключами UUID")
 	}
 	items := make([]Account, 0)
 	names := map[string]bool{}
@@ -70,7 +70,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return nil, errors.New("FileAuth JSON keys: требуется «strings»")
+			return nil, errors.New("Ключи JSON системы FileAuth должны быть строками")
 		}
 		var src rawUser
 		if err := decoder.Decode(&src); err != nil {
@@ -85,7 +85,7 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 			return nil, errors.New("Имя пользователя FileAuth не соответствует правилам именования Minecraft")
 		}
 		if names[strings.ToLower(name)] || uuids[uuid] {
-			return nil, errors.New("Обнаружен дубликат: «FileAuth username or UUID»")
+			return nil, errors.New("Обнаружен дубликат имени пользователя или UUID в FileAuth")
 		}
 		names[strings.ToLower(name)] = true
 		uuids[uuid] = true
@@ -100,14 +100,14 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 	}
 	endToken, err := decoder.Token()
 	if err != nil || endToken != json.Delim('}') {
-		return nil, errors.New("Некорректное значение: «FileAuth JSON closing delimiter»")
+		return nil, errors.New("Некорректный завершающий разделитель JSON в FileAuth")
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
 		return nil, errors.New("Database.json FileAuth содержит лишние данные")
 	}
 	if len(items) == 0 {
-		return nil, errors.New("Пустое значение: «FileAuth account database»")
+		return nil, errors.New("База учётных записей FileAuth пуста")
 	}
 
 	sort.Slice(items, func(i, j int) bool { return items[i].UUID < items[j].UUID })
@@ -130,7 +130,7 @@ func SupportedFormat(format string) bool {
 // пароля у него НИКОГДА нет, и неизвестные пароли он не пытается перехешировать.
 func EncodeCredential(format, hash string) (string, error) {
 	if !SupportedFormat(format) || len(hash) == 0 || len(hash) > 1024 {
-		return "", errors.New("Неизвестное значение: «password format or invalid hash length»")
+		return "", errors.New("Неизвестный формат пароля или некорректная длина хеша")
 	}
 	switch format {
 	case "sha256-base64url":
@@ -154,7 +154,7 @@ func EncodeCredential(format, hash string) (string, error) {
 		}
 		raw, err := hex.DecodeString(hash)
 		if err != nil || len(raw)*2 != len(hash) {
-			return "", errors.New("Некорректное значение: «hexadecimal digest»")
+			return "", errors.New("Некорректный шестнадцатеричный хеш")
 		}
 		hash = strings.ToLower(hash)
 	case "phpass":
@@ -162,7 +162,7 @@ func EncodeCredential(format, hash string) (string, error) {
 			return "", errors.New("Некорректное значение: PHPass хеш")
 		}
 		if !validPHPass(hash) {
-			return "", errors.New("Небезопасное значение: «or malformed PHPass hash»")
+			return "", errors.New("Небезопасный или повреждённый хеш PHPass")
 		}
 	case "bcrypt":
 		if len(hash) != 60 || !(strings.HasPrefix(hash, "$2a$") || strings.HasPrefix(hash, "$2b$") || strings.HasPrefix(hash, "$2y$")) {
@@ -177,7 +177,7 @@ func EncodeCredential(format, hash string) (string, error) {
 		}
 	case "argon2id":
 		if !ValidateArgon2id(hash) {
-			return "", errors.New("Некорректное значение: «or unsafe Argon2id/PHC parameters»")
+			return "", errors.New("Некорректные или небезопасные параметры Argon2id/PHC")
 		}
 		return hash, nil
 	}
@@ -252,11 +252,11 @@ func ValidateArgon2id(stored string) bool {
 // ValidateAccount защищает прямые вызовы репозитория, а также парсер CLI.
 func ValidateAccount(a Account) error {
 	if !uuidPattern.MatchString(a.UUID) || !usernamePattern.MatchString(a.Username) {
-		return errors.New("Некорректное значение: «FileAuth UUID/username»")
+		return errors.New("Некорректные UUID или имя пользователя FileAuth")
 	}
 	email, ok := UsernameEmail(a.Username)
 	if !ok || a.Email != email {
-		return errors.New("Некорректное значение: «FileAuth email mapping»")
+		return errors.New("Некорректное сопоставление электронной почты FileAuth")
 	}
 	if strings.HasPrefix(a.PasswordHash, "$argon2id$") {
 		if ValidateArgon2id(a.PasswordHash) {
@@ -267,5 +267,5 @@ func ValidateAccount(a Account) error {
 			return nil
 		}
 	}
-	return errors.New("Не поддерживается: «or malformed FileAuth credential»")
+	return errors.New("Учётные данные FileAuth не поддерживаются или повреждены")
 }

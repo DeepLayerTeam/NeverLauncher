@@ -147,7 +147,7 @@ class MultiHostExecutorTest(unittest.TestCase):
         with patch.object(mh, "run", return_value=json.dumps(raw)), \
              patch.object(mh.inventory, "machine_identity", return_value="machine:abc"), \
              patch.object(mh, "check_secure_file", return_value=None):
-            with self.assertRaisesRegex(mh.DeploymentError, "immutable"):
+            with self.assertRaisesRegex(mh.DeploymentError, "неизменяемую контрольную сумму"):
                 mh.resolved_compose(directory, "launcher")
         raw = fixture()
         raw["services"]["api"]["ports"] = [{"target": 8080, "published": "8080"}]
@@ -161,22 +161,22 @@ class MultiHostExecutorTest(unittest.TestCase):
         temp, directory = tmp_config()
         self.addCleanup(temp.cleanup)
         (directory / ".env").chmod(0o644)
-        with self.assertRaisesRegex(mh.DeploymentError, "group/other"):
+        with self.assertRaisesRegex(mh.DeploymentError, "доступен группе"):
             mh.resolved_compose(directory, "launcher")
         (directory / ".env").chmod(0o600)
         (directory / ".env").unlink()
         (directory / ".env").symlink_to(directory / "nginx.multi-host-0512.conf")
-        with self.assertRaisesRegex(mh.DeploymentError, "symlink"):
+        with self.assertRaisesRegex(mh.DeploymentError, "символической ссылкой"):
             mh.resolved_compose(directory, "launcher")
 
     def test_no_duplicate_machine_or_node_identity(self):
         a, b = node_report("a", "machine:a"), node_report("b", "machine:b")
         mh.assert_peer_config({"a": a, "b": b})
-        with self.assertRaisesRegex(mh.DeploymentError, "duplicate"):
+        with self.assertRaisesRegex(mh.DeploymentError, "Идентификаторы machine ID или node ID"):
             mh.assert_peer_config({"a": a, "b": {**b, "machineIdentity": "machine:a"}})
-        with self.assertRaisesRegex(mh.DeploymentError, "duplicate"):
+        with self.assertRaisesRegex(mh.DeploymentError, "Идентификаторы machine ID или node ID"):
             mh.assert_peer_config({"a": a, "b": {**b, "nodeId": "a"}})
-        with self.assertRaisesRegex(mh.DeploymentError, "different pinned images"):
+        with self.assertRaisesRegex(mh.DeploymentError, "закреплены разные образы"):
             mh.assert_peer_config({"a": a, "b": {**b, "imageDigestRefs": {"api": "wrong"}}})
 
     def test_production_start_pulls_pinned_images_before_start_then_probes(self):
@@ -293,7 +293,7 @@ class MultiHostExecutorTest(unittest.TestCase):
              patch.object(mh.inventory, "docker_inspect", return_value=[]):
             report = mh.live_observe(Path("/opt/launcher/deploy/production"), "launcher", growth=False)
         self.assertFalse(report["ready"])
-        self.assertIn("round-trip was deliberately skipped", " ".join(report["issues"]))
+        self.assertIn("Реальная сквозная проверка PostgreSQL/Redis/S3 была намеренно пропущена", " ".join(report["issues"]))
 
     def test_cli_refuses_disruption_without_opt_in_and_does_not_contact_ssh(self):
         temp, directory = tmp_config()

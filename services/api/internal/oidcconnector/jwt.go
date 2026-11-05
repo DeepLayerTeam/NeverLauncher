@@ -54,7 +54,7 @@ func validateJWKS(keys []jwk, cfg RuntimeConfig) error {
 	eligible := 0
 	for _, key := range keys {
 		if key.D != "" || key.P != "" || key.Q != "" || key.DP != "" || key.DQ != "" || key.QI != "" || key.K != "" || key.Kty == "oct" {
-			return errors.New("JWKS: запрещено «contain private or symmetric key material»")
+			return errors.New("JWKS не должен содержать закрытые или симметричные ключи")
 		}
 		if key.Use != "" && key.Use != "sig" {
 			continue
@@ -90,7 +90,7 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 		return verifiedToken{}, fmt.Errorf("Декодирование JSON заголовка ID-токена: %w", err)
 	}
 	if header.Alg == "" || header.Alg == "none" || strings.HasPrefix(header.Alg, "HS") || !cfg.AlgAllowed(header.Alg) {
-		return verifiedToken{}, fmt.Errorf("«ID token algorithm» %q: не разрешено", header.Alg)
+		return verifiedToken{}, fmt.Errorf("Недопустимый алгоритм ID-токена: %q", header.Alg)
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -127,7 +127,7 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 		}
 	}
 	if !verified {
-		return verifiedToken{}, errors.New("Ошибка: «ID token signature verification»")
+		return verifiedToken{}, errors.New("Ошибка проверки подписи ID-токена")
 	}
 	if issuerPolicy == nil {
 		issuerPolicy = ExactIssuerPolicy{}
@@ -144,12 +144,12 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 			return verifiedToken{}, fmt.Errorf("При нескольких получателях ID-токена параметр azp обязателен и должен совпадать с clientId")
 		}
 	} else if azp, ok := claims["azp"].(string); ok && azp != "" && azp != cfg.ClientID {
-		return verifiedToken{}, fmt.Errorf("Несовпадение: «ID token azp»")
+		return verifiedToken{}, fmt.Errorf("Значение azp в ID-токене не совпадает")
 	}
 	now := time.Now().UTC()
 	exp, ok := numericDate(claims["exp"])
 	if !ok || !now.Before(exp.Add(cfg.ClockSkewValue)) {
-		return verifiedToken{}, fmt.Errorf("Отсутствует: «ID token is expired or exp»")
+		return verifiedToken{}, fmt.Errorf("Срок действия ID-токена истёк или отсутствует поле exp")
 	}
 	if nbf, ok := numericDate(claims["nbf"]); ok && now.Add(cfg.ClockSkewValue).Before(nbf) {
 		return verifiedToken{}, fmt.Errorf("Срок действия ID-токена ещё не начался")
@@ -159,12 +159,12 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 	}
 	sub, _ := claims["sub"].(string)
 	if strings.TrimSpace(sub) == "" || len(sub) > 512 {
-		return verifiedToken{}, fmt.Errorf("Некорректное значение: «ID token subject is missing or»")
+		return verifiedToken{}, fmt.Errorf("В ID-токене отсутствует или некорректен subject")
 	}
 	if requireNonce {
 		nonce, _ := claims["nonce"].(string)
 		if nonce == "" || nonce != expectedNonce {
-			return verifiedToken{}, fmt.Errorf("Несовпадение: «ID token nonce»")
+			return verifiedToken{}, fmt.Errorf("Значение nonce в ID-токене не совпадает")
 		}
 	}
 	return verifiedToken{Header: header, Claims: claims}, nil
@@ -186,7 +186,7 @@ func validateAccessTokenHash(claims map[string]any, alg, accessToken string) err
 		sum := sha512.Sum512([]byte(accessToken))
 		digest = sum[:]
 	default:
-		return fmt.Errorf("Не удалось проверить «at_hash for ID token algorithm» %q", alg)
+		return fmt.Errorf("Не удалось проверить at_hash для алгоритма ID-токена %q", alg)
 	}
 	got := base64.RawURLEncoding.EncodeToString(digest[:len(digest)/2])
 	if got != want {
@@ -215,7 +215,7 @@ func verifySignature(alg string, key jwk, input, sig []byte) (bool, error) {
 		}
 		return ed25519.Verify(ed, input, sig), nil
 	default:
-		return false, fmt.Errorf("Не поддерживается: «alg» %s", alg)
+		return false, fmt.Errorf("Неподдерживаемый алгоритм: %s", alg)
 	}
 	var digest []byte
 	if hash == crypto.SHA256 {
@@ -245,7 +245,7 @@ func verifySignature(alg string, key jwk, input, sig []byte) (bool, error) {
 		s := new(big.Int).SetBytes(sig[size:])
 		return ecdsa.Verify(k, digest, r, s), nil
 	default:
-		return false, errors.New("«key type» не совпадает с «algorithm»")
+		return false, errors.New("Тип ключа не соответствует алгоритму")
 	}
 }
 func publicKey(k jwk) (any, error) {
@@ -285,7 +285,7 @@ func publicKey(k jwk) (any, error) {
 		case "P-521":
 			c = elliptic.P521()
 		default:
-			return nil, fmt.Errorf("Не поддерживается: «EC curve» %q", k.Crv)
+			return nil, fmt.Errorf("Неподдерживаемая эллиптическая кривая EC: %q", k.Crv)
 		}
 		x := new(big.Int).SetBytes(xBytes)
 		y := new(big.Int).SetBytes(yBytes)
@@ -295,18 +295,18 @@ func publicKey(k jwk) (any, error) {
 		return &ecdsa.PublicKey{Curve: c, X: x, Y: y}, nil
 	case "OKP":
 		if k.Crv != "Ed25519" {
-			return nil, fmt.Errorf("Не поддерживается: «OKP curve» %q", k.Crv)
+			return nil, fmt.Errorf("Неподдерживаемая кривая OKP: %q", k.Crv)
 		}
 		x, err := base64.RawURLEncoding.DecodeString(k.X)
 		if err != nil {
 			return nil, err
 		}
 		if len(x) != ed25519.PublicKeySize {
-			return nil, errors.New("Некорректное значение: «Ed25519 key size»")
+			return nil, errors.New("Некорректный размер ключа Ed25519")
 		}
 		return ed25519.PublicKey(x), nil
 	default:
-		return nil, fmt.Errorf("Не поддерживается: «JWK kty» %q", k.Kty)
+		return nil, fmt.Errorf("Неподдерживаемый тип ключа JWK (kty): %q", k.Kty)
 	}
 }
 func audienceContains(v any, want string) bool {

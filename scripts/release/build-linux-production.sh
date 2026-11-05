@@ -25,7 +25,7 @@ done
 case "$(uname -m)" in
   x86_64|amd64) ARCH="x64"; GOARCH="amd64" ;;
   aarch64|arm64) ARCH="arm64"; GOARCH="arm64" ;;
-  *) echo "Unsupported native Linux architecture: $(uname -m)" >&2; exit 2 ;;
+  *) echo "Неподдерживаемая нативная архитектура Linux: $(uname -m)" >&2; exit 2 ;;
 esac
 if [[ -n "${EXPECTED_ARCH}" && "${EXPECTED_ARCH}" != "${ARCH}" ]]; then
   echo "Архитектура нативного исполняемого компонента не совпадает: ожидалась ${EXPECTED_ARCH}, получена ${ARCH}" >&2

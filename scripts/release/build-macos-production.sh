@@ -18,7 +18,7 @@ done
 
 [[ "$(uname -s)" == "Darwin" ]] || { echo "Рабочие пакеты macOS x64 и ARM64 необходимо собирать на macOS" >&2; exit 2; }
 for tool in go cargo rustup npm codesign lipo ditto shasum python3; do
-  command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }
+  command -v "$tool" >/dev/null || { echo "Требуется утилита $tool" >&2; exit 1; }
 done
 
 SIGN_IDENTITY="${LAUNCHER_MACOS_SIGNING_IDENTITY:-}"
@@ -130,17 +130,17 @@ EOF_PLIST
       guard) identifier="ru.skif4er.launcher.guard" ;;
       runtime) identifier="ru.skif4er.launcher.runtime" ;;
       launcher-cli) identifier="ru.skif4er.launcher.cli" ;;
-      *) echo "unsupported macOS helper identifier mapping: ${binary}" >&2; exit 1 ;;
+      *) echo "Неподдерживаемое сопоставление идентификатора вспомогательного компонента macOS: ${binary}" >&2; exit 1 ;;
     esac
     file="${HELPERS_DIR}/${binary}"
     actual_arch="$(lipo -archs "${file}")"
-    [[ "${actual_arch}" == "${LIPO_ARCH}" ]] || { echo "${file}: expected thin ${LIPO_ARCH}, got ${actual_arch}" >&2; exit 1; }
+    [[ "${actual_arch}" == "${LIPO_ARCH}" ]] || { echo "${file}: ожидался одноархитектурный файл ${LIPO_ARCH}, получено ${actual_arch}" >&2; exit 1; }
     codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier "${identifier}" "${file}"
     codesign --verify --strict --verbose=2 "${file}"
     if [[ "${MODE}" == "production" ]]; then
       details="$(codesign -dv --verbose=4 "${file}" 2>&1)"
       grep -F "TeamIdentifier=${TEAM_ID}" <<<"${details}" >/dev/null || { echo "TeamIdentifier mismatch for ${file}" >&2; exit 1; }
-      grep -E 'flags=.*runtime' <<<"${details}" >/dev/null || { echo "Hardened Runtime flag missing for ${file}" >&2; exit 1; }
+      grep -E 'flags=.*runtime' <<<"${details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${file}" >&2; exit 1; }
     fi
   done
 
@@ -163,10 +163,10 @@ EOF_PLIST
   if [[ "${MODE}" == "production" ]]; then
     app_details="$(codesign -dv --verbose=4 "${APP_ROOT}" 2>&1)"
     grep -F "TeamIdentifier=${TEAM_ID}" <<<"${app_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${APP_ROOT}" >&2; exit 1; }
-    grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${APP_ROOT}" >&2; exit 1; }
+    grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${APP_ROOT}" >&2; exit 1; }
     desktop_details="$(codesign -dv --verbose=4 "${MACOS_DIR}/launcher-desktop" 2>&1)"
     grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
-    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
+    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
   fi
 
   NOTARY_ZIP="${WORK_ROOT}/launcher-${arch}-notary.zip"
@@ -232,7 +232,7 @@ for arch in x64 arm64; do
     "MACOS_PACKAGE_MANIFEST_${MANIFEST_SUFFIX}.json"
   )
   for artifact in "${REQUIRED_ARTIFACTS[@]}"; do
-    [[ -s "${OUT_DIR}/${artifact}" ]] || { echo "missing final macOS delivery artifact: ${OUT_DIR}/${artifact}" >&2; exit 1; }
+    [[ -s "${OUT_DIR}/${artifact}" ]] || { echo "Отсутствует итоговый артефакт поставки macOS: ${OUT_DIR}/${artifact}" >&2; exit 1; }
   done
   shasum -a 256 \
     "${OUT_DIR}/launcher-cli-macos-${arch}" \

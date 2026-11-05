@@ -158,7 +158,7 @@ def run_tier(tier):
             return [
                 {
                     "status": "BLOCKED",
-                    "error": "offline adversarial tier requires Linux",
+                    "error": "Для автономного набора adversarial-проверок требуется Linux",
                 }
             ]
     elif tier == "backend-security":
@@ -168,17 +168,17 @@ def run_tier(tier):
         specs = LINUX_LIVE
         env = {**os.environ, "NL_RUN_LIVE_LINUX_SANDBOX": "1"}
         if platform.system() != "Linux":
-            return [{"status": "BLOCKED", "error": "requires Linux kernel"}]
+            return [{"status": "BLOCKED", "error": "Требуется ядро Linux"}]
     elif tier == "windows-live":
         specs = WINDOWS_LIVE
         env = {**os.environ, "NL_RUN_LIVE_WIN_SANDBOX": "1"}
         if platform.system() != "Windows":
-            return [{"status": "BLOCKED", "error": "requires Windows host"}]
+            return [{"status": "BLOCKED", "error": "Требуется узел Windows"}]
     else:
         return [
             {
                 "status": "BLOCKED",
-                "error": "hardware and macOS isolation require external equipment and verified capability; no automatic certification",
+                "error": "Для аппаратной изоляции и изоляции macOS необходимо внешнее оборудование и подтверждённая поддержка; автоматическая сертификация недоступна",
             }
         ]
     return [run_test(pkg, names, env) for pkg, names in specs.items()]

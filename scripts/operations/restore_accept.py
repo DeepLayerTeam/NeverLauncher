@@ -26,7 +26,7 @@ def parse_utc(value: str) -> datetime:
     try:
         date = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise dr.DrillError("Некорректное значение: «incident UTC timestamp»") from exc
+        raise dr.DrillError("Некорректная временная метка инцидента в UTC") from exc
     if date.tzinfo is None:
         raise dr.DrillError("Временная метка инцидента в UTC должна содержать часовой пояс")
     return date.astimezone(timezone.utc)
@@ -35,7 +35,7 @@ def parse_utc(value: str) -> datetime:
 def exposure_seconds(snapshot_time: str, incident: datetime) -> float:
     saved = parse_utc(snapshot_time)
     if incident < saved:
-        raise dr.DrillError("Некорректное значение: «incident predates snapshot; recovery window»")
+        raise dr.DrillError("Инцидент произошёл раньше снимка; некорректный интервал восстановления")
     if incident > datetime.now(timezone.utc):
         raise dr.DrillError("Временная метка инцидента находится в будущем")
     return round((incident - saved).total_seconds(), 3)
@@ -43,7 +43,7 @@ def exposure_seconds(snapshot_time: str, incident: datetime) -> float:
 
 def write_report(path: Path, report: dict) -> None:
     if path.exists() or path.is_symlink() or not path.parent.is_dir() or path.parent.is_symlink():
-        raise dr.DrillError("report target: требуется «new path in existing directory»")
+        raise dr.DrillError("Для отчёта требуется новый путь в существующем каталоге")
     with tempfile.NamedTemporaryFile("w", dir=path.parent, encoding="utf-8",
                                      prefix=".restore-report-", delete=False) as out:
         stage = Path(out.name)
@@ -66,15 +66,15 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
         raise dr.DrillError("Отчёт уже существует")
     manifest = dr.verify_snapshot(snapshot)
     if manifest.get("schema") != 3 or manifest.get("mode") != "network-ha":
-        raise dr.DrillError("fresh-host acceptance: требуется «verified Network-HA snapshot»")
+        raise dr.DrillError("Для приёмки на чистом узле требуется проверенный снимок Network-HA")
     if manifest.get("version") != dr.target_release(env_file):
         raise dr.DrillError("Версия восстановления должна соответствовать снимку, а не версии целевого обновления")
     upper_bound = exposure_seconds(manifest["createdUtc"], incident)
     if bool(checkpoint) != bool(checksum):
-        raise dr.DrillError("checkpoint token and SHA-256: требуется «supplied together»")
+        raise dr.DrillError("Токен контрольной точки и SHA-256 необходимо указывать вместе")
     if checkpoint and (not re.fullmatch(r"[0-9a-f]{32}", checkpoint)
                        or not re.fullmatch(r"[0-9a-f]{64}", checksum or "")):
-        raise dr.DrillError("Некорректное значение: «checkpoint token/digest»")
+        raise dr.DrillError("Некорректный токен контрольной точки или контрольная сумма")
     dr.COMPOSE_FILES[:] = [dr.COMPOSE, dr.ROOT / "deploy/production/docker-compose.network-ha.yml"]
     dr.COMPOSE_PROFILES[:] = ["network-ha"]
     start = time.monotonic()

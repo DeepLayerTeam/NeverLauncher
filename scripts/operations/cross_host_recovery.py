@@ -108,19 +108,19 @@ def transfer(host, script, mode, source: Path, *options, timeout=7200):
             cp = subprocess.run(cmd, stdin=stream, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise RecoveryError("Недоступно: «SSH recovery transfer»") from exc
+        raise RecoveryError("Недоступна передача данных восстановления по SSH") from exc
     require(cp.returncode == 0 and len(cp.stdout) <= 65536, "Удалённое восстановление отклонено или завершилось ошибкой")
     try:
         return json.loads(cp.stdout)
     except (UnicodeError, ValueError) as exc:
-        raise RecoveryError("Некорректное значение: «remote restore response»") from exc
+        raise RecoveryError("Некорректный ответ удалённого восстановления") from exc
 
 def remote_json(host, script, mode, *options, timeout=180):
     data = cb.execute(cb.ssh(host, script, mode, *options), timeout=timeout)
     try:
         return json.loads(data)
     except (UnicodeError, ValueError) as exc:
-        raise RecoveryError("Некорректное значение: «remote inventory»") from exc
+        raise RecoveryError("Некорректный список ресурсов удалённого узла") from exc
 
 def stdin_archive(expected_sha):
     require(bool(cb.HEX64.fullmatch(expected_sha)), "Недопустимая контрольная сумма передачи")

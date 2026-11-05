@@ -32,7 +32,7 @@ for token in (
     "current_package_identity",
     "activated_at",
 ):
-    require(token in migration, f"lifecycle migration missing {token}")
+    require(token in migration, f"Отсутствует миграция жизненного цикла расширений {token}")
 
 repo = read("services/api/internal/repository/extension_lifecycle_0204.go")
 for token in (
@@ -43,7 +43,7 @@ for token in (
     "ExpectedGeneration",
     "extension_install_revisions",
 ):
-    require(token in repo, f"lifecycle repository missing {token}")
+    require(token in repo, f"Отсутствует репозиторий жизненного цикла расширений {token}")
 
 manager = read("services/api/internal/extensionlifecycle/lifecycle_0204.go")
 for token in (
@@ -65,7 +65,7 @@ for token in (
     "Для области project требуется scopeId",
     "PackageIdentity",
 ):
-    require(token in manager, f"lifecycle manager missing {token}")
+    require(token in manager, f"Отсутствует менеджер жизненного цикла расширений {token}")
 
 http = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
 routes = read("services/api/internal/httpapi/routes_packages.go")
@@ -78,11 +78,11 @@ for token in (
     "extensionRollback0204",
     "VerifyLockfile",
 ):
-    require(token in http, f"lifecycle HTTP missing {token}")
+    require(token in http, f"Отсутствует HTTP-обработчик жизненного цикла расширений {token}")
 for suffix in ("/install", "/enable", "/disable", "/uninstall", "/update", "/rollback"):
     require(
         "/api/v1/admin/extension-installs/{extensionId}" + suffix in routes,
-        f"lifecycle route missing {suffix}",
+        f"Отсутствует маршрут жизненного цикла расширений {suffix}",
     )
 
 cli = read("cli/cmd/launcher/extension_lifecycle_0204.go")
@@ -93,7 +93,7 @@ for token in (
     'case "enable", "disable", "uninstall", "rollback"',
     'case "update"',
 ):
-    require(token in cli, f"lifecycle CLI missing {token}")
+    require(token in cli, f"Отсутствует команда CLI для жизненного цикла расширений {token}")
 
 admin = read("apps/admin/src/main.tsx")
 for token in (
@@ -104,7 +104,7 @@ for token in (
     "rollback",
     "uninstall",
 ):
-    require(token in admin, f"Admin lifecycle UI missing {token}")
+    require(token in admin, f"Отсутствует интерфейс жизненного цикла расширений в Admin {token}")
 
 release = read("cli/cmd/launcher/release_commands.go")
 require(
@@ -118,17 +118,17 @@ for token in (
     "ExtensionLifecycleWrite",
     "historyLimit",
 ):
-    require(token in openapi, f"OpenAPI generator missing {token}")
+    require(token in openapi, f"Отсутствует генератор OpenAPI {token}")
 
 for envfile in (
     "deploy/production/env.production.example",
     "cli/cmd/launcher/templates/production/env.production.example",
 ):
     env = read(envfile)
-    require("LAUNCHER_EXTENSION_ROOT=" in env, f"{envfile} missing extension root")
+    require("LAUNCHER_EXTENSION_ROOT=" in env, f"{envfile} не указан корневой каталог расширений")
     require(
         "LAUNCHER_EXTENSION_BACKUP_RETENTION=" in env,
-        f"{envfile} missing backup retention",
+        f"{envfile} не задан срок хранения резервных копий",
     )
 
 print("Extensions 0.20.4: проверка жизненного цикла установки: OK")

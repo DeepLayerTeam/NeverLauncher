@@ -9,8 +9,8 @@ ARCH="$(uname -m)"
 [[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
   echo "Для рабочей сборки Linux Guard требуется публичный ключ Ed25519 на этапе компиляции" >&2; exit 2;
 }
-command -v cargo >/dev/null || { echo "cargo is required" >&2; exit 1; }
-command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
+command -v cargo >/dev/null || { echo "Требуется cargo" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "Требуется python3" >&2; exit 1; }
 
 cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
 cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bin guard

@@ -64,7 +64,7 @@ def resolve_installed_runtime(root: Path):
         )
         if path.is_file() and not path.is_symlink():
             return path
-    raise RuntimeError("Отсутствует: «native Runtime in activated Prestarter release»")
+    raise RuntimeError("В активированном выпуске Prestarter отсутствует нативный Runtime")
 
 
 def real_clean_install(
@@ -78,17 +78,17 @@ def real_clean_install(
     benchmark_commit: str,
 ):
     if not re.fullmatch("[0-9a-f]{64}", public_key):
-        raise ValueError("Требуется: «pinned public key»")
+        raise ValueError("Требуется закреплённый публичный ключ")
     if not re.fullmatch("[a-zA-Z0-9_]{3,16}", username):
-        raise ValueError("Для имя игрока Minecraft в автономном режиме требуется: «3-16 safe characters»")
+        raise ValueError("Имя игрока Minecraft в автономном режиме должно содержать 3–16 допустимых символов")
     if not re.fullmatch("[a-f0-9]{40}", benchmark_commit):
-        raise ValueError("Для точный коммит исходников требуется: «supplied»")
+        raise ValueError("Необходимо указать точный commit исходного кода")
     if root.exists() and any(root.iterdir()):
-        raise RuntimeError("GA clean-machine test: требуется «an EMPTY installation root»")
+        raise RuntimeError("Для GA-теста чистой установки нужен ПУСТОЙ каталог установки")
     if os.environ.get("JAVA_HOME"):
-        raise RuntimeError("Для JAVA_HOME требуется: «unset for clean machine bootstrap test»")
+        raise RuntimeError("Для теста запуска на чистом компьютере переменная JAVA_HOME должна быть не задана")
     if not signed_manifest.is_file() or signed_manifest.is_symlink():
-        raise RuntimeError("Требуется: «real signed Minecraft profile»")
+        raise RuntimeError("Требуется настоящий подписанный профиль Minecraft")
     # Установка пакета намеренно реальная, а не простая распаковка файлов.
     osname = platform.system()
     if osname == "Linux":
@@ -122,7 +122,7 @@ def real_clean_install(
             "Сертификация запуска игры на Windows требует внешнего GUI E2E-теста Desktop/Guard; прямой запуск Runtime не считается действительной проверкой безопасности"
         )
     else:
-        raise RuntimeError("Не поддерживается: «GA OS»")
+        raise RuntimeError("Неподдерживаемая операционная система для GA")
     runtime = resolve_installed_runtime(root)
     runtime_help = from_runtime(runtime, "--help")
     if runtime_help.get("version") != "0.24.0":
@@ -163,7 +163,7 @@ def real_clean_install(
         timeout=1500,
     )
     if result.get("status") != "ready":
-        raise RuntimeError("Ошибка: «game file installation»")
+        raise RuntimeError("Ошибка установки файлов игры")
     launched = from_runtime(
         runtime,
         "launch",

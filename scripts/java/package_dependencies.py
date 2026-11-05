@@ -20,7 +20,7 @@ VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[A-Za-z0-9.-]
 
 def bundle(host: Path, output: Path, specs: list[str]) -> None:
     if host.resolve() == output.resolve():
-        raise ValueError("«output»: запрещено «overwrite input host JAR»")
+        raise ValueError("Нельзя перезаписывать исходный JAR хоста выходным файлом")
     if not 1 <= len(specs) <= 64:
         raise ValueError("Укажите от 1 до 64 закреплённых зависимостей")
     libraries = []
@@ -32,23 +32,23 @@ def bundle(host: Path, output: Path, specs: list[str]) -> None:
             raise ValueError("Формат библиотеки: group:artifact@version@api-range@/path/file.jar")
         coord, version, api, filename = parts
         if not COORD.fullmatch(coord) or not VERSION.fullmatch(version) or not api or any(c in api for c in "\r\n\t"):
-            raise ValueError(f"Некорректное значение: «library coordinate/version/API range»: {coord}")
+            raise ValueError(f"Некорректные координаты библиотеки, версия или диапазон API: {coord}")
         if coord in identities:
-            raise ValueError("Обнаружен дубликат: «library coordinate:»" + coord)
+            raise ValueError("Повторяются координаты библиотеки:" + coord)
         identities.add(coord)
         data = Path(filename).read_bytes()
         if not 0 < len(data) <= 16 * 1024 * 1024:
-            raise ValueError("library JAR: требуется «1..16 MiB»")
+            raise ValueError("Размер JAR библиотеки должен быть от 1 до 16 МиБ")
         total += len(data)
         if total > 64 * 1024 * 1024:
-            raise ValueError("Превышен допустимый размер: «library collection»")
+            raise ValueError("Общий размер коллекции библиотек превышает допустимый")
         with zipfile.ZipFile(Path(filename)) as library:
             if library.testzip() is not None:
                 raise ValueError("Повреждён JAR библиотеки " + filename)
         digest = hashlib.sha256(data).hexdigest()
         name = PREFIX + coord.replace(":", "-") + "-" + version + ".jar"
         if not re.fullmatch(r"META-INF/launcher/libs/[A-Za-z0-9._-]+\.jar", name):
-            raise ValueError("Некорректное значение: «library filename»")
+            raise ValueError("Некорректное имя файла библиотеки")
         libraries.append((name, coord, version, digest, api, data))
     if len({row[0] for row in libraries}) != len(libraries):
         raise ValueError("Две координаты зависимостей указывают на один путь JAR")
@@ -61,7 +61,7 @@ def bundle(host: Path, output: Path, specs: list[str]) -> None:
             if len(names) != len(set(names)) or any(n == LOCK or n.startswith(PREFIX) for n in names):
                 raise ValueError("Во входном хосте уже есть встроенные зависимости или повторяющиеся записи")
             if "META-INF/MANIFEST.MF" not in names:
-                raise ValueError("Отсутствует: «host manifest»")
+                raise ValueError("Отсутствует манифест хоста")
             for info in source.infolist():
                 target.writestr(info, source.read(info))
             for name, coord, version, digest, api, data in libraries:

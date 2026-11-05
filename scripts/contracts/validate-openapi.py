@@ -10,7 +10,7 @@ try: spec=json.loads(SPEC.read_text(encoding="utf-8"))
 except Exception as exc: raise SystemExit(f"Ошибка: «OpenAPI parse»: {exc}")
 errors=[]
 if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
-if spec.get('info',{}).get('version')!='1.0.0': errors.append('info.version must be 1.0.0')
+if spec.get('info',{}).get('version')!='1.0.0': errors.append('Поле info.version должно быть равно 1.0.0')
 route_re=re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
 files=[HTTP/'handler.go']+sorted(p for p in HTTP.glob('routes_*.go') if 'legacy' not in p.name)+sorted(p for p in HTTP.glob('migration_*.go') if not p.name.endswith('_test.go'))
 code=set()
@@ -30,13 +30,13 @@ for path,item in spec.get('paths',{}).items():
         for name in re.findall(r'{([^}]+)}',path):
             params=op.get('parameters',[])
             if not any(p.get('in')=='path' and p.get('name')==name and p.get('required') is True for p in params):
-                errors.append(f'{method.upper()} {path} missing required path parameter {name}')
-for missing in sorted(code-doc): errors.append(f'route missing from OpenAPI: {missing[0].upper()} {missing[1]}')
-for extra in sorted(doc-code): errors.append(f'OpenAPI operation missing from canonical router: {extra[0].upper()} {extra[1]}')
-if len(ids)!=len(set(ids)): errors.append('operationId values must be unique')
+                errors.append(f'{method.upper()} {path} отсутствует обязательный параметр пути {name}')
+for missing in sorted(code-doc): errors.append(f'Маршрут отсутствует в OpenAPI: {missing[0].upper()} {missing[1]}')
+for extra in sorted(doc-code): errors.append(f'Операция OpenAPI отсутствует в основном маршрутизаторе: {extra[0].upper()} {extra[1]}')
+if len(ids)!=len(set(ids)): errors.append('Значения operationId должны быть уникальными')
 # Инвариант P3: исторические маршрутизаторы физически удалены из канонического сервера.
 config=(HTTP/'handler.go').read_text(encoding="utf-8")
-if 'registerLegacy' in config or 'EnableLegacyAPI' in config: errors.append('legacy API registration must be removed in P3')
+if 'registerLegacy' in config or 'EnableLegacyAPI' in config: errors.append('В P3 необходимо удалить регистрацию устаревшего API')
 if errors:
     print('Проверка контракта OpenAPI не пройдена:',file=sys.stderr)
     for e in errors: print(' - '+e,file=sys.stderr)

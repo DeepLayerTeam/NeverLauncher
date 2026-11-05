@@ -79,7 +79,7 @@ args=(runtime "${LOADER}-package"
   --version "$PRODUCT_VERSION-${LOADER}-${MINECRAFT_VERSION}-hardening"
   --output "$OUT_PACKAGE")
 if [[ "$LOADER" == "forge" || "$LOADER" == "neoforge" ]]; then
-  [[ -n "$JAVA_BIN" ]] || { echo "[loader-hardening] Java is required for $LOADER" >&2; exit 2; }
+  [[ -n "$JAVA_BIN" ]] || { echo "[loader-hardening] Для запуска требуется Java; загрузчик: $LOADER" >&2; exit 2; }
   args+=(--java "$JAVA_BIN")
 fi
 

@@ -86,7 +86,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         unknown = sorted(set(raw) - allowed)
         if unknown:
             die(
-                f"target #{index + 1}: unknown fields are forbidden: {', '.join(unknown)}"
+                f"target #{index + 1}: неизвестные поля запрещены: {', '.join(unknown)}"
             )
         target_id = str(raw.get("id", "")).strip()
         kind = str(raw.get("kind", "")).strip()
@@ -107,7 +107,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         if arch not in ALLOWED_ARCH:
             die(f"{target_id}: unsupported arch {arch!r}")
         if not isinstance(required, bool):
-            die(f"{target_id}: required must be boolean")
+            die(f"{target_id}: поле required должно иметь логический тип")
         if (
             not isinstance(checks, list)
             or not checks
@@ -161,7 +161,7 @@ def discover_results(
             errors.append(f"{path}: Недопустимый JSON результата: {exc}")
             continue
         if not isinstance(payload, dict):
-            errors.append(f"{path}: result must be an object")
+            errors.append(f"{path}: результат должен быть объектом")
             continue
         target_id = str(payload.get("targetId", "")).strip()
         if not ID_RE.fullmatch(target_id):
@@ -202,7 +202,7 @@ def verify_result(
         errors.append(f"exitCode is {result.get('exitCode')!r}")
     runtime_arch = str(result.get("runtimeArch", "")).strip()
     if not runtime_arch:
-        errors.append("runtimeArch is missing")
+        errors.append("Отсутствует runtimeArch")
     elif target["arch"] != "runner-native":
         architectures = {"x86_64": {"x86_64", "amd64"}, "arm64": {"arm64", "aarch64"}}
         if runtime_arch.lower() not in architectures[target["arch"]]:
@@ -245,12 +245,12 @@ def verify_result(
                     expected_digest
                 ):
                     errors.append(
-                        f"evidence digest for {name} is not canonical SHA-256"
+                        f"Хеш свидетельства {name} не соответствует каноническому формату SHA-256"
                     )
                     continue
                 evidence_path = result_path.parent / name
                 if evidence_path.is_symlink() or not evidence_path.is_file():
-                    errors.append(f"evidence file is missing or unsafe: {name}")
+                    errors.append(f"Файл свидетельства отсутствует или небезопасен: {name}")
                     continue
                 actual_digest = sha256_file(evidence_path)
                 if actual_digest != expected_digest:
@@ -261,7 +261,7 @@ def verify_result(
             errors.append("Отсутствуют заявленные результаты протокольных проверок")
         else:
             if claims.get("repository") != "postgresql":
-                errors.append("protocol E2E did not declare PostgreSQL repository")
+                errors.append("В протокольном E2E не объявлен репозиторий PostgreSQL")
             if claims.get("vendorHardwareProvenance") != "not-verified":
                 errors.append("Протокольная E2E-проверка не должна заявлять о подтверждённом производителе оборудования")
             if claims.get("privateKeyServerExposed") is not False:

@@ -46,7 +46,7 @@ def private_file(path: Path):
     except FileNotFoundError as exc:
         raise CutoverError(f"Отсутствует обязательный приватный файл: {path}") from exc
     if not stat.S_ISREG(st.st_mode) or st.st_mode & 0o077:
-        raise CutoverError(f"Требуется: «private regular file (0600)»: {path}")
+        raise CutoverError(f"Требуется обычный файл с приватными правами доступа (0600): {path}")
     return st
 
 
@@ -130,7 +130,7 @@ def storage_fingerprint(root: Path) -> tuple[str, int, int]:
             part = Path(folder) / name
             before = part.lstat()
             if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
-                raise CutoverError("Небезопасное значение: «source storage blob (link or special file)»")
+                raise CutoverError("Небезопасный исходный объект хранилища: ссылка или специальный файл")
             relative = part.relative_to(root).as_posix().encode("utf-8")
             fd = os.open(part, os.O_RDONLY | os.O_NOFOLLOW)
             with os.fdopen(fd, "rb") as stream:
@@ -258,7 +258,7 @@ def validate_sqlite_backup(path: Path):
     with closing(sqlite3.connect(uri, uri=True, timeout=10)) as db:
         check = db.execute("PRAGMA integrity_check").fetchall()
         if check != [("ok",)]:
-            raise CutoverError("Ошибка: «SQLite backup integrity_check»")
+            raise CutoverError("Проверка integrity_check резервной копии SQLite завершилась ошибкой")
         fk = db.execute("PRAGMA foreign_key_check").fetchone()
         if fk:
             raise CutoverError("В резервной копии SQLite нарушена целостность внешних ключей")
@@ -304,7 +304,7 @@ def sqlite_backup(source_name: str, dest: Path):
     # зафиксированные страницы WAL. Не копируйте только файл .db.
     with closing(sqlite3.connect(uri, uri=True, timeout=20)) as src:
         if src.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
-            raise CutoverError("Ошибка: «source SQLite integrity check»")
+            raise CutoverError("Проверка целостности исходной базы SQLite завершилась ошибкой")
         fd = os.open(dest, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         os.close(fd)
         try:
@@ -428,7 +428,7 @@ class Operator:
         if self.a.coordinator_db:
             private_file(Path(self.a.coordinator_db))
         if cfg.get("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") and cfg["LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"] != self.a.coordinator_db:
-            raise CutoverError("Coordinator path: требуется «explicitly supplied and match the source configuration»")
+            raise CutoverError("Путь к координатору должен быть указан явно и совпадать с исходной конфигурацией")
         sources = [self.a.core_db, self.a.http_db]
         if self.a.coordinator_db:
             sources.append(self.a.coordinator_db)
@@ -502,7 +502,7 @@ class Operator:
         if self.a.mfa_key_file and self.a.pg_secret_env:
             return ["--sqlite-mfa-key-file", self.a.mfa_key_file, "--postgres-secret-env", self.a.pg_secret_env]
         if self.a.mfa_key_file or self.a.pg_secret_env:
-            raise CutoverError("Требуется: «both MFA keys are»")
+            raise CutoverError("Необходимо указать оба ключа MFA")
         return []
 
     def files(self):
@@ -524,7 +524,7 @@ class Operator:
         enough_space(dst, size, "Проверенная локальная копия двоичных данных")
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-files", "--source-root", self.a.storage_source, "--target-root", self.a.storage_target, "--ack-offline"], env=self.env)
         if not report.get("verified") or report.get("sourceSha256") != self.state["sourceSHA256"]:
-            raise CutoverError("Некорректное значение: «file-copy receipt»")
+            raise CutoverError("Некорректная квитанция копирования файлов")
         after, after_count, after_size = storage_fingerprint(src)
         if (after, after_count, after_size) != (before, count, size):
             raise CutoverError("Файлы источника изменились во время копирования в PostgreSQL")
@@ -538,7 +538,7 @@ class Operator:
             raise CutoverError("Неоднозначный результат фиксации импорта: проверьте PostgreSQL и согласуйте состояние перед повтором")
         manifest = run_cmd([self.a.launcher_sqlite, "backup-verify", "--backup", str(self.backup)], env=self.env)
         if manifest.get("manifest", {}).get("sha256") != self.state.get("sourceSHA256"):
-            raise CutoverError("Обнаружено изменение: «frozen SQLite backup»")
+            raise CutoverError("Зафиксированная резервная копия SQLite была изменена")
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-cutover-check", "--source-sha256", self.state["sourceSHA256"], "--project", self.a.project, "--owner-email", self.a.owner_email], env=self.env)
         if not all(report.get(k) for k in ("liveVerified", "filesVerified", "repositoryVerified")):
             raise CutoverError("Проверка репозитория PostgreSQL не завершена")
@@ -548,7 +548,7 @@ class Operator:
         self.inactive()
         verdict = self.state.get("receipts", {}).get("verify", {})
         if not verdict.get("readyForBackendCutover") or not self.state.get("cutoverSupported"):
-            raise CutoverError("Небезопасное значение: «cutover blocked: HTTP/Coordinator state not migrated; Core receipt is not approval»")
+            raise CutoverError("Переключение заблокировано: состояние HTTP/Coordinator не перенесено; квитанция Core не является разрешением")
         # Барьер восстановления ОБЯЗАТЕЛЬНО должен попасть в долговременное хранилище до перезаписи env. Иначе
         # сбой между заменой конфигурации и фиксацией флага позволит небезопасный откат на SQLite после возможного
         # начала записей в PostgreSQL.
@@ -597,7 +597,7 @@ Backend до объявления завершения миграции опер
         if (parts.scheme not in ("https", "http") or
                 (parts.scheme == "http" and parts.hostname not in ("127.0.0.1", "::1", "localhost")) or
                 parts.username or parts.password or parts.query or parts.fragment or parts.path != "/ready"):
-            raise CutoverError("Требуется: «a local /ready or HTTPS /ready URL without credentials»")
+            raise CutoverError("Требуется локальный /ready или HTTPS-адрес /ready без учётных данных")
         base = self.a.health_url.rsplit("/ready", 1)[0]
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -697,7 +697,7 @@ Backend до объявления завершения миграции опер
             # После внезапного завершения между systemctl stop и квитанцией этапа безопасное восстановление возможно
             # лишь при неактивности всех служб.
             if "backup" not in self.state["completed"]:
-                raise CutoverError("Отсутствует: «verified preflight backup to restore»")
+                raise CutoverError("Отсутствует проверенная предварительная резервная копия для восстановления")
             self.inactive()
             private_file(self.original_env)
             # Исходные БД ещё не изменялись. Проверьте независимую замороженную копию до восстановления прежней

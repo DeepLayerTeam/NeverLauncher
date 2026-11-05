@@ -52,7 +52,7 @@ class LiveHAInventory(unittest.TestCase):
         self.assertIn("LAUNCHER_AUTH_TOKEN_SECRET", sensitive)
 
     def test_docker_project_mismatch_rejected_without_exposing_env(self):
-        with self.assertRaisesRegex(ha.InventoryError, "Несовпадение"):
+        with self.assertRaisesRegex(ha.InventoryError, "Проект в ответе Docker inspect не совпадает"):
             ha.classify_container({"Config": {"Labels": {"com.docker.compose.project": "wrong"},
                                                "Env": ["LAUNCHER_AUTH_TOKEN_SECRET=hidden"]}}, "launcher")
 

@@ -18,7 +18,7 @@ def verify(path: Path, required: list[str]) -> None:
         raise ValueError("Необходимо указать хотя бы один обязательный тест")
     wanted = set(required)
     if len(wanted) != len(required):
-        raise ValueError("«duplicate --require names»: не разрешено")
+        raise ValueError("Повторяющиеся имена в --require запрещены")
     observed: dict[str, str] = {}
     packages: dict[str, str] = {}
     count = 0
@@ -27,12 +27,12 @@ def verify(path: Path, required: list[str]) -> None:
             continue
         obj = json.loads(line)
         if not isinstance(obj, dict):
-            raise ValueError("go test JSON line: требуется «object»")
+            raise ValueError("Строка JSON из go test должна содержать объект")
         action = obj.get("Action")
         test = obj.get("Test")
         pkg = obj.get("Package")
         if not isinstance(action, str) or not isinstance(pkg, str):
-            raise ValueError("Некорректное значение: «or truncated Go test event»")
+            raise ValueError("Некорректное или обрезанное событие тестирования Go")
         count += 1
         if action in {"fail", "skip", "pass"}:
             if isinstance(test, str) and test in wanted:
@@ -45,13 +45,13 @@ def verify(path: Path, required: list[str]) -> None:
             if test is None:
                 packages[pkg] = action
     if not count:
-        raise ValueError("Пустое значение: «Go test evidence»")
+        raise ValueError("Отсутствуют данные о результатах тестирования Go")
     incomplete = sorted(name for name in wanted if observed.get(name) != "pass")
     failed_packages = sorted(pkg for pkg, action in packages.items() if action != "pass")
     if incomplete or failed_packages:
         raise ValueError(f"GA не сертифицирован: тесты без PASS={incomplete}, пакеты с ошибками или пропусками={failed_packages}")
     if not packages or not any(v == "pass" for v in packages.values()):
-        raise ValueError("Отсутствует: «successful Go package result»")
+        raise ValueError("Отсутствует успешный результат тестирования пакета Go")
     print(f"Подтверждено прохождение обязательных тестов Go: {len(wanted)}; пакетов={len(packages)}")
 
 

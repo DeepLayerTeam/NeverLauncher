@@ -21,10 +21,10 @@ export E2E_EXPECTED_COMMIT="$LAUNCHER_GA_SOURCE_SHA"
 [[ -z "$(git status --porcelain --untracked-files=no)" ]] || { echo 'Рабочая копия кандидата содержит изменения' >&2; exit 2; }
 
 for var in E2E_ADMIN_URL E2E_API_URL E2E_ADMIN_TOKEN E2E_OPERATOR_TOKEN E2E_PROJECT_ID E2E_FOREIGN_PROJECT_ID E2E_SERVERBRIDGE_NODE_ID E2E_DESTRUCTIVE_STAGING_ACK; do
-  [[ -n "${!var:-}" ]] || { echo "missing live staging variable $var" >&2; exit 2; }
+  [[ -n "${!var:-}" ]] || { echo "Не задана переменная действующего staging-окружения $var" >&2; exit 2; }
 done
 for cmd in go node npm python3 docker; do
-  command -v "$cmd" >/dev/null || { echo "missing certification tool: $cmd" >&2; exit 2; }
+  command -v "$cmd" >/dev/null || { echo "Отсутствует утилита сертификации: $cmd" >&2; exit 2; }
 done
 
 python3 - "$RELEASE_VERSION" "$COMMIT" <<'PYRUN'

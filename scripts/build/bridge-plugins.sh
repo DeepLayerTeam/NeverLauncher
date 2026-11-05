@@ -33,7 +33,7 @@ mkdir -p "$OUT"
 copy_artifact() {
   local module="$1" expected="$2" src
   src="$(find "$ROOT/plugins/$module/build/libs" -maxdepth 1 -type f -name "*.jar" -print -quit)"
-  [[ -n "$src" && -s "$src" ]] || { echo "[Launcher] missing Gradle artifact for $module" >&2; exit 1; }
+  [[ -n "$src" && -s "$src" ]] || { echo "[Launcher] Не найден артефакт Gradle для $module" >&2; exit 1; }
   cp "$src" "$OUT/$expected"
 }
 copy_artifact velocity-bridge "launcher-velocity-bridge-${VERSION}.jar"
@@ -57,25 +57,25 @@ copy_artifact neoforge-bridge "launcher-neoforge-bridge-${VERSION}.jar"
 
 for artifact in "$OUT"/launcher-{velocity,bungeecord,waterfall,bukkit,spigot,paper,purpur,folia,sponge,vanilla,forge,neoforge}-bridge-"${VERSION}".jar; do
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/common/LauncherApiClient.class$' || {
-    echo "[Launcher] bridge common runtime classes missing from $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют общие классы Runtime для Bridge: $(basename "$artifact")" >&2
     exit 1
   }
 done
 for platform in velocity bungeecord waterfall; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/proxy/ProxyBridgeRuntime.class$' || {
-    echo "[Launcher] proxy-family runtime classes missing from $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют классы Runtime семейства прокси: $(basename "$artifact")" >&2
     exit 1
   }
 done
 for platform in bungeecord waterfall; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/bungee/BungeeFamilyBridgePlugin.class$' || {
-    echo "[Launcher] Bungee-family runtime classes missing from $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют классы Runtime семейства Bungee: $(basename "$artifact")" >&2
     exit 1
   }
   jar tf "$artifact" | grep -q '^bungee.yml$' || {
-    echo "[Launcher] bungee.yml missing from $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствует bungee.yml: $(basename "$artifact")" >&2
     exit 1
   }
 done
@@ -103,7 +103,7 @@ for entry in \
   'ru/launcher/bridge/fabric/LauncherFabricBridge.class' \
   'ru/launcher/bridge/fabric/mixin/ServerLoginNetworkHandlerAccessor.class'; do
   jar tf "$FABRIC_ARTIFACT" | grep -q "^${entry}$" || {
-    echo "[Launcher] Fabric artifact missing ${entry}" >&2
+    echo "[Launcher] В артефакте Fabric отсутствует ${entry}" >&2
     exit 1
   }
 done
@@ -133,7 +133,7 @@ PY_FABRIC_META
 
 QUILT_ARTIFACT="$OUT/launcher-quilt-bridge-${VERSION}.jar"
 for entry in 'fabric.mod.json' 'quilt.mod.json' 'launcher.quilt.mixins.json' 'ru/launcher/bridge/quilt/LauncherQuiltBridge.class'; do
-  jar tf "$QUILT_ARTIFACT" | grep -q "^${entry}$" || { echo "[Launcher] Quilt artifact missing ${entry}" >&2; exit 1; }
+  jar tf "$QUILT_ARTIFACT" | grep -q "^${entry}$" || { echo "[Launcher] В артефакте Quilt отсутствует ${entry}" >&2; exit 1; }
 done
 jar tf "$QUILT_ARTIFACT" | grep -Eq '^META-INF/jars/bridge-common-[^/]+\.jar$' || { echo "[Launcher] Артефакт Quilt не содержит встроенную среду bridge-common" >&2; exit 1; }
 python3 - "$QUILT_ARTIFACT" <<'PY_QUILT_META'
@@ -149,7 +149,7 @@ PY_QUILT_META
 for platform in forge neoforge; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/modloader/ModLoaderBridgeRuntime.class$' || {
-    echo "[Launcher] modloader-family runtime classes missing from $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют классы Runtime семейства загрузчиков модов: $(basename "$artifact")" >&2
     exit 1
   }
 done
@@ -161,9 +161,9 @@ jar tf "$OUT/launcher-neoforge-bridge-${VERSION}.jar" | grep -q '^META-INF/neofo
   echo "[Launcher] Отсутствует neoforge.mods.toml для NeoForge" >&2
   exit 1
 }
-jar tf "$OUT/launcher-sponge-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/sponge/LauncherSpongeBridge.class$' || { echo "[Launcher] Sponge runtime class missing" >&2; exit 1; }
-jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/LauncherVanillaBridge.class$' || { echo "[Launcher] Vanilla sidecar runtime class missing" >&2; exit 1; }
-jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/VanillaRconClient.class$' || { echo "[Launcher] Vanilla RCON client missing" >&2; exit 1; }
+jar tf "$OUT/launcher-sponge-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/sponge/LauncherSpongeBridge.class$' || { echo "[Launcher] Отсутствует класс Runtime Sponge" >&2; exit 1; }
+jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/LauncherVanillaBridge.class$' || { echo "[Launcher] Отсутствует вспомогательный класс Runtime Vanilla" >&2; exit 1; }
+jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/VanillaRconClient.class$' || { echo "[Launcher] Отсутствует клиент Vanilla RCON" >&2; exit 1; }
 
 (
   cd "$OUT"

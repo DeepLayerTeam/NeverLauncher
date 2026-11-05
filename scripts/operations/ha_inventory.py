@@ -138,7 +138,7 @@ def docker_inspect(ids):
     except (ValueError, TypeError) as exc:
         raise InventoryError("Команда Docker inspect вернула некорректный JSON") from exc
     if not isinstance(data, list) or len(data) != len(ids):
-        raise InventoryError("«Docker inspect response» не совпадает с «requested containers»")
+        raise InventoryError("Ответ Docker inspect не соответствует запрошенным контейнерам")
     return data
 
 
@@ -146,7 +146,7 @@ def classify_container(raw, project):
     cfg = raw.get("Config") or {}
     labels = cfg.get("Labels") or {}
     if labels.get("com.docker.compose.project") != project:
-        raise InventoryError("Несовпадение: «Docker inspect project»")
+        raise InventoryError("Проект в ответе Docker inspect не совпадает с ожидаемым")
     service = labels.get("com.docker.compose.service") or "unknown"
     env, exposed_names = safe_environment(cfg.get("Env") or [])
     state = raw.get("State") or {}
@@ -383,11 +383,11 @@ def probe_public_edge(url, samples):
     try:
         parsed = urlsplit(url)
     except ValueError as exc:
-        raise InventoryError("Некорректное значение: «HTTPS edge URL»") from exc
+        raise InventoryError("Некорректный HTTPS-адрес внешней точки входа") from exc
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
-        raise InventoryError("edge URL: требуется «HTTPS without embedded credentials or fragment»")
+        raise InventoryError("Для внешней точки входа требуется HTTPS-адрес без встроенных учётных данных и фрагмента")
     if parsed.path not in ("", "/", "/ready") or parsed.query:
-        raise InventoryError("edge URL: требуется «an origin or /ready (no query)»")
+        raise InventoryError("Для внешней точки входа укажите адрес сервера или /ready без параметров запроса")
     target = url.rstrip("/") + ("/ready" if parsed.path in ("", "/") else "")
     opener = urllib.request.build_opener(NoRedirect())
     durations = []
@@ -516,9 +516,9 @@ def assess_cluster(nodes, edge=None):
 
 def remote_node(target, remote_script, project, samples, growth):
     if not SSH_RE.fullmatch(target) or target.startswith("-"):
-        raise InventoryError("Некорректное значение: «SSH target»")
+        raise InventoryError("Некорректный SSH-адрес узла")
     if not remote_script.startswith("/") or "\n" in remote_script:
-        raise InventoryError("remote script: требуется «an absolute installed path»")
+        raise InventoryError("Для удалённого скрипта требуется абсолютный путь установки")
     command = ["python3", remote_script, "node", "--project", project,
                "--samples", str(samples), "--output", "-"]
     if not growth:
@@ -538,11 +538,11 @@ def remote_node(target, remote_script, project, samples, growth):
 
 def validate_node(node, project):
     if not isinstance(node, dict) or node.get("schema") != "neverlauncher.ha-inventory.0.51.1" or node.get("project") != project:
-        raise InventoryError("Несовпадение: «node inventory schema/project»")
+        raise InventoryError("Схема или проект списка узлов не совпадает")
     if not isinstance(node.get("containers"), list) or not isinstance(node.get("observations"), list):
         raise InventoryError("Инвентаризация узла не завершена")
     if len(node["containers"]) > 100:
-        raise InventoryError("Превышен допустимый размер: «node inventory»")
+        raise InventoryError("Список узлов превышает допустимый размер")
 
 
 def write_report(path, payload):
@@ -554,7 +554,7 @@ def write_report(path, payload):
     if destination.is_symlink() or destination.exists():
         raise InventoryError("Отчёт уже существует; перезапись существующих подтверждений запрещена")
     if not destination.parent.is_dir():
-        raise InventoryError("Отсутствует: «report directory»")
+        raise InventoryError("Отсутствует каталог отчётов")
     fd, temp = tempfile.mkstemp(prefix=".ha-inventory-", dir=destination.parent)
     try:
         os.fchmod(fd, 0o600)
@@ -594,9 +594,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if not PROJECT_RE.fullmatch(args.project):
-            raise InventoryError("Некорректное значение: «Docker Compose project name»")
+            raise InventoryError("Некорректное имя проекта Docker Compose")
         if not 1 <= args.samples <= 20:
-            raise InventoryError("samples: требуется «between 1 and 20»")
+            raise InventoryError("Число образцов должно быть от 1 до 20")
         if args.mode == "node":
             result = node_inventory(args.project, args.samples, not args.skip_growth, args.source_root)
             write_report(args.output, result)
@@ -605,7 +605,7 @@ def main(argv=None):
         for spec in args.node:
             name, sep, target = spec.partition("=")
             if not sep or not LABEL_RE.fullmatch(name) or not target or name in nodes:
-                raise InventoryError("each --node: требуется «a unique name=SSH-target or name=local»")
+                raise InventoryError("Каждый --node должен содержать уникальное значение name=SSH-адрес или name=local")
             if target == "local":
                 nodes[name] = node_inventory(args.project, args.samples, not args.skip_growth, args.source_root)
             else:

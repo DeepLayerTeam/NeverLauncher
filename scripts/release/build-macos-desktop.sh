@@ -9,14 +9,14 @@ if [[ "${2:-}" == "--allow-ad-hoc" || "${1:-}" == "--allow-ad-hoc" ]]; then
   [[ "${1:-}" == "--allow-ad-hoc" ]] && OUT_DIR="${ROOT_DIR}/dist/release-${VERSION}"
 fi
 [[ "$(uname -s)" == "Darwin" ]] || { echo "Рабочий пакет macOS необходимо собирать на macOS" >&2; exit 2; }
-for tool in cargo rustup lipo codesign ditto shasum python3; do command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }; done
+for tool in cargo rustup lipo codesign ditto shasum python3; do command -v "$tool" >/dev/null || { echo "Требуется утилита $tool" >&2; exit 1; }; done
 
 SIGN_IDENTITY="${LAUNCHER_MACOS_SIGNING_IDENTITY:-}"
 TEAM_ID="${LAUNCHER_MACOS_TEAM_ID:-}"
 NOTARY_PROFILE="${LAUNCHER_MACOS_NOTARY_PROFILE:-}"
 if [[ "${MODE}" == "production" ]]; then
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
-    echo "production macOS release requires Developer ID Application identity, Team ID and notarytool keychain profile via LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID and LAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
+    echo "Для выпуска macOS необходимы сертификат Developer ID Application, Team ID и профиль связки ключей notarytool, задаваемые через LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID and LAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
   }
   [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "Для подписи рабочей сборки требуется сертификат Developer ID Application" >&2; exit 2; }
 else
@@ -100,7 +100,7 @@ codesign --verify --deep --strict --verbose=2 "${APP}"
 if [[ "${MODE}" == "production" ]]; then
   for signed in "${MACOS_DIR}/guard" "${MACOS_DIR}/launcher-desktop"; do
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -F "TeamIdentifier=${TEAM_ID}" >/dev/null || { echo "signing team mismatch for ${signed}" >&2; exit 1; }
-    codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Hardened Runtime flag missing for ${signed}" >&2; exit 1; }
+    codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${signed}" >&2; exit 1; }
   done
 fi
 

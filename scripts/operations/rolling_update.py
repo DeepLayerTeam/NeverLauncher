@@ -126,7 +126,7 @@ def read_journal(directory):
     try:
         data = json.loads(secure(path))
     except (ValueError, UnicodeDecodeError) as exc:
-        raise RollingError("Некорректное значение: «local recovery journal»") from exc
+        raise RollingError("Некорректный локальный журнал восстановления") from exc
     require(isinstance(data, dict) and data.get("schema") == SCHEMA,
             "Недопустимая схема локального журнала восстановления")
     return data
@@ -157,7 +157,7 @@ def rendered(directory, project, env):
     try:
         data = json.loads(raw)
     except ValueError as exc:
-        raise RollingError("Некорректное значение: «rendered Compose JSON»") from exc
+        raise RollingError("Некорректный сгенерированный JSON Docker Compose") from exc
     require(isinstance(data, dict) and isinstance(data.get("services"), dict),
             "Недопустимый состав служб Compose")
     return data
@@ -334,7 +334,7 @@ class PGAdvisoryLock:
             require(bool(ready), "Истекло время ожидания соединения для блокировки PostgreSQL")
             return self.process.stdout.readline().strip()
         except (OSError, ValueError, BrokenPipeError) as exc:
-            raise RollingError("Ошибка: «PostgreSQL rolling lock connection»") from exc
+            raise RollingError("Не удалось подключиться к PostgreSQL для блокировки поэтапного обновления") from exc
 
     def __enter__(self):
         env = nn.dsn_environment(self.dsn_file)

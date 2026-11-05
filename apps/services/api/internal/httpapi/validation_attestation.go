@@ -116,7 +116,7 @@ func validatePayload0345(p validationPayload0345) error {
 	}
 	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json", "update-recovery.json"} {
 		if !validationHex0345.MatchString(p.ArtifactHashes[name]) {
-			return fmt.Errorf("Отсутствует: «required artifact»: %s", name)
+			return fmt.Errorf("Отсутствует обязательный артефакт: %s", name)
 		}
 	}
 	// Начиная с 0.43.14 приёмка игрового процесса должна связывать исходные байты
@@ -127,16 +127,16 @@ func validatePayload0345(p validationPayload0345) error {
 	if count, _ := fmt.Sscanf(p.PackageVersion, "%d.%d.%d", &major, &minor, &patch); count == 3 &&
 		(major > 0 || minor > 43 || (minor == 43 && patch >= 14)) {
 		if !validationHex0345.MatchString(p.ArtifactHashes["adversarial-gameplay-04314.json"]) {
-			return errors.New("Отсутствует: «independently verified adversarial game artifact»")
+			return errors.New("Отсутствует независимо проверенный игровой артефакт adversarial-тестирования")
 		}
 	}
 	start, e := time.Parse(time.RFC3339Nano, p.StartedAt)
 	if e != nil {
-		return errors.New("Некорректное значение: «start time»")
+		return errors.New("Некорректное время начала")
 	}
 	end, e := time.Parse(time.RFC3339Nano, p.FinishedAt)
 	if e != nil || end.Before(start) || end.Sub(start) > 4*time.Hour || end.After(time.Now().Add(5*time.Minute)) {
-		return errors.New("Некорректное значение: «attestation time window»")
+		return errors.New("Некорректный временной интервал аттестации")
 	}
 	return nil
 }
@@ -150,11 +150,11 @@ func verifyValidation0345(p signedValidation0345, publicKey string) error {
 	}
 	fingerprint, e := validationKeyFingerprint0346(publicKey)
 	if e != nil || fingerprint != p.Evidence.SignerKeyID {
-		return errors.New("Несовпадение: «attestation key fingerprint»")
+		return errors.New("Отпечаток ключа аттестации не совпадает")
 	}
 	signature, e := base64.RawURLEncoding.DecodeString(p.Signature)
 	if e != nil || len(signature) != ed25519.SignatureSize {
-		return errors.New("Некорректное значение: «attestation signature format»")
+		return errors.New("Некорректный формат подписи аттестации")
 	}
 	canonical, e := json.Marshal(p.Evidence)
 	if e != nil {
@@ -162,13 +162,13 @@ func verifyValidation0345(p signedValidation0345, publicKey string) error {
 	}
 	message := append([]byte(validationDomain0345), canonical...)
 	if !ed25519.Verify(ed25519.PublicKey(rawKey), message, signature) {
-		return errors.New("Недоверенное значение: «attestation signer or tampered evidence»")
+		return errors.New("Недоверенный подписант аттестации или изменённые свидетельства")
 	}
 	return nil
 }
 func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun0342) error {
 	if run.RunID != p.RunID || run.PackageID != p.PackageID || run.ManifestSHA256 != p.ManifestSHA256 || run.ArtifactSHA256 != p.ArtifactSHA256 {
-		return errors.New("«run» не совпадает с «recorded immutable staged snapshot»")
+		return errors.New("Результат запуска не совпадает с сохранённым неизменяемым снимком staging-окружения")
 	}
 	begin, e := time.Parse(time.RFC3339Nano, p.StartedAt)
 	if e != nil || !begin.Equal(run.StartedAt) {
@@ -188,7 +188,7 @@ func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun034
 			return errors.New("Подписанный этап противоречит сохранённому отчёту о выполнении: " + stage)
 		}
 		if name, ok := stageArtifacts0345[stage]; ok && record.EvidenceSHA256 != p.ArtifactHashes[name] {
-			return errors.New("«signed evidence artifact» не совпадает с «stored stage:»" + stage)
+			return errors.New("Подписанный артефакт свидетельств не совпадает с сохранённым этапом:" + stage)
 		}
 	}
 	return nil
@@ -243,7 +243,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	p := signed.Evidence
 	fingerprint, e := validationKeyFingerprint0346(s.Config.ValidationAttestationPublicKey0345)
 	if e != nil || fingerprint != p.SignerKeyID {
-		deny(errors.New("Недоверенное значение: «signing key ID»"))
+		deny(errors.New("Недоверенный идентификатор ключа подписи"))
 		return
 	}
 	freshStore, ok := s.Repo.(validationFreshnessStore0346)
@@ -256,7 +256,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if !validationHex0345.MatchString(s.Config.ValidationTrustedRunnerImageSHA2560345) || p.RunnerImageSHA256 != s.Config.ValidationTrustedRunnerImageSHA2560345 {
-		deny(errors.New("Недоверенное значение: «or unconfigured pinned runner image»"))
+		deny(errors.New("Недоверенный или не настроенный закреплённый образ runner"))
 		return
 	}
 	if p.PackageID != r.PathValue("packageId") {
@@ -269,7 +269,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if lookup.Release.Version != p.PackageVersion {
-		deny(errors.New("Несовпадение: «attestation release version»"))
+		deny(errors.New("Версия выпуска в аттестации не совпадает"))
 		return
 	}
 	targets, matrixSHA, policyErr := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, p.ManifestSHA256, p.ArtifactSHA256)
@@ -285,7 +285,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		}
 	}
 	if !targetMatched {
-		deny(errors.New("Несовпадение: «attestation Java/preset/loader/server/adapter or build target»"))
+		deny(errors.New("Параметры Java, пресета, загрузчика, сервера, адаптера или целевой сборки в аттестации не совпадают"))
 		return
 	}
 	if lookup.Release.Status != "integrity-passed" {
@@ -299,7 +299,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		attestorKey, errAttestor := base64.RawURLEncoding.DecodeString(s.Config.ValidationAttestationPublicKey0345)
 		manifestKey, errManifest := hex.DecodeString(lookup.Release.Manifest.Signature.PublicKey)
 		if errAttestor == nil && errManifest == nil && bytes.Equal(attestorKey, manifestKey) {
-			deny(errors.New("attestation signer: требуется «distinct from release signing key»"))
+			deny(errors.New("Ключ подписанта аттестации должен отличаться от ключа подписи выпуска"))
 			return
 		}
 	}
@@ -323,7 +323,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	check, e := s.Repo.LatestIntegrityCheck(r.Context(), p.PackageID)
 	if e != nil || check.Result != "passed" || check.ManifestDigest != md || check.ArtifactDigest != fd {
-		deny(errors.New("Отсутствует: «current integrity proof»"))
+		deny(errors.New("Отсутствует актуальное доказательство целостности"))
 		return
 	}
 	runs, e := store.ListStagedRuns0342(r.Context(), p.PackageID)
