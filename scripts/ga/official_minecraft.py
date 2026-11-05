@@ -204,7 +204,7 @@ def verify_target(
         and not sig.is_symlink()
         and att.is_file()
         and sig.is_file(),
-        "missing/symlinked GA signature",
+        "подпись GA отсутствует или заменена символической ссылкой",
     )
     require(
         att.stat().st_size <= 64 * 1024 and sig.stat().st_size <= 256,

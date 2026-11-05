@@ -119,7 +119,7 @@ def live_snapshot(cfg):
 def capture(cfg):
     require(cfg.get('sourceVersion') in ORIGINAL, 'Неподдерживаемая версия устаревшего источника')
     actual = live.running_version(cfg['baseUrl'])
-    require(actual == cfg['sourceVersion'], 'original Backend version differs from actual running version')
+    require(actual == cfg['sourceVersion'], 'исходная версия Backend не совпадает с фактически запущенной')
     return {'schema': SCHEMA, 'phase': 'original', 'sourceVersion': actual,
             'identity': live_snapshot(cfg), 'source': source_snapshot(cfg)}
 

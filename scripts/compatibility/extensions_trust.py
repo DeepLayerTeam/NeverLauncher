@@ -29,7 +29,7 @@ def validate_targets(path: Path):
     required = {r.get("os") for r in rows if r.get("required")}
     if required != {"linux", "windows", "macos"}:
         raise SystemExit(
-            f"required cross-platform OS set must be linux/windows/macos, got {sorted(required)}"
+            f"набор обязательных ОС должен включать linux/windows/macos, получено: {sorted(required)}"
         )
     print(f"Extensions 0.20.12: проверено обязательных платформ — {len(rows)}: OK")
     return doc

@@ -62,7 +62,7 @@ def validate_targets(path: Path):
             f"Extensions GA certification requires VERSION >= {BASELINE_VERSION}"
         )
     print(
-        f"Extensions GA targets OK: {len(rows)} required platforms, {len(checks)} checks"
+        f"Целевые среды расширений GA проверены: {len(rows)} обязательных платформ, {len(checks)} проверок"
     )
     return doc
 

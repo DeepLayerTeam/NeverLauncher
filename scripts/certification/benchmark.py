@@ -130,7 +130,7 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
         "medianCandidateNs": newer,
         "speedup": round(base / newer, 3),
         "runs": rows,
-        "note": "GravitLauncher comparison is not part of this measurement",
+        "note": "сравнение с GravitLauncher не входит в это измерение",
     }
 
 

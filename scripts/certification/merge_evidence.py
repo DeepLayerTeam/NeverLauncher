@@ -38,7 +38,7 @@ def combine(paths: list[Path]) -> dict:
     for name in sorted(REQUIRED_PLATFORMS - set(report["platforms"])):
         report["unmetGates"].append(f"{name}: missing platform report")
     if report["platforms"].get("Windows", {}).get("suites", {}).get("windows-locked-executable-test") != "passed":
-        report["unmetGates"].append("Windows: exclusive executable lock test not passed")
+        report["unmetGates"].append("Windows: тест эксклюзивной блокировки исполняемого файла не пройден")
     if not report["unmetGates"]: report["status"] = "passed"
     elif any(p.get("status") == "failed" for p in report["platforms"].values()): report["status"] = "failed"
     return report

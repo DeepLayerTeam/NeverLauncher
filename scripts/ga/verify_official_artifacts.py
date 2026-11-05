@@ -54,7 +54,7 @@ def verify_shipped(bundle: Path, receipt_path: Path) -> dict:
             target in PACKAGES
             and target not in checked
             and reference.get("status") == "passed",
-            "invalid/duplicate GA target",
+            "неверная или повторяющаяся целевая среда GA",
         )
         digest = reference.get("signedArtifactSha256")
         require(

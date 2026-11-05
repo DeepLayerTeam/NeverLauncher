@@ -95,14 +95,14 @@ def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str
             a.get('commit') == b.get('commit') == commit and
             a.get('runId') == b.get('runId') == run_id and
             a.get('attempt') == b.get('attempt') == attempt,
-            'source, version or CI run differs')
+            'исходники, версия или запуск CI не совпадают')
     require(source_sha() == commit and SHA.fullmatch(commit) is not None, 'Рабочая копия не соответствует точному исходному состоянию')
     require(a.get('inputs') == b.get('inputs') == inputs(), 'Входные данные сборки изменились')
     require(a.get('builder') != b.get('builder') and a.get('runner') != b.get('runner') and
             all(ID.fullmatch(x or '') for x in (a.get('builder'), b.get('builder'), a.get('runner'), b.get('runner'))),
             'Требуются независимые идентификаторы сборщика и исполнителя')
     require(a.get('targets') == scan(dir_a) and b.get('targets') == scan(dir_b),
-            'signed reports disagree with actual archive bytes')
+            'подписанные отчёты не соответствуют фактическому содержимому архива')
     require(a['targets'] == b['targets'] and set(a['targets']) == TARGETS,
             'two independent builds differ in unsigned byte payloads')
     return {'schema': 'neverlauncher.reproducibility-current-comparison/' + VERSION,

@@ -128,7 +128,7 @@ def main() -> int:
         report = {
             "status": "failed",
             "error": str(exc),
-            "unmetGates": ["invalid certification evidence"],
+            "unmetGates": ["недействительное свидетельство сертификации"],
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

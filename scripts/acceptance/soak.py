@@ -144,7 +144,7 @@ def game(args):
                 'GITHUB_SHA': args.commit, 'GITHUB_RUN_ID': args.run_id,
                 'GITHUB_RUN_ATTEMPT': str(args.attempt)}
     require(env.get('LAUNCHER_ACCEPTANCE_DISPOSABLE') == '1',
-            'game soak may clear e2e/runtime only in approved disposable checkout')
+            'длительный игровой тест может очищать e2e/runtime только в разрешённой временной рабочей копии')
     require(env.get('LAUNCHER_E2E_JAVA'), 'Необходимо явно выбрать существующую поддерживаемую JRE')
     for key, value in expected.items():
         require(not env.get(key) or env[key] == value, 'Конфликт метаданных исполняющего компонента: ' + key)
@@ -194,7 +194,7 @@ def game(args):
 def check_https(url):
     u = urllib.parse.urlsplit(url)
     require(u.scheme == 'https' and u.hostname and u.username is None and u.password is None
-            and not u.fragment and u.port != 0 and len(url) <= 2048, 'HTTPS endpoint only')
+            and not u.fragment and u.port != 0 and len(url) <= 2048, 'допускается только конечная точка HTTPS')
     return u
 
 def https_once(url: str, timeout: float):

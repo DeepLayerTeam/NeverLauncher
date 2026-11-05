@@ -169,12 +169,12 @@ def main() -> int:
         save_private_exclusive(args.evidence, evidence)
     except (OSError, ValueError, json.JSONDecodeError) as e:
         print(
-            f"Official game join could not be certified: {type(e).__name__}: {e}",
+            f"Не удалось сертифицировать вход в официальную игру: {type(e).__name__}: {e}",
             file=sys.stderr,
         )
         return 2
     print(
-        f"Evidence written: {args.evidence} (server kind: {args.kind}; real operator log required)"
+        f"Свидетельство записано: {args.evidence} (тип сервера: {args.kind}; требуется реальный журнал оператора)"
     )
     return 0
 

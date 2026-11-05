@@ -124,7 +124,7 @@ def package_set(directory: Path, index_file: Path, index_pin: str, commit: str, 
     for row in records.values():
         path = directory / row['filename']
         require(sha(path) == row['sha256'] and path.stat().st_size == row['size'],
-                'final package bytes differ from independently pinned distribution index')
+                'содержимое итогового пакета отличается от независимого закреплённого индекса поставки')
         files[path.name] = {'sha256': row['sha256'], 'size': row['size']}
         if 'signatureUrl' in row:
             path = directory / (row['filename']+'.asc')

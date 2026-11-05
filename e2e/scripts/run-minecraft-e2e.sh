@@ -65,17 +65,17 @@ E2E_USER_AGENT="Launcher-E2E/${VERSION}"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
 
-case "$MODE" in full|compatibility) ;; *) echo "[e2e] unsupported mode: $MODE" >&2; exit 2 ;; esac
+case "$MODE" in full|compatibility) ;; *) echo "[e2e] неподдерживаемый режим: $MODE" >&2; exit 2 ;; esac
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[e2e] неподдерживаемый загрузчик: $LOADER" >&2; exit 2 ;; esac
 if [[ "$LOADER" == "vanilla" ]]; then
-  [[ -z "$LOADER_VERSION_SELECTOR" ]] || { echo "[e2e] Vanilla must not specify loader version" >&2; exit 2; }
+  [[ -z "$LOADER_VERSION_SELECTOR" ]] || { echo "[e2e] для Vanilla нельзя указывать версию загрузчика" >&2; exit 2; }
 else
   LOADER_VERSION_SELECTOR="${LOADER_VERSION_SELECTOR:-latest-stable}"
 fi
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[e2e] неверная версия Minecraft" >&2; exit 2; }
-[[ "$PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || { echo "[e2e] invalid profile id" >&2; exit 2; }
+[[ "$PROFILE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] || { echo "[e2e] неверный идентификатор профиля" >&2; exit 2; }
 if [[ -n "$LOADER_VERSION_SELECTOR" ]]; then
-  [[ "$LOADER_VERSION_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[e2e] invalid loader version selector" >&2; exit 2; }
+  [[ "$LOADER_VERSION_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[e2e] неверный параметр выбора версии загрузчика" >&2; exit 2; }
 fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
@@ -90,8 +90,8 @@ fi
 if [[ -z "$JAVA_BIN" ]]; then
   JAVA_BIN="$(command -v java || true)"
 fi
-[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[e2e] Java executable is unavailable; set LAUNCHER_E2E_JAVA or JAVA_HOME" >&2; exit 1; }
-"$JAVA_BIN" -version >/dev/null 2>&1 || { echo "[e2e] Java executable failed: $JAVA_BIN" >&2; exit 1; }
+[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[e2e] исполняемый файл Java недоступен; задайте LAUNCHER_E2E_JAVA или JAVA_HOME" >&2; exit 1; }
+"$JAVA_BIN" -version >/dev/null 2>&1 || { echo "[e2e] ошибка запуска исполняемого файла Java: $JAVA_BIN" >&2; exit 1; }
 
 rm -rf "$RUNTIME_DIR"
 GUARD_SHA="$(printf 'a%.0s' {1..64})"
@@ -238,7 +238,7 @@ capture_health_evidence() {
 record_live_serverbridge_04113() {
   local service="$1" node="$2" port="$3" cid
   cid="$(compose ps -q "$service")"
-  [[ -n "$cid" ]] || { echo "[e2e] no live container for $service" >&2; return 1; }
+  [[ -n "$cid" ]] || { echo "[e2e] для службы нет работающего контейнера: $service" >&2; return 1; }
   local -a extra=()
   [[ "$service" == "paper" ]] && extra+=(--require-real-join)
   python3 "$ROOT/e2e/scripts/record-serverbridge-runtime-04113.py" \
@@ -302,7 +302,7 @@ materialize_pinned_bytesocks_dependency() {
   )
 
   build_jar="$source_dir/target/bytesocks-java-client-${BYTESOCKS_BASE_VERSION}.jar"
-  [[ -s "$build_jar" ]] || { echo "[e2e] pinned bytesocks build artifact missing: $build_jar" >&2; return 1; }
+  [[ -s "$build_jar" ]] || { echo "[e2e] отсутствует закреплённый артефакт сборки bytesocks: $build_jar" >&2; return 1; }
   local jar_contents="$RUNTIME_DIR/bytesocks-jar-contents.txt"
   jar tf "$build_jar" > "$jar_contents"
   grep -Fxq 'me/lucko/bytesocks/client/BytesocksClient.class' "$jar_contents" || {
@@ -338,7 +338,7 @@ materialize_pinned_bytesocks_dependency() {
 </project>
 POM
   artifact_sha="$(sha256sum "$installed_jar" | awk '{print $1}')"
-  [[ "$artifact_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] invalid pinned bytesocks SHA-256" >&2; return 1; }
+  [[ "$artifact_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] неверный закреплённый SHA-256 bytesocks" >&2; return 1; }
 
   jq -n \
     --arg sourceRepository "$BYTESOCKS_SOURCE_REPOSITORY" \
@@ -391,9 +391,9 @@ GRADLE
   git -C "$source_dir" checkout --quiet --detach "$SPARK_SOURCE_COMMIT"
   resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
   [[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]] || { echo "[e2e] spark несовпадение коммита исходников: $resolved_commit" >&2; return 1; }
-  git -C "$source_dir" merge-base --is-ancestor "$SPARK_SOURCE_TAG" HEAD || { echo "[e2e] spark tag $SPARK_SOURCE_TAG is not an ancestor of pinned commit" >&2; return 1; }
+  git -C "$source_dir" merge-base --is-ancestor "$SPARK_SOURCE_TAG" HEAD || { echo "[e2e] тег spark $SPARK_SOURCE_TAG не является предком закреплённого коммита" >&2; return 1; }
   patch_count="$(git -C "$source_dir" rev-list --count "$SPARK_SOURCE_TAG..HEAD")"
-  [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] spark patch version mismatch: $patch_count" >&2; return 1; }
+  [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] версия патча spark не совпадает: $patch_count" >&2; return 1; }
 
   grep -Fq "me.lucko:bytesocks-java-client:$BYTESOCKS_MAVEN_VERSION" "$source_dir/spark-common/build.gradle" || {
     echo "[e2e] закреплённый исходник spark больше не требует ожидаемый снимок bytesocks" >&2; return 1;
@@ -406,7 +406,7 @@ GRADLE
   )
 
   build_jar="$source_dir/spark-paper/build/libs/spark-1.10.${SPARK_PATCH_VERSION}-paper.jar"
-  [[ -s "$build_jar" ]] || { echo "[e2e] pinned spark-paper build artifact missing: $build_jar" >&2; return 1; }
+  [[ -s "$build_jar" ]] || { echo "[e2e] отсутствует закреплённый артефакт сборки spark-paper: $build_jar" >&2; return 1; }
   local maven_dir="$maven_repo/me/lucko/spark-paper/$SPARK_MAVEN_VERSION"
   mkdir -p "$maven_dir"
   installed_jar="$maven_dir/spark-paper-${SPARK_MAVEN_VERSION}.jar"
@@ -422,7 +422,7 @@ GRADLE
 </project>
 POM
   artifact_sha="$(sha256sum "$installed_jar" | awk '{print $1}')"
-  [[ "$artifact_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] invalid pinned spark-paper SHA-256" >&2; return 1; }
+  [[ "$artifact_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] неверный закреплённый SHA-256 spark-paper" >&2; return 1; }
 
   jq -n \
     --arg sourceRepository "$SPARK_SOURCE_REPOSITORY" \
@@ -504,7 +504,7 @@ GRADLE
   build_jar="${candidates[0]}"
   install -m 0644 "$build_jar" "$output_jar"
   runtime_sha="$(sha256sum "$output_jar" | awk '{print $1}')"
-  [[ "$runtime_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] invalid Folia runtime SHA-256" >&2; return 1; }
+  [[ "$runtime_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] неверный SHA-256 Runtime Folia" >&2; return 1; }
 
   jq -n \
     --arg minecraftVersion "$FOLIA_MINECRAFT_VERSION" \
@@ -744,9 +744,9 @@ jq -e --arg mc "$MINECRAFT_VERSION" --arg loader "$LOADER" --arg profile "$PROFI
   "$CLIENT_PACKAGE" >/dev/null
 RESOLVED_LOADER_VERSION="$(jq -r '.manifestSettings.minecraft.loaderVersion // ""' "$CLIENT_PACKAGE")"
 if [[ "$LOADER" == "vanilla" ]]; then
-  [[ -z "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] Vanilla unexpectedly resolved loaderVersion=$RESOLVED_LOADER_VERSION" >&2; exit 1; }
+  [[ -z "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] для Vanilla неожиданно определена loaderVersion=$RESOLVED_LOADER_VERSION" >&2; exit 1; }
 else
-  [[ -n "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] loader version was not resolved" >&2; exit 1; }
+  [[ -n "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] не удалось определить версию загрузчика" >&2; exit 1; }
   case "$(printf '%s' "$RESOLVED_LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[e2e] изменяемый селектор загрузчика попал в выпуск" >&2; exit 1 ;; esac
 
   # 0.17.8: сертификация больше не ограничивается клиентом. Запустите чистый
@@ -891,7 +891,7 @@ player_negative_0398() {
   [[ "$http" == 403 ]] || { echo "[player-0398] $case_id expected 403, got $http" >&2; return 1; }
   jq -e --arg reason "$expected_reason" \
     '.data.allowed == false and .data.reason == $reason and (.data.player == null)' \
-    "$response" >/dev/null || { echo "[player-0398] $case_id wrong denial" >&2; return 1; }
+    "$response" >/dev/null || { echo "[player-0398] $case_id: неверная причина отказа" >&2; return 1; }
 }
 PLAYER_AUTHORIZED_UUID="$(jq -er '.data.join.uuid' "$RUNTIME_DIR/join-paper-real-client.json")"
 PLAYER_WRONG_UUID="$(python3 - "$PLAYER_AUTHORIZED_UUID" <<'PYUUID'
@@ -913,7 +913,7 @@ validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 
 consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed'")"
-(( consumed_count >= 1 )) || { echo "[e2e] ServerBridge Protocol v2 ticket was not persisted as consumed" >&2; exit 1; }
+(( consumed_count >= 1 )) || { echo "[e2e] билет ServerBridge Protocol v2 не сохранён как использованный" >&2; exit 1; }
 redemption_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,redeemed_identity_epoch,length(redeemed_nonce_hash),(redeemed_by_ip<>'')::text FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed' ORDER BY consumed_at DESC LIMIT 1")"
 IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch nonce_hash_len redeemed_ip_present <<< "$redemption_state"
 [[ "$redemption_version" == "2" && "$fingerprint_match" == "true" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "true" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
@@ -1049,14 +1049,14 @@ if [[ "$MODE" == "full" ]]; then
   validate_join velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" allow
   handoff_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg target "paper-e2e-p3" '{protocolVersion:2,username:$username,targetServer:$target}')"
   handoff_code="$(serverbridge_node_signed_request "$VELOCITY_NODE_KEY" velocity-e2e-p3 POST "$API/api/v1/server-bridge/handoff" "$handoff_body" "$RUNTIME_DIR/handoff-velocity-paper.json")"
-  [[ "$handoff_code" == 201 ]] || { echo "[e2e] expected handoff HTTP 201, got $handoff_code" >&2; cat "$RUNTIME_DIR/handoff-velocity-paper.json" >&2; exit 1; }
+  [[ "$handoff_code" == 201 ]] || { echo "[e2e] ожидался HTTP 201 для передачи сеанса, получено: $handoff_code" >&2; cat "$RUNTIME_DIR/handoff-velocity-paper.json" >&2; exit 1; }
   jq -e '.data.status == "handoff-created" and .data.oneTime == true and (.data.handoffId | startswith("ho_")) and .data.sourceNodeId == "velocity-e2e-p3" and .data.targetNodeId == "paper-e2e-p3"' "$RUNTIME_DIR/handoff-velocity-paper.json" >/dev/null
   validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
   validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
   handoff_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,(source_node_id='velocity-e2e-p3')::text,(target_node_id='paper-e2e-p3')::text,length(redeemed_nonce_hash),(consumed_at IS NOT NULL)::text FROM server_bridge_handoffs_v2 WHERE username_normalized=lower('$PLAYER_USERNAME') ORDER BY created_at DESC LIMIT 1")"
-  [[ "$handoff_state" == consumed\|true\|true\|64\|true ]] || { echo "[e2e] invalid consumed handoff state: $handoff_state" >&2; exit 1; }
+  [[ "$handoff_state" == consumed\|true\|true\|64\|true ]] || { echo "[e2e] неверное состояние использованного билета передачи сеанса: $handoff_state" >&2; exit 1; }
   topology_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE source_node_id='velocity-e2e-p3' AND target_node_id='paper-e2e-p3' AND status='active'")"
-  [[ "$topology_count" == "1" ]] || { echo "[e2e] runtime topology edge was not persisted" >&2; exit 1; }
+  [[ "$topology_count" == "1" ]] || { echo "[e2e] ребро топологии Runtime не было сохранено" >&2; exit 1; }
   curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"
   jq -e '.data.sourceOfTruth == "postgresql" and .data.mode == "runtime-learned-zero-patch" and ([.data.items[] | select(.sourceNodeId == "velocity-e2e-p3" and .targetNodeId == "paper-e2e-p3")] | length) == 1' "$RUNTIME_DIR/serverbridge-topology.json" >/dev/null
 

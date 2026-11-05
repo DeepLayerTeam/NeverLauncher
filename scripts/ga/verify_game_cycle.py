@@ -176,7 +176,7 @@ def verify(
         and state.get("updateVersion") == updated["version"]
         and state.get("sourceCommit") == source_sha
         and state.get("status") == "rolled-back-and-verified",
-        "signed baseline/update identity or updater state is inconsistent",
+        "идентичность подписанного базового выпуска/обновления или состояние средства обновления не согласованы",
     )
     require(
         base.get("signature", {}).get("algorithm") == "Ed25519"

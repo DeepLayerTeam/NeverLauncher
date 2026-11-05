@@ -46,7 +46,7 @@ def main() -> int:
     if loader not in ALLOWED_LOADERS:
         fail(f"Неподдерживаемый загрузчик {loader!r}")
     if os_name not in ALLOWED_OS:
-        fail(f"unsupported OS {os_name!r}")
+        fail(f"неподдерживаемая операционная система {os_name!r}")
     if arch not in ALLOWED_ARCH:
         fail(f"Неподдерживаемая архитектура {arch!r}")
 
@@ -92,7 +92,7 @@ def main() -> int:
         path = str(row.get("path", "")).replace("\\", "/")
         if not path.startswith(prefix):
             fail(
-                f"foreign native path in single-target package: {path!r}, expected prefix {prefix!r}"
+                f"в пакете для одной целевой платформы обнаружен посторонний путь к нативной библиотеке: {path!r}; ожидаемый префикс: {prefix!r}"
             )
         sha = str(row.get("sha256", "")).lower()
         if not SHA256_RE.fullmatch(sha):
@@ -109,7 +109,7 @@ def main() -> int:
     )
     if not actual_natives.endswith(expected_suffix):
         fail(
-            f"Runtime selected nativesDirectory={actual_natives!r}, expected suffix {expected_suffix!r}"
+            f"Runtime выбрал nativesDirectory={actual_natives!r}; ожидаемый суффикс: {expected_suffix!r}"
         )
     if int(cert.get("classpathEntries") or 0) <= 0:
         fail("Путь классов Runtime пуст")

@@ -163,7 +163,7 @@ def check_png(content, kind):
     width, height = __import__('struct').unpack('>II', content[16:24])
     need(width >= 64 and width <= 1024 and width % 64 == 0 and
          (height in (width // 2, width) if kind == 'skin' else height == width // 2),
-         f'unsupported {kind} PNG geometry')
+         f'Неподдерживаемая {kind} текстура: размеры PNG не поддерживаются')
 
 
 def upload_texture(api: API, token: str, kind: str, png: bytes):
@@ -367,7 +367,7 @@ def execute(args, report):
          manifest.get('channel') == args.channel and manifest.get('version') == package.get('version') and
          manifest.get('signature', {}).get('publicKey') == args.pinned_manifest_public_key and
          manifest.get('componentCatalog', {}).get('digest') == catalog['digest'],
-         'publicly served manifest differs from approved signed package')
+         'опубликованный манифест не совпадает с утверждённым подписанным пакетом')
     report['manifestSha256'] = sha(raw)
     report['checks'].append('published_immutable_manifest_readback')
     player = api.json('POST', '/api/v1/admin/login', body={
@@ -426,7 +426,7 @@ def execute(args, report):
                  'Для сервера с модами требуется реальный серверный пакет с независимо закреплённой суммой SHA-256')
         if bundle:
             need(sha_file(bundle, limit=3 << 30) == args.server_bundle_sha256,
-                 'matching server distribution differs from operator pin')
+                 'распределение целевого сервера отличается от версии, закреплённой оператором')
         server = MatchingServer(folder / 'game', args.java, args.cli, mc, loader, loader_version,
                                 bundle=str(bundle) if bundle else '', bundle_sha=args.server_bundle_sha256 or '',
                                 server_entry=args.server_entry, require_bridge=False)

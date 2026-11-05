@@ -118,7 +118,7 @@ def approval(root: Path, approval_file: Path, signature_file: Path, key_file: Pa
         raise Blocked('Некорректная временная метка проверяющего') from exc
     now = now or datetime.now(timezone.utc)
     require(timestamp.tzinfo is not None and now - timedelta(hours=72) <= timestamp <= now + timedelta(minutes=1),
-            'review is stale or future-dated')
+            'результат проверки устарел или датирован будущим временем')
     files = manifest['files']
     actual = evidence_inventory(root)
     require(type(files) is dict and files == actual, 'Независимое подтверждение не охватывает все байты свидетельств')
@@ -144,7 +144,7 @@ def verified_native(root: Path, commit: str, delivered: dict) -> dict:
                 and r['commit'] == commit and r['target'] == target and r['status'] == 'native-verified'
                 and r['nativeOS'] == expected_os and r['nativeArch'] == arch
                 and r['verifier'] == expected_verifier,
-                target + ': native signing never passed on correct OS/CPU')
+                target + ': подписывание нативных файлов не подтверждено на соответствующей ОС и архитектуре')
         require(r['packageSha256'] == delivered['targets'][target]['sha256'],
                 target + ': Нативный подписант не проверил итоговый пакет')
         require(r['releaseManifestSha256'] == file_hash(root / 'signed' / 'RELEASE_MANIFEST.json'),
@@ -241,7 +241,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
             'Итоговая подписанная поставка для шести платформ не проверена')
     if publishing_bundle is not None:
         require(evidence_inventory(root / 'signed') == evidence_inventory(publishing_bundle),
-                'publication candidate differs from independently reviewed final signed bytes')
+                'публикуемый артефакт отличается от окончательных подписанных данных, проверенных независимым экспертом')
     native = verified_native(root, commit, release)
     game = verify_native_game(root / 'native-game', native_package_id, VERSION, commit, ci_run)
     require(len(game['targets']) == 6, 'Отсутствуют отчёты реального игрового запуска')

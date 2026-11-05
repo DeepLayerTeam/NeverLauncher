@@ -28,7 +28,7 @@ if is_true "${STRICT}"; then
   RUN_DEVICE_TRUST_E2E=1
 fi
 
-echo "[Launcher] Preflight ${VERSION}: build, test & release gate (strict=${STRICT}, mode=${MODE})"
+echo "[Launcher] Предварительная проверка ${VERSION}: сборка, тесты и контроль выпуска (strict=${STRICT}, mode=${MODE})"
 
 run_step() {
   local id="$1"; shift

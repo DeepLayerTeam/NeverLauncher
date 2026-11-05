@@ -761,7 +761,7 @@ cp "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE3_CERTIFICATION.json" "${OUT_DIR}/
 # проверка обязательна для каждого выпуска начиная с 0.42.0; изменение VERSION не должно пропускать
 # реальные испытания 14 целей.
 if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" ]]; then
-  log "${VERSION}: verify exact final ServerBridge payload and full live network cycle"
+  log "${VERSION}: проверить точное содержимое финального пакета ServerBridge и полный цикл работы сети"
   python3 "${ROOT_DIR}/scripts/ga/accept_network_release_0420.py" \
     --root "${ROOT_DIR}" --release "${OUT_DIR}" \
     --runtime "${LAUNCHER_NETWORK_LIVE_EVIDENCE_DIR:-${ROOT_DIR}/e2e/runtime}" \
@@ -773,7 +773,7 @@ fi
 # байты по шести отчётам приёмки JVM того же запуска. Нельзя подписывать выпуск только на основании
 # заявленного соответствия модулей.
 if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' ]]; then
-  log "${VERSION}: build, sign and verify runnable Java Host and Gravit source-port .nlext"
+  log "${VERSION}: собрать, подписать и проверить исполняемые .nlext Java Host и порта исходников Gravit"
   EXT_EVIDENCE="${LAUNCHER_EXTENSION_ACCEPTANCE_EVIDENCE_DIR:-}"
   EXT_KEY="${LAUNCHER_EXTENSION_PUBLISHER_PRIVATE_KEY_FILE:-}"
   EXT_PUBLIC="${LAUNCHER_EXTENSION_PUBLISHER_PUBLIC_KEY_FILE:-}"
@@ -1001,7 +1001,7 @@ if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
 fi
 
-log "Ed25519 release signing"
+log "Подписание выпуска Ed25519"
 "${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"

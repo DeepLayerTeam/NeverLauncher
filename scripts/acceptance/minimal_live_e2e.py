@@ -65,7 +65,7 @@ def command(*argv, expected=0, timeout=90):
     proc = subprocess.run(argv, text=True, capture_output=True, timeout=timeout)
     require(
         proc.returncode == expected,
-        f"command {Path(str(argv[0])).name} exited {proc.returncode} instead of {expected}",
+        f"команда {Path(str(argv[0])).name} завершилась с кодом {proc.returncode} вместо ожидаемого {expected}",
     )
     return proc.stdout
 
@@ -544,7 +544,7 @@ def run_acceptance(
             )
             require(
                 response.get("data", {}).get("tokens", {}).get("refreshToken"),
-                "refresh token acknowledged before SIGKILL was lost",
+                "токен обновления, подтверждённый до SIGKILL, был потерян",
             )
 
         step(report, "durable_ack_survives_sigkill", verify_crash)
@@ -687,7 +687,7 @@ def run_acceptance(
                                        "--passphrase-file", str(portable_secret)],
                                       capture_output=True, timeout=90)
                 require(proc.returncode != 0 and not denied.exists(),
-                        "tampered portable snapshot was published")
+                        "изменённый переносимый снимок был опубликован")
             step(report, "authenticated_transfer_tampering_refused", tamper_transfer)
         finally:
             portable_api.cleanup()
@@ -792,7 +792,7 @@ def main(argv=None):
     try:
         require(
             args.expected_version == PRODUCT_VERSION,
-            "E2E version differs from checked-out VERSION",
+            "версия E2E не совпадает с файлом VERSION рабочей копии",
         )
         run_acceptance(
             args.binary.resolve(),

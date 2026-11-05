@@ -244,7 +244,7 @@ def execute(journeys, ids, timeout, report):
                     print(
                         "FAILED:",
                         path,
-                        "(output withheld; rerun directly for diagnostics)",
+                        "(вывод скрыт; для диагностики запустите команду непосредственно)",
                         file=sys.stderr,
                     )
             except (OSError, subprocess.TimeoutExpired) as e:
@@ -323,7 +323,7 @@ def main(argv=None):
         ids = [s.strip().upper() for s in args.ids.split(",")] if args.ids else IDS
         require(
             len(ids) == len(set(ids)) and set(ids) <= set(IDS),
-            "invalid or duplicate --ids",
+            "неверные или повторяющиеся значения --ids",
         )
         return execute(journeys, ids, args.timeout, args.report)
     except (AuditError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:

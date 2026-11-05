@@ -10,7 +10,7 @@ if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
 # Экспортируйте только метаданные. Не загружайте minidump WER из публичного CI: дампы содержат
 # токены аутентификации, учётные данные и другие секреты пользователя или приложения.
 $lines = [System.Collections.Generic.List[string]]::new()
-$lines.Add('Launcher public-CI Windows native fault summary (no memory dumps)')
+$lines.Add('Сводка сбоев нативных компонентов Windows в публичном CI Launcher (без дампов памяти)')
 try {
   $events = @(Get-WinEvent -FilterHashtable @{
       LogName = 'Application'
@@ -32,14 +32,14 @@ try {
         $lines.Add("  Field$($i)=$value")
       }
     } else {
-      $lines.Add('  Windows Error Reporting event present (fields omitted)')
+      $lines.Add('  Обнаружено событие Windows Error Reporting (поля скрыты)')
     }
     $matched++
     if ($matched -ge 15) { break }
   }
-  if ($matched -eq 0) { $lines.Add('No Java Application Error/WER event found in the last 90 minutes.') }
+  if ($matched -eq 0) { $lines.Add('За последние 90 минут событий ошибки Java в Application Error/WER не обнаружено.') }
 } catch {
-  $lines.Add('Windows Application Event Log unavailable on this runner.')
+  $lines.Add('Журнал событий приложений Windows недоступен на этом CI-агенте.')
 }
 # На некоторых GitHub runner доступ к Event Log ограничен. Windows Error Reporting хранит также
 # небольшой UTF-16 отчёт рядом с закрытыми дампами. Читайте ТОЛЬКО четыре разрешённых значения
@@ -79,7 +79,7 @@ try {
       }
       if ($safe.ContainsKey('Application Name') -and $safe['Application Name'] -notmatch '^(?i:javaw?\.exe)$') { continue }
       if ($safe.Count -gt 0) {
-        $lines.Add('WER Java native crash (signature metadata only):')
+        $lines.Add('Нативный сбой Java по WER (только метаданные сигнатуры):')
         foreach ($label in @('Application Name', 'Fault Module Name', 'Exception Code', 'Exception Offset')) {
           if ($safe.ContainsKey($label)) { $lines.Add("  $label=$($safe[$label])") }
         }
@@ -87,8 +87,8 @@ try {
       }
     }
   }
-  if ($found -eq 0) { $lines.Add('No readable Java WER signature reports in the last 90 minutes.') }
+  if ($found -eq 0) { $lines.Add('За последние 90 минут не найдено доступных для чтения отчётов о сигнатурах Java WER.') }
 } catch {
-  $lines.Add('Windows WER signature report store unavailable on this runner.')
+  $lines.Add('Хранилище отчётов о сигнатурах Windows WER недоступно на этом CI-агенте.')
 }
 [System.IO.File]::WriteAllLines($OutputPath, $lines)

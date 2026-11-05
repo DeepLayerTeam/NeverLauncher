@@ -308,7 +308,7 @@ async fn command_guard_inventory_0501(args: &[String]) -> Result<serde_json::Val
         if !FLAGS.contains(&arg.as_str()) || !used.insert(arg.as_str()) {
             return Err(format!("Проверка Guard: неизвестный или повторяющийся параметр {arg}"));
         }
-        let value = args.get(index+1).ok_or_else(|| format!("{arg} requires a value"))?;
+        let value = args.get(index+1).ok_or_else(|| format!("Для параметра {arg} требуется значение"))?;
         if value.is_empty() || value.starts_with("--") { return Err(format!("Для параметра {arg} требуется непустое значение")); }
         index += 2;
     }

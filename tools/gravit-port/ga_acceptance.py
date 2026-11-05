@@ -53,7 +53,7 @@ def regular(path: Path, limit: int = MAX_JSON, private: bool = False) -> bytes:
             require(os.fstat(f.fileno()).st_ino == info.st_ino, "Файл был заменён во время чтения")
         return data
     except OSError as exc:
-        raise Blocked("cannot read " + str(path)) from exc
+        raise Blocked("не удаётся прочитать " + str(path)) from exc
 
 
 def doc(path: Path, *, private: bool = False) -> dict:
@@ -85,7 +85,7 @@ def sha(path: Path, limit: int = 1 << 30) -> str:
                     "Проверяемый файл изменился во время чтения")
         return h.hexdigest()
     except OSError as exc:
-        raise Blocked("cannot hash " + str(path)) from exc
+        raise Blocked("не удаётся вычислить хеш " + str(path)) from exc
 
 
 def pinned(path: str, expected: str, *, executable: bool = False) -> Path:

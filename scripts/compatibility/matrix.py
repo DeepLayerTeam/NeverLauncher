@@ -1344,9 +1344,9 @@ def verify_result(
     else:
         for key in mandatory:
             if checks.get(key) is not True:
-                errors.append(f"check {key} is not true")
+                errors.append(f"проверка {key} не прошла")
     if result.get("exitCode") != 0:
-        errors.append(f"exitCode is {result.get('exitCode')!r}")
+        errors.append(f"код завершения: {result.get('exitCode')!r}")
 
     evidence = result.get("evidence")
     if not isinstance(evidence, dict):
@@ -1466,7 +1466,7 @@ def verify_result(
         ):
             errors.append("Неполный набор файлов доказательств")
     if result.get("status") != "passed":
-        errors.append(f"status is {result.get('status')!r}")
+        errors.append(f"состояние: {result.get('status')!r}")
     return errors
 
 

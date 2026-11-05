@@ -68,7 +68,7 @@ def verify(root, runtime_key, join_key, version, commit):
     certificates = list(root.rglob("runtime-certificate.json"))
     if len(certificates) != 5:
         fail(
-            f"exactly five native launch certificates required, got {len(certificates)}"
+            f"требуется ровно пять сертификатов нативного запуска; получено: {len(certificates)}"
         )
     families = set()
     digest_set = set()

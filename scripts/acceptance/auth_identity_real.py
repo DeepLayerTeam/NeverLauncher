@@ -79,7 +79,7 @@ def private_json(path: Path, max_size=32768):
 
 def private_write(path: Path, data: dict):
     require(path.is_absolute() and path.parent.is_dir() and not path.parent.is_symlink(), 'Родительский каталог вывода должен существовать и иметь абсолютный путь')
-    require(not path.exists() and not path.is_symlink(), 'output already exists; refusing to overwrite evidence')
+    require(not path.exists() and not path.is_symlink(), 'выходной файл уже существует; перезапись свидетельств запрещена')
     tmp = path.with_name('.' + path.name + '.' + secrets.token_hex(8))
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
@@ -261,10 +261,10 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
               'status': 'blocked', 'startedAt': int(time.time())}
     user, local_tokens = auth_login(api, local, local['providerId'])
     owner = user['id']
-    require(proof.get('ownerSha256') == user_digest(owner), 'OIDC proof belongs to another Never owner')
+    require(proof.get('ownerSha256') == user_digest(owner), 'подтверждение OIDC принадлежит другому владельцу Never')
     record(report, 'AUTH-LOCAL', {'canonicalUserSha256': user_digest(owner), 'role': user['roleId']})
     secondary_user, secondary_tokens = auth_login(api, secondary, secondary['providerId'])
-    require(secondary_user['id'] != owner, 'second account maps to same Never UUID')
+    require(secondary_user['id'] != owner, 'вторая учётная запись сопоставлена тому же UUID Never')
     record(report, 'AUTH-SEPARATE-ACCOUNT', {'canonicalUserSha256': user_digest(secondary_user['id'])})
     expect_denied(api, 'POST', '/api/v1/auth/login', data={
         'providerId': local['providerId'], 'identifier': local['identifier'],

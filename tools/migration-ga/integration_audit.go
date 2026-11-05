@@ -50,15 +50,15 @@ var auditIdentifier0491 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}
 
 func integrationAuditCommand0491(args []string) error {
 	fs := flag.NewFlagSet("integration-audit", flag.ContinueOnError)
-	backend := fs.String("backend", "", "HTTPS Backend origin (or numeric loopback HTTP)")
-	project := fs.String("project", "", "existing project ID")
-	run := fs.String("run", "", "existing Gravit migration run ID")
-	extension := fs.String("extension", "", "installed running Java Host extension ID")
-	scope := fs.String("scope", "global", "global or project")
-	scopeID := fs.String("scope-id", "", "project ID for a project-scoped extension")
-	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "environment variable containing PostgreSQL DSN")
+	backend := fs.String("backend", "", "HTTPS-адрес Backend (или HTTP для числового loopback-адреса)")
+	project := fs.String("project", "", "Идентификатор существующего проекта")
+	run := fs.String("run", "", "Идентификатор существующего запуска миграции Gravit")
+	extension := fs.String("extension", "", "Идентификатор установленного и запущенного расширения Java Host")
+	scope := fs.String("scope", "global", "Глобальная область или проект")
+	scopeID := fs.String("scope-id", "", "Идентификатор проекта для расширения с областью действия проекта")
+	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN PostgreSQL")
 	psql := fs.String("psql", "psql", "Путь к исполняемому файлу psql")
-	output := fs.String("output", "", "new private JSON evidence file")
+	output := fs.String("output", "", "Новый конфиденциальный JSON-файл свидетельств")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

@@ -327,7 +327,7 @@ def main():
     else:
         for name in ("rust-runtime", "build-runtime-e2e", "real-runtime-e2e"):
             suites.append(
-                {"id": name, "status": "missing", "reason": "cargo/rustc not installed"}
+                {"id": name, "status": "missing", "reason": "cargo/rustc не установлены"}
             )
 
     if platform.system() == "Windows" and shutil.which("go"):
@@ -406,12 +406,12 @@ def main():
             {
                 "id": "same-stand-benchmark",
                 "status": "missing",
-                "reason": "real 0.23.0 executable or built Rust artifacts unavailable",
+                "reason": "реальный исполняемый файл 0.23.0 или собранные артефакты Rust недоступны",
             }
         )
     if not sha or not clean:
         evidence["unmetGates"].append(
-            "exact clean git commit SHA is required; archive snapshot hash is not a git commit"
+            "требуется точный SHA коммита в чистом Git-репозитории; хеш снимка архива не является коммитом Git"
         )
     evidence["unmetGates"] += [s["id"] for s in suites if s["status"] != "passed"]
     if not evidence["unmetGates"]:

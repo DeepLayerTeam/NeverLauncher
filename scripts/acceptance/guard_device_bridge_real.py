@@ -216,7 +216,7 @@ def run_live(cfg):
             'serverBridge':{'tenRealRuntime':bridge,'threeBuildCompatibility':
                 ['bukkit','quilt','sponge'], 'vanillaSidecar':vanilla_result,
                 'productionJarVerificationOutputSha256':release},
-            'reviewRequired':'Independent final signed native packages, pilot observations, hardware secure storage and actual upstream runtimes',
+            'reviewRequired':'Независимая проверка окончательных подписанных нативных пакетов, пилотных наблюдений, аппаратного защищённого хранилища и реальных сторонних сред выполнения',
             'completedAt':datetime.now(timezone.utc).isoformat()}
 
 def run_local(output, only=None):

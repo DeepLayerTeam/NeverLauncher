@@ -93,7 +93,7 @@ def callback(host, token, method, params=None, *, expected=200):
     response = host.request('/v1/rpc', body, token, expected=expected)
     if expected == 200:
         require(response.get('requestId') == body['requestId'] and
-                isinstance(response.get('result'), dict), 'callback request ID or result differs')
+                isinstance(response.get('result'), dict), 'идентификатор запроса callback или его результат не совпадает')
     return response
 
 

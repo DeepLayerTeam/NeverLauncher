@@ -884,7 +884,7 @@ def snapshot(
             else "not-used",
             "files": files,
             "credentialPolicy": "Ключи подписи, пароли, материалы TLS и KMS необходимо восстановить отдельно",
-            "consistentWrites": "Compose writers stopped; PostgreSQL WAL unchanged and no extra client sessions across snapshot",
+            "consistentWrites": "Пишущие процессы Compose остановлены; WAL PostgreSQL не изменился, а дополнительных клиентских сеансов при создании снимка нет",
             "postgresWalLsn": pg_lsn_before,
             "serviceStateAtBackup": {key: states.get(key, "absent") for key in (
                 ("api", "api-b", "worker-a", "worker-b", "admin", "nginx")

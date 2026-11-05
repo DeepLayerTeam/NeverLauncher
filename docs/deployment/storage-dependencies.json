@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "scope": "source-wide Go AST + SQL/config/shell/Python/CI text; excludes vendored/generated binary dependencies",
+  "scope": "анализ всего исходного кода Go (AST), а также SQL, конфигураций, shell, Python и CI; исключены сторонние и сгенерированные двоичные зависимости",
   "methodSurface": {
     "httpRepositoryMethods": [
       "AcquireExtensionUpdateLease",

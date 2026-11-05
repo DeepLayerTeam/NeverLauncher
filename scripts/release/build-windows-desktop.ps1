@@ -40,7 +40,7 @@ if (-not [string]::IsNullOrWhiteSpace($TimestampFromEnv)) {
 function Invoke-Checked([scriptblock]$Command, [string]$Label) {
     & $Command
     if ($LASTEXITCODE -ne 0) {
-        throw "$Label failed with exit code $LASTEXITCODE"
+        throw "Ошибка операции «$Label», код завершения: $LASTEXITCODE"
     }
 }
 
@@ -59,7 +59,7 @@ function Get-SignToolPath {
             Sort-Object FullName -Descending)
         if ($Candidates.Count -gt 0) { return $Candidates[0].FullName }
     }
-    throw "signtool.exe was not found. Install Windows 10/11 SDK signing tools."
+    throw "signtool.exe не найден. Установите средства подписания из Windows 10/11 SDK."
 }
 
 function Find-CodeSigningCertificate([string]$Thumbprint) {
@@ -76,7 +76,7 @@ function Find-CodeSigningCertificate([string]$Thumbprint) {
             return [pscustomobject]@{ Certificate = $Candidate; StoreScope = $Entry.Scope; Imported = $false }
         }
     }
-    throw "Code-signing certificate not found for thumbprint $Thumbprint"
+    throw "Сертификат подписания кода с отпечатком $Thumbprint не найден"
 }
 
 function Import-CodeSigningCertificate([string]$Path, [string]$Password) {
@@ -88,9 +88,9 @@ function Import-CodeSigningCertificate([string]$Path, [string]$Password) {
         ConvertTo-SecureString -String $Password -AsPlainText -Force
     }
     $Certificate = Import-PfxCertificate -FilePath $Resolved -CertStoreLocation "Cert:\CurrentUser\My" -Password $SecurePassword -Exportable:$false
-    if ($null -eq $Certificate) { throw "PFX import did not return a certificate" }
+    if ($null -eq $Certificate) { throw "Импорт PFX не вернул сертификат" }
     $Certificate = $Certificate | Where-Object { $_.HasPrivateKey } | Select-Object -First 1
-    if ($null -eq $Certificate) { throw "Imported PFX does not contain a private code-signing key" }
+    if ($null -eq $Certificate) { throw "Импортированный PFX не содержит закрытого ключа подписания кода" }
     return [pscustomobject]@{ Certificate = $Certificate; StoreScope = "CurrentUser"; Imported = $true }
 }
 
@@ -100,18 +100,18 @@ function Resolve-CodeSigningCertificate {
         $Resolved = Import-CodeSigningCertificate $CodeSigningCertificatePath $CodeSigningCertificatePassword
         if (-not [string]::IsNullOrWhiteSpace($CodeSigningCertificateThumbprint) -and
             $Resolved.Certificate.Thumbprint.Replace(" ", "").ToUpperInvariant() -ne $CodeSigningCertificateThumbprint.Replace(" ", "").ToUpperInvariant()) {
-            throw "Imported PFX thumbprint does not match requested certificate thumbprint"
+            throw "Отпечаток импортированного PFX не совпадает с запрошенным отпечатком сертификата"
         }
     } elseif (-not [string]::IsNullOrWhiteSpace($CodeSigningCertificateThumbprint)) {
         $Resolved = Find-CodeSigningCertificate $CodeSigningCertificateThumbprint
     }
     if ($null -eq $Resolved) { return $null }
     $Certificate = $Resolved.Certificate
-    if (-not $Certificate.HasPrivateKey) { throw "Code-signing certificate has no private key" }
+    if (-not $Certificate.HasPrivateKey) { throw "У сертификата подписания кода отсутствует закрытый ключ" }
     $CodeSigningEku = $Certificate.EnhancedKeyUsageList | Where-Object { $_.ObjectId.Value -eq "1.3.6.1.5.5.7.3.3" } | Select-Object -First 1
-    if ($null -eq $CodeSigningEku) { throw "Certificate is missing Code Signing EKU 1.3.6.1.5.5.7.3.3" }
+    if ($null -eq $CodeSigningEku) { throw "У сертификата отсутствует расширенное назначение Code Signing (EKU 1.3.6.1.5.5.7.3.3)" }
     $Now = Get-Date
-    if ($Now -lt $Certificate.NotBefore -or $Now -gt $Certificate.NotAfter) { throw "Code-signing certificate is outside its validity interval" }
+    if ($Now -lt $Certificate.NotBefore -or $Now -gt $Certificate.NotAfter) { throw "Срок действия сертификата подписания кода ещё не наступил или уже истёк" }
     return $Resolved
 }
 
@@ -119,12 +119,12 @@ function Get-PEMachine([string]$Path) {
     $Stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
     try {
         $Reader = New-Object System.IO.BinaryReader($Stream)
-        if ($Reader.ReadUInt16() -ne 0x5A4D) { throw "$Path is not an MZ executable" }
+        if ($Reader.ReadUInt16() -ne 0x5A4D) { throw "$Path не является исполняемым файлом MZ" }
         $Stream.Position = 0x3C
         $PeOffset = $Reader.ReadUInt32()
-        if ($PeOffset -lt 0x40 -or $PeOffset -gt ($Stream.Length - 24)) { throw "$Path has invalid PE offset" }
+        if ($PeOffset -lt 0x40 -or $PeOffset -gt ($Stream.Length - 24)) { throw "У $Path неверное смещение PE" }
         $Stream.Position = $PeOffset
-        if ($Reader.ReadUInt32() -ne 0x00004550) { throw "$Path has invalid PE signature" }
+        if ($Reader.ReadUInt32() -ne 0x00004550) { throw "У $Path неверная сигнатура PE" }
         return $Reader.ReadUInt16()
     } finally {
         $Stream.Dispose()
@@ -134,13 +134,13 @@ function Get-PEMachine([string]$Path) {
 function Assert-PEArchitecture([string]$Path, [int]$ExpectedMachine, [string]$Architecture) {
     $Actual = Get-PEMachine $Path
     if ($Actual -ne $ExpectedMachine) {
-        throw "${Path} PE machine mismatch for ${Architecture}: expected 0x$('{0:X4}' -f $ExpectedMachine), got 0x$('{0:X4}' -f $Actual)"
+        throw "Архитектура PE файла ${Path} не соответствует ${Architecture}: ожидалось 0x$('{0:X4}' -f $ExpectedMachine), получено 0x$('{0:X4}' -f $Actual)"
     }
 }
 
 function Invoke-SignTool([string]$SignTool, [string[]]$Arguments, [string]$Label) {
     & $SignTool @Arguments
-    if ($LASTEXITCODE -ne 0) { throw "$Label failed with exit code $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "Ошибка операции «$Label», код завершения: $LASTEXITCODE" }
 }
 
 function Sign-And-VerifyAuthenticode([string]$Path, $SigningContext, [string]$SignTool) {
@@ -153,13 +153,13 @@ function Sign-And-VerifyAuthenticode([string]$Path, $SigningContext, [string]$Si
 
     $Signature = Get-AuthenticodeSignature -FilePath $Path
     if ($Signature.Status -ne "Valid") {
-        throw "Authenticode verification failed for ${Path}: $($Signature.Status) $($Signature.StatusMessage)"
+        throw "Не удалось проверить подпись Authenticode файла ${Path}: $($Signature.Status) $($Signature.StatusMessage)"
     }
     if ($null -eq $Signature.SignerCertificate -or $Signature.SignerCertificate.Thumbprint -ne $SigningContext.Certificate.Thumbprint) {
-        throw "Authenticode signer mismatch for $Path"
+        throw "Подписант Authenticode не совпадает для $Path"
     }
     if ($null -eq $Signature.TimeStamperCertificate) {
-        throw "RFC3161 timestamp is missing for $Path"
+        throw "У $Path отсутствует метка времени RFC3161"
     }
     return $Signature
 }
@@ -197,20 +197,20 @@ try {
     $SigningContext = Resolve-CodeSigningCertificate
     $SignedProduction = $null -ne $SigningContext
     $UnsignedOnly = ([Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_ONLY") -eq "1")
-    if ($UnsignedOnly -and $RequireCodeSigning) { throw "unsigned-only mode cannot require platform signing" }
+    if ($UnsignedOnly -and $RequireCodeSigning) { throw "Режим только неподписанных сборок несовместим с обязательной платформенной подписью" }
     $SigningRequired = (-not $UnsignedOnly) -and ($RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage))
     if ($SigningRequired -and -not $SignedProduction) {
-        throw "Production Windows x64+ARM64 delivery requires Authenticode credentials. Pass -CodeSigningCertificateThumbprint or -CodeSigningCertificatePath. Use -AllowUnsignedDevelopmentPackage only for CI/development candidates."
+        throw "Для поставки Windows x64+ARM64 в производство нужны учётные данные Authenticode. Передайте -CodeSigningCertificateThumbprint либо -CodeSigningCertificatePath. Используйте -AllowUnsignedDevelopmentPackage только для CI и тестовых сборок."
     }
     if ($SignedProduction) {
-        if ([string]::IsNullOrWhiteSpace($TimestampServer)) { throw "Production Authenticode signing requires an RFC3161 timestamp server" }
+        if ([string]::IsNullOrWhiteSpace($TimestampServer)) { throw "Для производственной подписи Authenticode необходим сервер меток времени RFC3161" }
         $SignTool = Get-SignToolPath
     }
 
     Push-Location (Join-Path $Root "apps\desktop")
     try {
-        Invoke-Checked { npm.cmd ci } "Desktop npm ci"
-        Invoke-Checked { npm.cmd run build } "Desktop frontend build"
+        Invoke-Checked { npm.cmd ci } "Установка зависимостей Desktop через npm ci"
+        Invoke-Checked { npm.cmd run build } "Сборка интерфейса Desktop"
     } finally {
         Pop-Location
     }
@@ -224,18 +224,18 @@ try {
         New-Item -ItemType Directory -Force -Path $PackageDir | Out-Null
 
         Invoke-Checked { rustup target add $Target.RustTarget } "rustup target add $($Target.RustTarget)"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin guard --bin runtime } "Guard/Runtime $Arch release build"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $SensorManifest } "Guard Sensor $Arch release build"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $DesktopManifest } "Desktop $Arch native release build"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin guard --bin runtime } "Сборка релиза Guard/Runtime для $Arch"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $SensorManifest } "Сборка релиза Guard Sensor для $Arch"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $DesktopManifest } "Нативная сборка Desktop для $Arch"
 
         $DesktopSource = Join-Path $Root "apps\desktop\src-tauri\target\$($Target.RustTarget)\release\launcher-desktop.exe"
         $GuardSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\guard.exe"
         $RuntimeSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\runtime.exe"
         $SensorSource = Join-Path $Root "runtime\guard-sensor\target\$($Target.RustTarget)\release\guard_sensor.dll"
-        if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Desktop $Arch artifact missing: $DesktopSource" }
-        if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "Guard $Arch artifact missing: $GuardSource" }
-        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "Runtime $Arch artifact missing: $RuntimeSource" }
-        if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "Guard Sensor $Arch artifact missing: $SensorSource" }
+        if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Отсутствует артефакт Desktop для $Arch: $DesktopSource" }
+        if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "Отсутствует артефакт Guard для $Arch: $GuardSource" }
+        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "Отсутствует артефакт Runtime для $Arch: $RuntimeSource" }
+        if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "Отсутствует артефакт Guard Sensor для $Arch: $SensorSource" }
 
         $DesktopPackageName = "launcher-desktop.exe"
         $DesktopPackagePath = Join-Path $PackageDir $DesktopPackageName
@@ -253,7 +253,7 @@ try {
         $OldGOOS = $env:GOOS; $OldGOARCH = $env:GOARCH; $OldCGO = $env:CGO_ENABLED
         try {
             $env:GOOS = "windows"; $env:GOARCH = $Target.GoArch; $env:CGO_ENABLED = "0"
-            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\launcher } "CLI $Arch release build"
+            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\launcher } "Сборка CLI для $Arch"
         } finally {
             $env:GOOS = $OldGOOS; $env:GOARCH = $OldGOARCH; $env:CGO_ENABLED = $OldCGO
             Pop-Location
@@ -368,7 +368,7 @@ try {
         $ZipPath = Join-Path $OutDir $ZipName
         if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
         Compress-Archive -Path (Join-Path $PackageDir "*") -DestinationPath $ZipPath -CompressionLevel Optimal
-        if (-not (Test-Path $ZipPath -PathType Leaf)) { throw "Windows $Arch package was not created: $ZipPath" }
+        if (-not (Test-Path $ZipPath -PathType Leaf)) { throw "Пакет Windows для $Arch не создан: $ZipPath" }
 
         $DesktopRootName = "launcher-desktop-windows-$Arch.exe"
         $GuardRootName = "guard-windows-$Arch.exe"
@@ -418,7 +418,7 @@ try {
     }
 
     if ($UnsignedOnly) {
-        Write-Host "Launcher $Version unsigned Windows x64+ARM64 build completed before any signing"
+        Write-Host "Сборка неподписанных пакетов Launcher $Version для Windows x64+ARM64 завершена до этапа подписания"
         return
     }
 
@@ -485,7 +485,7 @@ try {
     $LegacyZipPath = Join-Path $OutDir "launcher-desktop-$Version-windows-amd64.zip"
     if (Test-Path $LegacyZipPath) { Remove-Item -Force $LegacyZipPath }
     Compress-Archive -Path (Join-Path $LegacyPackageDir "*") -DestinationPath $LegacyZipPath -CompressionLevel Optimal
-    if (-not (Test-Path $LegacyZipPath -PathType Leaf)) { throw "Legacy Guard CI Windows package was not created: $LegacyZipPath" }
+    if (-not (Test-Path $LegacyZipPath -PathType Leaf)) { throw "Устаревший Windows-пакет Guard CI не создан: $LegacyZipPath" }
 
     $SignerEvidence = $null
     if ($SignedProduction) {
@@ -512,7 +512,7 @@ try {
     if ($null -ne $SignerEvidence) { $Evidence["signer"] = $SignerEvidence }
     Write-JsonNoBom (Join-Path $OutDir "WINDOWS_SIGNING_EVIDENCE.json") $Evidence
 
-    Write-Host "Launcher $Version Windows x64+ARM64 packages prepared (signingMode=$($Evidence.signingMode))"
+    Write-Host "Пакеты Launcher $Version для Windows x64+ARM64 подготовлены (режим подписи: $($Evidence.signingMode))"
 } finally {
     if ($null -ne $SigningContext -and $SigningContext.Imported) {
         $ImportedPath = "Cert:\CurrentUser\My\$($SigningContext.Certificate.Thumbprint)"

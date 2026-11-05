@@ -114,7 +114,7 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
             size = item.get("size")
             if name != canonical[role]:
                 fail(
-                    f"non-canonical certified artifact name for {target_id}/{role}: {name!r}"
+                    f"неканоническое имя сертифицированного артефакта для {target_id}/{role}: {name!r}"
                 )
             if (
                 not SHA256_RE.fullmatch(digest)

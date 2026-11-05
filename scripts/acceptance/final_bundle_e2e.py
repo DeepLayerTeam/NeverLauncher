@@ -79,7 +79,7 @@ def identity(bundle: Path, version: str, commit: str) -> dict:
     require(SHA40.fullmatch(commit) is not None, "Недопустимый SHA-код состояния репозитория")
     require(
         version == (HERE.parents[1] / "VERSION").read_text(encoding="utf-8").strip(),
-        "requested version differs from checkout",
+        "запрошенная версия отличается от версии рабочей копии",
     )
     manifest_path = bundle / "RELEASE_MANIFEST.json"
     sums_path = bundle / "SHA256SUMS"
@@ -109,7 +109,7 @@ def identity(bundle: Path, version: str, commit: str) -> dict:
     )
     require(binary.stat().st_mode & 0o022 == 0, "Итоговый API доступен на запись группе или всем пользователям")
     digest = sha(binary)
-    require(digest == digests[BINARY], "final API SHA256 differs from signed checksums")
+    require(digest == digests[BINARY], "окончательный SHA-256 API не совпадает с подписанными контрольными суммами")
     return {
         "productVersion": version,
         "sourceCommit": commit,
@@ -150,7 +150,7 @@ def validate_live_report(data: dict, expected: dict) -> None:
     )
     require(
         {row["id"] for row in rows} == REQUIRED_CHECKS,
-        "missing, duplicate or unexpected E2E step",
+        "отсутствующий, повторяющийся или неожиданный этап E2E",
     )
 
 

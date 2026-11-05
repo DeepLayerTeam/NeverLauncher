@@ -337,7 +337,7 @@ def verify_result(
     else:
         for check in target["requiredChecks"]:
             if checks.get(check) is not True:
-                errors.append(f"required check {check} is not true")
+                errors.append(f"обязательная проверка {check} не прошла")
     artifacts = result.get("artifacts")
     if not isinstance(artifacts, dict) or set(artifacts) != set(ARTIFACT_ROLES):
         errors.append(
@@ -348,7 +348,7 @@ def verify_result(
         for role in ARTIFACT_ROLES:
             item = artifacts.get(role)
             if not isinstance(item, dict):
-                errors.append(f"artifact {role} is invalid")
+                errors.append(f"артефакт {role} недействителен")
                 continue
             name = str(item.get("name", ""))
             digest = str(item.get("sha256", "")).lower()
@@ -392,7 +392,7 @@ def verify_result(
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
     print(
-        f"Guard CI targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}"
+        f"Целевые среды Guard CI проверены: {len(payload['targets'])} целевых сред для {PRODUCT_VERSION}"
     )
     return 0
 

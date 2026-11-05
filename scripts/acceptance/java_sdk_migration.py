@@ -33,7 +33,7 @@ SOURCE_RE=re.compile('[0-9a-f]{40}\\Z')
 
 def private_save(path: Path, obj):
     require(path.is_absolute() and path.parent.is_dir() and not path.parent.is_symlink()
-            and not path.exists() and not path.is_symlink(), 'new private output required')
+            and not path.exists() and not path.is_symlink(), 'требуется новый закрытый выходной файл')
     raw=(json.dumps(obj, sort_keys=True, indent=2, ensure_ascii=True)+'\n').encode()
     fd=os.open(path, os.O_CREAT|os.O_EXCL|os.O_WRONLY|getattr(os,'O_NOFOLLOW',0),0o600)
     with os.fdopen(fd, 'wb') as stream:
@@ -83,10 +83,10 @@ def local():
 
 def parse_live(cfg):
     require(cfg.get('format') == SCHEMA and SOURCE_RE.fullmatch(str(cfg.get('sourceCommit',''))),
-            'exact source commit and schema required')
+            'требуются точный коммит исходников и схема')
     require(type(cfg.get('gravit')) is dict and type(cfg.get('java')) is dict and
             type(cfg.get('legacy')) is list and len(cfg['legacy'])==2,
-            'live Java, three Gravit and two legacy migrations required')
+            'требуются реальная Java, три миграции Gravit и две миграции устаревших данных')
     versions=[entry.get('sourceVersion') for entry in cfg['legacy'] if type(entry) is dict]
     require(sorted(versions)==['0.36.0','0.46.0'], 'Требуются оба исторических маршрута NeverLauncher')
     require(len({str(entry.get('capture')) for entry in cfg['legacy']}) == 2,
@@ -157,7 +157,7 @@ def main(argv=None):
     args=ap.parse_args(argv)
     os.umask(0o077)
     try:
-        require(tuple(map(int, (ROOT/'VERSION').read_text().strip().split('.')[:3])) >= (0,52,8), 'checkout version is too old')
+        require(tuple(map(int, (ROOT/'VERSION').read_text().strip().split('.')[:3])) >= (0,52,8), 'версия рабочей копии слишком старая')
         result=local() if args.mode=='local' else live_run(private_json(args.config))
         private_save(args.report,result)
         print('0.52.8', result['status'], len(result.get('checks',{})))

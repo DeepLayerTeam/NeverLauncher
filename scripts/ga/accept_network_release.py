@@ -148,7 +148,7 @@ def verify_faults(runtime: Path, version: str, commit: str) -> None:
     fresh = validate(log, commit, version)
     require(
         proof == fresh and set(proof["tests"]) == set(REQUIRED),
-        "host fault report differs from actual test JSON events",
+        "отчёт о сбоях хоста не соответствует фактическим событиям JSON-тестов",
     )
 
 

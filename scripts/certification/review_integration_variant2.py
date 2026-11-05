@@ -149,7 +149,7 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(
-        "0.31.0 cross-platform integration gates passed (not upstream functional parity)"
+        "Межплатформенные интеграционные проверки версии 0.31.0 пройдены (это не подтверждает функциональную равнозначность исходному проекту)"
     )
 
 

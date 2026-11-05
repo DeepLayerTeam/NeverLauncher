@@ -114,7 +114,7 @@ def invoke(
     )
     if success and completed.returncode:
         raise AssertionError(
-            f"runtime {' '.join(argv[:1])} failed: {completed.stderr[-2400:]}"
+            f"ошибка Runtime {' '.join(argv[:1])}: {completed.stderr[-2400:]}"
         )
     if not success and completed.returncode == 0:
         raise AssertionError(f"Runtime неожиданно принял запрещённую команду {argv[:1]}")
@@ -189,7 +189,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 )
             # Файл, созданный игроком, НЕЛЬЗЯ незаметно включать в подписанное владение.
             player = installation / "mods/user-created.txt"
-            player.write_text("player's file; not in signed manifest", encoding="utf-8")
+            player.write_text("файл игрока отсутствует в подписанном манифесте", encoding="utf-8")
             minimal_requests = len(server.metrics()["requests"])
             verify = invoke(
                 runtime, ["verify", *base, "--preset", "minimal"], cache=cache
@@ -275,7 +275,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 assert_bytes(installation, doc, core)
                 if (
                     player.read_text(encoding="utf-8")
-                    != "player's file; not in signed manifest"
+                    != "файл игрока отсутствует в подписанном манифесте"
                 ):
                     raise AssertionError("Файл игрока изменился при переключении пресета")
                 # Пользовательский файл на новом управляемом пути блокирует операцию ДО загрузки.

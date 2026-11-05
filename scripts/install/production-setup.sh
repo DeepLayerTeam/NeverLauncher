@@ -49,12 +49,12 @@ cat > "${REPORT}" <<JSON
     "projectId": "demo-project",
     "profileId": "vanilla",
     "channel": "stable",
-    "nextStep": "POST /api/v1/install/first-project or nl install first-project"
+    "nextStep": "POST /api/v1/install/first-project или nl install first-project"
   },
   "serverBridge": {
     "serverId": "velocity-production-10000",
     "kind": "velocity",
-    "nextStep": "register bridge server and copy token to plugin config.yml"
+    "nextStep": "зарегистрируйте сервер Bridge и скопируйте токен в config.yml плагина"
   },
   "checks": [
     {"id": "env.file", "status": "$( [[ -f "${ENV_FILE}" ]] && echo ok || echo failed )", "message": "${ENV_FILE}"},

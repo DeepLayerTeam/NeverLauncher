@@ -22,7 +22,7 @@ from guard_ga_0510 import DOMAIN, SCHEMA, VERSION, evidence_inventory, require, 
 def sign(root: Path, key_path: Path, reviewer: str, publisher: str, commit: str,
          output: Path, signature: Path) -> dict:
     require(bool(IDENTITY.fullmatch(reviewer)) and bool(IDENTITY.fullmatch(publisher))
-            and reviewer != publisher, 'independent reviewer and different publisher required')
+            and reviewer != publisher, 'требуются независимый проверяющий и другой издатель')
     require(bool(COMMIT.fullmatch(commit)), 'Необходимо указать точный коммит исходников')
     require(key_path.is_file() and not key_path.is_symlink(), 'Отсутствует независимый PEM-ключ')
     if os.name != 'nt':
