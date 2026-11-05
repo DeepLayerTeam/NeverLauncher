@@ -302,7 +302,7 @@ export class AuthenticationExperience02610 {
   async link(id: string): Promise<void> {
     await this.execute("link", async (token) => {
       if (this.value.profile?.id.toLowerCase() !== id.toLowerCase())
-        throw Error("Minecraft UUID mismatch");
+        throw Error("UUID Minecraft не совпадает");
       await this.client.linkToNever(id, true);
       await this.accepted(token, this.value.profile);
     });
@@ -310,7 +310,7 @@ export class AuthenticationExperience02610 {
   async unlink(id: string): Promise<void> {
     await this.execute("unlink", async (token) => {
       if (this.value.profile?.id.toLowerCase() !== id.toLowerCase())
-        throw Error("Minecraft UUID mismatch");
+        throw Error("UUID Minecraft не совпадает");
       await this.client.unlinkFromNever(id, true);
       await this.accepted(token, this.value.profile);
     });

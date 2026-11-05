@@ -26,13 +26,13 @@ func handleAuthUpgrade02911(args []string) error {
 		return fmt.Errorf("unknown auth-upgrade command %q", action)
 	}
 	flags := flag.NewFlagSet("auth-upgrade "+action, flag.ContinueOnError)
-	dsn := flags.String("dsn", os.Getenv("LAUNCHER_DATABASE_DSN"), "PostgreSQL DSN (use LAUNCHER_DATABASE_DSN)")
-	psql := flags.String("psql", "psql", "psql executable")
-	snapshot := flags.String("snapshot", "", "path to preservation checkpoint")
-	backup := flags.Bool("backup-confirmed", false, "operator verified an independently restorable PostgreSQL backup")
-	maintenance := flags.Bool("maintenance-confirmed", false, "operator stopped authentication, GameProfile and Gravit source writes")
+	dsn := flags.String("dsn", os.Getenv("LAUNCHER_DATABASE_DSN"), "DSN PostgreSQL (используйте LAUNCHER_DATABASE_DSN)")
+	psql := flags.String("psql", "psql", "Исполняемый файл psql")
+	snapshot := flags.String("snapshot", "", "Путь к контрольной точке сохранности данных")
+	backup := flags.Bool("backup-confirmed", false, "Оператор подтвердил резервную копию PostgreSQL, пригодную для независимого восстановления")
+	maintenance := flags.Bool("maintenance-confirmed", false, "Оператор остановил запись авторизации, GameProfile и исходных данных Gravit")
 	var allow providerIDs02911
-	flags.Var(&allow, "allow-provider", "explicitly verified provider ID (repeat); no implicit custom-provider migration")
+	flags.Var(&allow, "allow-provider", "Явно подтверждённый идентификатор провайдера (можно повторять); не выполнять неявную миграцию сторонних провайдеров")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}

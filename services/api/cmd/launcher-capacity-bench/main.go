@@ -167,11 +167,11 @@ func run(ctx context.Context, client *http.Client, endpoint string, concurrency 
 	return r
 }
 func main() {
-	address := flag.String("url", "http://127.0.0.1:8080/api/v1/status", "read-only HTTP target")
-	maxWorkers := flag.Int("max-workers", 16, "maximum parallel requests, 1..64")
-	stepTime := flag.Duration("step", 8*time.Second, "measurement time per ramp step, 2..120s")
-	remote := flag.Bool("allow-remote", false, "explicitly authorize load against remote server YOU OWN")
-	confirm := flag.Bool("confirm", false, "explicitly approve generating HTTP load")
+	address := flag.String("url", "http://127.0.0.1:8080/api/v1/status", "Целевой HTTP-адрес для запросов только на чтение")
+	maxWorkers := flag.Int("max-workers", 16, "Максимальное число параллельных запросов: 1–64")
+	stepTime := flag.Duration("step", 8*time.Second, "Время измерения на каждом шаге увеличения нагрузки: 2–120 с")
+	remote := flag.Bool("allow-remote", false, "Явно разрешить нагрузку на удалённый сервер, которым вы владеете")
+	confirm := flag.Bool("confirm", false, "Явно подтвердить создание HTTP-нагрузки")
 	flag.Parse()
 	if !*confirm || *maxWorkers < 1 || *maxWorkers > 64 || *stepTime < 2*time.Second || *stepTime > 120*time.Second {
 		fmt.Fprintln(os.Stderr, "--confirm required; --max-workers 1..64; --step 2s..120s")

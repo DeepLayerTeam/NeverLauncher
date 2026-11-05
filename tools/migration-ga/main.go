@@ -860,8 +860,8 @@ func runMain(args []string) error {
 	case "integration-audit":
 		return integrationAuditCommand0491(args[1:])
 	case "manual-actions":
-		planFile := fs.String("plan", "", "migration operator plan")
-		out := fs.String("output", "", "new operator worklist Markdown file")
+		planFile := fs.String("plan", "", "План миграции для оператора")
+		out := fs.String("output", "", "Новый Markdown-файл списка задач оператора")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -875,17 +875,17 @@ func runMain(args []string) error {
 		}
 		return exportManualWorklist(context.Background(), p, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out)
 	case "audit-state":
-		source := fs.String("source", "", "absolute source snapshot directory")
-		target := fs.String("target", "", "absolute target snapshot directory")
-		out := fs.String("output", "", "new private JSON audit evidence file")
+		source := fs.String("source", "", "Абсолютный путь к каталогу исходного снимка")
+		target := fs.String("target", "", "Абсолютный путь к каталогу целевого снимка")
+		out := fs.String("output", "", "Новый приватный JSON-файл аудиторских свидетельств")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
 		return executeStateAudit(*source, *target, *out)
 	case "certify":
-		evidenceDir := fs.String("evidence-dir", "", "new private directory for complete check evidence")
-		p := fs.String("plan", "", "operator check plan JSON")
-		out := fs.String("output", "", "signed certificate (created with 0600)")
+		evidenceDir := fs.String("evidence-dir", "", "Новый приватный каталог для полного набора свидетельств проверки")
+		p := fs.String("plan", "", "JSON-план проверок оператора")
+		out := fs.String("output", "", "Подписанный сертификат (создаётся с правами 0600)")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -899,9 +899,9 @@ func runMain(args []string) error {
 		}
 		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out, *evidenceDir)
 	case "verify":
-		evidenceDir := fs.String("evidence-dir", "", "preserved evidence directory (required)")
-		file := fs.String("certificate", "", "signed evidence bundle")
-		pub := fs.String("public-key", "", "trusted Ed25519 PUBLIC KEY PEM")
+		evidenceDir := fs.String("evidence-dir", "", "Сохранённый каталог свидетельств (обязательно)")
+		file := fs.String("certificate", "", "Подписанный пакет свидетельств")
+		pub := fs.String("public-key", "", "Доверенный ПУБЛИЧНЫЙ ключ Ed25519 в PEM")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
@@ -938,16 +938,16 @@ func runMain(args []string) error {
 		fmt.Println("GA evidence signature, matrix and stored artifacts verified:", b.RunID)
 		return nil
 	case "verify-cohort", "verify-cohort-live":
-		key := fs.String("public-key", "", "trusted Ed25519 public key")
-		single := fs.String("fileauth-single", "", "fileauth certificate")
-		singleDir := fs.String("fileauth-single-evidence", "", "fileauth evidence directory")
-		modded := fs.String("sql-modded", "", "SQL/modded certificate")
-		moddedDir := fs.String("sql-modded-evidence", "", "SQL/modded evidence directory")
-		network := fs.String("proxy-network", "", "network certificate")
-		networkDir := fs.String("proxy-network-evidence", "", "network evidence directory")
-		singlePlan := fs.String("fileauth-single-plan", "", "fileauth live source plan")
-		moddedPlan := fs.String("sql-modded-plan", "", "SQL/modded live source plan")
-		networkPlan := fs.String("proxy-network-plan", "", "network live source plan")
+		key := fs.String("public-key", "", "Доверенный публичный ключ Ed25519")
+		single := fs.String("fileauth-single", "", "Сертификат fileauth")
+		singleDir := fs.String("fileauth-single-evidence", "", "Каталог свидетельств fileauth")
+		modded := fs.String("sql-modded", "", "Сертификат SQL/modded")
+		moddedDir := fs.String("sql-modded-evidence", "", "Каталог свидетельств SQL/modded")
+		network := fs.String("proxy-network", "", "Сетевой сертификат")
+		networkDir := fs.String("proxy-network-evidence", "", "Каталог сетевых свидетельств")
+		singlePlan := fs.String("fileauth-single-plan", "", "План проверки работающего источника fileauth")
+		moddedPlan := fs.String("sql-modded-plan", "", "План проверки работающего источника SQL/modded")
+		networkPlan := fs.String("proxy-network-plan", "", "План проверки работающего сетевого источника")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}

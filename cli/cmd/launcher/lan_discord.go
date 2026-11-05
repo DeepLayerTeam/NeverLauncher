@@ -26,11 +26,11 @@ func handleLAN0308(args []string) error {
 	}
 	cmd := args[0]
 	f := flag.NewFlagSet("lan "+cmd, flag.ContinueOnError)
-	name := f.String("instance", "Launcher", "DNS-SD instance (ASCII)")
-	endpoint := f.String("url", "", "HTTPS backend endpoint")
-	fingerprint := f.String("fingerprint", "", "SHA-256 TLS certificate fingerprint (hex)")
-	pin := f.String("pin", "", "independently configured pinned certificate fingerprint")
-	duration := f.Duration("timeout", 3*time.Second, "discovery timeout (1-30s)")
+	name := f.String("instance", "Launcher", "Экземпляр DNS-SD (ASCII)")
+	endpoint := f.String("url", "", "HTTPS-адрес Backend")
+	fingerprint := f.String("fingerprint", "", "Отпечаток сертификата TLS по SHA-256 (hex)")
+	pin := f.String("pin", "", "Отдельно настроенный закреплённый отпечаток сертификата")
+	duration := f.Duration("timeout", 3*time.Second, "Тайм-аут обнаружения (1–30 с)")
 	if err := f.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -83,12 +83,12 @@ func handleDiscord0308(args []string) error {
 		return errors.New("usage: nl discord presence --application-id <id> [--details ..] [--state ..] [--interactive]")
 	}
 	f := flag.NewFlagSet("discord presence", flag.ContinueOnError)
-	applicationID := f.String("application-id", "", "Discord developer application ID")
-	state := f.String("state", "In launcher", "Activity state")
-	details := f.String("details", "Launcher", "Activity details")
-	interactive := f.Bool("interactive", false, "read newline-separated JSON activities on stdin; null clears")
-	duration := f.Duration("duration", 0, "session duration, 0=until interrupted")
-	buttons := f.String("buttons-json", "", "JSON activity buttons (max two)")
+	applicationID := f.String("application-id", "", "Идентификатор приложения разработчика Discord")
+	state := f.String("state", "In launcher", "Статус активности")
+	details := f.String("details", "Launcher", "Подробности активности")
+	interactive := f.Bool("interactive", false, "Читать JSON-описания активности из stdin, по одному на строку; null очищает")
+	duration := f.Duration("duration", 0, "Длительность сеанса, 0 — до прерывания")
+	buttons := f.String("buttons-json", "", "Кнопки активности в JSON (не более двух)")
 	if err := f.Parse(args[1:]); err != nil {
 		return err
 	}

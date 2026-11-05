@@ -17,11 +17,11 @@ import (
 // Backend.
 func runPGCutoverCheck0475(args []string) int {
 	fs := flag.NewFlagSet("sqlite-to-postgres-cutover-check", flag.ContinueOnError)
-	sha := fs.String("source-sha256", "", "SHA-256 of the verified SQLite Core backup")
-	project := fs.String("project", "", "migrated project ID")
-	email := fs.String("owner-email", "", "previous owner email")
-	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "environment variable containing target PostgreSQL DSN")
-	timeout := fs.Duration("timeout", time.Minute, "read-only verification timeout")
+	sha := fs.String("source-sha256", "", "SHA-256 проверенной резервной копии SQLite Core")
+	project := fs.String("project", "", "Идентификатор перенесённого проекта")
+	email := fs.String("owner-email", "", "Адрес электронной почты прежнего владельца")
+	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN целевой базы PostgreSQL")
+	timeout := fs.Duration("timeout", time.Minute, "Тайм-аут проверки только на чтение")
 	if e := fs.Parse(args); e != nil {
 		return 2
 	}

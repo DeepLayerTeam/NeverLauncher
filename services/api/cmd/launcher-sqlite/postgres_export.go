@@ -14,10 +14,10 @@ import (
 
 func runPGExport(args []string) int {
 	flags := flag.NewFlagSet("postgres-to-sqlite", flag.ContinueOnError)
-	target := flags.String("backup", "", "new SQLite backup destination (.json manifest is created)")
-	env := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "environment variable with PostgreSQL DSN")
+	target := flags.String("backup", "", "Путь к новой резервной копии SQLite (манифест .json будет создан)")
+	env := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN PostgreSQL")
 	timeout := flags.Duration("timeout", 30*time.Minute, "deadline")
-	acknowledge := flags.Bool("ack-no-backend-cutover", false, "understand that exported data are a verified offline snapshot, not live PostgreSQL->SQLite backend cutover")
+	acknowledge := flags.Bool("ack-no-backend-cutover", false, "Подтвердить, что экспорт создаёт проверенный автономный снимок, а не переключает рабочий Backend с PostgreSQL на SQLite")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}

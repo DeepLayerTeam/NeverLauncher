@@ -32,9 +32,9 @@ func main() {
 }
 func run() error {
 	command := flag.String("command", "", "backup|restore|gc|verify")
-	backup := flag.String("backup", "", "immutable snapshot directory (required for backup/restore)")
-	limit := flag.Int("limit", 100, "GC batch size 1..100")
-	report := flag.String("report", "", "JSON report file for verify (must not exist)")
+	backup := flag.String("backup", "", "Каталог неизменяемого снимка (обязателен для резервного копирования и восстановления)")
+	limit := flag.Int("limit", 100, "Размер пакета сборки мусора: 1–100")
+	report := flag.String("report", "", "Новый файл отчёта JSON для проверки (не должен существовать)")
 	flag.Parse()
 	if *command != "backup" && *command != "restore" && *command != "gc" && *command != "verify" {
 		return errors.New("--command must be backup, restore, gc or verify")

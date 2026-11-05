@@ -80,7 +80,7 @@ export class LauncherDesktopBridge {
     params: DesktopRPCMethods[K]["params"],
   ): Promise<DesktopRPCMethods[K]["result"]> {
     if (this.closed)
-      return Promise.reject(new Error("Launcher Desktop bridge is closed"));
+      return Promise.reject(new Error("Мост Launcher Desktop закрыт"));
     const id = `rpc-${Date.now()}-${++this.seq}`;
     const msg: RPCRequest = {
       protocol: PROTOCOL_VERSION,
@@ -93,7 +93,7 @@ export class LauncherDesktopBridge {
     return new Promise((resolve, reject) => {
       const timer = window.setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error("Launcher Desktop RPC timeout"));
+        reject(new Error("Истекло время ожидания RPC Launcher Desktop"));
       }, this.timeoutMs);
       this.pending.set(id, {
         resolve: resolve as (v: unknown) => void,
@@ -108,7 +108,7 @@ export class LauncherDesktopBridge {
     window.removeEventListener("message", this.listener);
     for (const [id, p] of this.pending) {
       clearTimeout(p.timer);
-      p.reject(new Error("Launcher Desktop bridge closed"));
+      p.reject(new Error("Мост Launcher Desktop был закрыт"));
       this.pending.delete(id);
     }
   }

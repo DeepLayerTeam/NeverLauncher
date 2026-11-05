@@ -163,7 +163,7 @@ func handleExtension0201(args []string) error {
 		}
 		if target == "cli" {
 			manifest.Permissions = []string{"cli:contribute"}
-			manifest.CLI = &CanonicalExtensionCLIContributions0209{Namespace: "example", Commands: []CanonicalExtensionCLICommand0209{{Name: "status", Description: "Show extension status", Usage: "nl x example status"}}}
+			manifest.CLI = &CanonicalExtensionCLIContributions0209{Namespace: "example", Commands: []CanonicalExtensionCLICommand0209{{Name: "status", Description: "Показать состояние расширения", Usage: "nl x example status"}}}
 		}
 		manifest, _, err := normalizeCanonicalExtension0201(manifest)
 		if err != nil {

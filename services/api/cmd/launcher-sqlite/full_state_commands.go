@@ -41,10 +41,10 @@ func readPackageFile(path string) ([]byte, error) {
 func runFullStateAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
-	db := flags.String("db", "", "existing SQLite database")
-	input := flags.String("input", "", "private 0600 JSON parameters")
-	pkg := flags.String("package", "", "private 0600 binary package (package-import)")
-	timeout := flags.Duration("timeout", 30*time.Second, "operation deadline")
+	db := flags.String("db", "", "Существующая база данных SQLite")
+	input := flags.String("input", "", "Приватный JSON-файл параметров с правами 0600")
+	pkg := flags.String("package", "", "Приватный бинарный пакет с правами 0600 (package-import)")
+	timeout := flags.Duration("timeout", 30*time.Second, "Предельное время выполнения операции")
 	if e := flags.Parse(args[1:]); e != nil {
 		return 2
 	}

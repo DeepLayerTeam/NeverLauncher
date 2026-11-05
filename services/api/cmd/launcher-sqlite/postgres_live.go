@@ -18,13 +18,13 @@ import (
 // оператор исправил причину и безопасно повторил --from-staging.
 func runPGLive0473(args []string) int {
 	flags := flag.NewFlagSet("sqlite-to-postgres-live", flag.ContinueOnError)
-	backup := flags.String("backup", "", "verified immutable SQLite Core backup and manifest")
-	fromStaging := flags.Bool("from-staging", false, "reuse already verified immutable staging import")
-	dsnEnv := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "PostgreSQL DSN environment variable name")
-	timeout := flags.Duration("timeout", 30*time.Minute, "overall import deadline")
-	mfaFile := flags.String("sqlite-mfa-key-file", "", "private 0600 SQLite Core 32-byte MFA key file")
-	secretEnv := flags.String("postgres-secret-env", "", "environment variable holding the exact PostgreSQL HTTP API encryption secret")
-	ack := flags.Bool("ack-live-import", false, "acknowledge offline writes into EMPTY SQLRepository database")
+	backup := flags.String("backup", "", "Проверенная неизменяемая резервная копия SQLite Core и её манифест")
+	fromStaging := flags.Bool("from-staging", false, "Повторно использовать ранее проверенный неизменяемый промежуточный импорт")
+	dsnEnv := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Имя переменной окружения с DSN PostgreSQL")
+	timeout := flags.Duration("timeout", 30*time.Minute, "Общий предельный срок импорта")
+	mfaFile := flags.String("sqlite-mfa-key-file", "", "Приватный файл с 32-байтовым ключом MFA для SQLite Core (права 0600)")
+	secretEnv := flags.String("postgres-secret-env", "", "Переменная окружения с точным секретом шифрования HTTP API PostgreSQL")
+	ack := flags.Bool("ack-live-import", false, "Подтвердить автономную запись в ПУСТУЮ базу данных SQLRepository")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}

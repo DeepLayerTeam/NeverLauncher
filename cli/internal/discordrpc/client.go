@@ -24,7 +24,7 @@ import (
 const maxFrame = 1 << 20
 
 // ErrDisconnected означает разрыв локального IPC Desktop, а не отклонение RPC.
-var ErrDisconnected = errors.New("Discord desktop IPC disconnected")
+var ErrDisconnected = errors.New("Локальное IPC-соединение с Discord разорвано")
 
 var snowflake = regexp.MustCompile(`^[0-9]{17,20}$`)
 
@@ -43,18 +43,18 @@ type Activity struct {
 
 func (a Activity) Validate() error {
 	if len([]rune(a.State)) > 128 || len([]rune(a.Details)) > 128 {
-		return errors.New("Discord state/details exceed 128 characters")
+		return errors.New("Поля состояния и описания активности Discord превышают 128 символов")
 	}
 	if len(a.Buttons) > 2 {
-		return errors.New("Discord supports at most two activity buttons")
+		return errors.New("Discord поддерживает не более двух кнопок активности")
 	}
 	for _, b := range a.Buttons {
 		if len([]rune(b.Label)) < 1 || len([]rune(b.Label)) > 32 {
-			return errors.New("Discord button label must have 1..32 characters")
+			return errors.New("Надпись кнопки Discord должна содержать от 1 до 32 символов")
 		}
 		u, err := url.Parse(b.URL)
 		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || u.Fragment != "" || strings.ContainsAny(b.URL, "\r\n\t") {
-			return errors.New("Discord button must have a valid HTTPS URL without credentials")
+			return errors.New("Кнопка Discord должна содержать корректный HTTPS-адрес без учётных данных")
 		}
 	}
 	return nil
@@ -93,7 +93,7 @@ func dial() (io.ReadWriteCloser, error) {
 			}
 		}
 	}
-	return nil, errors.New("Discord desktop IPC unavailable")
+	return nil, errors.New("Локальное IPC-соединение с Discord недоступно")
 }
 func writeFrame(w io.Writer, opcode uint32, body any) error {
 	data, err := json.Marshal(body)
@@ -101,7 +101,7 @@ func writeFrame(w io.Writer, opcode uint32, body any) error {
 		return err
 	}
 	if len(data) > maxFrame {
-		return errors.New("Discord IPC frame too large")
+		return errors.New("Слишком большой кадр IPC Discord")
 	}
 	var header [8]byte
 	binary.LittleEndian.PutUint32(header[:4], opcode)
@@ -132,7 +132,7 @@ func readFrame(r io.Reader) (uint32, map[string]json.RawMessage, error) {
 	}
 	size := binary.LittleEndian.Uint32(header[4:])
 	if size > maxFrame {
-		return 0, nil, errors.New("Discord IPC oversized frame")
+		return 0, nil, errors.New("Размер кадра IPC Discord превышает ограничение")
 	}
 	data := make([]byte, size)
 	if _, err := io.ReadFull(r, data); err != nil {
@@ -163,7 +163,7 @@ func (c *Client) Close() error {
 }
 func Connect(ctx context.Context, appID string) (*Client, error) {
 	if !snowflake.MatchString(appID) {
-		return nil, errors.New("Discord application ID must be a decimal snowflake")
+		return nil, errors.New("Идентификатор приложения Discord должен быть десятичным snowflake")
 	}
 	raw, err := dial()
 	if err != nil {
@@ -191,16 +191,16 @@ func (c *Client) handshake(ctx context.Context, id string) error {
 			return err
 		}
 		if op == 2 {
-			return errors.New("Discord closed IPC handshake")
+			return errors.New("Discord прервал IPC-рукопожатие")
 		}
 		if string(p["evt"]) == `"ERROR"` {
-			return fmt.Errorf("Discord handshake rejected: %s", p["data"])
+			return fmt.Errorf("Discord отклонил рукопожатие: %s", p["data"])
 		}
 		if op == 1 && string(p["evt"]) == `"READY"` {
 			return nil
 		}
 	}
-	return errors.New("Discord IPC READY not received")
+	return errors.New("Не получено сообщение READY по IPC Discord")
 }
 func deadline(raw io.ReadWriteCloser, ctx context.Context) error {
 	if c, ok := raw.(interface{ SetDeadline(time.Time) error }); ok {
@@ -248,11 +248,11 @@ func (c *Client) SetActivity(ctx context.Context, activity *Activity) error {
 			continue
 		}
 		if string(p["evt"]) == `"ERROR"` {
-			return fmt.Errorf("Discord SET_ACTIVITY rejected: %s", p["data"])
+			return fmt.Errorf("Discord отклонил SET_ACTIVITY: %s", p["data"])
 		}
 		if string(p["cmd"]) == `"SET_ACTIVITY"` {
 			return nil
 		}
 	}
-	return errors.New("Discord activity acknowledgement not received")
+	return errors.New("Не получено подтверждение активности от Discord")
 }

@@ -22,15 +22,15 @@ const schema = "launcher.guard-compatibility.v1"
 const domain = "NeverLauncher-Guard-Compatibility-v1\n"
 
 func main() {
-	mode := flag.String("mode", "sign", "sign, keygen, revoke or rollback")
-	current := flag.String("current", "", "currently signed policy envelope for revoke/rollback")
-	previous := flag.String("previous", "", "previous signed policy envelope for rollback")
-	revokeDigest := flag.String("revoke-digest", "", "comma-separated SHA-256 hashes")
-	revokeTransform := flag.String("revoke-transform", "", "comma-separated transformation IDs")
-	policy := flag.String("policy", "", "source policy JSON")
-	key := flag.String("private-key", "", "external hex Ed25519 private key file")
-	public := flag.String("public-key", "", "external hex Ed25519 public key output for keygen")
-	out := flag.String("out", "", "signed envelope output")
+	mode := flag.String("mode", "sign", "sign, keygen, revoke или rollback")
+	current := flag.String("current", "", "Текущий подписанный контейнер политики для revoke/rollback")
+	previous := flag.String("previous", "", "Предыдущий подписанный контейнер политики для rollback")
+	revokeDigest := flag.String("revoke-digest", "", "Хеши SHA-256 через запятую")
+	revokeTransform := flag.String("revoke-transform", "", "Идентификаторы преобразований через запятую")
+	policy := flag.String("policy", "", "Исходный JSON-файл политики")
+	key := flag.String("private-key", "", "Внешний файл приватного ключа Ed25519 в hex")
+	public := flag.String("public-key", "", "Внешний файл для сохранения публичного ключа Ed25519 в hex (keygen)")
+	out := flag.String("out", "", "Выходной подписанный контейнер")
 	flag.Parse()
 	var err error
 	switch *mode {

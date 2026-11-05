@@ -606,7 +606,7 @@ type DesktopDiagnosticsPolicy = {
 };
 type DesktopBindingPolicy = {
   apiVersion: "v1";
-  manifestVerification: "Ed25519 pinned-key required";
+  manifestVerification: "Необходим закреплённый ключ Ed25519";
   runtime: "Runtime";
 };
 type DesktopBindingResult = {
@@ -791,7 +791,7 @@ function decodeWebAuthnRequestOptions(
 }
 
 const DESKTOP_VERSION = __LAUNCHER_VERSION__;
-const RELEASE_DOCTOR_MARKER = "Desktop First-Run Binding";
+const RELEASE_DOCTOR_MARKER = "Первичная привязка Desktop";
 
 const stageLabels: Record<Stage, string> = {
   idle: "ожидание",
@@ -1606,7 +1606,7 @@ function App() {
       }
       localStorage.setItem("launcher.desktop.settings", JSON.stringify(next));
       log(
-        "Web preview: localStorage fallback не является production configuration.",
+        "Предпросмотр в браузере: резервное хранение в localStorage не предназначено для промышленной конфигурации.",
       );
     }
   }
@@ -1748,7 +1748,7 @@ function App() {
 
   async function passkeyStepUp(session: AuthSession): Promise<AuthSession> {
     if (!navigator.credentials?.get)
-      throw new Error("WebAuthn/passkey недоступен в текущем desktop webview.");
+      throw new Error("WebAuthn/passkey недоступен во встроенном веб-представлении Desktop.");
     const beginResponse = await postDeviceJson(
       "/api/v1/auth/passkeys/step-up/begin",
       session.accessToken,
@@ -1760,7 +1760,7 @@ function App() {
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
     if (!begin.transactionToken || !begin.publicKey?.challenge)
-      throw new Error("Backend вернул неполный passkey step-up challenge.");
+      throw new Error("Backend вернул неполный запрос дополнительной проверки passkey.");
     const credential = (await navigator.credentials.get({
       publicKey: decodeWebAuthnRequestOptions(begin.publicKey),
     })) as PublicKeyCredential | null;
@@ -1793,7 +1793,7 @@ function App() {
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken)
-      throw new Error("Backend не вернул access token после passkey step-up.");
+      throw new Error("Backend не вернул токен доступа после дополнительной проверки passkey.");
     log(
       "Выполнена свежая phishing-resistant step-up authentication для восстановления device key.",
     );
@@ -1831,7 +1831,7 @@ function App() {
     );
     if (staged.privateKeyExposedToFrontend)
       throw new Error(
-        "Staged private key покинул native boundary; fail-closed.",
+        "Подготовленный приватный ключ вышел за пределы нативного защищённого контура; операция заблокирована.",
       );
     setDeviceTrustStatus(mode === "rotate" ? "Ротация ключа" : "Восстановление ключа");
     let serverCommitted = false;
@@ -2823,7 +2823,7 @@ function App() {
       );
       setBindingPolicy({
         apiVersion: "v1",
-        manifestVerification: "Ed25519 pinned-key required",
+        manifestVerification: "Необходим закреплённый ключ Ed25519",
         runtime: "Runtime",
       });
       setBackendStatus("ready");

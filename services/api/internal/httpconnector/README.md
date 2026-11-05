@@ -1,10 +1,10 @@
-# протокол HTTP-коннектора авторизации Launcher v1
+# Протокол HTTP-коннектора авторизации Launcher v1
 
-`0.11.4` использует этот протокол как реальный remote authentication transport. Connector не принимает произвольный URL из login request: все endpoints строятся только относительно заранее проверенного `baseUrl` provider-конфигурации.
+`0.11.4` использует этот протокол для удалённой аутентификации. Коннектор не принимает произвольный URL из запроса на вход: все конечные точки строятся только относительно заранее проверенного `baseUrl` в конфигурации провайдера.
 
-## конечные точки
+## Конечные точки
 
-По умолчанию remote auth service реализует:
+По умолчанию удалённый сервис аутентификации реализует:
 
 ```text
 POST /authenticate
@@ -14,9 +14,9 @@ POST /logout
 GET  /health
 ```
 
-Все ответы, включая ошибки, имеют `Content-Type: application/json` и подписываются тем же HMAC key, который настроен в Launcher. Redirects запрещены.
+Все ответы, включая сообщения об ошибках, имеют `Content-Type: application/json` и подписываются тем же ключом HMAC, который настроен в Launcher. Перенаправления запрещены.
 
-Успешная identity response:
+Успешный ответ с данными пользователя:
 
 ```json
 {
@@ -35,7 +35,7 @@ GET  /health
 }
 ```
 
-`subject` обязан быть стабильным и неизменяемым идентификатором. `/resolve` обязан вернуть ровно тот же subject, который был запрошен. Email не является subject и не используется для implicit account linking.
+`subject` обязан быть стабильным и неизменяемым идентификатором. `/resolve` обязан вернуть ровно тот же subject, который был запрошен. Электронная почта не заменяет `subject` и не используется для неявной привязки учётных записей.
 
 Ошибка:
 
@@ -47,11 +47,11 @@ GET  /health
 }
 ```
 
-Launcher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, timeout и `5xx` считаются временной недоступностью provider.
+Launcher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, тайм-ауты и `5xx` считаются временной недоступностью провайдера.
 
-## оболочка запроса
+## Структура запроса
 
-`POST` request содержит:
+Запрос `POST` содержит:
 
 ```json
 {
@@ -63,11 +63,11 @@ Launcher распознаёт `invalid_credentials`, `identity_disabled`, `ident
 }
 ```
 
-Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Provider token никогда не является Never access/refresh token.
+Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Токен провайдера никогда не является токеном доступа или обновления Never.
 
-## подпись HMAC
+## Подпись HMAC
 
-Каждый request содержит:
+Каждый запрос содержит:
 
 ```text
 X-Launcher-Key-Id
@@ -87,9 +87,9 @@ NONCE\n
 HEX_SHA256(BODY)
 ```
 
-`X-Launcher-Signature` равен `v1=` + lowercase hex `HMAC-SHA256(secret, canonical)`.
+`X-Launcher-Signature` равен `v1=` с последующим `HMAC-SHA256(secret, canonical)` в шестнадцатеричном формате с буквами нижнего регистра.
 
-Remote service должен вернуть тот же `X-Launcher-Nonce`, свой текущий `X-Launcher-Timestamp`, тот же `X-Launcher-Key-Id` и signature над:
+Удалённый сервис должен вернуть тот же `X-Launcher-Nonce`, текущий `X-Launcher-Timestamp`, тот же `X-Launcher-Key-Id` и подпись над:
 
 ```text
 RESPONSE\n
@@ -99,21 +99,21 @@ NONCE\n
 HEX_SHA256(BODY)
 ```
 
-Launcher использует constant-time HMAC comparison, проверяет timestamp window и отклоняет уже использованный response nonce.
+Launcher сравнивает HMAC за постоянное время, проверяет допустимое отклонение временной метки и отклоняет повторное использование nonce ответа.
 
-## сетевая безопасность
+## Сетевая безопасность
 
-- Только HTTPS; plaintext HTTP не поддерживается.
-- Redirects отключены.
-- `hostAllowlist` проверяется перед каждым dial.
-- DNS разрешается самим Connector’ом, все полученные IP проверяются до соединения, а dial выполняется непосредственно на уже проверенный IP — это закрывает обычный DNS-rebinding SSRF path.
-- Loopback/private/link-local/multicast/shared/reserved/test networks заблокированы по умолчанию. Для контролируемого внутреннего auth service конкретная сеть должна быть явно указана в `allowedCidrs`.
-- HTTP proxy environment variables намеренно не используются Connector’ом.
-- TLS certificate verification включена; дополнительный CA задаётся `mtls.caFile`.
-- Client certificate/key (`mtls.certFile` + `mtls.keyFile`) включают mutual TLS.
-- Response body имеет жёсткий size limit и strict JSON schema decoding.
+- Только HTTPS; незашифрованный HTTP не поддерживается.
+- Перенаправления отключены.
+- `hostAllowlist` проверяется перед каждым соединением.
+- DNS разрешается самим коннектором: все полученные IP-адреса проверяются до соединения, а подключение выполняется непосредственно к проверенному IP-адресу. Это предотвращает обычные SSRF-атаки с подменой DNS-ответа.
+- Адреса обратной петли, частные, локальные для канала, многоадресные, общие, зарезервированные и тестовые сети по умолчанию заблокированы. Для доверенного внутреннего сервиса аутентификации соответствующая сеть должна быть явно включена в `allowedCidrs`.
+- Коннектор намеренно не использует переменные окружения HTTP-прокси.
+- Проверка сертификата TLS включена; дополнительный центр сертификации задаётся параметром `mtls.caFile`.
+- Клиентский сертификат и ключ (`mtls.certFile` + `mtls.keyFile`) включают взаимную аутентификацию TLS.
+- Размер тела ответа строго ограничен; JSON разбирается с проверкой соответствия схеме.
 
-## конфигурация провайдера
+## Конфигурация провайдера
 
 ```json
 [
@@ -136,4 +136,4 @@ Launcher использует constant-time HMAC comparison, проверяет 
 ]
 ```
 
-HMAC secret задаётся только через environment variable или secret file (`hmac.secretFile`), а не inline в provider JSON.
+Секрет HMAC задаётся только через переменную окружения или файл секрета (`hmac.secretFile`), но не непосредственно в JSON-конфигурации провайдера.

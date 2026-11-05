@@ -75,17 +75,17 @@ func texturePreviewClean0445(report texturegravit.Report) bool {
 }
 
 func run() error {
-	sourceID := flag.String("source-id", "", "stable ID of legacy installation (required)")
-	sourceJSON := flag.String("source-json", "", "offline JSON export of TextureProvider textures table")
-	sourceDSN := flag.String("source-dsn", "", "upstream PostgreSQL DSN (alternative to source-json)")
-	sourceRoot := flag.String("source-root", "", "trusted local legacy PNG root")
-	sourceS3 := flag.Bool("source-s3", false, "read blobs from separately configured legacy S3 bucket")
-	sourceTemplate := flag.String("source-template", "%kind%/%hash%.png", "object-key template, e.g. skins/%hash%.png or %hash%")
-	mappingFile := flag.String("mapping", "", "JSON array of source_uuid,target_uuid; missing identities skipped")
-	reportFile := flag.String("report", "", "required JSON report output path")
-	replace := flag.Bool("replace", false, "explicitly replace an existing Launcher texture assignment")
-	dryRun := flag.Bool("dry-run", false, "validate source PNGs and identities without persisting")
-	approved := flag.String("approved-plan-sha256", "", "required for live import: planSha256 from a reviewed dry-run report")
+	sourceID := flag.String("source-id", "", "Постоянный идентификатор старой установки (обязательно)")
+	sourceJSON := flag.String("source-json", "", "Автономный JSON-экспорт таблицы textures из TextureProvider")
+	sourceDSN := flag.String("source-dsn", "", "DSN исходной базы PostgreSQL (вместо source-json)")
+	sourceRoot := flag.String("source-root", "", "Доверенный локальный каталог исходных PNG")
+	sourceS3 := flag.Bool("source-s3", false, "Читать объекты из отдельно настроенного старого бакета S3")
+	sourceTemplate := flag.String("source-template", "%kind%/%hash%.png", "Шаблон ключа объекта, например skins/%hash%.png или %hash%")
+	mappingFile := flag.String("mapping", "", "JSON-массив source_uuid,target_uuid; отсутствующие идентификаторы пропускаются")
+	reportFile := flag.String("report", "", "Обязательный путь к выходному JSON-отчёту")
+	replace := flag.Bool("replace", false, "Явно заменить существующую привязку текстуры Launcher")
+	dryRun := flag.Bool("dry-run", false, "Проверить исходные PNG и идентификаторы без сохранения")
+	approved := flag.String("approved-plan-sha256", "", "Для реального импорта требуется planSha256 из проверенного отчёта пробного запуска")
 	flag.Parse()
 	if *reportFile == "" || *sourceID == "" {
 		return errors.New("--report and --source-id are required")

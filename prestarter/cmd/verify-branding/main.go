@@ -15,9 +15,9 @@ import (
 )
 
 func run() error {
-	config := flag.String("config", "", "path to bootstrap.signed.json")
-	rootFile := flag.String("root-key-file", "", "path to provisioned public Ed25519 root (hex)")
-	policyFile := flag.String("trust-policy", "", "optional root-signed delegated trust policy")
+	config := flag.String("config", "", "Путь к bootstrap.signed.json")
+	rootFile := flag.String("root-key-file", "", "Путь к установленному публичному корневому ключу Ed25519 (hex)")
+	policyFile := flag.String("trust-policy", "", "Необязательная делегированная политика доверия с подписью корневого ключа")
 	flag.Parse()
 	if *config == "" || *rootFile == "" {
 		return errors.New("--config and --root-key-file required")

@@ -308,7 +308,7 @@ export function DesktopExtensions0209({
           message.method === "tauri.openGameDirectory"
         ) {
           if (!current.bridgeAllowed)
-            throw new Error("desktop:bridge is not granted");
+            throw new Error("Разрешение desktop:bridge не предоставлено");
           const response = await authorized(
             `/api/v1/desktop/extensions/${encodeURIComponent(current.extensionId)}/rpc?${queryFor(current)}`,
             {

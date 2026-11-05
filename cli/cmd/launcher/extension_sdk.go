@@ -101,7 +101,7 @@ func extensionInit02010(args []string) error {
 			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: name}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: name, PageID: "main"}}}
 		case "cli":
 			permissions["cli:contribute"] = true
-			manifest.CLI = &CanonicalExtensionCLIContributions0209{Namespace: "example", Commands: []CanonicalExtensionCLICommand0209{{Name: "status", Description: "Show extension status", Usage: "nl x example status"}}}
+			manifest.CLI = &CanonicalExtensionCLIContributions0209{Namespace: "example", Commands: []CanonicalExtensionCLICommand0209{{Name: "status", Description: "Показать состояние расширения", Usage: "nl x example status"}}}
 		}
 	}
 	for permission := range permissions {

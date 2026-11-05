@@ -73,7 +73,7 @@ export class LauncherAdminBridge {
     params: AdminRPCMethods[K]["params"],
   ): Promise<AdminRPCMethods[K]["result"]> {
     if (this.closed)
-      return Promise.reject(new Error("Launcher Admin bridge is closed"));
+      return Promise.reject(new Error("Мост Launcher Admin закрыт"));
     const id = `rpc-${Date.now()}-${++this.seq}`;
     const msg: RPCRequest = {
       protocol: PROTOCOL_VERSION,
@@ -86,7 +86,7 @@ export class LauncherAdminBridge {
     return new Promise((resolve, reject) => {
       const timer = window.setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error("Launcher Admin RPC timeout"));
+        reject(new Error("Истекло время ожидания RPC Launcher Admin"));
       }, this.timeoutMs);
       this.pending.set(id, {
         resolve: resolve as (v: unknown) => void,
@@ -102,7 +102,7 @@ export class LauncherAdminBridge {
     window.removeEventListener("message", this.listener);
     for (const [id, p] of this.pending) {
       clearTimeout(p.timer);
-      p.reject(new Error("Launcher Admin bridge closed"));
+      p.reject(new Error("Мост Launcher Admin был закрыт"));
       this.pending.delete(id);
     }
   }

@@ -14,10 +14,10 @@ import (
 
 func runPGTransfer(args []string) int {
 	flags := flag.NewFlagSet("sqlite-to-postgres", flag.ContinueOnError)
-	backup := flags.String("backup", "", "path to an existing verified SQLite online backup with .json manifest")
-	dsnEnv := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "name of environment variable containing PostgreSQL DSN")
-	timeout := flags.Duration("timeout", 30*time.Minute, "operation deadline")
-	acknowledge := flags.Bool("ack-staging-only", false, "acknowledge data is imported into a quarantine schema, not live Backend")
+	backup := flags.String("backup", "", "Путь к проверенной оперативной резервной копии SQLite с манифестом .json")
+	dsnEnv := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Имя переменной окружения с DSN PostgreSQL")
+	timeout := flags.Duration("timeout", 30*time.Minute, "Предельное время выполнения операции")
+	acknowledge := flags.Bool("ack-staging-only", false, "Подтвердить импорт в изолированную схему, а не в рабочий Backend")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}

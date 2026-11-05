@@ -58,9 +58,9 @@ func run(args []string) int {
 		return 2
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	path := flags.String("db", "", "absolute or relative on-disk database pathname")
-	timeout := flags.Duration("timeout", 15*time.Second, "overall operation deadline")
-	readers := flags.Int("readers", 4, "maximum concurrent SQLite read connections (1..16)")
+	path := flags.String("db", "", "Абсолютный или относительный путь к файлу базы данных")
+	timeout := flags.Duration("timeout", 15*time.Second, "Общий предельный срок операции")
+	readers := flags.Int("readers", 4, "Максимальное число одновременных подключений для чтения SQLite (1–16)")
 	if err := flags.Parse(args[1:]); err != nil {
 		return 2
 	}

@@ -425,14 +425,14 @@ func writeReport(path string, r *report) error {
 }
 
 func main() {
-	clientID := flag.String("client-id", os.Getenv("LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID"), "OWN Entra public-client application UUID")
-	flow := flag.String("flow", "browser", "browser (authorization code + PKCE) or device")
-	output := flag.String("report", "", "new JSON report path (exclusive, mode 0600); default stdout")
-	timeout := flag.Duration("timeout", 15*time.Minute, "overall timeout")
-	noOpen := flag.Bool("no-open", false, "print browser link without launching default browser")
-	online := flag.Bool("online-session", true, "perform a live Mojang join/hasJoined challenge; required for official Minecraft GA certification")
-	server := flag.String("probe-server", "", "optional host:port of an authorized online-mode server (handshake probe, NOT full game login)")
-	protocol := flag.Int("protocol", 0, "Minecraft protocol version for --probe-server, e.g. 767 for 1.21")
+	clientID := flag.String("client-id", os.Getenv("LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID"), "UUID собственного публичного клиентского приложения Entra")
+	flow := flag.String("flow", "browser", "browser (код авторизации + PKCE) или device")
+	output := flag.String("report", "", "Путь к новому JSON-отчёту (создаётся эксклюзивно, права 0600); по умолчанию stdout")
+	timeout := flag.Duration("timeout", 15*time.Minute, "Общий тайм-аут")
+	noOpen := flag.Bool("no-open", false, "Вывести ссылку, не запуская браузер по умолчанию")
+	online := flag.Bool("online-session", true, "Выполнить реальную проверку Mojang join/hasJoined; требуется для GA-сертификации официальной авторизации Minecraft")
+	server := flag.String("probe-server", "", "Необязательный host:port разрешённого сервера online-mode (проверка рукопожатия, НЕ полный игровой вход)")
+	protocol := flag.Int("protocol", 0, "Версия протокола Minecraft для --probe-server, например 767 для 1.21")
 	flag.Parse()
 	if *server != "" && (!*online || *protocol < 1 || *protocol > 1000000) {
 		fmt.Fprintln(os.Stderr, "--probe-server requires --online-session=true and a positive --protocol")

@@ -30,7 +30,7 @@ func handleDevTools03010(args []string) error {
 		switch args[1] {
 		case "analyze":
 			f := flag.NewFlagSet("devtools jar analyze", flag.ContinueOnError)
-			input := f.String("input", "", "path to JAR")
+			input := f.String("input", "", "Путь к JAR")
 			if e := f.Parse(args[2:]); e != nil {
 				return e
 			}
@@ -44,8 +44,8 @@ func handleDevTools03010(args []string) error {
 			return devtoolsPrint03010(r)
 		case "strip-debug":
 			f := flag.NewFlagSet("devtools jar strip-debug", flag.ContinueOnError)
-			input := f.String("input", "", "input JAR")
-			output := f.String("output", "", "new output JAR")
+			input := f.String("input", "", "Исходный JAR")
+			output := f.String("output", "", "Путь к новому JAR")
 			if e := f.Parse(args[2:]); e != nil {
 				return e
 			}
@@ -63,12 +63,12 @@ func handleDevTools03010(args []string) error {
 			break
 		}
 		f := flag.NewFlagSet("devtools component test", flag.ContinueOnError)
-		jar := f.String("jar", "", "test component JAR")
-		java := f.String("java", "java", "java executable")
-		isolation := f.String("isolation", "sandbox", "sandbox (Linux bubblewrap), or process (trusted JAR only)")
-		ack := f.Bool("ack-unconfined", false, "explicitly permit a test JVM without OS sandbox")
-		timeout := f.Duration("timeout", 15*time.Second, "test timeout 1s..2m")
-		heap := f.Int("heap-mb", 128, "maximum JVM heap (not RSS)")
+		jar := f.String("jar", "", "JAR тестового компонента")
+		java := f.String("java", "java", "Исполняемый файл Java")
+		isolation := f.String("isolation", "sandbox", "sandbox (Linux bubblewrap) или process (только доверенный JAR)")
+		ack := f.Bool("ack-unconfined", false, "Явно разрешить тестовую JVM без песочницы ОС")
+		timeout := f.Duration("timeout", 15*time.Second, "Тайм-аут теста: от 1 с до 2 мин")
+		heap := f.Int("heap-mb", 128, "Максимальный размер кучи JVM (не RSS)")
 		rest := args[2:]
 		var appArgs []string
 		for i, a := range rest {
@@ -97,10 +97,10 @@ func handleDevTools03010(args []string) error {
 			break
 		}
 		f := flag.NewFlagSet("devtools auth serve", flag.ContinueOnError)
-		listen := f.String("listen", "127.0.0.1:0", "numeric loopback IPv4 or IPv6 address")
-		duration := f.Duration("duration", 5*time.Minute, "maximum fixture lifetime")
-		user := f.String("user", "debug-player", "temporary test account username")
-		ack := f.Bool("ack-test-only", false, "confirm test-only identity use")
+		listen := f.String("listen", "127.0.0.1:0", "Числовой адрес IPv4/IPv6 обратной петли")
+		duration := f.Duration("duration", 5*time.Minute, "Максимальное время жизни тестовой среды")
+		user := f.String("user", "debug-player", "Имя пользователя временной тестовой учётной записи")
+		ack := f.Bool("ack-test-only", false, "Подтвердить использование учётной записи только для тестов")
 		if e := f.Parse(args[2:]); e != nil {
 			return e
 		}

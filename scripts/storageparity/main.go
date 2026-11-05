@@ -348,9 +348,9 @@ func serialize(r Report) ([]byte, error) {
 	return append(b, '\n'), nil
 }
 func main() {
-	root := flag.String("root", ".", "repository root")
-	output := flag.String("output", "docs/deployment/storage-dependencies-0371.json", "checked in inventory")
-	check := flag.Bool("check", false, "verify inventory equals the current code; never rewrite on check")
+	root := flag.String("root", ".", "Корневой каталог репозитория")
+	output := flag.String("output", "docs/deployment/storage-dependencies-0371.json", "Реестр, зафиксированный в репозитории")
+	check := flag.Bool("check", false, "Проверить соответствие реестра текущему коду; при проверке не перезаписывать")
 	flag.Parse()
 	abs, err := filepath.Abs(*root)
 	if err != nil {

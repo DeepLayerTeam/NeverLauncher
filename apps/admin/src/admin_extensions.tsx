@@ -227,7 +227,7 @@ function AdminExtensionFrame({
             protocol: ADMIN_PROTOCOL,
             type: "rpc.response",
             id: message.id,
-            error: "Admin RPC concurrency limit exceeded",
+            error: "Превышен лимит одновременных RPC-запросов Admin",
           },
           "*",
         );

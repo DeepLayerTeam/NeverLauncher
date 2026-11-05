@@ -40,9 +40,9 @@ func run(args []string, output io.Writer, input io.Reader) error {
 	switch args[0] {
 	case "import":
 		flags := flag.NewFlagSet("import", flag.ContinueOnError)
-		path := flags.String("file", "", "FileAuthSystem Database.json path; never Sessions.json")
-		format := flags.String("format", "", "explicit legacy password format")
-		apply := flags.Bool("apply", false, "commit import (default: rollback after dry-run)")
+		path := flags.String("file", "", "Путь к Database.json системы FileAuthSystem; не используйте Sessions.json")
+		format := flags.String("format", "", "Явно указанный формат устаревших паролей")
+		apply := flags.Bool("apply", false, "Применить импорт (по умолчанию после пробного запуска выполняется откат)")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -105,12 +105,12 @@ func run(args []string, output io.Writer, input io.Reader) error {
 func runOnline(args []string, output io.Writer, input io.Reader) error {
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
-	endpoint := flags.String("api", os.Getenv("LAUNCHER_API_URL"), "HTTPS Backend URL")
-	tokenEnv := flags.String("token-env", "LAUNCHER_ADMIN_ACCESS_TOKEN", "environment variable containing admin Bearer token")
-	email := flags.String("email", "", "new account email")
-	displayName := flags.String("name", "", "display name")
-	role := flags.String("role", "player", "new account role")
-	userID := flags.String("user-id", "", "target Never user ID")
+	endpoint := flags.String("api", os.Getenv("LAUNCHER_API_URL"), "HTTPS-адрес Backend")
+	tokenEnv := flags.String("token-env", "LAUNCHER_ADMIN_ACCESS_TOKEN", "Переменная окружения с Bearer-токеном администратора")
+	email := flags.String("email", "", "Адрес электронной почты новой учётной записи")
+	displayName := flags.String("name", "", "Отображаемое имя")
+	role := flags.String("role", "player", "Роль новой учётной записи")
+	userID := flags.String("user-id", "", "Идентификатор целевого пользователя Never")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}

@@ -557,7 +557,7 @@ export function AdminApp() {
     preserveRefresh = false,
   ) {
     const nextToken = data.tokens?.accessToken ?? data.accessToken;
-    if (!nextToken) throw new Error("Backend не вернул Never access token.");
+    if (!nextToken) throw new Error("Backend не вернул токен доступа Never.");
     setToken(nextToken);
     setPassword("");
     setTotp("");
@@ -571,7 +571,7 @@ export function AdminApp() {
 
   async function finishPasskeyMFA(data: LoginResponse) {
     if (!data.transactionToken || !data.publicKey)
-      throw new Error("Backend запросил passkey MFA без WebAuthn transaction.");
+      throw new Error("Backend запросил MFA через passkey без транзакции WebAuthn.");
     const credential = await getPasskeyAssertion(data.publicKey);
     const completed = await requestJSON<PasskeySessionResponse>(
       backendUrl,
@@ -613,7 +613,7 @@ export function AdminApp() {
       await finishPasskeyMFA(data);
       return;
     }
-    if (!data.token) throw new Error("Backend не вернул access token.");
+    if (!data.token) throw new Error("Backend не вернул токен доступа.");
     setToken(data.token);
     setPassword("");
     setTotp("");

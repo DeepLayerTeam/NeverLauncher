@@ -13,10 +13,10 @@ import (
 
 func runMinimalPG0377(command string, args []string) int {
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
-	bundle := flags.String("bundle", "", "existing offline backup bundle (import) or new bundle directory (export)")
-	env := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "PostgreSQL DSN environment variable")
-	timeout := flags.Duration("timeout", 2*time.Hour, "migration deadline")
-	acknowledge := flags.Bool("ack-no-backend-cutover", false, "confirm this is verified offline data transfer, not an operational PostgreSQL backend cutover")
+	bundle := flags.String("bundle", "", "Существующий автономный пакет резервной копии (импорт) или каталог для нового пакета (экспорт)")
+	env := flags.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN PostgreSQL")
+	timeout := flags.Duration("timeout", 2*time.Hour, "Предельное время миграции")
+	acknowledge := flags.Bool("ack-no-backend-cutover", false, "Подтвердить, что это проверенный автономный перенос данных, а не переключение рабочего Backend на PostgreSQL")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}

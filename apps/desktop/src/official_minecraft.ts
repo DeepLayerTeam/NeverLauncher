@@ -349,7 +349,7 @@ export class OfficialMinecraftClient0257 {
   /** Намеренно запрещено передавать токены доступа к игре через интерфейс. */
   async credentials(): Promise<never> {
     throw new Error(
-      "Official Minecraft launch credentials доступны только Runtime через native manager.",
+      "Учётные данные официального запуска Minecraft доступны только Runtime через нативный менеджер.",
     );
   }
 }

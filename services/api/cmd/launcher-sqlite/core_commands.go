@@ -67,19 +67,19 @@ func readPrivateJSON(path string, out any) error {
 func runCoreAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
-	db := flags.String("db", "", "private local SQLite file")
-	input := flags.String("input", "", "private JSON file; mode 0600")
+	db := flags.String("db", "", "Приватный локальный файл SQLite")
+	input := flags.String("input", "", "Приватный JSON-файл с правами 0600")
 	kind := flags.String("kind", "", "project|profile|channel|user|audit or get resource")
-	actor := flags.String("actor", "", "required audit actor for mutations")
+	actor := flags.String("actor", "", "Обязательный идентификатор исполнителя для записей аудита изменений")
 	project := flags.String("project", "", "project ID")
 	profile := flags.String("profile", "", "profile ID")
 	userID := flags.String("user", "", "user ID")
 	release := flags.String("release", "", "release ID")
 	channel := flags.String("channel", "", "channel ID")
-	version := flags.String("version", "", "release version")
-	expected := flags.Int64("expected-revision", 0, "expected channel head revision")
-	rootHex := flags.String("trusted-root", "", "operator-configured Ed25519 trusted public key hex")
-	timeout := flags.Duration("timeout", 20*time.Second, "operation deadline")
+	version := flags.String("version", "", "Версия выпуска")
+	expected := flags.Int64("expected-revision", 0, "Ожидаемая ревизия текущей версии канала")
+	rootHex := flags.String("trusted-root", "", "Настроенный оператором доверенный публичный ключ Ed25519 в hex")
+	timeout := flags.Duration("timeout", 20*time.Second, "Предельное время выполнения операции")
 	if err := flags.Parse(args[1:]); err != nil {
 		return 2
 	}

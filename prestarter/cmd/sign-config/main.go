@@ -10,12 +10,12 @@ import (
 )
 
 func main() {
-	payload := flag.String("payload", "", "unsigned JSON payload")
-	keyPath := flag.String("private-key-file", "", "restricted-permission Ed25519 seed hex file")
-	out := flag.String("out", "", "signed JSON output")
-	policyPath := flag.String("trust-policy", "", "root-signed delegated trust policy file")
-	rootKey := flag.String("root-public-key", "", "pre-provisioned root Ed25519 public key (64 hex)")
-	keyID := flag.String("key-id", "", "delegated bootstrap signing key ID")
+	payload := flag.String("payload", "", "Неподписанные данные JSON")
+	keyPath := flag.String("private-key-file", "", "Файл Ed25519 seed в hex с ограниченными правами доступа")
+	out := flag.String("out", "", "Выходной подписанный JSON")
+	policyPath := flag.String("trust-policy", "", "Файл делегированной политики доверия, подписанной корневым ключом")
+	rootKey := flag.String("root-public-key", "", "Предварительно установленный публичный корневой ключ Ed25519 (64 hex)")
+	keyID := flag.String("key-id", "", "Идентификатор делегированного ключа подписи bootstrap")
 	flag.Parse()
 	if *payload == "" || *keyPath == "" || *out == "" {
 		fmt.Fprintln(os.Stderr, "--payload --private-key-file --out required")

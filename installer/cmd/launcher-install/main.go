@@ -24,9 +24,9 @@ func run() error {
 	switch os.Args[1] {
 	case "verify", "install":
 		flags := flag.NewFlagSet(os.Args[1], flag.ContinueOnError)
-		bundle := flags.String("bundle", "", "signed release archive")
-		key := flags.String("trusted-key", "", "independent pinned Ed25519 public key file")
-		target := flags.String("target", "", "new absolute installation directory")
+		bundle := flags.String("bundle", "", "Подписанный архив выпуска")
+		key := flags.String("trusted-key", "", "Файл отдельно закреплённого публичного ключа Ed25519")
+		target := flags.String("target", "", "Новый абсолютный путь к каталогу установки")
 		if err := flags.Parse(os.Args[2:]); err != nil {
 			return err
 		}

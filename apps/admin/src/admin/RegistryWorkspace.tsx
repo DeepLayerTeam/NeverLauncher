@@ -297,7 +297,7 @@ export function RegistryWorkspace({
   async function addRegistryPublisherKey() {
     if (!registryPublisherId.trim() || !registryPublicKey.trim())
       throw new Error(
-        "Укажите publisher ID и raw Ed25519 public key в Base64.",
+        "Укажите идентификатор издателя и исходный публичный ключ Ed25519 в Base64.",
       );
     if (
       !confirmAction(

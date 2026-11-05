@@ -18,12 +18,12 @@ import (
 // остановлены.
 func runPGFiles0474(args []string) int {
 	fs := flag.NewFlagSet("sqlite-to-postgres-files", flag.ContinueOnError)
-	sourceRoot := fs.String("source-root", "", "SQLite LocalStorage root")
-	targetRoot := fs.String("target-root", "", "PostgreSQL LocalStorage root (omit for S3)")
-	targetS3 := fs.Bool("target-s3", false, "write to an isolated S3 bucket configured by LAUNCHER_STORAGE_S3_* env")
-	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "environment variable containing target PostgreSQL DSN")
-	timeout := fs.Duration("timeout", 4*time.Hour, "file copy deadline")
-	offline := fs.Bool("ack-offline", false, "confirm both backends have stopped writing")
+	sourceRoot := fs.String("source-root", "", "Корневой каталог LocalStorage для SQLite")
+	targetRoot := fs.String("target-root", "", "Корневой каталог LocalStorage для PostgreSQL (не указывать для S3)")
+	targetS3 := fs.Bool("target-s3", false, "Записывать в изолированный бакет S3, настроенный переменными LAUNCHER_STORAGE_S3_*")
+	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN целевой базы PostgreSQL")
+	timeout := fs.Duration("timeout", 4*time.Hour, "Предельное время копирования файлов")
+	offline := fs.Bool("ack-offline", false, "Подтвердить остановку записи в обоих Backend")
 	if e := fs.Parse(args); e != nil {
 		return 2
 	}

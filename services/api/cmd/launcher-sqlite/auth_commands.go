@@ -55,10 +55,10 @@ func readAuthKey(path string) ([]byte, error) {
 func runAuthAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
-	db := flags.String("db", "", "existing 0.32.3 SQLite database")
-	keyPath := flags.String("key-file", "", "private 32-byte AES-GCM MFA key file")
-	input := flags.String("input", "", "0600 JSON input containing secrets")
-	timeout := flags.Duration("timeout", 20*time.Second, "operation deadline")
+	db := flags.String("db", "", "Существующая база данных SQLite версии 0.32.3")
+	keyPath := flags.String("key-file", "", "Приватный файл с 32-байтовым ключом AES-GCM для MFA")
+	input := flags.String("input", "", "Входной JSON-файл с секретами и правами 0600")
+	timeout := flags.Duration("timeout", 20*time.Second, "Предельное время выполнения операции")
 	if e := flags.Parse(args[1:]); e != nil {
 		return 2
 	}

@@ -28,9 +28,9 @@ func isDurableAction(s string) bool {
 func runDurableAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
-	db := flags.String("db", "", "existing SQLite DB")
-	input := flags.String("input", "", "0600 JSON command input")
-	timeout := flags.Duration("timeout", 20*time.Second, "operation timeout")
+	db := flags.String("db", "", "Существующая база данных SQLite")
+	input := flags.String("input", "", "Входной JSON-файл команды с правами 0600")
+	timeout := flags.Duration("timeout", 20*time.Second, "Тайм-аут операции")
 	if err := flags.Parse(args[1:]); err != nil {
 		return 2
 	}

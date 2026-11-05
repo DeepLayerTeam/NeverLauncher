@@ -52,9 +52,9 @@ func readNodeKey(path string) (ed25519.PrivateKey, error) {
 func runJoinAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
-	db := flags.String("db", "", "existing SQLite core DB")
-	input := flags.String("input", "", "0600 JSON file (credentials never in argv)")
-	keyFile := flags.String("key-file", "", "private Ed25519 node key, or 32-byte MFA key for join-issue")
+	db := flags.String("db", "", "Существующая основная база данных SQLite")
+	input := flags.String("input", "", "JSON-файл с правами 0600 (учётные данные никогда не передаются через argv)")
+	keyFile := flags.String("key-file", "", "Приватный ключ узла Ed25519 или 32-байтовый ключ MFA для join-issue")
 	timeout := flags.Duration("timeout", 20*time.Second, "deadline")
 	if e := flags.Parse(args[1:]); e != nil {
 		return 2

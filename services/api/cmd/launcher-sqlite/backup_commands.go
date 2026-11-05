@@ -25,10 +25,10 @@ func isBackupAction(action string) bool {
 func runBackupAction(args []string) int {
 	action := args[0]
 	flags := flag.NewFlagSet(action, flag.ContinueOnError)
-	db := flags.String("db", "", "SQLite database path")
-	backup := flags.String("backup", "", "backup .db file path")
-	replace := flags.Bool("replace", false, "explicitly replace existing offline database (old file kept for rollback)")
-	timeout := flags.Duration("timeout", 3*time.Minute, "deadline for snapshot/check")
+	db := flags.String("db", "", "Путь к базе данных SQLite")
+	backup := flags.String("backup", "", "Путь к резервной копии в файле .db")
+	replace := flags.Bool("replace", false, "Явно заменить существующую автономную базу (старый файл сохраняется для отката)")
+	timeout := flags.Duration("timeout", 3*time.Minute, "Предельное время создания снимка или проверки")
 	if err := flags.Parse(args[1:]); err != nil {
 		return 2
 	}
