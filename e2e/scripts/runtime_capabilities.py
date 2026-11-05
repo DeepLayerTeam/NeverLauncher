@@ -40,10 +40,10 @@ def host_identity(system=None, machine=None):
 
 def _probe_java(java):
     if not java:
-        return {"available": False, "reason": "No selected Java binary provided"}
+        return {"available": False, "reason": "Не указан выбранный исполняемый файл Java"}
     java = Path(java)
     if not java.is_file():
-        return {"available": False, "reason": "Selected Java binary does not exist"}
+        return {"available": False, "reason": "Выбранный исполняемый файл Java не существует"}
     try:
         proc = subprocess.run(
             [str(java), "-version"],
@@ -58,7 +58,7 @@ def _probe_java(java):
         ):
             return {
                 "available": False,
-                "reason": "Selected Java executable failed version probe",
+                "reason": "Не удалось определить версию выбранной Java",
             }
         h = hashlib.sha256()
         with java.open("rb") as stream:
@@ -72,7 +72,7 @@ def _probe_java(java):
     except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
         return {
             "available": False,
-            "reason": "Java execution unavailable: " + type(exc).__name__,
+            "reason": "Запуск Java недоступен: " + type(exc).__name__,
         }
 
 
@@ -80,7 +80,7 @@ def _linux_gui():
     if not os.environ.get("DISPLAY"):
         return (
             False,
-            "DISPLAY is unavailable; an X11-capable GUI runner is required",
+            "Переменная DISPLAY недоступна; требуется графический раннер с поддержкой X11",
             None,
         )
     tools = (
@@ -94,7 +94,7 @@ def _linux_gui():
     )
     missing = [x for x in tools if not shutil.which(x)]
     if missing:
-        return False, "GUI dependencies absent: " + ",".join(missing), None
+        return False, "Отсутствуют зависимости графического интерфейса: " + ",".join(missing), None
     try:
         cp = subprocess.run(
             ["glxinfo", "-B"],
@@ -107,7 +107,7 @@ def _linux_gui():
         renderer = re.search(r"(?im)^OpenGL renderer string:\s*(.+)$", output)
         version = re.search(r"(?im)^OpenGL version string:\s*(.+)$", output)
         if cp.returncode or not renderer or not version:
-            return False, "X11 display has no usable OpenGL renderer", None
+            return False, "На дисплее X11 нет доступного средства рендеринга OpenGL", None
         return (
             True,
             "",
@@ -117,7 +117,7 @@ def _linux_gui():
             },
         )
     except (OSError, subprocess.TimeoutExpired):
-        return False, "OpenGL capability probe failed or timed out", None
+        return False, "Проверка возможностей OpenGL завершилась ошибкой или превысила время ожидания", None
 
 
 def _native_display():
@@ -133,38 +133,38 @@ def _native_display():
                 )
                 or session.value == 0
             ):
-                return False, "Windows process has no interactive desktop session"
+                return False, "У процесса Windows нет интерактивной сеансовой среды рабочего стола"
             if user32.GetSystemMetrics(0) < 640 or user32.GetSystemMetrics(1) < 400:
-                return False, "Windows desktop dimensions cannot render Minecraft"
+                return False, "Размер рабочего стола Windows не позволяет отобразить Minecraft"
             if not user32.GetDesktopWindow() or not user32.GetForegroundWindow():
                 return (
                     False,
-                    "Windows interactive/unlocked foreground desktop unavailable",
+                    "В Windows недоступен интерактивный разблокированный рабочий стол",
                 )
             return True, ""
         except (OSError, AttributeError):
-            return False, "Windows desktop API is unavailable"
+            return False, "API рабочего стола Windows недоступен"
     if sys.platform == "darwin":
         try:
             import Quartz
 
             if not Quartz.CGPreflightScreenCaptureAccess():
-                return False, "macOS Screen Recording authorization missing"
+                return False, "В macOS отсутствует разрешение на запись экрана"
             if not Quartz.AXIsProcessTrusted():
                 return (
                     False,
-                    "macOS Accessibility authorization missing for gameplay input",
+                    "В macOS отсутствует разрешение универсального доступа для игрового ввода",
                 )
             display = Quartz.CGMainDisplayID()
             if (
                 Quartz.CGDisplayPixelsWide(display) < 640
                 or Quartz.CGDisplayPixelsHigh(display) < 400
             ):
-                return False, "macOS has no suitable active display"
+                return False, "В macOS отсутствует подходящий активный дисплей"
             return True, ""
         except (ImportError, AttributeError, RuntimeError, OSError, TypeError):
-            return False, "macOS Quartz/Screen Recording unavailable"
-    return False, "No native display driver for this OS"
+            return False, "В macOS недоступны Quartz или запись экрана"
+    return False, "Для этой ОС отсутствует нативный драйвер дисплея"
 
 
 def _native_renderer():
@@ -173,22 +173,22 @@ def _native_renderer():
         import glfw
         from OpenGL import GL
     except ImportError:
-        return False, "glfw/PyOpenGL capability dependencies missing", None
+        return False, "Отсутствуют зависимости для проверки GLFW/PyOpenGL", None
     try:
         if not glfw.init():
-            return False, "GLFW failed to initialize a native display", None
+            return False, "GLFW не удалось инициализировать нативный дисплей", None
         glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
         glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 2)
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 1)
-        window = glfw.create_window(64, 64, "Launcher capability probe", None, None)
+        window = glfw.create_window(64, 64, "Проверка возможностей Launcher", None, None)
         if not window:
-            return False, "GLFW could not create an OpenGL context", None
+            return False, "GLFW не удалось создать контекст OpenGL", None
         try:
             glfw.make_context_current(window)
             renderer = GL.glGetString(GL.GL_RENDERER)
             version = GL.glGetString(GL.GL_VERSION)
             if not renderer or not version:
-                return False, "OpenGL context has no renderer/version", None
+                return False, "В контексте OpenGL отсутствуют сведения о рендерере или версии", None
             return (
                 True,
                 "",
@@ -200,7 +200,7 @@ def _native_renderer():
         finally:
             glfw.destroy_window(window)
     except Exception as exc:
-        return False, "Native OpenGL context probe failed: " + type(exc).__name__, None
+        return False, "Проверка нативного контекста OpenGL завершилась ошибкой: " + type(exc).__name__, None
     finally:
         try:
             glfw.terminate()
@@ -226,7 +226,7 @@ def evaluate(mode="gui", java=None):
     }
     if not ident["supported"]:
         capabilities["blockers"].append(
-            "Unsupported OS/architecture; target cannot execute"
+            "Неподдерживаемая ОС или архитектура: целевой компонент невозможно запустить"
         )
     if not capabilities["java"]["available"]:
         capabilities["blockers"].append(capabilities["java"]["reason"])

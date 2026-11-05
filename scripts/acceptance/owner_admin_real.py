@@ -50,18 +50,18 @@ def require(condition, why):
 
 
 def private_bytes(path: Path, *, max_size=8192) -> bytes:
-    require(path.is_absolute() and not path.is_symlink(), 'private file must be an absolute regular path')
+    require(path.is_absolute() and not path.is_symlink(), 'Закрытый файл должен иметь абсолютный путь к обычному файлу')
     st = path.stat()
     require(stat.S_ISREG(st.st_mode) and st.st_uid == os.geteuid() and
             st.st_mode & 0o077 == 0 and 0 < st.st_size <= max_size,
-            'unsafe private file permissions/owner/size')
+            'Небезопасные права, владелец или размер закрытого файла')
     return path.read_bytes().strip()
 
 
 def sha_file(path: Path) -> str:
-    require(path.is_file() and not path.is_symlink(), 'missing persistent user-data marker')
+    require(path.is_file() and not path.is_symlink(), 'Отсутствует постоянный маркер пользовательских данных')
     size = path.stat().st_size
-    require(0 < size <= 16 * 1024 * 1024, 'invalid user-data marker size')
+    require(0 < size <= 16 * 1024 * 1024, 'Некорректный размер маркера пользовательских данных')
     h = hashlib.sha256()
     with path.open('rb') as stream:
         for chunk in iter(lambda: stream.read(65536), b''):
@@ -70,9 +70,9 @@ def sha_file(path: Path) -> str:
 
 
 def save_report(path: Path, data):
-    require(path.is_absolute() and not path.is_symlink(), 'report path must be absolute')
+    require(path.is_absolute() and not path.is_symlink(), 'Путь отчёта должен быть абсолютным')
     path.parent.mkdir(parents=True, exist_ok=True)
-    require(not path.parent.is_symlink(), 'unsafe report parent')
+    require(not path.parent.is_symlink(), 'Небезопасный родительский каталог отчёта')
     temp = path.with_name('.' + path.name + '.' + secrets.token_hex(8))
     fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
@@ -96,7 +96,7 @@ class HTTPS:
         parts = urlsplit(origin)
         require(parts.scheme == 'https' and parts.hostname and not parts.username
                 and not parts.password and parts.path in ('', '/') and not parts.query
-                and not parts.fragment, 'Standard requires an HTTPS origin')
+                and not parts.fragment, 'Для стандартного режима требуется исходный HTTPS-адрес')
         self.origin = origin.rstrip('/')
         self.opener = build_opener(ProxyHandler({}), HTTPSHandler(context=ssl.create_default_context()), NoRedirect())
 
@@ -129,7 +129,7 @@ class HTTPS:
             parsed = json.loads(raw)
         except (ValueError, UnicodeError):
             raise Blocked('Некорректный JSON-ответ Backend') from None
-        require(type(parsed) is dict, 'non-object Backend JSON')
+        require(type(parsed) is dict, 'Backend вернул JSON, который не является объектом')
         return parsed
 
 
@@ -145,7 +145,7 @@ def login(api, email, password):
     login_data = api.request('POST', '/api/v1/admin/login', data={'email': email, 'password': password})
     token = login_data.get('token')
     require(isinstance(token, str) and len(token) >= 20 and
-            login_data.get('user', {}).get('email') == email, 'admin login missing identity/session')
+            login_data.get('user', {}).get('email') == email, 'При входе администратора отсутствуют идентификатор или сессия')
     return token
 
 
@@ -153,7 +153,7 @@ def verify_project(api, project, profile, channel, description, email, password)
     token = login(api, email, password)
     doc = api.request('GET', '/api/v1/projects/' + project)
     require(doc.get('id') == project and doc.get('description') == description,
-            'project identity/description was lost')
+            'Утрачены идентификатор или описание проекта')
     profiles = api.request('GET', '/api/v1/projects/' + project + '/profiles')
     channels = api.request('GET', '/api/v1/projects/' + project + '/channels')
     require(any(row.get('id') == profile for row in profiles.get('items', [])), 'profile lost')
@@ -168,18 +168,18 @@ def create_project(api, email, password):
     api.request('POST', '/api/v1/admin/projects', data={'id': 'unauthorized-0523'}, expected=(401, 403))
     project = 'real-owner-0523-' + secrets.token_hex(6)
     profile, channel = 'owner-vanilla', 'owner-acceptance'
-    description = 'Persisted real owner workflow 0523 ' + secrets.token_hex(8)
+    description = 'Сохранённый реальный сценарий владельца 0523 ' + secrets.token_hex(8)
     base = '/api/v1/admin/projects/' + project
     created = api.request('POST', '/api/v1/admin/projects', token=token,
                           data={'id': project, 'name': 'Real E2E Owner 0523', 'defaultChannel': 'stable'}, expected=(201,))
-    require(created.get('data', {}).get('project', {}).get('id') == project, 'project create response invalid')
+    require(created.get('data', {}).get('project', {}).get('id') == project, 'Некорректный ответ на создание проекта')
     api.request('PATCH', base, token=token, data={'description': description})
     made_profile = api.request('POST', base + '/profiles', token=token, expected=(201,),
-                               data={'id': profile, 'name': 'Vanilla owner test', 'loader': 'vanilla'})
-    require(made_profile.get('data', {}).get('profile', {}).get('id') == profile, 'profile creation invalid')
+                               data={'id': profile, 'name': 'Проверка владельца Vanilla', 'loader': 'vanilla'})
+    require(made_profile.get('data', {}).get('profile', {}).get('id') == profile, 'Некорректный результат создания профиля')
     made_channel = api.request('POST', base + '/channels', token=token, expected=(201,),
                                data={'id': channel, 'name': 'Real acceptance', 'protected': True})
-    require(made_channel.get('data', {}).get('channel', {}).get('id') == channel, 'channel creation invalid')
+    require(made_channel.get('data', {}).get('channel', {}).get('id') == channel, 'Некорректный результат создания канала')
     verify_project(api, project, profile, channel, description, email, password)
     # Черновик недоступен для чтения как опубликованный стабильный выпуск.
     api.request('GET', '/api/v1/projects/' + project + '/profiles/' + profile + '/manifest?channel=' + channel,
@@ -192,7 +192,7 @@ def host_status(api, server_id, token):
     content = doc.get('data', {})
     require(isinstance(content.get('host', {}).get('status', {}).get('processAlive'), bool)
             and content.get('bridge', {}).get('serverId') == server_id,
-            'not a provisioned live JVM host')
+            'Узел не является настроенным работающим JVM-хостом')
     return content
 
 
@@ -204,20 +204,20 @@ def host_action(api, server_id, token, action):
     data = doc.get('data', {})
     op = data.get('operation', {})
     require(op.get('action') == action and op.get('id') and not data.get('idempotentReplay'),
-            'missing real durable host-operation intent')
+            'Отсутствует реальный сохранённый запрос операции с узлом')
     operation_id = op['id']
     replay = api.request('POST', route, token=token, idempotency=key,
                          data={'action': action}, expected=(200,), timeout=30)
     require(replay.get('data', {}).get('idempotentReplay') is True and
             replay['data'].get('operation', {}).get('id') == operation_id,
-            'host operation idempotency not enforced')
+            'Не обеспечена идемпотентность операции с узлом')
     until = time.monotonic() + 120
     while time.monotonic() < until:
         refreshed = api.request('GET', route + '/' + quote(operation_id) + '?refresh=1', token=token)
         state = refreshed.get('data', {}).get('hostState')
         if state == 'succeeded':
             return refreshed
-        require(state in ('accepted', 'indeterminate'), 'remote JVM action rejected or failed')
+        require(state in ('accepted', 'indeterminate'), 'Удалённое действие JVM отклонено или завершилось ошибкой')
         time.sleep(2)
     raise Blocked('Не подтверждено успешное выполнение реального действия удалённой JVM: ' + action)
 
@@ -237,12 +237,12 @@ def establish_real_mfa(api, email, password):
     access = login(api, email, password)
     response = api.request('POST', '/api/v1/auth/totp/enroll', token=access, data={})
     secret = response.get('data', {}).get('secret')
-    require(isinstance(secret, str) and len(secret) >= 16, 'TOTP enrollment secret missing')
+    require(isinstance(secret, str) and len(secret) >= 16, 'Отсутствует секрет подключения TOTP')
     code = totp_now(secret)
     verified = api.request('POST', '/api/v1/auth/totp/verify', token=access,
                            data={'code': code})
     require(verified.get('data', {}).get('status') == 'totp-enabled',
-            'TOTP verification did not enable MFA')
+            'Проверка TOTP не включила MFA')
     # Проверка может потребить временной шаг; предоставьте следующий уникальный шаг, если проверка и
     # дополнительное подтверждение попадают в одно окно (политика Backend).
     stepped = api.request('POST', '/api/v1/auth/mfa/step-up/totp', token=access,
@@ -250,7 +250,7 @@ def establish_real_mfa(api, email, password):
     result = stepped.get('data', {})
     token = result.get('accessToken')
     require(result.get('status') == 'stepped-up' and isinstance(token, str) and len(token) > 20,
-            'real MFA step-up did not issue fresh admin session')
+            'Реальное дополнительное подтверждение MFA не создало новую сессию администратора')
     return token
 
 
@@ -265,7 +265,7 @@ def real_game_command(api, server_id, token):
     command_id = command.get('id')
     require(command.get('type') == 'server.console' and command_id and
             result.get('data', {}).get('idempotentReplay') is False,
-            'real game console request was not persisted')
+            'Реальный запрос к игровой консоли не был сохранён')
     until = time.monotonic() + 110
     while time.monotonic() < until:
         result = api.request('GET', route + '/' + quote(command_id), token=token)
@@ -273,7 +273,7 @@ def real_game_command(api, server_id, token):
         if status in ('executed', 'succeeded'):
             return
         require(status in ('pending', 'leased', 'accepted', 'delivered'),
-                'game agent command failed, expired or was refused')
+                'Команда игрового агента завершилась ошибкой, устарела или была отклонена')
         time.sleep(2)
     raise Blocked('Игровой агент Minecraft не подтвердил консольную команду')
 
@@ -287,14 +287,14 @@ def run_host(api, server_id, token, marker):
             initial['bridge']['status'] == 'active' and
             isinstance(initial['bridge']['runtimeId'], str) and initial['bridge']['runtimeId'] and
             isinstance(initial['bridge']['runtimeEpoch'], int) and initial['bridge']['runtimeEpoch'] >= 1,
-            'dedicated Minecraft process/supervisor not running before test')
+            'До проверки выделенный процесс Minecraft или управляющая служба не запущены')
     marker_before = sha_file(marker)
     for action, expected_alive in (('stop', False), ('start', True), ('restart', True)):
         host_action(api, server_id, token, action)
         latest = host_status(api, server_id, token)
         require(latest['host']['status']['processAlive'] is expected_alive,
-                'actual host process state does not match ' + action)
-    require(sha_file(marker) == marker_before, 'Minecraft project/player data marker changed or disappeared')
+                'Фактическое состояние процесса узла не соответствует: ' + action)
+    require(sha_file(marker) == marker_before, 'Маркер данных проекта или игрока Minecraft изменился либо исчез')
     return marker_before
 
 
@@ -304,19 +304,19 @@ def deploy_call(env, action, *, email='', password_file=None):
     if action == 'first-admin':
         args += ['--email', email, '--display-name', '0523 Owner', '--password-file', str(password_file)]
     task = subprocess.run(args, capture_output=True, text=True, timeout=1800)
-    require(task.returncode == 0, 'real production Compose ' + action + ' failed (inspect private runner logs)')
+    require(task.returncode == 0, 'Реальный рабочий Compose ' + action + ' завершился ошибкой (проверьте закрытые журналы раннера)')
 
 
 def no_existing_project(project):
     require(re.fullmatch(r'nl0523[a-z0-9]{8,20}', project) is not None,
-            'Standard acceptance requires unique nl0523 Docker project namespace')
+            'Для стандартной приёмки требуется уникальное пространство имён проекта Docker nl0523')
     require(shutil.which('docker'), 'Docker is required')
     for cmd in (['docker', 'ps', '-a', '--filter', 'label=com.docker.compose.project='+project, '--format', '{{.ID}}'],
                 ['docker', 'volume', 'ls', '--filter', 'label=com.docker.compose.project='+project, '--quiet'],
                 ['docker', 'network', 'ls', '--filter', 'label=com.docker.compose.project='+project, '--quiet']):
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         require(proc.returncode == 0 and not proc.stdout.strip(),
-                'project namespace already used or Docker unavailable')
+                'Пространство имён проекта уже занято или Docker недоступен')
 
 
 def execute(args, report):
@@ -328,21 +328,21 @@ def execute(args, report):
             values.get('LAUNCHER_IMAGE_TAG') == VERSION and
             all(values.get(name) for name in ('LAUNCHER_0523_HOST_TARGETS_FILE',
                  'LAUNCHER_0523_HOST_CA_FILE', 'LAUNCHER_0523_HOST_TOKEN_FILE')), 
-            'incorrect Standard/PostgreSQL/current-version installation')
+            'Некорректная установка стандартного режима, PostgreSQL или текущей версии')
     require(not (env.parent / '.launcher-compose-state.json').exists(),
-            'fresh Standard instance required, existing deployment cannot be overwritten')
+            'Требуется новый экземпляр стандартного режима; существующее развёртывание перезаписывать нельзя')
     require(not os.environ.get('GITHUB_SHA') or
             values.get('LAUNCHER_SOURCE_COMMIT') == os.environ['GITHUB_SHA'],
-            'Standard release image commit must match exact checkout')
+            'Коммит образа стандартного выпуска должен совпадать с текущей рабочей копией')
     project_name = DEPLOY.compose_project(values)
     check(report, 'unused_isolated_compose_project', lambda: no_existing_project(project_name))
     password = private_bytes(args.password_file.absolute()).decode('utf-8')
     require(len(password) >= 12 and '\n' not in password and '\r' not in password,
             'Недопустимый файл пароля администратора')
     require(args.server_id and re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{2,100}', args.server_id),
-            'dedicated registered game server ID required')
+            'Требуется зарегистрированный идентификатор выделенного игрового сервера')
     marker = args.world_marker.absolute()
-    require(sha_file(marker), 'existing game data marker required')
+    require(sha_file(marker), 'Требуется существующий маркер игровых данных')
     api = HTTPS(values['LAUNCHER_PUBLIC_URL'])
     report['mode'] = 'standard-postgresql-real-compose-https-remote-jvm'
     report['dockerProject'] = project_name
@@ -354,12 +354,12 @@ def execute(args, report):
     def first_ready():
         doc = api.request('GET', '/ready')
         require(doc.get('status') == 'ready' and doc.get('version') == VERSION and
-                doc.get('repository') == 'postgres', 'wrong live Standard backend')
+                doc.get('repository') == 'postgres', 'Неверный реально работающий Backend стандартного режима')
         checkout = os.environ.get('GITHUB_SHA', '')
         require(not checkout or doc.get('sourceCommit') == checkout,
                 'deployed backend is not built from exact source commit')
         require(api.request('GET', '/api/v1/install/readiness').get('data', {}).get('bootstrapTokenConsumed') is False,
-                'owner already exists; not a fresh installation')
+                'Владелец уже существует; установка не является новой')
     check(report, 'real_https_postgres_ready', first_ready)
     def first_admin():
         api.request('POST', '/api/v1/install/bootstrap-admin', data={'email': args.email, 'password': password},
@@ -368,7 +368,7 @@ def execute(args, report):
         api.request('POST', '/api/v1/install/bootstrap-admin', data={'email': args.email, 'password': password},
                     bootstrap=values['LAUNCHER_BOOTSTRAP_TOKEN'], expected=(403,))
         require(api.request('GET', '/api/v1/install/readiness').get('data', {}).get('bootstrapTokenConsumed') is True,
-                'bootstrap token not consumed')
+                'Токен первоначальной настройки не был использован')
         login(api, args.email, password)
     check(report, 'one_time_real_owner_bootstrap', first_admin)
     def first_project():
@@ -377,9 +377,9 @@ def execute(args, report):
         created = api.request('POST', '/api/v1/install/first-project', token=token, expected=(201,),
                               data={'projectId': project, 'profileId': 'vanilla', 'channel': 'stable', 'version': '0.1.0'})
         require(created.get('data', {}).get('installationCompleted') is True,
-                'first-project installation failed')
+                'Не удалось установить первый проект')
         require(api.request('GET', '/api/v1/projects/'+project).get('id') == project,
-                'first project not persisted')
+                'Первый проект не сохранён')
         return project
     initial_project = check(report, 'first_project_and_draft', first_project)
     state = check(report, 'owner_admin_crud_and_audit', lambda: create_project(api, args.email, password))
@@ -390,13 +390,13 @@ def execute(args, report):
                 request.get('projectId') in (None, '', state[0]) and
                 request.get('profileId') in (None, '', state[2]) and
                 request.get('publicKey') and request.get('keyAlgorithm'),
-                'Bridge registration does not match current test project/real node key')
+                'Регистрация Bridge не соответствует текущему тестовому проекту или ключу реального узла')
         request['projectId'], request['profileId'] = state[0], state[2]
         token = login(api, args.email, password)
         registered = api.request('POST', '/api/v1/server-bridge/servers/register', token=token,
                                  data=request, expected=(201,))
         require(registered.get('data', {}).get('server', {}).get('id') == args.server_id,
-                'pinned ServerBridge public key registration failed')
+                'Регистрация закреплённого открытого ключа ServerBridge не удалась')
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             try:
@@ -420,18 +420,18 @@ def execute(args, report):
     def after_restart():
         ready = api.request('GET', '/ready')
         require(ready.get('status') == 'ready' and ready.get('repository') == 'postgres',
-                'PostgreSQL not ready after restart')
+                'PostgreSQL не готов после перезапуска')
         require(api.request('GET', '/api/v1/install/readiness').get('data', {}).get('installationCompleted') is True,
-                'first installer state lost after restart')
+                'После перезапуска утрачено исходное состояние установщика')
         require(api.request('GET', '/api/v1/projects/' + initial_project).get('id') == initial_project,
-                'first project lost after restart')
+                'После перезапуска утрачен первый проект')
         verify_project(api, *state, args.email, password)
-        require(sha_file(marker) == world_hash, 'game data changed or disappeared after Compose restart')
+        require(sha_file(marker) == world_hash, 'После перезапуска Compose игровые данные изменились или исчезли')
     check(report, 'owner_login_projects_profiles_channels_after_restart', after_restart)
     check(report, 'standard_compose_final_shutdown_retaining_data', lambda: deploy_call(env, 'down'))
     report['persistentProjectId'] = state[0]
     report['firstProjectId'] = initial_project
-    report['storage'] = 'real PostgreSQL and existing dedicated Minecraft data marker'
+    report['storage'] = 'Реальный PostgreSQL и существующий маркер данных выделенного сервера Minecraft'
 
 
 def main(argv=None):
@@ -452,15 +452,15 @@ def main(argv=None):
               'checks': [], 'gaCertified': False, 'nativeMinecraftMatrixCertified': False}
     code = 1
     try:
-        require(args.isolated_destructive_acceptance, 'explicit destructive acceptance consent required')
+        require(args.isolated_destructive_acceptance, 'Требуется явное согласие на приёмку с разрушительными действиями')
         execute(args, report)
-        require(len(report['checks']) >= 14, 'incomplete owner/admin acceptance')
+        require(len(report['checks']) >= 14, 'Приёмка владельца или администратора не завершена')
         report['status'] = 'passed'
         code = 0
     except (Blocked, ValueError, UnicodeError, OSError, KeyError, RuntimeError, subprocess.TimeoutExpired) as exc:
         # НИКОГДА не включайте серверные ответы, секреты и значения окружения в опубликованные артефакты.
         report['failureType'] = type(exc).__name__
-        report['failure'] = 'real installation/owner/host operation failed; consult private runner logs'
+        report['failure'] = 'Реальная установка, создание владельца или операция с узлом завершилась ошибкой; проверьте закрытые журналы раннера'
         print('E2E-проверка владельца и администратора заблокирована: ' + type(exc).__name__, file=sys.stderr)
     finally:
         report['finishedAt'] = datetime.now(timezone.utc).isoformat()

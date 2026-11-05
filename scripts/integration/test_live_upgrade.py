@@ -127,7 +127,7 @@ class LiveAcceptanceTests(unittest.TestCase):
         op.state['receipts']={'verify':{'ownerId':'u-old-123'}}
         self.assertTrue(op.health_check()['ownerAuthenticated'])
         op.a.owner_credentials=''
-        with self.assertRaisesRegex(CutoverError,'credentials'):
+        with self.assertRaisesRegex(CutoverError,'учётных данных'):
             op.health_check()
 
     def test_real_http_and_durable_sqlite_capture(self):
@@ -154,21 +154,21 @@ class LiveAcceptanceTests(unittest.TestCase):
         self.prepare_verified_cutover()
         (self.storage/'my-object').write_bytes(b'changed-blob-body')
         with patch.object(a, 'postgres_live_probe'):
-            with self.assertRaisesRegex(a.AcceptanceError, 'local storage changed'):
+            with self.assertRaisesRegex(a.AcceptanceError, 'изменилось исходное локальное хранилище'):
                 a.verify(self.args)
 
     def test_target_blob_mutation_detected(self):
         self.prepare_verified_cutover()
         (self.target_storage/'my-object').write_bytes(b'same-size-altered')
         with patch.object(a, 'postgres_live_probe'):
-            with self.assertRaisesRegex(a.AcceptanceError, 'target local storage'):
+            with self.assertRaisesRegex(a.AcceptanceError, 'хранилище целевого PostgreSQL'):
                 a.verify(self.args)
 
     def test_project_mutation_detected(self):
         self.prepare_verified_cutover()
         self.project_name='reinitialized demo'
         with patch.object(a,'postgres_live_probe'):
-            with self.assertRaisesRegex(a.AcceptanceError, 'project/profile/channel'):
+            with self.assertRaisesRegex(a.AcceptanceError, 'проекта, профиля, канала'):
                 a.verify(self.args)
 
     def test_unapproved_cutover_cannot_pass(self):
@@ -177,7 +177,7 @@ class LiveAcceptanceTests(unittest.TestCase):
         x = json.loads(state.read_text());x['cutoverSupported']=False
         state.write_text(json.dumps(x))
         with patch.object(a, 'postgres_live_probe'):
-            with self.assertRaisesRegex(a.AcceptanceError, 'permitted PostgreSQL cutover'):
+            with self.assertRaisesRegex(a.AcceptanceError, 'разрешённое переключение на PostgreSQL'):
                 a.verify(self.args)
 
     def test_full_local_acceptance_requires_database_probe(self):
@@ -190,7 +190,7 @@ class LiveAcceptanceTests(unittest.TestCase):
         self.prepare_verified_cutover()
         self.server_version='0.47.8'
         with patch.object(a,'postgres_live_probe'):
-            with self.assertRaisesRegex(a.AcceptanceError, 'not running 0.48.0'):
+            with self.assertRaisesRegex(a.AcceptanceError, 'не работает на версии 0.48.0'):
                 a.verify(self.args)
 
     def test_positive_local_dry_run_does_not_claim_independent_ga(self):

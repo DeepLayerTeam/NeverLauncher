@@ -115,8 +115,8 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
         "rtoSecondsMeasured": round((restored_at - incident).total_seconds(), 3),
         "restoreExecutionSecondsMeasured": round(time.monotonic() - start, 3),
         "rpoSecondsUpperBoundFromSnapshotAge": upper_bound,
-        "rpoInterpretation": "snapshot-age upper bound, NOT proven actual data-loss duration",
-        "limits": ["not a substitute for source write journal", "Приёмка восстановления должна проводиться на новом реальном узле", "Автоматическая повторная регистрация узлов ServerBridge запрещена"],
+        "rpoInterpretation": "Верхняя граница возраста снимка, а НЕ подтверждённая длительность потери данных",
+        "limits": ["Не заменяет журнал операций записи источника", "Приёмка восстановления должна проводиться на новом реальном узле", "Автоматическая повторная регистрация узлов ServerBridge запрещена"],
     }
     write_report(report_path, report)
     return report

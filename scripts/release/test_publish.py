@@ -240,7 +240,7 @@ class PublicationAcceptance(unittest.TestCase):
             patch.object(p, "run") as commands,
             patch.object(p.subprocess, "run", return_value=absent),
         ):
-            with self.assertRaisesRegex(Blocked, "changed after GA validation"):
+            with self.assertRaisesRegex(Blocked, "После проверки GA файл выпуска изменился"):
                 p.publish("DeepLayerTeam/Launcher", verified, self.bundle)
             commands.assert_not_called()
 

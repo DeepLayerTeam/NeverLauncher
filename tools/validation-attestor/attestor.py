@@ -117,19 +117,19 @@ STAGE_ARTIFACT = {
 }
 def needs_adversarial_gameplay(version):
     match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:[-+][A-Za-z0-9.-]+)?", version)
-    check(match is not None, "invalid version for native game acceptance")
+    check(match is not None, "Некорректная версия для приёмки нативной игры")
     return tuple(map(int, match.groups())) >= (0, 43, 14)
 
 
 def verify_adversarial_gameplay_04314(work, signed_manifest, snapshot, game):
-    """Independent host: bind negative probes to staged bytes and game proof."""
+    """Независимый узел: привяжите отрицательные проверки к подготовленным файлам и свидетельствам игрового запуска."""
     proof = read_json(work / "adversarial-gameplay-04314.json")
     assertion = game.get("adversarialGameplay04314")
     check(isinstance(assertion, dict) and assertion.get("status") == "passed"
           and assertion.get("evidenceSha256") == sha(work / "adversarial-gameplay-04314.json")
           and assertion.get("manifestTamperDenied") is True
           and assertion.get("installedFileTamperDeniedAndRestored") is True,
-          "0.43.14 positive gameplay has no bound negative observation")
+          "Для успешного игрового запуска 0.43.14 отсутствует связанное отрицательное наблюдение")
     manifest = proof.get("manifestTamper")
     installed = proof.get("installedFileTamper")
     check(proof.get("schemaVersion") == "launcher.adversarial-gameplay.04314.v1"
@@ -138,13 +138,13 @@ def verify_adversarial_gameplay_04314(work, signed_manifest, snapshot, game):
           and manifest.get("baselineVerified") is True
           and HEX64.fullmatch(manifest.get("alteredManifestSha256", ""))
           and installed.get("status") == "denied-and-restored",
-          "0.43.14 native Runtime/CLI rejection not observed")
+          "Не наблюдался отказ нативных Runtime/CLI версии 0.43.14")
     name = installed.get("filePath")
     required = {e["path"]: e for e in snapshot["files"] if e.get("required", True)}
     check(isinstance(name, str) and name in required and
           not name.startswith("/") and "\\" not in name and
           all(part not in ("", ".", "..") for part in name.split("/")),
-          "native corruption probe did not target a required package file")
+          "Проверка повреждения не затронула обязательный файл пакета")
     expected = required[name]["sha256"].lower()
     path = work / "delivery-verified-client" / name
     restored = work / "adversarial-restored-04314.json"
@@ -156,7 +156,7 @@ def verify_adversarial_gameplay_04314(work, signed_manifest, snapshot, game):
           and installed.get("restoredFileSha256") == expected
           and installed.get("restoredVerificationSha256") == sha(restored)
           and read_json(restored).get("status") == "valid",
-          "negative test did not restore exact signed client or rerun production verifier")
+          "Отрицательный тест не восстановил точную подписанную сборку или не перезапустил рабочую проверку")
     return sha(work / "adversarial-gameplay-04314.json")
 
 
@@ -208,7 +208,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
         and proof["previousVersion"] == prior["version"]
         and prior["packageId"] != current_pkg["packageId"]
         and prior["version"] != current_pkg["version"],
-        "V09 same-release or cross-package rollback",
+        "V09: откат в пределах выпуска или между пакетами",
     )
     check(
         prior["projectId"] == current_pkg["projectId"]
@@ -216,7 +216,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
         and prior_signed["version"] == prior["version"]
         and prior_signed["signature"]["publicKey"]
         == signed_manifest["signature"]["publicKey"],
-        "V09 prior release is not same identity / signed by pinned key",
+        "V09: предыдущий выпуск имеет другой идентификатор или не подписан закреплённым ключом",
     )
     check(
         HEX64.fullmatch(proof["previousArchiveSha256"])
@@ -224,7 +224,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
         and HEX64.fullmatch(proof["javaReplacementSha256"])
         and proof["javaOriginalSha256"] != proof["javaReplacementSha256"]
         and identity["javaSha256"] == proof["javaOriginalSha256"],
-        "V09 Java replacement was not executed with independent binary",
+        "V09: замена Java не выполнена независимым исполняемым файлом",
     )
     required = (
         "cleanPreviousInstall",
@@ -238,7 +238,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
     )
     check(
         all(proof["checks"].get(key) == "passed" for key in required),
-        "V09 required lifecycle transaction did not pass",
+        "V09: обязательная транзакция жизненного цикла не прошла проверку",
     )
     for phase in ("staging", "committing"):
         p = proof["checks"].get("interruptedTransaction-" + phase, {})
@@ -249,24 +249,24 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
             and p.get("previousRestored") is True
             and p.get("retryVerified") is True
             and p.get("currentPackageId") == current_pkg["packageId"],
-            "V09 crashed updater phase was not recovered: " + phase,
+            "V09: не выполнено восстановление после сбоя обновления на этапе: " + phase,
         )
         case = root / ("interrupted-" + phase)
         check(
             read_json(case / "prior.json").get("status") == "applied-and-verified"
             and read_json(case / "retry.json").get("status") == "applied-and-verified",
-            "V09 interrupted updater did not complete production CLI retry",
+            "V09: прерванное обновление не завершило повторную попытку через рабочий CLI",
         )
     download = proof["checks"].get("interruptedDownload", {})
     check(
         download.get("interruptedRejected") is True
         and download.get("partialRemoved") is True
         and download.get("retryVerified") is True,
-        "V09 interrupted downloader accepted corrupt bytes",
+        "V09: прерванная загрузка приняла повреждённые данные",
     )
     check(
         sha(root / "interrupted-download.bin") == download["artifactSha256"],
-        "V09 download retry bytes mismatch",
+        "V09: после повторной загрузки данные не совпадают",
     )
     check(
         read_json(root / "prior-install.json")["status"] == "applied-and-verified"
@@ -275,7 +275,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
         and read_json(root / "rollback.json")["status"] == "rolled-back"
         and read_json(root / "rollback.json")["restoredSnapshot"]
         == proof["rollbackSnapshot"],
-        "V09 production CLI transactions not observed",
+        "V09: транзакции рабочего CLI не подтверждены",
     )
     check(
         read_json(root / "java-replacement-launch.json")["status"] == "passed"
@@ -284,7 +284,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
         == proof["javaReplacementSha256"]
         and read_json(root / "rollback-launch.json")["javaSha256"]
         == proof.get("previousJavaSha256", proof["javaOriginalSha256"]),
-        "V09 actual JVM replacement or rollback startup not confirmed",
+        "V09: не подтверждён запуск после реальной замены или отката JVM",
     )
     manager = proof.get("managedJava", {})
     check(
@@ -297,7 +297,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
         == "passed"
         and read_json(root / "managed-java-repair-launch.json").get("javaSha256")
         == manager["javaSha256"],
-        "V09 pinned Managed Java repair/replacement and real launch missing",
+        "V09: отсутствует восстановление или замена закреплённой управляемой Java и реальный запуск",
     )
     for name in (
         "java-replacement-launch.json",
@@ -309,12 +309,12 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
             len(samples) == 2
             and samples[0]["sha256"] != samples[1]["sha256"]
             and all(len(x.get("menuControls", [])) >= 2 for x in samples),
-            "V09 real menu/window observation missing: " + name,
+            "V09: отсутствует наблюдение реального меню или окна: " + name,
         )
     signed_files = {f["path"]: f for f in prior_signed["files"]}
     check(
         len(signed_files) == len(prior["files"]) and bool(signed_files),
-        "V09 previous release signed file count mismatch",
+        "V09: не совпадает количество подписанных файлов предыдущего выпуска",
     )
     actual = {}
     for item in prior["files"]:
@@ -325,13 +325,13 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
             and not rel.startswith("/")
             and "\\" not in rel
             and all(bit not in ("", ".", "..") for bit in rel.split("/")),
-            "V09 unsafe previous release path",
+            "V09: небезопасный путь к предыдущему выпуску",
         )
         check(
             rel in signed_files
             and signed_files[rel]["sha256"] == item["sha256"]
             and signed_files[rel]["size"] == item["size"],
-            "V09 previous release manifest mismatch",
+            "V09: манифест предыдущего выпуска не совпадает",
         )
         for directory in (root / "previous-source", root / "installation"):
             f = directory / rel
@@ -340,7 +340,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
                 and not f.is_symlink()
                 and f.stat().st_size == item["size"]
                 and sha(f) == item["sha256"],
-                "V09 rollback did not restore signed previous bytes: " + rel,
+                "V09: откат не восстановил подписанные данные предыдущего выпуска: " + rel,
             )
         actual[rel] = item["sha256"]
     check(
@@ -349,7 +349,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
             json.dumps(actual, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
         == proof["filesSha256"],
-        "V09 final rollback files digest inconsistent",
+        "V09: контрольные суммы файлов после отката не согласованы",
     )
     return {
         "lifecycle-report.json": sha(work / "update-recovery.json"),
@@ -365,26 +365,26 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
 
 
 def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridge_sha):
-    """Only run after a trusted, pinned OCI container has exited successfully."""
+    """Запускайте только после успешного завершения доверенного контейнера OCI с закреплённым образом."""
     report = read_json(work / "staged-execution.json")
     check(
         report["schemaVersion"] == "launcher.staged-runtime-run.v1",
-        "wrong execution report schema",
+        "Некорректная схема отчёта о выполнении",
     )
     for k in ("runId", "packageId", "manifestSha256", "artifactSha256"):
-        check(report[k] == issued[k], "staged grant/report mismatch: " + k)
+        check(report[k] == issued[k], "Несовпадение подготовленного разрешения и отчёта: " + k)
     stages = report["stages"]
     check(
         set(stages) == set(REQUIRED),
-        "staged execution is incomplete or contains unrecognized stages",
+        "Подготовленное выполнение не завершено или содержит неизвестные этапы",
     )
     for name in REQUIRED:
-        check(stages[name]["status"] == "passed", "unverified runtime stage: " + name)
+        check(stages[name]["status"] == "passed", "Не проверен этап Runtime: " + name)
     hashes = {name: sha(work / name) for name in FILES}
     for stage, name in STAGE_ARTIFACT.items():
         check(
             stages[stage].get("evidenceSha256") == hashes[name],
-            "stage evidence does not match raw artifact: " + stage,
+            "Свидетельство этапа не соответствует исходному артефакту: " + stage,
         )
     # The job's actual display, renderer and OS are part of the verified
     # observations. A headless/materialization-only job must be signed
@@ -400,7 +400,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and isinstance(host.get("renderer"), dict)
         and bool(host["renderer"].get("renderer"))
         and bool(host["renderer"].get("version")),
-        "V10 positive OpenGL GUI capability not established on trusted Linux/amd64 worker",
+        "V10: на доверенном исполнителе Linux/amd64 не подтверждена работоспособность графического OpenGL",
     )
     hashes["host-capabilities.json"] = sha(work / "host-capabilities.json")
     identity = read_json(work / "execution-identity.json")
@@ -408,19 +408,19 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         HEX64.fullmatch(identity["javaSha256"])
         and HEX64.fullmatch(identity["RuntimeSha256"])
         and HEX64.fullmatch(identity["cliSha256"]),
-        "unbound Java or binary hashes",
+        "Контрольные суммы Java или исполняемых файлов не привязаны к проверке",
     )
     check(
         hashlib.sha256(
             (identity["cliSha256"] + identity["RuntimeSha256"]).encode()
         ).hexdigest()
         == identity["installAdapterSha256"],
-        "install adapter binary identity inconsistent",
+        "Идентификатор исполняемого файла установочного адаптера не согласован",
     )
     check(
         HEX64.fullmatch(identity["resolvedPlanSha256"])
         and HEX64.fullmatch(identity["guardPolicySha256"]),
-        "unbound runtime plan or guard policy",
+        "План Runtime или политика Guard не привязаны к проверке",
     )
     # Independently verify the exact staged downloads AND the actual installed
     # bytes. A report saying "valid" cannot compensate for a modified game jar.
@@ -430,12 +430,12 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         snapshot["packageId"] == issued["packageId"]
         and signed_manifest["projectId"] == snapshot["projectId"]
         and signed_manifest["version"] == snapshot["version"],
-        "materialized release identity mismatch",
+        "Не совпадает идентификатор подготовленного выпуска",
     )
     signed_files = {f["path"]: f for f in signed_manifest["files"]}
     check(
         len(signed_files) == len(snapshot["files"]) and bool(signed_files),
-        "missing or duplicated signed staged files",
+        "Подписанные подготовленные файлы отсутствуют или повторяются",
     )
     native_adoption = read_json(work / "native-adoption.json")
     check(
@@ -444,7 +444,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and isinstance(native_adoption.get("importedFiles"), int)
         and native_adoption["importedFiles"] > 0
         and HEX64.fullmatch(native_adoption.get("planSha256", "")),
-        "native transaction must adopt exact staged bytes without network downloads",
+        "Нативная транзакция должна использовать точные подготовленные данные без сетевой загрузки",
     )
     catalog = signed_manifest.get("componentCatalog")
     if catalog:
@@ -453,7 +453,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             selection["schemaVersion"] == "launcher.component-execution.v1"
             and selection["preset"] == identity["preset"]
             and selection["catalogDigest"] == catalog["digest"],
-            "selected catalog/preset not bound to run",
+            "Выбранный каталог или набор компонентов не связан с запуском",
         )
         selected_ids, selected_paths = selected_components(
             signed_manifest, selection["preset"]
@@ -464,20 +464,20 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             native.get("status") == "ready"
             and sync == native_adoption
             and sync.get("status") == "ready",
-            "native selected install was not committed and verified",
+            "Выбранная нативная установка не зафиксирована и не проверена",
         )
         check(
             selection["syncSha256"] == sha(work / "component-sync.json")
             and selection["nativeVerifySha256"]
             == sha(work / "component-verification.json"),
-            "native component verifier artifacts were tampered",
+            "Артефакты нативной проверки компонентов были изменены",
         )
         observed = {
             f["path"] for f in native.get("files", []) if f.get("status") == "ok"
         }
         check(
             observed <= selected_paths and bool(observed),
-            "native verifier checked files outside selected preset",
+            "Нативная проверка затронула файлы вне выбранного набора компонентов",
         )
         # For every optional JAR, presence must equal signed membership. A
         # default install leaving unselected mods in mods/ would be a FAIL.
@@ -487,7 +487,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
                 check(
                     not (work / "client" / name).exists()
                     and not (work / "client" / name).is_symlink(),
-                    "unselected optional component remains physically installed: "
+                    "Невыбранный дополнительный компонент остаётся установленным: "
                     + name,
                 )
         listed = sorted(
@@ -508,7 +508,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         ).hexdigest()
         check(
             selection["resolvedComponentPlanSha256"] == calculated_component_digest,
-            "signed component resolved plan does not match native verified paths",
+            "Подписанный план компонентов не соответствует путям, проверенным нативным кодом",
         )
         hashes["component-selection.json"] = sha(work / "component-selection.json")
         hashes["component-verification.json"] = sha(
@@ -521,7 +521,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             "componentCatalogDigest": catalog["digest"],
         }
     else:
-        check(identity["preset"] == "default", "unsigned component selection claimed")
+        check(identity["preset"] == "default", "Заявлен выбор компонентов без подписи")
         selected_paths = {f["path"] for f in signed_manifest["files"]}
         extra = {}
     for entry in snapshot["files"]:
@@ -532,7 +532,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             and not name.startswith("/")
             and not any(bit in (".", "..", "") for bit in name.split("/"))
             and "\\" not in name,
-            "unsafe staged file path",
+            "Небезопасный путь подготовленного файла",
         )
         check(
             name in signed_files
@@ -553,7 +553,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
                 and full.resolve().is_relative_to(folder.resolve())
                 and full.stat().st_size == entry["size"]
                 and sha(full) == entry["sha256"],
-                "downloaded or installed client bytes are not signed staged bytes: "
+                "Загруженные или установленные данные клиента не совпадают с подписанными подготовленными данными: "
                 + name,
             )
     recomputed = hashlib.sha256(
@@ -574,7 +574,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     ).hexdigest()
     check(
         identity["resolvedPlanSha256"] == recomputed,
-        "runtime plan digest not bound to signed staged contents",
+        "Контрольная сумма плана Runtime не привязана к подписанному подготовленному содержимому",
     )
     guard = signed_manifest.get("runtime", {}).get("guard", {})
     actual_guard = hashlib.sha256(
@@ -583,32 +583,32 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     check(
         identity["guardPolicySha256"] == actual_guard
         and identity["guardMode"] == str(guard.get("mode") or "disabled"),
-        "Guard policy mismatch",
+        "Несовпадение политики Guard",
     )
     check(
         identity["loader"]
         == signed_manifest.get("minecraft", {}).get("loader", "vanilla").lower(),
-        "loader mismatch against signed manifest",
+        "Загрузчик не соответствует подписанному манифесту",
     )
     check(
         identity["preset"] == (selection["preset"] if catalog else "default"),
-        "actual preset mismatch against signed component selection",
+        "Фактический набор компонентов не соответствует подписанному выбору",
     )
     hashes.update(verify_lifecycle_0349(work, snapshot, signed_manifest, identity))
     install = read_json(work / "verified.json")
-    check(install["status"] == "valid", "client verify did not pass")
+    check(install["status"] == "valid", "Проверка клиента не пройдена")
     startup = read_json(work / "startup-readiness.json")
     check(
         startup["schemaVersion"] == "launcher.startup-readiness.v1"
         and startup["windowPid"] is not None
         and not startup.get("failure")
         and not startup.get("blocked"),
-        "GUI readiness not positively established",
+        "Готовность графического интерфейса не подтверждена",
     )
     samples = startup.get("samples", [])
     check(
         len(samples) == 2 and samples[0]["sha256"] != samples[1]["sha256"],
-        "two distinct rendered menu frames missing",
+        "Отсутствуют два различающихся отрисованных кадра меню",
     )
     for i, sample in enumerate(samples, 1):
         f = work / "startup-diagnostics" / f"menu-frame-{i}.png"
@@ -620,7 +620,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             and sample["pid"] == startup["windowPid"]
             and sample["width"] >= 640
             and sample["height"] >= 400,
-            "menu frame not bound to Java window",
+            "Кадр меню не связан с окном Java",
         )
         hashes["menu-frame-" + str(i) + ".png"] = sha(f)
     authentication = read_json(work / "authentication.json")
@@ -635,7 +635,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and authentication.get("providerJoin") == "passed"
         and authentication.get("providerHasJoined") == "passed"
         and HEX64.fullmatch(authentication.get("profileSha256", "")),
-        "real provider authentication missing or mock not accepted",
+        "Отсутствует аутентификация у реального провайдера либо имитация не допускается",
     )
     if mode == "custom":
         check(
@@ -645,28 +645,28 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             == "positive-join-and-live-trust-denial"
             and authentication.get("guardPolicySha256")
             == identity["guardPolicySha256"],
-            "custom Yggdrasil revocation/replay/device policy not verified",
+            "Не проверены отзыв доступа, защита от повторов и политика устройств пользовательского Yggdrasil",
         )
         check(
             authentication.get("negativeDeviceTrustJoinDenied") is True,
-            "device trust policy must reject a real negatively provisioned test session",
+            "Политика доверия к устройствам должна отклонять реальную тестовую сессию с недопустимой конфигурацией",
         )
         if identity["guardMode"] != "disabled":
             check(
                 authentication.get("negativeGuardJoinDenied") is True,
-                "Guard-enabled runtime requires real Guard-specific denial",
+                "Для Runtime с Guard требуется реальный отказ, связанный с политикой Guard",
             )
     else:
         check(
             authentication.get("serverOnlineModeRequired") is True
             and identity["guardMode"] == "disabled",
-            "official Minecraft requires online-mode and disabled Guard until a live Guard policy proof exists",
+            "Официальный Minecraft требует online-mode и отключённый Guard до получения реального подтверждения политики Guard",
         )
     server = read_json(work / "server-readiness.json")
     game = read_json(work / "gameplay-smoke.json")
     props = work / "matching-server" / "server.properties"
     check(
-        props.is_file() and not props.is_symlink(), "matching server properties missing"
+        props.is_file() and not props.is_symlink(), "Отсутствуют свойства соответствующего сервера"
     )
     server_properties = dict(
         line.split("=", 1)
@@ -678,19 +678,19 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         server.get("onlineMode") is expected_online
         and server_properties.get("online-mode") == str(expected_online).lower()
         and server_properties.get("server-ip") == "127.0.0.1",
-        "Minecraft server online-mode policy does not match real provider",
+        "Политика online-mode сервера Minecraft не соответствует реальному провайдеру",
     )
     hashes["server.properties"] = sha(props)
     check(
         server["runId"] == issued["runId"] and game["runId"] == issued["runId"],
-        "gameplay/server run ID mismatch",
+        "Не совпадают идентификаторы игрового и серверного запусков",
     )
     check(
         server["startup"] == "passed"
         and server["minecraftVersion"] == game["minecraftVersion"]
         and server["loader"] == game["loader"]
         and server["loaderVersion"] == game["loaderVersion"],
-        "server/plugin/runtime version mismatch",
+        "Не совпадают версии сервера, плагина или Runtime",
     )
     if needs_adversarial_gameplay(signed_manifest["version"]):
         hashes["adversarial-gameplay-04314.json"] = verify_adversarial_gameplay_04314(
@@ -702,7 +702,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and game["clientInputSent"] is True
         and game["windowJavaProcessId"] is not None
         and not game["failure"],
-        "gameplay not positively confirmed",
+        "Игровой процесс не подтверждён",
     )
     before, after = game["positionBefore"], game["positionAfter"]
     check(
@@ -710,14 +710,14 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and len(after) == 3
         and any(abs(float(a) - float(b)) > 0.001 for a, b in zip(before, after))
         and int(game["ticksAfter"]) > int(game["ticksBefore"]),
-        "no server-confirmed movement or game ticks",
+        "Сервер не подтвердил движение игрока или игровые тики",
     )
     check(
         game["frameBeforeSha256"] != game["frameAfterSha256"]
         and all(
             HEX64.fullmatch(game[k]) for k in ("frameBeforeSha256", "frameAfterSha256")
         ),
-        "rendered gameplay frames did not change",
+        "Отрисованные игровые кадры не изменились",
     )
     for filename, key in (
         ("world-before.png", "frameBeforeSha256"),
@@ -726,46 +726,46 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         frame = work / "gameplay-diagnostics" / filename
         check(
             frame.is_file() and not frame.is_symlink() and sha(frame) == game[key],
-            "gameplay screenshot not present or wrong digest",
+            "Снимок игрового процесса отсутствует или его контрольная сумма неверна",
         )
         hashes[filename] = sha(frame)
     check(
         identity["loader"] == server["loader"]
         and TOKEN.fullmatch(identity["preset"])
         and TOKEN.fullmatch(identity["guardMode"]),
-        "signed loader/preset/guard mismatch",
+        "Не совпадают подписанные параметры загрузчика, набора компонентов или Guard",
     )
     check(
         HEX64.fullmatch(bridge_sha),
-        "bridge digest must be pinned (zero digest for Vanilla)",
+        "Контрольная сумма Bridge должна быть закреплена (нулевая сумма для Vanilla)",
     )
     if mode == "custom":
         check(
             server["bridgeRequired"],
-            "custom Yggdrasil matching server must run verified ServerBridge",
+            "Подходящий сервер пользовательского Yggdrasil должен запускать проверенный ServerBridge",
         )
     if server["bridgeRequired"]:
         check(
             bridge_sha != "0" * 64
             and server["bridgeRequired"]
             and game["serverBridgeVersion"],
-            "ServerBridge required but unverified",
+            "ServerBridge обязателен, но не проверен",
         )
     else:
         check(
             bridge_sha == "0" * 64,
-            "Vanilla without bridge cannot claim a bridge binary",
+            "Для Vanilla без Bridge нельзя заявлять наличие исполняемого файла Bridge",
         )
     java_version = identity["javaVersionRaw"].splitlines()[0].strip()
     match = re.search(r'(?:version\s+)?["\']?([0-9]+(?:\.[0-9]+){0,3})', java_version)
-    check(bool(match), "Java version not verified")
+    check(bool(match), "Версия Java не проверена")
     java_version = match.group(1)
     image_sha = image_sha.lower()
     check(
         HEX64.fullmatch(image_sha)
         and HEX64.fullmatch(build_sha)
         and bool(re.fullmatch("[0-9a-f]{40}|[0-9a-f]{64}", source_sha)),
-        "untrusted host build provenance",
+        "Недоверенное происхождение сборки на узле",
     )
     started = datetime.fromisoformat(report["startedAt"].replace("Z", "+00:00"))
     finished = datetime.fromisoformat(report["finishedAt"].replace("Z", "+00:00"))
@@ -773,7 +773,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         started <= finished
         and (finished - started).total_seconds() < 4 * 3600
         and finished <= datetime.now(timezone.utc),
-        "invalid execution time bounds",
+        "Некорректные временные границы выполнения",
     )
     # IMPORTANT: order must match Go validationPayload0345 field order.
     evidence = {
@@ -849,13 +849,13 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     ]
     check(
         len(applicable) == 1,
-        "no unique configured target matches exact Java/preset/server/build/runtime identity",
+        "Нет единственного настроенного целевого окружения, точно соответствующего Java, набору компонентов, серверу, сборке и Runtime",
     )
     evidence["targetId"] = applicable[0]["id"]
     check(
         HEX64.fullmatch(evidence["runNonce"])
         and HEX64.fullmatch(evidence["targetMatrixSha256"]),
-        "missing backend issued run nonce or target matrix",
+        "Отсутствует выданное Backend одноразовое значение запуска или целевая матрица",
     )
     for val in (
         "runId",
@@ -874,7 +874,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         "purpose",
     ):
         check(
-            TOKEN.fullmatch(evidence[val]), "unsafe/noncanonical signed value: " + val
+            TOKEN.fullmatch(evidence[val]), "Небезопасное или неканоническое подписанное значение: " + val
         )
     return evidence
 
@@ -891,15 +891,15 @@ def request_json(base, path, token, body):
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=60) as res:
-        check(res.status == 201, "backend refused validation operation")
+        check(res.status == 201, "Backend отклонил операцию проверки")
         return json.load(res)["data"]
 
 
 def sign_evidence(payload, key_path):
     p = Path(key_path)
-    check(p.stat().st_mode & 0o077 == 0, "attestation private key must be owner-only")
+    check(p.stat().st_mode & 0o077 == 0, "Закрытый ключ аттестации должен быть доступен только владельцу")
     private = load_pem_private_key(p.read_bytes(), password=None)
-    check(isinstance(private, Ed25519PrivateKey), "Ed25519 attestation key required")
+    check(isinstance(private, Ed25519PrivateKey), "Требуется ключ аттестации Ed25519")
     payload = dict(payload)
     payload["signerKeyId"] = hashlib.sha256(
         private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
@@ -916,25 +916,25 @@ def sign_evidence(payload, key_path):
 
 def execute_run(cfg, package_id, selection=None, issued_grant=None):
     check(
-        re.fullmatch(r"[A-Za-z0-9_\-]{1,128}", package_id), "invalid package identifier"
+        re.fullmatch(r"[A-Za-z0-9_\-]{1,128}", package_id), "Некорректный идентификатор пакета"
     )
     check(
         platform.system() == "Linux" and platform.machine() in ("x86_64", "AMD64"),
-        "this pinned runner is limited to Linux amd64; other targets require their own build",
+        "Этот закреплённый раннер предназначен только для Linux amd64; другим платформам требуется собственная сборка",
     )
-    check(cfg.backend.startswith("https://"), "attestor requires HTTPS backend")
+    check(cfg.backend.startswith("https://"), "Для аттестации требуется Backend по HTTPS")
     check(
         "@sha256:" in cfg.image and HEX64.fullmatch(cfg.image.rsplit("@sha256:", 1)[1]),
-        "runner image must be pinned with an OCI digest",
+        "Образ раннера должен быть закреплён контрольной суммой OCI",
     )
     image_sha = cfg.image.rsplit("@sha256:", 1)[1]
     check(
         re.fullmatch("[0-9a-f]{40}|[0-9a-f]{64}", cfg.source_sha),
-        "source commit must be pinned",
+        "Коммит исходного кода должен быть закреплён",
     )
-    check(HEX64.fullmatch(cfg.build_sha), "trusted build SHA-256 must be pinned")
+    check(HEX64.fullmatch(cfg.build_sha), "Контрольная сумма SHA-256 доверенной сборки должна быть закреплена")
     check(
-        HEX64.fullmatch(cfg.manifest_key), "signed staged manifest key must be pinned"
+        HEX64.fullmatch(cfg.manifest_key), "Ключ подписанного подготовленного манифеста должен быть закреплён"
     )
     # Pull/inspect the digest-identified image on the trusted host. Image labels
     # are immutable under the pinned digest, so arbitrary host-provided source
@@ -957,7 +957,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
     check(
         labels.get("org.opencontainers.image.revision") == cfg.source_sha
         and labels.get("io.launcher.validation.build-sha256") == cfg.build_sha,
-        "pinned image build provenance labels do not match operator-approved release",
+        "Метки происхождения закреплённого образа не соответствуют выпуску, одобренному оператором",
     )
     # Do not accept a user-chosen executable, runtime, image, Docker flags or signing key.
     grant = (
@@ -972,7 +972,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
     )
     check(
         grant["packageId"] == package_id and grant["attested"] is False,
-        "backend issued wrong staged snapshot",
+        "Backend выдал неверный подготовленный снимок",
     )
     with tempfile.TemporaryDirectory(prefix="launcher-attestor-") as tmp:
         root = Path(tmp)
@@ -987,7 +987,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
         if cfg.auth_mode == "official":
             check(
                 cfg.official_client_id and cfg.official_refresh_token_file,
-                "official provider requires authorized test account and host-only refresh token",
+                "Официальный провайдер требует разрешённую тестовую учётную запись и токен обновления, доступный только узлу",
             )
             issue_minecraft_credentials(
                 cfg.official_client_id,
@@ -999,10 +999,10 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 cfg.server_sha
                 and HEX64.fullmatch(cfg.server_sha)
                 and sha(cfg.server_bundle_file) == cfg.server_sha,
-                "server bundle digest does not match operator pin",
+                "Контрольная сумма серверного пакета не соответствует закреплённой оператором",
             )
         job_network = "nlval-" + grant["runId"][:24]
-        check(os.getuid() != 0, "attestation service MUST run as unprivileged account")
+        check(os.getuid() != 0, "Служба аттестации ОБЯЗАНА работать от непривилегированной учётной записи")
         subprocess.run(
             [cfg.engine, "network", "create", job_network],
             check=True,
@@ -1063,7 +1063,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
         ]
         check(
             not Path(cfg.previous_bundle_file).is_symlink(),
-            "symlink prior-release bundle forbidden",
+            "Символьная ссылка на пакет предыдущего выпуска запрещена",
         )
         prior_bundle = Path(cfg.previous_bundle_file).resolve(strict=True)
         check(
@@ -1071,13 +1071,13 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
             and not prior_bundle.is_symlink()
             and HEX64.fullmatch(cfg.previous_sha)
             and sha(prior_bundle) == cfg.previous_sha,
-            "host-pinned prior release is missing or tampered",
+            "Закреплённый на узле предыдущий выпуск отсутствует или изменён",
         )
         replacement_home = Path(cfg.replacement_java_home).resolve(strict=True)
         replacement_binary = replacement_home / "bin" / "java"
         check(
             replacement_binary.is_file() and replacement_binary.stat().st_mode & 0o111,
-            "host-approved Java replacement missing",
+            "Отсутствует одобренная узлом замена Java",
         )
         args[args.index(cfg.image) : args.index(cfg.image)] = [
             "--mount",
@@ -1091,7 +1091,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
             and managed_manifest.is_file()
             and HEX64.fullmatch(cfg.managed_java_sha)
             and sha(managed_manifest) == cfg.managed_java_sha,
-            "host-approved Managed Java manifest missing or not pinned",
+            "Манифест управляемой Java, одобренный узлом, отсутствует или не закреплён",
         )
         managed_dir = managed_manifest.resolve(strict=True).parent
         args[args.index(cfg.image) : args.index(cfg.image)] = [
@@ -1133,15 +1133,15 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
             ]
         check(
             cfg.auth_mode in ("official", "custom"),
-            "live V07 provider mode must be explicit",
+            "Режим реального провайдера V07 должен быть указан явно",
         )
 
         def mount_identity(hostfile, inside, argument, required):
             if not hostfile:
-                check(not required, "required live test identity unavailable")
+                check(not required, "Недоступна обязательная реальная тестовая учётная запись")
                 return
             supplied = Path(hostfile)
-            check(not supplied.is_symlink(), "symlink credential file not allowed")
+            check(not supplied.is_symlink(), "Символьная ссылка на файл учётных данных запрещена")
             path = supplied.resolve(strict=True)
             stat = path.stat()
             check(
@@ -1149,7 +1149,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 and not path.is_symlink()
                 and stat.st_mode & 0o077 == 0
                 and stat.st_size <= 16384,
-                "test-account credential file must be a regular owner-only file",
+                "Файл учётных данных тестовой записи должен быть обычным файлом с доступом только для владельца",
             )
             # Mounted directly, copied into generic work/output artifacts.
             args[args.index(cfg.image) : args.index(cfg.image)] = [
@@ -1163,7 +1163,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 selection["authenticationMode"] == cfg.auth_mode
                 and selection["preset"]
                 in {target["preset"] for target in grant["requiredTargets"]},
-                "target not permitted by backend-issued runtime matrix",
+                "Целевое окружение не разрешено матрицей Runtime, выданной Backend",
             )
             args.extend(["--preset", selection["preset"]])
         args.extend(["--auth-mode", cfg.auth_mode])
@@ -1224,19 +1224,19 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 grant["runId"],
                 cfg.diagnostics_ttl_hours,
             )
-        check(proc.returncode == 0, "pinned worker failed; no trusted evidence emitted")
+        check(proc.returncode == 0, "Закреплённый исполнитель завершился с ошибкой; доверенные свидетельства не получены")
         payload = verify_local_artifacts(
             out, grant, image_sha, cfg.source_sha, cfg.build_sha, cfg.bridge_sha
         )
         check(
             payload["authenticationMode"] == cfg.auth_mode,
-            "worker returned a different real authentication provider than the host selected",
+            "Исполнитель вернул другого реального провайдера авторизации, чем выбранный узлом",
         )
         if selection is not None:
             check(
                 payload["targetId"] == selection["id"]
                 and payload["preset"] == selection["preset"],
-                "worker executed a different runtime matrix target",
+                "Исполнитель запустил другое целевое окружение матрицы Runtime",
             )
         signed = sign_evidence(payload, cfg.signing_key)
         # No signature is ever exposed to an OCI container or a user-supplied
@@ -1270,13 +1270,13 @@ def execute_matrix(cfg, package_id):
     targets = initial.get("requiredTargets", [])
     check(
         bool(targets) and len(targets) <= 128,
-        "backend did not provide required runtime targets",
+        "Backend не предоставил обязательные целевые окружения Runtime",
     )
     outcomes = []
     seen = set()
     for index, target in enumerate(targets):
         ident = target["id"]
-        check(ident not in seen, "duplicate required target ID")
+        check(ident not in seen, "Повторяющийся идентификатор обязательного целевого окружения")
         seen.add(ident)
         if target["os"] != "linux" or target["arch"] not in ("amd64", "x86_64"):
             outcomes.append(
@@ -1284,7 +1284,7 @@ def execute_matrix(cfg, package_id):
                     "targetId": ident,
                     "preset": target["preset"],
                     "status": "blocked",
-                    "detail": "target needs an independent matching OS/arch trusted runner",
+                    "detail": "Для целевого окружения требуется независимый доверенный раннер с подходящими ОС и архитектурой",
                 }
             )
             continue
@@ -1294,7 +1294,7 @@ def execute_matrix(cfg, package_id):
                     "targetId": ident,
                     "preset": target["preset"],
                     "status": "blocked",
-                    "detail": "target needs its own live authentication provider runner",
+                    "detail": "Для целевого окружения требуется собственный раннер реального провайдера авторизации",
                 }
             )
             continue
@@ -1313,7 +1313,7 @@ def execute_matrix(cfg, package_id):
             )
             check(
                 grant["targetMatrixSha256"] == initial["targetMatrixSha256"],
-                "required matrix changed while running; restart entire matrix",
+                "Обязательная матрица изменилась во время выполнения; перезапустите всю матрицу",
             )
             result = execute_run(cfg, package_id, target, grant)
             outcomes.append(
@@ -1353,14 +1353,14 @@ def main():
     p.add_argument(
         "--signing-key",
         required=True,
-        help="Host-only Ed25519 PKCS8 PEM, permission 0600",
+        help="Ключ Ed25519 PKCS8 PEM только для узла, права доступа 0600",
     )
     p.add_argument(
         "--image", required=True, help="Доверенный образ, полностью закреплённый по имени@sha256:..."
     )
     p.add_argument("--auth-mode", choices=("official", "custom"), required=True)
     p.add_argument(
-        "--credentials-file", default="", help="Custom-Yggdrasil test-session JSON only"
+        "--credentials-file", default="", help="Только JSON тестовой сессии пользовательского Yggdrasil"
     )
     p.add_argument(
         "--official-client-id",
@@ -1437,12 +1437,12 @@ def main():
     token_path = Path(cfg.operator_token_file)
     check(
         token_path.stat().st_mode & 0o077 == 0,
-        "host operator credential must be owner-only",
+        "Учётные данные оператора узла должны быть доступны только владельцу",
     )
     cfg.operator_token = token_path.read_text(encoding="utf-8").strip()
-    check(bool(cfg.operator_token), "missing host operator credential")
-    check(15 <= cfg.runtime_seconds <= 3600, "invalid runtime deadline")
-    check(1 <= cfg.diagnostics_ttl_hours <= 720, "invalid diagnostic retention TTL")
+    check(bool(cfg.operator_token), "Отсутствуют учётные данные оператора узла")
+    check(15 <= cfg.runtime_seconds <= 3600, "Некорректный крайний срок выполнения Runtime")
+    check(1 <= cfg.diagnostics_ttl_hours <= 720, "Некорректный срок хранения диагностики (TTL)")
     # A rootful Docker daemon makes its client effectively root on the host,
     # including access to the signing key. Refuse it unconditionally.
     info = subprocess.run(
@@ -1454,7 +1454,7 @@ def main():
     )
     check(
         info.returncode == 0 and info.stdout.strip() == b"true",
-        "host-side attestor requires configured rootless Podman",
+        "Аттестатор на узле требует настроенный Podman без прав root",
     )
     if cfg.package_id:
         outcome = execute_matrix(cfg, cfg.package_id)
@@ -1464,7 +1464,7 @@ def main():
         return
     check(
         cfg.tls_cert and cfg.tls_key and cfg.client_ca,
-        "service requires mTLS server+client certificates",
+        "Службе требуются серверный и клиентский сертификаты mTLS",
     )
     lock = threading.Lock()
 
@@ -1478,7 +1478,7 @@ def main():
                 return
             try:
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-                check(set(body) == {"packageId"}, "only packageId is accepted")
+                check(set(body) == {"packageId"}, "Допускается только параметр packageId")
                 if not lock.acquire(blocking=False):
                     self.send_error(429, "attestor busy")
                     return
@@ -1494,7 +1494,7 @@ def main():
                 self.wfile.write(raw)
             except ExternalOutage:
                 self.send_error(
-                    503, "inconclusive: external official provider unavailable"
+                    503, "Результат неопределён: внешний официальный провайдер недоступен"
                 )
             except Exception as exc:
                 self.send_error(409, redact_diagnostics(str(exc))[:160])

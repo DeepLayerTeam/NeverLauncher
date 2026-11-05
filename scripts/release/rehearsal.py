@@ -38,7 +38,7 @@ def architecture(content: bytes, target: str) -> None:
     system, arch = target.split("-")
     if system == "windows":
         require(
-            len(content) >= 0x40 and content[:2] == b"MZ", "not a Windows executable"
+            len(content) >= 0x40 and content[:2] == b"MZ", "Файл не является исполняемым файлом Windows"
         )
         offset = struct.unpack_from("<I", content, 0x3C)[0]
         require(
@@ -62,26 +62,26 @@ def architecture(content: bytes, target: str) -> None:
             cert_offset > 0
             and cert_size >= 8
             and cert_offset + cert_size <= len(content),
-            "missing Authenticode certificate table",
+            "Отсутствует таблица сертификатов Authenticode",
         )
     elif system == "linux":
         require(
             len(content) >= 20 and content[:6] == b"\x7fELF\x02\x01",
-            "ELF64 little endian required",
+            "Требуется ELF64 с порядком байтов little endian",
         )
         require(
             struct.unpack_from("<H", content, 18)[0] == {"x64": 62, "arm64": 183}[arch],
-            "wrong ELF architecture",
+            "Неверная архитектура ELF",
         )
     else:
         require(
             len(content) >= 32 and content[:4] == b"\xcf\xfa\xed\xfe",
-            "Mach-O 64-bit required",
+            "Требуется 64-разрядный Mach-O",
         )
         require(
             struct.unpack_from("<I", content, 4)[0]
             == {"x64": 0x01000007, "arm64": 0x0100000C}[arch],
-            "wrong Mach-O architecture",
+            "Неверная архитектура Mach-O",
         )
         ncmds = struct.unpack_from("<I", content, 16)[0]
         size = struct.unpack_from("<I", content, 20)[0]
@@ -92,25 +92,25 @@ def architecture(content: bytes, target: str) -> None:
             require(cursor + 8 <= 32 + size, "Недопустимый размер команды Mach-O")
             cmd, length = struct.unpack_from("<II", content, cursor)
             require(
-                length >= 8 and cursor + length <= 32 + size, "truncated Mach-O command"
+                length >= 8 and cursor + length <= 32 + size, "Усечённая команда Mach-O"
             )
             if cmd == 0x1D:
                 require(length >= 16, "Неполная команда подписи кода")
                 off, length_sig = struct.unpack_from("<II", content, cursor + 8)
                 require(
                     off > 0 and length_sig > 0 and off + length_sig <= len(content),
-                    "invalid Mach-O code signature",
+                    "Некорректная подпись кода Mach-O",
                 )
                 signed = True
             cursor += length
-        require(signed, "macOS code signature absent")
+        require(signed, "Отсутствует подпись кода macOS")
 
 
 def safe_members(members: dict[str, bytes]) -> None:
     require(
         len(members) <= MAX_ENTRIES
         and sum(map(len, members.values())) <= MAX_UNCOMPRESSED,
-        "archive size/entry limit",
+        "Превышено ограничение размера архива или количества элементов",
     )
     seen = set()
     for name in members:
@@ -121,7 +121,7 @@ def safe_members(members: dict[str, bytes]) -> None:
             and "\\" not in name
             and all(x not in ("", ".", "..") for x in name.split("/"))
             and not path.is_absolute(),
-            "duplicate or unsafe archive member: " + name,
+            "Повторяющийся или небезопасный элемент архива: " + name,
         )
         seen.add(name)
 
@@ -137,20 +137,20 @@ def unpack(path: Path) -> dict[str, bytes]:
                 mode = (meta.external_attr >> 16) & 0o170000
                 require(
                     mode != 0o120000 and not meta.flag_bits & 1,
-                    "archive symlink/encrypted entry",
+                    "В архиве обнаружена символьная ссылка или зашифрованный элемент",
                 )
                 require(
                     meta.filename not in result and meta.file_size <= MAX_UNCOMPRESSED,
-                    "archive duplicate or oversized member",
+                    "В архиве обнаружен повторяющийся или слишком большой элемент",
                 )
                 total += meta.file_size
                 require(
                     total <= MAX_UNCOMPRESSED and len(result) < MAX_ENTRIES,
-                    "archive expansion limit",
+                    "Превышено ограничение распаковки архива",
                 )
                 result[meta.filename] = archive.read(meta)
     else:
-        require(path.name.endswith(".tar.gz"), "unsupported installer format")
+        require(path.name.endswith(".tar.gz"), "Неподдерживаемый формат установщика")
         with tarfile.open(path, mode="r:gz") as archive:
             for meta in archive:
                 if meta.isdir():
@@ -159,7 +159,7 @@ def unpack(path: Path) -> dict[str, bytes]:
                 total += meta.size
                 require(
                     total <= MAX_UNCOMPRESSED and len(result) < MAX_ENTRIES,
-                    "TAR expansion limit",
+                    "Превышено ограничение распаковки TAR",
                 )
                 reader = archive.extractfile(meta)
                 require(reader is not None, "Невозможно прочитать элемент архива TAR")
@@ -226,14 +226,14 @@ def verify_update_payload_0410(
         )
         require(
             isinstance(source, str) and source not in package_rows,
-            "duplicate or invalid installer artifact path",
+            "Повторяющийся или некорректный путь артефакта установщика",
         )
         package_rows[source] = row
 
     def check_rows(rows: object, expected: dict[str, str], label: str) -> None:
         require(
             isinstance(rows, list) and len(rows) == len(expected),
-            "missing or unexpected installed " + label,
+            "Отсутствует или неожиданно присутствует установленный компонент: " + label,
         )
         roles = set()
         for entry in rows:
@@ -241,7 +241,7 @@ def verify_update_payload_0410(
             role = entry.get("component")
             require(
                 isinstance(role, str) and role in expected and role not in roles,
-                "duplicate or unexpected installed component: " + str(role),
+                "Повторяющийся или неожиданный установленный компонент: " + str(role),
             )
             roles.add(role)
             src = entry.get("sourcePath")
@@ -288,7 +288,7 @@ def verify_update_payload_0410(
                     len(matching) == 1
                     and matching[0].get("sha256") == entry["sha256"]
                     and matching[0].get("size") == entry["size"],
-                    "installer and updater component mapping differ: " + role,
+                    "Сопоставление компонентов установщика и обновляющего модуля различается: " + role,
                 )
 
     check_rows(update.get("components"), expected_roles, "components")
@@ -302,7 +302,7 @@ def verify_update_payload_0410(
         + ("Contents/Resources/" if system == "darwin" else "")
         + "COMPONENT_SET_SIGNATURE.json"
     )
-    require(signature_path in members, "missing installed component-set signature")
+    require(signature_path in members, "Отсутствует подпись набора установленных компонентов")
     signature = json.loads(members[signature_path], object_pairs_hook=_no_dupes)
     require(
         isinstance(signature, dict)
@@ -318,7 +318,7 @@ def verify_update_payload_0410(
         + ("Contents/Resources/" if system == "darwin" else "")
         + "COMPONENT_SET_SIGNATURE_V2.json"
     )
-    require(v2_path in members, "missing installed delegated component-set signature")
+    require(v2_path in members, "Отсутствует делегированная подпись набора установленных компонентов")
     v2 = json.loads(members[v2_path], object_pairs_hook=_no_dupes)
     require(
         isinstance(v2, dict)
@@ -336,7 +336,7 @@ def verify_update_payload_0410(
     )
     require(
         trust_policy in members and 0 < len(members[trust_policy]) <= 128 * 1024,
-        "missing installed delegated component trust policy",
+        "Отсутствует установленная политика доверия к делегированным компонентам",
     )
     # Проверяйте обе подписи Ed25519 по корневым ключам доверия, предоставленным
     # отдельно оператором выпуска. Никогда не берите открытый ключ доверия из ZIP.
@@ -349,7 +349,7 @@ def verify_update_payload_0410(
     require(
         re.fullmatch("[0-9a-fA-F]{64}", component_root) is not None
         and re.fullmatch("[0-9a-fA-F]{64}", delegation_root) is not None,
-        "release trusted component public keys are missing",
+        "Отсутствуют доверенные открытые ключи компонентов выпуска",
     )
     try:
         Ed25519PublicKey.from_public_bytes(bytes.fromhex(component_root)).verify(
@@ -358,14 +358,14 @@ def verify_update_payload_0410(
         envelope = json.loads(members[trust_policy], object_pairs_hook=_no_dupes)
         require(
             isinstance(envelope, dict) and envelope.get("schemaVersion") == "1.0",
-            "invalid root-signed component trust policy envelope",
+            "Некорректная оболочка политики доверия к компонентам с корневой подписью",
         )
         payload = base64.b64decode(envelope["payload"], validate=True)
         require(
             0 < len(payload) <= 128 * 1024
             and re.fullmatch("[0-9a-fA-F]{128}", envelope.get("rootSignature", ""))
             is not None,
-            "invalid component trust policy payload/signature",
+            "Некорректное содержимое или подпись политики доверия к компонентам",
         )
         Ed25519PublicKey.from_public_bytes(bytes.fromhex(delegation_root)).verify(
             bytes.fromhex(envelope["rootSignature"]),
@@ -380,7 +380,7 @@ def verify_update_payload_0410(
             and delegated_policy["epoch"] > 0
             and v2.get("trustEpoch") == delegated_policy["epoch"]
             and v2.get("policySha256") == hashlib.sha256(payload).hexdigest(),
-            "component trust policy epoch or identity mismatch",
+            "Не совпадают эпоха или идентификатор политики доверия к компонентам",
         )
 
         def date(value: str) -> datetime:
@@ -393,14 +393,14 @@ def verify_update_payload_0410(
             date(delegated_policy["issuedAt"])
             <= current
             < date(delegated_policy["expiresAt"]),
-            "component trust policy is expired or not yet valid",
+            "Срок действия политики доверия к компонентам истёк или ещё не начался",
         )
         require(
             date(v2["signedAt"]) <= current
             and date(delegated_policy["issuedAt"])
             <= date(v2["signedAt"])
             < date(delegated_policy["expiresAt"]),
-            "component delegated signature is not within policy validity",
+            "Делегированная подпись компонента выходит за срок действия политики",
         )
         matching = [
             key
@@ -415,7 +415,7 @@ def verify_update_payload_0410(
         ]
         require(
             len(matching) == 1,
-            "no independently trusted active delegated component key",
+            "Отсутствует активный делегированный ключ компонента с независимым доверием",
         )
         context = (
             "Launcher-Component-v2\n"
@@ -466,7 +466,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
         member = "Launcher.app/Contents/MacOS/launcher-desktop"
     require(
         inner in members and member in members,
-        target + ": missing packaged desktop/manifest",
+        target + ": отсутствует упакованный Desktop или манифест",
     )
     # На macOS встроенный манифест .app запечатывается codesign до копирования
     # окончательных нотариально заверенных байтов обратно в корневой манифест.
@@ -478,7 +478,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
         require(
             embedded.get("productVersion") == version
             and embedded.get("architecture") == arch,
-            target + ": embedded macOS manifest identity mismatch",
+            target + ": идентификатор встроенного манифеста macOS не совпадает",
         )
         manifest = json.loads(
             (bundle / manifest_name).read_bytes(), object_pairs_hook=_no_dupes
@@ -493,7 +493,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
         manifest.get("productVersion") == version
         and manifest.get("architecture") == arch
         and isinstance(manifest.get("artifacts"), list),
-        target + ": package manifest version/architecture mismatch",
+        target + ": версия или архитектура манифеста пакета не совпадает",
     )
     require(
         hashlib.sha256(members[member]).hexdigest() == sha(binary),
@@ -514,11 +514,11 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
             and SHA.fullmatch(row["sha256"]) is not None
             and row.get("size") == len(members[name])
             and hashlib.sha256(members[name]).hexdigest() == row["sha256"],
-            target + ": missing/altered package component: " + str(name),
+            target + ": отсутствующий или изменённый компонент пакета: " + str(name),
         )
         seen.add(name)
         if row.get("component") == "desktop-launcher":
-            require(name == member, target + ": unexpected desktop component mapping")
+            require(name == member, target + ": неожиданное сопоставление компонентов Desktop")
         if row.get("component") in ("desktop-launcher", "runtime", "guard", "cli"):
             architecture(members[name], target)
         if system == "windows":
@@ -530,7 +530,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
                     r"[a-fA-F0-9]{40}", str(row.get("signerThumbprint", ""))
                 )
                 is not None,
-                target + ": native Authenticode signing evidence missing",
+                target + ": отсутствует свидетельство нативной подписи Authenticode",
             )
         if system == "darwin":
             require(
@@ -538,10 +538,10 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
                 and row.get("hardenedRuntime") is True
                 and re.fullmatch("[A-Z0-9]{10}", str(row.get("teamId", "")))
                 is not None,
-                target + ": native code-signing evidence missing",
+                target + ": отсутствует свидетельство нативной подписи кода",
             )
     require(
-        member in seen and len(seen) >= 4, target + ": incomplete production package"
+        member in seen and len(seen) >= 4, target + ": неполный рабочий пакет"
     )
     if tuple(int(v) for v in version.split(".")[:3]) >= (0, 41, 0):
         verify_update_payload_0410(members, manifest, system, arch, version)
@@ -553,7 +553,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
                 else "COMPONENT_SET_SIGNATURE.json"
             )
             in members,
-            target + ": missing component set signature",
+            target + ": отсутствует подпись набора компонентов",
         )
     return {
         "target": target,
@@ -568,7 +568,7 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
 def _no_dupes(pairs):
     obj = {}
     for key, value in pairs:
-        require(key not in obj, "duplicate JSON field " + key)
+        require(key not in obj, "Повторяющееся поле JSON: " + key)
         obj[key] = value
     return obj
 
@@ -583,7 +583,7 @@ def current_run() -> tuple[str, str]:
     require(
         re.fullmatch(r"[1-9][0-9]{0,29}", run_id) is not None
         and re.fullmatch(r"[1-9][0-9]{0,9}", attempt) is not None,
-        "production rehearsal requires the exact CI run ID and attempt",
+        "Для приёмочного прогона требуются точные идентификатор запуска CI и номер попытки",
     )
     return run_id, attempt
 
@@ -627,7 +627,7 @@ def certify(bundle: Path, evidence: Path, key: Path, version: str, commit: str) 
             (r["target"], r["binarySha256"], r["packageSha256"])
             for r in receipt["targets"]
         ],
-        "rehearsal records are not the signed GA target set",
+        "Записи приёмочного прогона не соответствуют подписанному набору целей GA",
     )
     return {
         "schemaVersion": SCHEMA,
@@ -655,7 +655,7 @@ def dry_run(
 ) -> dict:
     require(
         stage.resolve() != bundle.resolve() and not stage.exists(),
-        "dry-run staging must be a fresh distinct directory",
+        "Для пробной подготовки требуется новый отдельный каталог",
     )
     receipt = certify(bundle, evidence, key, version, commit)
     report = json.loads(
@@ -663,7 +663,7 @@ def dry_run(
         object_pairs_hook=_no_dupes,
     )
     require(
-        report == receipt, "signed release rehearsal receipt is stale or mismatched"
+        report == receipt, "Квитанция пробного выпуска с подписью устарела или не соответствует сборке"
     )
     sums = (bundle / "SHA256SUMS").read_text(encoding="utf-8")
     expected = {}
@@ -683,7 +683,7 @@ def dry_run(
     files = [p for p in bundle.iterdir() if p.is_file() and not p.is_symlink()]
     require(
         set(expected) == {p.name for p in files} - {"SHA256SUMS", "SHA256SUMS.sig"},
-        "missing/unsigned/extra final release file",
+        "В финальном выпуске отсутствует файл, обнаружен неподписанный или лишний файл",
     )
     # Никогда не используйте общее или промышленное состояние доверия как
     # записываемое состояние пробного прогона.
@@ -698,7 +698,7 @@ def dry_run(
                 shutil.copyfileobj(read, write, 1024 * 1024)
             require(
                 sha(target) == sha(source),
-                "dry-run transport changed bytes " + source.name,
+                "Пробная передача изменила данные: " + source.name,
             )
             if source.name in expected:
                 require(
@@ -723,7 +723,7 @@ def dry_run(
         finished = subprocess.run(argv, capture_output=True, text=True, timeout=240)
         require(
             finished.returncode == 0,
-            "staged release publish-check refused: "
+            "Проверка публикации подготовленного выпуска отклонена: "
             + (finished.stderr or finished.stdout)[-900:],
         )
         return {
@@ -766,7 +766,7 @@ def main() -> int:
         else:
             require(
                 all((a.cli, a.public_key, a.trust_policy, a.trust_state, a.stage)),
-                "dry-run requires cli, public key, trust policy, trust state and staging directory",
+                "Для пробного запуска требуются CLI, открытый ключ, политика доверия, состояние доверия и каталог подготовки",
             )
             result = dry_run(
                 base["bundle"],

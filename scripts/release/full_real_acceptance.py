@@ -85,7 +85,7 @@ def path_file(path, limit=16<<20):
 
 def read(path):
     doc = rehearsal.read(Path(path))
-    need(type(doc) is dict, 'invalid JSON evidence')
+    need(type(doc) is dict, 'Некорректные свидетельства JSON')
     return doc
 
 def digest(path):
@@ -95,17 +95,17 @@ def strict_plan(doc, commit, pin):
     need(type(doc) is dict and set(doc)=={'version','sourceCommit','sourceIndexSha256','scenarios'}
          and doc['version']==VERSION=='0.53.0' and doc['sourceCommit']==commit and
          doc['sourceIndexSha256']==pin and type(doc['scenarios']) is dict and
-         set(doc['scenarios'])==set(SCENARIOS), 'incomplete exact-version live execution plan')
+         set(doc['scenarios'])==set(SCENARIOS), 'Неполный план реального выполнения для точной версии')
     for name, args in doc['scenarios'].items():
         need(type(args) is list and 0<len(args)<=80 and
              all(type(part) is str and 0<len(part)<=2048 and '\x00' not in part and
                  '\n' not in part and '\r' not in part for part in args),
-             'invalid live argv for '+name)
+             'Некорректные аргументы реального запуска для: '+name)
         prefix=SCENARIOS[name][1]
         need(tuple(args[:len(prefix)])==prefix and
              '--help' not in args and '--version' not in args and
              '--output' not in args and '--report' not in args,
-             'unsafe/fake output or mode in '+name)
+             'Небезопасный или имитированный вывод либо режим в: '+name)
         tail=args[len(prefix):]
         # Явно ограниченная грамматика, а не произвольные команды оболочки или
         # программы раннера. Каждый флаг без значения-переключателя должен иметь
@@ -113,17 +113,17 @@ def strict_plan(doc, commit, pin):
         singles={'--isolated-destructive-acceptance','--destructive-isolated-run',
                  '--source-fenced'}
         need(all(t.startswith('--') or i>0 and tail[i-1].startswith('--') for i,t in enumerate(tail)),
-             'unexpected positional argument in '+name)
+             'Неожиданный позиционный аргумент в: '+name)
         used=set();i=0
         while i<len(tail):
             flag=tail[i]
             need(flag.startswith('--') and flag not in ('--help','--version')
-                 and (flag not in used or flag=='--node'), 'duplicate or disallowed switch: '+flag)
+                 and (flag not in used or flag=='--node'), 'Повторяющийся или запрещённый параметр: '+flag)
             used.add(flag)
             i+=1 if flag in singles else 2
             need(i<=len(tail) and (flag in singles or
                 i-1<len(tail) and not tail[i-1].startswith('--')),
-                'missing value for '+flag)
+                'Отсутствует значение параметра: '+flag)
         required = {
             'minimal': {'--binary','--guard-policy','--bridge-policy','--work-root'},
             'standard': {'--env','--email','--password-file','--server-id','--bridge-registration-file',
@@ -152,14 +152,14 @@ def strict_plan(doc, commit, pin):
                 required[name].update({'--service','--backend-server','--target','--ha-env-file'})
                 service={'ha-postgresql':'patroni','ha-redis':'redis-server','ha-s3':'minio'}[name]
                 need(tail[tail.index('--service')+1]==service if '--service' in tail else False,
-                     name+': wrong real service')
-        need(required[name].issubset(used), 'real required inputs omitted: '+name)
+                     name+': неверная реальная служба')
+        need(required[name].issubset(used), 'Пропущены обязательные реальные входные данные: '+name)
         if name=='auth':
             need(tail[tail.index('--source-commit')+1]==commit, 'official auth evidence from other commit')
         if name=='minimal':
             need('--expected-version' not in tail or
                  tail[tail.index('--expected-version')+1]==VERSION,
-                 'Minimal ran another product version')
+                 'Минимальная установка запустила другую версию продукта')
     return doc
 
 def assert_observed(name, doc, commit):
@@ -179,51 +179,51 @@ def assert_observed(name, doc, commit):
              doc.get('mode')==('dependency' if name in ('ha-postgresql','ha-redis','ha-s3')
                                 else name[3:]) and
              (name!='ha-world' or doc.get('markerVerified') is True),
-             'real HA fault/world recovery not observed: '+name)
+             'Не подтверждены реальный сбой HA или восстановление мира: '+name)
         if name in ('ha-postgresql','ha-redis','ha-s3'):
             need(doc.get('service')=={'ha-postgresql':'patroni','ha-redis':'redis-server',
-                 'ha-s3':'minio'}[name], 'incorrect actual dependency')
+                 'ha-s3':'minio'}[name], 'Некорректная фактическая зависимость')
         return
     status,version_key,checks=expected[name]
     need(doc.get('status')==status and doc.get(version_key)==VERSION,
-         name+': live result did not pass on current version')
+         name+': реальная проверка не пройдена на текущей версии')
     if name in ('minimal','standard','auth'):
         actual=doc.get('checks')
         need(type(actual) is list and len(actual)>=checks and
              all(type(row) is dict and row.get('status') in ('passed',None) for row in actual),
-             name+': incomplete real steps')
+             name+': не все реальные этапы завершены')
     if name=='modpacks':
         need(type(doc.get('checks')) is list and len(doc['checks'])==9 and
              type(doc.get('textures')) is list and len(doc['textures'])==2,
-             'skin/cape/launch operations incomplete')
+             'Операции со скином, плащом или запуском не завершены')
     if name=='java':
         need(doc.get('sourceCommit')==commit and doc.get('gravit',{}).get('migrationChecks')==36 and
              doc['gravit'].get('moduleChecks')==19 and
              set(doc.get('legacy',{}))=={'0.36.0','0.46.0'} and
              doc.get('java',{}).get('checks',0)>=6,
-             'five JVM scenarios, three Gravit migrations or two legacy routes missing')
+             'Отсутствуют пять сценариев JVM, три миграции Gravit или два пути обновления устаревших версий')
     if name=='guard':
         need(doc.get('sourceCommit')==commit and
              len(doc.get('serverBridge',{}).get('tenRealRuntime',{}))==10 and
              len(doc.get('serverBridge',{}).get('threeBuildCompatibility',[]))==3 and
              doc.get('deviceTrust',{}).get('targets') and doc.get('guard',{}),
-             'Guard, Device Trust or Bridge real evidence incomplete')
+             'Реальные свидетельства Guard, доверия к устройствам или Bridge неполны')
     if name=='install':
         need(type(doc.get('checks')) is list and len(doc['checks'])>=8,
-             'real install, fault, repair and rollback sequence incomplete')
+             'Реальная последовательность установки, сбоя, восстановления и отката не завершена')
     if name=='sdk':
         need(type(doc.get('checks')) is list and len(doc['checks'])>=checks,
-             'three actual HTTP SDK clients not all exercised')
-    if name=='auth': need(doc.get('sourceCommit')==commit, 'other commit official auth')
+             'Не все три реальных HTTP-клиента SDK прошли проверку')
+    if name=='auth': need(doc.get('sourceCommit')==commit, 'Официальная авторизация относится к другому коммиту')
 
 def execute(plan, work, commit, pin):
     """Однократно запускать настоящие раннеры выделенной лаборатории; не принимать заданные пользователем
 исполняемые файлы или команды оболочки."""
-    need(work.is_absolute() and work.is_dir() and not work.is_symlink(), 'private work directory required')
-    need(not any(work.iterdir()), 'work directory must be empty: no old evidence reuse')
+    need(work.is_absolute() and work.is_dir() and not work.is_symlink(), 'Требуется закрытый рабочий каталог')
+    need(not any(work.iterdir()), 'Рабочий каталог должен быть пустым; повторное использование старых свидетельств запрещено')
     data=strict_plan(read(plan),commit,pin)
     need(path_file(plan,256*1024).stat().st_mode & 0o077 == 0,
-         'private lab plan must be group-readable neither by world nor other users')
+         'Закрытый план лаборатории должен быть недоступен для чтения другим пользователям и группам')
     logdir=work/'logs'; datadir=work/'results'
     logdir.mkdir(mode=0o700);datadir.mkdir(mode=0o700)
     records={}
@@ -238,31 +238,31 @@ def execute(plan, work, commit, pin):
                             env={**os.environ,'PYTHONUNBUFFERED':'1'})
         log=proc.stdout
         need(len(log)>0 and len(log)<16<<20 and proc.returncode==0,
-             name+': real physical/client execution failed or produced no bounded log')
+             name+': реальное выполнение на оборудовании или клиенте завершилось ошибкой либо не создало ограниченный журнал')
         need(not re.search(rb'(?i)(authorization:\s*bearer\s+\S+|refresh[_ -]?token\s*[=:]\s*\S+)',log),
-             name+': credentials leaked in acceptance log')
+             name+': в журнал приёмки попали учётные данные')
         inventory.write_exclusive(logdir/(name+'.log'),log)
         observed=read(outfile)
         assert_observed(name,observed,commit)
         records[name]={'resultSha256':digest(outfile), 'logSha256':digest(logdir/(name+'.log')),
                        'status':observed['status'],'exit':proc.returncode}
-    need(set(records)==set(SCENARIOS), 'incomplete real live suite')
+    need(set(records)==set(SCENARIOS), 'Неполный набор реальных проверок')
     return records
 
 def replay(work, records, commit):
-    need(type(records) is dict and set(records)==set(SCENARIOS), 'missing live scenario receipts')
+    need(type(records) is dict and set(records)==set(SCENARIOS), 'Отсутствуют квитанции реальных сценариев')
     output={}
     for name in SCENARIOS:
         row=records[name]
         need(type(row) is dict and set(row)=={'resultSha256','logSha256','status','exit'}
-             and row['exit']==0, 'incomplete original live execution record: '+name)
+             and row['exit']==0, 'Неполная исходная запись реального выполнения: '+name)
         source=work/'results'/(name+'.json')
         log=work/'logs'/(name+'.log')
         need(digest(source)==row['resultSha256'] and digest(log)==row['logSha256'],
-             'mutated live execution result/log: '+name)
+             'Изменён результат или журнал реального выполнения: '+name)
         report=read(source)
         assert_observed(name,report,commit)
-        need(report['status']==row['status'], 'status changed after signed execution')
+        need(report['status']==row['status'], 'Статус изменился после подписанного выполнения')
         output[name]=row
     return output
 
@@ -276,12 +276,12 @@ def group_coverage(sweep_result, original):
          len(sweep_result.get('nativePackages',{}).get('nativeTargets',[]))==6 and
          sweep_result.get('nativeGame',{}).get('status')=='observed-not-independently-certified' and
          len(sweep_result.get('nativeGame',{}).get('targets',[]))==6,
-         'raw 280/six-native/six-game/soak/repro observations incomplete')
+         'Исходные наблюдения 280, шести нативных, шести игровых, длительных или повторных проверок неполны')
     need(type(original) is dict and set(original)==set(SCENARIOS),
-         'missing original real external scenarios')
+         'Отсутствуют исходные реальные внешние сценарии')
     covered={name:tuple(members) for name,members in GROUPS.items()}
     need(len(covered)==18 and all(set(members).issubset(set(original)|{'full-sweep'}) for members in covered.values()),
-         'E2E-01..18 mandatory coverage incomplete')
+         'Обязательный набор проверок E2E-01..18 выполнен не полностью')
     return covered
 
 def inputs(p):
@@ -299,16 +299,16 @@ def live_review(p, *, rerun):
                                    p.commit,p.project,p.packages,p.index,p.index_sha)
     rehearsal.require(p.release_pin not in (p.issues_pin,p.qa_pin,p.verifier_pin) and
              len({p.release_pin,p.issues_pin,p.qa_pin,p.verifier_pin})==4,
-             'release, issue, QA and verifier must be four independent authorities')
+             'Выпускающий оператор, ответственный за дефекты, QA и проверяющий должны быть четырьмя независимыми сторонами')
     # Существующий повторный прогон выполняет исходные регрессии И проверяет все
     # исходные файлы окончательной подписанной установки, настоящего Minecraft,
     # часовой нагрузки и независимой сборки.
     former=rehearsal.rehearse(**inputs(p),replay=rerun)
-    need(former['status']=='REHEARSED_NOT_GA', 'full previous GA prerequisites not verified')
+    need(former['status']=='REHEARSED_NOT_GA', 'Не подтверждены все обязательные условия предыдущей финальной приёмки GA')
     a=rehearsal.full_args(p.config,p.commit)
     one=rehearsal.sweep.verify_full(a)
     two=rehearsal.sweep.verify_full(a)
-    need(inventory.canonical(one)==inventory.canonical(two), 'raw evidence not stable')
+    need(inventory.canonical(one)==inventory.canonical(two), 'Исходные свидетельства нестабильны')
     lab=strict_plan(read(p.lab_plan),p.commit,p.index_sha)
     plan_sha=digest(p.lab_plan)
     if not rerun:
@@ -318,7 +318,7 @@ def live_review(p, *, rerun):
         records=replay(p.lab_work,signed['scenarios'],p.commit)
     coverage=group_coverage(one,records)
     need(rehearsal.freeze(p.commit,p.project,p.packages,p.index,p.index_sha)==frozen,
-         'final signed source packages changed during full real acceptance')
+         'Во время полной реальной приёмки изменились финальные подписанные исходные пакеты')
     return {'schema':SCHEMA,'version':VERSION,'commit':p.commit,'project':p.project,
             'indexSha256':p.index_sha,'labPlanSha256':plan_sha,'frozenSha256':digest(p.freeze),
             'rehearsalSha256':hashlib.sha256(inventory.canonical(former)).hexdigest(),
@@ -328,7 +328,7 @@ def live_review(p, *, rerun):
             'status':'REVIEWED_LIVE_18_E2E_PENDING_INDEPENDENT_VERIFIER'}
 
 def sign(path, sig, doc, private, domain):
-    need(path!=sig and not path.exists() and not sig.exists(), 'new signed receipt paths required')
+    need(path!=sig and not path.exists() and not sig.exists(), 'Требуются новые пути для подписанных квитанций')
     rehearsal.save(path,doc)
     inventory.write_exclusive(sig,private.sign(domain+inventory.canonical(doc)))
 
@@ -338,10 +338,10 @@ def verify_signed(path,sig,key,pin,domain):
     return report
 
 def approval(p):
-    need(VERSION=='0.53.0','final GA only for product version 0.53.0')
-    need(p.commit and rehearsal.COMMIT.fullmatch(p.commit),'approved real git source commit required')
+    need(VERSION=='0.53.0','Финальная приёмка GA допускается только для версии продукта 0.53.0')
+    need(p.commit and rehearsal.COMMIT.fullmatch(p.commit),'Требуется утверждённый реальный коммит Git')
     need(len({p.release_pin,p.issues_pin,p.qa_pin,p.verifier_pin})==4,
-         'the four reviewer authorities must not reuse keys')
+         'Четырём проверяющим сторонам запрещено повторно использовать ключи')
     qa=verify_signed(p.qa_report,p.qa_sig,p.qa_key,p.qa_pin,DOMAIN)
     current=live_review(p,rerun=True)
     need(qa==current,'independent replay differs from QA observation')
@@ -370,7 +370,7 @@ def main(argv=None):
     p=parser();a=p.parse_args(argv)
     try:
         if a.action=='review':
-            need(a.qa_private_key is not None,'independent QA signing key required')
+            need(a.qa_private_key is not None,'Требуется независимый ключ подписи QA')
             report=live_review(a,rerun=False)
             secret=rehearsal.private_key(a.qa_private_key)
             public=inventory.public_key(a.qa_key,a.qa_pin)
@@ -380,7 +380,7 @@ def main(argv=None):
             sign(a.qa_report,a.qa_sig,report,secret,DOMAIN)
             print('Независимо проверены 18 групп реальных E2E-тестов; итоговое подтверждение GA ещё заблокировано')
         elif a.action=='approve':
-            need(a.verifier_private_key is not None,'separate final verifier signing key required')
+            need(a.verifier_private_key is not None,'Требуется отдельный ключ подписи финального проверяющего')
             report=approval(a)
             secret=rehearsal.private_key(a.verifier_private_key)
             public=inventory.public_key(a.verifier_key,a.verifier_pin)
@@ -392,7 +392,7 @@ def main(argv=None):
         else:
             approved=approval(a)
             signed=verify_signed(a.ga_report,a.ga_sig,a.verifier_key,a.verifier_pin,FINAL_DOMAIN)
-            need(approved==signed and signed['status']=='PASS', 'GA signature or live evidence changed')
+            need(approved==signed and signed['status']=='PASS', 'Подпись GA или реальные свидетельства изменились')
             print('Выпускной контроль GA пройден: итоговые пакеты и все 18 групп реальных E2E-тестов независимо проверены')
         return 0
     except (Blocked,rehearsal.Blocked,inventory.Blocked,OSError,ValueError,TypeError,

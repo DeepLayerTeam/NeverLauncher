@@ -41,18 +41,18 @@ def fresh(timestamp: str, now: datetime):
     except (ValueError, AttributeError) as exc:
         raise ValueError('Некорректная временная метка приёмки') from exc
     require(dt.tzinfo is not None and now - timedelta(days=14) <= dt <= now + timedelta(minutes=5),
-            'expired, future or naive operational acceptance timestamp')
+            'Время эксплуатационной приёмки истекло, находится в будущем или не содержит часового пояса')
 
 
 def package_hash(path: Path):
     require(path.is_file() and not path.is_symlink() and path.stat().st_size > 0,
-            'missing or unsafe final installer: ' + path.name)
+            'Финальный установщик отсутствует или небезопасен: ' + path.name)
     return operational.sha(path)
 
 
 def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
     version = (ROOT / 'VERSION').read_text().strip()
-    require(COMMIT.fullmatch(commit) is not None, 'invalid source commit')
+    require(COMMIT.fullmatch(commit) is not None, 'Некорректный коммит исходного кода')
     require(version in ('0.46.0', '0.46.1', '0.46.2', '0.46.3'), 'Неподдерживаемая версия эксплуатационной приёмки')
     records = {name: operational.read_receipt(path, name) for name, path in receipts.items()}
     args = argparse.Namespace(install_receipt=receipts[NAMES[0]], upgrade_receipt=receipts[NAMES[1]],
@@ -65,12 +65,12 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
         require(data.get('secondOperator') != data.get('firstOperator'), 'Оператор не является независимым')
     require(records['upgrade-standard'].get('identity', {}).get('oldAdminLogin') == 'verified' and
             records['upgrade-standard'].get('identity', {}).get('oldProjectRead') == 'verified',
-            'upgrade needs verified real account and pre-existing project')
+            'Для обновления требуются проверенная реальная учётная запись и ранее созданный проект')
     require(records['restore-standard'].get('identity', {}).get('oldAdminLogin') == 'verified' and
             records['restore-standard'].get('identity', {}).get('oldProjectRead') == 'verified',
-            'restore needs verified real account and pre-existing project')
+            'Для восстановления требуются проверенная реальная учётная запись и ранее созданный проект')
     require(records['failover-network-ha'].get('rpoSecondsObservedCanaries') == 0,
-            'all acknowledged canaries must survive failover')
+            'Все подтверждённые контрольные операции должны сохраниться после переключения при отказе')
     targets = {}
     for os_name, arch, filename in (
         ('windows', 'x64', f'launcher-desktop-{version}-windows-x64.zip'),
@@ -118,24 +118,24 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     """
     require(bundle.is_dir() and not bundle.is_symlink(), 'Пакет выпуска отсутствует')
     require(public_key_file.resolve().is_relative_to(bundle.resolve()) is False,
-            'operator trust anchor must be outside the bundle')
+            'Корень доверия оператора должен находиться вне пакета')
     require(release_key_file.resolve().is_relative_to(bundle.resolve()) is False,
-            'release trust anchor must be outside the bundle')
+            'Корень доверия выпуска должен находиться вне пакета')
     pub = serialization.load_pem_public_key(public_key_file.read_bytes())
     rel = serialization.load_pem_public_key(release_key_file.read_bytes())
     require(isinstance(pub, Ed25519PublicKey) and isinstance(rel, Ed25519PublicKey),
-            'both trust anchors must be Ed25519')
+            'Оба корня доверия должны использовать Ed25519')
     key_bytes = lambda key: key.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
     require(key_bytes(pub) != key_bytes(rel), 'Подписант выпуска не может самостоятельно подтверждать собственные операции')
     def load(name, max_len):
         p = bundle / name
         require(p.is_file() and not p.is_symlink() and 0 < p.stat().st_size <= max_len,
-                'missing/unsafe release evidence: '+name)
+                'Свидетельство выпуска отсутствует или небезопасно: '+name)
         return p.read_bytes()
     raw = load('OPERATIONS_GA_0460.json', 65536)
     import base64
     signature = base64.b64decode(load('OPERATIONS_GA_0460.sig', 1024).strip(), validate=True)
-    require(len(signature) == 64, 'bad operations GA signature length')
+    require(len(signature) == 64, 'Некорректная длина подписи финальной эксплуатационной приёмки')
     try: pub.verify(signature, DOMAIN + raw)
     except InvalidSignature as exc: raise ValueError('Некорректная независимая подпись оператора') from exc
     document = json.loads(raw)
@@ -145,17 +145,17 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
             document.get('version') == manifest.get('version') and
             document.get('sourceCommit') == manifest.get('sourceCommit') and
             COMMIT.fullmatch(document.get('sourceCommit','')),
-            'source version/commit mismatch')
+            'Версия источника или коммит не совпадают')
     fresh(document.get('issuedAt'), datetime.now(timezone.utc))
     require(document.get('operator') and document.get('sourceMachine') != document.get('restoreMachine') and
             all(isinstance(document.get(name), str) and SHA.fullmatch(document[name]) for name in ('sourceMachine','restoreMachine','openApiV1Sha256')),
-            'invalid independently certified identities or API hash')
+            'Некорректные независимо сертифицированные идентификаторы или контрольная сумма API')
     require(document.get('scope') == 'Фактическая независимая эксплуатационная приёмка; RPO проверен только на контрольных данных, без утверждений об отказоустойчивости физических узлов и неизмеренного RPO нагрузки',
-            'unsupported operations scope')
+            'Неподдерживаемая область эксплуатационных операций')
     stages = document.get('stageReceipts', {})
     require(isinstance(stages, dict) and set(stages) == set(NAMES) and
             all(isinstance(v, str) and SHA.fullmatch(v) for v in stages.values()),
-            'missing original operator acceptance evidence hashes')
+            'Отсутствуют исходные контрольные суммы свидетельств операторской приёмки')
     apis = [c['sourceSha256'] for c in bom.get('components', []) if c.get('sourceFile') == 'schemas/openapi.yaml']
     require(apis == [document.get('openApiV1Sha256')], 'approved API differs from pinned source in release BOM')
     targets = document.get('targets')
@@ -170,7 +170,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
         target=targets.get(os_name+'-'+arch)
         require(isinstance(target,dict) and target.get('name') == filename and
                 target.get('sha256') == package_hash(bundle/filename),
-                'shipped package not independently approved: '+filename)
+                'Поставленный пакет не получил независимого одобрения: '+filename)
     for name in ('OPERATIONS_GA_0460.json','OPERATIONS_GA_0460.sig'):
         require(name in manifest.get('requiredFiles', []) and any(
             f.get('name') == name and f.get('required') is True and f.get('status') == 'present' and
@@ -196,13 +196,13 @@ def main():
     try:
         if args.action == 'verify-public':
             require(args.trusted_operator_public_key and args.release_public_key,
-                    'both external public keys are required')
+                    'Требуются оба внешних открытых ключа')
             result = verify_public(args.bundle, args.trusted_operator_public_key, args.release_public_key)
             print(json.dumps(result))
             return 0
         require(all((args.source_commit, args.install_receipt, args.upgrade_receipt,
                      args.restore_receipt, args.failover_receipt, args.operator_private_key,
-                     args.output_dir)), 'missing attestation input')
+                     args.output_dir)), 'Отсутствуют входные данные аттестации')
         receipts = dict(zip(NAMES, (args.install_receipt, args.upgrade_receipt, args.restore_receipt, args.failover_receipt)))
         for file in receipts.values(): operational.private_file(file)
         key_path = operational.private_file(args.operator_private_key)
@@ -210,11 +210,11 @@ def main():
         private = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
         require(isinstance(private, Ed25519PrivateKey), 'Ключ оператора должен использовать Ed25519')
         require(args.output_dir.is_dir() and not args.output_dir.is_symlink() and
-                not (args.output_dir.stat().st_mode & 0o077), 'output directory must be private')
+                not (args.output_dir.stat().st_mode & 0o077), 'Выходной каталог должен быть закрытым')
         approved = build_attestation(args.bundle, receipts, args.source_commit)
         primary = operational.read_receipt(receipts[NAMES[0]], NAMES[0])['firstOperator']
         require(operational.actor(primary) == approved['operator'],
-                'GA signing must be performed by the independently recorded second operator')
+                'Финальную подпись должен поставить второй независимый оператор, зарегистрированный в свидетельстве')
         raw = (json.dumps(approved, sort_keys=True, separators=(',', ':'), ensure_ascii=False) + '\n').encode()
         sig = private.sign(DOMAIN + raw)
         import base64

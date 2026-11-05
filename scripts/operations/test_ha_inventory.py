@@ -52,7 +52,7 @@ class LiveHAInventory(unittest.TestCase):
         self.assertIn("LAUNCHER_AUTH_TOKEN_SECRET", sensitive)
 
     def test_docker_project_mismatch_rejected_without_exposing_env(self):
-        with self.assertRaisesRegex(ha.InventoryError, "project mismatch"):
+        with self.assertRaisesRegex(ha.InventoryError, "Несовпадение"):
             ha.classify_container({"Config": {"Labels": {"com.docker.compose.project": "wrong"},
                                                "Env": ["LAUNCHER_AUTH_TOKEN_SECRET=hidden"]}}, "launcher")
 
@@ -137,9 +137,9 @@ class LiveHAInventory(unittest.TestCase):
              patch.object(ha, "docker_ready", return_value={"sampled": 2, "success": 2, "p50Ms": 1, "p95Ms": 1, "failures": 0}):
             report = ha.node_inventory("launcher", 2, growth=False)
         self.assertEqual(report["nodeStatus"], "RISK")
-        self.assertTrue(any("duplicate" in x for x in report["observations"]))
+        self.assertTrue(any("Повторяющийся" in x for x in report["observations"]))
         self.assertTrue(any("DATABASE_AUTO_MIGRATE" in x for x in report["observations"]))
-        self.assertTrue(any("worker-a is not running dedicated worker" in x for x in report["observations"]))
+        self.assertTrue(any("worker-a: выделенная роль worker" in x for x in report["observations"]))
 
     def test_source_inventory_reports_but_does_not_assert_remote_consistency(self):
         root = Path(__file__).resolve().parents[2]
@@ -155,11 +155,11 @@ class LiveHAInventory(unittest.TestCase):
             ha.write_report(str(path), {"ok": True})
             self.assertEqual(json.loads(path.read_text()), {"ok": True})
             self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
-            with self.assertRaisesRegex(ha.InventoryError, "exists"):
+            with self.assertRaisesRegex(ha.InventoryError, "уже существует"):
                 ha.write_report(str(path), {"ok": False})
             link = Path(directory) / "link.json"
             link.symlink_to(path)
-            with self.assertRaisesRegex(ha.InventoryError, "exists"):
+            with self.assertRaisesRegex(ha.InventoryError, "уже существует"):
                 ha.write_report(str(link), {"ok": False})
 
     def test_remote_accepts_nonzero_risk_exit_with_json(self):

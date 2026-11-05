@@ -69,10 +69,10 @@ def verified_source(backup: Path, stanza: str, trust_file: Path):
     require(manifest["schema"] == cb.SCHEMA and manifest.get("version") == "0.51.8", "Неподдерживаемая контрольная точка")
     trust = cb.read_private_json(trust_file)
     require(isinstance(trust, dict) and trust and trust == manifest["trustEscrowSha256"],
-            "independently escrowed trust roots do not match checkpoint")
+            "Независимо сохранённые корневые ключи доверия не соответствуют контрольной точке")
     require(manifest["externalAuthPolicy"] == "none" or
             (manifest["externalAuthPolicy"] == "included" and (backup / "external").is_dir()),
-            "external identity provider recovery is incomplete")
+            "Восстановление внешнего провайдера учётных записей не завершено")
     return manifest
 
 def fresh_bucket(bucket, endpoint, source_bucket):
@@ -85,7 +85,7 @@ def target_spec(args, manifest):
     nodes = parse_pairs(args.node, expected=original_nodes)
     require(len(nodes) >= 2 and len(set(nodes.values())) == len(nodes), "Для восстановления требуются минимум два разных узла")
     for host in nodes.values():
-        require(bool(multi.HOST_REGEX.fullmatch(host)) and not host.startswith("-"), "unsafe restore SSH target")
+        require(bool(multi.HOST_REGEX.fullmatch(host)) and not host.startswith("-"), "Небезопасный SSH-узел восстановления")
     worlds = parse_pairs(args.world_destination, expected={r["name"] for r in manifest["worlds"]})
     # Формат name=ssh-target:/absolute/new/path; команды оболочки или вводимые пользователем
     # команды не исполняются.
@@ -93,7 +93,7 @@ def target_spec(args, manifest):
     for name, value in worlds.items():
         host, sep, path = value.partition(":")
         require(sep and multi.HOST_REGEX.fullmatch(host) and path.startswith("/") and ".." not in Path(path).parts,
-                "world requires trusted SSH target and absolute fresh destination")
+                "Для восстановления мира требуются доверенный SSH-узел и новый абсолютный целевой путь")
         entries[name] = (host, path)
     require(args.project.startswith("nl-dr-") and bool(dr.PROJECT_PATTERN.fullmatch(args.project)),
             "Имя изолированного DR-проекта должно начинаться с nl-dr-")
@@ -239,7 +239,7 @@ def prepare(args):
     absolute_fresh(Path(args.pgdata))
     require(Path(args.pgdata).resolve() not in (backup.resolve(), work.resolve()) and
             backup.resolve() not in Path(args.pgdata).resolve().parents and
-            work.resolve() not in Path(args.pgdata).resolve().parents, "PostgreSQL target overlaps protected backup/workspace")
+            work.resolve() not in Path(args.pgdata).resolve().parents, "Целевой каталог PostgreSQL пересекается с защищённой резервной копией или рабочим каталогом")
     require(args.s3_bucket != manifest["s3"]["bucket"], "Исходный бакет не может одновременно быть бакетом восстановления")
     fresh_bucket(args.s3_bucket, args.s3_endpoint, manifest["s3"]["bucket"])
     machine_ids = set()
@@ -276,7 +276,7 @@ def prepare(args):
                              "--project", args.project, "--volume", vol,
                              "--tar-image", args.tar_image, "--sha256", dr.sha256_file(archive))
             require(reply.get("status") == "restored" and reply.get("volume") == vol,
-                    "recovered host volume not acknowledged")
+                    "Восстановленный том узла не подтверждён")
             state["prepared"].append("volume:" + label + "/" + vol); persist(work, state)
     for row in manifest["worlds"]:
         name, wid = row["name"], row["backupId"]
@@ -290,7 +290,7 @@ def prepare(args):
                              "--destination", destination, "--backup-id", wid,
                              "--sha256", dr.sha256_file(archive))
         require(reply.get("status") == "restored" and reply.get("backupId") == wid,
-                "world recovery not acknowledged")
+                "Восстановление мира не подтверждено")
         state["prepared"].append("world:" + name); persist(work, state)
     # Внешние экспорты и секреты требуют отдельного явного восстановления и изоляции
     # прежнего кластера; скрипт не восстанавливает произвольные секреты.
@@ -342,7 +342,7 @@ def replay_postgres(args):
         actual = fields[2]
         require(re.fullmatch(r"[0-9A-F]+/[0-9A-F]+", actual) and
                 lsn_value(actual) >= lsn_value(state["cohortLsn"]),
-                "WAL replay did not reach cohort LSN")
+                "Воспроизведение WAL не достигло LSN группы")
         # pg_wal_replay_resume() доводит восстановление до конца при
         # recovery_target_action=pause.
         pg_sql(args.pg_port, "SELECT pg_wal_replay_resume();", socket_dir)
@@ -363,7 +363,7 @@ def replay_postgres(args):
         if should_stop:
             cb.execute(["pg_ctl", "-D", str(target), "-m", "fast", "-w", "-t", "120", "stop"], timeout=180)
     return {"status": "postgres-promoted-isolated", "replayedLsn": actual,
-            "next": "start PostgreSQL through the approved HA service manager before admit"}
+            "next": "Перед вводом в эксплуатацию запустите PostgreSQL через одобренный менеджер службы HA"}
 
 def audit_recovery(ledger_file, pg_env, incident):
     """Необязательная выборочная оценка RPO на основе *внешнего* неизменяемого реестра подтверждений.
@@ -382,11 +382,11 @@ def audit_recovery(ledger_file, pg_env, incident):
     for row in rows:
         event_id = row.get("id")
         require(isinstance(event_id, str) and re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", event_id)
-                and event_id not in seen, "bad/duplicate audit event ID")
+                and event_id not in seen, "Некорректный или повторяющийся идентификатор события аудита")
         seen.add(event_id)
         stamp = datetime.fromisoformat(row["ackUtc"].replace("Z", "+00:00"))
         require(stamp.tzinfo is not None and stamp <= incident,
-                "audit acknowledgement outside incident window")
+                "Подтверждение аудита находится за пределами временного окна инцидента")
         # Переменные psql с кавычками :'-quoted' позволяют не подставлять
         # идентификаторы как SQL-литералы.
         actual = cb.execute(["psql", "-X", "-q", "-A", "-t", "-w", "-v", "ON_ERROR_STOP=1",
@@ -408,18 +408,18 @@ def audit_recovery(ledger_file, pg_env, incident):
             round(max(0, (incident - last).total_seconds()), 3),
             "auditEventsRecovered": recovered, "auditEventsMissing": len(missing),
             "nonMonotonicRecovery": nonmonotonic,
-            "auditCoverage": "only IDs in external ledger; other writes/worlds/S3 not measured"}
+            "auditCoverage": "Внешний журнал содержит только идентификаторы; другие записи, миры и S3 не проверялись"}
 
 def assert_recovered_runtime(report):
     require(report.get("ready") is True and report.get("configurationValidated") is True,
-            "recovery host did not pass live readiness")
+            "Узел восстановления не прошёл реальную проверку готовности")
     containers = {row.get("service"): row for row in (report.get("live") or {}).get("containers", [])}
     for role in ("api", "worker"):
         row = containers.get(role) or {}
         ready = row.get("readiness") or {}
         require(row.get("running") is True and ready.get("versionVerified") is True and
                 ready.get("version") == "0.51.9" and ready.get("success") == ready.get("sampled") == 3,
-                "recovered " + role + " is not the running verified 0.51.9 binary")
+                "recovered " + role + " не является работающим проверенным исполняемым файлом версии 0.51.9")
     return True
 
 def admission(args):
@@ -465,11 +465,11 @@ def admission(args):
     result = {"schema": SCHEMA, "status": "recovery-ready", "runId": state["runId"],
               "readyUtc": end.isoformat(), "incidentUtc": incident.isoformat(),
               "rtoSeconds": round((end - incident).total_seconds(), 3),
-              "rtoScope": "control-plane public ingress readiness; not Minecraft world join",
+              "rtoScope": "Готовность публичного входа плоскости управления, но не подключение к миру Minecraft",
               "recoveryPointAgeSeconds": round((incident - frozen).total_seconds(), 3),
-              "rpoMeasured": False, "rpoNote": "requires external last-acknowledged-write ledger and readback",
+              "rpoMeasured": False, "rpoNote": "Требуется внешний журнал последней подтверждённой записи и проверка чтения",
               "nodesReady": len(reports), "worlds": len(state["worldTargets"]),
-              "fencing": "operator independently attested; not machine-verifiable"}
+              "fencing": "Оператор подтвердил независимо; автоматическая проверка невозможна"}
     if audit is not None:
         result["sampledRpo"] = audit
     cb.save_exclusive(work / RECORD, (json.dumps(result, sort_keys=True, indent=2) + "\n").encode())

@@ -76,7 +76,7 @@ class SQLiteUpgradeTests(unittest.TestCase):
 
     def test_retry_and_health_probe_fail_closed(self):
         for url in ('https://example.com/ready','http://localhost:8080/ready','http://127.0.0.1:8080/admin'):
-            with self.assertRaisesRegex(u.UpgradeError,'loopback'):
+            with self.assertRaisesRegex(u.UpgradeError,'локальный HTTP'):
                 u.wait_loopback_ready(url,timeout=0)
 
     def test_switch_native_execstart_persists_and_failed_reload_cleans(self):
@@ -87,7 +87,7 @@ class SQLiteUpgradeTests(unittest.TestCase):
                 override=u.switch_native_service(binary,'launcher.service',unit_root=root)
                 self.assertEqual(override.read_text(),
                     '[Service]\nExecStart=\nExecStart=/opt/launcher/releases/0.45.7/bin/launcher-api\n')
-                with self.assertRaisesRegex(u.UpgradeError,'already exists'):
+                with self.assertRaisesRegex(u.UpgradeError,'уже существует'):
                     u.switch_native_service(binary,'launcher.service',unit_root=root)
                 u.revert_native_service(override)
                 self.assertFalse(override.exists())
@@ -96,7 +96,7 @@ class SQLiteUpgradeTests(unittest.TestCase):
                 with self.assertRaisesRegex(u.UpgradeError,'reload refused'):
                     u.switch_native_service(binary,'launcher.service',unit_root=root)
                 self.assertFalse(override.exists())
-            with self.assertRaisesRegex(u.UpgradeError,'only managed'):
+            with self.assertRaisesRegex(u.UpgradeError,'только управляемая'):
                 u.switch_native_service(binary,'ssh.service',unit_root=root)
 
 
@@ -111,7 +111,7 @@ class PostgreSQLUpgradeTests(unittest.TestCase):
             with self.assertRaisesRegex(u.UpgradeError,'POSTGRES_PASSWORD'):
                 u.validate_source_target(first,second,False)
             second.write_text('LAUNCHER_IMAGE_TAG=0.45.6\nPOSTGRES_PASSWORD=same\n')
-            with self.assertRaisesRegex(u.UpgradeError,'target 0.45.7'):
+            with self.assertRaisesRegex(u.UpgradeError,'целевой образ версии 0.45.7'):
                 u.validate_source_target(first,second,False)
 
     def test_postgres_migration_runs_real_one_shot_twice(self):
@@ -145,7 +145,7 @@ class PostgreSQLUpgradeTests(unittest.TestCase):
                  patch.object(u,'reset_postgres') as reset, patch.object(u,'resume') as resume,\
                  patch.object(dr,'compose'), patch.object(dr,'check_restored_backend'), patch.object(dr,'run'):
                 snapshot.return_value={'version':'0.45.6'}
-                with self.assertRaisesRegex(u.UpgradeError,'restored and verified'):
+                with self.assertRaisesRegex(u.UpgradeError,'восстановлены и проверены'):
                     u.upgrade_postgres('nl-dr-source',src,target,backup,'nl-dr-source')
                 self.assertFalse(resume.call_args_list[0].kwargs['network_ha'])
                 self.assertEqual(resume.call_args_list[0].args[1],src)

@@ -68,7 +68,7 @@ class Backup0518Tests(unittest.TestCase):
                 with self.assertRaises(cb.BackupError):
                     cb.freeze(directory, "launcher", "d" * 32)
             self.assertEqual(cb.frozen_record(directory, "launcher", "d" * 32)["phase"], "stopping")
-            with self.assertRaisesRegex(cb.BackupError, "different backup"):
+            with self.assertRaisesRegex(cb.BackupError, "другой операции резервного копирования"):
                 cb.frozen_record(directory, "launcher", "e" * 32)
 
     def test_pg_query_refuses_sessions_and_non_primary(self):
@@ -94,7 +94,7 @@ class Backup0518Tests(unittest.TestCase):
             self.assertEqual(cb.backup_physical("nl")["label"], "20261103-100000F")
         with patch.object(cb, "pgbackrest", return_value=b""), \
              patch.object(cb, "pg_info", side_effect=[first, first]):
-            with self.assertRaisesRegex(cb.BackupError, "did not register"):
+            with self.assertRaisesRegex(cb.BackupError, "не зарегистрировал"):
                 cb.backup_physical("nl")
 
     def test_s3_version_change_refuses_cohort_and_requires_versioning(self):

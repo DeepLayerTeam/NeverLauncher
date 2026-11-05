@@ -396,11 +396,11 @@ class AdversarialGame03414Tests(unittest.TestCase):
             self.assertEqual(a.verify_adversarial_gameplay_04314(work, {}, pkg, game),
                              a.sha(work / 'adversarial-gameplay-04314.json'))
             client.write_bytes(b'evil')
-            with self.assertRaisesRegex(ValueError, 'restore exact signed client'):
+            with self.assertRaisesRegex(ValueError, 'восстановил точную подписанную сборку'):
                 a.verify_adversarial_gameplay_04314(work, {}, pkg, game)
             client.write_bytes((work / 'payload' / file_entry['path']).read_bytes())
             game['adversarialGameplay04314']['evidenceSha256'] = 'f' * 64
-            with self.assertRaisesRegex(ValueError, 'bound negative observation'):
+            with self.assertRaisesRegex(ValueError, 'связанное отрицательное наблюдение'):
                 a.verify_adversarial_gameplay_04314(work, {}, pkg, game)
 
     def test_v14_gate_does_not_apply_to_v13(self):
@@ -421,7 +421,7 @@ class TrustBoundaryTests(unittest.TestCase):
                 {**cap, "status": "blocked"},
             ):
                 dump(work / "host-capabilities.json", bad)
-                with self.assertRaisesRegex(ValueError, "OpenGL GUI capability"):
+                with self.assertRaisesRegex(ValueError, "графического OpenGL"):
                     a.verify_local_artifacts(
                         work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                     )
@@ -453,7 +453,7 @@ class TrustBoundaryTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 priv.public_key().verify(signature, a.DOMAIN + a.canonical(payload))
             key.chmod(0o644)
-            with self.assertRaisesRegex(ValueError, "owner-only"):
+            with self.assertRaisesRegex(ValueError, "только владельцу"):
                 a.sign_evidence(payload, key)
 
     def test_no_report_or_arbitrary_stage_can_certify(self):
@@ -484,7 +484,7 @@ class TrustBoundaryTests(unittest.TestCase):
                     }
                 )
             )
-            with self.assertRaisesRegex(ValueError, "without network downloads"):
+            with self.assertRaisesRegex(ValueError, "без сетевой загрузки"):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )
@@ -498,7 +498,7 @@ class TrustBoundaryTests(unittest.TestCase):
                 },
             )
             (work / "client" / "mods" / "example.jar").write_bytes(b"poison")
-            with self.assertRaisesRegex(ValueError, "installed client bytes"):
+            with self.assertRaisesRegex(ValueError, "установленные данные клиента"):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )
@@ -518,7 +518,7 @@ class TrustBoundaryTests(unittest.TestCase):
                 work / "gameplay-smoke.json"
             )
             dump(work / "staged-execution.json", report)
-            with self.assertRaisesRegex(ValueError, "movement or game ticks"):
+            with self.assertRaisesRegex(ValueError, "движение игрока или игровые тики"):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )
@@ -535,7 +535,7 @@ class TrustBoundaryTests(unittest.TestCase):
                 work / "authentication.json"
             )
             dump(work / "staged-execution.json", report)
-            with self.assertRaisesRegex(ValueError, "real provider authentication"):
+            with self.assertRaisesRegex(ValueError, "аутентификация у реального провайдера"):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )
@@ -547,7 +547,7 @@ class TrustBoundaryTests(unittest.TestCase):
             (work / "matching-server" / "server.properties").write_text(
                 "server-ip=127.0.0.1\nonline-mode=false\n"
             )
-            with self.assertRaisesRegex(ValueError, "online-mode policy"):
+            with self.assertRaisesRegex(ValueError, "Политика online-mode"):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )
@@ -572,7 +572,7 @@ class TrustBoundaryTests(unittest.TestCase):
                 work / "update-recovery.json"
             )
             dump(work / "staged-execution.json", report)
-            with self.assertRaisesRegex(ValueError, "crashed updater phase"):
+            with self.assertRaisesRegex(ValueError, "после сбоя обновления"):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )
@@ -585,7 +585,7 @@ class TrustBoundaryTests(unittest.TestCase):
                 work / "lifecycle-validation" / "installation" / "mods" / "example.jar"
             ).write_bytes(b"bad")
             with self.assertRaisesRegex(
-                ValueError, "rollback did not restore signed previous bytes"
+                ValueError, "не восстановил подписанные данные предыдущего выпуска"
             ):
                 a.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
@@ -609,7 +609,7 @@ class TrustBoundaryTests(unittest.TestCase):
             ]:
                 forged = json.loads(json.dumps(issued))
                 forged["requiredTargets"][0][field] = wrong
-                with self.assertRaisesRegex(ValueError, "no unique configured target"):
+                with self.assertRaisesRegex(ValueError, "Нет единственного настроенного целевого окружения"):
                     a.verify_local_artifacts(
                         work, forged, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                     )

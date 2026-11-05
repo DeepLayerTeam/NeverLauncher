@@ -297,24 +297,24 @@ def node_inventory(project, samples, growth=True, source_root=None):
         engine_id = None
     problems = []
     if not node_id:
-        problems.append("host OS identity unavailable; cannot distinguish failure domains")
+        problems.append("Не удалось определить ОС узла: невозможно различить домены отказа")
     if not engine_id:
-        problems.append("Docker daemon identity unavailable")
+        problems.append("Не удалось определить идентификатор демона Docker")
     if not items:
-        problems.append("no running or stopped project containers found")
+        problems.append("Не найдены запущенные или остановленные контейнеры проекта")
     for item in items:
         service = item["service"]
         if service in ("api", "api-b", "worker", "worker-a", "worker-b"):
             item["readiness"] = docker_ready(item["containerId"], samples) if item["running"] else {
                 "sampled": 0, "success": 0, "failures": 0, "p50Ms": None, "p95Ms": None}
             if item["readiness"]["success"] != samples:
-                problems.append("%s readiness did not pass all real probes" % service)
+                problems.append("%s: не пройдены все реальные проверки готовности" % service)
             if item["health"] not in ("healthy", "not-configured"):
                 problems.append("%s Docker health is %s" % (service, item["health"]))
             env = item["environment"]
             wanted_role = "api" if service in ("api", "api-b") else "worker"
             if env.get("LAUNCHER_PROCESS_ROLE") != wanted_role:
-                problems.append("%s is not running dedicated %s role" % (service, wanted_role))
+                problems.append("%s: выделенная роль %s не запущена" % (service, wanted_role))
             for key, target in (("LAUNCHER_REPOSITORY_DRIVER", "postgres"),
                                 ("LAUNCHER_STORAGE_DRIVER", "s3"),
                                 ("LAUNCHER_SERVERBRIDGE_HA_REQUIRED", "true"),
@@ -324,15 +324,15 @@ def node_inventory(project, samples, growth=True, source_root=None):
                 if env.get(key, "").lower() != target:
                     problems.append("%s unsafe %s" % (service, key))
             if env.get("LAUNCHER_DEPLOYMENT_MODE") != "network-ha":
-                problems.append("%s is not configured for network-ha" % service)
+                problems.append("%s: не настроена сетевая высокая доступность" % service)
             if not env.get("LAUNCHER_REPLICA_ID", "").strip():
-                problems.append("%s missing stable LAUNCHER_REPLICA_ID" % service)
+                problems.append("%s: отсутствует постоянный LAUNCHER_REPLICA_ID" % service)
             if env.get("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", ""):
-                problems.append("%s still uses SQLite coordinator" % service)
+                problems.append("%s: по-прежнему используется координатор SQLite" % service)
             if growth and service in ("api", "api-b") and item["running"]:
                 item["dependencyRoundTrip"] = docker_growth(item["containerId"])
                 if not item["dependencyRoundTrip"]["verified"]:
-                    problems.append("%s live PostgreSQL/Redis/S3 growth probe failed" % service)
+                    problems.append("%s: не пройдена реальная проверка расширения PostgreSQL/Redis/S3" % service)
         elif service == "postgres" and item["running"]:
             item["postgresState"] = probe_postgres(item["containerId"])
         elif service == "redis" and item["running"]:
@@ -343,7 +343,7 @@ def node_inventory(project, samples, growth=True, source_root=None):
                    if i["service"] in ("api", "api-b", "worker", "worker-a", "worker-b")]
     nonempty = [x for x in replica_ids if x]
     if len(nonempty) != len(set(nonempty)):
-        problems.append("duplicate LAUNCHER_REPLICA_ID on Docker host")
+        problems.append("Повторяющийся LAUNCHER_REPLICA_ID на узле Docker")
     source = source_state_inventory(source_root or Path(__file__).resolve().parents[2])
     state_inventory = []
     for item in items:
@@ -360,11 +360,11 @@ def node_inventory(project, samples, growth=True, source_root=None):
             state_inventory.append({"service": item["service"], "surface": destination,
                                     "classification": classification,
                                     "mountType": mount["type"], "writable": mount["writable"]})
-    for name, classification in (("PostgreSQL domain repository", "authoritative_metadata"),
+    for name, classification in (("Доменное хранилище PostgreSQL", "authoritative_metadata"),
                                  ("S3 release objects", "authoritative_objects"),
-                                 ("Redis leases / rate limits", "reconstructible_coordination_not_durable_authority"),
-                                 ("Auth/MFA/ServerBridge runtime maps", "replica_local_state_cross_replica_consistency_unverified"),
-                                 ("ServerBridge game worlds", "external_game_host_state_not_inspected")):
+                                 ("Аренды Redis и ограничения частоты запросов", "reconstructible_coordination_not_durable_authority"),
+                                 ("Карты состояния Auth/MFA/ServerBridge в Runtime", "replica_local_state_cross_replica_consistency_unverified"),
+                                 ("Игровые миры ServerBridge", "external_game_host_state_not_inspected")):
         state_inventory.append({"surface": name, "classification": classification})
     return {"schema": "neverlauncher.ha-inventory.0.51.1", "version": VERSION,
             "collectedUtc": utc_now(), "project": project, "nodeIdentity": node_id,
@@ -422,8 +422,8 @@ def assess_cluster(nodes, edge=None):
     host_ids = [n.get("nodeIdentity") for n in nodes.values()]
     host_ids_valid = all(host_ids) and len(host_ids) == len(set(host_ids))
     record("failure_domains", "OBSERVED" if host_ids_valid and len(host_ids) >= 2 else "RISK",
-           "distinct OS identities on %d operator-reached Docker hosts; physical/hypervisor separation unverified" % len(set(host_ids))
-           if host_ids_valid else "duplicate/missing OS identity or fewer than two hosts")
+           "Разные идентификаторы ОС на %d доступных оператору узлах Docker; физическая изоляция или изоляция гипервизоров не проверена" % len(set(host_ids))
+           if host_ids_valid else "Идентификаторы ОС повторяются или отсутствуют либо доступно менее двух узлов")
     for role, aliases in (("api", ("api", "api-b")), ("worker", ("worker", "worker-a", "worker-b")),
                           ("admin", ("admin",)), ("ingress", ("nginx", "ingress"))):
         matched = [(h, i) for _, h, i in containers if i["service"] in aliases and i["running"]]
@@ -431,7 +431,7 @@ def assess_cluster(nodes, edge=None):
                                               if role in CRITICAL_ROLES else i["health"] == "healthy")]
         domains = {h for h, _ in ready if h}
         status = "OBSERVED" if len(domains) >= 2 and len(ready) >= 2 else "RISK"
-        record(role, status, "%d running; %d live-ready on %d OS identities" %
+        record(role, status, "Запущено %d; готовы к работе %d на %d идентификаторах ОС" %
                (len(matched), len(ready), len(domains)))
     replicas = [(name, i) for name, _, i in containers if i["service"] in
                 ("api", "api-b", "worker", "worker-a", "worker-b") and i["running"]]
@@ -443,11 +443,11 @@ def assess_cluster(nodes, edge=None):
     if role_safe:
         role_safe = all(not n.get("observations") for n in nodes.values())
     record("replica_roles_and_identity", "OBSERVED" if role_safe else "RISK",
-           "replica IDs unique and runtime role/readiness/configuration checked" if role_safe
-           else "missing/duplicate IDs, invalid role/configuration or failed node checks")
+           "Идентификаторы реплик уникальны; роли, готовность и настройки Runtime проверены" if role_safe
+           else "Идентификаторы отсутствуют или повторяются, роль или конфигурация некорректны либо проверки узлов не пройдены")
     pg = [(h, i) for _, h, i in containers if i["service"] == "postgres" and i["running"]]
     if len(pg) == 1:
-        record("postgresql", "RISK", "only one PostgreSQL container on inspected hosts; no proven external failover")
+        record("postgresql", "RISK", "На проверенных узлах найден только один контейнер PostgreSQL; внешнее переключение при отказе не подтверждено")
     elif not pg:
         record("postgresql", "UNVERIFIED", "external PostgreSQL/managed cluster topology not observable from inspected Docker projects")
     else:
@@ -455,58 +455,58 @@ def assess_cluster(nodes, edge=None):
         sync_pg = any(i.get("postgresState", {}).get("synchronousPeers", 0) >= 1 for _, i in pg)
         distinct_pg = len({h for h, _ in pg if h}) >= 2
         record("postgresql", "UNVERIFIED" if all_pg and sync_pg and distinct_pg else "RISK",
-               "live PostgreSQL replication observed; failover/fencing not exercised" if all_pg and sync_pg and distinct_pg
-               else "PostgreSQL synchronous replication, roles or failure domains not proven")
+               "Подтверждена реальная репликация PostgreSQL; переключение при отказе и изоляция узлов не проверены" if all_pg and sync_pg and distinct_pg
+               else "Синхронная репликация PostgreSQL, роли или домены отказа не подтверждены")
     redis = [(h, i) for _, h, i in containers if i["service"] == "redis" and i["running"]]
     if len(redis) == 1:
-        record("redis", "RISK", "single Redis container; leases do not establish Redis HA")
+        record("redis", "RISK", "Только один контейнер Redis; аренды не подтверждают высокую доступность Redis")
     elif not redis:
-        record("redis", "UNVERIFIED", "external Redis/sentinel/managed failover not observable")
+        record("redis", "UNVERIFIED", "Невозможно наблюдать внешнее переключение Redis, Sentinel или управляемого сервиса")
     else:
-        record("redis", "UNVERIFIED", "multiple Redis processes observed; epoch, quorum and failover not exercised")
+        record("redis", "UNVERIFIED", "Обнаружено несколько процессов Redis; эпоха, кворум и переключение при отказе не проверены")
     live = [i.get("dependencyRoundTrip") for _, i in replicas if i["service"] in ("api", "api-b")]
     if live and all(x and x.get("verified") and x.get("postgresql") and x.get("redisLease") and x.get("s3RoundTrip") for x in live):
         record("s3_objects", "UNVERIFIED", "actual cross-client S3 write/read/hash/delete works; provider durability and failover not exercised")
-        record("durable_lease", "UNVERIFIED", "PostgreSQL transaction fence and Redis lease work; partition safety remains unproven")
+        record("durable_lease", "UNVERIFIED", "Транзакционная изоляция PostgreSQL и аренда Redis работают; безопасность при разделении сети не подтверждена")
     else:
         record("s3_objects", "UNVERIFIED", "missing successful live S3 write/read/hash/delete evidence")
-        record("durable_lease", "UNVERIFIED", "missing live PostgreSQL + Redis fencing/lease evidence")
+        record("durable_lease", "UNVERIFIED", "Отсутствует реальное свидетельство изоляции или аренды PostgreSQL и Redis")
     if edge:
         record("public_tls_edge", "OBSERVED" if edge.get("success") == edge.get("sampled") else "RISK",
-               "public HTTPS /ready passed %d/%d (does not test ingress host failover)" %
+               "Публичный HTTPS /ready пройден %d/%d (переключение входного узла при отказе не проверяется)" %
                (edge["success"], edge["sampled"]), required=True)
     else:
-        record("public_tls_edge", "UNVERIFIED", "no public HTTPS edge probe supplied")
+        record("public_tls_edge", "UNVERIFIED", "Не предоставлена проверка публичного HTTPS-шлюза")
     source_reports = [node.get("sourceState") for node in nodes.values() if node.get("sourceState", {}).get("observed")]
     if source_reports and any(s.get("replicaLocalStateToVerify") for s in source_reports):
         record("replica_local_runtime_state", "UNVERIFIED",
-               "live-replica agreement for auth/security/Bridge in-process state not tested; source confirms per-process fields")
+               "Согласованность внутрипроцессного состояния авторизации, безопасности и Bridge между работающими репликами не проверена; код подтверждает наличие локальных полей процесса")
     else:
         record("replica_local_runtime_state", "UNVERIFIED",
-               "source unavailable or per-process security state not inventoried")
+               "Исходный код недоступен или состояние безопасности отдельных процессов не учтено")
     for kind, why in (
-        ("secret_authority", "secret/key distribution, consistency and independent recovery not probed"),
-        ("external_auth", "OIDC/Microsoft/external auth dependency failover not probed"),
-        ("dns", "authoritative DNS and TTL/network failover not probed"),
-        ("serverbridge", "game host/Bridge runtime epochs and cross-host routing not probed"),
-        ("game_worlds", "single-writer worlds, snapshots and remote restoration not probed"),
-        ("backups", "off-host PITR and verified restore not probed"),
-        ("extension_state", "extension processes, filesystem state and cross-replica compatibility not probed"),
+        ("secret_authority", "Распределение секретов и ключей, согласованность и независимое восстановление не проверены"),
+        ("external_auth", "Переключение внешних зависимостей авторизации OIDC/Microsoft не проверено"),
+        ("dns", "Авторитетные DNS-серверы, TTL и сетевое переключение при отказе не проверены"),
+        ("serverbridge", "Эпохи Runtime игрового узла или Bridge и маршрутизация между узлами не проверены"),
+        ("game_worlds", "Миры с единственным записывающим процессом, снимки и удалённое восстановление не проверены"),
+        ("backups", "Восстановление на момент времени (PITR) вне узла и его проверка не выполнялись"),
+        ("extension_state", "Процессы расширений, состояние файловой системы и совместимость реплик не проверены"),
     ):
         record(kind, "UNVERIFIED", why)
     operations = [
-        {"operation": "publish/rollback + durable jobs", "authority": "PostgreSQL transactional lease/outbox",
-         "partitionRule": "no PostgreSQL authority -> fail closed; stale worker may not commit",
-         "evidence": "fencing probe only, live partition unverified"},
-        {"operation": "ServerBridge control command", "authority": "PostgreSQL command journal + Redis channel lease",
-         "partitionRule": "stale epoch/token cannot apply external side effect; no blind replay",
-         "evidence": "not proven by inventory; requires 0.51.4/0.51.5"},
-        {"operation": "profile/auth/MFA/passkey mutation", "authority": "PostgreSQL plus legacy per-process runtime snapshots",
-         "partitionRule": "independent replicas must agree immediately after commit",
-         "evidence": "cross-replica write/read behavior not proven; needs dedicated test"},
-        {"operation": "Minecraft world save/restore", "authority": "single active game JVM/world writer",
-         "partitionRule": "quorum/fenced single writer or stop writes until restored",
-         "evidence": "not proven by inventory; requires game-host test"},
+        {"operation": "Публикация и откат, а также надёжные фоновые задания", "authority": "Транзакционная аренда PostgreSQL и исходящая очередь",
+         "partitionRule": "Нет полномочий PostgreSQL — операция запрещается; устаревший исполнитель не может зафиксировать изменения",
+         "evidence": "Проверена только изоляция; реальное разделение сети не подтверждено"},
+        {"operation": "Команда управления ServerBridge", "authority": "Журнал команд PostgreSQL и аренда канала Redis",
+         "partitionRule": "Устаревшая эпоха или токен не могут выполнить внешнее действие; слепое повторение запрещено",
+         "evidence": "Инвентаризацией не подтверждено; требуются версии 0.51.4/0.51.5"},
+        {"operation": "Изменение профиля, авторизации, MFA или ключа доступа", "authority": "PostgreSQL и устаревшие снимки Runtime отдельных процессов",
+         "partitionRule": "Независимые реплики должны согласовываться сразу после фиксации изменений",
+         "evidence": "Чтение и запись между репликами не подтверждены; требуется отдельный тест"},
+        {"operation": "Сохранение и восстановление мира Minecraft", "authority": "Единственный активный процесс JVM с правом записи в игровой мир",
+         "partitionRule": "Единственный писатель с кворумом и изоляцией либо остановка записи до восстановления",
+         "evidence": "Инвентаризацией не подтверждено; требуется тест игрового узла"},
     ]
     return {"status": "RISK" if issues else "UNVERIFIED", "issues": issues,
             "spof": findings, "criticalOperations": operations,

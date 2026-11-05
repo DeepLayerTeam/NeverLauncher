@@ -29,39 +29,39 @@ def read(path):
     return obj
 
 def files(root, entries):
-    require(isinstance(entries, list) and entries and len(entries) == len(set(entries)), 'evidence file list absent/duplicated')
+    require(isinstance(entries, list) and entries and len(entries) == len(set(entries)), 'Список файлов свидетельств отсутствует или содержит повторы')
     for name in entries:
-        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9._/-]{1,160}', name), 'unsafe evidence file name')
-        require(all(p not in ('', '.', '..') for p in name.split('/')), 'traversal in evidence name')
+        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9._/-]{1,160}', name), 'Небезопасное имя файла свидетельства')
+        require(all(p not in ('', '.', '..') for p in name.split('/')), 'В имени свидетельства обнаружен выход за пределы каталога')
         f = root / name
         require(f.resolve().is_relative_to(root.resolve()) and f.is_file() and not f.is_symlink() and f.stat().st_size > 0, f'missing actual evidence: {name}')
 
 def minecraft(root, version=EXPECTED_VERSION, *, matching=False, mc=None):
     value = read(root / 'result.json')
-    require(value.get('status') == 'passed' and value.get('version') == version, 'game result not passed for target release')
+    require(value.get('status') == 'passed' and value.get('version') == version, 'Проверка игры для целевого выпуска не пройдена')
     game = value.get('minecraft') or {}
-    require(game.get('client') == 'actual-mojang-client', 'synthetic client not allowed')
+    require(game.get('client') == 'actual-mojang-client', 'Использование имитации игрового клиента запрещено')
     if mc is not None:
-        require(game.get('version') == mc, 'wrong Minecraft version for matrix entry')
+        require(game.get('version') == mc, 'Версия Minecraft не соответствует записи в матрице')
     checks = value.get('checks') or {}
     required = ('materialized','packageVerified','runtimeResolved','javaMatched','actualClient','matchingServer','serverVersionMatched','serverHealthy','clientJoinedServer') if matching else (
         'packageVerified','signedManifest','cleanSync','actualClient','paperJoin',
         'sessionRevokeDeny','realGameUpdateRollback','realWorldBackupRestore',
         'fabricServerBridge','forgeNeoForgeServerBridge')
-    require(all(checks.get(k) is True for k in required), 'game/runtime/serverbridge checks missing or false')
+    require(all(checks.get(k) is True for k in required), 'Проверки игры, Runtime или ServerBridge отсутствуют либо завершились неуспешно')
     if matching:
         proof = read(root / 'matching-server.json')
-        require(proof.get('status') == 'passed' and proof.get('clientJoinedServer') is True and proof.get('actualClient') is True, 'no real matching-server join')
-        require(game.get('serverVersion') == game.get('version'), 'server and client Minecraft versions differ')
+        require(proof.get('status') == 'passed' and proof.get('clientJoinedServer') is True and proof.get('actualClient') is True, 'Не подтверждено реальное подключение к подходящему серверу')
+        require(game.get('serverVersion') == game.get('version'), 'Версии Minecraft на сервере и клиенте различаются')
     else:
-        require(value.get('mode') == 'full' and game.get('paperJoin') == 'passed', 'not full signed release with real Paper join')
-        require((value.get('health') or {}).get('paper') == 'healthy', 'Paper did not become healthy')
+        require(value.get('mode') == 'full' and game.get('paperJoin') == 'passed', 'Нет подтверждения полной подписанной сборки с реальным подключением к Paper')
+        require((value.get('health') or {}).get('paper') == 'healthy', 'Сервер Paper не перешёл в исправное состояние')
         game_cycle = read(root / 'game-cycle-0364-result.json')
         require(game_cycle.get('status') == 'passed' and all(game_cycle.get('checks',{}).get(k) is True for k in (
           'productionGoTransactionalUpdate','updateMinecraftJVMJoin','productionGoTransactionalRollback','rollbackMinecraftJVMJoin')),
-          'production client update/rollback plus JVM join not proved')
+          'Не подтверждены обновление и откат рабочего клиента с подключением JVM')
         bridge = read(root / 'live-matrix-core-04113.json')
-        require(bridge.get('status') in ('core-passed-not-full-matrix', 'passed') and bridge.get('passedCount') == 10, 'real ServerBridge core 10-target runtime matrix did not pass')
+        require(bridge.get('status') in ('core-passed-not-full-matrix', 'passed') and bridge.get('passedCount') == 10, 'Матрица реальных проверок ServerBridge Core на 10 целевых окружениях не пройдена')
     files(root, value.get('evidence'))
     return value
 
@@ -78,15 +78,15 @@ def owner(path, version, commit):
 
 def legacy(path, version):
     data = read(path)
-    require(data.get('status') == 'passed' and data.get('targetVersion') == version and data.get('type') == 'native-legacy-upgrade', 'native upgrade not certified')
+    require(data.get('status') == 'passed' and data.get('targetVersion') == version and data.get('type') == 'native-legacy-upgrade', 'Нативное обновление не сертифицировано')
     rows = data.get('results')
-    require(isinstance(rows, list) and len(rows) == len(VERSIONS) and {x.get('version') for x in rows} == VERSIONS, 'old versions not fully covered')
+    require(isinstance(rows, list) and len(rows) == len(VERSIONS) and {x.get('version') for x in rows} == VERSIONS, 'Не все старые версии охвачены проверками')
     require(all(x.get('nativeVerified') is True and x.get('userDataVerified') is True
                 and isinstance(x.get('beforeFiles'), int) and x['beforeFiles'] >= 2
                 and isinstance(x.get('originalSha256'), str) and re.fullmatch('[a-f0-9]{64}', x['originalSha256'])
                 and isinstance(x.get('oldExecutableSha256'), str) and re.fullmatch('[a-f0-9]{64}', x['oldExecutableSha256'])
                 and isinstance(x.get('newExecutableSha256'), str) and re.fullmatch('[a-f0-9]{64}', x['newExecutableSha256'])
-                for x in rows), 'missing native upgraded executable or user data verification')
+                for x in rows), 'Отсутствует обновлённый нативный исполняемый файл или проверка пользовательских данных')
     return data
 
 def main(argv=None):
@@ -98,7 +98,7 @@ def main(argv=None):
     p.add_argument('--minecraft-version')
     a = p.parse_args(argv)
     try:
-        require(a.version == (ROOT / 'VERSION').read_text().strip(), 'version mismatch with canonical VERSION')
+        require(a.version == (ROOT / 'VERSION').read_text().strip(), 'Версия не совпадает с каноническим файлом VERSION')
         if a.type == 'full-game':
             minecraft(a.path, a.version, mc=a.minecraft_version)
         elif a.type == 'matching-game':

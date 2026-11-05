@@ -54,15 +54,15 @@ def private_bytes(p, limit=8192):
     p = Path(p)
     require(p.is_absolute() and not p.is_symlink() and
             not any(parent.is_symlink() for parent in p.parents),
-            'private file must have no symlinked ancestors')
+            'В пути к закрытому файлу не должно быть символьных ссылок')
     fd = os.open(p, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
     try:
         st = os.fstat(fd)
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
                 (stat.S_IMODE(st.st_mode) & 0o077) == 0 and 0 < st.st_size <= limit,
-                'unsafe private file metadata')
+                'Небезопасные метаданные закрытого файла')
         raw = os.read(fd, limit + 1)
-        require(len(raw) == st.st_size, 'private file changed during reading')
+        require(len(raw) == st.st_size, 'Закрытый файл изменился во время чтения')
         return raw
     finally:
         os.close(fd)
@@ -82,7 +82,7 @@ def save(path, doc):
     require(path.is_absolute() and path.parent.is_dir() and
             not path.parent.is_symlink() and path.parent.stat().st_uid == os.geteuid() and
             stat.S_IMODE(path.parent.stat().st_mode) & 0o077 == 0,
-            'private 0700 state parent required')
+            'Для каталога состояния требуются закрытые права 0700')
     payload = (json.dumps(doc, sort_keys=True, indent=2) + '\n').encode()
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
@@ -108,13 +108,13 @@ def invoke(args, timeout=20, allow_fail=False):
         if allow_fail:
             return None
         raise Blocked('Удалённое управление недоступно')
-    require(len(cp.stdout) < 256_000, 'remote output too large')
+    require(len(cp.stdout) < 256_000, 'Слишком большой ответ удалённого узла')
     if cp.returncode and not allow_fail:
         raise Blocked('Удалённая команда отклонена')
     return cp.stdout.decode('utf-8', 'strict') if cp.returncode == 0 else None
 
 def ssh(target, command, timeout=20, allow_fail=False):
-    require(multi.HOST_REGEX.fullmatch(target) and not target.startswith('-'), 'invalid SSH host')
+    require(multi.HOST_REGEX.fullmatch(target) and not target.startswith('-'), 'Некорректный SSH-узел')
     return invoke(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
                    '-o', 'NumberOfPasswordPrompts=0', '-o', 'ConnectTimeout=5',
                    target, shlex.join(command)], timeout, allow_fail)
@@ -124,17 +124,17 @@ def redfish_parts(url):
     require(parsed.scheme == 'https' and parsed.hostname and not parsed.username and
             not parsed.password and not parsed.query and not parsed.fragment and
             re.fullmatch(r'/redfish/v1/Systems/[A-Za-z0-9_.-]+', parsed.path or ''),
-            'Redfish must use a pinned HTTPS ComputerSystem resource')
+            'Redfish должен использовать закреплённый HTTPS-ресурс ComputerSystem')
     require(parsed.hostname.lower() not in ('localhost', '127.0.0.1', '::1'),
-            'BMC cannot be loopback')
+            'BMC не должен использовать адрес обратной петли')
     return parsed
 
 def redfish(url, token_path, ca, method='GET', body=None):
     parts = redfish_parts(url)
     raw_token = private_bytes(Path(token_path), 4096).strip()
     require(16 <= len(raw_token) <= 4096 and b'\n' not in raw_token and
-            all(33 <= n <= 126 for n in raw_token), 'invalid BMC token')
-    require(Path(ca).is_absolute() and Path(ca).is_file(), 'pinned BMC CA required')
+            all(33 <= n <= 126 for n in raw_token), 'Некорректный токен BMC')
+    require(Path(ca).is_absolute() and Path(ca).is_file(), 'Требуется закреплённый центр сертификации BMC')
     ctx = ssl.create_default_context(cafile=ca)
     connection = http.client.HTTPSConnection(parts.hostname, parts.port or 443, context=ctx, timeout=12)
     path = parts.path + ('/Actions/ComputerSystem.Reset' if method == 'POST' else '')
@@ -144,14 +144,14 @@ def redfish(url, token_path, ca, method='GET', body=None):
         connection.request(method, path, body=json.dumps(body).encode() if body else None, headers=headers)
         response = connection.getresponse()
         raw = response.read(131073)
-        require(len(raw) <= 131072, 'BMC response oversized')
+        require(len(raw) <= 131072, 'Ответ BMC превышает допустимый размер')
         if method == 'POST':
-            require(response.status in (200, 202, 204), 'BMC rejected power transition')
+            require(response.status in (200, 202, 204), 'BMC отклонил изменение состояния питания')
             return {'accepted': True}
-        require(response.status == 200, 'BMC status rejected')
+        require(response.status == 200, 'BMC вернул недопустимый статус')
         result = json.loads(raw)
         require(isinstance(result, dict) and result.get('PowerState') in ('On', 'Off', 'PoweringOn', 'PoweringOff'),
-                'BMC returned no verifiable physical power state')
+                'BMC не предоставил проверяемое физическое состояние питания')
         return result
     finally:
         connection.close()
@@ -160,15 +160,15 @@ def bmc_status(args):
     result = redfish(args.redfish_url, args.bmc_token_file, args.bmc_ca)
     require(result.get('SerialNumber') == args.expected_serial and
             SERIAL.fullmatch(args.expected_serial or ''),
-            'BMC system serial does not match the approved physical host')
+            'Серийный номер BMC не соответствует утверждённому физическому узлу')
     return result
 
 def bmc_reset(args, action):
-    require(action in ('ForceOff', 'On'), 'unsupported Redfish reset')
+    require(action in ('ForceOff', 'On'), 'Неподдерживаемая операция сброса Redfish')
     result = bmc_status(args)
     allowable = ((result.get('Actions') or {}).get('#ComputerSystem.Reset') or {}).get('ResetType@Redfish.AllowableValues')
     require(isinstance(allowable, list) and action in allowable,
-            'BMC does not advertise requested reset capability')
+            'BMC не объявляет поддержку запрошенного сброса')
     return redfish(args.redfish_url, args.bmc_token_file, args.bmc_ca,
                    'POST', {'ResetType': action})
 
@@ -185,10 +185,10 @@ def baseline(args, nodes):
                                     'local-observe')
     result = multi.cluster_verify(reports, args.edge_url)
     require(result['multiHostControlPlaneObserved'] and len(reports) >= 2,
-            'real multi-host baseline not healthy')
+            'Исходное состояние реального многоузлового окружения неисправно')
     ids = [v.get('machineIdentity') for v in reports.values()]
     require(len(set(ids)) == len(ids) and all(isinstance(x, str) and x for x in ids),
-            'not distinct physical host identities')
+            'Идентификаторы физических узлов не являются уникальными')
     return reports
 
 def survivor(args, nodes, victim):
@@ -196,14 +196,14 @@ def survivor(args, nodes, victim):
     observations, result = chaos.edge_survivor_probe(nodes, victim, args.remote_script,
          args.directory, args.project, args.edge_url, args.timeout, interval=1)
     require(result and all(result.values()) and len(observations) >= 8,
-            'surviving hosts failed under a real physical disruption')
+            'Оставшиеся узлы не выдержали реального физического сбоя')
     return {'edgeSamples': observations, 'survivors': result}
 
 def peer_connectivity(args, nodes, victim):
     # Проверяйте реальное TCP-подключение приложения с выживших узлов, а не административный SSH.
-    require(1 <= args.victim_port <= 65535, 'invalid victim application TCP port')
+    require(1 <= args.victim_port <= 65535, 'Некорректный TCP-порт приложения на отключаемом узле')
     ip = ipaddress.ip_address(args.victim_ip)
-    require(ip.version == 4 and ip.is_private, 'victim service address must be private IPv4')
+    require(ip.version == 4 and ip.is_private, 'Адрес службы отключаемого узла должен быть частным IPv4')
     code = ('import socket,sys; '
             's=socket.create_connection((sys.argv[1],int(sys.argv[2])),timeout=3); s.close()')
     result = {}
@@ -211,7 +211,7 @@ def peer_connectivity(args, nodes, victim):
         if name != victim:
             result[name] = ssh(target, ['python3', '-c', code, str(ip), str(args.victim_port)],
                                timeout=10, allow_fail=True) is not None
-    require(result, 'surviving application hosts missing')
+    require(result, 'Отсутствуют узлы приложения, которые должны остаться работающими')
     return result
 
 
@@ -221,8 +221,8 @@ def firewall(args, action):
     # запрещены. По истечении срока доступ восстанавливается даже при отказе наблюдателя.
     ip = ipaddress.ip_address(args.victim_ip)
     require(ip.version == 4 and ip.is_private and not ip.is_loopback and
-            not ip.is_multicast and not ip.is_unspecified, 'invalid private victim IPv4')
-    require(action in ('add', 'delete', 'check'), 'invalid firewall action')
+            not ip.is_multicast and not ip.is_unspecified, 'Некорректный частный IPv4 отключаемого узла')
+    require(action in ('add', 'delete', 'check'), 'Некорректное действие брандмауэра')
     fixed = ['sudo', '-n', 'nft']
     policy = json.loads(ssh(args.router, fixed + ['-j', 'list', 'table', 'inet',
                          'launcher_partition_05210']))
@@ -246,7 +246,7 @@ def firewall(args, action):
     require(len(forwarding) == len(sets) == 1 and forwarding[0].get('hook') == 'forward'
             and 'timeout' in sets[0].get('flags', []) and len(rules) == 2 and
             any(matches(r, 'saddr') for r in rules) and any(matches(r, 'daddr') for r in rules),
-            'unverified dedicated forwarding policy/expiry; no network injection permitted')
+            'Политика выделенной маршрутизации или срок действия не проверены; сетевое вмешательство запрещено')
     if action == 'add':
         cmd = fixed + ['add', 'element', 'inet', 'launcher_partition_05210', 'victims4',
                        '{', str(ip), 'timeout', str(args.ttl) + 's', '}']
@@ -257,7 +257,7 @@ def firewall(args, action):
         ssh(args.router, cmd)
     raw = ssh(args.router, fixed + ['-j', 'list', 'set', 'inet', 'launcher_partition_05210', 'victims4'])
     data = json.loads(raw)
-    require(isinstance(data, dict) and isinstance(data.get('nftables'), list), 'router nftables status absent')
+    require(isinstance(data, dict) and isinstance(data.get('nftables'), list), 'Отсутствует состояние nftables маршрутизатора')
     # Это наблюдение членства; внешнее тестирование клиента подтверждает, проходит ли трафик действительно
     # через данный маршрутизатор.
     def element_address(entry):
@@ -278,7 +278,7 @@ def firewall(args, action):
 def alert_delivery(args, started):
     # Одного состояния Alertmanager недостаточно. Отдельный нижестоящий HTTPS-получатель должен подтвердить
     # соответствующее активное событие после нарушения.
-    require(bool(args.alertmanager_url and args.delivery_url), 'alert manager and downstream delivery URL required')
+    require(bool(args.alertmanager_url and args.delivery_url), 'Требуются менеджер оповещений и URL последующей доставки')
     base = urlsplit(args.alertmanager_url)
     target = urlsplit(args.delivery_url)
     require(base.scheme == target.scheme == 'https' and base.hostname and target.hostname
@@ -286,9 +286,9 @@ def alert_delivery(args, started):
             target.path == '/events/latest' and not base.query and not base.fragment and
             not target.query and not target.fragment and
             not base.username and not target.username and not base.password and not target.password,
-            'alerts and downstream receipt must be separate verified HTTPS hosts')
+            'Оповещения и подтверждения доставки должны поступать с разных проверенных HTTPS-узлов')
     require(args.alert_name and re.fullmatch(r'NeverLauncher[A-Za-z0-9]{2,80}', args.alert_name),
-            'explicit expected alert name required')
+            'Требуется явно указать ожидаемое имя оповещения')
     import urllib.request
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -296,7 +296,7 @@ def alert_delivery(args, started):
     opener = urllib.request.build_opener(NoRedirect())
     token = private_bytes(Path(args.delivery_token_file), 4096).strip()
     require(len(token) >= 32 and all(33 <= n <= 126 for n in token),
-            'independent alert receiver bearer token required')
+            'Требуется токен независимого получателя оповещений')
     until = time.monotonic() + args.timeout
     while time.monotonic() < until:
         try:
@@ -306,7 +306,7 @@ def alert_delivery(args, started):
                     } if url == args.delivery_url else {})
                 with opener.open(request, timeout=7) as response:
                     raw = response.read(65537)
-                require(len(raw) <= 65536, 'alert receipt too large')
+                require(len(raw) <= 65536, 'Подтверждение получения оповещения слишком велико')
                 return json.loads(raw)
             entries = load(args.alertmanager_url.rstrip('/') + '/api/v2/alerts')
             receipt = load(args.delivery_url)
@@ -330,23 +330,23 @@ def live_fault(args):
     nodes = multi.parse_nodes(args.node)
     require(args.victim in nodes and len(nodes) >= 2 and
             args.allow_disruption == 'I-ACCEPT-PHYSICAL-OUTAGE' and
-            25 <= args.timeout <= 300, 'physical fault requires explicit bounded approval')
+            25 <= args.timeout <= 300, 'Для физического сбоя требуется явное ограниченное по времени разрешение')
     require(not Path(args.state).exists() and not Path(args.state).is_symlink() and
             not Path(args.report).exists() and not Path(args.report).is_symlink(),
-            'unrecovered prior journal/report')
+            'Обнаружен журнал или отчёт предыдущего невосстановленного сбоя')
     baseline(args, nodes)
     if args.mode == 'host':
-        require(bmc_status(args).get('PowerState') == 'On', 'victim is not powered on')
+        require(bmc_status(args).get('PowerState') == 'On', 'Отключаемый узел не включён')
     else:
         require(args.timeout + 45 <= args.ttl <= 600 and args.router not in nodes.values(),
-                'router expiry must outlast observation window but remain bounded')
+                'Срок действия правил маршрутизатора должен превышать окно наблюдения, но оставаться ограниченным')
         require(not firewall(args, 'check'), 'victim still partitioned from earlier drill')
-        require(bmc_status(args).get('PowerState') == 'On', 'partition requires powered-on target')
+        require(bmc_status(args).get('PowerState') == 'On', 'Для сетевого разделения целевой узел должен быть включён')
     require(ssh(nodes[args.victim], ['hostname'], allow_fail=True) is not None,
-            'victim is not SSH reachable before physical fault')
+            'Перед физическим сбоем отключаемый узел недоступен по SSH')
     if args.mode == 'partition':
         require(all(peer_connectivity(args, nodes, args.victim).values()),
-                'survivors cannot reach victim service before partition')
+                'Оставшиеся узлы не могут связаться со службой отключаемого узла до разделения')
     fault_started = datetime.now(timezone.utc)
     save(args.state, {'schema': SCHEMA, 'mode': args.mode, 'phase': 'disruption-pending',
                       'victim': args.victim, 'victimTarget': nodes[args.victim],
@@ -363,17 +363,17 @@ def live_fault(args):
             injected = await_power(args, 'Off', min(args.timeout, 90))
         else:
             injected = firewall(args, 'add')
-        require(injected, 'physical fault was not observed')
+        require(injected, 'Физический сбой не зафиксирован')
         if args.mode == 'host':
             require(ssh(nodes[args.victim], ['hostname'], allow_fail=True) is None,
-                    'powered-off host remains reachable via management SSH')
+                    'Выключенный узел по-прежнему доступен по управляющему SSH')
         else:
             require(bmc_status(args).get('PowerState') == 'On' and
                     ssh(nodes[args.victim], ['hostname'], allow_fail=True) is not None,
-                    'network-only outage not proven: BMC or management unavailable')
+                    'Не подтверждён исключительно сетевой сбой: BMC или управляющее подключение недоступны')
             observations['partitionedPeerTcp'] = peer_connectivity(args, nodes, args.victim)
             require(not any(observations['partitionedPeerTcp'].values()),
-                    'real peer data-plane traffic was not partitioned')
+                    'Реальный трафик данных между узлами не был разделён')
         observations.update(survivor(args, nodes, args.victim))
         observations['alert'] = alert_delivery(args, fault_started)
     finally:
@@ -415,45 +415,45 @@ def live_fault(args):
 def heal(args):
     journal = read_json(args.state)
     require(journal.get('schema') == SCHEMA and journal.get('recoveryRequired') is True,
-            'invalid recovery journal')
+            'Некорректный журнал восстановления')
     require(journal.get('mode') == args.heal_mode,
-            'recovery journal belongs to another fault type')
+            'Журнал восстановления относится к другому типу сбоя')
     if args.heal_mode == 'dependency':
         require(args.target == journal.get('target') and args.service == journal.get('service')
                 and args.backend_server == journal.get('backend'),
-                'dependency recovery target/service does not match durable journal')
+                'Цель или служба восстановления зависимости не соответствует сохранённому журналу')
         require(ssh(args.target, ['systemctl', 'is-active', args.service]).strip() == 'active',
-                'dependency service not actually running')
+                'Служба зависимости фактически не запущена')
         cfg = dependency.validate(dependency.load_env(Path(args.ha_env_file)))
         creds = dependency.storage_credentials(dependency.load_env(Path(args.ha_env_file)))
         multi.validate_edge_url(args.edge_url)
         report = dependency.perform_verification(Path(args.ha_socket), args.edge_url, {},
                                                 redundant=True, cfg=cfg, creds=creds)
-        require(report['healthy'], 'dependency quorum and ingress not recovered')
+        require(report['healthy'], 'Кворум и входное подключение зависимости не восстановлены')
         Path(args.state).unlink()
         return 0
     require(journal.get('victim') == args.victim,
-            'recovery journal belongs to another physical host')
+            'Журнал восстановления относится к другому физическому узлу')
     if args.heal_mode == 'host':
-        require(journal.get('bmcUrl') == args.redfish_url, 'BMC recovery identity differs')
+        require(journal.get('bmcUrl') == args.redfish_url, 'При восстановлении изменился идентификатор BMC')
         state = bmc_status(args).get('PowerState')
         if state == 'Off':
             bmc_reset(args, 'On')
         ok = await_power(args, 'On', 120)
     else:
-        require(journal.get('victimIpv4') == args.victim_ip, 'partition identity differs')
+        require(journal.get('victimIpv4') == args.victim_ip, 'Изменился идентификатор сетевого разделения')
         if firewall(args, 'check'):
             firewall(args, 'delete')
         ok = not firewall(args, 'check')
-    require(ok, 'physical fault recovery not confirmed')
+    require(ok, 'Восстановление после физического сбоя не подтверждено')
     require(ssh(journal['victimTarget'], ['hostname'], allow_fail=True) is not None,
-            'recovered host not reachable via SSH')
+            'Восстановленный узел недоступен по SSH')
     if args.heal_mode == 'partition':
         nodes = multi.parse_nodes(args.node)
         require(args.victim in nodes and nodes[args.victim] == journal['victimTarget'],
-                'partition recovery observer hosts do not match durable journal')
+                'Узлы-наблюдатели восстановления сети не соответствуют сохранённому журналу')
         require(all(peer_connectivity(args, nodes, args.victim).values()),
-                'surviving hosts still cannot reach recovered application network')
+                'Оставшиеся узлы по-прежнему не видят восстановленную сеть приложения')
     Path(args.state).unlink()
     return 0
 
@@ -461,16 +461,16 @@ def game_restore(args):
     # Выполняется на новом Linux-хосте восстановления игры после внешней аппаратной блокировки источника.
     # Безопасное восстановление мира использует ту же промышленную побайтовую проверку, что и DR.
     require(args.allow_disruption == 'I-ACCEPT-PHYSICAL-OUTAGE' and args.source_fenced,
-            'world recovery requires explicit fencing and operator approval')
+            'Для восстановления мира требуются явная изоляция и разрешение оператора')
     # Старый сервер мира должен быть физически отключён, а не только объявлен отключённым аргументом CLI.
     # Считайте исходное состояние питания непосредственно через его BMC.
     require(bmc_status(args).get('PowerState') == 'Off',
-            'original Minecraft world writer is not physically fenced')
+            'Исходный процесс записи мира Minecraft физически не изолирован')
     source, dest = Path(args.world_backup), Path(args.world_destination)
     require(source.is_absolute() and dest.is_absolute() and dest.parent.is_dir() and
-            not dest.exists() and not dest.is_symlink(), 'world restore must use a fresh absolute directory')
+            not dest.exists() and not dest.is_symlink(), 'Для восстановления мира требуется новый каталог с абсолютным путём')
     require(source != dest and source not in dest.parents and dest not in source.parents,
-            'world recovery source and destination overlap')
+            'Исходный и целевой каталоги восстановления мира пересекаются')
     manifest = dr.safe_world_backup(source)
     dr.restore_world_backup(source, dest)
     dr.safe_world_restored(dest, manifest)
@@ -480,16 +480,16 @@ def game_restore(args):
     for name in ('game_start', 'game_stop'):
         path = Path(getattr(args, name))
         require(path.is_absolute() and path.is_file() and not path.is_symlink() and
-                path.stat().st_mode & 0o111, 'missing executable real JVM control: ' + name)
+                path.stat().st_mode & 0o111, 'Отсутствует исполняемый контроллер реальной JVM: ' + name)
     config = read_json(args.game_config)
     require(type(config) is dict and config.get('minecraftVersion') == '1.21.1' and
             type(config.get('minecraftPort')) is int and 1 <= config['minecraftPort'] <= 65535 and
             type(config.get('rconPort')) is int and 1 <= config['rconPort'] <= 65535 and
             Path(config.get('serverDir', '')).resolve() == dest.resolve(),
-            'real Vanilla 1.21.1 game server must use actually restored world directory')
+            'Реальный игровой сервер Vanilla 1.21.1 должен использовать фактически восстановленный каталог мира')
     password = private_bytes(Path(args.rcon_password_file), 4096).decode('utf-8').strip()
     require(re.fullmatch(r'[A-Za-z0-9_]{3,16}', args.expected_player or ''),
-            'actual Minecraft player name required')
+            'Требуется имя реального игрока Minecraft')
     started = False
     stopped = False
     result = {'schema': SCHEMA, 'version': VERSION, 'mode': 'world', 'status': 'BLOCKED',
@@ -506,17 +506,17 @@ def game_restore(args):
                 players = vanilla.rcon('127.0.0.1', config['rconPort'], password, 'list')
                 require(re.search(r'(?<![A-Za-z0-9_])' + re.escape(args.expected_player) +
                                   r'(?![A-Za-z0-9_])', players, flags=re.IGNORECASE),
-                        'independent player has not joined restored game world')
+                        'Независимый игрок не присоединился к восстановленному игровому миру')
                 before = vanilla.rcon('127.0.0.1', config['rconPort'], password, 'time query gametime')
                 time.sleep(2)
                 after = vanilla.rcon('127.0.0.1', config['rconPort'], password, 'time query gametime')
-                require(before != after, 'recovered world is not ticking')
+                require(before != after, 'В восстановленном мире не выполняются игровые тики')
                 # Точный внутриигровой маркер состояния должен уже находиться в резервной копии исходного мира; его
                 # содержимое задаёт оператор.
                 require(re.fullmatch(r'-?[0-9]{1,7} -?[0-9]{1,7} -?[0-9]{1,7}', args.marker_xyz or ''),
-                        'world marker coordinates required')
+                        'Требуются координаты маркера мира')
                 require(re.fullmatch(r'minecraft:[a-z0-9_]{1,60}', args.marker_block or ''),
-                        'world marker block required')
+                        'Требуется блок-маркер мира')
                 marker = 'NLDR' + hashlib.sha256((source.name + args.expected_player).encode()).hexdigest()[:20]
                 cmd = 'execute if block ' + args.marker_xyz + ' ' + args.marker_block + ' run say ' + marker
                 response = vanilla.rcon('127.0.0.1', config['rconPort'], password, cmd)
@@ -528,7 +528,7 @@ def game_restore(args):
                 break
             except (Blocked, vanilla.Blocked, OSError, ValueError, KeyError):
                 time.sleep(2)
-        require(verified, 'real player join/world state not observed')
+        require(verified, 'Реальное подключение игрока или состояние мира не подтверждено')
     finally:
         if started:
             stopped = invoke([args.game_stop], timeout=90, allow_fail=True) is not None
@@ -539,19 +539,19 @@ def game_restore(args):
 def dependency_drill(args):
     """Выполнить настоящий отказ HAProxy/Patroni/Redis/S3 и повторно его проверить."""
     require(args.allow_disruption == 'I-ACCEPT-PHYSICAL-OUTAGE',
-            'live dependency failover needs explicit disruption approval')
+            'Для реального переключения зависимости при отказе требуется явное разрешение на сбой')
     require(args.service in ('patroni', 'redis-server', 'minio') and args.backend_server and
             args.target and Path(args.ha_env_file).is_absolute(),
-            'service, mapped backend SSH target and HA environment required')
-    require(25 <= args.timeout <= 300, 'invalid failover deadline')
+            'Требуются служба, сопоставленный SSH-узел Backend и окружение высокой доступности')
+    require(25 <= args.timeout <= 300, 'Некорректный крайний срок переключения при отказе')
     cfg = dependency.validate(dependency.load_env(Path(args.ha_env_file)))
     creds = dependency.storage_credentials(dependency.load_env(Path(args.ha_env_file)))
     nodes = multi.parse_nodes(args.node) if args.node else {}
     before = dependency.perform_verification(Path(args.ha_socket), args.edge_url, nodes,
                                              redundant=True, cfg=cfg, creds=creds)
-    require(before['healthy'], 'dependency baseline not healthy')
+    require(before['healthy'], 'Исходная служба зависимости неисправна')
     require(args.state and Path(args.state).is_absolute() and not Path(args.state).exists(),
-            'durable recovery journal required for dependency disruption')
+            'Для нарушения работы зависимости необходим сохраняемый журнал восстановления')
     # Временный таймер на хосте зависимости восстановит службу, даже если контроллер приёмки завершится через
     # SIGKILL или потеряет административную сеть. systemctl start идемпотентен; таймер намеренно не
     # отменяется.
@@ -570,12 +570,12 @@ def dependency_drill(args):
     after = dependency.perform_verification(Path(args.ha_socket), args.edge_url, nodes,
                                             redundant=True, cfg=cfg, creds=creds)
     require(result['testPassed'] is True and after['healthy'],
-            'dependency failover or recovery did not complete')
+            'Переключение зависимости при отказе или восстановление не завершено')
     require(result['stopExecuted'] and result['restorationReadinessObserved'] and
             any(row.get('newLeaderObserved') is True for row in result['observations']),
-            'actual dependency leader failover not proven')
+            'Реальное переключение ведущего узла зависимости при отказе не подтверждено')
     delivery = alert_delivery(args, start)
-    require(not Path(args.report).exists(), 'existing dependency report cannot be overwritten')
+    require(not Path(args.report).exists(), 'Существующий отчёт зависимости нельзя перезаписывать')
     result_code = output(args, {'schema': SCHEMA, 'version': VERSION, 'mode': 'dependency',
                          'status': 'PASS', 'service': args.service,
                          'backend': args.backend_server, 'failover': result,
@@ -633,7 +633,7 @@ def main(argv=None):
                 else (bool(args.report) and Path(args.report).is_absolute() and
                       (args.mode == 'world' or
                        (bool(args.state) and Path(args.state).is_absolute()))),
-                'absolute state/report paths required')
+                'Требуются абсолютные пути к состоянию и отчёту')
         if args.mode == 'heal':
             return heal(args)
         if args.mode == 'world':

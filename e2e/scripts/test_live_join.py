@@ -45,7 +45,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
         self.assertEqual(gate.load_pinned_bundle(self.args)[1], self.sha)
         self.entry['loaderVersion'] = 'latest'
         self.persist_pins()
-        with self.assertRaisesRegex(RuntimeError, 'loader version'):
+        with self.assertRaisesRegex(RuntimeError, 'Версия загрузчика'):
             gate.load_pinned_bundle(self.args)
 
     def test_bundle_tampering_is_blocked(self):
@@ -57,7 +57,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
     def test_directory_escape_blocked(self):
         self.entry['file'] = '../server.zip'
         self.persist_pins()
-        with self.assertRaisesRegex(RuntimeError, 'simple pinned ZIP'):
+        with self.assertRaisesRegex(RuntimeError, 'закреплённое имя ZIP-файла'):
             gate.load_pinned_bundle(self.args)
 
     def test_missing_modded_distribution_is_blocked(self):
@@ -126,7 +126,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
         witness = gate.read_json(runtime / 'live-server-witness.json')
         witness['playerOnlineViaRcon'] = False
         put(runtime / 'live-server-witness.json', witness)
-        with self.assertRaisesRegex(RuntimeError, 'corroborate'):
+        with self.assertRaisesRegex(RuntimeError, 'не подтвердили реальное подключение клиента'):
             gate.verify(args)
 
     def test_wrong_java_or_client_port_blocked(self):
@@ -138,7 +138,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
         cert = gate.read_json(runtime / 'fabric-certification.json')
         cert['matchingServerPort'] = 5555
         put(runtime / 'fabric-certification.json', cert)
-        with self.assertRaisesRegex(RuntimeError, 'client did not target'):
+        with self.assertRaisesRegex(RuntimeError, 'не был направлен'):
             gate.verify(args)
 
     def test_replayed_ci_run_identity_blocked(self):
@@ -146,7 +146,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
         original = gate.read_json(runtime / 'live-server-ready.json')
         original['ciRunId'] = 'a-previous-CI-run'
         put(runtime / 'live-server-ready.json', original)
-        with self.assertRaisesRegex(RuntimeError, 'replayed'):
+        with self.assertRaisesRegex(RuntimeError, 'повторно использовано'):
             gate.verify(args)
 
     def test_stale_world_ticks_blocked(self):
@@ -154,7 +154,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
         witness = gate.read_json(runtime / 'live-server-witness.json')
         witness['tickAfter'] = 7
         put(runtime / 'live-server-witness.json', witness)
-        with self.assertRaisesRegex(RuntimeError, 'did not advance'):
+        with self.assertRaisesRegex(RuntimeError, 'не изменилось'):
             gate.verify(args)
 
 

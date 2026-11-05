@@ -41,7 +41,7 @@ class StandardComponentTests(unittest.TestCase):
             source, target = self.fixture(Path(tmp))
             self.assertEqual(c.assert_same_config(source, target), '0.45.7')
             target.write_text('LAUNCHER_IMAGE_TAG=0.45.8\nSECRET=different\nLAUNCHER_DATABASE_AUTO_MIGRATE=false\n')
-            with self.assertRaisesRegex(c.ComponentError, 'differ'):
+            with self.assertRaisesRegex(c.ComponentError, 'отличаются'):
                 c.assert_same_config(source, target)
             target.write_text('LAUNCHER_IMAGE_TAG=0.45.8\nSECRET=value\nLAUNCHER_DATABASE_AUTO_MIGRATE=true\n')
             with self.assertRaisesRegex(c.ComponentError, 'DDL'):
@@ -114,7 +114,7 @@ class HAComponentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);source,target=self.fixture(root)
             with patch.object(dr, 'authorize_project'):
-                with self.assertRaisesRegex(c.ComponentError, 'stopped worlds'):
+                with self.assertRaisesRegex(c.ComponentError, 'остановка миров'):
                     c.network_ha('nl-dr-a', 'nl-dr-a', source, target, root/'backup', {}, '', None)
 
     def test_complete_ha_cutover_keeps_recovery_capable(self):
@@ -259,7 +259,7 @@ class ClientExtensionTests(unittest.TestCase):
                 self.assertIn('apply',cmd.call_args.args[0])
             with patch.dict(os.environ,{'LAUNCHER_TOKEN':'ограниченные права доступа'},clear=False), \
                  patch.object(c,'run',side_effect=[json.dumps(plan).encode(),json.dumps({'data':{'transaction':{'status':'rolled_back'}}}).encode()]):
-                with self.assertRaisesRegex(c.ComponentError,'did not commit'):
+                with self.assertRaisesRegex(c.ComponentError,'не была зафиксирована'):
                     c.extensions(cli,'https://example.org',['my.ext@0.45.8'],'stable')
             with self.assertRaisesRegex(c.ComponentError,'использовать HTTPS'):
                 c.extensions(cli,'http://example.org',['my.ext@0.45.8'],'stable')

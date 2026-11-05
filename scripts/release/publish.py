@@ -64,7 +64,7 @@ def json_object(path: Path) -> dict:
         path.is_file()
         and not path.is_symlink()
         and 0 < path.stat().st_size <= 4 * 1024 * 1024,
-        "missing/unsafe JSON evidence: " + str(path),
+        "Свидетельство JSON отсутствует или небезопасно: " + str(path),
     )
 
     def unique(pairs):
@@ -75,22 +75,22 @@ def json_object(path: Path) -> dict:
         return result
 
     data = json.loads(path.read_bytes(), object_pairs_hook=unique)
-    require(isinstance(data, dict), "evidence root is not JSON object")
+    require(isinstance(data, dict), "Корень свидетельства должен быть объектом JSON")
     return data
 
 
 def file_set(bundle: Path) -> dict[str, str]:
     require(
-        bundle.is_dir() and not bundle.is_symlink(), "missing final release directory"
+        bundle.is_dir() and not bundle.is_symlink(), "Отсутствует каталог финального выпуска"
     )
     manifest = json_object(bundle / "RELEASE_MANIFEST.json")
     version = manifest.get("version")
     require(
         isinstance(version, str) and policy(version).ga_mode == "signed-ga-v2",
-        "only current stable signed GA releases can be published",
+        "Публиковать можно только текущие стабильные подписанные выпуски, прошедшие GA",
     )
     require(
-        tuple(parsed(version)[0]) >= (0, 37, 0), "publication requires version 0.37.0+"
+        tuple(parsed(version)[0]) >= (0, 37, 0), "Для публикации требуется версия 0.37.0 или новее"
     )
     sums = (bundle / "SHA256SUMS").read_text(encoding="utf-8")
     expected = {}
@@ -109,18 +109,18 @@ def file_set(bundle: Path) -> dict[str, str]:
     for p in bundle.iterdir():
         require(
             p.is_file() and not p.is_symlink(),
-            "release contains non-regular file: " + p.name,
+            "Выпуск содержит не обычный файл: " + p.name,
         )
         present.add(p.name)
     require(
         present == set(expected) | {"SHA256SUMS", "SHA256SUMS.sig"},
-        "unsigned extra or missing release asset",
+        "В выпуске отсутствует файл, обнаружен лишний или неподписанный артефакт",
     )
     for name, digest in expected.items():
         require(sha(bundle / name) == digest, "Контрольная сумма подписанного артефакта не совпадает: " + name)
     for extra in ("SHA256SUMS", "SHA256SUMS.sig"):
         require(
-            (bundle / extra).stat().st_size > 0, "missing release signature/checksums"
+            (bundle / extra).stat().st_size > 0, "Отсутствуют подпись выпуска или контрольные суммы"
         )
     expected["SHA256SUMS"] = sha(bundle / "SHA256SUMS")
     expected["SHA256SUMS.sig"] = sha(bundle / "SHA256SUMS.sig")
@@ -139,7 +139,7 @@ def verify_ci(report: dict, version: str, commit: str, run_id: int, attempt: int
         and report.get("missingJobs") == []
         and report.get("unexpectedJobs") == []
         and report.get("nonSuccessJobs") == {},
-        "production CI report is stale or incomplete",
+        "Отчёт рабочего CI устарел или неполон",
     )
     jobs = report.get("jobResults")
     expected = declared_jobs(str(PRODUCTION_WORKFLOW)) - {
@@ -152,7 +152,7 @@ def verify_ci(report: dict, version: str, commit: str, run_id: int, attempt: int
         and all(value == "success" for value in jobs.values())
         and "release-bundle" in jobs
         and "base-ci" in jobs,
-        "required production jobs missing, unexpected, skipped or failed",
+        "Обязательные задания CI отсутствуют, неожиданны, пропущены или завершились ошибкой",
     )
 
 
@@ -164,7 +164,7 @@ def verify_security_archive(
     require(
         archive_path.is_file() and not archive_path.is_symlink()
         and 0 < archive_path.stat().st_size <= 256 * 1024 * 1024,
-        "missing/unsafe signed security evidence archive",
+        "Подписанный архив свидетельств безопасности отсутствует или небезопасен",
     )
     with tempfile.TemporaryDirectory(prefix="nl-security-publish-") as folder:
         extracted = Path(folder)
@@ -179,7 +179,7 @@ def verify_security_archive(
                     and 0 < item.file_size <= 32 * 1024 * 1024
                     for item in members
                 ),
-                "security archive contains missing, extra, symlink or oversized evidence",
+                "Архив безопасности содержит отсутствующие, лишние, символьные или слишком большие свидетельства",
             )
             for member in members:
                 # Имена файлов берутся только из фиксированного списка проверяющего; произвольные пути и archive.extract()
@@ -204,7 +204,7 @@ def verify_ga(
         and receipt.get("status") == "approved-for-release-signing"
         and receipt.get("version") == version
         and receipt.get("commit") == commit,
-        "GA receipt source/version mismatch",
+        "Источник или версия квитанции GA не совпадают",
     )
     require(
         rehearsal.get("schemaVersion") == "launcher.release.rehearsal.v1"
@@ -224,12 +224,12 @@ def verify_ga(
         sha(bundle / "GA_TARGET_APPROVAL.json")
         == receipt.get("approvalSha256")
         == rehearsal.get("gaApprovalSha256"),
-        "signed GA approval digest mismatch",
+        "Контрольная сумма подписанного одобрения GA не совпадает",
     )
     require(
         hashlib.sha256(bytes.fromhex(key.decode())).hexdigest()
         == receipt.get("operatorPublicKeySha256"),
-        "GA receipt operator identity mismatch",
+        "Идентификатор оператора в квитанции GA не совпадает",
     )
     targets = approval.get("targets")
     require(
@@ -237,7 +237,7 @@ def verify_ga(
         and len(targets) == 6
         and all(isinstance(r, dict) for r in targets)
         and {r.get("target") for r in targets} == set(TARGETS),
-        "GA signature does not authorize exactly six targets",
+        "Подпись GA не разрешает ровно шесть целевых платформ",
     )
     certified = receipt.get("targets")
     rehearsed = rehearsal.get("targets")
@@ -248,12 +248,12 @@ def verify_ga(
         and isinstance(rehearsed, list)
         and len(rehearsed) == 6
         and all(isinstance(r, dict) for r in rehearsed),
-        "missing six target GA/rehearsal results",
+        "Отсутствуют результаты GA или пробного прогона для шести платформ",
     )
     require(
         {r.get("target") for r in rehearsed} == set(TARGETS)
         and {r.get("target") for r in certified} == set(TARGETS),
-        "duplicate/missing target in GA and rehearsal receipts",
+        "В квитанциях GA и пробного прогона платформа отсутствует или повторяется",
     )
     for target in TARGETS:
         signed_row = next(r for r in targets if r["target"] == target)
@@ -269,7 +269,7 @@ def verify_ga(
                  or certified_row.get("securityCapabilitiesVerified") == list(security_checks(version)))
             and rehearsed_row.get("binary") == binary
             and rehearsed_row.get("package") == package,
-            target + ": incomplete independent GA checks",
+            target + ": независимые проверки GA не завершены",
         )
         for field, file in [("binarySha256", binary), ("packageSha256", package)]:
             digest = sha(bundle / file)
@@ -278,7 +278,7 @@ def verify_ga(
                 == signed_row.get(field)
                 == certified_row.get(field)
                 == rehearsed_row.get(field),
-                target + ": published file not independently authorized: " + file,
+                target + ": публикуемый файл не получил независимого разрешения: " + file,
             )
     if security_checks(version):
         verify_security_archive(bundle, approval, run_id, attempt)
@@ -333,16 +333,16 @@ def validate(
 ) -> dict:
     require(
         HEX40.fullmatch(commit) is not None and run_id > 0 and attempt > 0,
-        "invalid source identity or CI run identity",
+        "Некорректный идентификатор источника или запуска CI",
     )
     require(
         policy(version).ga_mode == "signed-ga-v2" and parsed(version)[0] >= (0, 37, 0),
-        "missing current GA release policy",
+        "Отсутствует текущая политика выпуска GA",
     )
     manifest = json_object(bundle / "RELEASE_MANIFEST.json")
     require(
         manifest.get("version") == version and manifest.get("sourceCommit") == commit,
-        "release manifest version/commit mismatch",
+        "Версия или коммит манифеста выпуска не совпадают",
     )
     files = file_set(bundle)
     if parsed(version)[0] >= (0, 46, 2):
@@ -358,7 +358,7 @@ def validate(
         # черновика проверяйте независимую эксплуатационную приёмку по доверенным ключам в текущем процессе
         # публикации.
         operator_key = os.environ.get('LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE', '')
-        require(bool(operator_key), '0.46.0 GA BLOCKED: independent operator public key missing')
+        require(bool(operator_key), 'GA версии 0.46.0 ЗАБЛОКИРОВАНА: отсутствует открытый ключ независимого оператора')
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'operations'))
         from operations_ga_0460 import verify_public
         try:
@@ -375,7 +375,7 @@ def validate(
         index_pin = os.environ.get('NL_GA0530_INDEX_SHA256','')
         project = os.environ.get('NL_GA0530_PROJECT','')
         require(all((base,key,pin,index_pin,project)),
-                '0.53.0 release BLOCKED: independent Full User Acceptance GA inputs missing')
+                'Выпуск 0.53.0 ЗАБЛОКИРОВАН: отсутствуют независимые входные данные полной пользовательской приёмки GA')
         root=Path(base)
         require(root.is_absolute() and root.is_dir(), '0.53.0 GA inbox unavailable')
         try:
@@ -398,14 +398,14 @@ def validate(
         and dry.get("filesCopied") == len(files)
         and dry.get("sha256sumsSha256") == files["SHA256SUMS"]
         and dry.get("gaApprovalSha256") == approval,
-        "missing, stale or incomplete signed publication dry-run",
+        "Подписанная пробная публикация отсутствует, устарела или неполна",
     )
     require(
         cli.is_file()
         and not cli.is_symlink()
         and cli.resolve().is_relative_to(bundle.resolve())
         and cli.name in files,
-        "must verify with published release CLI",
+        "Требуется проверка с помощью CLI опубликованного выпуска",
     )
     cli.chmod(0o755)
     # Используйте изолированное состояние доверия: проверка кандидата не должна продвигать доверие
@@ -445,10 +445,10 @@ def github(repo: str, args: list[str]) -> str:
 
 
 def publish(repo: str, verified: dict, bundle: Path) -> dict:
-    require(REPOSITORY.fullmatch(repo) is not None, "invalid GitHub repository")
+    require(REPOSITORY.fullmatch(repo) is not None, "Некорректный репозиторий GitHub")
     require(
         os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"),
-        "publication token not configured",
+        "Токен публикации не настроен",
     )
     version = verified["version"]
     tag = "v" + version
@@ -466,7 +466,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
             or "http 404" in existing.stderr.lower()
             or "not found" in existing.stderr.lower()
         ),
-        "release already exists or its absence cannot be verified",
+        "Выпуск уже существует или невозможно проверить его отсутствие",
     )
     ref = subprocess.run(
         ["gh", "api", f"repos/{repo}/git/ref/tags/{tag}"],
@@ -476,7 +476,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
     require(
         ref.returncode != 0
         and ("http 404" in ref.stderr.lower() or "not found" in ref.stderr.lower()),
-        "tag already exists or tag lookup failed",
+        "Тег уже существует или проверка тега не удалась",
     )
     files = verified["files"]
     # Опечатайте точные проверенные байты до любых сетевых операций. Изменённое после проверки дерево сборки
@@ -487,10 +487,10 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         for name, digest in files.items():
             source = bundle / name
             require(source.is_file() and not source.is_symlink() and sha(source) == digest,
-                    "release file changed after GA validation: " + name)
+                    "После проверки GA файл выпуска изменился: " + name)
             shutil.copyfile(source, snapshot / name)
             require(sha(snapshot / name) == digest and sha(source) == digest,
-                    "release bytes changed while sealing: " + name)
+                    "При окончательном подписании данные выпуска изменились: " + name)
     except Exception:
         snapshot_context.cleanup()
         raise
@@ -507,7 +507,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         "Launcher " + version,
         "--draft",
         "--notes",
-        "Verified six-platform release. GA exact-byte approvals and signed manifest are included.",
+        "Проверенный выпуск для шести платформ. Включены побайтовые одобрения GA и подписанный манифест.",
     ]
     try:
         run(args)
@@ -522,14 +522,14 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
             )
             require(
                 {p.name for p in remote.iterdir()} == set(files),
-                "published draft has missing or unexpected files",
+                "В черновике публикации отсутствуют файлы или обнаружены неожиданные файлы",
             )
             for name, digest in files.items():
                 require(
                     (remote / name).is_file()
                     and not (remote / name).is_symlink()
                     and sha(remote / name) == digest,
-                    "remote GitHub asset bytes mismatch: " + name,
+                    "Данные удалённого артефакта GitHub не совпадают: " + name,
                 )
             if parsed(version)[0] >= (0, 46, 2):
                 from delivery_verify_0462 import verify_bundle
@@ -557,7 +557,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
             and isinstance(metadata.get("assets"), list)
             and len(metadata["assets"]) == len(files)
             and {a.get("name") for a in metadata["assets"]} == set(files),
-            "draft release identity/assets mismatch",
+            "Идентификатор или артефакты черновика выпуска не совпадают",
         )
         run(["gh", "release", "edit", tag, "--repo", repo, "--draft=false"])
         final = json.loads(
@@ -565,7 +565,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         )
         require(
             final.get("isDraft") is False and final.get("tagName") == tag,
-            "GitHub did not publish verified release",
+            "GitHub не опубликовал проверенный выпуск",
         )
     except Exception:
         # Намеренно сохраняйте черновик для расследования; не публикуйте неполные файлы.
@@ -641,7 +641,7 @@ def main() -> int:
         if a.version == "0.48.0":
             require(all((a.ga0480_evidence_dir, a.ga0480_approval,
                          a.ga0480_signature, a.ga0480_trusted_key)),
-                    "0.48.x requires independent signed live migration, real game and legacy GA evidence")
+                    "Для версии 0.48.x требуются независимые подписанные свидетельства реальной миграции, игровой проверки и приёмки устаревших версий GA")
             from ga_gate_0480 import gate as ga0480_gate
             evidence_root = Path(a.ga0480_evidence_dir)
             ga0480_gate(evidence_root, Path(a.ga0480_approval),
@@ -650,7 +650,7 @@ def main() -> int:
             certified_bundle = evidence_root / 'signed'
             require(sha(actual_bundle / 'RELEASE_MANIFEST.json') ==
                     sha(certified_bundle / 'RELEASE_MANIFEST.json'),
-                    '0.48.0 actual publish bundle not identical to independently approved final release')
+                    'Фактический публикуемый пакет 0.48.0 не идентичен независимо одобренному финальному выпуску')
             # Сравнивайте каждый платформенный пакет поставки, а не только объявленную версию. Побайтовое совпадение
             # обязательно до первой записи в сеть.
             from delivery_verify_0462 import verify_bundle

@@ -72,12 +72,12 @@ def require(ok, why):
 def safe(path: Path, maximum: int):
     # Не разрешайте путь до проверки: разрешение скрыло бы подмену символьной ссылкой.
     require(path.is_absolute() and not path.is_symlink() and path.is_file(),
-            'missing/unsafe original evidence: ' + str(path))
+            'Исходное свидетельство отсутствует или небезопасно: ' + str(path))
     require(not any(parent.is_symlink() for parent in path.parents),
-            'symlinked evidence directory: ' + str(path))
+            'Каталог свидетельств содержит символьную ссылку: ' + str(path))
     st = path.stat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= maximum,
-            'hardlinked, empty or oversized evidence: ' + str(path))
+            'Свидетельство имеет жёсткую ссылку, пусто или слишком велико: ' + str(path))
     return path
 
 def sha(path: Path) -> str:
@@ -98,18 +98,18 @@ def git(*args):
 
 def source_identity(expected: str):
     require(VERSION == '0.53.0' and COMMIT.fullmatch(expected or '') is not None,
-            'exact 0.53.0 version and 40-digit approved commit required')
+            'Требуются точная версия 0.53.0 и утверждённый коммит из 40 шестнадцатеричных символов')
     require(git('rev-parse', 'HEAD') == expected, 'Коммит проверяемой рабочей копии изменился')
     require(git('status','--porcelain','--untracked-files=all') == '',
-            'checkout is dirty or has untracked source files')
+            'В рабочей копии есть незакоммиченные изменения или неотслеживаемые исходные файлы')
     tree = git('rev-parse','HEAD^{tree}')
-    require(COMMIT.fullmatch(tree) is not None, 'invalid git source tree')
+    require(COMMIT.fullmatch(tree) is not None, 'Некорректное дерево исходников Git')
     return tree
 
 def package_set(directory: Path, index_file: Path, index_pin: str, commit: str, project: str):
     require(directory.is_absolute() and directory.is_dir() and not directory.is_symlink()
-            and not any(p.is_symlink() for p in directory.parents), 'unsafe final package directory')
-    require(SHA.fullmatch(index_pin or '') is not None, 'out-of-band pinned source index SHA required')
+            and not any(p.is_symlink() for p in directory.parents), 'Небезопасный каталог финальных пакетов')
+    require(SHA.fullmatch(index_pin or '') is not None, 'Требуется закреплённая по независимому каналу сумма SHA индекса исходников')
     index = safe(index_file, native.MAX_INDEX).read_bytes()
     records = native.read_index(index, index_pin, VERSION, commit, project)
     expected = {entry['filename'] for entry in records.values()}
@@ -119,7 +119,7 @@ def package_set(directory: Path, index_file: Path, index_pin: str, commit: str, 
             # пакета.
             expected.add(item['filename'] + '.asc')
     require({p.name for p in directory.iterdir()} == expected,
-            'exact six final packages and their detached Linux signatures required')
+            'Требуются ровно шесть финальных пакетов и их отдельные подписи Linux')
     files = {}
     for row in records.values():
         path = directory / row['filename']
@@ -130,7 +130,7 @@ def package_set(directory: Path, index_file: Path, index_pin: str, commit: str, 
             path = directory / (row['filename']+'.asc')
             require(sha(path) == row['signatureSha256'] and
                     path.stat().st_size == row['signatureSize'],
-                    'detached final Linux signature mismatches pinned index')
+                    'Отдельная подпись финального пакета Linux не соответствует закреплённому индексу')
             files[path.name] = {'sha256': row['signatureSha256'], 'size': row['signatureSize']}
     return dict(sorted(files.items()))
 
@@ -152,7 +152,7 @@ def private_key(path: Path):
 def verify_signature(doc, sig_path, public_path, pin, domain):
     key = inventory.public_key(public_path, pin)
     sig = safe(sig_path, 128).read_bytes()
-    require(len(sig) == 64, 'invalid independent signature length')
+    require(len(sig) == 64, 'Некорректная длина независимой подписи')
     try:
         key.verify(sig, domain + inventory.canonical(doc))
     except InvalidSignature as e:
@@ -163,7 +163,7 @@ def sealed_freeze(path, sig, key, pin, commit, project, packages, index, index_s
     doc = read(path)
     verify_signature(doc,sig,key,pin,FREEZE_DOMAIN)
     require(doc == freeze(commit,project,packages,index,index_sha),
-            'freeze does not match live git source tree and exact final package bytes')
+            'Зафиксированное состояние не соответствует текущему дереву Git и точным данным финальных пакетов')
     return doc
 
 def closed_defects(path, sig, key, pin, commit):
@@ -172,31 +172,31 @@ def closed_defects(path, sig, key, pin, commit):
     require(set(doc) == {'schema','version','commit','scope','issues'} and
             doc['schema'] == ISSUES and doc['version'] == VERSION and
             doc['commit'] == commit and doc['scope'] == 'all-open-release-defects',
-            'defect export does not represent exact release-wide issue snapshot')
+            'Выгрузка дефектов не соответствует точному снимку задач всего выпуска')
     entries=doc['issues']
     require(type(entries) is list and len(entries) <= 10000,
-            'defect export invalid or too large')
+            'Выгрузка дефектов некорректна или слишком велика')
     names=set()
     for issue in entries:
         require(type(issue) is dict and set(issue)=={'id','severity','status','regression'},
-                'issue missing required fields')
+                'В задаче отсутствуют обязательные поля')
         ident=issue['id']
         require(type(ident) is str and re.fullmatch(r'[A-Z][A-Z0-9]+-[1-9][0-9]*',ident)
-                and ident not in names, 'invalid/duplicate issue identifier')
+                and ident not in names, 'Некорректный или повторяющийся идентификатор задачи')
         names.add(ident)
         require(issue['severity'] in ('P0','P1','P2','P3') and
                 issue['status'] in ('closed','open') and
-                type(issue['regression']) is str, 'invalid issue severity/status')
+                type(issue['regression']) is str, 'Некорректная серьёзность или статус задачи')
         if issue['severity'] in ('P0','P1'):
             require(issue['status'] == 'closed' and issue['regression'] in REGRESSIONS,
-                    'blocking defect not closed by a real mandatory regression')
+                    'Блокирующий дефект не закрыт обязательной реальной регрессионной проверкой')
     return {'issueCount':len(entries),'criticalClosed':sum(
         x['severity'] in ('P0','P1') for x in entries),'sha256':sha(path)}
 
 def run_regressions(log_dir: Path, *, replay=False):
     require(log_dir.is_absolute() and log_dir.is_dir() and not log_dir.is_symlink()
             and not any(p.is_symlink() for p in log_dir.parents),
-            'private regression evidence directory required')
+            'Требуется закрытый каталог свидетельств регрессионных проверок')
     commands = [([sys.executable,'scripts/version/manage.py','check'],'version-check'),
                 ([sys.executable,'-m','unittest','-q',*REGRESSIONS],'mandatory-python-regressions')]
     env=os.environ.copy()
@@ -210,10 +210,10 @@ def run_regressions(log_dir: Path, *, replay=False):
                             stdin=subprocess.DEVNULL)
         data=proc.stdout+proc.stderr
         require(proc.returncode == 0 and data and len(data)<=16*1024*1024,
-                name+' failed, timed out or emitted no inspectable log')
+                name+' завершился ошибкой, превысил время ожидания или не создал доступный журнал')
         require(b'FAILED' not in data and b' (skipped=' not in data and
                 b'... skipped ' not in data,
-                name+' had skipped/failed mandatory tests')
+                name+' содержит пропущенные или неудачные обязательные тесты')
         actual_count = None
         if name=='mandatory-python-regressions':
             found=re.search(rb'Ran ([1-9][0-9]*) tests? in [0-9.]+s',data)
@@ -222,15 +222,15 @@ def run_regressions(log_dir: Path, *, replay=False):
         path=log_dir/(name+'.log')
         if not replay:
             require(not path.exists() and not path.is_symlink(),
-                    'regression log already exists')
+                    'Журнал регрессионной проверки уже существует')
             inventory.write_exclusive(path,data)
         original=safe(path,16*1024*1024).read_bytes()
         if replay:
             require(b'FAILED' not in original and b' (skipped=' not in original,
-                    'signed original regression log contains failures/skips')
+                    'Подписанный исходный журнал регрессионной проверки содержит ошибки или пропуски')
             require(actual_count is None or re.search(rb'Ran '+str(actual_count).encode()+
                     rb' tests? in [0-9.]+s',original) is not None,
-                    'rerun changed mandatory test inventory')
+                    'При повторном запуске изменился перечень обязательных тестов')
         output.append({'name':name,'exit':proc.returncode,
                        'logSha256':hashlib.sha256(original).hexdigest(),
                        'logBytes':len(original),'tests':actual_count})
@@ -251,7 +251,7 @@ def full_args(config_path: Path, commit: str):
             all(type(doc[k]) is str and doc[k].startswith('/') for k in FULL_PATHS) and
             all(type(doc[k]) is str and doc[k] for k in FULL_STRINGS) and
             all(type(doc[k]) is int and doc[k]>0 for k in FULL_INTS),
-            'full sweep configuration missing strict independent original input paths')
+            'В конфигурации полного прогона отсутствуют строгие независимые пути исходных входных данных')
     values={k:Path(doc[k]) for k in FULL_PATHS}
     values.update({k:doc[k] for k in FULL_STRINGS+FULL_INTS})
     values['commit']=commit
@@ -267,18 +267,18 @@ def rehearse(freeze_path,freeze_sig,release_key,release_pin,commit,project,packa
     args=full_args(config,commit)
     require(args.project == project and args.index_sha == index_sha and
             sha(args.source_index) == index_sha,
-            'sweep uses a different final distribution source index')
+            'Полный прогон использует другой финальный индекс исходников дистрибутива')
     # Независимо повторите ИСХОДНЫЙ полный набор 280+шесть+длительные
     # испытания+воспроизводимость дважды, а не копируйте JSON со status=PASS от
     # сборщика.
     first=sweep.verify_full(args)
     require(first.get('status')=='OBSERVED_NOT_INDEPENDENT_GA',
-            'full sweep has not verified all original live results')
+            'Полный прогон не проверил все исходные результаты реальных испытаний')
     second=sweep.verify_full(args)
     require(inventory.canonical(first)==inventory.canonical(second),
-            'nondeterministic or mutated raw evidence between independent replays')
+            'Между независимыми повторными прогонами свидетельства недетерминированы или изменены')
     require(freeze(commit,project,packages,index,index_sha)==frozen,
-            'candidate source or downloaded final package bytes changed during rehearsal')
+            'Во время прогона изменились исходники кандидата или данные загруженного финального пакета')
     return {'schema':REPORT,'version':VERSION,'commit':commit,'sourceTree':frozen['sourceTree'],
             'freezeSha256':sha(freeze_path),'issues':defects,'regressions':regression,
             'fullSweepSha256':hashlib.sha256(inventory.canonical(first)).hexdigest(),
@@ -287,7 +287,7 @@ def rehearse(freeze_path,freeze_sig,release_key,release_pin,commit,project,packa
 
 def save(path: Path, doc):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(),
-            'new absolute report path required')
+            'Требуется новый абсолютный путь к отчёту')
     inventory.write_exclusive(path,inventory.canonical(doc)+b'\n')
 
 def main():
@@ -319,12 +319,12 @@ def main():
         if a.cmd=='freeze':
             doc=freeze(a.commit,a.project,a.packages,a.index,a.index_sha)
             key=private_key(a.release_private_key)
-            require(a.output!=a.signature,'output and signature paths must differ')
+            require(a.output!=a.signature,'Пути результата и подписи должны различаться')
             save(a.output,doc)
             inventory.write_exclusive(a.signature,key.sign(FREEZE_DOMAIN+inventory.canonical(doc)))
         else:
             require(a.release_pin != a.review_pin and a.issues_pin != a.review_pin,
-                    'reviewer must be independent of release/issue signers')
+                    'Проверяющий должен быть независимым от подписантов выпуска и задач')
             doc=rehearse(a.freeze,a.freeze_sig,a.release_key,a.release_pin,a.commit,
                          a.project,a.packages,a.index,a.index_sha,a.issues,a.issues_sig,
                          a.issues_key,a.issues_pin,a.config,a.logs,replay=(a.cmd=='verify'))
@@ -333,8 +333,8 @@ def main():
                 pub=inventory.public_key(a.review_key,a.review_pin)
                 require(key.public_key().public_bytes(serialization.Encoding.Raw,serialization.PublicFormat.Raw)
                         ==pub.public_bytes(serialization.Encoding.Raw,serialization.PublicFormat.Raw),
-                        'independent reviewer key mismatch')
-                require(a.output!=a.signature,'output and signature paths must differ')
+                        'Ключ независимого проверяющего не совпадает')
+                require(a.output!=a.signature,'Пути результата и подписи должны различаться')
                 save(a.output,doc)
                 inventory.write_exclusive(a.signature,key.sign(REHEARSAL_DOMAIN+inventory.canonical(doc)))
             else:

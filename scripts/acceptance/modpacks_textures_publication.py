@@ -45,7 +45,7 @@ def need(value, reason):
 def strict_object(pairs):
     result = {}
     for k, v in pairs:
-        need(k not in result, 'duplicate field in JSON evidence')
+        need(k not in result, 'Повторяющееся поле в свидетельстве JSON')
         result[k] = v
     return result
 
@@ -63,7 +63,7 @@ def sha(raw):
 
 def sha_file(path: Path, *, limit=1024 * 1024 * 1024):
     need(path.is_file() and not path.is_symlink() and 0 < path.stat().st_size <= limit,
-         'expected pinned regular file is unavailable/unsafe')
+         'Ожидаемый закреплённый обычный файл недоступен или небезопасен')
     digest = hashlib.sha256()
     with path.open('rb') as stream:
         for part in iter(lambda: stream.read(1024 * 1024), b''):
@@ -72,17 +72,17 @@ def sha_file(path: Path, *, limit=1024 * 1024 * 1024):
 
 
 def private_file(path: Path, *, limit=65536):
-    need(path.is_absolute() and not path.is_symlink(), 'private input must be an absolute non-symlink path')
+    need(path.is_absolute() and not path.is_symlink(), 'Закрытый входной путь должен быть абсолютным и не содержать символьных ссылок')
     st = path.stat()
     need(stat.S_ISREG(st.st_mode) and st.st_uid == os.geteuid() and
-         not st.st_mode & 0o077 and 0 < st.st_size <= limit, 'private input owner/mode/size invalid')
+         not st.st_mode & 0o077 and 0 < st.st_size <= limit, 'Некорректный владелец, права или размер закрытых входных данных')
     return path.read_bytes()
 
 
 def atomic_private_json(path: Path, doc):
-    need(path.is_absolute() and not path.is_symlink(), 'output must be an absolute non-symlink path')
+    need(path.is_absolute() and not path.is_symlink(), 'Выходной путь должен быть абсолютным и не содержать символьных ссылок')
     path.parent.mkdir(parents=True, exist_ok=True)
-    need(not path.parent.is_symlink(), 'output parent cannot be a symlink')
+    need(not path.parent.is_symlink(), 'Родительский выходной каталог не должен быть символьной ссылкой')
     tmp = path.with_name('.' + path.name + '-' + secrets.token_hex(8))
     fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
     try:
@@ -111,15 +111,15 @@ class API:
         need(port is None or 1 <= port <= 65535, 'Некорректный порт HTTPS-источника')
         need(parts.scheme == 'https' and parts.hostname and not parts.username and not parts.password
              and parts.path in ('', '/') and not parts.query and not parts.fragment,
-             'production acceptance requires a clean HTTPS origin')
+             'Для рабочей приёмки требуется корректный исходный HTTPS-адрес')
         self.origin = origin.rstrip('/')
         self.opener = build_opener(ProxyHandler({}), NoRedirect(), HTTPSHandler(context=ssl.create_default_context()))
 
     def request(self, method, route, *, token='', body=None, content_type='application/json', expected=(200,), limit=5 << 20):
         need(route.startswith('/api/v1/') and not route.startswith('//') and
              not any(ch in route for ch in ('\\', '#', '\r', '\n')),
-             'unsafe API path')
-        need(method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'), 'invalid HTTP method')
+             'Небезопасный путь API')
+        need(method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'), 'Некорректный HTTP-метод')
         headers = {'Accept': 'application/json'}
         if token:
             headers['Authorization'] = 'Bearer ' + token
@@ -141,12 +141,12 @@ class API:
 
     def json(self, method, route, **kwargs):
         value = parse_json(self.request(method, route, **kwargs))
-        need(isinstance(value, dict), 'Backend returned a non-object JSON document')
+        need(isinstance(value, dict), 'Backend вернул JSON-документ, который не является объектом')
         return value
 
 
 def multipart_png(kind, content, revision):
-    need(kind in ('skin', 'cape') and len(content) <= 4 << 20, 'invalid PNG upload size or kind')
+    need(kind in ('skin', 'cape') and len(content) <= 4 << 20, 'Некорректный размер или тип загружаемого PNG')
     boundary = 'nl-0526-' + secrets.token_hex(18)
     body = bytearray()
     for name, value in [('expectedRevision', str(revision)), ('model', 'classic'), ('visibility', 'public')]:
@@ -169,9 +169,9 @@ def check_png(content, kind):
 def upload_texture(api: API, token: str, kind: str, png: bytes):
     check_png(png, kind)
     listing = api.json('GET', '/api/v1/me/textures', token=token).get('data', {})
-    need(isinstance(listing.get('profileUuid'), str), 'no canonical local Minecraft profile')
+    need(isinstance(listing.get('profileUuid'), str), 'Отсутствует канонический локальный профиль Minecraft')
     existing = [x for x in listing.get('items', []) if x.get('kind') == kind and not x.get('projectId')]
-    need(len(existing) <= 1, 'ambiguous local texture assignment')
+    need(len(existing) <= 1, 'Неоднозначное назначение локальной текстуры')
     revision = existing[0]['revision'] if existing else 0
     body, content_type = multipart_png(kind, png, revision)
     updated = api.json('POST', f'/api/v1/me/textures/{kind}/upload', body=body,
@@ -194,15 +194,15 @@ def native(binary: Path, args, *, timeout=660):
     completed = subprocess.run([str(binary), *map(str, args)], timeout=timeout,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     need(completed.returncode == 0 and len(completed.stdout) <= 2 << 20,
-         'native Runtime execution did not complete successfully')
+         'Выполнение нативного Runtime завершилось ошибкой')
     return parse_json(completed.stdout)
 
 
 def assert_native_ready(result):
     need(isinstance(result, dict) and result.get('status') == 'ready',
-         'native Runtime did not verify/synchronize the signed game files')
+         'Нативный Runtime не проверил или не синхронизировал подписанные игровые файлы')
     for item in result.get('files', []):
-        need(item.get('status') == 'ok', 'selected optional game file is absent or corrupt')
+        need(item.get('status') == 'ok', 'Выбранный дополнительный игровой файл отсутствует или повреждён')
 
 
 def selected_catalog_files(catalog, component_id):
@@ -216,15 +216,15 @@ def selected_catalog_files(catalog, component_id):
 def confirm_local_files(manifest, root, paths, should_exist):
     signed = {f['path']: f for f in manifest['files']}
     for rel in paths:
-        need(rel in signed and HEX.fullmatch(signed[rel]['sha256']), 'unsigned optional mod file')
+        need(rel in signed and HEX.fullmatch(signed[rel]['sha256']), 'Дополнительный файл мода не имеет подписи')
         path = root.joinpath(*rel.split('/'))
         need(not path.is_symlink() and root.resolve() in path.resolve().parents,
-             'unsafe mod materialization path')
+             'Небезопасный путь установки мода')
         if should_exist:
             need(path.is_file() and sha_file(path) == signed[rel]['sha256'],
-                 'selected signed optional mod was not installed with original bytes')
+                 'Выбранный подписанный мод установлен не с исходными данными')
         else:
-            need(not path.exists(), 'unselected optional mod was installed')
+            need(not path.exists(), 'Установлен невыбранный дополнительный мод')
 
 
 def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server, report):
@@ -247,9 +247,9 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
                 launched = True
                 deadline = time.monotonic() + 150
                 while time.monotonic() < deadline:
-                    need(server.process.poll() is None, 'matching Minecraft server died')
+                    need(server.process.poll() is None, 'Соответствующий сервер Minecraft завершил работу')
                     log = server.log_text()
-                    need(not CRASH.search(log), 'Minecraft server crash')
+                    need(not CRASH.search(log), 'Сбой сервера Minecraft')
                     if username in JOIN.findall(log) and player_online(server.rcon.query('list'), username):
                         before = parse_gametime(server.rcon.query('time query gametime'))
                         time.sleep(1.2)
@@ -260,17 +260,17 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
                     if proc.poll() is not None:
                         break
                     time.sleep(.5)
-                need(observed, 'no server-log + online-RCON + advancing-ticks game join')
+                need(observed, 'Не подтверждено подключение к игре по журналу сервера, активному RCON и изменению игровых тиков')
                 try:
                     proc.wait(timeout=150)
                 except subprocess.TimeoutExpired:
                     proc.terminate()
                     proc.wait(timeout=20)
                     raise Blocked('Запуск клиента превысил срок ожидания нативного Runtime')
-                need(proc.returncode == 0, 'native game launcher failed after join')
+                need(proc.returncode == 0, 'Нативный игровой лаунчер завершился с ошибкой после подключения')
             response = parse_json((Path(temp) / 'client-result.json').read_bytes())
             need(isinstance(response, dict) and response.get('success') is True,
-                 'native Runtime did not confirm successful real client launch')
+                 'Нативный Runtime не подтвердил успешный запуск реального клиента')
         # Запросите настоящее сохранение мира и остановку, затем проверьте успешное завершение JVM.
         try:
             server.rcon.query('save-all flush')
@@ -280,7 +280,7 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
             server.rcon.query('stop')
         except (OSError, ValueError, RuntimeError):
             pass  # сокет может закрыться, потому что реальный сервер останавливается
-        need(server.process.wait(timeout=40) == 0, 'Minecraft server did not stop cleanly')
+        need(server.process.wait(timeout=40) == 0, 'Сервер Minecraft завершился некорректно')
         report['serverArtifactSha256'] = server.artifact_sha
         report['observedOnlineTicks'] = True
     finally:
@@ -294,26 +294,26 @@ def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server,
         server.close()
         if observed and server.log_file.is_file():
             report['serverLogSha256'] = sha_file(server.log_file, limit=32 << 20)
-    need(observed, 'no live game join')
+    need(observed, 'Реальное подключение к игре не подтверждено')
 
 
 def execute(args, report):
-    need(args.destructive_isolated_run, 'explicit permission to mutate isolated project required')
-    need(HEX.fullmatch(args.runtime_sha256) and HEX.fullmatch(args.cli_sha256), 'independent executable SHA-256 pins required')
+    need(args.destructive_isolated_run, 'Требуется явное разрешение на изменение изолированного проекта')
+    need(HEX.fullmatch(args.runtime_sha256) and HEX.fullmatch(args.cli_sha256), 'Требуются независимые закреплённые суммы SHA-256 исполняемых файлов')
     need(sha_file(args.runtime) == args.runtime_sha256 and sha_file(args.cli) == args.cli_sha256,
-         'native Runtime/CLI does not match externally pinned release payload')
-    need(args.java.is_file() and not args.java.is_symlink(), 'real installed Java executable required')
+         'Нативный Runtime/CLI не соответствует внешне закреплённому содержимому выпуска')
+    need(args.java.is_file() and not args.java.is_symlink(), 'Требуется реально установленный исполняемый файл Java')
     need(all(ID.fullmatch(x) for x in (args.project, args.profile, args.channel, args.package_id, args.component)),
-         'invalid exact project/profile/channel/package/component identity')
+         'Некорректные точные идентификаторы проекта, профиля, канала, пакета или компонента')
     need(args.selected_preset != args.excluded_preset and
          all(ID.fullmatch(x) for x in (args.selected_preset, args.excluded_preset)),
-         'two different signed presets required')
-    need(HEX.fullmatch(args.pinned_manifest_public_key), 'independently pinned signing key required')
+         'Требуются два различных подписанных набора компонентов')
+    need(HEX.fullmatch(args.pinned_manifest_public_key), 'Требуется независимо закреплённый ключ подписи')
     secrets_doc = parse_json(private_file(args.secrets.absolute()))
     need(isinstance(secrets_doc, dict) and all(secrets_doc.get(k) for k in
-         ('origin', 'playerEmail', 'playerPassword')), 'player login secrets unavailable')
+         ('origin', 'playerEmail', 'playerPassword')), 'Недоступны секреты входа игрока')
     operator_token = private_file(args.operator_token.absolute(), limit=16384).decode().strip()
-    need(len(operator_token) > 24 and '\n' not in operator_token, 'recent operator MFA session unavailable')
+    need(len(operator_token) > 24 and '\n' not in operator_token, 'Недоступна недавняя MFA-сессия оператора')
     api = API(secrets_doc['origin'])
     report['originHost'] = urlsplit(secrets_doc['origin']).hostname
     report['sourceCommit'] = os.environ.get('GITHUB_SHA', '')
@@ -322,31 +322,31 @@ def execute(args, report):
     need(package.get('packageId') == args.package_id and package.get('projectId') == args.project
          and package.get('profileId') == args.profile and package.get('channel') == args.channel
          and package.get('status') == 'draft' and package.get('manifestSchemaVersion') == '3.0',
-         'test package is not a fresh, exact, schema-v3 draft')
+         'Тестовый пакет не является новым точным черновиком схемы v3')
     catalog = api.json('GET', package_route + '/component-catalog', token=operator_token).get('data', {}).get('catalog')
     need(isinstance(catalog, dict) and catalog.get('schemaVersion') == '5.0' and
          all(any(p.get('id') == name for p in catalog.get('presets', [])) for name in
-             (args.selected_preset, args.excluded_preset)), 'signed component catalog and presets unavailable')
+             (args.selected_preset, args.excluded_preset)), 'Недоступны подписанный каталог компонентов и наборы компонентов')
     paths = selected_catalog_files(catalog, args.component)
     selected_def = next(p for p in catalog['presets'] if p['id'] == args.selected_preset)
     excluded_def = next(p for p in catalog['presets'] if p['id'] == args.excluded_preset)
     need(args.component in selected_def['components'] and args.component not in excluded_def['components'],
-         'test presets do not positively toggle the selected mod')
+         'Тестовые наборы компонентов не обеспечивают включение и отключение выбранного мода')
     validation = api.json('POST', package_route + '/validate', token=operator_token).get('data', {})
     need(validation.get('status') == 'valid' and len(validation.get('checks', [])) > 0 and
-         all(x.get('status') == 'ok' for x in validation['checks']), 'storage/package prepublication validation failed')
+         all(x.get('status') == 'ok' for x in validation['checks']), 'Проверка хранилища и пакета перед публикацией не пройдена')
     report['checks'].append('real_draft_storage_and_catalog_validation')
     signed = api.json('POST', package_route + '/sign', token=operator_token).get('data', {})
     need(signed.get('signatureStatus') == 'verified-ed25519' and signed.get('status') == 'signed' and
-         signed.get('publicKey') == args.pinned_manifest_public_key, 'unexpected package Ed25519 signing identity')
+         signed.get('publicKey') == args.pinned_manifest_public_key, 'Неожиданный идентификатор подписи пакета Ed25519')
     staged = api.json('POST', package_route + '/stage', token=operator_token).get('data', {})
-    need(staged.get('status') == 'staged', 'real package stage failed')
+    need(staged.get('status') == 'staged', 'Реальная подготовка пакета завершилась ошибкой')
     integrity = api.json('POST', package_route + '/integrity-check', token=operator_token).get('data', {})
     need(integrity.get('status') == 'integrity-passed' and
          integrity.get('result', {}).get('result') == 'passed' and
          integrity.get('result', {}).get('filesVerified') is True and
          integrity.get('result', {}).get('signatureVerified') is True,
-         'package integrity check did not verify signed files and signature')
+         'Проверка целостности пакета не подтвердила подписанные файлы и подпись')
     report['checks'].append('real_signature_stage_and_integrity')
     # Существующая политика готовности авторитетна: никакой поддельной или неявной проверки.
     api.json('POST', package_route + '/publish', token=operator_token, expected=(200, 201, 202))
@@ -355,9 +355,9 @@ def execute(args, report):
         current = api.json('GET', package_route, token=operator_token).get('data', {})
         if current.get('status') == 'published':
             break
-        need(current.get('status') not in ('failed', 'rejected', 'cancelled'), 'durable publication failed')
+        need(current.get('status') not in ('failed', 'rejected', 'cancelled'), 'Надёжная публикация завершилась ошибкой')
         time.sleep(3)
-    need(current.get('status') == 'published', 'durable channel publication not completed')
+    need(current.get('status') == 'published', 'Надёжная публикация канала не завершена')
     uri = (f'/api/v1/projects/{quote(args.project)}/profiles/{quote(args.profile)}/manifest'
            f'?channel={quote(args.channel)}')
     raw = api.request('GET', uri, limit=4 << 20)
@@ -373,7 +373,7 @@ def execute(args, report):
     player = api.json('POST', '/api/v1/admin/login', body={
         'email': secrets_doc['playerEmail'], 'password': secrets_doc['playerPassword']})
     token = player.get('token')
-    need(isinstance(token, str) and len(token) >= 20, 'real player login failed')
+    need(isinstance(token, str) and len(token) >= 20, 'Не удалось выполнить вход реального игрока')
     for kind, local in [('skin', args.skin), ('cape', args.cape)]:
         texture = upload_texture(api, token, kind, local.read_bytes())
         report['textures'].append(texture)
@@ -396,7 +396,7 @@ def execute(args, report):
                                            args.pinned_manifest_public_key, '--root', root, '--preset', preset])
             assert_native_ready(result)
             need(marker.read_bytes() == b'neverlauncher user-owned configuration 0.52.6\n',
-                 'download erased or modified user-owned game configuration')
+                 'Загрузка удалила или изменила пользовательскую конфигурацию игры')
             confirm_local_files(manifest, root, paths, select)
             report['checks'].append(('selected' if select else 'unselected') + '_mods_native_sync_and_verify')
         # Выбранный JAR должен быть реально восстанавливаемым, а не только указанным в JSON.
@@ -406,7 +406,7 @@ def execute(args, report):
         failed = native(args.runtime, ['verify', '--manifest', mf, '--pinned-public-key',
                                        args.pinned_manifest_public_key, '--root', root,
                                        '--preset', args.selected_preset])
-        need(failed.get('status') == 'invalid', 'missing selected mod was wrongly accepted by native verify')
+        need(failed.get('status') == 'invalid', 'Нативная проверка ошибочно приняла отсутствие выбранного мода')
         recovered = native(args.runtime, ['sync-local', '--manifest', mf, '--pinned-public-key',
                                          args.pinned_manifest_public_key, '--root', root,
                                          '--preset', args.selected_preset])
@@ -419,11 +419,11 @@ def execute(args, report):
         from staged_matching_0344 import MatchingServer
         game = manifest.get('minecraft', {})
         mc, loader, loader_version = game.get('version'), game.get('loader'), game.get('loaderVersion', '')
-        need(mc and loader in ('vanilla', 'fabric', 'quilt', 'forge', 'neoforge'), 'manifest lacks real Minecraft identity')
+        need(mc and loader in ('vanilla', 'fabric', 'quilt', 'forge', 'neoforge'), 'В манифесте отсутствует реальный идентификатор Minecraft')
         bundle = args.server_bundle
         if loader != 'vanilla':
             need(bundle and args.server_bundle_sha256 and HEX.fullmatch(args.server_bundle_sha256),
-                 'modded server requires independent SHA-256 pinned real server bundle')
+                 'Для сервера с модами требуется реальный серверный пакет с независимо закреплённой суммой SHA-256')
         if bundle:
             need(sha_file(bundle, limit=3 << 30) == args.server_bundle_sha256,
                  'matching server distribution differs from operator pin')
@@ -459,13 +459,13 @@ def main(argv=None):
     try:
         execute(args, report)
         need(len(report['checks']) == 9 and len(report['textures']) == 2,
-             'incomplete real modpack/texture/publication/game E2E')
+             'Реальные E2E-проверки модпака, текстуры, публикации и игры не завершены')
         report['status'] = 'passed'
         return 0
     except (Blocked, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired,
             subprocess.SubprocessError, RuntimeError) as err:
         report['failureType'] = type(err).__name__
-        report['failure'] = 'live acceptance incomplete; inspect private runner diagnostics'
+        report['failure'] = 'Реальная приёмка не завершена; изучите закрытую диагностику раннера'
         print('BLOCKED 0.52.6: ' + type(err).__name__, file=sys.stderr)
         return 1
     finally:

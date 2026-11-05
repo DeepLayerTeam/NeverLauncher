@@ -52,10 +52,10 @@ def exec_checked(command: list[str], *, timeout=1800):
 @contextmanager
 def lock(directory: Path):
     directory = directory.resolve(strict=True)
-    require(directory.is_dir() and not directory.is_symlink(), 'lock directory must exist')
+    require(directory.is_dir() and not directory.is_symlink(), 'Каталог блокировки должен существовать')
     fd = os.open(directory / UPGRADE_LOCK, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
     try:
-        require(stat.S_ISREG(os.fstat(fd).st_mode) and os.fstat(fd).st_nlink == 1, 'unsafe upgrade lock')
+        require(stat.S_ISREG(os.fstat(fd).st_mode) and os.fstat(fd).st_nlink == 1, 'Небезопасная блокировка обновления')
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -68,25 +68,25 @@ def lock(directory: Path):
 def schema_check_sqlite(root: Path, *, target_version: int | None = None):
     paths = [root / 'db/http.sqlite', root / 'db/coordinator.sqlite']
     for i, path in enumerate(paths):
-        require(path.is_file() and not path.is_symlink(), 'SQLite database absent or unsafe')
+        require(path.is_file() and not path.is_symlink(), 'База SQLite отсутствует или небезопасна')
         connection = sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=10)
         try:
-            require(connection.execute('PRAGMA integrity_check').fetchone() == ('ok',), 'SQLite integrity failed')
-            require(connection.execute('PRAGMA foreign_key_check').fetchone() is None, 'SQLite foreign key check failed')
+            require(connection.execute('PRAGMA integrity_check').fetchone() == ('ok',), 'Нарушена целостность SQLite')
+            require(connection.execute('PRAGMA foreign_key_check').fetchone() is None, 'Ошибка проверки внешних ключей SQLite')
             if i == 0:
                 version = connection.execute('PRAGMA user_version').fetchone()[0]
-                require(version > 0, 'SQLite core schema is missing')
+                require(version > 0, 'Отсутствует основная схема SQLite')
                 if target_version is not None:
                     require(version == target_version, f'SQLite schema {version} != expected {target_version}')
             else:
-                require(connection.execute("SELECT value FROM coord_meta WHERE key='version'").fetchone() == (1,), 'SQLite coordinator schema incompatible')
+                require(connection.execute("SELECT value FROM coord_meta WHERE key='version'").fetchone() == (1,), 'Схема координатора SQLite несовместима')
         finally:
             connection.close()
 
 
 def wait_loopback_ready(url: str, *, timeout: int = 90, expected_version: str | None = None):
     require(re.fullmatch(r'http://127\.0\.0\.1:[0-9]{2,5}/ready', url) is not None,
-            'SQLite health probe must be loopback HTTP /ready')
+            'Проверка работоспособности SQLite должна использовать локальный HTTP /ready')
     opener = build_opener(ProxyHandler({}))
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -130,15 +130,15 @@ def switch_native_service(binary: Path, service: str, *, unit_root: Path = Path(
     Старый ExecStart восстанавливается удалением этого drop-in после ошибки. Сбой после записи
     оставляет старую службу остановленной, а не создаёт ложное свидетельство успеха.
     """
-    require(service == 'launcher.service', 'only managed launcher.service is eligible')
-    require(re.fullmatch(r'/[A-Za-z0-9_./-]+', str(binary)) is not None, 'unsupported binary path')
+    require(service == 'launcher.service', 'Поддерживается только управляемая служба launcher.service')
+    require(re.fullmatch(r'/[A-Za-z0-9_./-]+', str(binary)) is not None, 'Неподдерживаемый путь исполняемого файла')
     path = unit_root / (service + '.d')
     if path.exists():
-        require(path.is_dir() and not path.is_symlink(), 'unsafe systemd drop-in directory')
+        require(path.is_dir() and not path.is_symlink(), 'Небезопасный каталог дополнительных настроек systemd')
     else:
         path.mkdir(mode=0o755)
     override = path / '20-database-upgrade-0457.conf'
-    require(not override.exists() and not override.is_symlink(), 'database upgrade override already exists')
+    require(not override.exists() and not override.is_symlink(), 'Переопределение обновления БД уже существует')
     fd = os.open(override, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
     with os.fdopen(fd, 'w') as writer:
         writer.write('[Service]\nExecStart=\nExecStart=' + str(binary) + '\n')
@@ -166,20 +166,20 @@ def service_active(service: str) -> bool:
 def upgrade_sqlite(root: Path, destination: Path, binary: Path, env: Path,
                    service: str, service_user: str, expect_schema: int, ready_url: str):
     import pwd
-    require(os.geteuid() == 0, 'SQLite upgrade requires root for systemctl and transient service')
-    require(service == 'launcher.service', 'only launcher.service is supported for managed upgrades')
-    require(re.fullmatch(r'[a-z_][a-z0-9_-]*', service_user) is not None, 'invalid service user')
+    require(os.geteuid() == 0, 'Для обновления SQLite через systemctl и временную службу требуются права root')
+    require(service == 'launcher.service', 'Для управляемых обновлений поддерживается только launcher.service')
+    require(re.fullmatch(r'[a-z_][a-z0-9_-]*', service_user) is not None, 'Некорректный пользователь службы')
     pwd.getpwnam(service_user)
-    require(root.is_dir() and not root.is_symlink(), 'existing minimal root required')
-    require(env == root / 'config/backend.env', 'minimal environment must be the managed installation environment')
-    require(binary.is_file() and not binary.is_symlink() and os.access(binary, os.X_OK), 'target backend executable missing')
-    require(binary.stat().st_uid == 0 and binary.stat().st_mode & 0o022 == 0, 'target binary must be root-owned and immutable to service user')
-    require(destination.is_absolute() and destination.parent.is_dir() and not destination.exists(), 'new backup path outside root required')
-    require(not destination.is_relative_to(root), 'backups must survive installation rollback')
+    require(root.is_dir() and not root.is_symlink(), 'Требуется существующий корневой каталог минимальной установки')
+    require(env == root / 'config/backend.env', 'Минимальное окружение должно соответствовать окружению управляемой установки')
+    require(binary.is_file() and not binary.is_symlink() and os.access(binary, os.X_OK), 'Отсутствует исполняемый файл целевого Backend')
+    require(binary.stat().st_uid == 0 and binary.stat().st_mode & 0o022 == 0, 'Целевой исполняемый файл должен принадлежать root и быть недоступен для изменения пользователю службы')
+    require(destination.is_absolute() and destination.parent.is_dir() and not destination.exists(), 'Требуется новый путь резервной копии вне корневого каталога')
+    require(not destination.is_relative_to(root), 'Резервные копии должны сохраняться при откате установки')
     uid = pwd.getpwnam(service_user).pw_uid
     for folder in (root.parent, destination.parent):
         require(folder.stat().st_uid == uid and folder.stat().st_mode & 0o077 == 0,
-                'backup and install parents must be private and owned by service user')
+                'Родительские каталоги резервной копии и установки должны быть закрыты и принадлежать пользователю службы')
     originally_active = service_active(service)
     source_version = wait_loopback_ready(ready_url, timeout=10) if originally_active else None
     if originally_active:
@@ -207,7 +207,7 @@ def upgrade_sqlite(root: Path, destination: Path, binary: Path, env: Path,
                 revert_native_service(override)
                 override = None
                 failed = root.with_name(root.name + '.failed-upgrade-' + str(os.getpid()))
-                require(not failed.exists(), 'failed upgrade directory already exists')
+                require(not failed.exists(), 'Каталог предыдущего неудачного обновления уже существует')
                 root.rename(failed)
                 try:
                     exec_checked(['runuser', '-u', service_user, '--', sys.executable,
@@ -228,16 +228,16 @@ def upgrade_sqlite(root: Path, destination: Path, binary: Path, env: Path,
 
 
 def env_values(path: Path):
-    require(path.is_file() and not path.is_symlink(), 'Compose environment file must be real')
+    require(path.is_file() and not path.is_symlink(), 'Файл окружения Compose должен быть обычным файлом')
     values = {}
     for line in path.read_text().splitlines():
         item = line.strip()
         if not item or item.startswith('#'):
             continue
-        require('=' in item, 'invalid Compose environment record')
+        require('=' in item, 'Некорректная запись окружения Compose')
         key, value = item.split('=', 1)
         require(re.fullmatch(r'[A-Z][A-Z0-9_]*', key) is not None and key not in values,
-                'invalid/duplicate Compose environment key')
+                'Некорректный или повторяющийся ключ окружения Compose')
         values[key] = value.strip().strip('"').strip("'")
     return values
 
@@ -245,8 +245,8 @@ def env_values(path: Path):
 def validate_source_target(source: Path, target: Path, network_ha: bool):
     before, after = env_values(source), env_values(target)
     require(before.get('LAUNCHER_IMAGE_TAG') and after.get('LAUNCHER_IMAGE_TAG') == TARGET,
-            'source image and target 0.45.7 image required')
-    require(before['LAUNCHER_IMAGE_TAG'] != TARGET, 'source must be an earlier release')
+            'Требуются исходный образ и целевой образ версии 0.45.7')
+    require(before['LAUNCHER_IMAGE_TAG'] != TARGET, 'Исходная версия должна быть более ранним выпуском')
     require(after.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false',
             'target env must persist LAUNCHER_DATABASE_AUTO_MIGRATE=false for all API replicas')
     # Рассматривайте неизменяемые секреты и топологию хранилища как единую область
@@ -258,7 +258,7 @@ def validate_source_target(source: Path, target: Path, network_ha: bool):
         if before.get(name) != after.get(name):
             raise UpgradeError(f'Обновление не может изменить {name}; выполните ротацию отдельно')
     if network_ha:
-        require(before.get('LAUNCHER_STORAGE_S3_BUCKET'), 'HA upgrade requires configured S3')
+        require(before.get('LAUNCHER_STORAGE_S3_BUCKET'), 'Для обновления высокой доступности требуется настроенный S3')
     return before['LAUNCHER_IMAGE_TAG']
 
 
@@ -323,21 +323,21 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
                      s3_bucket: str | None = None, s3_endpoint: str | None = None):
     dr.authorize_project(project, confirm, production=production, approved=approved)
     source_version = validate_source_target(source, target, network_ha)
-    require(snapshot_dir.is_absolute() and not snapshot_dir.exists(), 'snapshot must be new, absolute path')
-    require(snapshot_dir.parent.is_dir() and not snapshot_dir.parent.is_symlink(), 'snapshot parent unsafe')
+    require(snapshot_dir.is_absolute() and not snapshot_dir.exists(), 'Путь снимка должен быть новым и абсолютным')
+    require(snapshot_dir.parent.is_dir() and not snapshot_dir.parent.is_symlink(), 'Небезопасный родительский каталог снимка')
     if network_ha:
         raise UpgradeError('Обновление схемы Network-HA требует согласованной работы мира и сервера; используйте регламент аварийного восстановления, а не стандартную процедуру обновления')
     # Блокировка должна быть независимой от самого снимка и сохраняться в течение всего DDL и
     # восстановления.
     with lock(snapshot_dir.parent):
         states = dr.compose_states(project, source)
-        require(states.get('postgres') == 'running', 'source PostgreSQL must be running')
+        require(states.get('postgres') == 'running', 'Исходный PostgreSQL должен быть запущен')
         for service in ROLES:
             require(states.get(service, 'exited') not in ('paused', 'restarting'), 'unhealthy writer: ' + service)
         original = [s for s in ('nginx', 'admin', 'api', 'api-b', 'worker-a', 'worker-b') if states.get(s) == 'running']
-        require('api' in original, 'source API must be active before upgrade')
+        require('api' in original, 'Перед обновлением исходный API должен быть активен')
         require(not any(states.get(name) == 'running' for name in ('worker-a','worker-b','api-b')),
-                'Standard upgrade refuses unexpected HA workers or API replicas')
+                'Стандартное обновление запрещено при неожиданных исполнителях высокой доступности или репликах API')
         dr.check_restored_backend(project, source, version=source_version, storage='local')
         # Соберите настоящие целевые бинарники ДО простоя; одноразовая миграция
         # никогда не должна незаметно возвращаться к старому образу API.

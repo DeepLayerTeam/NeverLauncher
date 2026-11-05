@@ -95,7 +95,7 @@ class CandidateTests(unittest.TestCase):
 
     def test_source_not_clean_fails_closed(self):
         with mock.patch.object(m,'git',side_effect=['a'*40,' M VERSION']):
-            with self.assertRaisesRegex(m.Blocked,'dirty'):
+            with self.assertRaisesRegex(m.Blocked,'незакоммиченные изменения'):
                 m.source_identity(COMMIT)
 
     def test_release_signed_freeze_cannot_be_reused_after_byte_change(self):
@@ -126,14 +126,14 @@ class CandidateTests(unittest.TestCase):
             base={'schema':m.ISSUES,'version':m.VERSION,'commit':COMMIT,
                   'scope':'all-open-release-defects','issues':[issue]}
             doc,sig=seal(root,'issues',base,private,m.ISSUE_DOMAIN)
-            with self.assertRaisesRegex(m.Blocked,'blocking defect'):
+            with self.assertRaisesRegex(m.Blocked,'Блокирующий дефект'):
                 m.closed_defects(doc,sig,pub,pin,COMMIT)
             issue['status']='closed'
             doc,sig=seal(root,'issues',base,private,m.ISSUE_DOMAIN)
             self.assertEqual(m.closed_defects(doc,sig,pub,pin,COMMIT)['criticalClosed'],1)
             issue['regression']='echo green'
             doc,sig=seal(root,'issues',base,private,m.ISSUE_DOMAIN)
-            with self.assertRaisesRegex(m.Blocked,'real mandatory regression'):
+            with self.assertRaisesRegex(m.Blocked,'обязательной реальной регрессионной'):
                 m.closed_defects(doc,sig,pub,pin,COMMIT)
 
     def test_modified_defect_export_cannot_reuse_signature(self):
@@ -173,7 +173,7 @@ class CandidateTests(unittest.TestCase):
                      mock.patch.object(m,'run_regressions',return_value=[{'exit':0}]),\
                      mock.patch.object(m,'full_args',return_value=SimpleNamespace(project=PROJECT,index_sha=pin,source_index=index)),\
                      mock.patch.object(m.sweep,'verify_full',side_effect=[{'status':'BLOCKED'}]):
-                    with self.assertRaisesRegex(m.Blocked,'not verified'):
+                    with self.assertRaisesRegex(m.Blocked,'не проверил'):
                         m.rehearse(freeze_path,freeze_sig,pub,keypin,COMMIT,PROJECT,
                             packages,index,pin,root,root,issue_pub,issue_pin,root,root)
 

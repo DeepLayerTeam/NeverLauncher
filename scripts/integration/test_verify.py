@@ -21,7 +21,7 @@ class EvidenceSafety(unittest.TestCase):
 
     def test_legacy_missing_release_is_rejected(self):
         self.put('manifest.json', {'target':'0.48.0','baselines':[{'version':'0.47.7','url':'https://example.test/old.zip','sha256':'a'*64,'binary':'launcher'}]})
-        with self.assertRaisesRegex(legacy.MatrixError, 'every supported original release'):
+        with self.assertRaisesRegex(legacy.MatrixError, 'Для каждой поддерживаемой исходной версии'):
             legacy.load_manifest(self.root / 'manifest.json')
 
     def test_legacy_duplicate_version_is_rejected(self):
@@ -35,7 +35,7 @@ class EvidenceSafety(unittest.TestCase):
         rows = [{'version':x,'sha256':'a'*64,'url':'https://example.test/old.zip','binary':'launcher'} for x in legacy.VERSIONS]
         rows[3]['url'] = 'http://example.test/old.zip'
         self.put('manifest.json', {'target':'0.48.0','baselines':rows})
-        with self.assertRaisesRegex(legacy.MatrixError, 'pinned HTTPS'):
+        with self.assertRaisesRegex(legacy.MatrixError, 'закреплённый HTTPS-адрес'):
             legacy.load_manifest(self.root/'manifest.json')
         rows[3]['url'] = 'https://example.test/old.zip'; rows[3]['sha256']='wrong'
         self.put('manifest.json', {'target':'0.48.0','baselines':rows})

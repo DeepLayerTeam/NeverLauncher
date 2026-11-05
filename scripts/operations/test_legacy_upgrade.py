@@ -68,7 +68,7 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(result['protectedEntries'], 5)
         self.assertEqual(json.loads((self.backups / 'run' / 'journal.json').read_text())['phase'], 'verified')
         self.assertEqual(invoked.call_args.kwargs['target_version'], u.TARGET)
-        with self.assertRaisesRegex(u.LegacyUpgradeError, 'already exists'):
+        with self.assertRaisesRegex(u.LegacyUpgradeError, 'уже существует'):
             u.execute(self.args())
 
     def test_failing_updater_keeps_recovery_journal_and_backup(self):
@@ -108,13 +108,13 @@ class UpgradeTests(unittest.TestCase):
 
     def test_bad_version_symlink_and_overlap_rejected_without_mutation(self):
         self.client_state('0.31.1')
-        with self.assertRaisesRegex(u.LegacyUpgradeError, 'unsupported'):
+        with self.assertRaisesRegex(u.LegacyUpgradeError, 'не поддерживается'):
             u.execute(self.args())
         self.assertFalse((self.backups / 'run').exists())
         (self.root / 'profiles' / 'fake').symlink_to('/tmp')
-        with self.assertRaisesRegex(u.LegacyUpgradeError, 'symlink'):
+        with self.assertRaisesRegex(u.LegacyUpgradeError, 'Символическая ссылка'):
             u.enumerate_data(self.root, ['profiles'])
-        with self.assertRaisesRegex(u.LegacyUpgradeError, 'overlapping'):
+        with self.assertRaisesRegex(u.LegacyUpgradeError, 'Пересекающиеся пути'):
             u.enumerate_data(self.root, ['settings', 'settings/preferences.json'])
 
     def test_backend_routes_to_verified_existing_standard_operator(self):
@@ -168,7 +168,7 @@ class UpgradeTests(unittest.TestCase):
                          plugin_type='paper', release_manifest=str(manifest),
                          manifest_sha256='0'*64, service='paper.service')
         with patch.object(u.os,'geteuid',return_value=0), patch.object(u.native,'run') as run:
-            with self.assertRaisesRegex(u.LegacyUpgradeError,'manifest hash mismatch'):
+            with self.assertRaisesRegex(u.LegacyUpgradeError,'Контрольная сумма манифеста выпуска не совпадает'):
                 u.execute(args)
             run.assert_not_called()
         self.assertEqual(u.jar_metadata_version(old),'0.47.5')

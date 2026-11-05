@@ -41,13 +41,13 @@ class OwnerAdminReal0523Tests(unittest.TestCase):
             p = Path(t) / 'password'
             p.write_text('test-password-not-real')
             p.chmod(0o644)
-            with self.assertRaisesRegex(mod.Blocked, 'unsafe'):
+            with self.assertRaisesRegex(mod.Blocked, 'Небезопасные'):
                 mod.private_bytes(p)
             p.chmod(0o600)
             self.assertEqual(mod.private_bytes(p), b'test-password-not-real')
             other = Path(t) / 'alias'
             other.symlink_to(p)
-            with self.assertRaisesRegex(mod.Blocked, 'regular path'):
+            with self.assertRaisesRegex(mod.Blocked, 'обычному файлу'):
                 mod.private_bytes(other)
 
     def test_user_data_marker_mutation_is_detectable(self):
@@ -87,7 +87,7 @@ class OwnerAdminReal0523Tests(unittest.TestCase):
         class Fake:
             def request(self, *args, **kwargs):
                 return {'token': 'abc', 'user': {'email': 'real@example.test'}}
-        with self.assertRaisesRegex(mod.Blocked, 'login'):
+        with self.assertRaisesRegex(mod.Blocked, 'входе администратора'):
             mod.login(Fake(), 'real@example.test', 'not-real')
 
     def test_full_runner_missing_preflight_blocks_without_docker(self):
@@ -123,11 +123,11 @@ class OwnerAdminReal0523Tests(unittest.TestCase):
             self.assertIn(str(mod.ROOT/'deploy/production/docker-compose.owner-e2e-0523.yml'), args)
             self.assertIn('nl0523abcdefgh', args)
             env.write_text(env.read_text().replace('nl0523abcdefgh', 'launcher'))
-            with self.assertRaisesRegex(RuntimeError, 'isolated'):
+            with self.assertRaisesRegex(RuntimeError, 'изолированном'):
                 mod.DEPLOY.compose_args(env, 'standard')
             env.write_text(env.read_text().replace('launcher\n', 'nl0523abcdefgh\n'))
             (root/'token').chmod(0o644)
-            with self.assertRaisesRegex(RuntimeError, 'permissions'):
+            with self.assertRaisesRegex(RuntimeError, 'права доступа'):
                 mod.DEPLOY.compose_args(env, 'standard')
 
     def test_game_console_must_receive_real_agent_ack(self):
@@ -140,7 +140,7 @@ class OwnerAdminReal0523Tests(unittest.TestCase):
                                      'idempotentReplay': False}}
                 return {'data': {'command': {'status': 'rejected'}}}
         api = RejectedGame()
-        with self.assertRaisesRegex(mod.Blocked, 'agent command failed'):
+        with self.assertRaisesRegex(mod.Blocked, 'Команда игрового агента'):
             mod.real_game_command(api, 'real-paper', 'auth-token')
         self.assertEqual(api.calls, 2)
 
