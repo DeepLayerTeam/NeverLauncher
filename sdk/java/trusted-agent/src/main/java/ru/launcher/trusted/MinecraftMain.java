@@ -9,7 +9,7 @@ public final class MinecraftMain {
     private MinecraftMain() { }
     public static void main(String[] args) throws Throwable {
         String entry = Agent.mainClass();
-        if (entry.equals(MinecraftMain.class.getName())) throw new IllegalStateException("recursive Minecraft entrypoint");
+        if (entry.equals(MinecraftMain.class.getName())) throw new IllegalStateException("Обнаружен рекурсивный вызов точки входа Minecraft");
         Throwable failure = null;
         try {
             Agent.beforeMain(args);

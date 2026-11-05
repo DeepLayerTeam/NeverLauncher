@@ -13,7 +13,7 @@ import (
 func decodeSensitiveRequest0300(w http.ResponseWriter, r *http.Request, destination any) bool {
 	if err := authrequest.Decode(r.Body, destination); err != nil {
 		if errors.Is(err, authrequest.ErrTooLarge) {
-			writeError(w, http.StatusRequestEntityTooLarge, "authentication/protection request exceeds 16 KiB")
+			writeError(w, http.StatusRequestEntityTooLarge, "Запрос авторизации или защиты превышает 16 КиБ")
 		} else {
 			writeError(w, http.StatusBadRequest, "некорректный JSON")
 		}

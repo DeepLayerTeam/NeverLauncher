@@ -25,7 +25,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 	core := federation.New(repo)
 	local := localAuthConnector112{repo: repo}
 	if report := conformance.Run(ctx, local); !report.Passed {
-		return nil, fmt.Errorf("local connector failed SDK conformance: %+v", report.Checks)
+		return nil, fmt.Errorf("Локальный коннектор не соответствует требованиям SDK: %+v", report.Checks)
 	}
 	if err := core.Register(local); err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, normalized.Provisioning.Mode, normalized.Provisioning.DefaultRole); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("SQL connector registration: %w", err)
+			return nil, fmt.Errorf("Ошибка регистрации SQL-коннектора: %w", err)
 		}
 	}
 
@@ -71,7 +71,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		}
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = core.Close()
-			return nil, fmt.Errorf("FileAuth connector registration: %w", err)
+			return nil, fmt.Errorf("Ошибка регистрации коннектора FileAuth: %w", err)
 		}
 	}
 
@@ -89,7 +89,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("HTTP connector registration: %w", err)
+			return nil, fmt.Errorf("Ошибка регистрации HTTP-коннектора: %w", err)
 		}
 	}
 
@@ -107,7 +107,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("OIDC connector registration: %w", err)
+			return nil, fmt.Errorf("Ошибка регистрации OIDC-коннектора: %w", err)
 		}
 	}
 
@@ -125,7 +125,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("Microsoft connector registration: %w", err)
+			return nil, fmt.Errorf("Ошибка регистрации Microsoft-коннектора: %w", err)
 		}
 	}
 	routing, err := federation.LoadRoutingConfig(cfg.AuthRoutingJSON, cfg.AuthRoutingFile)
@@ -146,7 +146,7 @@ func registerFederatedConnector(ctx context.Context, core *federation.Core, conn
 }, provisioningMode, defaultRole string) error {
 	report := conformance.Run(ctx, connector)
 	if !report.Passed {
-		return fmt.Errorf("connector %q failed SDK conformance: %+v", report.ConnectorID, report.Checks)
+		return fmt.Errorf("Коннектор %q не соответствует требованиям SDK: %+v", report.ConnectorID, report.Checks)
 	}
 	policy := federation.ProviderPolicy{AutoProvision: provisioningMode == "jit", DefaultRole: defaultRole}
 	if mapper, ok := connector.(interface{ RoleMappings() map[string]string }); ok {

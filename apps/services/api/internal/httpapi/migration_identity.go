@@ -28,7 +28,7 @@ func (s Server) registerMigrationIdentityRoutes0334(mux *http.ServeMux) {
 func (s Server) identityStore0334(w http.ResponseWriter) (migrationIdentityStore0334, bool) {
 	v, ok := s.Repo.(migrationIdentityStore0334)
 	if !ok {
-		writeError(w, 503, "identity mapping requires PostgreSQL")
+		writeError(w, 503, "Для сопоставления учётных записей требуется PostgreSQL")
 		return nil, false
 	}
 	return v, true
@@ -75,25 +75,25 @@ func (s Server) migrationIdentityMap0334(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "identity mapping expects the same application/zip as inventory")
+		writeError(w, 415, "Для сопоставления учётных записей требуется тот же application/zip, что использовался для инвентаризации")
 		return
 	}
 	select {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "identity scanner busy")
+		writeError(w, 429, "Сканер учётных записей занят")
 		return
 	}
 	if r.ContentLength > saved.SourceBytes && r.ContentLength >= 0 {
-		writeError(w, 413, "source exceeds previously inventoried ZIP")
+		writeError(w, 413, "Размер источника превышает ранее учтённый ZIP")
 		return
 	}
 	// Промежуточное хранение и проверка используют общий ограниченный потоковый
 	// считыватель недоверенных ZIP.
 	src, size, digest, e := spoolIdentity0334(w, r)
 	if e != nil {
-		writeError(w, 413, "unable to read source identity ZIP")
+		writeError(w, 413, "Не удалось прочитать ZIP с учётными записями источника")
 		return
 	}
 	defer func() { src.Close(); _ = os.Remove(src.Name()) }()
@@ -103,7 +103,7 @@ func (s Server) migrationIdentityMap0334(w http.ResponseWriter, r *http.Request)
 	}
 	accounts, e := gi.Extract(r.Context(), src, size, saved)
 	if e != nil {
-		writeError(w, 422, "identity source parse failed: "+e.Error())
+		writeError(w, 422, "Не удалось разобрать источник учётных записей: "+e.Error())
 		return
 	}
 	out, e := store.SaveMigrationIdentities0334(r.Context(), id, digest, saved.ManifestSHA256, accounts)

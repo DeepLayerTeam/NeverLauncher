@@ -60,13 +60,13 @@ def main():
     if not __import__("re").fullmatch("[0-9a-f]{40}", args.commit):
         parser.error("Требуется: «exact Git commit SHA»")
     if (ROOT / "VERSION").read_text().strip() != "0.32.0":
-        parser.error("source VERSION must equal 0.32.0")
+        parser.error("VERSION исходников должна быть равна 0.32.0")
     if (ROOT / ".git").exists():
         current = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip()
         if current != args.commit:
-            parser.error("release commit is not checked-out HEAD")
+            parser.error("Коммит релиза отличается от HEAD рабочей копии")
         dirty = subprocess.check_output(
             ["git", "status", "--porcelain"], cwd=ROOT, text=True
         )

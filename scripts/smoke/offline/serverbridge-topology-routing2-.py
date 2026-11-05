@@ -74,13 +74,13 @@ for text, wants, label in [
 ]:
     for want in wants:
         if want not in text:
-            raise SystemExit(f"{label} missing {want!r}")
+            raise SystemExit(f"{label}: отсутствует {want!r}")
 for text, want, label in [
     (preflight, "serverbridge-topology-routing2-0196.py", "preflight"),
     (ci, "serverbridge-topology-routing2-0196.py", "CI"),
 ]:
     if want not in text:
-        raise SystemExit(f"{label} missing {want!r}")
+        raise SystemExit(f"{label}: отсутствует {want!r}")
 if any(x in client for x in ["ProcessBuilder(", "Runtime.getRuntime().exec"]):
     raise SystemExit("«routing/control client»: запрещено «execute OS shell»")
 print("ServerBridge 0.19.6 Topology & Routing 2 production gate: PASS")

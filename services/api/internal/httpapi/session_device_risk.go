@@ -11,8 +11,8 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-var errSessionRiskDenied0126 = errors.New("session risk policy denied request")
-var errSessionBindingChanged0432 = errors.New("device session binding changed during authenticated operation")
+var errSessionRiskDenied0126 = errors.New("Политика риска сеанса отклонила запрос")
+var errSessionBindingChanged0432 = errors.New("Привязка устройства к сеансу изменилась во время аутентифицированной операции")
 
 func sameDeviceBinding0432(current, expected authSessionRecord) bool {
 	return current.ID == expected.ID && current.UserID == expected.UserID &&

@@ -100,7 +100,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 	mapped, ids := make(map[string]bool), make(map[string]bool)
 	for _, d := range destinations {
 		if !available[d.ProfilePath] || mapped[d.ProfilePath] || d.ProfileID == "" || d.ProfileName == "" || d.Loader == "" || (d.Loader != "vanilla" && d.LoaderVersion == "") || d.Channel == "" || d.Version == "" || len(d.ProfileID) > 128 || len(d.ProfileName) > 120 || len(d.Channel) > 128 || len(d.Version) > 128 || len(d.Loader) > 24 || len(d.LoaderVersion) > 128 {
-			return out, errors.New("invalid, duplicated or unmapped source profile")
+			return out, errors.New("Исходный профиль некорректен, повторяется или не сопоставлен")
 		}
 		id := strings.ToLower(d.ProfileID)
 		if ids[id] {

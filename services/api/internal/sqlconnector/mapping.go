@@ -22,7 +22,7 @@ type MappedColumn struct {
 // Конфигурация должна поступать из Normalize после проверки идентификаторов.
 func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]MappedColumn, error) {
 	if db == nil {
-		return nil, errors.New("SQL mapping: database handle is nil")
+		return nil, errors.New("SQL-сопоставление: дескриптор БД отсутствует")
 	}
 	if err := validateTableIdentifier(cfg.Table); err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 	defer cancel()
 	tx, err := db.BeginTx(inspectCtx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("SQL schema inspection transaction: %w", err)
+		return nil, fmt.Errorf("Ошибка транзакции проверки схемы SQL: %w", err)
 	}
 	defer tx.Rollback()
 	// SQL без плейсхолдеров, с полностью проверенными идентификаторами: безопасен
@@ -74,7 +74,7 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 	types, err := rows.ColumnTypes()
 	if err != nil {
 		rows.Close()
-		return nil, fmt.Errorf("SQL column type inspection: %w", err)
+		return nil, fmt.Errorf("Ошибка проверки типа столбца SQL: %w", err)
 	}
 	if len(types) != len(selected) {
 		rows.Close()
@@ -88,19 +88,19 @@ func InspectMapping(ctx context.Context, db *sql.DB, cfg RuntimeConfig) ([]Mappe
 			name := selected[i].DatabaseType
 			if strings.Contains(name, "BINARY") || strings.Contains(name, "BLOB") || name == "BYTEA" || name == "VARBINARY" {
 				rows.Close()
-				return nil, fmt.Errorf("SQL %s column is binary; use an explicitly encoded text column", selected[i].Field)
+				return nil, fmt.Errorf("Столбец SQL %s двоичный; используйте текстовый столбец с явной кодировкой", selected[i].Field)
 			}
 		}
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return nil, fmt.Errorf("SQL schema inspection rows: %w", err)
+		return nil, fmt.Errorf("Ошибка чтения строк при проверке схемы SQL: %w", err)
 	}
 	if err := rows.Close(); err != nil {
-		return nil, fmt.Errorf("SQL schema inspection close: %w", err)
+		return nil, fmt.Errorf("Ошибка завершения проверки схемы SQL: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("SQL schema inspection commit: %w", err)
+		return nil, fmt.Errorf("Ошибка фиксации проверки схемы SQL: %w", err)
 	}
 	return selected, nil
 }

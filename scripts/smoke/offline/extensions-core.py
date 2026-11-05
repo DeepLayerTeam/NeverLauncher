@@ -13,7 +13,7 @@ def require(rel, tokens):
     text = read(rel)
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{rel}: missing {missing}")
+        raise SystemExit(f"{rel}: отсутствует {missing}")
 
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])

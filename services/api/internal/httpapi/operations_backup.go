@@ -419,7 +419,7 @@ func (s Server) restoreStorageObjectsSequential880(root string) (int, error) {
 		}
 		got, size, openErr := s.Storage.Open(projectID, versionID, relativePath)
 		if openErr != nil {
-			return fmt.Errorf("restored storage object not readable: %w", openErr)
+			return fmt.Errorf("Не удалось прочитать восстановленный объект хранилища: %w", openErr)
 		}
 		h := sha256.New()
 		actualSize, readErr := io.Copy(h, got)

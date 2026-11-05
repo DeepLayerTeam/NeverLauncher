@@ -180,10 +180,10 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 		return fmt.Sprintf("architecture %q is not in %v", env.Arch, v.Arch)
 	}
 	if v.JavaMajorMin > 0 && (env.JavaMajor == 0 || env.JavaMajor < v.JavaMajorMin) {
-		return fmt.Sprintf("Java major %d is below %d", env.JavaMajor, v.JavaMajorMin)
+		return fmt.Sprintf("Основная версия Java %d ниже %d", env.JavaMajor, v.JavaMajorMin)
 	}
 	if v.JavaMajorMax > 0 && (env.JavaMajor == 0 || env.JavaMajor > v.JavaMajorMax) {
-		return fmt.Sprintf("Java major %d exceeds %d", env.JavaMajor, v.JavaMajorMax)
+		return fmt.Sprintf("Основная версия Java %d превышает %d", env.JavaMajor, v.JavaMajorMax)
 	}
 	if len(v.MinecraftVersions) > 0 && !in0244(v.MinecraftVersions, env.MinecraftVersion) {
 		return fmt.Sprintf("Minecraft %q is not in %v", env.MinecraftVersion, v.MinecraftVersions)
@@ -191,7 +191,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	if v.MinecraftVersionRange != "" {
 		ok, e := matchRange0243(env.MinecraftVersion, v.MinecraftVersionRange)
 		if e != nil {
-			return "Minecraft version not semver-compatible: " + e.Error()
+			return "Версия Minecraft не совместима по SemVer: " + e.Error()
 		}
 		if !ok {
 			return fmt.Sprintf("Minecraft %q outside %q", env.MinecraftVersion, v.MinecraftVersionRange)
@@ -203,7 +203,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	if v.LoaderVersionRange != "" {
 		ok, e := matchRange0243(env.LoaderVersion, v.LoaderVersionRange)
 		if e != nil {
-			return "loader version not semver-compatible: " + e.Error()
+			return "Версия загрузчика не совместима по SemVer: " + e.Error()
 		}
 		if !ok {
 			return fmt.Sprintf("loader %q outside %q", env.LoaderVersion, v.LoaderVersionRange)
@@ -211,7 +211,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	}
 	for _, permission := range v.Permissions {
 		if !env.VerifiedPermissions[permission] {
-			return "missing verified permission: " + permission
+			return "Отсутствует подтверждённое разрешение: " + permission
 		}
 	}
 	return ""
@@ -234,7 +234,7 @@ func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env 
 		reason := unavailable0244(c.Conditions, env)
 		if reason != "" {
 			if c.Required {
-				return nil, resolutionError0243("condition_unsatisfied", c.ID, "", "required component "+c.ID+": "+reason)
+				return nil, resolutionError0243("condition_unsatisfied", c.ID, "", "Обязательный компонент "+c.ID+": "+reason)
 			}
 			if !explicit {
 				modified.Components[i].Default = false
@@ -251,7 +251,7 @@ func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env 
 	}
 	for _, id := range selected {
 		if why := unavailable0244(index[id].Conditions, env); why != "" {
-			return nil, resolutionError0243("condition_unsatisfied", id, "", "selected/dependent component "+id+": "+why)
+			return nil, resolutionError0243("condition_unsatisfied", id, "", "Выбранный или зависимый компонент "+id+": "+why)
 		}
 	}
 	return selected, nil

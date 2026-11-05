@@ -117,7 +117,7 @@ def source_identity():
         clean = clean and not untracked.stdout.strip()
     injected = os.environ.get("GITHUB_SHA")
     if injected and injected != sha:
-        raise ValueError("GITHUB_SHA disagrees with actual git HEAD")
+        raise ValueError("GITHUB_SHA не совпадает с фактическим git HEAD")
     return sha, clean
 
 
@@ -240,7 +240,7 @@ def main():
     )
     args = parser.parse_args()
     if (ROOT / "VERSION").read_text().strip() != "0.24.0":
-        raise SystemExit("VERSION must equal 0.24.0")
+        raise SystemExit("VERSION должна быть равна 0.24.0")
     try:
         sha, clean = source_identity()
     except ValueError as e:

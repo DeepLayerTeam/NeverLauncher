@@ -67,12 +67,12 @@ var rehearsalStageID03310 = regexp.MustCompile(`^[a-zA-Z0-9_-]{16,128}$`)
 
 func rehearsalPath03310(root, sub string) (string, error) {
 	if filepath.IsAbs(sub) || strings.ContainsAny(sub, "\\\x00") || sub == "" {
-		return "", errors.New("expected relative staging path")
+		return "", errors.New("Ожидается относительный путь в подготовленной области")
 	}
 	full := filepath.Join(root, sub)
 	rel, e := filepath.Rel(root, full)
 	if e != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", errors.New("path escapes staging root")
+		return "", errors.New("Путь выходит за пределы корня подготовленной области")
 	}
 	real, e := filepath.EvalSymlinks(full)
 	if e != nil {
@@ -80,7 +80,7 @@ func rehearsalPath03310(root, sub string) (string, error) {
 	}
 	rel, e = filepath.Rel(root, real)
 	if e != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", errors.New("symlink escapes staging root")
+		return "", errors.New("Символическая ссылка выходит за пределы корня подготовленной области")
 	}
 	return real, nil
 }
@@ -149,14 +149,14 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	}
 	var trailing any
 	if dec.Decode(&trailing) != io.EOF {
-		return probe, errors.New("probe JSON has trailing data")
+		return probe, errors.New("JSON проверки содержит лишние данные")
 	}
 	if output.Evidence == "" || len(output.Detail) > 512 {
-		return probe, errors.New("probe must produce bounded evidence file and detail")
+		return probe, errors.New("Проверка должна создать файл подтверждения допустимого размера и описание")
 	}
 	raw, e := rehearsalRead03310(root, output.Evidence, 1<<20)
 	if e != nil {
-		return probe, fmt.Errorf("probe %s missing evidence: %w", name, e)
+		return probe, fmt.Errorf("Для проверки %s отсутствуют подтверждения: %w", name, e)
 	}
 	h := sha256.Sum256(raw)
 	probe.Passed = output.Passed
@@ -171,7 +171,7 @@ type limitedProbeBuffer03310 struct{ bytes.Buffer }
 
 func (b *limitedProbeBuffer03310) Write(p []byte) (int, error) {
 	if b.Len()+len(p) > 16<<10 {
-		return 0, errors.New("probe output exceeds 16 KiB")
+		return 0, errors.New("Результат проверки превышает 16 КиБ")
 	}
 	return b.Buffer.Write(p)
 }
@@ -179,10 +179,10 @@ func (b *limitedProbeBuffer03310) Write(p []byte) (int, error) {
 func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string) (rehearsalReport03310, error) {
 	var report rehearsalReport03310
 	if !rehearsalHex03310.MatchString(inventory) || len(run) < 8 || len(run) > 128 {
-		return report, errors.New("--run and exact --inventory-sha256 required")
+		return report, errors.New("Требуются --run и точное значение --inventory-sha256")
 	}
 	if !filepath.IsAbs(root) {
-		return report, errors.New("--stage must be an absolute path to a separate sandbox")
+		return report, errors.New("--stage должен содержать абсолютный путь к отдельной изолированной среде")
 	}
 	real, e := filepath.EvalSymlinks(root)
 	if e != nil {
@@ -224,7 +224,7 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	}
 	live, verifyLive, cleanup, e := rehearsalLaunchLive0447(ctx, real, report.Source)
 	if e != nil {
-		return report, fmt.Errorf("real Minecraft launch/join rehearsal: %w", e)
+		return report, fmt.Errorf("Ошибка репетиции реального запуска и подключения Minecraft: %w", e)
 	}
 	defer cleanup()
 	report.LiveSession = &live
@@ -275,7 +275,7 @@ func handleMigrationRehearsal03310(args []string) error {
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	if backend == "" || token == "" {
-		return errors.New("--backend and --token required: local results are not yet certified")
+		return errors.New("Требуются --backend и --token: локальные результаты ещё не сертифицированы")
 	}
 	endpoint := backend + "/api/v1/admin/migration-runs/" + run + "/rehearsal"
 	if e = migrationModuleEndpoint0338(endpoint); e != nil {
@@ -303,7 +303,7 @@ func handleMigrationRehearsal03310(args []string) error {
 		return e
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("rehearsal commit HTTP %d: %s", resp.StatusCode, answer)
+		return fmt.Errorf("Фиксация репетиции вернула HTTP %d: %s", resp.StatusCode, answer)
 	}
 	var parsed any
 	if e = json.Unmarshal(answer, &parsed); e != nil {

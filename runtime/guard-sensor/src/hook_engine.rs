@@ -469,7 +469,7 @@ fn verify_locked(state: &mut HookEngineState) -> Result<(), String> {
         if current != record.replacement {
             state.healthy = false;
             return Err(format!(
-                "Guard Hook Engine IAT integrity violation for {} in {}",
+                "Guard: нарушена целостность IAT для {} в {}",
                 record.hook_name, record.module_path
             ));
         }
@@ -653,7 +653,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     };
     if ok == 0 {
         return Err(format!(
-            "Guard Hook Engine VirtualProtect(IAT) failed: {}",
+            "Guard: вызов VirtualProtect(IAT) завершился ошибкой: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -678,7 +678,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     };
     if restore_ok == 0 || flush_ok == 0 {
         return Err(format!(
-            "Guard Hook Engine failed to restore/flush IAT protection: {}",
+            "Guard: не удалось восстановить защиту IAT или сбросить кеш: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -711,7 +711,7 @@ fn enumerate_modules() -> Result<Vec<ProcessModule>, String> {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard Hook Engine module enumeration failed: {}",
+                "Guard: не удалось перечислить модули: {}",
                 std::io::Error::last_os_error()
             ));
         }

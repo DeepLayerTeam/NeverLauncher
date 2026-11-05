@@ -20,12 +20,12 @@ public final class PortedSuite implements Extension {
             String loader = Json.string(p, "loader", true);
             String version = Json.string(p, "loaderVersion", false);
             if (!Set.of("vanilla", "forge", "neoforge", "fabric", "quilt").contains(loader))
-                return RuntimeEvents.HookDecision.deny("unsupported loader");
+                return RuntimeEvents.HookDecision.deny("Неподдерживаемый загрузчик");
             if (!loader.equals("vanilla") && version.isBlank())
-                return RuntimeEvents.HookDecision.deny("loader version is required");
+                return RuntimeEvents.HookDecision.deny("Требуется версия загрузчика");
             Object major = p.get("javaMajor");
             if (major instanceof Number n && n.intValue() > 0 && n.intValue() < 17)
-                return RuntimeEvents.HookDecision.deny("unsupported Java runtime");
+                return RuntimeEvents.HookDecision.deny("Неподдерживаемая среда Java");
             return RuntimeEvents.HookDecision.allow();
         });
         ctx.runtime().stateMigrations().register("0.49.4", "0.49.5", (config, storage) -> {

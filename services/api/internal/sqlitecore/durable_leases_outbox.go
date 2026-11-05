@@ -41,7 +41,7 @@ func (r *Repository) AcquireDurableScopeLease(ctx context.Context, scope, owner 
 				return ErrDurableLeaseBusy
 			}
 			if previous == math.MaxInt64 {
-				return errors.New("fencing epoch overflow")
+				return errors.New("Переполнение эпохи разграничения доступа")
 			}
 			_, e = q.ExecContext(ctx, `UPDATE durable_scope_leases SET owner=?,lease_token=?,fencing_token=fencing_token+1,expires_at=?,updated_at=? WHERE scope_key=?`, owner, token, now+int64(ttl), now, scope)
 		}
@@ -272,7 +272,7 @@ func (r *Repository) ClaimOutboxEvents(ctx context.Context, worker string, limit
 				continue
 			}
 			if v.LeaseFence == math.MaxInt64 {
-				return errors.New("outbox fencing overflow")
+				return errors.New("Переполнение счётчика разграничения доступа в очереди исходящих сообщений")
 			}
 			token, e := newLeaseToken()
 			if e != nil {

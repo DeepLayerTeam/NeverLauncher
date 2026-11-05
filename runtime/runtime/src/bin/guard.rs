@@ -109,7 +109,7 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     {
         let _ = parent_pid;
-        Err("Guard production implementation is available on Windows, Linux and macOS".into())
+        Err("Рабочая реализация Guard доступна в Windows, Linux и macOS".into())
     }
 }
 

@@ -962,12 +962,12 @@ pub async fn certify_vanilla_compatibility(
     writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
     // Записываются только уже разрешённые относительные JAR-пути, без учётных данных или
     // токенов аргументов. Так можно диагностировать отсутствие библиотек в старых версиях.
-    writeln!(log_file, "--- verified classpath entries ---").map_err(|e| e.to_string())?;
+    writeln!(log_file, "--- проверенные элементы пути классов ---").map_err(|e| e.to_string())?;
     for entry in &plan.classpath_entries {
         let relative = Path::new(entry).strip_prefix(root).unwrap_or(Path::new(entry));
         writeln!(log_file, "{}", relative.display()).map_err(|e| e.to_string())?;
     }
-    writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
+    writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
@@ -1022,12 +1022,12 @@ pub async fn certify_vanilla_compatibility(
         {
             use std::os::unix::process::ExitStatusExt;
             let signal = status.as_ref().and_then(|value| value.signal());
-            writeln!(diagnostics, "--- runtime exit --- code={:?} signal={:?}",
+            writeln!(diagnostics, "--- завершение Runtime --- код={:?}, сигнал={:?}",
                 status.as_ref().and_then(|value| value.code()), signal)
                 .map_err(|e| format!("Не удалось записать диагностику завершения сертификации: {e}"))?;
         }
         #[cfg(not(unix))]
-        writeln!(diagnostics, "--- runtime exit --- code={:?}",
+        writeln!(diagnostics, "--- завершение Runtime --- код={:?}",
             status.as_ref().and_then(|value| value.code()))
             .map_err(|e| format!("Не удалось записать диагностику завершения сертификации: {e}"))?;
     }
@@ -1045,12 +1045,12 @@ pub async fn certify_vanilla_compatibility(
             let bounded = guard.last_violation.chars().take(1024).collect::<String>();
             let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
                 .map_err(|e| format!("Не удалось дополнить диагностические данные сертификации Guard: {e}"))?;
-            writeln!(diagnostics, "--- Guard fail-closed ---\n{bounded}")
+            writeln!(diagnostics, "--- Guard: остановка при нарушении безопасности ---\n{bounded}")
                 .map_err(|e| format!("Не удалось записать диагностические данные сертификации Guard: {e}"))?;
         } else if exit_code == Some(0xE3) {
             let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
                 .map_err(|e| format!("Не удалось дополнить диагностические данные сертификации Guard: {e}"))?;
-            writeln!(diagnostics, "--- Guard fail-closed ---\nGuard terminated the runtime without a recorded violation")
+            writeln!(diagnostics, "--- Guard: остановка при нарушении безопасности ---\nGuard завершил Runtime без зарегистрированного нарушения")
                 .map_err(|e| format!("Не удалось записать диагностические данные сертификации Guard: {e}"))?;
         }
     }
@@ -1148,7 +1148,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     use std::io::Write as _;
     writeln!(log_file, "Runtime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
-    writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
+    writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
@@ -1243,7 +1243,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     let (status, timed_out) = (guarded_exit.status, guarded_exit.timed_out);
     if let Some(reason) = guarded_exit.violation.as_ref() {
         let _ = writeln!(std::fs::OpenOptions::new().append(true).open(&log_path)
-            .map_err(|e| e.to_string())?, "--- Continuous Game Guard 0.50.6 ---\n{reason}");
+            .map_err(|e| e.to_string())?, "--- Непрерывная игровая защита Guard 0.50.6 ---\n{reason}");
     }
     let success = guarded_exit.violation.is_none() && status.as_ref().map(|value| value.success()).unwrap_or(false);
     let exit_code = status.and_then(|value| value.code());
@@ -1717,7 +1717,7 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
         let absolute = Path::new(absolute);
         let rel = absolute.strip_prefix(root).or_else(|_| absolute.strip_prefix(&canonical_root))
             .map_err(|_| format!("JAR запуска находится за пределами корневого каталога клиента: {}", absolute.display()))?;
-        let rel = rel.to_str().ok_or("non-UTF8 JAR path")?.replace('\\', "/");
+        let rel = rel.to_str().ok_or("Путь к JAR содержит символы, отличные от UTF-8")?.replace('\\', "/");
         paths.insert(rel);
     }
     // Метаданные Compatibility Engine тоже должны побайтово совпадать с

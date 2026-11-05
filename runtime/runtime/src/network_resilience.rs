@@ -15,7 +15,7 @@ pub enum Directive { Running, Paused, Cancelled }
 
 impl Directive {
     pub fn error(self) -> &'static str {
-        match self { Self::Running => "", Self::Paused => "download paused", Self::Cancelled => "download cancelled" }
+        match self { Self::Running => "", Self::Paused => "Загрузка приостановлена", Self::Cancelled => "Загрузка отменена" }
     }
 }
 

@@ -36,7 +36,7 @@ def check_evidence(
     report_path: Path, properties_path: Path, log_path: Path, kind: str
 ) -> dict:
     if kind not in {"vanilla", *LOADER_MARKERS}:
-        raise CertificationFailure("Не поддерживается: «server loader»")
+        raise CertificationFailure("Неподдерживаемый загрузчик сервера")
     report = json.loads(report_path.read_text(encoding="utf-8"))
     if (
         report.get("schema") != "launcher.official-provider-poc.v1"
@@ -49,7 +49,7 @@ def check_evidence(
         report.get("onlineModeSession") != "verified_live_join_has_joined"
         or report.get("minecraftServicesAccess") != "verified_live_profile"
     ):
-        raise CertificationFailure("Отсутствует: «Mojang join/hasJoined proof»")
+        raise CertificationFailure("Отсутствует подтверждение Mojang join/hasJoined")
     stages = report.get("stages", [])
     mandatory = {
         "microsoft_oauth",
@@ -68,10 +68,10 @@ def check_evidence(
             if isinstance(s, dict) and s.get("status") == "passed"
         }
     ):
-        raise CertificationFailure("real authentication chain not fully passed")
+        raise CertificationFailure("Реальная цепочка аутентификации пройдена не полностью")
     subject = report.get("minecraftProfileSHA256")
     if not isinstance(subject, str) or not re.fullmatch(r"[a-f0-9]{64}", subject):
-        raise CertificationFailure("Отсутствует: «stable Minecraft subject digest»")
+        raise CertificationFailure("Отсутствует стабильный дайджест субъекта Minecraft")
     raw_properties = properties_path.read_text(encoding="utf-8-sig")
     values = {}
     for line in raw_properties.splitlines():

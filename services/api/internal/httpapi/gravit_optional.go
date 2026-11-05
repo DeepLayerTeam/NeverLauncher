@@ -24,7 +24,7 @@ func (s Server) componentCatalogGravitPreview02411(w http.ResponseWriter, r *htt
 		return
 	}
 	if lookup.Release.Status != "draft" || lookup.Release.Manifest.SchemaVersion != model.ManifestSchemaV3 {
-		writeError(w, http.StatusConflict, "Gravit migration requires an unsigned Manifest v3 draft")
+		writeError(w, http.StatusConflict, "Для миграции Gravit требуется неподписанный черновик Manifest v3")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 2<<20)
@@ -42,18 +42,18 @@ func (s Server) componentCatalogGravitPreview02411(w http.ResponseWriter, r *htt
 	}
 	existing := lookup.Release.Manifest.ComponentCatalog
 	if existing == nil || req.ExpectedRevision == 0 || req.ExpectedRevision != existing.Revision {
-		writeError(w, http.StatusConflict, "catalog revision changed; reload before importing")
+		writeError(w, http.StatusConflict, "Ревизия каталога изменилась; обновите данные перед импортом")
 		return
 	}
 	if len(req.Source) == 0 {
-		writeError(w, http.StatusBadRequest, "Gravit source is required")
+		writeError(w, http.StatusBadRequest, "Требуется источник Gravit")
 		return
 	}
 	source := []byte(req.Source)
 	if len(source) > 0 && source[0] == '"' {
 		var verbatim string
 		if err := json.Unmarshal(source, &verbatim); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid source string")
+			writeError(w, http.StatusBadRequest, "Некорректная строка источника")
 			return
 		}
 		source = []byte(verbatim)

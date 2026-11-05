@@ -45,7 +45,7 @@ func readBounded0482(file *zip.File, max int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(data)) > max {
-		return nil, errors.New("library exceeds size limit")
+		return nil, errors.New("Библиотека превышает допустимый размер")
 	}
 	return data, nil
 }
@@ -73,7 +73,7 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 			return nil, 0, 0, errors.New("Пустое значение: блокировка библиотек")
 		}
 		if len(lines) > 64 {
-			return nil, 0, 0, errors.New("more than 64 libraries")
+			return nil, 0, 0, errors.New("Число библиотек превышает 64")
 		}
 	}
 	recorded := map[string]bool{}
@@ -106,11 +106,11 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 		}
 		total += int64(len(contents))
 		if total > 64<<20 {
-			return nil, 0, 0, errors.New("bundled libraries exceed 64 MiB")
+			return nil, 0, 0, errors.New("Размер вложенных библиотек превышает 64 МиБ")
 		}
 		sum := sha256.Sum256(contents)
 		if hex.EncodeToString(sum[:]) != hash {
-			return nil, 0, 0, fmt.Errorf("library checksum mismatch %s", name)
+			return nil, 0, 0, fmt.Errorf("Контрольная сумма библиотеки %s не совпадает", name)
 		}
 		archive, err := zip.NewReader(bytes.NewReader(contents), int64(len(contents)))
 		if err != nil {
@@ -128,11 +128,11 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 			}
 			names[fn] = true
 			if part.UncompressedSize64 > 16<<20 {
-				return nil, 0, 0, errors.New("nested JAR oversized entry")
+				return nil, 0, 0, errors.New("Запись вложенного JAR превышает ограничение размера")
 			}
 			expanded += part.UncompressedSize64
 			if expanded > 64<<20 {
-				return nil, 0, 0, errors.New("nested JAR expansion exceeds limit")
+				return nil, 0, 0, errors.New("Распакованный вложенный JAR превышает ограничение")
 			}
 			if strings.EqualFold(fn, "META-INF/MANIFEST.MF") {
 				data, err := readBounded0482(part, 65536)
@@ -154,10 +154,10 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 				continue
 			}
 			if strings.HasPrefix(fn, "java/") || strings.HasPrefix(fn, "javax/") || strings.HasPrefix(fn, "sun/") || strings.HasPrefix(fn, "jdk/") || strings.HasPrefix(fn, "ru/launcher/sdk/") || strings.HasPrefix(fn, "com/sun/") || strings.HasPrefix(fn, "org/w3c/") || strings.HasPrefix(fn, "org/xml/") {
-				return nil, 0, 0, fmt.Errorf("library overrides protected namespace: %s", fn)
+				return nil, 0, 0, fmt.Errorf("Библиотека переопределяет защищённое пространство имён: %s", fn)
 			}
 			if classes[fn] {
-				return nil, 0, 0, fmt.Errorf("class conflict between host and libraries: %s", fn)
+				return nil, 0, 0, fmt.Errorf("Конфликт классов между хостом и библиотеками: %s", fn)
 			}
 			classes[fn] = true
 			extraClasses++
@@ -180,7 +180,7 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 	}
 	for _, f := range zr.File {
 		if strings.HasPrefix(f.Name, libraryPrefix0482) && strings.HasSuffix(f.Name, ".jar") && !recorded[f.Name] {
-			return nil, 0, 0, fmt.Errorf("unlocked nested JAR %s", f.Name)
+			return nil, 0, 0, fmt.Errorf("Вложенный JAR %s отсутствует в файле закрепления зависимостей", f.Name)
 		}
 	}
 	return info, extraClasses, maxMajor, nil

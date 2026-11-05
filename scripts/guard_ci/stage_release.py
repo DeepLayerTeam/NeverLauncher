@@ -177,7 +177,7 @@ def main() -> int:
         copy_verified(
             found[name], args.out / name, digest, size, f"{target_id}/{role}/{name}"
         )
-    print(f"Staged {len(expected)} exact Guard CI-certified artifacts into {args.out}")
+    print(f"Подготовлено {len(expected)} точно соответствующих артефактов Guard, сертифицированных CI, в {args.out}")
     return 0
 
 

@@ -83,7 +83,7 @@ func (s Server) authOIDCComplete115(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if tx.LinkUserID != "" || (req.DeviceID != "" && req.DeviceID != tx.DeviceID) {
-		writeError(w, http.StatusUnauthorized, "OIDC transaction context mismatch")
+		writeError(w, http.StatusUnauthorized, "Контекст транзакции OIDC не совпадает")
 		return
 	}
 	s.completeOIDC115(w, r, tx, req.Code, req.State, req.TOTP, req.RecoveryCode)

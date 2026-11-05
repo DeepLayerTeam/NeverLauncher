@@ -81,7 +81,7 @@ for rel, needles in checks.items():
     text = (ROOT / rel).read_text(encoding="utf-8")
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{rel}: missing {needle!r}")
+            raise SystemExit(f"{rel}: отсутствует {needle!r}")
 
 version = tuple(
     map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3])

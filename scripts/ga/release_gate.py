@@ -120,7 +120,7 @@ def check_report(
             or not SHA256.fullmatch(report.get("logSha256", ""))
             or not report.get("minecraftVersion")
         ):
-            raise ValueError("Отсутствует: «real Minecraft/Managed Java evidence»")
+            raise ValueError("Отсутствуют реальные подтверждающие данные Minecraft и управляемой Java")
     elif subject == "certification":
         if (
             not report.get("gitTreeClean")
@@ -171,9 +171,9 @@ def check_report(
             version != "0.25.0"
             or report.get("schemaVersion") != "launcher.components.certification.v1"
         ):
-            raise ValueError("Не поддерживается: «optional components certification schema»")
+            raise ValueError("Неподдерживаемая схема сертификации необязательных компонентов")
         if report.get("target") != target or report.get("gitTreeClean") is not True:
-            raise ValueError("Несовпадение: «optional components certification target/source»")
+            raise ValueError("Цель и источник сертификации необязательных компонентов не совпадают")
         if (
             report.get("signedManifestVersion") != "3.0"
             or report.get("catalogSchema") != "5.0"
@@ -186,7 +186,7 @@ def check_report(
             or report.get("actualGuardIntegration") is not True
             or report.get("actualBridgeIntegration") is not True
         ):
-            raise ValueError("Отсутствует: «actual Minecraft/Guard/Bridge evidence»")
+            raise ValueError("Отсутствуют реальные подтверждающие данные Minecraft, Guard и Bridge")
         checks = report.get("checks")
         if not isinstance(checks, dict) or any(
             checks.get(c) != "passed" for c in COMPONENT_GA_CHECKS
@@ -195,7 +195,7 @@ def check_report(
                 "optional components certification has skipped/failed gates"
             )
         if not SHA256.fullmatch(report.get("nativeEvidenceSha256", "")):
-            raise ValueError("Отсутствует: «native execution evidence digest»")
+            raise ValueError("Отсутствует дайджест подтверждения нативного выполнения")
         for section in ("minecraftEvidence", "guardEvidence", "bridgeEvidence"):
             reference = report.get(section)
             if (
@@ -210,7 +210,7 @@ def check_report(
             or len(report["runs"]) < 6
             or report.get("speedup", 0) <= 1
         ):
-            raise ValueError("Отсутствует: «baseline benchmark measurement/speedup»")
+            raise ValueError("Отсутствуют базовое измерение производительности или значение ускорения")
         if not SHA256.fullmatch(
             report.get("baselineExecutableSha256", "")
         ) or not SHA256.fullmatch(report.get("candidateExecutableSha256", "")):
@@ -282,7 +282,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
     proofs = {}
     for name, obj in objects.items():
         if not isinstance(obj, dict):
-            raise ValueError(f"invalid {name} object")
+            raise ValueError(f"Некорректный объект {name}")
         content = load_attested_file(
             folder, obj.get("file"), obj.get("sha256"), binary=name == "installer"
         )
@@ -310,7 +310,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
             ("bridgeEvidence", "bridgeRun"),
         ):
             if components[section]["sha256"] != objects[object_name]["sha256"]:
-                raise ValueError(f"{section}: authenticated evidence digest mismatch")
+                raise ValueError(f"{section}: не совпадает контрольная сумма аутентифицированных данных")
     if (
         proofs["osSignature"].get("artifactSha256") != installer_sha
         or proofs["cleanMachine"].get("installerSha256") != installer_sha
@@ -384,7 +384,7 @@ def main() -> int:
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print(f"GA release gate: {result['status']}")
+    print(f"Проверка готовности GA-релиза: {result['status']}")
     return 0 if result["status"] == "passed" else 1
 
 

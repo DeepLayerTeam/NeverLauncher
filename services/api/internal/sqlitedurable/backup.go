@@ -103,7 +103,7 @@ func snapshotCheck(ctx context.Context, path string) (int, error) {
 		return 0, err
 	}
 	if integrity != "ok" {
-		return 0, fmt.Errorf("snapshot integrity_check: %s", integrity)
+		return 0, fmt.Errorf("Ошибка проверки целостности снимка: %s", integrity)
 	}
 	rows, err := db.QueryContext(ctx, "PRAGMA foreign_key_check")
 	if err != nil {
@@ -191,7 +191,7 @@ func requireNewBackupPath(source, dest string) (string, string, error) {
 		return "", "", err
 	}
 	if src == dst || src == dst+".json" || dst == src+".json" {
-		return "", "", errors.New("source and backup path overlap")
+		return "", "", errors.New("Пути источника и резервной копии пересекаются")
 	}
 	if err = verifyLocalPath(src); err != nil {
 		return "", "", err
@@ -204,7 +204,7 @@ func requireNewBackupPath(source, dest string) (string, string, error) {
 	}
 	for _, p := range []string{dst, dst + ".json"} {
 		if _, e := os.Lstat(p); e == nil {
-			return "", "", fmt.Errorf("backup path already exists: %s", p)
+			return "", "", fmt.Errorf("Путь резервной копии уже существует: %s", p)
 		} else if !os.IsNotExist(e) {
 			return "", "", e
 		}
@@ -245,7 +245,7 @@ func OnlineBackup(ctx context.Context, source, destination string) (m BackupMani
 		}
 	}()
 	if _, err = reader.ExecContext(ctx, "VACUUM INTO ?", temp); err != nil {
-		return m, fmt.Errorf("SQLite online backup VACUUM INTO: %w", err)
+		return m, fmt.Errorf("Ошибка оперативного резервного копирования SQLite (VACUUM INTO): %w", err)
 	}
 	f, e := os.OpenFile(temp, os.O_RDONLY, 0)
 	if e != nil {
@@ -319,7 +319,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 	var extra any
 	if err == nil {
 		if e := dec.Decode(&extra); e != io.EOF {
-			err = errors.New("backup metadata has trailing content")
+			err = errors.New("В метаданных резервной копии обнаружены лишние данные")
 		}
 	}
 	err = errors.Join(err, f.Close())
@@ -344,7 +344,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupManifest, error) {
 		return m, err
 	}
 	if v != m.SchemaVersion {
-		return m, fmt.Errorf("SQLite backup schema %d != manifest %d", v, m.SchemaVersion)
+		return m, fmt.Errorf("Версия схемы резервной копии SQLite %d не совпадает с манифестом %d", v, m.SchemaVersion)
 	}
 	return m, nil
 }
@@ -385,7 +385,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 	}
 	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		if _, e = os.Lstat(dst + suffix); e == nil {
-			return "", fmt.Errorf("refusing restore: %s exists; shut down SQLite and checkpoint first", dst+suffix)
+			return "", fmt.Errorf("Восстановление отменено: %s существует; сначала остановите SQLite и выполните контрольную точку", dst+suffix)
 		} else if !os.IsNotExist(e) {
 			return "", e
 		}
@@ -447,7 +447,7 @@ func RestoreBackup(ctx context.Context, backup, target string, replace bool) (ro
 		}
 		rollback = dst + ".pre-restore-" + strconv.FormatInt(time.Now().UTC().UnixNano(), 10) + "-" + tok
 		if err = os.Link(dst, rollback); err != nil {
-			return "", fmt.Errorf("create rollback hardlink: %w", err)
+			return "", fmt.Errorf("Не удалось создать жёсткую ссылку для отката: %w", err)
 		}
 		if err = syncDirectory(filepath.Dir(dst)); err != nil {
 			_ = os.Remove(rollback)

@@ -49,7 +49,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 	// внешнего IdP о "mfa" не доказывает, что RP Launcher проверил passkey.
 	if policy == mfaPhishingResistant117 {
 		if passkeys == 0 {
-			return loginMFAResult117{}, errors.New("phishing-resistant MFA is required but no passkey is registered")
+			return loginMFAResult117{}, errors.New("Требуется MFA с защитой от фишинга, но ключ доступа не зарегистрирован")
 		}
 		return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 	}

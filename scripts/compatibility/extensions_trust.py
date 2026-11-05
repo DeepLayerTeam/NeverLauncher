@@ -49,11 +49,11 @@ def aggregate(targets: Path, evidence_dir: Path, out_json: Path, out_md: Path):
             or e.get("os") != target["os"]
             or e.get("status") != "pass"
         ):
-            raise SystemExit(f"invalid/non-PASS evidence for {target['id']}")
+            raise SystemExit(f"Недопустимые или неуспешные подтверждения для {target['id']}")
         got = e.get("checks", {})
         missing = [c for c in checks if got.get(c) is not True]
         if missing:
-            raise SystemExit(f"{target['id']} missing checks: {missing}")
+            raise SystemExit(f"{target['id']}: отсутствуют проверки {missing}")
         results.append(e)
     matrix = {
         "schemaVersion": "1.0",

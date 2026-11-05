@@ -185,7 +185,7 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
         )
 
     if not timestamp(policy["issuedAt"]) <= now < timestamp(policy["expiresAt"]):
-        raise ValueError("expired/future trust policy")
+        raise ValueError("Политика доверия просрочена или датирована будущим")
     signing = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(seed))
     pub = (
         signing.public_key()
@@ -201,7 +201,7 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
         for k in policy["keys"]
     )
     if not authorized:
-        raise ValueError("component key not active in root-signed trust policy")
+        raise ValueError("Ключ компонента не активен в политике доверия, подписанной корневым ключом")
     signature = {
         "schemaVersion": "2.0",
         "algorithm": "ed25519",

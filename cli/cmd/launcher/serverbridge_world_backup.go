@@ -198,7 +198,7 @@ func worldBackupNoSymlinkAncestors02810(path string) error {
 		fi, err := os.Lstat(path)
 		if err == nil {
 			if fi.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("symlink in path: %s", path)
+				return fmt.Errorf("Символическая ссылка в пути: %s", path)
 			}
 			if !fi.IsDir() {
 				return fmt.Errorf("Указанный путь не является каталогом: %s", path)

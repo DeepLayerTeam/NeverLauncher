@@ -471,9 +471,9 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 			// Quilt/Fabric Meta возвращает 404, если для версии Minecraft нет
 			// соответствующих маппингов загрузчика. Корректный HTTP 404 нельзя
 			// заменять выдуманным резервным вариантом или считать успешной сертификацией.
-			return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: Minecraft %s is not present in the upstream compatibility index (HTTP 404): %w", loader, minecraftVersion, err)
+			return loaderMetaEntry{}, "", "", fmt.Errorf("Метаданные версии загрузчика %s: Minecraft %s отсутствует в индексе совместимости поставщика (HTTP 404): %w", loader, minecraftVersion, err)
 		}
-		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: %w", loader, err)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Ошибка метаданных версии загрузчика %s: %w", loader, err)
 	}
 	var entries []loaderMetaEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
@@ -592,7 +592,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		artifact := lib.Downloads.Artifact
 		canonical, err := strictMavenPath(lib.Name)
 		if err != nil {
-			return nil, fmt.Errorf("loader library %s: %w", lib.Name, err)
+			return nil, fmt.Errorf("Ошибка библиотеки загрузчика %s: %w", lib.Name, err)
 		}
 		rel := strings.TrimSpace(artifact.Path)
 		if rel == "" {
@@ -600,7 +600,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		}
 		rel = strings.TrimPrefix(filepath.ToSlash(rel), "libraries/")
 		if rel != canonical {
-			return nil, fmt.Errorf("loader library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
+			return nil, fmt.Errorf("Библиотека загрузчика %s: artifact.path %q отличается от идентификатора Maven %q", lib.Name, rel, canonical)
 		}
 		if err := validateVanillaRelativePath(rel); err != nil {
 			return nil, fmt.Errorf("Путь к библиотеке %s: %w", lib.Name, err)
@@ -614,7 +614,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 			artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(rel, "/")
 		}
 		if err := validateRemoteURL(artifactURL); err != nil {
-			return nil, fmt.Errorf("loader library %s URL: %w", lib.Name, err)
+			return nil, fmt.Errorf("Ошибка URL библиотеки загрузчика %s: %w", lib.Name, err)
 		}
 		expectedSHA1 := strings.ToLower(strings.TrimSpace(artifact.SHA1))
 		if expectedSHA1 == "" {
@@ -681,7 +681,7 @@ func strictMavenPath(name string) (string, error) {
 	// отклоняются: элементы classpath должны быть загружаемыми архивами.
 	coordinate, extension, hasExtension := strings.Cut(strings.TrimSpace(name), "@")
 	if hasExtension && extension != "jar" {
-		return "", fmt.Errorf("loader Maven coordinate %q has unsupported classpath extension", name)
+		return "", fmt.Errorf("Координаты Maven загрузчика %q имеют неподдерживаемое расширение пути классов", name)
 	}
 	parts := strings.Split(coordinate, ":")
 	if len(parts) < 3 || len(parts) > 4 {

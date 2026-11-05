@@ -109,7 +109,7 @@ func loaderGASupportEntries0180() []loaderGASupportEntry0180 {
 		for _, minecraft := range versions {
 			entry, ok := loaderGASupport0180(loader, minecraft)
 			if !ok {
-				panic("invalid GA support entry " + loader + "/" + minecraft)
+				panic("Некорректная запись поддержки GA " + loader + "/" + minecraft)
 			}
 			entries = append(entries, entry)
 		}

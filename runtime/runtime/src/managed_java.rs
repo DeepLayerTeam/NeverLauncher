@@ -580,7 +580,7 @@ async fn install_managed_java_archive(
     sync_directory(&platform_dir)?;
     validate_installed_runtime(&final_dir, required_major, distribution, false)
         .await?
-        .ok_or_else(|| "Java runtime post-install verification failed".to_string())
+        .ok_or_else(|| "Проверка среды Java после установки завершилась ошибкой".to_string())
 }
 
 fn managed_java_http_client() -> Result<Client, String> {
@@ -598,8 +598,8 @@ fn managed_java_http_client() -> Result<Client, String> {
         .connect_timeout(Duration::from_secs(12))
         .timeout(Duration::from_secs(15 * 60))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
-            if attempt.previous().len() >= 5 { return attempt.error("too many Managed Java redirects"); }
-            if attempt.url().scheme() != "https" { return attempt.error("Managed Java HTTPS downgrade rejected"); }
+            if attempt.previous().len() >= 5 { return attempt.error("Слишком много перенаправлений при загрузке управляемой Java"); }
+            if attempt.url().scheme() != "https" { return attempt.error("Переход управляемой Java с HTTPS на менее защищённый протокол запрещён"); }
             attempt.follow()
         }))
         .build()
@@ -632,7 +632,7 @@ async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &s
         sleep(Duration::from_millis(delay_ms.min(4_000))).await;
     }
     Err(format!(
-        "Managed Java upstream failed after {MANAGED_JAVA_HTTP_ATTEMPTS} attempts: {last_error}"
+        "Не удалось получить управляемую Java после {MANAGED_JAVA_HTTP_ATTEMPTS} попыток: {last_error}"
     ))
 }
 
@@ -1411,11 +1411,11 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     let details = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
     let detected = crate::parse_java_major_version(&details);
     if detected != Some(major) { return Err(format!("Основная версия управляемой Java не совпадает: ожидалась {major}, получено {detected:?}")); }
-    let reported_arch = java_property(&details, "os.arch").ok_or("Managed Java missing os.arch")?;
+    let reported_arch = java_property(&details, "os.arch").ok_or("В управляемой Java отсутствует os.arch")?;
     if normalize_adoptium_arch(reported_arch) != normalize_adoptium_arch(arch) {
         return Err(format!("Не совпадает архитектура управляемой Java: получена {reported_arch}, ожидалась {arch}"));
     }
-    let reported_os = java_property(&details, "os.name").ok_or("Managed Java missing os.name")?.to_ascii_lowercase();
+    let reported_os = java_property(&details, "os.name").ok_or("В управляемой Java отсутствует os.name")?.to_ascii_lowercase();
     let expected_os = normalize_adoptium_os(os);
     let os_ok = match expected_os.as_str() {
         "windows" => reported_os.contains("windows"),

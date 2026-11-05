@@ -7,7 +7,7 @@ import "net/http"
 // серверные пути.
 func (s Server) operationsCapacity03215(w http.ResponseWriter, r *http.Request) {
 	if s.Capacity == nil {
-		writeError(w, http.StatusServiceUnavailable, "capacity collector not initialized")
+		writeError(w, http.StatusServiceUnavailable, "Сборщик метрик ёмкости не инициализирован")
 		return
 	}
 	report := s.Capacity.Latest()

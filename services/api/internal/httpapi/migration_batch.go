@@ -71,7 +71,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 	}
 	var destinations []gp.Destination
 	if json.Unmarshal(raw, &destinations) != nil || len(destinations) == 0 || len(destinations) > gp.MaxProfiles0492 {
-		writeError(w, 400, "invalid profile mapping")
+		writeError(w, 400, "Некорректное сопоставление профилей")
 		return
 	}
 	// Отклоняйте также неизвестные поля: опечатка не должна незаметно изменить целевые
@@ -105,7 +105,7 @@ func (s Server) migrationBatch0492(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes || (r.ContentLength >= 0 && r.ContentLength != saved.SourceBytes) {
-		writeError(w, 413, "source differs from committed inventory")
+		writeError(w, 413, "Источник отличается от зафиксированной инвентаризации")
 		return
 	}
 	f, n, sha, err := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))

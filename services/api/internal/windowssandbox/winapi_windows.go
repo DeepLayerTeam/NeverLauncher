@@ -386,7 +386,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	envBlock := []uint16{}
 	for _, pair := range env {
 		if strings.IndexByte(pair, 0) >= 0 {
-			return fail(errors.New("NUL in child environment"))
+			return fail(errors.New("В окружении дочернего процесса обнаружен NUL"))
 		}
 		envBlock = append(envBlock, syscall.StringToUTF16(pair)...)
 	}

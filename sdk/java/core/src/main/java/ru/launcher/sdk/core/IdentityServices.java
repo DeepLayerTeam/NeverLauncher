@@ -11,7 +11,7 @@ public final class IdentityServices {
     void bind(ProviderRegistry value) {registry=Objects.requireNonNull(value);}
     private ProviderRegistry registry() {
         ProviderRegistry value=registry;
-        if(value==null)throw new IllegalStateException("identity SPI not initialized");
+        if(value==null)throw new IllegalStateException("Служба идентификации SPI не инициализирована");
         return value;
     }
     public IdentityProof authenticatePassword(String identifier,String secret) throws IdentityFailure {
@@ -70,7 +70,7 @@ public final class IdentityServices {
                     revokeProviderSession(Json.string(params,"subject",true),Json.string(params,"providerToken",true));
                     return Map.of("revoked",true);
                 }
-                default: throw new IllegalArgumentException("unknown auth operation");
+                default: throw new IllegalArgumentException("Неизвестная операция авторизации");
             }
         }catch(IdentityFailure e){return Map.of("errorCode",e.code().name().toLowerCase(java.util.Locale.ROOT));}
         catch(IllegalArgumentException e){return Map.of("errorCode","invalid_credentials");}

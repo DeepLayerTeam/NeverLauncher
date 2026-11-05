@@ -59,10 +59,10 @@ def load(path: Path) -> dict[str, Any]:
             raise SystemExit(f"target #{i}: требуется объект")
         unknown = set(row) - allowed
         if unknown:
-            raise SystemExit(f"target #{i} has unknown fields: {sorted(unknown)}")
+            raise SystemExit(f"Цель №{i} содержит неизвестные поля: {sorted(unknown)}")
         tid = str(row.get("id", "")).strip()
         if not ID_RE.fullmatch(tid):
-            raise SystemExit(f"target #{i}: invalid id {tid!r}")
+            raise SystemExit(f"Цель №{i}: некорректный идентификатор {tid!r}")
         if tid in ids:
             raise SystemExit(f"Обнаружен дубликат: цель {tid}")
         ids.append(tid)
@@ -70,17 +70,17 @@ def load(path: Path) -> dict[str, Any]:
             row.get("family") not in ALLOWED_FAMILIES
             or row.get("role") not in ALLOWED_ROLES
         ):
-            raise SystemExit(f"{tid}: invalid family/role")
+            raise SystemExit(f"{tid}: некорректное семейство или роль")
         if row.get("coverage") not in ALLOWED_COVERAGE:
-            raise SystemExit(f"{tid}: invalid coverage")
+            raise SystemExit(f"{tid}: некорректное покрытие")
         if str(row.get("minecraft", "")) != "1.21.1":
             raise SystemExit(
                 f"{tid}: this release matrix is pinned to Minecraft 1.21.1"
             )
         if row.get("required") is not True:
-            raise SystemExit(f"{tid}: required must be true")
+            raise SystemExit(f"{tid}: параметр required должен быть true")
         if (row.get("role") == "proxy") != (row.get("family") == "proxy"):
-            raise SystemExit(f"{tid}: proxy family/role mismatch")
+            raise SystemExit(f"{tid}: несоответствие семейства или роли прокси")
         expected_coverage = {
             "bukkit": "build-compatibility",
             "quilt": "build-compatibility",

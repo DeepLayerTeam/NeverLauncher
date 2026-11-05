@@ -107,7 +107,7 @@ func (s Server) migrationPlanGet0442(w http.ResponseWriter, r *http.Request) {
 	}
 	digest, _, e := s.migrationTargetSnapshot0442(run.ProjectID)
 	if e != nil {
-		writeError(w, 503, "cannot verify current target")
+		writeError(w, 503, "Не удалось проверить текущую целевую версию")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
@@ -157,7 +157,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	path, id, name, loader, channel, version := migrationContentHeaders0337(r)
 	if path == "" || id == "" || loader == "" || channel == "" || version == "" || len(path) > 1024 || len(id) > 128 || len(name) > 120 || len(loader) > 24 || len(channel) > 128 || len(version) > 128 {
-		writeError(w, 400, "target profile/path/loader/channel/version required")
+		writeError(w, 400, "Требуются целевые профиль, путь, загрузчик, канал и версия")
 		return
 	}
 	select {
@@ -178,12 +178,12 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes || (r.ContentLength >= 0 && r.ContentLength != saved.SourceBytes) {
-		writeError(w, 413, "source size differs from approved inventory")
+		writeError(w, 413, "Размер источника отличается от утверждённой инвентаризации")
 		return
 	}
 	f, n, digest, e := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if e != nil {
-		writeError(w, 413, "unable to stage verified source ZIP")
+		writeError(w, 413, "Не удалось подготовить проверенный исходный ZIP")
 		return
 	}
 	defer func() { f.Close(); os.Remove(f.Name()) }()
@@ -193,7 +193,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	actual, e := inv.Inspect(r.Context(), f, n, digest)
 	if e != nil {
-		writeError(w, 422, "source validation failed: "+e.Error())
+		writeError(w, 422, "Проверка источника завершилась ошибкой: "+e.Error())
 		return
 	}
 	if actual.ManifestSHA256 != saved.ManifestSHA256 {
@@ -202,7 +202,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	compat, e := gd.AssessReader(r.Context(), f, n, digest, previous.ClaimedVersion)
 	if e != nil {
-		writeError(w, 422, "compatibility analysis failed: "+e.Error())
+		writeError(w, 422, "Не удалось выполнить анализ совместимости: "+e.Error())
 		return
 	}
 	if compat.FilesSHA256 != previous.FilesSHA256 || compat.VersionStatus != previous.VersionStatus || compat.DetectedVersion != previous.DetectedVersion {
@@ -216,7 +216,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	}
 	content, e := gc.Prepare(r.Context(), f, n, saved, path, run.ProjectID, id, name, loader, strings.TrimSpace(r.Header.Get("X-Loader-Version")))
 	if e != nil {
-		writeError(w, 422, "content preview failed: "+e.Error())
+		writeError(w, 422, "Не удалось сформировать предпросмотр содержимого: "+e.Error())
 		return
 	}
 	ids := gp.IdentityPreview{State: "blocked", Reason: "no supported source identity snapshot"}
@@ -242,7 +242,7 @@ func (s Server) migrationDryRun0442(w http.ResponseWriter, r *http.Request) {
 	d := gp.Destination{ProfilePath: path, ProfileID: id, ProfileName: name, Loader: loader, LoaderVersion: strings.TrimSpace(r.Header.Get("X-Loader-Version")), Channel: channel, Version: version}
 	p, e := gp.Build(run.ID, run.ProjectID, target, d, saved, compat, modules, content, existing[id], ids)
 	if e != nil {
-		writeError(w, 422, "cannot calculate migration plan: "+e.Error())
+		writeError(w, 422, "Не удалось рассчитать план миграции: "+e.Error())
 		return
 	}
 	// Отклоняйте целевой объект, изменившийся во время потенциально длительного

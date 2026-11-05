@@ -614,7 +614,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
             .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() {
             return Err(format!(
-                "Guard package verification rejected non-regular/symlink artifact: {}",
+                "Guard: проверка пакета отклонила нестандартный файл или символическую ссылку: {}",
                 path.display()
             ));
         }
@@ -657,7 +657,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
 
     if !manifest.authenticode_required {
         return Err(
-            "production Windows package manifest must require Authenticode; unsigned release packages are rejected"
+            "Манифест рабочего пакета Windows должен требовать Authenticode; неподписанные релизы отклоняются"
                 .to_string(),
         );
     }
@@ -1174,7 +1174,7 @@ pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServe
     };
     if converted == 0 || security_descriptor.is_null() {
         return Err(format!(
-            "Guard named pipe security descriptor creation failed: {}",
+            "Guard: не удалось создать дескриптор безопасности именованного канала: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1255,7 +1255,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
                 .as_deref()
                 .unwrap_or("no authenticated client connected");
             return Err(format!(
-                "Guard IPC authentication window expired: {detail}"
+                "Guard IPC: срок действия окна аутентификации истёк: {detail}"
             ));
         }
 
@@ -1303,7 +1303,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         if let Err(err) = server.disconnect() {
             bootstrap_secret.zeroize();
             return Err(format!(
-                "Guard IPC failed to reset after rejected client: {err}"
+                "Guard IPC: не удалось сбросить состояние после отклонения клиента: {err}"
             ));
         }
         sleep(Duration::from_millis(10)).await;
@@ -1437,7 +1437,7 @@ async fn serve_authenticated_session(
         }
         if request.sequence != expected_sequence {
             return Err(format!(
-                "Guard IPC replay/out-of-order request rejected: expected {expected_sequence}, got {}",
+                "Guard IPC: отклонён повторный или внеочередной запрос; ожидался номер {expected_sequence}, получен {}",
                 request.sequence
             ));
         }

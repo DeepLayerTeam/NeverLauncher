@@ -16,7 +16,7 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 api_migration = read(
@@ -135,7 +135,7 @@ if (
     "guard-macos:\n    name: Guard macOS production implementation\n    runs-on: macos-14\n    timeout-minutes: 45\n    steps:\n    steps:"
     in ci
 ):
-    raise SystemExit("macOS CI job still contains duplicate steps key")
+    raise SystemExit("Задание CI macOS по-прежнему содержит повторяющийся ключ steps")
 
 migration_tests = read("services/api/internal/dbmigrate/migrate_test.go")
 latest_migration = sorted((root / "services/api/internal/dbmigrate/sql").glob("*.sql"))[
@@ -172,7 +172,7 @@ require(
 # Менеджер версий должен был перенести 0.13.10 в метаданные политики Guard.
 targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("productVersion") != version:
-    raise SystemExit("Guard CI targets are not aligned with VERSION")
+    raise SystemExit("Цели Guard CI не соответствуют VERSION")
 
 print(
     f"Launcher 0.13.10 Guard migration + compatibility + stabilization gate: OK ({version})"

@@ -258,7 +258,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	req.ID = strings.TrimSpace(req.ID)
 	req.Method = strings.ToLower(strings.TrimSpace(req.Method))
 	if req.Protocol != desktopBridgeProtocol0209 || req.ID == "" || len(req.ID) > 160 || req.Method == "" || len(req.Method) > 64 || len(req.Params) > 128<<10 {
-		writeError(w, 400, "invalid Desktop RPC envelope")
+		writeError(w, 400, "Некорректная оболочка запроса Desktop RPC")
 		return
 	}
 	respond := func(result any, e error) {
@@ -422,18 +422,18 @@ func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
 		req.Scope = "global"
 	}
 	if req.Scope != "global" && req.Scope != "project" {
-		writeError(w, 400, "scope must be global or project")
+		writeError(w, 400, "Область действия должна быть global или project")
 		return
 	}
 	if req.Scope == "global" {
 		req.ScopeID = ""
 	} else if strings.TrimSpace(req.ScopeID) == "" {
-		writeError(w, 400, "project scope requires scopeId")
+		writeError(w, 400, "Для области project требуется scopeId")
 		return
 	}
 	req.Command = strings.ToLower(strings.TrimSpace(req.Command))
 	if req.Command == "" || len(req.Command) > 64 || len(req.Args) > 127 {
-		writeError(w, 400, "invalid cli command")
+		writeError(w, 400, "Некорректная команда CLI")
 		return
 	}
 	id := strings.ToLower(strings.TrimSpace(r.PathValue("extensionId")))
@@ -444,7 +444,7 @@ func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
 	}
 	ver, err := s.Repo.GetExtensionVersion(r.Context(), id, install.CurrentVersion)
 	if err != nil || ver.Manifest.CLI == nil {
-		writeError(w, 409, "cli target unavailable")
+		writeError(w, 409, "Цель команды CLI недоступна")
 		return
 	}
 	declared := false
@@ -455,7 +455,7 @@ func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !declared {
-		writeError(w, 404, "cli command is not declared by extension")
+		writeError(w, 404, "Команда CLI не объявлена расширением")
 		return
 	}
 	argv := append([]string{req.Command}, req.Args...)

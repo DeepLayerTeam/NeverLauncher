@@ -98,7 +98,7 @@ mod imp {
             .map_err(|err| format!("Не удалось проверить подпись codesign для {}: {err}", path.display()))?;
         if !verify.status.success() {
             return Err(format!(
-                "macOS code signature verification failed for {}: {}",
+                "Не удалось проверить подпись кода macOS для {}: {}",
                 path.display(),
                 String::from_utf8_lossy(&verify.stderr).trim()
             ));
@@ -108,10 +108,10 @@ mod imp {
             .args(["-d", "--verbose=4", "--entitlements", ":-"])
             .arg(path)
             .output()
-            .map_err(|err| format!("failed to inspect code signature for {}: {err}", path.display()))?;
+            .map_err(|err| format!("Не удалось изучить подпись кода для {}: {err}", path.display()))?;
         if !display.status.success() {
             return Err(format!(
-                "macOS code signature inspection failed for {}: {}",
+                "Не удалось изучить подпись кода macOS для {}: {}",
                 path.display(),
                 String::from_utf8_lossy(&display.stderr).trim()
             ));
@@ -245,7 +245,7 @@ mod imp {
             }
         }).map_err(|err| {
             unsafe { libc::close(kq); }
-            format!("macOS parent watcher thread failed: {err}")
+            format!("Не удалось запустить поток наблюдения за родительским процессом macOS: {err}")
         })?;
         Ok(())
     }
@@ -304,18 +304,18 @@ pub use imp::{
 };
 
 #[cfg(not(target_os = "macos"))]
-pub fn ensure_macos_production_hardening() -> Result<MacOSProductionHardeningReport, String> { Err("macOS hardening is only available on macOS".into()) }
+pub fn ensure_macos_production_hardening() -> Result<MacOSProductionHardeningReport, String> { Err("Усиленная защита macOS доступна только в macOS".into()) }
 #[cfg(not(target_os = "macos"))]
-pub fn guard_policy_report(_parent_exit_watch: bool) -> Result<MacOSGuardPolicyDetails, String> { Err("macOS policy is only available on macOS".into()) }
+pub fn guard_policy_report(_parent_exit_watch: bool) -> Result<MacOSGuardPolicyDetails, String> { Err("Политика macOS доступна только в macOS".into()) }
 #[cfg(not(target_os = "macos"))]
-pub fn install_parent_exit_watch(_parent_pid: u32) -> Result<(), String> { Err("macOS parent watcher is only available on macOS".into()) }
+pub fn install_parent_exit_watch(_parent_pid: u32) -> Result<(), String> { Err("Наблюдение за родительским процессом macOS доступно только в macOS".into()) }
 #[cfg(not(target_os = "macos"))]
 pub fn prepare_guard_command(_command: &mut tokio::process::Command) {}
 #[cfg(not(target_os = "macos"))]
 pub fn prepare_runtime_command(_command: &mut tokio::process::Command) {}
 #[cfg(not(target_os = "macos"))]
-pub fn runtime_policy(_child: &mut tokio::process::Child) -> Result<MacOSRuntimeProcessPolicyReport, String> { Err("macOS runtime policy is only available on macOS".into()) }
+pub fn runtime_policy(_child: &mut tokio::process::Child) -> Result<MacOSRuntimeProcessPolicyReport, String> { Err("Политика Runtime macOS доступна только в macOS".into()) }
 #[cfg(not(target_os = "macos"))]
-pub fn terminate_runtime_process_group(_pid: u32) -> Result<(), String> { Err("macOS runtime process groups are only available on macOS".into()) }
+pub fn terminate_runtime_process_group(_pid: u32) -> Result<(), String> { Err("Группы процессов Runtime macOS доступны только в macOS".into()) }
 #[cfg(not(target_os = "macos"))]
-pub fn verify_macos_code_signature(_path: &Path) -> Result<MacOSCodeSignatureState, String> { Err("macOS code signature verification is only available on macOS".into()) }
+pub fn verify_macos_code_signature(_path: &Path) -> Result<MacOSCodeSignatureState, String> { Err("Проверка подписи кода macOS доступна только в macOS".into()) }

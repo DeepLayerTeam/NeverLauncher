@@ -53,11 +53,11 @@ def _read_policy(path: Path):
         try:
             return datetime.datetime.strptime(raw, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
         except ValueError as err:
-            raise ValueError("trust policy certificate validity malformed") from err
+            raise ValueError("Некорректный срок действия сертификата политики доверия") from err
     issued = parse_time("issuedAt")
     expires = parse_time("expiresAt")
     if issued >= expires:
-        raise ValueError("trust policy validity interval inverted")
+        raise ValueError("Начало срока действия политики доверия позже его окончания")
     if not isinstance(value.get("keys"), list) or not value["keys"]:
         raise ValueError("Политика доверия: требуется «delegated keys»")
     seen = set()
@@ -86,7 +86,7 @@ def sign_policy(
 ) -> None:
     payload = _read_policy(payload_path)
     if output_path.is_symlink() or output_path.is_dir():
-        raise ValueError("refusing to replace symlink or directory trust policy")
+        raise ValueError("Замена политики доверия, которая является символической ссылкой или каталогом, отклонена")
     seed = bytes.fromhex(seed_hex)
     if len(seed) != 32:
         raise ValueError("root seed: требуется «32 bytes»")

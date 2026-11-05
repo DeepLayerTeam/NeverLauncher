@@ -632,7 +632,7 @@ async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &s
         sleep(Duration::from_millis(delay_ms.min(4_000))).await;
     }
     Err(format!(
-        "Managed Java upstream failed after {MANAGED_JAVA_HTTP_ATTEMPTS} attempts: {last_error}"
+        "Не удалось получить управляемую Java после {MANAGED_JAVA_HTTP_ATTEMPTS} попыток: {last_error}"
     ))
 }
 

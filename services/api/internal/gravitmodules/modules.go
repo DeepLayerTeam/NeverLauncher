@@ -66,7 +66,7 @@ func safePath(p string) bool {
 }
 func readFile(ctx context.Context, f *zip.File, limit int64) ([]byte, error) {
 	if f.UncompressedSize64 > uint64(limit) {
-		return nil, errors.New("file exceeds static inspection limit")
+		return nil, errors.New("Файл превышает ограничение размера для статической проверки")
 	}
 	r, e := f.Open()
 	if e != nil {
@@ -94,7 +94,7 @@ func readFile(ctx context.Context, f *zip.File, limit int64) ([]byte, error) {
 		}
 	}
 	if uint64(b.Len()) != f.UncompressedSize64 {
-		return nil, errors.New("truncated ZIP entry")
+		return nil, errors.New("Запись ZIP обрезана")
 	}
 	return b.Bytes(), nil
 }
@@ -105,7 +105,7 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 		return "", false, false, fmt.Errorf("Некорректное значение: модуль JAR: %w", e)
 	}
 	if len(z.File) == 0 || len(z.File) > maxJarEntries {
-		return "", false, false, errors.New("JAR entry count outside bounds")
+		return "", false, false, errors.New("Число записей JAR выходит за допустимые границы")
 	}
 	seen := map[string]bool{}
 	var expanded uint64
@@ -123,11 +123,11 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 			continue
 		}
 		if f.UncompressedSize64 > maxJarExpanded-expanded {
-			return "", false, false, errors.New("JAR expanded size exceeds limit")
+			return "", false, false, errors.New("Распакованный JAR превышает ограничение размера")
 		}
 		expanded += f.UncompressedSize64
 		if f.UncompressedSize64 > f.CompressedSize64*400+8192 {
-			return "", false, false, errors.New("JAR expansion ratio exceeds limit")
+			return "", false, false, errors.New("Коэффициент распаковки JAR превышает ограничение")
 		}
 		lower := strings.ToLower(p)
 		if lower == "meta-inf/manifest.mf" {
@@ -252,10 +252,10 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		return Report{}, e
 	}
 	if size != inventory.SourceBytes {
-		return Report{}, errors.New("source size differs from saved inventory")
+		return Report{}, errors.New("Размер источника отличается от сохранённой инвентаризации")
 	}
 	if size < 1 || size > inv.MaxSourceBytes {
-		return Report{}, errors.New("source size outside MIG03 bounds")
+		return Report{}, errors.New("Размер источника выходит за ограничения MIG03")
 	}
 	// Внутренний вызывающий код тоже не может обойти закрепление целого архива.
 	check := sha256.New()
@@ -277,7 +277,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		}
 	}
 	if hex.EncodeToString(check.Sum(nil)) != inventory.SourceSHA256 {
-		return Report{}, errors.New("source SHA-256 differs from MIG03 inventory")
+		return Report{}, errors.New("SHA-256 источника отличается от инвентаризации MIG03")
 	}
 	z, e := zip.NewReader(file, size)
 	if e != nil {
@@ -312,7 +312,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		}
 		entry, ok := indexed[p]
 		if !ok || int64(f.UncompressedSize64) != entry.Size {
-			return Report{}, fmt.Errorf("entry missing from MIG03: %s", p)
+			return Report{}, fmt.Errorf("Запись отсутствует в MIG03: %s", p)
 		}
 		limit := maxJar
 		if (wrapperFile(p) && !moduleJar(p)) || isConfig {
@@ -328,7 +328,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		}
 		sha := digest(b)
 		if sha != entry.SHA256 {
-			return Report{}, fmt.Errorf("source changed since inventory: %s", p)
+			return Report{}, fmt.Errorf("Источник изменился после инвентаризации: %s", p)
 		}
 		if isConfig && !moduleJar(p) {
 			// Конфигурация модуля влияет на исполняемое поведение, включая хуки входа и

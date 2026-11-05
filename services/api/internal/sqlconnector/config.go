@@ -114,7 +114,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		return RuntimeConfig{}, errors.New("Идентификатор коннектора SQL обязателен и не может быть local")
 	}
 	if len(cfg.ID) > 64 {
-		return RuntimeConfig{}, fmt.Errorf("SQL connector id %q exceeds 64 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Идентификатор SQL-коннектора %q длиннее 64 символов", cfg.ID)
 	}
 	for _, r := range cfg.ID {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
@@ -261,7 +261,7 @@ func validateTableIdentifier(value string) error {
 		// PostgreSQL молча обрезает идентификаторы длиннее 63 байтов. Отклоняйте их до
 		// формирования SQL, чтобы случайно не выбрать другое поле.
 		if len(part) > 63 {
-			return fmt.Errorf("SQL identifier %q exceeds 63 bytes", part)
+			return fmt.Errorf("SQL-идентификатор %q длиннее 63 байт", part)
 		}
 		if !identifierPattern.MatchString(part) {
 			return fmt.Errorf("Недопустимый идентификатор таблицы %q", value)
@@ -293,7 +293,7 @@ func validateColumns(columns Columns) error {
 			return fmt.Errorf("Идентификатор столбца %s превышает 63 байта", item.name)
 		}
 		if !identifierPattern.MatchString(item.value) {
-			return fmt.Errorf("column %s=%q is invalid", item.name, item.value)
+			return fmt.Errorf("Некорректное значение столбца %s=%q", item.name, item.value)
 		}
 		lower := strings.ToLower(item.value)
 		if previous, ok := seen[lower]; ok && previous != item.name {

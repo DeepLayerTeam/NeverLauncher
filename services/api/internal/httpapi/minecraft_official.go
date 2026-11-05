@@ -48,7 +48,7 @@ type officialState0257 struct {
 
 func officialSeal0257(secret string, state officialState0257) (string, error) {
 	if len(secret) < 24 {
-		return "", errors.New("official token encryption key not configured")
+		return "", errors.New("Ключ шифрования официального токена не настроен")
 	}
 	key := sha256.Sum256([]byte("launcher/official-minecraft/aes-gcm/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
@@ -159,7 +159,7 @@ func officialFail0257(w http.ResponseWriter, err error) {
 		w.Header().Set("Retry-After", "30")
 		writeError(w, http.StatusTooManyRequests, "Minecraft Services rate limit")
 	default:
-		writeError(w, http.StatusBadGateway, "official Minecraft service unavailable")
+		writeError(w, http.StatusBadGateway, "Официальный сервис Minecraft недоступен")
 	}
 }
 
@@ -275,7 +275,7 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	}
 	st, actor, err := s.officialRead0257(r, "pending")
 	if err != nil {
-		writeError(w, 401, "invalid or expired official authorization flow")
+		writeError(w, 401, "Процесс официальной авторизации некорректен или срок его действия истёк")
 		return
 	}
 	interval := time.Duration(st.Interval) * time.Second
@@ -285,7 +285,7 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	if now.Unix() < st.NextPoll || !officialPollingAllowed0257(st.DeviceCode, interval) {
 		w.Header().Set("Retry-After", strconv.Itoa(max(5, st.Interval)))
-		writeError(w, 429, "Microsoft authorization polling too frequent")
+		writeError(w, 429, "Слишком частые запросы проверки авторизации Microsoft")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
@@ -315,12 +315,12 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if st.MicrosoftAccess == "" {
-		writeError(w, 401, "redeemed Microsoft authorization is incomplete")
+		writeError(w, 401, "Завершённая авторизация Microsoft содержит неполные данные")
 		return
 	}
 	if st.MicrosoftAccessExpires <= time.Now().Add(60*time.Second).Unix() {
 		if st.MicrosoftRefresh == "" {
-			writeError(w, 401, "Microsoft reauthorization required")
+			writeError(w, 401, "Требуется повторная авторизация Microsoft")
 			return
 		}
 		tokens, e := client.Refresh(ctx, policy.ClientID, st.MicrosoftRefresh)
@@ -377,17 +377,17 @@ func (s Server) officialAuthorized0257(w http.ResponseWriter, r *http.Request) (
 	}
 	st, _, err := s.officialRead0257(r, "linked")
 	if err != nil {
-		writeError(w, 401, "official Minecraft session required")
+		writeError(w, 401, "Требуется официальный сеанс Minecraft")
 		return st, nil, false
 	}
 	if st.MinecraftToken == "" || st.UUID == "" {
-		writeError(w, 401, "official Minecraft session incomplete")
+		writeError(w, 401, "Официальный сеанс Minecraft содержит неполные данные")
 		return st, nil, false
 	}
 	client := officialminecraft.New()
 	if st.MinecraftExpires <= time.Now().Add(60*time.Second).Unix() {
 		if st.MicrosoftRefresh == "" {
-			writeError(w, 401, "official Minecraft reauthorization required")
+			writeError(w, 401, "Требуется повторная авторизация Minecraft")
 			return st, nil, false
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 35*time.Second)
@@ -408,7 +408,7 @@ func (s Server) officialAuthorized0257(w http.ResponseWriter, r *http.Request) (
 			return st, nil, false
 		}
 		if !strings.EqualFold(profile.ID, st.UUID) {
-			writeError(w, 403, "official account changed during refresh")
+			writeError(w, 403, "Во время обновления авторизации официальная учётная запись изменилась")
 			return st, nil, false
 		}
 		st.MicrosoftRefresh = tokens.RefreshToken
@@ -462,25 +462,25 @@ func (s Server) officialSkinUpload0257(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if e != nil {
-			writeError(w, 400, "invalid multipart payload")
+			writeError(w, 400, "Некорректные данные multipart")
 			return
 		}
 		field := part.FormName()
 		if seen[field] || (field != "variant" && field != "file") {
 			part.Close()
-			writeError(w, 400, "duplicate or unsupported multipart field")
+			writeError(w, 400, "Повторяющееся или неподдерживаемое поле multipart")
 			return
 		}
 		seen[field] = true
 		b, e := io.ReadAll(io.LimitReader(part, texturepng.MaxEncodedBytes+1))
 		part.Close()
 		if e != nil || len(b) > texturepng.MaxEncodedBytes {
-			writeError(w, 413, "skin exceeds upload limit")
+			writeError(w, 413, "Размер скина превышает ограничение загрузки")
 			return
 		}
 		if field == "variant" {
 			if len(b) > 10 {
-				writeError(w, 400, "invalid variant")
+				writeError(w, 400, "Некорректный вариант")
 				return
 			}
 			variant = string(b)
@@ -489,18 +489,18 @@ func (s Server) officialSkinUpload0257(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if variant != "classic" && variant != "slim" {
-		writeError(w, 400, "skin variant must be classic or slim")
+		writeError(w, 400, "Вариант скина должен быть classic или slim")
 		return
 	}
 	normalized, err := texturepng.Process(bytes.NewReader(file), "skin", variant)
 	if err != nil {
-		writeError(w, 422, "invalid Minecraft skin PNG")
+		writeError(w, 422, "Некорректный PNG скина Minecraft")
 		return
 	}
 	// Официальный API загрузки Mojang не гарантирует поддержку PNG повышенного
 	// разрешения.
 	if normalized.Width != 64 || (normalized.Height != 64 && normalized.Height != 32) {
-		writeError(w, 422, "official skin must be 64x64 or classic 64x32")
+		writeError(w, 422, "Официальный скин должен иметь размер 64×64 или classic 64×32")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
@@ -511,7 +511,7 @@ func (s Server) officialSkinUpload0257(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !strings.EqualFold(profile.ID, st.UUID) {
-		writeError(w, 502, "Minecraft Services returned another profile")
+		writeError(w, 502, "Minecraft Services вернул другой профиль")
 		return
 	}
 	profile, err = client.ConfirmTexture0395(ctx, st.MinecraftToken, st.UUID, "skin-upload", variant)
@@ -554,7 +554,7 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&req); err != nil || req.CapeID == "" || len(req.CapeID) > 128 {
-			writeError(w, 400, "capeId required")
+			writeError(w, 400, "Требуется capeId")
 			return
 		}
 		var extra any
@@ -579,7 +579,7 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !found {
-			writeError(w, 403, "cape does not belong to official Minecraft account")
+			writeError(w, 403, "Плащ не принадлежит официальной учётной записи Minecraft")
 			return
 		}
 		updated, err := client.SelectCape(ctx, st.MinecraftToken, req.CapeID)
@@ -588,7 +588,7 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !strings.EqualFold(updated.ID, st.UUID) {
-			writeError(w, 502, "Minecraft Services returned another profile")
+			writeError(w, 502, "Minecraft Services вернул другой профиль")
 			return
 		}
 		updated, err = client.ConfirmTexture0395(ctx, st.MinecraftToken, st.UUID, "cape-select", req.CapeID)

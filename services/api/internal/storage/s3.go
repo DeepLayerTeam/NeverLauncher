@@ -122,14 +122,14 @@ func (s *S3Storage) Delete(ctx context.Context, projectID, versionID, relativePa
 	}
 	response, err := s.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("S3 delete: %w", err)
+		return fmt.Errorf("Ошибка удаления из S3: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusNoContent || response.StatusCode == http.StatusAccepted || response.StatusCode == http.StatusNotFound {
 		return nil
 	}
 	body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-	return fmt.Errorf("S3 delete status %d: %s", response.StatusCode, strings.TrimSpace(string(body)))
+	return fmt.Errorf("Ошибка удаления из S3: статус %d: %s", response.StatusCode, strings.TrimSpace(string(body)))
 }
 
 func (s *S3Storage) Open(projectID, versionID, relativePath string) (io.ReadCloser, int64, error) {

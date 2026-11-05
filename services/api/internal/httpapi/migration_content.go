@@ -118,7 +118,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "expected source application/zip")
+		writeError(w, 415, "Ожидается источник с типом application/zip")
 		return
 	}
 	profilePath, profileID, name, loader, channel, version := migrationContentHeaders0337(r)
@@ -158,7 +158,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 	}
 	plan, e := gc.Prepare(r.Context(), src, n, snapshot, profilePath, run.ProjectID, profileID, name, loader)
 	if e != nil {
-		writeError(w, 422, "content analysis failed: "+e.Error())
+		writeError(w, 422, "Не удалось выполнить анализ содержимого: "+e.Error())
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
@@ -192,19 +192,19 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 	if ws.State == "built" && ws.PackageID != "" {
 		digest, err := s.workspaceValidate0226(ws)
 		if err != nil {
-			writeError(w, 409, "built workspace verification failed: "+err.Error())
+			writeError(w, 409, "Не удалось проверить собранную рабочую область: "+err.Error())
 			return
 		}
 		writeJSON(w, 200, map[string]any{"data": migrationContentResponse0337(plan, ws, "verified built workspace: "+digest, true)})
 		return
 	}
 	if ws.PackageID != "" {
-		writeError(w, 409, "package build in progress; retry after completion")
+		writeError(w, 409, "Сборка пакета выполняется; повторите после её завершения")
 		return
 	}
 	reader, e := gc.NewReader(src, n)
 	if e != nil {
-		writeError(w, 422, "invalid source ZIP")
+		writeError(w, 422, "Некорректный исходный ZIP")
 		return
 	}
 	existing := map[string]repository.BuildFile{}
@@ -226,21 +226,21 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		}
 		b, readErr := reader.ReadVerified(r.Context(), f)
 		if readErr != nil {
-			writeError(w, 422, "source content verification failed: "+readErr.Error())
+			writeError(w, 422, "Проверка исходного содержимого завершилась ошибкой: "+readErr.Error())
 			return
 		}
 		file := repository.BuildFile{Path: f.TargetPath, Size: f.Size, SHA256: f.SHA256, Ownership: f.Ownership, Selected: true}
 		if e = normalizeBuildFile0226(file); e != nil {
-			writeError(w, 422, "unsupported target file: "+e.Error())
+			writeError(w, 422, "Неподдерживаемый целевой файл: "+e.Error())
 			return
 		}
 		encrypted, encryptErr := s.encryptWorkspace0226(ws, file, b)
 		if encryptErr != nil {
-			writeError(w, 503, "workspace encryption failed")
+			writeError(w, 503, "Не удалось зашифровать рабочую область")
 			return
 		}
 		if _, _, e = s.Storage.Save(ws.ProjectID, ws.ID, workspaceObjectPath0226(file), bytes.NewReader(encrypted)); e != nil {
-			writeError(w, 503, "object storage unavailable: "+e.Error())
+			writeError(w, 503, "Объектное хранилище недоступно: "+e.Error())
 			return
 		}
 		if _, ok := existing[file.Path]; !ok {
@@ -295,12 +295,12 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		return
 	}
 	if r.ContentLength > 0 {
-		writeError(w, 400, "no request body expected")
+		writeError(w, 400, "Тело запроса не допускается")
 		return
 	}
 	runID := r.PathValue("runId")
 	if r.Header.Get("X-Migration-Content-Confirm") != runID {
-		writeError(w, 400, "explicit migration ID confirmation required")
+		writeError(w, 400, "Требуется явное подтверждение идентификатора миграции")
 		return
 	}
 	pp := r.URL.Query().Get("profilePath")
@@ -310,7 +310,7 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		return
 	}
 	if plan.Optional == nil || !plan.Optional.Ready {
-		writeError(w, 409, "no supported optional selection for this profile")
+		writeError(w, 409, "Для этого профиля отсутствуют поддерживаемые дополнительные компоненты")
 		return
 	}
 	claims, e := s.adminClaims(r)
@@ -322,17 +322,17 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		return
 	}
 	if ws.State != "built" || ws.PackageID == "" {
-		writeError(w, 409, "build and validate workspace before applying optionals")
+		writeError(w, 409, "Сначала соберите и проверьте рабочую область, затем применяйте дополнительные компоненты")
 		return
 	}
 	lookup, unlock, e := s.lockPackageLookupMutation(r.Context(), ws.PackageID)
 	if e != nil {
-		writeError(w, 409, "draft package unavailable or busy")
+		writeError(w, 409, "Черновик пакета недоступен или занят")
 		return
 	}
 	defer unlock()
 	if lookup.Release.Status != "draft" || lookup.Release.ProjectID != ws.ProjectID || lookup.Release.ProfileID != ws.ProfileID || lookup.Release.ID != ws.PackageID || lookup.Release.Manifest.SchemaVersion != model.ManifestSchemaV3 || lookup.Release.Manifest.ComponentCatalog == nil {
-		writeError(w, 409, "package must be an unsigned v3 draft belonging to the migrated profile")
+		writeError(w, 409, "Пакет должен быть неподписанным черновиком v3, принадлежащим перенесённому профилю")
 		return
 	}
 	// Отклоняйте любые расхождения файлов пакета после подготовки. Необязательный
@@ -343,13 +343,13 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		expected[f.TargetPath] = f
 	}
 	if len(lookup.Files) != len(expected) {
-		writeError(w, 409, "package file count changed")
+		writeError(w, 409, "Количество файлов пакета изменилось")
 		return
 	}
 	for _, f := range lookup.Files {
 		old, exists := expected[f.Path]
 		if !exists || old.SHA256 != f.SHA256 || old.Size != f.Size || old.Ownership != f.Ownership {
-			writeError(w, 409, "package files differ from verified content")
+			writeError(w, 409, "Файлы пакета отличаются от проверенного содержимого")
 			return
 		}
 	}
@@ -360,7 +360,7 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		return
 	}
 	if len(existing.Components) != 0 {
-		writeError(w, 409, "draft component catalog has manual changes; refusing to overwrite")
+		writeError(w, 409, "Каталог компонентов черновика изменён вручную; перезапись отклонена")
 		return
 	}
 	req := componentEditorRequest0248{ExpectedRevision: existing.Revision, Catalog: original}
@@ -373,12 +373,12 @@ func (s Server) migrationContentApplyOptionals0337(w http.ResponseWriter, r *htt
 		UpdateDraftComponentCatalog0248(string, string, uint64, model.ComponentCatalog0241) (model.ReleaseVersion, error)
 	})
 	if !ok {
-		writeError(w, 503, "catalog persistence unavailable")
+		writeError(w, 503, "Сохранение каталога недоступно")
 		return
 	}
 	result, e := writer.UpdateDraftComponentCatalog0248(ws.ProjectID, ws.PackageID, existing.Revision, cat)
 	if e != nil {
-		writeError(w, 409, "cannot commit optional catalog: "+e.Error())
+		writeError(w, 409, "Не удалось сохранить каталог дополнительных компонентов: "+e.Error())
 		return
 	}
 	s.audit(r, claims.Sub, "migration:gravit-optionals", ws.PackageID)

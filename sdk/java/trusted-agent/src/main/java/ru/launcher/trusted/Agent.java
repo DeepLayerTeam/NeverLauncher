@@ -33,27 +33,27 @@ public final class Agent {
     private Agent() { }
 
     public static void premain(String argument, Instrumentation instrumentation) throws Exception {
-        if (argument == null || argument.isEmpty()) throw new IllegalArgumentException("signed agent configuration required");
+        if (argument == null || argument.isEmpty()) throw new IllegalArgumentException("Требуется конфигурация подписанного агента");
         Properties config = new Properties();
         try (FileInputStream in = new FileInputStream(argument)) { config.load(in); }
         String encodedMain = config.getProperty("main");
-        if (encodedMain == null) throw new IllegalArgumentException("Minecraft original main missing");
+        if (encodedMain == null) throw new IllegalArgumentException("Отсутствует исходный главный класс Minecraft");
         originalMain = new String(Base64.getDecoder().decode(encodedMain), java.nio.charset.StandardCharsets.UTF_8);
-        if (!originalMain.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+")) throw new IllegalArgumentException("invalid Minecraft main");
+        if (!originalMain.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+")) throw new IllegalArgumentException("Некорректный главный класс Minecraft");
         int count = Integer.parseInt(config.getProperty("count", "-1"));
-        if (count < 0 || count > 32) throw new IllegalArgumentException("invalid plugin count");
+        if (count < 0 || count > 32) throw new IllegalArgumentException("Некорректное число плагинов");
         guardPolicyActive = "true".equals(config.getProperty("guard.policy.active"));
         if (guardPolicyActive) {
             int transforms = Integer.parseInt(config.getProperty("transform.count", "-1"));
-            if (transforms < 0 || transforms > 4096) throw new SecurityException("Guard transform count invalid");
+            if (transforms < 0 || transforms > 4096) throw new SecurityException("Guard: некорректное число преобразований");
             for (int i = 0; i < transforms; i++) {
                 String sha = config.getProperty("transform." + i + ".owner");
                 String clazz = new String(Base64.getDecoder().decode(config.getProperty("transform." + i + ".class")), java.nio.charset.StandardCharsets.UTF_8);
                 if (sha == null || !sha.matches("[0-9a-f]{64}") || !clazz.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+"))
-                    throw new SecurityException("Guard invalid transform binding");
+                    throw new SecurityException("Guard: некорректная привязка преобразования");
                 Set<String> classes = ALLOWED_TRANSFORMS.get(sha);
                 if (classes == null) { classes = new HashSet<String>(); ALLOWED_TRANSFORMS.put(sha, classes); }
-                if (!classes.add(clazz)) throw new SecurityException("Guard duplicate transform binding");
+                if (!classes.add(clazz)) throw new SecurityException("Guard: повторяющаяся привязка преобразования");
             }
         }
         if (guardPolicyActive) {
@@ -72,7 +72,7 @@ public final class Agent {
             String path = new String(Base64.getDecoder().decode(config.getProperty("plugin."+i)), java.nio.charset.StandardCharsets.UTF_8);
             String sha = config.getProperty("plugin."+i+".sha256");
             if (sha == null || !sha.matches("[0-9a-f]{64}") || !sha.equals(digest(path)))
-                throw new SecurityException("trusted JVM plugin digest mismatch: " + i);
+                throw new SecurityException("Не совпадает контрольная сумма плагина доверенной JVM: " + i);
             URL url = new java.io.File(path).toURI().toURL();
             urls.add(url);
             PLUGIN_DIGESTS.put(url.toExternalForm(), sha);
@@ -102,7 +102,7 @@ public final class Agent {
                                     Runtime.getRuntime().halt(79); // JVM может скрывать исключения трансформатора
                                 }
                             }
-                            if (result.length == 0 || result.length > 64*1024*1024) throw new IllegalStateException("invalid class transform result");
+                            if (result.length == 0 || result.length > 64*1024*1024) throw new IllegalStateException("Некорректный результат преобразования класса");
                             current = result;
                             modified = true;
                         }
@@ -122,9 +122,9 @@ public final class Agent {
         try {
             URL jar = hook.getClass().getProtectionDomain().getCodeSource().getLocation();
             String digest = PLUGIN_DIGESTS.get(jar.toExternalForm());
-            if (digest == null) throw new SecurityException("Guard hook source is not a pinned plugin JAR");
+            if (digest == null) throw new SecurityException("Guard: источником перехвата не является закреплённый JAR плагина");
             return digest;
-        } catch (NullPointerException e) { throw new SecurityException("Guard hook has no trusted source", e); }
+        } catch (NullPointerException e) { throw new SecurityException("Guard: у перехвата отсутствует доверенный источник", e); }
     }
     private static boolean isMinecraftClass(String n) {
         return n.startsWith("net/minecraft/") || n.startsWith("com/mojang/") ||
@@ -150,5 +150,5 @@ public final class Agent {
     static void afterMain(Throwable failure) throws Exception {
         for (MinecraftHook hook : HOOKS) hook.afterMinecraftMain(originalMain,failure);
     }
-    private static void ensureReady() { if (!ready) throw new IllegalStateException("trusted JVM premain did not complete"); }
+    private static void ensureReady() { if (!ready) throw new IllegalStateException("Инициализация premain доверенной JVM не завершилась"); }
 }

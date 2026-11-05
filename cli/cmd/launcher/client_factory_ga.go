@@ -62,13 +62,13 @@ func factoryReadJoinEvidence0280(path string) (factoryJoinEvidence0280, string, 
 		return e, "", err
 	}
 	if len(b) > 2<<20 {
-		return e, "", errors.New("server join evidence exceeds 2 MiB")
+		return e, "", errors.New("Размер доказательств подключения к серверу превышает 2 МиБ")
 	}
 	if err = json.Unmarshal(b, &e); err != nil {
 		return e, "", err
 	}
 	if e.Status != "passed" || !e.ClientJoinedServer || !e.ActualClient || !e.ServerProcessAlive || !e.ServerVersionMatched || e.MinecraftVersion == "" || e.MinecraftVersion != e.ClientVersion || e.MinecraftVersion != e.ServerVersion || e.ServerHost != "127.0.0.1" {
-		return e, "", errors.New("matching-server evidence does not prove a real exact-version client join")
+		return e, "", errors.New("Данные совпадающего сервера не подтверждают реальное подключение клиента требуемой версии")
 	}
 	sum := sha256.Sum256(b)
 	return e, hex.EncodeToString(sum[:]), nil
@@ -108,7 +108,7 @@ func factoryVerifyJoin0280(evidence, attestation, publicKey, ver, commit string)
 		return e, "", err
 	}
 	if len(b) > 1<<20 {
-		return e, "", errors.New("server join attestation exceeds 1 MiB")
+		return e, "", errors.New("Размер подтверждения подключения к серверу превышает 1 МиБ")
 	}
 	if err = json.Unmarshal(b, &a); err != nil {
 		return e, "", err
@@ -118,7 +118,7 @@ func factoryVerifyJoin0280(evidence, attestation, publicKey, ver, commit string)
 	}
 	issued, err := time.Parse(time.RFC3339, a.CreatedAt)
 	if err != nil || issued.After(time.Now().Add(5*time.Minute)) || time.Since(issued) > 30*24*time.Hour {
-		return e, "", errors.New("server join attestation expired or has invalid timestamp")
+		return e, "", errors.New("Подтверждение подключения к серверу просрочено или имеет неверную временную метку")
 	}
 	pub, err := certReadPublic02712(publicKey)
 	if err != nil {

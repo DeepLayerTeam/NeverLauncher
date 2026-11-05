@@ -10,7 +10,7 @@ public record ProviderDescriptor<T extends JavaProvider>(
     public ProviderDescriptor {
         Objects.requireNonNull(service, "service");
         if (id == null || !id.matches("[a-z][a-z0-9._-]{1,79}"))
-            throw new IllegalArgumentException("invalid provider id");
+            throw new IllegalArgumentException("Некорректный идентификатор провайдера");
         Objects.requireNonNull(version, "version");
         Objects.requireNonNull(factory, "factory");
         // Разбирайте сейчас, до того как библиотека получит возможность выполнить

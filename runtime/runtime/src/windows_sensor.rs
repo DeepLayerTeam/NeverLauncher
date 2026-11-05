@@ -173,7 +173,7 @@ mod imp {
                     }
                 }
                 return Err(format!(
-                    "Guard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
+                    "Guard: отклонён параметр инструментирования при запуске {label}"
                 ));
             }
         }
@@ -181,7 +181,7 @@ mod imp {
             if let Some(value) = effective_command_env(command, name) {
                 if let Some(label) = java_options_contains_forbidden(&value) {
                     return Err(format!(
-                        "Guard Debug & Instrumentation Guard rejected {label} from {name}"
+                        "Guard: отклонён {label} от {name}"
                     ));
                 }
             }
@@ -197,7 +197,7 @@ mod imp {
     ) -> Result<WindowsSensorBootstrap, String> {
         validate_startup_instrumentation_boundary(command, verified_root)?;
         let metadata = std::fs::symlink_metadata(&sensor_path).map_err(|err| {
-            format!("Guard Sensor DLL is unavailable {}: {err}", sensor_path.display())
+            format!("DLL датчика Guard недоступна {}: {err}", sensor_path.display())
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
             return Err("Guard Sensor должен быть непустым regular non-symlink DLL".to_string());
@@ -262,13 +262,13 @@ mod imp {
                 .ok_or_else(|| "Guard Sensor startup pipe already consumed".to_string())?;
             timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), server.connect())
                 .await
-                .map_err(|_| "Guard Sensor did not load before JVM startup timeout".to_string())?
+                .map_err(|_| "Датчик Guard не загрузился до истечения времени запуска JVM".to_string())?
                 .map_err(|err| format!("Ошибка: «Guard Sensor startup pipe connect»: {err}"))?;
 
             let mut packet = [0u8; 48];
             timeout(Duration::from_secs(3), server.read_exact(&mut packet))
                 .await
-                .map_err(|_| "Guard Sensor startup authentication timed out".to_string())?
+                .map_err(|_| "Превышено время аутентификации датчика Guard при запуске".to_string())?
                 .map_err(|err| format!("Ошибка: «Guard Sensor startup packet read»: {err}"))?;
 
             if &packet[..8] != SENSOR_MAGIC {

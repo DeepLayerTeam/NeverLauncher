@@ -105,11 +105,11 @@ func embedDeviceTrustCertification(out, matrixPath, targetsPath, ver, expectedCo
 	}
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {
-		return fmt.Errorf("read Device Trust matrix: %w", err)
+		return fmt.Errorf("Не удалось прочитать матрицу доверия устройств: %w", err)
 	}
 	targetsRaw, err := os.ReadFile(targetsPath)
 	if err != nil {
-		return fmt.Errorf("read Device Trust targets: %w", err)
+		return fmt.Errorf("Не удалось прочитать цели доверия устройств: %w", err)
 	}
 	certification, err := validateDeviceTrustEvidence(matrixRaw, targetsRaw, ver, expectedCommit)
 	if err != nil {
@@ -137,7 +137,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		return releaseDeviceTrustCertification{}, errors.New("Device Trust evidence требует schemaVersion=1.0")
 	}
 	if strings.TrimSpace(ver) == "" || targets.ProductVersion != ver || matrix.ProductVersion != ver {
-		return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust productVersion mismatch: release=%s targets=%s matrix=%s", ver, targets.ProductVersion, matrix.ProductVersion)
+		return releaseDeviceTrustCertification{}, fmt.Errorf("Несоответствие productVersion в доверии устройств: релиз=%s, цели=%s, матрица=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {
 		return releaseDeviceTrustCertification{}, errors.New("Device Trust matrix не имеет fail-closed status=passed")
@@ -146,7 +146,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		return releaseDeviceTrustCertification{}, errors.New("Device Trust matrix не содержит repository/commit/runId")
 	}
 	if strings.TrimSpace(expectedCommit) != "" && matrix.Commit != strings.TrimSpace(expectedCommit) {
-		return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust matrix commit mismatch: expected=%s actual=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
+		return releaseDeviceTrustCertification{}, fmt.Errorf("Не совпадает коммит матрицы доверия устройств: ожидался=%s, фактический=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
 	}
 
 	mandatoryProtocol := map[string]bool{
@@ -228,7 +228,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		resultByID[id] = result
 	}
 	if len(resultByID) != len(targetByID) {
-		return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust matrix target count mismatch: expected=%d actual=%d", len(targetByID), len(resultByID))
+		return releaseDeviceTrustCertification{}, fmt.Errorf("Не совпадает число целей матрицы доверия устройств: ожидалось=%d, фактически=%d", len(targetByID), len(resultByID))
 	}
 
 	passedIDs := []string{}
@@ -245,7 +245,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		}
 		for _, check := range target.RequiredChecks {
 			if result.Checks == nil || result.Checks[check] != true {
-				return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust target %s required check %s != true", id, check)
+				return releaseDeviceTrustCertification{}, fmt.Errorf("Цель доверия устройств %s: обязательная проверка %s не равна true", id, check)
 			}
 		}
 		if !deviceTrustSHA256RE.MatchString(strings.ToLower(result.EvidenceSHA256)) {

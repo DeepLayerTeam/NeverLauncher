@@ -163,7 +163,7 @@ func (s Server) serverBridgeTopology0148(w http.ResponseWriter, r *http.Request)
 func (b *serverBridgeStore) createHandoff0148(h model.ServerBridgeHandoff) (model.ServerBridgeHandoff, error) {
 	backend := b.backendV2()
 	if backend == nil {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("PostgreSQL ServerBridge source of truth is required for handoff")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("Для передачи управления требуется PostgreSQL как источник достоверных данных ServerBridge")
 	}
 	ctx, cancel := bridgeContextV2()
 	defer cancel()
@@ -206,7 +206,7 @@ func (b *serverBridgeStore) invalidateHandoff0148(id string) bool {
 func (b *serverBridgeStore) topology0148() ([]model.ServerBridgeTopologyEdge, error) {
 	backend := b.backendV2()
 	if backend == nil {
-		return nil, fmt.Errorf("PostgreSQL ServerBridge source of truth is required for topology")
+		return nil, fmt.Errorf("Для топологии требуется PostgreSQL как источник достоверных данных ServerBridge")
 	}
 	ctx, cancel := bridgeContextV2()
 	defer cancel()

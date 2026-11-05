@@ -110,14 +110,14 @@ func checkPrivateRegular(filename string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > limit {
-		return nil, errors.New("Для подтверждающие данные требуется: «a bounded regular file, not a symlink»")
+		return nil, errors.New("Подтверждающие данные должны храниться в обычном файле допустимого размера, не в символической ссылке")
 	}
 	return os.ReadFile(filename)
 }
 
 func verifyEvidence(b Bundle, dir string) error {
 	if !filepath.IsAbs(dir) || dir == "" {
-		return errors.New("Требуется: «absolute evidence directory»")
+		return errors.New("Требуется абсолютный путь к каталогу подтверждающих данных")
 	}
 	info, err := os.Lstat(dir)
 	if err != nil {
@@ -140,7 +140,7 @@ func verifyEvidence(b Bundle, dir string) error {
 	}
 	for _, entry := range entries {
 		if !approved[entry.Name()] || !entry.Type().IsRegular() {
-			return fmt.Errorf("Неожиданное значение: «or nonregular evidence»: %s", entry.Name())
+			return fmt.Errorf("Неожиданные подтверждающие данные или файл неподдерживаемого типа: %s", entry.Name())
 		}
 	}
 	for _, check := range b.Checks {
@@ -168,7 +168,7 @@ func verifyEvidence(b Bundle, dir string) error {
 		}
 		sum, err := shaFile(evidence, 128<<20)
 		if err != nil || sum != check.EvidenceSHA256 {
-			return fmt.Errorf("Несовпадение: «%s evidence SHA-256»", check.Name)
+			return fmt.Errorf("Несовпадение SHA-256 подтверждающих данных %s", check.Name)
 		}
 		if check.Name == "uuid-world-plugin-data" {
 			auditRaw, readErr := os.ReadFile(evidence)
@@ -187,7 +187,7 @@ func verifyEvidence(b Bundle, dir string) error {
 			}
 			for i, id := range source {
 				if id == "" || (i > 0 && id == source[i-1]) {
-					return errors.New("Обнаружен дубликат: «or empty player UUID»")
+					return errors.New("UUID игрока повторяется или отсутствует")
 				}
 			}
 		}
@@ -239,7 +239,7 @@ func verifyCohort(keyFile string, cohort map[string]CohortInput) error {
 		return err
 	}
 	if len(cohort) != len(referenceClasses) {
-		return errors.New("Требуется: «all three migration reference classes»")
+		return errors.New("Требуются все три категории эталонных данных миграции")
 	}
 	seenProject, seenSource, seenRun := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	commit := ""

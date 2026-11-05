@@ -565,7 +565,7 @@ func (m *Manager) Install(ctx context.Context, item model.ExtensionRegistryVersi
 		return model.ExtensionInstall{}, err
 	}
 	if err := m.ValidateCandidate0305(ctx, stage, item.Manifest, scope, false); err != nil {
-		return model.ExtensionInstall{}, fmt.Errorf("extension pre-activation check rejected %s@%s: %w", id, item.Version, err)
+		return model.ExtensionInstall{}, fmt.Errorf("Проверка перед активацией отклонила расширение %s@%s: %w", id, item.Version, err)
 	}
 	if _, err := m.Repo.SaveExtensionVersion(ctx, item.Manifest); err != nil {
 		return model.ExtensionInstall{}, err
@@ -643,7 +643,7 @@ func (m *Manager) UpdateWithSandboxApproval0318(ctx context.Context, item model.
 		return model.ExtensionInstall{}, err
 	}
 	if err := m.ValidateCandidate0305(ctx, stage, item.Manifest, scope, false); err != nil {
-		return model.ExtensionInstall{}, fmt.Errorf("extension pre-activation check rejected %s@%s: %w", id, item.Version, err)
+		return model.ExtensionInstall{}, fmt.Errorf("Проверка перед активацией отклонила расширение %s@%s: %w", id, item.Version, err)
 	}
 	if _, err := m.Repo.SaveExtensionVersion(ctx, item.Manifest); err != nil {
 		return model.ExtensionInstall{}, err

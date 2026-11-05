@@ -98,7 +98,7 @@ mod imp {
             .map_err(|err| format!("Не удалось проверить подпись codesign для {}: {err}", path.display()))?;
         if !verify.status.success() {
             return Err(format!(
-                "macOS code signature verification failed for {}: {}",
+                "Не удалось проверить подпись кода macOS для {}: {}",
                 path.display(),
                 String::from_utf8_lossy(&verify.stderr).trim()
             ));
@@ -111,7 +111,7 @@ mod imp {
             .map_err(|err| format!("Не удалось проверить подпись кода для {}: {err}", path.display()))?;
         if !display.status.success() {
             return Err(format!(
-                "macOS code signature inspection failed for {}: {}",
+                "Не удалось изучить подпись кода macOS для {}: {}",
                 path.display(),
                 String::from_utf8_lossy(&display.stderr).trim()
             ));

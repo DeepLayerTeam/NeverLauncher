@@ -76,10 +76,10 @@ def identity(
             text=True,
         )
         if head.returncode or head.stdout.strip().lower() != commit:
-            raise CertificationBlocked("checkout HEAD differs from current CI commit")
+            raise CertificationBlocked("HEAD рабочей копии отличается от текущего коммита CI")
         version_in_checkout = (root / "VERSION").read_text(encoding="utf-8").strip()
         if version_in_checkout != version:
-            raise CertificationBlocked("checkout VERSION differs from certification")
+            raise CertificationBlocked("VERSION рабочей копии отличается от сертифицируемой версии")
     repository = env.get("GITHUB_REPOSITORY", "")
     if not REPO.fullmatch(repository):
         raise CertificationBlocked("Требуется: «current GitHub repository identity»")

@@ -292,10 +292,10 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			return resolutionError0243("invalid_version", c.ID, "", fmt.Sprintf("component %s: %v", c.ID, err))
 		}
 		if c.ExclusiveGroup != "" && !validComponentID0241(c.ExclusiveGroup) {
-			return resolutionError0243("invalid_group", c.ID, "", fmt.Sprintf("component %s has invalid exclusive group %q", c.ID, c.ExclusiveGroup))
+			return resolutionError0243("invalid_group", c.ID, "", fmt.Sprintf("Компонент %s содержит некорректную группу взаимоисключения %q", c.ID, c.ExclusiveGroup))
 		}
 		if len(c.Dependencies) > 64 || len(c.Conflicts) > 64 {
-			return resolutionError0243("limit", c.ID, "", fmt.Sprintf("component %s has too many constraints", c.ID))
+			return resolutionError0243("limit", c.ID, "", fmt.Sprintf("У компонента %s слишком много ограничений", c.ID))
 		}
 		depSeen := map[string]bool{}
 		conflictSeen := map[string]bool{}
@@ -307,7 +307,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			for _, r := range relation.refs {
 				other, exists := items[r.ID]
 				if !exists || relation.seen[r.ID] || r.ID == c.ID {
-					return resolutionError0243("invalid_reference", c.ID, r.ID, fmt.Sprintf("%s %s references missing, duplicate or self component %s", c.ID, relation.kind, r.ID))
+					return resolutionError0243("invalid_reference", c.ID, r.ID, fmt.Sprintf("%s %s ссылается на отсутствующий, повторяющийся или самого себя компонент %s", c.ID, relation.kind, r.ID))
 				}
 				relation.seen[r.ID] = true
 				if _, err := matchRange0243(other.Version, r.VersionRange); err != nil {
@@ -332,7 +332,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 					break
 				}
 			}
-			return resolutionError0243("cycle", id, id, "dependency cycle: "+strings.Join(append(append([]string{}, stack[start:]...), id), " -> "))
+			return resolutionError0243("cycle", id, id, "Циклическая зависимость: "+strings.Join(append(append([]string{}, stack[start:]...), id), " -> "))
 		}
 		state[id] = 1
 		stack = append(stack, id)
@@ -410,7 +410,7 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 	activate = func(id string, chain []string) error {
 		c, ok := components[id]
 		if !ok {
-			return resolutionError0243("missing_dependency", id, "", fmt.Sprintf("unknown dependency %s", id))
+			return resolutionError0243("missing_dependency", id, "", fmt.Sprintf("Неизвестная зависимость %s", id))
 		}
 		if expanded[id] {
 			return nil
@@ -422,7 +422,7 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 				return err
 			}
 			if !allowed {
-				return resolutionError0243("version_mismatch", id, d.ID, fmt.Sprintf("%s requires %s %q, available version %s (via %s)", id, d.ID, d.VersionRange, target.Version, strings.Join(append(chain, id), " -> ")))
+				return resolutionError0243("version_mismatch", id, d.ID, fmt.Sprintf("%s требует %s %q, доступная версия %s (через %s)", id, d.ID, d.VersionRange, target.Version, strings.Join(append(chain, id), " -> ")))
 			}
 			selected[d.ID] = true
 			if err := activate(d.ID, append(append([]string{}, chain...), id)); err != nil {
@@ -446,7 +446,7 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 		}
 		if c.ExclusiveGroup != "" {
 			if previous := groups[c.ExclusiveGroup]; previous != "" {
-				return nil, resolutionError0243("exclusive_group", c.ID, previous, fmt.Sprintf("components %s and %s are mutually exclusive (group %s)", previous, c.ID, c.ExclusiveGroup))
+				return nil, resolutionError0243("exclusive_group", c.ID, previous, fmt.Sprintf("Компоненты %s и %s взаимоисключающие (группа %s)", previous, c.ID, c.ExclusiveGroup))
 			}
 			groups[c.ExclusiveGroup] = c.ID
 		}
@@ -457,7 +457,7 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 			other := components[conflict.ID]
 			matches, _ := matchRange0243(other.Version, conflict.VersionRange)
 			if matches {
-				return nil, resolutionError0243("conflict", c.ID, conflict.ID, fmt.Sprintf("components %s and %s cannot be selected together: %s conflicts with %s version %s (range %q)", c.ID, other.ID, c.ID, other.ID, other.Version, conflict.VersionRange))
+				return nil, resolutionError0243("conflict", c.ID, conflict.ID, fmt.Sprintf("Компоненты %s и %s нельзя выбрать вместе: %s конфликтует с %s версии %s (диапазон %q)", c.ID, other.ID, c.ID, other.ID, other.Version, conflict.VersionRange))
 			}
 		}
 	}

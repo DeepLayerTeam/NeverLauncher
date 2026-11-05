@@ -67,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("Требуется: «at least one artifact»")
     for env in ("SENTRY_AUTH_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT"):
         if not os.environ.get(env):
-            parser.error(f"{env} is required for a real upload")
+            parser.error(f"Для реальной загрузки требуется {env}")
     if args.jvm_mapping and (
         not args.mapping_uuid
         or not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", args.mapping_uuid)
@@ -103,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"Не удалось проверить «JVM mapping/build pair:» {exc}")
         sample = args.jvm_mapping.read_text(encoding="utf-8")[:8192]
         if " -> " not in sample:
-            parser.error("JVM mapping file does not look like a ProGuard mapping")
+            parser.error("Файл сопоставления JVM не похож на карту ProGuard")
     root = Path(__file__).resolve().parents[2]
     if args.version != (root / "VERSION").read_text().strip():
         parser.error("Версия отличается от VERSION; артефакт отклонён")
@@ -177,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     # Только после успешного завершения ВСЕХ загрузок; source maps не должны утекать в распространяемые пакеты.
     for sm in js_maps:
         sm.unlink()
-    print(f"Sentry release {release} uploaded; removed {len(js_maps)} private JS maps")
+    print(f"Релиз Sentry {release} загружен; удалено {len(js_maps)} закрытых карт JS")
     return 0
 
 

@@ -516,7 +516,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
     (args.output_dir / "WINDOWS_ADVERSARIAL_CERTIFICATE.md").write_text(
         "\n".join(lines), encoding="utf-8"
     )
-    print(f"Windows adversarial certification PASS -> {cert_path}")
+    print(f"Проверка устойчивости Windows к атакам пройдена -> {cert_path}")
     return 0
 
 

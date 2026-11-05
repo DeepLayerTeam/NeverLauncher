@@ -22,14 +22,14 @@ def bundle(host: Path, output: Path, specs: list[str]) -> None:
     if host.resolve() == output.resolve():
         raise ValueError("«output»: запрещено «overwrite input host JAR»")
     if not 1 <= len(specs) <= 64:
-        raise ValueError("provide 1..64 locked dependencies")
+        raise ValueError("Укажите от 1 до 64 закреплённых зависимостей")
     libraries = []
     identities = set()
     total = 0
     for raw in specs:
         parts = raw.split("@", 3)
         if len(parts) != 4:
-            raise ValueError("library format: group:artifact@version@api-range@/path/file.jar")
+            raise ValueError("Формат библиотеки: group:artifact@version@api-range@/path/file.jar")
         coord, version, api, filename = parts
         if not COORD.fullmatch(coord) or not VERSION.fullmatch(version) or not api or any(c in api for c in "\r\n\t"):
             raise ValueError(f"Некорректное значение: «library coordinate/version/API range»: {coord}")
@@ -44,14 +44,14 @@ def bundle(host: Path, output: Path, specs: list[str]) -> None:
             raise ValueError("Превышен допустимый размер: «library collection»")
         with zipfile.ZipFile(Path(filename)) as library:
             if library.testzip() is not None:
-                raise ValueError("corrupt library JAR " + filename)
+                raise ValueError("Повреждён JAR библиотеки " + filename)
         digest = hashlib.sha256(data).hexdigest()
         name = PREFIX + coord.replace(":", "-") + "-" + version + ".jar"
         if not re.fullmatch(r"META-INF/launcher/libs/[A-Za-z0-9._-]+\.jar", name):
             raise ValueError("Некорректное значение: «library filename»")
         libraries.append((name, coord, version, digest, api, data))
     if len({row[0] for row in libraries}) != len(libraries):
-        raise ValueError("two dependency coordinates map to the same JAR path")
+        raise ValueError("Две координаты зависимостей указывают на один путь JAR")
     libraries.sort(key=lambda row: row[0])
     lock = "".join("\t".join(row[:5]) + "\n" for row in libraries).encode("utf-8")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -59,7 +59,7 @@ def bundle(host: Path, output: Path, specs: list[str]) -> None:
         with zipfile.ZipFile(host) as source, zipfile.ZipFile(output, "w") as target:
             names = source.namelist()
             if len(names) != len(set(names)) or any(n == LOCK or n.startswith(PREFIX) for n in names):
-                raise ValueError("input host already has bundled dependencies or duplicate entries")
+                raise ValueError("Во входном хосте уже есть встроенные зависимости или повторяющиеся записи")
             if "META-INF/MANIFEST.MF" not in names:
                 raise ValueError("Отсутствует: «host manifest»")
             for info in source.infolist():
@@ -82,7 +82,7 @@ def main() -> int:
         bundle(args.host, args.output, args.library)
     except (OSError, ValueError, zipfile.BadZipFile) as exc:
         parser.error(str(exc))
-    print(f"Packed {len(args.library)} pinned dependencies into {args.output}")
+    print(f"Упаковано {len(args.library)} закреплённых зависимостей в {args.output}")
     return 0
 
 

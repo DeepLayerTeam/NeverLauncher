@@ -83,7 +83,7 @@ func RequiredMatrixSelections0348(cat *model.ComponentCatalog0241) ([]string, in
 	// покрытия, его нельзя незаметно усечь. Лимит настроенных целей — 128, чтобы осталось место для попарных
 	// проверок.
 	if len(conditional)+len(presets) > 116 {
-		return nil, 0, fmt.Errorf("component matrix exceeds runnable target capacity: %d mandatory preset/conditional selections", len(conditional)+len(presets))
+		return nil, 0, fmt.Errorf("Матрица компонентов превышает вместимость исполняемых целей: %d обязательных пресетов или условных выборов", len(conditional)+len(presets))
 	}
 	const maxCandidatePairs = 512
 	examined := 0
@@ -224,7 +224,7 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 	}
 	for _, choice := range required {
 		if byPreset[choice] == 0 {
-			return fmt.Errorf("required component runtime selection %q has no target", choice)
+			return fmt.Errorf("Для обязательного выбора компонента Runtime %q отсутствует цель", choice)
 		}
 	}
 	if manifest.ComponentCatalog == nil {
@@ -255,7 +255,7 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 				}
 			}
 			if !found {
-				return fmt.Errorf("condition branch %s OS=%s has no execution target", c.ID, os)
+				return fmt.Errorf("Для ветви условия %s OS=%s нет цели выполнения", c.ID, os)
 			}
 		}
 		for _, arch := range c.Conditions.Arch {
@@ -267,7 +267,7 @@ func validateComponentMatrix0348(manifest model.Manifest, targets []validationTa
 				}
 			}
 			if !found {
-				return fmt.Errorf("condition branch %s arch=%s has no execution target", c.ID, arch)
+				return fmt.Errorf("Для ветви условия %s arch=%s нет цели выполнения", c.ID, arch)
 			}
 		}
 	}

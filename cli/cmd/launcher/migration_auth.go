@@ -17,7 +17,7 @@ import (
 // помещайте хеши учётных записей в аргументы командной строки или ответ JSON.
 func postMigrationAuth0335(endpoint, token, sourcePath, algorithm, runID, out string, commit bool) error {
 	if sourcePath == "" {
-		return errors.New("credentials require --source /path/to/original-gravit.zip")
+		return errors.New("Для учётных данных требуется --source /path/to/original-gravit.zip")
 	}
 	u, e := url.Parse(endpoint)
 	if e != nil {
@@ -63,7 +63,7 @@ func postMigrationAuth0335(endpoint, token, sourcePath, algorithm, runID, out st
 		return e
 	}
 	if response.StatusCode != 200 {
-		return fmt.Errorf("credentials HTTP %d: %s", response.StatusCode, string(raw))
+		return fmt.Errorf("Запрос учётных данных вернул HTTP %d: %s", response.StatusCode, string(raw))
 	}
 	// Никогда не сохраняйте конфиденциальный отчёт миграции в общедоступном файле.
 	var value any

@@ -28,13 +28,13 @@ def package(cli: Path, private_key: Path, public_key: Path, output: Path) -> dic
         p.resolve(strict=True) for p in (cli, private_key, public_key)
     ]
     if not cli.is_file() or not private_key.is_file() or not public_key.is_file():
-        raise ValueError("expected real CLI and key files")
+        raise ValueError("Ожидаются реальные файлы CLI и ключей")
     if output.is_symlink() or (output.exists() and any(output.iterdir())):
-        raise ValueError("output: требуется «an empty regular directory»")
+        raise ValueError("Каталог вывода должен существовать и быть пустым")
     output.mkdir(parents=True, exist_ok=True)
     version = (ROOT / "VERSION").read_text().strip()
     if version != "0.31.0":
-        raise ValueError("package release must match VERSION=0.31.0")
+        raise ValueError("Релиз пакета должен соответствовать VERSION=0.31.0")
     records = []
     for name in EXAMPLES:
         # Скрипт вызывает существующие работающие компилятор Java и подписант.

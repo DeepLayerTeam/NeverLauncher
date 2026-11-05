@@ -18,7 +18,7 @@ COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 
 def strict_json(path: Path):
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 1024 * 1024:
-        raise ValueError(f"missing, symlinked or oversized evidence: {path.name}")
+        raise ValueError(f"Подтверждающий файл отсутствует, является символической ссылкой или слишком велик: {path.name}")
 
     def unique(pairs):
         value = {}
@@ -30,7 +30,7 @@ def strict_json(path: Path):
 
     data = json.loads(path.read_text("utf-8"), object_pairs_hook=unique)
     if not isinstance(data, dict):
-        raise ValueError(f"not a JSON object: {path.name}")
+        raise ValueError(f"Файл не содержит объект JSON: {path.name}")
     return data
 
 
@@ -49,7 +49,7 @@ def verify(root: Path, version: str, commit: str):
         or mc.get("client") != "actual-mojang-client"
         or mc.get("paperJoin") != "passed"
     ):
-        raise ValueError("real Minecraft client Paper join not evidenced")
+        raise ValueError("Нет доказательств реального подключения клиента Minecraft к серверу Paper")
     checks = result.get("checks", {})
     required = (
         "signedManifest",
@@ -67,9 +67,9 @@ def verify(root: Path, version: str, commit: str):
         or proof.get("version") != version
         or proof.get("status") != "passed"
     ):
-        raise ValueError("real Paper world restore report not present for release")
+        raise ValueError("Для релиза отсутствует отчёт о реальном восстановлении мира Paper")
     if proof.get("source") != "docker-compose-real-paper-after-minecraft-client-join":
-        raise ValueError("restored source is not the real Minecraft Paper container")
+        raise ValueError("Восстановленный источник не является реальным контейнером Minecraft Paper")
     for name in (
         "actualMinecraftWorld",
         "gracefulPaperExit",
@@ -83,33 +83,33 @@ def verify(root: Path, version: str, commit: str):
             raise ValueError(f"Ошибка: «world backup runtime check»: {name}")
     for name in ("playerDataFiles", "pluginDataFiles", "filesVerified"):
         if type(proof.get(name)) is not int or proof[name] <= 0:
-            raise ValueError(f"world backup contains no actual {name}")
+            raise ValueError(f"Резервная копия мира не содержит фактический файл {name}")
     if not DIGEST.fullmatch(str(proof.get("worldFileSha256", ""))):
         raise ValueError("Отсутствует: «preserved real world digest»")
     if commit:
         if not COMMIT.fullmatch(commit) or proof.get("sourceCommit") != commit:
-            raise ValueError("Paper world restore proof belongs to a different commit")
+            raise ValueError("Доказательство восстановления мира Paper относится к другому коммиту")
     # Проверяйте независимые результаты, а не один заявленный boolean в result.json.
     join = strict_json(root / "join-paper-real-client-fresh.json")
     if (
         join.get("data", {}).get("oneTime") is not True
         or join.get("data", {}).get("ticketVersion") != 2
     ):
-        raise ValueError("real Minecraft client did not receive a one-time join ticket")
+        raise ValueError("Реальный клиент Minecraft не получил одноразовый билет подключения")
     denied = strict_json(root / "validate-paper-e2e-p3-deny.json")
     if denied.get("data", {}).get("allowed") is not False:
-        raise ValueError("ServerBridge replay was not rejected")
+        raise ValueError("Повторное использование запроса ServerBridge не было отклонено")
     if (
         "world-backup-0290.json" in result.get("evidence", [])
         and checks.get("realWorldBackupRestore") is not True
     ):
-        raise ValueError("inconsistent backup evidence index")
+        raise ValueError("Индекс подтверждений резервного копирования содержит несогласованные данные")
     handoff = strict_json(root / "handoff-velocity-paper.json")
     if (
         handoff.get("data", {}).get("oneTime") is not True
         or handoff.get("data", {}).get("status") != "handoff-created"
     ):
-        raise ValueError("real proxy-to-backend one-time handoff not evidenced")
+        raise ValueError("Отсутствует доказательство реальной однократной передачи от прокси к Backend")
     return {
         "version": version,
         "sourceCommit": commit,
@@ -132,7 +132,7 @@ def main():
             )
         )
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
-        print(f"[0290] Production GA evidence denied: {error}", file=sys.stderr)
+        print(f"[0290] Доказательства готовности GA отклонены: {error}", file=sys.stderr)
         raise SystemExit(1)
 
 

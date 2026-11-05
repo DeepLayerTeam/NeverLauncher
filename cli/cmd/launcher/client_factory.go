@@ -264,7 +264,7 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 			return err
 		}
 		if seen[o.Path] || !isSHA256Hex0271(o.SHA256) || o.Size < 0 {
-			return fmt.Errorf("invalid/duplicate factory output %s", o.Path)
+			return fmt.Errorf("Некорректный или повторяющийся результат фабрики сборок %s", o.Path)
 		}
 		seen[o.Path] = true
 	}
@@ -388,7 +388,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 		return fmt.Errorf("Ошибка проверки запуска прежней версии: %w", err)
 	}
 	if err := verifyCompat0279(root, p); err != nil {
-		return fmt.Errorf("authlib/classloader verification: %w", err)
+		return fmt.Errorf("Ошибка проверки authlib/classloader: %w", err)
 	}
 	if err := verifyAuthlibProvenance0279(root, p); err != nil {
 		return fmt.Errorf("Ошибка проверки происхождения authlib: %w", err)
@@ -810,7 +810,7 @@ func rejectFactoryOutputPath0271(root, output string) error {
 		return err
 	}
 	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
-		return errors.New("--output must be outside managed client directory (otherwise the lock would become invalid)")
+		return errors.New("Путь --output должен находиться вне управляемого каталога клиента (иначе блокировка станет недействительной)")
 	}
 	return nil
 }

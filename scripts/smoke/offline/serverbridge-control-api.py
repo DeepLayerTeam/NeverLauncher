@@ -132,7 +132,7 @@ for rel, needles in checks.items():
     text = (ROOT / rel).read_text(encoding="utf-8")
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{rel}: missing {needle!r}")
+            raise SystemExit(f"{rel}: отсутствует {needle!r}")
 
 # В полном пути Control API запрещены запуск оболочки ОС и выполнение процессов.
 control_sources = [

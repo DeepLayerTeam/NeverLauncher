@@ -87,7 +87,7 @@ def strict_json(data: bytes) -> dict:
 
     value = json.loads(data, object_pairs_hook=no_duplicate)
     if type(value) is not dict:
-        raise GateError("report is not an object")
+        raise GateError("Отчёт не является объектом")
     return value
 
 
@@ -143,7 +143,7 @@ def check_report(report: dict, name: str, target: str, commit: str) -> None:
         or report.get("simulated") is not False
         or report.get("mocked") is not False
     ):
-        raise GateError(f"{target}/{name}: not a matching real execution report")
+        raise GateError(f"{target}/{name}: отчёт не соответствует фактическому выполнению")
     for check in REQUIRED_REPORTS[name]:
         if report.get(check) is not True:
             raise GateError(f"{target}/{name}: {check} was not verified")
@@ -156,7 +156,7 @@ def check_report(report: dict, name: str, target: str, commit: str) -> None:
                 f"{target}/gameplay: required real Minecraft loaders missing"
             )
     if name == "installer" and not report.get("trustedOSSigner"):
-        raise GateError(f"{target}/installer: trusted OS signing identity missing")
+        raise GateError(f"{target}/installer: отсутствует доверенный сертификат подписи ОС")
 
 
 def verify_target(
@@ -167,11 +167,11 @@ def verify_target(
         read_file(folder, "attestation.sig", limit=256).decode("ascii").strip()
     )
     if not re.fullmatch(r"[0-9a-f]{128}", signature_hex):
-        raise GateError(f"{target}: invalid Ed25519 signature encoding")
+        raise GateError(f"{target}: некорректная кодировка подписи Ed25519")
     try:
         key.verify(bytes.fromhex(signature_hex), DOMAIN + raw)
     except InvalidSignature as exc:
-        raise GateError(f"{target}: untrusted or altered signed attestation") from exc
+        raise GateError(f"{target}: недоверенное или изменённое подписанное подтверждение") from exc
     data = strict_json(raw)
     if (
         data.get("schemaVersion") != SCHEMA
@@ -182,24 +182,24 @@ def verify_target(
         or data.get("actualExecution") is not True
         or data.get("sourceTreeClean") is not True
     ):
-        raise GateError(f"{target}: release identity/status mismatch")
+        raise GateError(f"{target}: идентификатор или статус релиза не совпадает")
     try:
         recorded = datetime.fromisoformat(data["recordedAt"].replace("Z", "+00:00"))
     except (KeyError, ValueError, AttributeError) as exc:
-        raise GateError(f"{target}: missing recordedAt timestamp") from exc
+        raise GateError(f"{target}: отсутствует временная метка recordedAt") from exc
     age = (
         (datetime.now(timezone.utc) - recorded).total_seconds()
         if recorded.tzinfo
         else -1
     )
     if age < -300 or age > 60 * 60 * 24 * 90:
-        raise GateError(f"{target}: stale or future evidence")
+        raise GateError(f"{target}: подтверждение устарело или датировано будущим")
     reports = data.get("reports")
     if not isinstance(reports, dict) or set(reports) != set(REQUIRED_REPORTS):
-        raise GateError(f"{target}: missing mandatory evidence report")
+        raise GateError(f"{target}: отсутствует обязательный отчёт с подтверждениями")
     for name, info in reports.items():
         if not isinstance(info, dict) or set(info) != {"file", "sha256"}:
-            raise GateError(f"{target}/{name}: invalid report descriptor")
+            raise GateError(f"{target}/{name}: некорректное описание отчёта")
         report = strict_json(
             read_file(
                 folder, info["file"], expected=info["sha256"], limit=2 * 1024 * 1024
@@ -211,7 +211,7 @@ def verify_target(
     # подписи ОС.
     installer = data.get("releaseArtifact")
     if not isinstance(installer, dict) or set(installer) != {"file", "sha256"}:
-        raise GateError(f"{target}: release installer missing")
+        raise GateError(f"{target}: отсутствует установщик релиза")
     read_file(
         folder,
         installer["file"],
@@ -232,7 +232,7 @@ def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
     if not re.fullmatch("[a-f0-9]{64}", trusted_public_key):
         raise GateError("trusted independent Ed25519 public key: требуется «32-byte hex»")
     if evidence.is_symlink() or not evidence.is_dir():
-        raise GateError("missing/unsafe evidence directory")
+        raise GateError("Каталог подтверждающих данных отсутствует или небезопасен")
     found = {p.name for p in evidence.iterdir()}
     if found != TARGETS:
         raise GateError(
@@ -267,7 +267,7 @@ def main() -> int:
         args.output.write_text(
             json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-        print("Accepted independent signed GA evidence for all six platforms")
+        print("Приняты независимые подписанные подтверждения GA для всех шести платформ")
         return 0
     except (GateError, ValueError, OSError, json.JSONDecodeError, UnicodeError) as exc:
         args.output.parent.mkdir(parents=True, exist_ok=True)

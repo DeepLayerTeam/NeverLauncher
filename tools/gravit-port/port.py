@@ -81,7 +81,7 @@ def validate_manifest(raw: bytes, entrypoint: str) -> None:
     if len({t["kind"] for t in targets}) != len(targets):
         raise PortError("Обнаружен дубликат: цель Java")
     if not isinstance(doc.get("permissions"), list):
-        raise PortError("Для разрешения требуется: «declared in the signed manifest»")
+        raise PortError("Разрешение должно быть объявлено в подписанном манифесте")
 
 
 def ensure_clean_destination(path: Path) -> None:
@@ -94,13 +94,13 @@ def build(args: argparse.Namespace) -> None:
     if not IDENT.fullmatch(args.module_class) or args.module_class.startswith(
         ("pro.gravit.", "ru.launcher.sdk.")
     ):
-        raise PortError("Некорректное значение: «or reserved Gravit module class name»")
+        raise PortError("Некорректное или зарезервированное имя класса модуля Gravit")
     entrypoint = "backend/gravit-port.jar"
     if args.manifest.is_symlink():
         raise PortError("Запрещено: символическая ссылка манифеста")
     manifest_file = args.manifest.resolve(strict=True)
     if not manifest_file.is_file() or manifest_file.stat().st_size > 1 << 20:
-        raise PortError("Манифест: требуется «a regular non-symlink file under 1 MiB»")
+        raise PortError("Манифест должен быть обычным файлом без символических ссылок размером менее 1 МиБ")
     raw_manifest = manifest_file.read_bytes()
     validate_manifest(raw_manifest, entrypoint)
     sources = sources_in(args.source)
@@ -112,7 +112,7 @@ def build(args: argparse.Namespace) -> None:
     ensure_clean_destination(destination)
     if args.private_key is not None:
         if args.package is None or args.public_key is None or args.nl is None:
-            raise PortError("Для подписание требуется «--package, --nl and --public-key»")
+            raise PortError("Для подписания требуются параметры --package, --nl и --public-key")
         ensure_clean_destination(args.package.resolve())
     elif args.package is not None or args.public_key is not None or args.nl is not None:
         raise PortError(

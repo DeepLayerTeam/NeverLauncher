@@ -33,11 +33,11 @@ PRODUCTION_FILES = {"docker-compose.yml", "nginx.conf", "env.production.example"
 def bundle(source: Path, prefix: str, pattern: str) -> tuple[bytes, int]:
     files = sorted((p for p in source.glob(pattern) if prefix != "production/" or p.name in PRODUCTION_FILES), key=lambda p: p.name)
     if prefix == "sql/" and len(files) < 100:
-        raise ValueError("migration catalog unexpectedly incomplete (fewer than 100 SQL files)")
+        raise ValueError("Каталог миграций неожиданно неполон (менее 100 файлов SQL)")
     if prefix == "production/" and {f.name for f in files} != PRODUCTION_FILES:
-        raise ValueError("production template list drift")
+        raise ValueError("Набор шаблонов рабочего развёртывания изменился")
     if any(not p.is_file() or p.is_symlink() for p in files):
-        raise ValueError("resource bundle contains a symlink or non-file")
+        raise ValueError("Набор ресурсов содержит символическую ссылку или объект, не являющийся файлом")
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in files:
@@ -58,8 +58,8 @@ def verify_or_write(write: bool) -> None:
             if not target.is_file() or target.read_bytes() != data:
                 target.write_bytes(data)
         elif not target.is_file() or target.read_bytes() != data:
-            raise ValueError(f"stale embedded CLI bundle: {target_rel}; run --write and review the diff")
-        print(f"PASS: {target_rel}: {count} canonical files")
+            raise ValueError(f"Встроенные ресурсы CLI устарели: {target_rel}; выполните --write и проверьте изменения")
+        print(f"ПРОЙДЕНО: {target_rel}: {count} эталонных файлов")
 
 
 def main() -> int:
@@ -72,7 +72,7 @@ def main() -> int:
         verify_or_write(write=args.write)
         return 0
     except (ValueError, OSError, zipfile.BadZipFile) as exc:
-        print(f"EMBEDDED CLI RESOURCES BLOCKED: {exc}", file=sys.stderr)
+        print(f"ВСТРОЕННЫЕ РЕСУРСЫ CLI ЗАБЛОКИРОВАНЫ: {exc}", file=sys.stderr)
         return 2
 
 

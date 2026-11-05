@@ -91,10 +91,10 @@ func LoadTarget(path, serverID string) (Target, error) {
 	}
 	t, ok := targets[serverID]
 	if !ok {
-		return empty, errors.New("host control target not provisioned")
+		return empty, errors.New("Целевой узел управления не настроен")
 	}
 	if t.NodeID == "" || t.CAFile == "" || t.TokenFile == "" {
-		return empty, errors.New("host target missing identity or trust configuration")
+		return empty, errors.New("Для целевого узла не настроены идентификатор или доверие")
 	}
 	u, err := url.Parse(t.URL)
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Path != "" && u.Path != "/" || u.RawQuery != "" || u.Fragment != "" {
@@ -172,7 +172,7 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 		return Status{}, err
 	}
 	if code != 200 {
-		return Status{}, fmt.Errorf("host status HTTP %d", code)
+		return Status{}, fmt.Errorf("Ошибка получения состояния узла: HTTP %d", code)
 	}
 	var s Status
 	if err = json.Unmarshal(b, &s); err != nil {
@@ -196,7 +196,7 @@ func (c *Client) Execute(ctx context.Context, action, key string) (Receipt, erro
 		return Receipt{}, err
 	}
 	if code != 200 && code != 409 {
-		return Receipt{}, fmt.Errorf("host command HTTP %d", code)
+		return Receipt{}, fmt.Errorf("Ошибка отправки команды узлу: HTTP %d", code)
 	}
 	var r Receipt
 	if err = json.Unmarshal(b, &r); err != nil {
@@ -228,7 +228,7 @@ func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Rece
 		return Receipt{}, ErrReceiptNotFound04112
 	}
 	if code != http.StatusOK {
-		return Receipt{}, fmt.Errorf("host receipt HTTP %d", code)
+		return Receipt{}, fmt.Errorf("Ошибка получения квитанции от узла: HTTP %d", code)
 	}
 	var receipt Receipt
 	if err = json.Unmarshal(b, &receipt); err != nil {

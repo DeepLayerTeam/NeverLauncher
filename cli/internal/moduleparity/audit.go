@@ -114,7 +114,7 @@ func SafeRepoFile(root, relative string) (string, error) {
 		p = filepath.Join(p, part)
 		info, err := os.Lstat(p)
 		if err != nil {
-			return "", fmt.Errorf("evidence path missing %q: %w", relative, err)
+			return "", fmt.Errorf("Отсутствует путь к подтверждающим данным %q: %w", relative, err)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
 			return "", fmt.Errorf("Запрещено: «symlink evidence»: %q", relative)
@@ -122,7 +122,7 @@ func SafeRepoFile(root, relative string) (string, error) {
 	}
 	info, err := os.Stat(p)
 	if err != nil || !info.Mode().IsRegular() {
-		return "", fmt.Errorf("evidence path is not a regular file: %q", relative)
+		return "", fmt.Errorf("Путь подтверждающих данных не указывает на обычный файл: %q", relative)
 	}
 	return p, nil
 }
@@ -340,7 +340,7 @@ func Inspect(root string) (Report, error) {
 		out.Results = append(out.Results, Result{ModuleID: id, UpstreamModule: mod.UpstreamModule, Status: mod.Status, SourceValidated: true, SourceDigests: digests, Test: TestOutcome{Status: "not-run"}, Limitations: mod.Limitations})
 	}
 	if err = validateJavaContract(root); err != nil {
-		return Report{}, fmt.Errorf("Java API compatibility: %w", err)
+		return Report{}, fmt.Errorf("Ошибка совместимости Java API: %w", err)
 	}
 	return out, nil
 }
@@ -521,7 +521,7 @@ func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, o
 			detail := ""
 			if !success {
 				status = "failed"
-				detail = "package failed, test skipped, or one or more expected tests did not execute"
+				detail = "Пакет завершился ошибкой, тест пропущен или часть ожидаемых тестов не выполнялась"
 				if commandErr != nil {
 					detail = commandErr.Error()
 				}
@@ -555,7 +555,7 @@ func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, o
 			status, detail := "passed", ""
 			if !success {
 				status = "failed"
-				detail = "Node test failed or did not execute tests"
+				detail = "Тест Node завершился ошибкой или не выполнил проверки"
 				if e != nil {
 					detail = e.Error()
 				}

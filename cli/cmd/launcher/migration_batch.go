@@ -221,7 +221,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return errors.New("ЗАБЛОКИРОВАНО: проверьте ошибки каждого профиля; импорт не выполнялся")
 	}
 	if report != "" {
-		fmt.Println("Verified dry-run against live Backend and source: " + current.BatchSHA256)
+		fmt.Println("Проверенный пробный запуск на работающем Backend и исходных данных: " + current.BatchSHA256)
 	}
 	return nil
 }

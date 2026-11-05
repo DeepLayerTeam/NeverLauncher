@@ -28,24 +28,24 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 			return false, err
 		}
 		if cost < 4 || cost > 16 {
-			return false, fmt.Errorf("bcrypt cost %d is outside Launcher safety range 4..16", cost)
+			return false, fmt.Errorf("Стоимость bcrypt %d вне безопасного диапазона Launcher 4..16", cost)
 		}
 		return verifyBcryptSystem(secret, encoded), nil
 	case "pbkdf2-sha256":
 		return verifyPBKDF2SHA256(secret, encoded, cfg.PBKDF2MinIterations)
 	case "digest", "double-digest":
 		if !cfg.AllowLegacyHashes {
-			return false, errors.New("legacy digests are disabled")
+			return false, errors.New("Проверка устаревших дайджестов отключена")
 		}
 		return verifyGravitDigest(secret, encoded, cfg)
 	case "phpass":
 		if !cfg.AllowLegacyHashes {
-			return false, errors.New("legacy PHPass is disabled")
+			return false, errors.New("Устаревший PHPass отключён")
 		}
 		return verifyPHPass(secret, encoded)
 	case "legacy-sha256":
 		if !cfg.AllowLegacySHA256 {
-			return false, errors.New("legacy SHA-256 verification is disabled")
+			return false, errors.New("Проверка устаревших SHA-256 отключена")
 		}
 		return verifyLegacySHA256(secret, encoded), nil
 	default:
@@ -125,7 +125,7 @@ func validateArgon2idPHC(encoded string) error {
 		return errors.New("Требуется: «argon2id parameters m/t/p are»")
 	}
 	if memory > 1024*1024 || iterations > 20 || parallelism > 32 {
-		return errors.New("argon2id parameters exceed Launcher safety limits")
+		return errors.New("Параметры argon2id превышают безопасные ограничения Launcher")
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil || len(salt) < 8 {
@@ -192,10 +192,10 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		return false, errors.New("Не поддерживается: «pbkdf2-sha256 hash format»")
 	}
 	if iterations < minIterations {
-		return false, fmt.Errorf("pbkdf2 iteration count %d is below configured minimum %d", iterations, minIterations)
+		return false, fmt.Errorf("Число итераций pbkdf2 %d ниже настроенного минимума %d", iterations, minIterations)
 	}
 	if iterations > 10_000_000 {
-		return false, errors.New("pbkdf2 iteration count exceeds Launcher safety limit")
+		return false, errors.New("Число итераций pbkdf2 превышает безопасный предел Launcher")
 	}
 	if len(salt) < 8 || len(expected) < 16 || len(expected) > 128 {
 		return false, errors.New("Некорректное значение: «pbkdf2 salt/digest length»")

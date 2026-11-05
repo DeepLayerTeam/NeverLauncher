@@ -87,7 +87,7 @@ def certify(
 
     resolved = executable_path(java)
     if not resolved.is_file():
-        raise ValueError(f"Java executable is not a regular file: {resolved}")
+        raise ValueError(f"Исполняемый файл Java не является обычным файлом: {resolved}")
 
     proc = subprocess.run(
         [str(resolved), "-XshowSettings:properties", "-version"],

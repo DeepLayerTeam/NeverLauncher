@@ -160,7 +160,7 @@ RC_03514_SUITES = (
 
 def suites_for_version(version: str) -> tuple[Suite, ...]:
     if not rc_supported(version):
-        raise GateError("Не поддерживается: «RC exact version; no implicit GA carry-forward»")
+        raise GateError("Неподдерживаемая точная версия RC; автоматический перенос подтверждения GA запрещён")
     return SUITES + (RC_03514_SUITES if rc_extended(version) else ())
 
 
@@ -207,12 +207,12 @@ def validate_events(lines: str, suite: Suite, returncode: int) -> dict:
 def validate_preflight(env: dict[str, str]) -> str:
     missing = [k for k in REQUIRED_ENV if not env.get(k)]
     if missing:
-        raise GateError("Отсутствует: «live dependencies:»" + ", ".join(missing))
+        raise GateError("Отсутствуют рабочие зависимости:" + ", ".join(missing))
     if env.get("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1":
-        raise GateError("SQLite supported filesystem: требуется «required, not skipped»")
+        raise GateError("Проверка поддержки файловой системы SQLite обязательна; пропуск запрещён")
     root = Path(env["LAUNCHER_SQLITE_TEST_ROOT"])
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
-        raise GateError("SQLite test volume: требуется «an existing absolute directory»")
+        raise GateError("Для тестового тома SQLite требуется существующий абсолютный путь к каталогу")
     if root.stat().st_mode & 0o077:
         raise GateError("SQLite test root: требуется приватные права 0700")
     return str(root.resolve())
@@ -224,14 +224,14 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
     selected = suites_for_version(canonical)
     current_run = identity(canonical, env.get("GITHUB_SHA", ""), env, root=ROOT)
     if rc_extended(canonical) and not env.get("LAUNCHER_TEST_POSTGRES_DSN"):
-        raise GateError("Требуется: «real PostgreSQL immutable-stable certification DSN»")
+        raise GateError("Требуется реальный DSN PostgreSQL для сертификации стабильной неизменяемой сборки")
     git_sha = env.get("GITHUB_SHA", "")
     if git_sha:
         git = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True
         )
         if git.returncode or git.stdout.strip() != git_sha:
-            raise GateError("refusing CI evidence from an unexpected Git revision")
+            raise GateError("Данные CI с неожиданной ревизией Git отклонены")
     version = subprocess.run(["go", "version"], cwd=API, capture_output=True, text=True)
     if version.returncode or not re.search(
         r"go1\.(?:2[7-9]|[3-9]\d)\.", version.stdout
@@ -262,7 +262,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
         except subprocess.TimeoutExpired as exc:
             raise GateError(f"{suite.name}: timed out") from exc
         receipts.append(validate_events(result.stdout, suite, result.returncode))
-        print(f"{suite.name}: {receipts[-1]['count']} real tests passed", flush=True)
+        print(f"{suite.name}: пройдено {receipts[-1]['count']} реальных тестов", flush=True)
     receipt = {
         "format": "launcher-03216-rc-test-evidence-v1",
         "version": canonical,
@@ -296,7 +296,7 @@ def main() -> int:
     except (GateError, OSError, ValueError) as exc:
         print(f"RC BLOCKED: {exc}", file=sys.stderr)
         return 2
-    print("RC tests passed; remaining GA gates are still required.")
+    print("Тесты RC пройдены; остальные проверки готовности GA по-прежнему обязательны.")
     return 0
 
 

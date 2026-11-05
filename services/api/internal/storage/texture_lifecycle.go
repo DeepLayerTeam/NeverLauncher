@@ -93,7 +93,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	}
 	resp, err := s3.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("S3 GC read: %w", err)
+		return fmt.Errorf("Ошибка чтения S3 при очистке: %w", err)
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		resp.Body.Close()
@@ -101,7 +101,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return fmt.Errorf("S3 GC read HTTP %d", resp.StatusCode)
+		return fmt.Errorf("Ошибка чтения S3 при очистке: HTTP %d", resp.StatusCode)
 	}
 	etag := resp.Header.Get("ETag")
 	if len(etag) < 3 || len(etag) > 256 || !strings.HasPrefix(etag, "\"") || !strings.HasSuffix(etag, "\"") {
@@ -118,7 +118,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 		return closeErr
 	}
 	if n < 1 || n > 4<<20 || hex.EncodeToString(dataHash.Sum(nil)) != digest {
-		return errors.New("S3 texture corruption: GC stopped; restore from backup before deletion")
+		return errors.New("Повреждены текстуры S3: очистка остановлена; перед удалением восстановите данные из резервной копии")
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", etag)
@@ -139,6 +139,6 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	case http.StatusPreconditionFailed, http.StatusConflict:
 		return errors.New("Обнаружено изменение: «S3 GC conditional delete failed: object»")
 	default:
-		return fmt.Errorf("S3 GC delete HTTP %d", response.StatusCode)
+		return fmt.Errorf("Ошибка удаления S3 при очистке: HTTP %d", response.StatusCode)
 	}
 }

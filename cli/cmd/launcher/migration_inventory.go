@@ -66,7 +66,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 			return e
 		}
 		if len(b) > 16<<20 {
-			return errors.New("export manifest overflow")
+			return errors.New("Размер экспортного манифеста превышает ограничение")
 		}
 		if e = json.Unmarshal(b, &manifest); e != nil {
 			return e
@@ -79,7 +79,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		break
 	}
 	if !hasManifest || manifest.Format != "launcher.gravit-source-inventory.v1" {
-		return errors.New("missing/invalid export manifest")
+		return errors.New("Экспортный манифест отсутствует или некорректен")
 	}
 	// Передавайте каждый экспортируемый файл потоком и проверяйте контрольную сумму, размер, CRC и присутствие в наборе.
 	expected := make(map[string]exportedSourceFile0333, len(manifest.Files))
@@ -168,7 +168,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(response.Body, 2<<20))
-		return fmt.Errorf("source inventory/export HTTP %d: %s", response.StatusCode, string(b))
+		return fmt.Errorf("Инвентаризация или экспорт источника вернули HTTP %d: %s", response.StatusCode, string(b))
 	}
 	if !export {
 		b, e := io.ReadAll(io.LimitReader(response.Body, 32<<20))
@@ -185,7 +185,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 		return writeOrPrintJSON(out, doc)
 	}
 	if response.Header.Get("Content-Type") != "application/zip" {
-		return errors.New("export endpoint returned unexpected content type")
+		return errors.New("Точка экспорта вернула неожиданный тип содержимого")
 	}
 	expected := response.Header.Get("X-Migration-Manifest-SHA256")
 	if len(expected) != 64 {
@@ -215,6 +215,6 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	if e = os.Link(tmp.Name(), out); e != nil {
 		return fmt.Errorf("«cannot safely publish export to %q (destination»: запрещено «exist):» %w", out, e)
 	}
-	fmt.Printf("Exported verified Gravit source: %s (manifest SHA-256 %s)\n", out, expected)
+	fmt.Printf("Экспортирован проверенный источник Gravit: %s (SHA-256 манифеста %s)\n", out, expected)
 	return nil
 }

@@ -29,11 +29,11 @@ func normalizeDeviceRevokeReason0125(value, fallback string) (string, error) {
 		value = fallback
 	}
 	if value == "" || len(value) > 160 || !utf8.ValidString(value) {
-		return "", errors.New("revocation reason must contain 1-160 UTF-8 characters")
+		return "", errors.New("Причина отзыва должна содержать от 1 до 160 символов UTF-8")
 	}
 	for _, r := range value {
 		if unicode.IsControl(r) {
-			return "", errors.New("revocation reason contains control characters")
+			return "", errors.New("Причина отзыва содержит управляющие символы")
 		}
 	}
 	return value, nil

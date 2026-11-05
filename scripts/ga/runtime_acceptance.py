@@ -280,7 +280,7 @@ def main():
         )
         return 0
     except (Blocked, OSError, ValueError, json.JSONDecodeError) as ex:
-        print("GA runtime preflight BLOCKED: " + str(ex), file=sys.stderr)
+        print("Предварительная проверка GA Runtime ЗАБЛОКИРОВАНА: " + str(ex), file=sys.stderr)
         return 3
 
 

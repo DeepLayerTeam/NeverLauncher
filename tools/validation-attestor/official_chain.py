@@ -70,10 +70,10 @@ def request_live(url, payload=None, bearer="", form=False):
                 raise AccountRejected("real authentication returned non-success")
             raw = resp.read(1024 * 1024 + 1)
             if len(raw) > 1024 * 1024:
-                raise AccountRejected("Превышен допустимый размер: «provider response»")
+                raise AccountRejected("Ответ провайдера превышает допустимый размер")
             out = json.loads(raw)
             if not isinstance(out, dict):
-                raise AccountRejected("Некорректное значение: «provider response»")
+                raise AccountRejected("Некорректный ответ провайдера")
             return out
     except urllib.error.HTTPError as exc:
         if exc.code in (408, 425, 429) or exc.code >= 500:

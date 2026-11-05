@@ -56,7 +56,7 @@ def policy(version: str) -> Policy:
     if number > (0, 36, 0):
         # Предварительные кандидаты не должны выдавать себя за стабильный выпуск GA.
         if prerelease is not None:
-            raise ValueError("GA release policy refuses prerelease: " + version)
+            raise ValueError("Политика выпуска GA запрещает предварительные версии: " + version)
         return Policy(
             version,
             "signed-ga-v2",

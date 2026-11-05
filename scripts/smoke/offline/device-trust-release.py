@@ -27,14 +27,14 @@ if len(version_tuple) != 3 or version_tuple < (0, 13, 0):
 api_migs = sorted((ROOT / "services/api/internal/dbmigrate/sql").glob("*.sql"))
 cli_migs = migration_catalog(ROOT)
 if [p.name for p in api_migs] != sorted(cli_migs):
-    raise SystemExit("API/CLI migration catalogs differ")
+    raise SystemExit("Каталоги миграций API/CLI отличаются")
 if not any(p.name == "0018_device_trust_stabilization_01210.sql" for p in api_migs):
     raise SystemExit(
         "0.13+ must retain sealed 0018 Device Trust stabilization migration"
     )
 for a in api_migs:
     if a.read_bytes() != cli_migs[a.name]:
-        raise SystemExit(f"migration differs: {a.name}")
+        raise SystemExit(f"Миграция отличается: {a.name}")
 release = read("cli/cmd/launcher/device_trust_release.go")
 req(
     release,

@@ -12,14 +12,14 @@ import (
 // или одному провайдеру, неоднозначному между издателями.
 func (s Server) pendingProviderIdentity0296(userID, provider, identityID string) (model.AuthIdentity, error) {
 	if userID == "" || identityID == "" || strings.TrimSpace(provider) == "" {
-		return model.AuthIdentity{}, errors.New("pending provider identity is incomplete")
+		return model.AuthIdentity{}, errors.New("Учётные данные ожидающего провайдера неполны")
 	}
 	for _, identity := range s.Repo.ListAuthIdentities(userID) {
 		if identity.ID == identityID && identity.UserID == userID && identity.Provider == provider && identity.Subject != "" {
 			return identity, nil
 		}
 	}
-	return model.AuthIdentity{}, errors.New("pending provider identity changed or unlinked")
+	return model.AuthIdentity{}, errors.New("Учётная запись ожидающего провайдера изменилась или отвязана")
 }
 
 // commitPendingProviderCredential0296 вызывается только после успешного

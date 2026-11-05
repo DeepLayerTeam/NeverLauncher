@@ -33,7 +33,7 @@ def declared_jobs(workflow: str) -> set[str]:
     for line in text.splitlines():
         if line == "jobs:":
             if seen_jobs:
-                raise GateFailure("Обнаружен дубликат: «jobs: section»")
+                raise GateFailure("Повторяется раздел заданий jobs")
             in_jobs = True
             seen_jobs = True
             continue
@@ -44,14 +44,14 @@ def declared_jobs(workflow: str) -> set[str]:
             continue
         match = JOB_RE.match(line)
         if line.startswith("  ") and not line.startswith("    ") and not line.lstrip().startswith("#") and not match and line.strip():
-            raise GateFailure(f"unrecognized job declaration (fail closed): {line!r}")
+            raise GateFailure(f"Неизвестное объявление задания (отказ по умолчанию): {line!r}")
         if match:
             name = match.group(1)
             if name in jobs:
                 raise GateFailure(f"Обнаружен дубликат: идентификатор задания: {name}")
             jobs.add(name)
     if not jobs:
-        raise GateFailure("Отсутствует: «jobs found in workflow»")
+        raise GateFailure("В рабочем процессе не найдены задания")
     return jobs
 
 
@@ -65,15 +65,15 @@ def verify(
     checked_out_sha: str, run_id: str, run_attempt: str, version: str,
 ) -> dict:
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.+-]+)?", version):
-        raise GateFailure("Отсутствует: «or malformed current product version»")
+        raise GateFailure("Версия текущего продукта отсутствует или некорректна")
     if not SHA_RE.fullmatch(source_sha) or not SHA_RE.fullmatch(checked_out_sha):
-        raise GateFailure("Отсутствует: «or invalid 40-hex source SHA»")
+        raise GateFailure("SHA исходного кода отсутствует или не является 40-символьным шестнадцатеричным значением")
     if source_sha.lower() != checked_out_sha.lower():
-        raise GateFailure("checked-out commit differs from workflow source SHA")
+        raise GateFailure("Коммит рабочей копии отличается от SHA источника рабочего процесса")
     if not run_id.isdigit() or int(run_id) <= 0 or not run_attempt.isdigit() or int(run_attempt) <= 0:
-        raise GateFailure("Отсутствует: «CI run id/attempt»")
+        raise GateFailure("Отсутствуют идентификатор запуска CI или номер попытки")
     if not isinstance(needs, dict):
-        raise GateFailure("GitHub needs context is missing or not an object")
+        raise GateFailure("Контекст GitHub needs отсутствует или имеет неверный формат")
     all_jobs = declared_jobs(workflow)
     # Задание публикации запускается ПОСЛЕ общего барьера и не считается предварительным
     # условием. Не разрешайте произвольные исключения: только одно задание публикации в
@@ -85,14 +85,14 @@ def verify(
             raise GateFailure('missing mandatory post-gate publication job')
     expected = all_jobs - {gate} - downstream
     if gate not in all_jobs or not expected:
-        raise GateFailure("Пустое значение: «gate job missing or required job set»")
+        raise GateFailure("Отсутствует обязательное проверочное задание или список обязательных заданий пуст")
     actual = set(needs)
     missing = sorted(expected - actual)
     unexpected = sorted(actual - expected)
     outcomes: dict[str, str] = {}
     for key, details in needs.items():
         if not isinstance(details, dict) or not isinstance(details.get("result"), str):
-            raise GateFailure(f"{key}: missing GitHub Actions job conclusion")
+            raise GateFailure(f"{key}: отсутствует итоговый статус задания GitHub Actions")
         outcomes[key] = details["result"]
     unsuccessful = {job: outcomes[job] for job in sorted(expected & actual) if outcomes[job] != "success"}
     report = {

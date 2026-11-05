@@ -114,7 +114,7 @@ func (s Server) textureSavedSelect0255(w http.ResponseWriter, r *http.Request) {
 	}
 	if input.ExpectedRevision == nil || *input.ExpectedRevision < 0 || len(input.Digest) != 64 || (input.Model != "classic" && input.Model != "slim") ||
 		(input.Visibility != "public" && input.Visibility != "private" && input.Visibility != "unlisted") || (kind == "cape" && input.Model != "classic") {
-		writeError(w, http.StatusBadRequest, "digest, expectedRevision, model and visibility are required")
+		writeError(w, http.StatusBadRequest, "Требуются digest, expectedRevision, model и visibility")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -150,7 +150,7 @@ func (s Server) textureClear0255(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if input.ExpectedRevision == nil || *input.ExpectedRevision < 1 || input.Digest != "" || input.Model != "" || input.Visibility != "" {
-		writeError(w, http.StatusBadRequest, "expectedRevision is required")
+		writeError(w, http.StatusBadRequest, "Требуется expectedRevision")
 		return
 	}
 	deleteAsset := r.Method == http.MethodDelete
@@ -209,7 +209,7 @@ func (s Server) textureSavedDelete0255(w http.ResponseWriter, r *http.Request) {
 	}
 	kind, digest := r.PathValue("kind"), strings.ToLower(r.PathValue("digest"))
 	if (kind != "skin" && kind != "cape") || len(digest) != 64 {
-		writeError(w, http.StatusBadRequest, "invalid kind or digest")
+		writeError(w, http.StatusBadRequest, "Некорректный тип или digest")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)

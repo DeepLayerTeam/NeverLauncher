@@ -415,7 +415,7 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 }
 func handleTrustedJVM0306(args []string) error {
 	if len(args) == 0 {
-		return errors.New("trusted JVM: trusted-install|trusted-verify|trusted-inspect|trusted-remove")
+		return errors.New("Доверенная JVM: trusted-install|trusted-verify|trusted-inspect|trusted-remove")
 	}
 	root := flagValue(args[1:], "--client-dir", "")
 	if root == "" {

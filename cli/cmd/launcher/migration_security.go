@@ -44,7 +44,7 @@ func postMigrationSecurity0336(endpoint, token, runID, out string, activate bool
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return fmt.Errorf("security reset HTTP %d", res.StatusCode)
+		return fmt.Errorf("Сброс безопасности вернул HTTP %d", res.StatusCode)
 	}
 	// Не дублируйте код запросов: GET API использует ту же структуру ответа и логику закрытого вывода,
 	// но здесь применяется ограниченный по объёму читатель закрытого вывода.

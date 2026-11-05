@@ -441,7 +441,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 			installerCacheHit = true
 		} else {
 			if _, statErr := os.Lstat(installerPath); statErr == nil {
-				if _, qErr := quarantineCompatibilityArtifact(opts.ClientDir, installerRel, "pinned installer failed resolution-lock SHA-256 verification"); qErr != nil {
+				if _, qErr := quarantineCompatibilityArtifact(opts.ClientDir, installerRel, "Закреплённый установщик не прошёл проверку SHA-256 блокировки разрешения зависимостей"); qErr != nil {
 					return forgeMaterializeResult{}, qErr
 				}
 			} else if !errors.Is(statErr, os.ErrNotExist) {
@@ -1954,7 +1954,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			return stats, fmt.Errorf("Процессор [%d]: ошибка проверки результата: %w", index, err)
 		}
 		if len(processor.Outputs) > 0 && !allReady {
-			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, "expected outputs were not produced")
+			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, "Ожидаемые выходные файлы не созданы")
 			return stats, fmt.Errorf("processor[%d] не создал ожидаемые outputs", index)
 		}
 		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "completed", logPath, interrupted, "")

@@ -1752,7 +1752,7 @@ stabilization_gate = read(
     "scripts/smoke/offline/device-trust-migration-stabilization-01210.py"
 )
 if stabilization_migration_api != stabilization_migration_cli:
-    fail("0.12.10 API/CLI migration 0018 differs")
+    fail("Миграция 0018 API/CLI 0.12.10 отличается")
 for required in [
     "key-rotate",
     "key-recover",

@@ -238,7 +238,7 @@ func handlePackaging(args []string) error {
 		if err := packaging940Prepare(root, dir); err != nil {
 			return err
 		}
-		fmt.Printf("Production packaging bundle prepared: %s\n", dir)
+		fmt.Printf("Рабочий пакет поставки подготовлен: %s\n", dir)
 		return nil
 	case "verify":
 		dir := flagValue(args, "--bundle", "")
@@ -419,7 +419,7 @@ func packaging940Verify(dir string) (map[string]any, error) {
 			}
 			parts := strings.Fields(line)
 			if len(parts) < 2 {
-				errs = append(errs, "bad checksum line: "+line)
+				errs = append(errs, "Некорректная строка контрольной суммы: "+line)
 				continue
 			}
 			expected, rel := parts[0], parts[1]
@@ -429,7 +429,7 @@ func packaging940Verify(dir string) (map[string]any, error) {
 				continue
 			}
 			if actual != expected {
-				errs = append(errs, "checksum mismatch: "+rel)
+				errs = append(errs, "Контрольная сумма не совпадает: "+rel)
 				continue
 			}
 			verified++

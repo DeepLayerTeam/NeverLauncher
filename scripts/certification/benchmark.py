@@ -28,17 +28,17 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
             [str(path), "--help"], text=True, capture_output=True, timeout=15
         )
         if proc.returncode != 0:
-            raise ValueError(f"version probe failed for {path}: {proc.stderr[-400:]}")
+            raise ValueError(f"Не удалось проверить версию {path}: {proc.stderr[-400:]}")
         try:
             version = json.loads(proc.stdout)["version"]
         except (ValueError, KeyError) as err:
-            raise ValueError(f"version probe is not a Runtime CLI: {path}") from err
+            raise ValueError(f"Проверяемая программа не является Runtime CLI: {path}") from err
         if version != expected:
             raise ValueError(
                 f"baseline/candidate version mismatch: expected {expected}, got {version}"
             )
     if repetitions < 3:
-        raise ValueError("Требуется: «at least 3 repetitions»")
+        raise ValueError("Требуется не менее трёх повторений")
     rows = []
     with tempfile.TemporaryDirectory(prefix="nl-perf-02313-") as d:
         folder = Path(d)
@@ -104,7 +104,7 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
                             or hashlib.sha256(path.read_bytes()).digest()
                             != hashlib.sha256(data_bytes).digest()
                         ):
-                            raise RuntimeError(f"{label} produced mismatched file {i}")
+                            raise RuntimeError(f"{label} создал файл {i} с несовпадающим содержимым")
                     rows.append(
                         {
                             "round": round_id,
@@ -159,7 +159,7 @@ def main():
         or clean.stdout.strip()
         or not re.fullmatch(r"[0-9a-f]{40}", rev.stdout.strip())
     ):
-        raise RuntimeError("benchmark publication: требуется «a clean Git HEAD»")
+        raise RuntimeError("Для публикации результатов теста производительности требуется чистое состояние Git HEAD")
     result.update(
         commit=rev.stdout.strip(),
         productVersion="0.24.0",

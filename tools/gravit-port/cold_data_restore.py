@@ -260,7 +260,7 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
     elif phase in ("verified_installed", "restored_previous_after_failure", "aborted_before_install"):
         return state["phase"]
     else:
-        raise co.Blocked("Требуется: «inconsistent restore journal/target: manual recovery»")
+        raise co.Blocked("Журнал восстановления и целевое состояние не совпадают: требуется ручное восстановление")
     raw = (json.dumps(state,sort_keys=True) + "\n").encode()
     fd = os.open(nextfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os,"O_NOFOLLOW",0), 0o600)
     with os.fdopen(fd,"wb") as f:

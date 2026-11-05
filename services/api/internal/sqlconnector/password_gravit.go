@@ -58,7 +58,7 @@ func verifyGravitDigest(secret, encoded string, cfg PasswordConfig) (bool, error
 	case "base64":
 		expected, err = base64.StdEncoding.Strict().DecodeString(encoded)
 		if err == nil && base64.StdEncoding.EncodeToString(expected) != encoded {
-			err = errors.New("non-canonical digest base64")
+			err = errors.New("Дайджест имеет неканоническую кодировку base64")
 		}
 	default:
 		return false, errors.New("digest encoding: требуется «configured as hex or base64»")
@@ -91,7 +91,7 @@ func verifyPHPass(secret, encoded string) (bool, error) {
 	}
 	countLog2 := strings.IndexByte(phpassAlphabet, encoded[3])
 	if countLog2 < 7 || countLog2 > 17 {
-		return false, errors.New("PHPass iteration count outside allowed range 7..17")
+		return false, errors.New("Число итераций PHPass вне разрешённого диапазона 7..17")
 	}
 	salt := encoded[4:12]
 	for i := 0; i < len(salt); i++ {

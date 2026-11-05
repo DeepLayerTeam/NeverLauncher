@@ -254,7 +254,7 @@ func shaFile(path string, limit int64) (string, error) {
 		return "", e
 	}
 	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > limit {
-		return "", errors.New("Для подтверждающие данные требуется: «a nonempty bounded regular file»")
+		return "", errors.New("Подтверждающие данные должны храниться в непустом обычном файле допустимого размера")
 	}
 	h := sha256.New()
 	n, e := io.Copy(h, io.LimitReader(f, limit+1))
@@ -418,7 +418,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			manifest = string(b)
 		}
 		if manifest == "" {
-			return "", "", errors.New("Отсутствует: «LaunchServer jar manifest»")
+			return "", "", errors.New("Отсутствует манифест JAR LaunchServer")
 		}
 		product := ""
 		ver := ""
@@ -472,7 +472,7 @@ func validatePlan(p Plan) error {
 		return errors.New("Отсутствуют или некорректны идентификаторы запуска, проекта, источника, ключа подписи либо SHA-256 коммита")
 	}
 	if !filepath.IsAbs(p.SourceArchive) || !filepath.IsAbs(p.SigningKey) || !filepath.IsAbs(p.SnapshotSourceDir) || !filepath.IsAbs(p.SnapshotTargetDir) || filepath.Clean(p.SnapshotSourceDir) == filepath.Clean(p.SnapshotTargetDir) {
-		return errors.New("Для пути к исходному архиву и ключу подписи требуется: «absolute»")
+		return errors.New("Пути исходного архива и ключа подписи должны быть абсолютными")
 	}
 	if githubSHA := os.Getenv("GITHUB_SHA"); githubSHA != "" && githubSHA != p.CommitSHA {
 		return errors.New("Коммит плана отличается от коммита, извлечённого в CI")
@@ -536,14 +536,14 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	out := stdout.data.Bytes()
 	// A replaced test executable cannot contribute to a signed GA result.
 	if err := verifyExecutable(c); err != nil {
-		return result, fmt.Errorf("Обнаружено изменение: «%s check executable»: %w", c.Name, err)
+		return result, fmt.Errorf("Исполняемый файл проверки %s был изменён: %w", c.Name, err)
 	}
 	result.DurationMS = time.Since(started).Milliseconds()
 	if cctx.Err() != nil {
 		return result, fmt.Errorf("%s: %w", c.Name, cctx.Err())
 	}
 	if e != nil {
-		return result, fmt.Errorf("Ошибка: «%s: independent check»: %w", c.Name, e)
+		return result, fmt.Errorf("Ошибка независимой проверки %s: %w", c.Name, e)
 	}
 	var probe Probe
 	if e = decodeStrict(out, &probe); e != nil {
@@ -553,7 +553,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 		return result, fmt.Errorf("%s: данные проверки отсутствуют, отрицательны или не имеют привязки", c.Name)
 	}
 	if !filepath.IsAbs(probe.EvidenceFile) {
-		return result, fmt.Errorf("%s: evidence path: требуется «absolute»", c.Name)
+		return result, fmt.Errorf("%s: путь к подтверждающим данным должен быть абсолютным", c.Name)
 	}
 	info, e := os.Stat(probe.EvidenceFile)
 	if e != nil || info.ModTime().Before(started.Add(-2*time.Second)) || info.ModTime().After(time.Now().Add(time.Minute)) {
@@ -561,12 +561,12 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	}
 	actual, e := shaFile(probe.EvidenceFile, 128<<20)
 	if e != nil || actual != probe.EvidenceSHA256 {
-		return result, fmt.Errorf("Некорректное значение: «%s: evidence file checksum»: %v", c.Name, e)
+		return result, fmt.Errorf("Некорректная контрольная сумма файла подтверждения %s: %v", c.Name, e)
 	}
 	if c.Name == "uuid-world-plugin-data" {
 		native, nativeErr := auditState(p.SnapshotSourceDir, p.SnapshotTargetDir)
 		if nativeErr != nil || !native.Matched || native.SourceWorldSHA256 != probe.SourceWorldSHA256 || native.SourcePluginSHA256 != probe.SourcePluginSHA256 || len(native.SourceUUIDs) != len(uuids) {
-			return result, errors.New("Ошибка: «independent native source/target snapshot comparison»")
+			return result, errors.New("Ошибка независимого сравнения нативных снимков источника и назначения")
 		}
 		for i, id := range uuids {
 			if id != native.SourceUUIDs[i] {
@@ -608,7 +608,7 @@ func signingKey(filename string) (ed25519.PrivateKey, error) {
 		return nil, e
 	}
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("Для закрытый ключ GA требуется: «regular and owner-only (0600)»")
+		return nil, errors.New("Закрытый ключ GA должен быть обычным файлом с правами владельца 0600")
 	}
 	b, e := os.ReadFile(filename)
 	if e != nil {
@@ -720,7 +720,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return err
 	}
 	if evidenceDir == "" || !filepath.IsAbs(evidenceDir) || evidenceDir == filepath.Dir(output) {
-		return errors.New("Требуется: «a separate absolute evidence directory»")
+		return errors.New("Требуется отдельный абсолютный путь к каталогу подтверждающих данных")
 	}
 	if strings.TrimSpace(token) == "" {
 		return errors.New("Отсутствует: LAUNCHER_MIGRATION_GA_TOKEN")
@@ -765,7 +765,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if review.Status != "rc_reviewed_not_ga_certified" || review.Report.ReportSHA256 != r.ReportSHA256 || review.ReviewedBy == "" || !digest(review.EvidenceSHA256) {
-		return errors.New("Отсутствует: «matching immutable MIG13 RC review»")
+		return errors.New("Отсутствует соответствующее неизменяемое заключение MIG13 RC")
 	}
 	if err := reportVerified(review.Report); err != nil {
 		return err

@@ -36,19 +36,19 @@ func (s Server) authMeasuredBootBegin0315(w http.ResponseWriter, r *http.Request
 	id := strings.TrimSpace(r.PathValue("deviceId"))
 	claims, session, device, _, ok := s.measuredBootPrerequisites0315(r, id)
 	if !ok {
-		writeError(w, http.StatusPreconditionFailed, "active registered session and remotely verified TPM Certify required")
+		writeError(w, http.StatusPreconditionFailed, "Требуются активный зарегистрированный сеанс и удалённая проверка TPM Certify")
 		return
 	}
 	now := canonicalDeviceAttestationTime0124(time.Now())
 	policies, hash, err := measuredBootPolicy0315(now)
 	if err != nil {
-		writeError(w, 412, "operator measured-boot policy unavailable: "+err.Error())
+		writeError(w, 412, "Политика измеренной загрузки администратора недоступна: "+err.Error())
 		return
 	}
 	policyID := strings.TrimSpace(r.URL.Query().Get("policyId"))
 	policy, err := policies.Find(policyID, normalizedTPMPlatform0312(device.Platform), now)
 	if err != nil {
-		writeError(w, 412, "no active measured-boot policy for requested ID/platform")
+		writeError(w, 412, "Для указанного ID или платформы нет активной политики измеренной загрузки")
 		return
 	}
 	idChallenge, err := randomToken("mpc")
@@ -66,7 +66,7 @@ func (s Server) authMeasuredBootBegin0315(w http.ResponseWriter, r *http.Request
 		"sessionId": session.ID, "bindingEpoch": strconv.FormatInt(session.BindingEpoch, 10), "keyFingerprint": device.KeyFingerprint, "platform": normalizedTPMPlatform0312(device.Platform), "policyId": policy.ID, "policyHash": hash,
 	}}
 	if err = s.Repo.SaveDeviceChallenge(r.Context(), challenge); err != nil {
-		writeError(w, 500, "cannot persist PCR challenge")
+		writeError(w, 500, "Не удалось сохранить проверочный запрос PCR")
 		return
 	}
 	b := attestverify.Binding{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, ChallengeID: idChallenge, Challenge: secret, IssuedAt: now, ExpiresAt: expires, Platform: normalizedTPMPlatform0312(device.Platform)}
@@ -85,46 +85,46 @@ func (s Server) authMeasuredBootComplete0315(w http.ResponseWriter, r *http.Requ
 	id := strings.TrimSpace(r.PathValue("deviceId"))
 	claims, session, device, hw, ok := s.measuredBootPrerequisites0315(r, id)
 	if !ok {
-		writeError(w, 412, "active device/session with certified TPM identity required")
+		writeError(w, 412, "Требуется активное устройство и сеанс с сертифицированным идентификатором TPM")
 		return
 	}
 	var req measuredBootComplete0315
 	if err := decodeDeviceJSON0121(w, r, &req, 96<<10); err != nil {
-		writeError(w, 400, "invalid TPM Quote evidence JSON")
+		writeError(w, 400, "Некорректный JSON данных TPM Quote")
 		return
 	}
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, id, "measured-boot-quote", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, 401, "expired, invalid or replayed Quote challenge")
+		writeError(w, 401, "Запрос TPM Quote просрочен, некорректен или использован повторно")
 		return
 	}
 	platform := normalizedTPMPlatform0312(device.Platform)
 	policyID := metadataString0121(ch.Metadata, "policyId")
 	oldHash := metadataString0121(ch.Metadata, "policyHash")
 	if metadataString0121(ch.Metadata, "sessionId") != session.ID || metadataString0121(ch.Metadata, "bindingEpoch") != strconv.FormatInt(session.BindingEpoch, 10) || metadataString0121(ch.Metadata, "keyFingerprint") != device.KeyFingerprint || metadataString0121(ch.Metadata, "platform") != platform {
-		writeError(w, 401, "Quote session/device/epoch changed")
+		writeError(w, 401, "Сеанс, устройство или эпоха TPM Quote изменились")
 		return
 	}
 	policies, hash, err := measuredBootPolicy0315(now)
 	if err != nil || hash != oldHash {
-		writeError(w, 412, "PCR policy unavailable or changed during challenge")
+		writeError(w, 412, "Политика PCR недоступна или изменилась во время проверки")
 		return
 	}
 	policy, err := policies.Find(policyID, platform, now)
 	if err != nil {
-		writeError(w, 412, "PCR policy no longer active")
+		writeError(w, 412, "Политика PCR больше не активна")
 		return
 	}
 	roots, err := hardwareRootStore0312(now)
 	if err != nil {
-		writeError(w, 412, "trusted AK roots unavailable")
+		writeError(w, 412, "Доверенные корни AK недоступны")
 		return
 	}
 	b := attestverify.Binding{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, ChallengeID: ch.ID, Challenge: req.Challenge, IssuedAt: ch.CreatedAt, ExpiresAt: ch.ExpiresAt, Platform: platform}
 	result, err := attestverify.VerifyQuote0315(req.Evidence, b, policy, hash, attestverify.Result{RootID: hw.RootID, RootFingerprint: hw.RootFingerprint, AKFingerprint: hw.AKFingerprint, ExpiresAt: hw.ExpiresAt}, roots, now)
 	if err != nil {
-		writeError(w, 401, "TPM Quote rejected: "+err.Error())
+		writeError(w, 401, "Проверка TPM Quote отклонена: "+err.Error())
 		return
 	}
 	// Действительная Quote для сеанса, отозванного во время проверки подписи, не может
@@ -134,12 +134,12 @@ func (s Server) authMeasuredBootComplete0315(w http.ResponseWriter, r *http.Requ
 	if sessionErr != nil || deviceErr != nil || currentSession.ID != session.ID ||
 		currentSession.BindingEpoch != session.BindingEpoch || currentDevice.KeyFingerprint != device.KeyFingerprint ||
 		attestationEligibleDevice0124(currentDevice) != nil {
-		writeError(w, 409, "TPM Quote device/session revoked during verification")
+		writeError(w, 409, "Устройство или сеанс TPM Quote отозваны во время проверки")
 		return
 	}
 	saved := model.MeasuredBootEvidence0315{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, KeyFingerprint: device.KeyFingerprint, RootID: result.RootID, RootFingerprint: result.RootFingerprint, AKFingerprint: result.AKFingerprint, PolicyID: result.PolicyID, PolicyHash: result.PolicyHash, PCRDigest: result.PCRDigest, ChallengeID: ch.ID, VerifiedAt: now, ExpiresAt: result.ExpiresAt}
 	if err = s.Repo.SaveMeasuredBoot0315(r.Context(), saved); err != nil {
-		writeError(w, 409, "cannot persist TPM Quote verification")
+		writeError(w, 409, "Не удалось сохранить результат проверки TPM Quote")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "tpm-quote-" + ch.ID, Actor: claims.Sub, Action: "auth:device:measured-boot:verified", Target: id, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})

@@ -139,9 +139,9 @@ def run_cases(
     names: list[str], report_path: Path, *, timeout: float, cli: str, commit: str
 ) -> dict:
     if len(names) != len(set(names)) or not names or any(x not in CASES for x in names):
-        raise ValueError("unknown, duplicate or empty test case list")
+        raise ValueError("Список тестовых сценариев пуст, содержит дубликаты или неизвестные сценарии")
     if timeout <= 0:
-        raise ValueError("timeout: требуется «positive»")
+        raise ValueError("Тайм-аут должен быть положительным")
     report_path = report_path.resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {

@@ -353,7 +353,7 @@ def seal(doc: dict) -> None:
         json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=False) + "\n",
         encoding="utf-8",
     )
-    print(f"sealed {len(hashes)} security-sensitive files")
+    print(f"Зафиксировано {len(hashes)} файлов, важных для безопасности")
 
 
 def main() -> None:

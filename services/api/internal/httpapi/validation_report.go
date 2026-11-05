@@ -66,13 +66,13 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("before"); v != "" {
 		before, err = strconv.ParseInt(v, 10, 64)
 		if err != nil || before <= 0 {
-			writeError(w, 400, "invalid audit cursor")
+			writeError(w, 400, "Некорректный указатель аудита")
 			return
 		}
 	}
 	page, err := store.ListValidationAttempts03412(r.Context(), pkg, before, 101)
 	if err != nil {
-		writeError(w, 503, "validation audit read failed")
+		writeError(w, 503, "Не удалось прочитать журнал аудита проверки")
 		return
 	}
 	more := len(page) > 100
@@ -92,19 +92,19 @@ func (s Server) validationReport03412(w http.ResponseWriter, r *http.Request) {
 	var runs []model.StagedRuntimeRun0342
 	if runQuery != "" {
 		if !validationToken0345.MatchString(runQuery) {
-			writeError(w, 400, "invalid run identity")
+			writeError(w, 400, "Некорректный идентификатор запуска")
 			return
 		}
 		history, ok := s.Repo.(interface {
 			GetValidationRun03412(context.Context, string, string) (model.StagedRuntimeRun0342, error)
 		})
 		if !ok {
-			writeError(w, 503, "run history unavailable")
+			writeError(w, 503, "История запусков недоступна")
 			return
 		}
 		v, err := history.GetValidationRun03412(r.Context(), pkg, runQuery)
 		if err != nil {
-			writeError(w, 404, "run not found")
+			writeError(w, 404, "Запуск не найден")
 			return
 		}
 		runs = []model.StagedRuntimeRun0342{v}

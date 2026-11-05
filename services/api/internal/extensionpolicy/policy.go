@@ -95,7 +95,7 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, errors.New("Некорректное значение: «sandbox resource limit»")
 	}
 	if p.MaxRequestsPerSecond < 0 || p.MaxRequestsPerSecond > 64 || p.MaxOutputBytes < 0 || p.MaxOutputBytes > 8<<20 {
-		return nil, errors.New("sandbox IPC rate/output limit exceeds host maximum")
+		return nil, errors.New("Ограничение частоты/вывода IPC изолированной среды превышает допустимый предел хоста")
 	}
 	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
 		return nil, errors.New("isolated sandbox: требуется «finite process, memory, CPU and time limits»")
@@ -151,7 +151,7 @@ func ApprovalDigest(m model.ExtensionManifest) (string, error) {
 // предполагаются безопасными.
 func ChangesRequireApproval(before, after model.ExtensionManifest) (bool, error) {
 	if before.ID == "" || after.ID == "" || before.ID != after.ID {
-		return true, errors.New("sandbox policy transition must preserve extension identity")
+		return true, errors.New("При изменении политики изоляции необходимо сохранить идентификатор расширения")
 	}
 	a, err := Validate(before.Sandbox)
 	if err != nil {
@@ -197,7 +197,7 @@ func RequireReview(before, after model.ExtensionManifest, submittedDigest string
 		return err
 	}
 	if submittedDigest != want {
-		return fmt.Errorf("sandbox/permission policy changed: explicit owner review required; target approvalDigest=%s", want)
+		return fmt.Errorf("Политика изоляции или разрешений изменена: необходимо явное подтверждение владельца; целевой approvalDigest=%s", want)
 	}
 	return nil
 }

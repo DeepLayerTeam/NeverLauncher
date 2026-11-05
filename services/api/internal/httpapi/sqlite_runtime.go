@@ -393,7 +393,7 @@ func sqliteEncrypt0373(secret, name string, plain []byte) ([]byte, error) {
 func sqliteRead0373(ctx context.Context, store sqliteRuntimeBackend0373, name, secret string, out any) error {
 	encrypted, found, err := store.ReadRuntimeComponent0373(ctx, name)
 	if err != nil {
-		return fmt.Errorf("SQLite component %s: %w", name, err)
+		return fmt.Errorf("Компонент SQLite %s: %w", name, err)
 	}
 	if !found {
 		return nil
@@ -408,14 +408,14 @@ func sqliteRead0373(ctx context.Context, store sqliteRuntimeBackend0373, name, s
 		return err
 	}
 	if len(encrypted) < aead.NonceSize() {
-		return fmt.Errorf("SQLite component %s ciphertext truncated", name)
+		return fmt.Errorf("Шифртекст компонента SQLite %s обрезан", name)
 	}
 	raw, err := aead.Open(nil, encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():], []byte("launcher-runtime-0.37.3:"+name))
 	if err != nil {
-		return fmt.Errorf("SQLite component %s: wrong key or corrupted ciphertext: %w", name, err)
+		return fmt.Errorf("Компонент SQLite %s: неверный ключ или повреждённый шифртекст: %w", name, err)
 	}
 	if err = json.Unmarshal(raw, out); err != nil {
-		return fmt.Errorf("SQLite component %s decode: %w", name, err)
+		return fmt.Errorf("Не удалось декодировать компонент SQLite %s: %w", name, err)
 	}
 	return nil
 }

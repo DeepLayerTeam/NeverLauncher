@@ -217,7 +217,7 @@ def main(argv=None) -> int:
         result["status"] = "passed"
     except (Blocked, OSError, ValueError, json.JSONDecodeError) as exc:
         result["failureType"] = type(exc).__name__
-        print("FINAL BUNDLE E2E BLOCKED: " + str(exc)[:250], file=sys.stderr)
+        print("Сквозные тесты финального пакета ЗАБЛОКИРОВАНЫ: " + str(exc)[:250], file=sys.stderr)
     finally:
         # Отчёт намеренно хранится вне уже подписанного каталога выпуска.
         args.report.parent.mkdir(parents=True, exist_ok=True)

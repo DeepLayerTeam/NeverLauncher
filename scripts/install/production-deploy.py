@@ -400,7 +400,7 @@ def bootstrap_first_admin(args):
         if not login.get("token") or login.get("user", {}).get("email") != args.email:
             fail("Администратор создан, но фактический вход по паролю не удался")
         print("Первый администратор создан; одноразовый токен использован; вход через доверенный HTTPS проверен")
-        print("Remove the password file securely; log in to Admin and create the first project")
+        print("Безопасно удалите файл с паролем; войдите в Admin и создайте первый проект")
 
 
 @contextlib.contextmanager

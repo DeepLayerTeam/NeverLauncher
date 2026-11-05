@@ -844,7 +844,7 @@ func (u *transactionalUpdater0156) recoverComponentTreesLocked0157() ([]string, 
 			continue
 		case "prepared":
 			journal.Phase = "rolled-back"
-			journal.Error = "recovered prepared component tree transaction before live switch"
+			journal.Error = "Восстановлена подготовленная транзакция дерева компонентов до переключения работающей версии"
 			if err := writeComponentTreeJournal0157(u, journal); err != nil {
 				return recovered, err
 			}

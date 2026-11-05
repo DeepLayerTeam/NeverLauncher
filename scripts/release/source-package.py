@@ -184,7 +184,7 @@ def main() -> int:
     write_zip(root, out, [(rel, rel) for rel in files])
     if ns.list_file:
         Path(ns.list_file).write_text("\n".join(files) + "\n", encoding="utf-8")
-    print(f"source-package: {len(files)} allowlisted files -> {out}")
+    print(f"Пакет исходников: {len(files)} разрешённых файлов -> {out}")
     return 0
 
 

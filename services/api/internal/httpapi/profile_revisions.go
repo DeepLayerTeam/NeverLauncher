@@ -17,7 +17,7 @@ type profileRevisionReader0221 interface {
 func (s Server) profileRevisions0221(w http.ResponseWriter, r *http.Request) {
 	reader, ok := s.Repo.(profileRevisionReader0221)
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "profile revision store not available")
+		writeError(w, http.StatusServiceUnavailable, "Хранилище ревизий профилей недоступно")
 		return
 	}
 	versions, err := reader.ListProfileRevisions(r.PathValue("projectId"), r.PathValue("profileId"))
@@ -33,7 +33,7 @@ func (s Server) profileRevisions0221(w http.ResponseWriter, r *http.Request) {
 	if rev != "" {
 		index, err := strconv.ParseInt(rev, 10, 64)
 		if err != nil || index < 1 {
-			writeError(w, http.StatusBadRequest, "revision must be positive integer")
+			writeError(w, http.StatusBadRequest, "Ревизия должна быть положительным целым числом")
 			return
 		}
 		for _, version := range versions {
@@ -42,7 +42,7 @@ func (s Server) profileRevisions0221(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		writeError(w, http.StatusNotFound, "revision not found")
+		writeError(w, http.StatusNotFound, "Ревизия не найдена")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": versions})

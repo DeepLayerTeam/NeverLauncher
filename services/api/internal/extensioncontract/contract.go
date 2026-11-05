@@ -59,7 +59,7 @@ func IsLegacyAPIVersion(raw string) bool {
 func RequireGAAPIVersion(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw != ExtensionAPIVersion {
-		return fmt.Errorf("new Extensions publications require Extension API %s; got %q", ExtensionAPIVersion, raw)
+		return fmt.Errorf("Для новых публикаций расширений требуется Extension API %s, получено %q", ExtensionAPIVersion, raw)
 	}
 	return nil
 }

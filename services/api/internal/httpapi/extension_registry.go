@@ -204,7 +204,7 @@ func copyMultipartArtifact0203(file io.Reader) (string, string, int64, error) {
 		return "", "", size, err
 	}
 	if size <= 0 || size > extensionRegistryMaxUpload0203 {
-		return "", "", size, errors.New(".nlext upload is empty or exceeds registry limit")
+		return "", "", size, errors.New("Загрузка .nlext пуста или превышает лимит реестра")
 	}
 	if err := tmp.Sync(); err != nil {
 		return "", "", size, err
@@ -218,7 +218,7 @@ func copyMultipartArtifact0203(file io.Reader) (string, string, int64, error) {
 
 func registryPublicKey0203(key model.ExtensionRegistryPublisherKey) (ed25519.PublicKey, error) {
 	if !key.Active || key.RevokedAt != nil || key.Algorithm != "Ed25519" {
-		return nil, errors.New("publisher signing key is inactive/revoked")
+		return nil, errors.New("Ключ подписи издателя неактивен или отозван")
 	}
 	raw, err := base64.StdEncoding.DecodeString(key.PublicKeyBase64)
 	if err != nil || len(raw) != ed25519.PublicKeySize {
@@ -235,7 +235,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	}
 	file, _, err := r.FormFile("artifact")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "publish requires multipart artifact=.nlext")
+		writeError(w, http.StatusBadRequest, "Для публикации требуется multipart-артефакт artifact=.nlext")
 		return
 	}
 	defer file.Close()
@@ -248,10 +248,10 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	inspected, err := extensionpackage.InspectSignedFile(tmpPath)
 	if err != nil {
 		if _, qerr := s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Некорректное значение: «signed .nlext:»"+err.Error(), nil); qerr != nil {
-			writeError(w, http.StatusInternalServerError, "artifact rejected; quarantine persistence failed: "+qerr.Error())
+			writeError(w, http.StatusInternalServerError, "Артефакт отклонён; сохранить карантин не удалось: "+qerr.Error())
 			return
 		}
-		writeError(w, http.StatusBadRequest, "invalid signed .nlext: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректный подписанный .nlext: "+err.Error())
 		return
 	}
 	publisherID := strings.ToLower(strings.TrimSpace(r.FormValue("publisher")))
@@ -260,7 +260,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	}
 	if publisherID != inspected.Manifest.Publisher {
 		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "«publisher field» не совпадает с «signed manifest publisher»", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: inspected.Manifest.Publisher, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
-		writeError(w, http.StatusBadRequest, "publisher field must match launcher-extension.json publisher")
+		writeError(w, http.StatusBadRequest, "Поле publisher должно совпадать с publisher в launcher-extension.json")
 		return
 	}
 	if trustErr := s.enforcePublisherTrust02012(r.Context(), publisherID); trustErr != nil {
@@ -291,7 +291,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if verified.SHA256 != uploadSHA || verified.Size != uploadSize {
-		writeError(w, http.StatusBadRequest, "artifact changed during verification")
+		writeError(w, http.StatusBadRequest, "Артефакт изменился во время проверки")
 		return
 	}
 	if err := extensioncontract.RequireGAAPIVersion(verified.Manifest.API); err != nil {
@@ -312,11 +312,11 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	_, storedSize, saveErr := s.Storage.Save(storageProject, storageVersion, storagePath, tmp)
 	closeErr := tmp.Close()
 	if saveErr != nil {
-		writeError(w, http.StatusInternalServerError, "artifact storage failed: "+saveErr.Error())
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить артефакт: "+saveErr.Error())
 		return
 	}
 	if closeErr != nil || storedSize != verified.Size {
-		writeError(w, http.StatusInternalServerError, "artifact storage size/close verification failed")
+		writeError(w, http.StatusInternalServerError, "Проверка размера или закрытия файла артефакта завершилась ошибкой")
 		return
 	}
 	publication := model.ExtensionRegistryPublication{
@@ -339,7 +339,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "publisher/signing key not found")
+		writeError(w, http.StatusNotFound, "Издатель или ключ подписи не найден")
 		return
 	}
 	if err != nil {
@@ -353,7 +353,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 func (s Server) extensionRegistryYank0203(w http.ResponseWriter, r *http.Request) {
 	var request registryYankWrite0203
 	if err := decodeSingleJSON0203(r, &request); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid yank payload: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректные данные снятия версии с публикации: "+err.Error())
 		return
 	}
 	item, err := s.Repo.YankExtensionRegistryVersion(r.Context(), r.PathValue("extensionId"), r.PathValue("version"), request.Reason)
@@ -376,7 +376,7 @@ func (s Server) extensionRegistryYank0203(w http.ResponseWriter, r *http.Request
 func (s Server) extensionRegistryChannelSet0203(w http.ResponseWriter, r *http.Request) {
 	var request registryChannelWrite0203
 	if err := decodeSingleJSON0203(r, &request); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel payload: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректные данные канала: "+err.Error())
 		return
 	}
 	item, err := s.Repo.SetExtensionRegistryChannel(r.Context(), r.PathValue("extensionId"), r.PathValue("channel"), request.Version)
@@ -408,12 +408,12 @@ func (s Server) extensionRegistryArtifact0203(w http.ResponseWriter, r *http.Req
 	}
 	reader, size, err := s.Storage.Open(item.Artifact.StorageProject, item.Artifact.StorageVersion, item.Artifact.StoragePath)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "registry artifact not found in storage")
+		writeError(w, http.StatusNotFound, "Артефакт реестра не найден в хранилище")
 		return
 	}
 	defer reader.Close()
 	if size != item.Artifact.Size {
-		writeError(w, http.StatusInternalServerError, "registry artifact storage size mismatch")
+		writeError(w, http.StatusInternalServerError, "Размер артефакта реестра в хранилище не совпадает")
 		return
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
@@ -491,7 +491,7 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if item.YankedAt != nil {
-		writeError(w, http.StatusConflict, "yanked registry version cannot be installed")
+		writeError(w, http.StatusConflict, "Снятую с публикации версию реестра нельзя установить")
 		return
 	}
 	var request registryInstallWrite0203
@@ -505,7 +505,7 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		lower := strings.ToLower(err.Error())
 		if strings.Contains(lower, ".nlext") || strings.Contains(lower, "signature") || strings.Contains(lower, "package identity") || strings.Contains(lower, "artifact sha") || strings.Contains(lower, "publisher key") {
-			writeError(w, http.StatusConflict, "registry artifact verification failed: "+err.Error())
+			writeError(w, http.StatusConflict, "Проверка артефакта реестра завершилась ошибкой: "+err.Error())
 			return
 		}
 		writeLifecycleError0204(w, err)

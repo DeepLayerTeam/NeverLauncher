@@ -202,7 +202,7 @@ func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {
 	}
 	for _, k := range reg.Keys {
 		if strings.EqualFold(k.Fingerprint, fp) && k.Status == "revoked" {
-			return fmt.Errorf("trusted key revoked: %s", k.ID)
+			return fmt.Errorf("Доверенный ключ отозван: %s", k.ID)
 		}
 	}
 	return nil

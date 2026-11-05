@@ -17,7 +17,7 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: missing {missing}")
+        raise SystemExit(f"{name}: отсутствует {missing}")
 
 
 compose = read("e2e/docker-compose.minecraft-e2e.yml")

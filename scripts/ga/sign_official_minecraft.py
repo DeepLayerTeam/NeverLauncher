@@ -33,7 +33,7 @@ def sign_attestation(
     if not re.fullmatch(r"[a-fA-F0-9]{64}", seed_hex):
         raise GateError("Защищённый исходный ключ Ed25519 отсутствует либо недействителен")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", expected_public):
-        raise GateError("Некорректное значение: «pinned operator public key»")
+        raise GateError("Некорректный закреплённый публичный ключ оператора")
     if (
         folder.is_symlink()
         or not folder.is_dir()

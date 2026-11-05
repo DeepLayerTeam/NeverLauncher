@@ -27,7 +27,7 @@ func (s Server) registerMigrationInventoryRoutes0333(mux *http.ServeMux) {
 func (s Server) migrationInventoryStore0333(w http.ResponseWriter) (migrationInventoryStore0333, bool) {
 	store, ok := s.Repo.(migrationInventoryStore0333)
 	if !ok {
-		writeError(w, 503, "Gravit source inventory requires PostgreSQL")
+		writeError(w, 503, "Для инвентаризации исходных данных Gravit требуется PostgreSQL")
 		return nil, false
 	}
 	return store, true
@@ -69,14 +69,14 @@ func (s Server) migrationInventoryUpload0333(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "upload a ZIP as application/zip")
+		writeError(w, 415, "Загрузите ZIP-архив с типом application/zip")
 		return
 	}
 	select {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "source inventory capacity is busy; retry after another upload finishes")
+		writeError(w, 429, "Сервис инвентаризации занят; повторите после завершения другой загрузки")
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes {
@@ -85,13 +85,13 @@ func (s Server) migrationInventoryUpload0333(w http.ResponseWriter, r *http.Requ
 	}
 	src, n, digest, e := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if e != nil {
-		writeError(w, 413, "unable to read bounded source ZIP: "+e.Error())
+		writeError(w, 413, "Не удалось прочитать исходный ZIP с ограничением размера: "+e.Error())
 		return
 	}
 	defer func() { src.Close(); _ = os.Remove(src.Name()) }()
 	report, e := inv.Inspect(r.Context(), src, n, digest)
 	if e != nil {
-		writeError(w, 422, "source inventory failed: "+e.Error())
+		writeError(w, 422, "Не удалось выполнить инвентаризацию источника: "+e.Error())
 		return
 	}
 	if !export {

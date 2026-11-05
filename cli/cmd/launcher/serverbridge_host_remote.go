@@ -628,13 +628,13 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	event := remoteAudit0284{At: a.now().UTC().Format(time.RFC3339Nano), Event: "remote-request", IP: ip, Outcome: "denied"}
 	if r.TLS == nil || !remoteAllowIP0284(a.sources, r.RemoteAddr) {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusForbidden, map[string]string{"error": "TLS and approved source required"})
+		write(http.StatusForbidden, map[string]string{"error": "Требуются TLS и разрешённый источник"})
 		return
 	}
 	tokenField := r.Header.Get("Authorization")
 	if !strings.HasPrefix(tokenField, "Bearer ") {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusUnauthorized, map[string]string{"error": "bearer token required"})
+		write(http.StatusUnauthorized, map[string]string{"error": "Требуется токен Bearer"})
 		return
 	}
 	token := strings.TrimPrefix(tokenField, "Bearer ")
@@ -642,13 +642,13 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// ключа делает старые учётные данные недействительными без перезапуска слушателя.
 	identity, loadErr := remoteLoad0284(a.root)
 	if loadErr != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "node identity unavailable"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Идентификатор узла недоступен"})
 		return
 	}
 	claims, err := remoteTokenDecode0284(identity, token, a.now())
 	if err != nil {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusUnauthorized, map[string]string{"error": "invalid or expired token"})
+		write(http.StatusUnauthorized, map[string]string{"error": "Токен некорректен или просрочен"})
 		return
 	}
 	event.TokenID = claims.ID
@@ -656,18 +656,18 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cidrs, err := remoteParseSources0284(claims.Sources)
 	if err != nil || !remoteAllowIP0284(cidrs, r.RemoteAddr) {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusForbidden, map[string]string{"error": "token source restriction"})
+		write(http.StatusForbidden, map[string]string{"error": "Ограничение источника токена"})
 		return
 	}
 	a.mu.Lock()
 	revoked, err := remoteRevoked0284(a.dir, claims.ID, a.now())
 	a.mu.Unlock()
 	if err != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "revocation store unavailable"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Хранилище отзывов недоступно"})
 		return
 	}
 	if revoked {
-		write(http.StatusUnauthorized, map[string]string{"error": "revoked token"})
+		write(http.StatusUnauthorized, map[string]string{"error": "Токен отозван"})
 		return
 	}
 	scope := ""
@@ -681,7 +681,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/host/receipts/") {
 		receiptKey = strings.TrimPrefix(r.URL.Path, "/v1/host/receipts/")
 		if !remoteIdempotency0284.MatchString(receiptKey) {
-			write(http.StatusBadRequest, map[string]string{"error": "invalid receipt key"})
+			write(http.StatusBadRequest, map[string]string{"error": "Некорректный ключ квитанции"})
 			return
 		}
 		scope = "host.status"
@@ -692,7 +692,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		decoder.DisallowUnknownFields()
 		var command remoteCommand0284
 		if decoder.Decode(&command) != nil || decoder.Decode(new(any)) != io.EOF {
-			write(http.StatusBadRequest, map[string]string{"error": "invalid command body"})
+			write(http.StatusBadRequest, map[string]string{"error": "Некорректное тело команды"})
 			return
 		}
 		action = command.Action
@@ -702,13 +702,13 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if scope == "" {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusNotFound, map[string]string{"error": "unsupported operation"})
+		write(http.StatusNotFound, map[string]string{"error": "Неподдерживаемая операция"})
 		return
 	}
 	event.Action = scope
 	if !remoteScopeContains0284(claims, scope) {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusForbidden, map[string]string{"error": "insufficient scope"})
+		write(http.StatusForbidden, map[string]string{"error": "Недостаточно разрешений"})
 		return
 	}
 	if receiptKey != "" {
@@ -717,12 +717,12 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		path := remoteReceiptFile0284(a.dir, receiptKey)
 		receipt, readErr := remoteReadReceipt0284(path)
 		if errors.Is(readErr, os.ErrNotExist) {
-			write(http.StatusNotFound, map[string]string{"error": "receipt not found"})
+			write(http.StatusNotFound, map[string]string{"error": "Квитанция не найдена"})
 			return
 		}
 		if readErr != nil || receipt.KeyHash != strings.TrimSuffix(filepath.Base(path), ".json") || receipt.Subject != claims.Subject ||
 			!remoteScopeContains0284(claims, "host."+receipt.Action) {
-			write(http.StatusForbidden, map[string]string{"error": "receipt unavailable or not authorized"})
+			write(http.StatusForbidden, map[string]string{"error": "Квитанция недоступна или доступ не разрешён"})
 			return
 		}
 		event.Outcome = "receipt-read"
@@ -745,7 +745,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := r.Header.Get("Idempotency-Key")
 	if !remoteIdempotency0284.MatchString(key) {
 		_ = remoteAuditLog0284(a.dir, event)
-		write(http.StatusBadRequest, map[string]string{"error": "Idempotency-Key must be 16-128 safe characters"})
+		write(http.StatusBadRequest, map[string]string{"error": "Idempotency-Key должен содержать от 16 до 128 допустимых символов"})
 		return
 	}
 	digestBytes := sha256.Sum256([]byte(action + "\x00" + claims.Subject + "\x00" + identity.NodeID))
@@ -755,17 +755,17 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer a.mu.Unlock()
 	// Срок действия или отзыв токена могут измениться во время другой выполняемой команды.
 	if a.now().Unix() >= claims.Expires {
-		write(http.StatusUnauthorized, map[string]string{"error": "token expired"})
+		write(http.StatusUnauthorized, map[string]string{"error": "Срок действия токена истёк"})
 		return
 	}
 	revoked, err = remoteRevoked0284(a.dir, claims.ID, a.now())
 	if err != nil || revoked {
-		write(http.StatusUnauthorized, map[string]string{"error": "token revoked/unavailable"})
+		write(http.StatusUnauthorized, map[string]string{"error": "Токен отозван или недоступен"})
 		return
 	}
 	if old, readErr := remoteReadReceipt0284(path); readErr == nil {
 		if old.KeyHash != strings.TrimSuffix(filepath.Base(path), ".json") || old.Digest != digest || old.Subject != claims.Subject || old.Action != action {
-			write(http.StatusConflict, map[string]string{"error": "idempotency key already bound to a different operation"})
+			write(http.StatusConflict, map[string]string{"error": "Ключ идемпотентности уже связан с другой операцией"})
 			return
 		}
 		event.Outcome = "replayed-" + old.State
@@ -777,7 +777,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		write(code, old)
 		return
 	} else if !errors.Is(readErr, os.ErrNotExist) {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "command journal unavailable"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Журнал команд недоступен"})
 		return
 	}
 	// Проверяйте все предыдущие подтверждения, а не только текущий ключ идемпотентности.
@@ -785,11 +785,11 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// незаметно повторно выполнить второе опасное действие.
 	unknown, guardErr := remoteUnresolvedCommand04112(a.dir)
 	if guardErr != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "command journal integrity unavailable"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Проверка целостности журнала команд недоступна"})
 		return
 	}
 	if unknown {
-		write(http.StatusConflict, map[string]string{"error": "previous host command indeterminate; operator reconciliation required"})
+		write(http.StatusConflict, map[string]string{"error": "Результат предыдущей команды хоста неопределён; требуется проверка администратором"})
 		return
 	}
 	event.Outcome = "accepted"
@@ -799,7 +799,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	receipt := remoteReceipt0284{SchemaVersion: "1.0", KeyHash: strings.TrimSuffix(filepath.Base(path), ".json"), Digest: digest, Subject: claims.Subject, Action: action, State: "indeterminate", CreatedAt: a.now().UTC().Format(time.RFC3339Nano)}
 	if err = remotePersistReceipt0284(path, receipt); err != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "cannot persist command intent"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Не удалось сохранить намерение выполнить команду"})
 		return
 	}
 	result, runErr := a.execute(action)
@@ -811,12 +811,12 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		receipt.Error = runErr.Error() /* невозможно доказать, что внешнее действие не было выполнено */
 	}
 	if err = remotePersistReceipt0284(path, receipt); err != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "result persistence failed; command outcome indeterminate"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Не удалось сохранить результат; итог выполнения команды неизвестен"})
 		return
 	}
 	event.Outcome = receipt.State
 	if err = remoteAuditLog0284(a.dir, event); err != nil {
-		write(http.StatusServiceUnavailable, map[string]string{"error": "audit write failed; inspect persisted receipt"})
+		write(http.StatusServiceUnavailable, map[string]string{"error": "Не удалось записать аудит; проверьте сохранённую квитанцию"})
 		return
 	}
 	code := http.StatusOK
@@ -896,7 +896,7 @@ func remoteHandle0284(args []string) error {
 		if err = remoteSave0284(filepath.Join(remoteDir0284(root), "identity.json"), id); err != nil {
 			return err
 		}
-		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]string{"nodeId": id.NodeID, "status": "key-rotated", "effect": "all old service tokens invalidated on next request"})
+		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]string{"nodeId": id.NodeID, "status": "key-rotated", "effect": "Все старые токены службы будут аннулированы при следующем запросе"})
 	case "issue":
 		id, err := remoteLoad0284(root)
 		if err != nil {

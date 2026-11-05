@@ -619,7 +619,7 @@ def main(argv=None):
         return 3 if assessment["status"] == "RISK" else 0
     except InventoryError as exc:
         # Ошибка никогда не содержит вывод команды, учётные данные или окружение.
-        print("HA inventory unavailable: " + str(exc), file=sys.stderr)
+        print("Инвентаризация высокой доступности недоступна: " + str(exc), file=sys.stderr)
         return 2
 
 

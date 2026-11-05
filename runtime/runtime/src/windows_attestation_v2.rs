@@ -77,7 +77,7 @@ fn is_sha256_hex(value: &str) -> bool {
 fn now_unix_ms() -> Result<u64, String> {
     Ok(SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|err| format!("system clock before UNIX epoch: {err}"))?
+        .map_err(|err| format!("Системное время предшествует эпохе UNIX: {err}"))?
         .as_millis() as u64)
 }
 

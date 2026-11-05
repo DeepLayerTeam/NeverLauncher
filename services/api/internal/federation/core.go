@@ -20,7 +20,7 @@ import (
 var (
 	ErrProviderNotFound      = errors.New("Провайдер авторизации не найден")
 	ErrCapabilityUnsupported = errors.New("Не поддерживается: «auth provider capability»")
-	ErrIdentityNotLinked     = errors.New("external identity is not linked to a Never user")
+	ErrIdentityNotLinked     = errors.New("Внешний идентификатор не связан с пользователем Never")
 )
 
 type Result struct {
@@ -68,7 +68,7 @@ func (c *Core) Register(connector authconnector.Connector) error {
 
 func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy ProviderPolicy) error {
 	if connector == nil {
-		return errors.New("connector is nil")
+		return errors.New("Коннектор отсутствует")
 	}
 	if err := authconnector.ValidateConnector(connector); err != nil {
 		return err

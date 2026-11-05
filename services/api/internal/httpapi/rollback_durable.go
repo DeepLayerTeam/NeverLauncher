@@ -351,7 +351,7 @@ func (s Server) executeRollbackJob0217(ctx context.Context, cp repository.Durabl
 func (s Server) rollbackExecute0217(w http.ResponseWriter, r *http.Request) {
 	var req packageActionRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&req); err != nil {
-		writeError(w, 400, "invalid rollback request: "+err.Error())
+		writeError(w, 400, "Некорректный запрос на откат: "+err.Error())
 		return
 	}
 	operation := operationRequest0217{Kind: durableRollbackKind0217, ProjectID: firstNonEmpty(req.ProjectID, queryDefault(r, "projectId", ""), queryDefault(r, "project", "")), ProfileID: firstNonEmpty(req.ProfileID, queryDefault(r, "profileId", "vanilla")), Channel: r.PathValue("channel"), ToVersion: firstNonEmpty(req.ToVersion, queryDefault(r, "toVersion", ""))}

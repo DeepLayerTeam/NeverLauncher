@@ -11,8 +11,8 @@ import (
 
 var (
 	ErrNotFound = errors.New("Не найдено: «migration run»")
-	ErrBusy     = errors.New("migration run is leased, paused or not executable")
-	ErrConflict = errors.New("migration run changed concurrently")
+	ErrBusy     = errors.New("Запуск миграции заблокирован, приостановлен или недоступен для выполнения")
+	ErrConflict = errors.New("Параметры запуска миграции были изменены параллельно")
 )
 
 // Prepared означает сбор исходных сведений о целевом состоянии Never, а НЕ

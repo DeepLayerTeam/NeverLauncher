@@ -196,13 +196,13 @@ func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun034
 func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationAttestationRepository0345)
 	if !ok {
-		writeError(w, 503, "validation attestation storage unavailable")
+		writeError(w, 503, "Хранилище подтверждений проверки недоступно")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	incoming, readErr := io.ReadAll(r.Body)
 	if readErr != nil {
-		writeError(w, 400, "invalid or oversized validation evidence")
+		writeError(w, 400, "Некорректные или слишком большие данные проверки")
 		return
 	}
 	dec := json.NewDecoder(bytes.NewReader(incoming))
@@ -221,7 +221,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
-		writeError(w, 400, "malformed validation evidence")
+		writeError(w, 400, "Неверный формат доказательств проверки")
 		return
 	}
 	deny := func(err error) {
@@ -248,7 +248,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	freshStore, ok := s.Repo.(validationFreshnessStore0346)
 	if !ok {
-		writeError(w, 503, "validation freshness store unavailable")
+		writeError(w, 503, "Хранилище актуальности проверок недоступно")
 		return
 	}
 	if e = validateFreshness0346(r.Context(), freshStore, p, time.Now().UTC(), true); e != nil {
@@ -328,7 +328,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	runs, e := store.ListStagedRuns0342(r.Context(), p.PackageID)
 	if e != nil {
-		writeError(w, 503, "cannot read staged runtime runs")
+		writeError(w, 503, "Не удалось прочитать подготовленные запуски Runtime")
 		return
 	}
 	matched := false
@@ -372,7 +372,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationAttestationRepository0345)
 	if !ok {
-		writeError(w, 503, "attestation storage unavailable")
+		writeError(w, 503, "Хранилище подтверждений недоступно")
 		return
 	}
 	rows, e := store.ListValidationAttestations0345(r.Context(), r.PathValue("packageId"))

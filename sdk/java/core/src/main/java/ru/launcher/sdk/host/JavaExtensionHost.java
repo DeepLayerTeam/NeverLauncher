@@ -14,22 +14,22 @@ public final class JavaExtensionHost {
         ru.launcher.sdk.core.SentryDiagnostics.installFromEnvironment(System.getenv());
         URI location=JavaExtensionHost.class.getProtectionDomain().getCodeSource().getLocation().toURI();
         Path jar=Path.of(location).toRealPath();
-        if(!jar.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar"))throw new IllegalArgumentException("Java Extension Host must be launched from a JAR");
+        if(!jar.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar"))throw new IllegalArgumentException("Хост Java Extension необходимо запускать из JAR");
         String className;
         try(JarFile file=new JarFile(jar.toFile())){
-            if(file.getManifest()==null)throw new IllegalArgumentException("JAR manifest missing");
+            if(file.getManifest()==null)throw new IllegalArgumentException("Манифест JAR отсутствует");
             Attributes attributes=file.getManifest().getMainAttributes();
-            if(!JavaExtensionHost.class.getName().equals(attributes.getValue("Main-Class")))throw new IllegalArgumentException("wrong JAR Main-Class");
+            if(!JavaExtensionHost.class.getName().equals(attributes.getValue("Main-Class")))throw new IllegalArgumentException("Некорректный Main-Class в JAR");
             className=attributes.getValue("Launcher-Extension-Class");
-            if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}"))throw new IllegalArgumentException("invalid Launcher-Extension-Class");
+            if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}"))throw new IllegalArgumentException("Некорректный Launcher-Extension-Class");
         }
         String target=System.getenv().getOrDefault("LAUNCHER_EXTENSION_TARGET","backend");
         if("backend".equals(target)){
-            if(args.length!=0)throw new IllegalArgumentException("backend host does not accept arguments");
+            if(args.length!=0)throw new IllegalArgumentException("Хост Backend не принимает аргументы");
             ExtensionRunner.runManagedFromHost(className,System.getenv());
         }else if("cli".equals(target)){
-            if(args.length==0)throw new IllegalArgumentException("cli host requires a command");
+            if(args.length==0)throw new IllegalArgumentException("Для хоста CLI требуется команда");
             ExtensionRunner.runManagedCliFromHost(className,System.getenv(),Arrays.copyOf(args,args.length));
-        }else throw new IllegalArgumentException("unsupported Java Extension Host target");
+        }else throw new IllegalArgumentException("Неподдерживаемая цель хоста Java Extension");
     }
 }

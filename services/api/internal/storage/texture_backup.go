@@ -106,7 +106,7 @@ func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBac
 		visited[obj.Digest] = true
 		payload, err := backupBytes0253(store, obj)
 		if err != nil {
-			return fmt.Errorf("backup %s: %w", obj.Digest, err)
+			return fmt.Errorf("Ошибка резервного копирования %s: %w", obj.Digest, err)
 		}
 		f, err := os.OpenFile(filepath.Join(blobs, obj.Digest+".png"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if err != nil {
@@ -216,7 +216,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		allowed[b.Digest] = b
 	}
 	if len(man.Objects) != len(allowed) {
-		return 0, fmt.Errorf("incomplete texture snapshot: backup has %d objects, database has %d", len(man.Objects), len(allowed))
+		return 0, fmt.Errorf("Неполный снимок текстур: в копии %d объектов, в БД %d", len(man.Objects), len(allowed))
 	}
 	visited := make(map[string]bool, len(man.Objects))
 	for _, obj := range man.Objects {
@@ -228,7 +228,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		}
 		visited[obj.Digest] = true
 		if expected, ok := allowed[obj.Digest]; !ok || expected != obj {
-			return 0, fmt.Errorf("backup object %s not authorized by current database", obj.Digest)
+			return 0, fmt.Errorf("Объект резервной копии %s отсутствует в разрешённом наборе текущей БД", obj.Digest)
 		}
 	}
 	// Предварительно проверять ВСЕ объекты до записи, избегая частичной записи при повреждённой копии.
@@ -259,7 +259,7 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		// Не доверять только результату операции записи хранилища. Повторно прочитать
 		// через настроенный локальный/S3 путь и проверить всё содержимое.
 		if verification := VerifyTexture02511(ctx, store, obj); verification.Result != "ok" {
-			return restored, fmt.Errorf("restored texture %s failed readback: %s (%s)", obj.Digest, verification.Result, verification.Detail)
+			return restored, fmt.Errorf("Не удалось проверить восстановленную текстуру %s чтением: %s (%s)", obj.Digest, verification.Result, verification.Detail)
 		}
 		restored++
 	}

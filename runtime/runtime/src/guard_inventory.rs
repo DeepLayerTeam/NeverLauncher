@@ -144,13 +144,13 @@ pub async fn collect_guard_inventory_0501(
             match supervisor.process_policy().await {
                 Ok(policy) if policy.enforced && policy.pid == status.pid =>
                     checks.push(check("guard.process-policy", "PASS", format!("Guard применил {} к PID {}", policy.schema, policy.pid))),
-                Ok(_) => checks.push(check("guard.process-policy", "BLOCKED", "Policy absent, unenforced or PID mismatch")),
+                Ok(_) => checks.push(check("guard.process-policy", "BLOCKED", "Политика отсутствует, не применяется или PID не совпадает")),
                 Err(err) => checks.push(check("guard.process-policy", "BLOCKED", err)),
             }
             match supervisor.integrity_evidence().await {
                 Ok(evidence) if evidence.guard.pid == status.pid && evidence.boundary.parent_matches =>
                     checks.push(check("guard.integrity-evidence", "PASS", format!("Проверено {} для PID {}", evidence.schema, evidence.guard.pid))),
-                Ok(_) => checks.push(check("guard.integrity-evidence", "BLOCKED", "Integrity evidence PID or process boundary mismatch")),
+                Ok(_) => checks.push(check("guard.integrity-evidence", "BLOCKED", "Не совпадает PID или граница процесса в подтверждении целостности")),
                 Err(err) => checks.push(check("guard.integrity-evidence", "BLOCKED", err)),
             }
             let nonce: [u8; 16] = rand::random();
@@ -159,7 +159,7 @@ pub async fn collect_guard_inventory_0501(
             match supervisor.remote_attestation(&id, &challenge).await {
                 Ok(attestation) if attestation.challenge_id == id =>
                     checks.push(check("guard.remote-attestation", "PASS", "Fresh challenge validated by authenticated Guard IPC; not server/game attestation")),
-                Ok(_) => checks.push(check("guard.remote-attestation", "BLOCKED", "Remote attestation challenge mismatch")),
+                Ok(_) => checks.push(check("guard.remote-attestation", "BLOCKED", "Проверочный запрос удалённого подтверждения не совпадает")),
                 Err(err) => checks.push(check("guard.remote-attestation", "BLOCKED", err)),
             }
         }
@@ -170,9 +170,9 @@ pub async fn collect_guard_inventory_0501(
     // Для этого требуется НАСТОЯЩИЙ процесс Minecraft и сертифицированный нативный исполнитель.
     // Локальный список никогда не повышает статус до PASS только из-за наличия библиотек.
     if cfg!(windows) {
-        checks.push(check("sensor.windows.in-process", "BLOCKED", "Requires real game startup and authenticated pre-main sensor report"));
-        checks.push(check("sensor.jvm-awareness", "BLOCKED", "Requires live JVM and native sensor reports"));
-        checks.push(check("sensor.continuous", "BLOCKED", "Requires game-lifetime watchdog observations"));
+        checks.push(check("sensor.windows.in-process", "BLOCKED", "Требуются реальный запуск игры и аутентифицированный отчёт датчика до выполнения main"));
+        checks.push(check("sensor.jvm-awareness", "BLOCKED", "Требуются отчёты работающей JVM и нативного датчика"));
+        checks.push(check("sensor.continuous", "BLOCKED", "Требуются наблюдения сторожевого процесса на протяжении игрового сеанса"));
     } else {
         checks.push(check("sensor.windows.in-process", "UNSUPPORTED", "Windows-only native in-process Guard Sensor"));
         checks.push(check("sensor.jvm-awareness", "UNSUPPORTED", "Windows-only native JVM-aware Guard Sensor in 0.50.1"));
@@ -183,8 +183,8 @@ pub async fn collect_guard_inventory_0501(
             if loader.as_deref() == Some(name) { "Installed metadata detected; no native Minecraft launch/join certificate supplied" }
             else { "No real runtime/game launch evidence for this loader" }));
     }
-    checks.push(check("minecraft.real-join", "BLOCKED", "Requires external real Minecraft launch/join evidence; metadata and Java detection are insufficient"));
-    checks.push(check("minecraft.authorized-javaagent", "BLOCKED", "Trusted Java Agent + Guard compatibility not demonstrated by inventory; planned for 0.50.3"));
+    checks.push(check("minecraft.real-join", "BLOCKED", "Требуются внешние доказательства реального запуска Minecraft и подключения к серверу; одних метаданных и обнаружения Java недостаточно"));
+    checks.push(check("minecraft.authorized-javaagent", "BLOCKED", "Инвентаризация не подтверждает совместимость доверенного Java Agent и Guard; запланировано для 0.50.3"));
     let status = if checks.iter().any(|c| c.status == "BLOCKED") { "BLOCKED" } else { "PASS" };
     GuardInventory0501 {
         schema: INVENTORY_SCHEMA_0501,

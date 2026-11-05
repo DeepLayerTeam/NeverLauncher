@@ -160,7 +160,7 @@ func stateRoster(root string) ([]string, error) {
 	for scanner.Scan() {
 		id := strings.TrimSpace(scanner.Text())
 		if !canonicalUUID.MatchString(id) || seen[id] {
-			return nil, errors.New("Некорректное значение: «or duplicated player UUID in roster»")
+			return nil, errors.New("В списке игроков обнаружен некорректный или повторяющийся UUID")
 		}
 		seen[id] = true
 		uuids = append(uuids, id)
@@ -180,7 +180,7 @@ func stateRoster(root string) ([]string, error) {
 
 func inspectStateRoot(root string) error {
 	if !filepath.IsAbs(root) {
-		return errors.New("Для корневой каталог снимков требуется: «absolute»")
+		return errors.New("Корневой каталог снимков должен иметь абсолютный путь")
 	}
 	info, err := os.Lstat(root)
 	if err != nil {
@@ -209,7 +209,7 @@ func auditState(source, target string) (StateAudit, error) {
 		return a, err
 	}
 	if srcRoot == tgtRoot {
-		return a, errors.New("Для исходный и целевой снимки требуется: «separate»")
+		return a, errors.New("Исходный и целевой снимки должны быть раздельными")
 	}
 	for _, pair := range [][2]string{{srcRoot, tgtRoot}, {tgtRoot, srcRoot}} {
 		rel, relErr := filepath.Rel(pair[0], pair[1])
@@ -217,7 +217,7 @@ func auditState(source, target string) (StateAudit, error) {
 			return a, relErr
 		}
 		if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-			return a, errors.New("каталоги исходного и целевого снимков: запрещено «be nested»")
+			return a, errors.New("Каталоги исходного и целевого снимков не должны быть вложены друг в друга")
 		}
 	}
 	a.SourceUUIDs, err = stateRoster(source)
@@ -290,7 +290,7 @@ func validateStateAuditEvidence(data []byte, probe Probe) error {
 		a.SourcePluginSHA256 != probe.SourcePluginSHA256 || a.TargetPluginSHA256 != probe.TargetPluginSHA256 ||
 		len(a.SourceUUIDs) == 0 || len(a.SourceUUIDs) != len(probe.SourceUUIDs) ||
 		len(a.TargetUUIDs) != len(probe.TargetUUIDs) {
-		return errors.New("Некорректное значение: «or unbound state audit evidence»")
+		return errors.New("Некорректные подтверждающие данные проверки состояния или данные без привязки")
 	}
 	for _, pair := range [][2][]string{{a.SourceUUIDs, probe.SourceUUIDs}, {a.TargetUUIDs, probe.TargetUUIDs}} {
 		left := append([]string(nil), pair[0]...)

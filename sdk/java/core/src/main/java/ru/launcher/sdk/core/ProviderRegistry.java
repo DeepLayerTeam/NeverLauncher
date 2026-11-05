@@ -51,14 +51,14 @@ public final class ProviderRegistry implements AutoCloseable {
         Objects.requireNonNull(descriptor);
         synchronized (gate) {
             requireOpen();
-            if (switching) throw new IllegalStateException("provider selection in progress");
+            if (switching) throw new IllegalStateException("Выполняется выбор провайдера");
             if (services.size() >= 64 && !services.containsKey(descriptor.service().id()))
-                throw new IllegalStateException("too many SPI services");
+                throw new IllegalStateException("Превышено допустимое число служб SPI");
             ServiceSlot slot = services.computeIfAbsent(descriptor.service().id(), k -> new ServiceSlot(descriptor.service()));
             if (!slot.contract.equals(descriptor.service()))
-                throw new IllegalArgumentException("conflicting SPI contract: " + descriptor.service().id());
-            if (slot.candidates.size() >= 64) throw new IllegalStateException("too many SPI implementations");
-            if (slot.candidates.containsKey(descriptor.id())) throw new IllegalArgumentException("duplicate SPI provider: " + descriptor.id());
+                throw new IllegalArgumentException("Конфликтующий контракт SPI: " + descriptor.service().id());
+            if (slot.candidates.size() >= 64) throw new IllegalStateException("Превышено допустимое число реализаций SPI");
+            if (slot.candidates.containsKey(descriptor.id())) throw new IllegalArgumentException("Повторяющийся провайдер SPI: " + descriptor.id());
             // Должны совпасть и API пакета расширения, и версия типа SPI, даже если провайдер
             // собран с другим выпуском SDK.
             SemVer api = SemVer.parse(manifest.api() + (manifest.api().chars().filter(c -> c == '.').count() == 1 ? ".0" : ""));
@@ -92,10 +92,10 @@ public final class ProviderRegistry implements AutoCloseable {
         Active prior;
         synchronized (gate) {
             requireOpen();
-            if (switching) throw new IllegalStateException("concurrent SPI selection");
+            if (switching) throw new IllegalStateException("Параллельный выбор SPI запрещён");
             slot = services.get(serviceId);
             if (slot == null || (choice = slot.candidates.get(providerId)) == null)
-                throw new IllegalArgumentException("unregistered provider: " + serviceId + "/" + providerId);
+                throw new IllegalArgumentException("Незарегистрированный провайдер: " + serviceId + "/" + providerId);
             prior = slot.active;
             if (prior != null && prior.descriptor.id().equals(providerId))
                 return new Selection(serviceId, providerId, prior.descriptor.version());
@@ -139,10 +139,10 @@ public final class ProviderRegistry implements AutoCloseable {
         T selected;
         synchronized (gate) {
             requireOpen();
-            if (switching) throw new IllegalStateException("SPI service is switching");
+            if (switching) throw new IllegalStateException("Выполняется переключение службы SPI");
             ServiceSlot slot = services.get(service.id());
             if (slot == null || !slot.contract.equals(service)) throw new CompatibilityException("SPI contract mismatch: " + service.id());
-            if (slot.active == null) throw new IllegalStateException("SPI provider not selected: " + service.id());
+            if (slot.active == null) throw new IllegalStateException("Провайдер SPI не выбран: " + service.id());
             selected = service.type().cast(slot.active.provider);
             inflight++;
         }
@@ -167,7 +167,7 @@ public final class ProviderRegistry implements AutoCloseable {
         if (joinExisting) {
             if (!terminated.await(remaining(until), TimeUnit.NANOSECONDS))
                 throw new TimeoutException("concurrent SPI shutdown deadline exceeded");
-            if (shutdownFailure != null) throw new IllegalStateException("previous SPI shutdown failed", shutdownFailure);
+            if (shutdownFailure != null) throw new IllegalStateException("Предыдущее завершение SPI завершилось ошибкой", shutdownFailure);
             return;
         }
         try {
@@ -204,11 +204,11 @@ public final class ProviderRegistry implements AutoCloseable {
         catch (Exception ignored) { callbacks.shutdownNow(); }
     }
     private void requireOpen() {
-        if (closed || cancellation.isCancelled()) throw new IllegalStateException("SPI registry is closed");
+        if (closed || cancellation.isCancelled()) throw new IllegalStateException("Реестр SPI закрыт");
     }
     private void checkNotInsideProvider() {
         if (inProviderCallback.get() || inProviderCall.get())
-            throw new IllegalStateException("cannot select or shut down SPI from a provider callback");
+            throw new IllegalStateException("Нельзя выбирать или завершать SPI из обратного вызова провайдера");
     }
     private ProviderContext context(String serviceId, String providerId, long until) {
         long remain = Math.max(1, until - System.nanoTime());
@@ -244,7 +244,7 @@ public final class ProviderRegistry implements AutoCloseable {
         catch (ExecutionException e) {
             Throwable cause = e.getCause();
             if (cause instanceof Exception ex) throw ex;
-            throw new IllegalStateException("SPI callback failed", cause);
+            throw new IllegalStateException("Обратный вызов SPI завершился ошибкой", cause);
         }
     }
     private void awaitDeadline(long until) throws InterruptedException, TimeoutException {
@@ -260,7 +260,7 @@ public final class ProviderRegistry implements AutoCloseable {
     private static void checkTimeout(Duration timeout) {
         Objects.requireNonNull(timeout);
         if (timeout.isNegative() || timeout.isZero() || timeout.compareTo(Duration.ofMinutes(5)) > 0)
-            throw new IllegalArgumentException("SPI timeout must be in (0,5m]");
+            throw new IllegalArgumentException("Тайм-аут SPI должен быть в интервале (0, 5 мин]");
     }
     public static final class CompatibilityException extends IllegalArgumentException {
         public CompatibilityException(String message) { super(message); }

@@ -94,7 +94,7 @@ func snapshotFromGuardLaunchTicket0135(ticket model.DeviceChallenge) (minecraftI
 		}
 	}
 	if snapshot.LauncherVersion == "" || len(snapshot.LauncherVersion) > 64 || snapshot.VerifiedAt.IsZero() {
-		return minecraftIntegritySnapshot0135{}, errors.New("Guard launch ticket integrity metadata incomplete")
+		return minecraftIntegritySnapshot0135{}, errors.New("Метаданные целостности билета запуска Guard неполны")
 	}
 	return snapshot, nil
 }

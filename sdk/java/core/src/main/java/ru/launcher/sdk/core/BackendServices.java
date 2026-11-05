@@ -63,12 +63,12 @@ public final class BackendServices {
     private static long number(Map<String,Object> raw,String key) {
         Object n=raw.get(key);
         if(!(n instanceof Number value)||value.longValue()!=value.doubleValue()||value.longValue()<0)
-            throw new IllegalArgumentException("invalid backend number: "+key);
+            throw new IllegalArgumentException("Некорректное число Backend: "+key);
         return value.longValue();
     }
     private static int narrow(Map<String,Object> raw,String key) {
         long v=number(raw,key);
-        if(v>Integer.MAX_VALUE)throw new IllegalArgumentException("backend integer overflow: "+key);
+        if(v>Integer.MAX_VALUE)throw new IllegalArgumentException("Переполнение целочисленного значения Backend: "+key);
         return (int)v;
     }
     private static Project project(Map<String,Object> m) {
@@ -96,12 +96,12 @@ public final class BackendServices {
     }
     private <T> Page<T> page(String operation,Map<String,Object> base,int offset,int limit,Function<Map<String,Object>,T> decoder)
             throws IOException,InterruptedException {
-        if(offset<0||offset>1_000_000||limit<1||limit>50)throw new IllegalArgumentException("invalid page parameters");
+        if(offset<0||offset>1_000_000||limit<1||limit>50)throw new IllegalArgumentException("Некорректные параметры страницы");
         var params=new java.util.LinkedHashMap<>(base);
         params.put("offset",offset);params.put("limit",limit);
         var response=call(operation,params);
         Object raw=response.get("items");
-        if(!(raw instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("invalid backend page");
+        if(!(raw instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("Некорректная страница данных Backend");
         List<T> decoded=new ArrayList<>(items.size());
         for(Object item:items) {
             Map<String,Object> map=Json.object(item);
@@ -110,19 +110,19 @@ public final class BackendServices {
             // проектов.
             Object expected=base.get("projectId");
             if(expected!=null && !Objects.equals(expected,map.get("projectId")))
-                throw new SecurityException("cross-project backend response");
+                throw new SecurityException("Ответ Backend относится к другому проекту");
             decoded.add(value);
         }
         Integer next=null;
         if(response.containsKey("nextOffset")) {
             long n=number(response,"nextOffset");
-            if(n<=offset||n>1_000_000)throw new IllegalArgumentException("invalid backend cursor");
+            if(n<=offset||n>1_000_000)throw new IllegalArgumentException("Некорректный указатель выборки Backend");
             next=(int)n;
         }
         return new Page<>(decoded,next);
     }
     private static void checkScope(String projectId,String expected) {
-        if(!projectId.equals(expected))throw new SecurityException("cross-project backend response");
+        if(!projectId.equals(expected))throw new SecurityException("Ответ Backend относится к другому проекту");
     }
 
     /** Требуется project:read и глобальное разрешение для расширения глобальной области действия. */

@@ -200,7 +200,7 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 		"continuous evidence": e.EvidenceSHA256,
 	} {
 		if !isSHA256Hex0134(value) {
-			return fmt.Errorf("Guard Attestation v2 %s SHA-256 malformed", label)
+			return fmt.Errorf("Guard Attestation v2: некорректный SHA-256 для %s", label)
 		}
 	}
 	nowMS := uint64(now.UTC().UnixMilli())
@@ -225,7 +225,7 @@ func validateGuardAttestationV201810(a guardRemoteAttestationV201810, challengeI
 		return errors.New("Хеш проверочного запроса Guard Attestation v2 не совпадает")
 	}
 	if !isSHA256Hex0134(a.AttestationSHA256) {
-		return errors.New("Guard Attestation v2 digest malformed")
+		return errors.New("Guard Attestation v2: некорректная контрольная сумма")
 	}
 	if a.BaseAttestation.ChallengeID != a.ChallengeID || !hmac.Equal([]byte(a.BaseAttestation.ChallengeSHA256), []byte(a.ChallengeSHA256)) {
 		return errors.New("Несоответствие привязки базового проверочного запроса Guard Attestation v2")
@@ -325,7 +325,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	if req.MinecraftAccessToken != "" {
 		ms, _, _, err := s.validateMinecraftToken119(strings.TrimSpace(req.MinecraftAccessToken))
 		if err != nil || ms.ID == "" || ms.UserID != claims.Sub || ms.NeverSessionID != claims.SessionID || ms.TrustedDeviceID != deviceID || ms.BindingEpoch != claims.BindingEpoch || ms.LauncherVersion != req.LauncherVersion || !ms.IntegrityVerified {
-			writeError(w, http.StatusPreconditionFailed, "Minecraft runtime session does not match current Never session, device, epoch and release")
+			writeError(w, http.StatusPreconditionFailed, "Сеанс Minecraft Runtime не совпадает с текущим сеансом Never, устройством, эпохой или релизом")
 			return
 		}
 		minecraftSessionID = ms.ID
@@ -443,7 +443,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	// обновлении политики.
 	runtimePolicyDigest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, req.Attestation.ContinuousEvidence)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "Guard runtime denied: "+err.Error())
+		writeError(w, http.StatusPreconditionFailed, "Guard Runtime отклонил операцию: "+err.Error())
 		return
 	}
 	ticketID, err := randomToken("ngctid")
@@ -521,10 +521,10 @@ func validateContinuousGuardTicketForMinecraftSession01810(ticket model.DeviceCh
 		return errors.New("Целостность сеанса Minecraft не подтверждена")
 	}
 	if !session.CreatedAt.IsZero() && ticket.CreatedAt.Before(session.CreatedAt.Add(-guardAttestationClockSkew0134)) {
-		return errors.New("Continuous Guard runtime evidence predates Minecraft session")
+		return errors.New("Данные подтверждения непрерывной защиты Guard предшествуют сеансу Minecraft")
 	}
 	if guardRuntimePolicyRequired0317(session.LauncherVersion) && (metadataString0121(ticket.Metadata, "minecraftSessionId") == "" || metadataString0121(ticket.Metadata, "minecraftSessionId") != session.ID) {
-		return errors.New("Continuous Guard runtime not bound to this Minecraft session")
+		return errors.New("Runtime непрерывной защиты Guard не привязан к этому сеансу Minecraft")
 	}
 	if metadataString0121(ticket.Metadata, "launcherVersion") != strings.TrimSpace(session.LauncherVersion) {
 		return errors.New("«Continuous Guard ticket launcher version» не совпадает с «Minecraft integrity session»")

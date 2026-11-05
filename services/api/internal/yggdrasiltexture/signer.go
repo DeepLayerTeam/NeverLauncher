@@ -64,11 +64,11 @@ func ParsePrivateKey(pemBytes []byte) (*Signer, error) {
 
 func LoadFile(path string) (*Signer, error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, errors.New("Yggdrasil RSA signing key file not configured")
+		return nil, errors.New("Не настроен файл ключа RSA для подписи Yggdrasil")
 	}
 	info, err := os.Lstat(path)
 	if err != nil {
-		return nil, fmt.Errorf("read RSA key metadata: %w", err)
+		return nil, fmt.Errorf("Не удалось прочитать метаданные ключа RSA: %w", err)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, errors.New("Требуется обычный файл: RSA ключ подписи")

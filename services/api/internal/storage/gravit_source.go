@@ -38,12 +38,12 @@ func (s *S3Storage) OpenGravitSourceObject02510(ctx context.Context, key string)
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
 		cancel()
-		return nil, fmt.Errorf("source S3 object HTTP %d", res.StatusCode)
+		return nil, fmt.Errorf("Ошибка получения исходного объекта S3: HTTP %d", res.StatusCode)
 	}
 	if res.ContentLength > 4<<20 {
 		res.Body.Close()
 		cancel()
-		return nil, errors.New("source S3 object exceeds 4 MiB")
+		return nil, errors.New("Исходный объект S3 превышает 4 МиБ")
 	}
 	return &cancelReadCloser{ReadCloser: res.Body, cancel: cancel}, nil
 }

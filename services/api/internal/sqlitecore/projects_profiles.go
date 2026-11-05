@@ -73,7 +73,7 @@ func (r *Repository) SaveProject(ctx context.Context, p model.Project, actor str
 		p.ID = strings.ToLower(strings.ReplaceAll(p.Name, " ", "-"))
 	}
 	if p.ID == "" || p.Name == "" || strings.ContainsRune(p.ID, '\x00') {
-		return p, errors.New("project id/name required and NUL prohibited")
+		return p, errors.New("Требуются идентификатор и имя проекта; NUL запрещён")
 	}
 	if p.DefaultChannel == "" {
 		p.DefaultChannel = "stable"
@@ -110,7 +110,7 @@ func scanProfile(s interface{ Scan(...any) error }) (model.Profile, error) {
 	p.CreatedAt, p.UpdatedAt = ts(created), ts(updated)
 	p.SchemaVersion = model.ProfileSchemaV2
 	if p.Revision < 1 || p.Digest != model.ProfileDigest(model.ProfileSpecOf(p)) {
-		return model.Profile{}, fmt.Errorf("inconsistent profile digest or revision %s/%s", p.ProjectID, p.ID)
+		return model.Profile{}, fmt.Errorf("Несовместимые дайджест или редакция профиля %s/%s", p.ProjectID, p.ID)
 	}
 	return p, nil
 }

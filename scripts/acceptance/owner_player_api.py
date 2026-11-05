@@ -32,7 +32,7 @@ MAX_BODY = 2 * 1024 * 1024
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise AuditError("redirect refused to protect credentials")
+        raise AuditError("Перенаправление отклонено для защиты учётных данных")
 
 
 class API:
@@ -66,7 +66,7 @@ class API:
         try:
             return status, json.loads(data)
         except ValueError:
-            raise AuditError(f"{method} {path}: malformed JSON") from None
+            raise AuditError(f"{method} {path}: некорректный JSON") from None
 
 
 def run(base, email, password):
@@ -271,7 +271,7 @@ def main():
         )
         return 0
     except (AuditError, OSError, ValueError, URLError, KeyError, TypeError) as e:
-        print("Owner/player HTTP acceptance BLOCKED: " + str(e), file=sys.stderr)
+        print("Приёмочные HTTP-проверки владельца и игрока ЗАБЛОКИРОВАНЫ: " + str(e), file=sys.stderr)
         return 3
 
 

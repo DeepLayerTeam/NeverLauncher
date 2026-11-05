@@ -25,20 +25,20 @@ REQUIRED_OBJECTS = {"installer", "osSignature", "cleanMachine", "certification",
 
 def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: str, commit: str) -> None:
     if folder.is_symlink() or key_path.is_symlink():
-        raise ValueError("symlinked signing input is prohibited")
+        raise ValueError("Символические ссылки во входных данных для подписи запрещены")
     # Убедитесь, что корень доверия одобрен отдельно от этого запуска подписания.
     if not re.fullmatch(r"[a-fA-F0-9]{64}", trusted_key_hex):
-        raise ValueError("a pinned trusted 32-byte Ed25519 public key is mandatory")
+        raise ValueError("Обязателен закреплённый доверенный 32-байтовый публичный ключ Ed25519")
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
-        raise ValueError("a full, exact source Git commit is mandatory")
+        raise ValueError("Требуется полный точный идентификатор коммита Git исходников")
     if os.name != 'nt' and key_path.stat().st_mode & 0o077:
         raise ValueError("«signing private key»: запрещено «be readable by group/others»")
     private = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
     if not isinstance(private, Ed25519PrivateKey):
-        raise ValueError("expected PEM-encoded Ed25519 private key")
+        raise ValueError("Ожидается приватный ключ Ed25519 в кодировке PEM")
     public = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
     if public.lower() != trusted_key_hex.lower():
-        raise ValueError("signing key differs from approved independent GA trust anchor")
+        raise ValueError("Ключ подписи отличается от утверждённого независимого корня доверия GA")
     attestation_file = folder / 'attestation.json'
     if attestation_file.is_symlink() or not attestation_file.is_file():
         raise ValueError("Требуется: «ordinary attestation.json»")
@@ -49,10 +49,10 @@ def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: 
     if doc.get('schemaVersion') != COMPONENT_GA_SCHEMA or doc.get('productVersion') != '0.25.0' or doc.get('commit') != commit:
         raise ValueError("Не поддерживается: «GA attestation or source mismatch»")
     if doc.get('status') != 'passed' or doc.get('gitTreeClean') is not True:
-        raise ValueError("incomplete GA source")
+        raise ValueError("Неполные исходные данные GA")
     platform, arch = doc.get('platform'), doc.get('architecture')
     if folder.name != f'{platform}-{arch}':
-        raise ValueError("platform/architecture not bound to directory")
+        raise ValueError("Платформа или архитектура не привязана к каталогу")
     objects = doc.get('objects')
     if not isinstance(objects, dict) or set(objects) != REQUIRED_OBJECTS:
         raise ValueError("Отсутствует: «or extra evidence objects»")
@@ -66,7 +66,7 @@ def sign_existing_attestation(folder: Path, key_path: Path, *, trusted_key_hex: 
     # платформы и обязательные проверки до принятия квитанции.
     sig_path = folder / 'attestation.sig'
     if sig_path.exists() or sig_path.is_symlink():
-        raise ValueError("refusing to overwrite a previously signed attestation")
+        raise ValueError("Перезапись ранее подписанного подтверждения отклонена")
     sig_path.write_text(private.sign(COMPONENT_GA_DOMAIN + raw).hex() + '\n', encoding='ascii')
     try:
         verify_target(folder, private.public_key(), commit, '0.25.0')

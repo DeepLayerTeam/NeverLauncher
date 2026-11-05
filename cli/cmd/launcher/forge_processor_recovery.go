@@ -39,7 +39,7 @@ func forgeProcessorJournalPath(pc forgeProcessorContext) string {
 func loadForgeProcessorJournal(pc forgeProcessorContext) (forgeProcessorJournal, bool, error) {
 	_, installerSHA, _, err := hashFileSHA1SHA256(pc.InstallerPath)
 	if err != nil {
-		return forgeProcessorJournal{}, false, fmt.Errorf("processor journal installer hash: %w", err)
+		return forgeProcessorJournal{}, false, fmt.Errorf("Ошибка хеша установщика в журнале обработчика: %w", err)
 	}
 	fresh := forgeProcessorJournal{
 		SchemaVersion:    forgeProcessorJournalSchema,
@@ -58,13 +58,13 @@ func loadForgeProcessorJournal(pc forgeProcessorContext) (forgeProcessorJournal,
 	}
 	var journal forgeProcessorJournal
 	if err := json.Unmarshal(raw, &journal); err != nil {
-		if err := quarantineProcessorJournal(pc, "processor journal JSON is corrupt"); err != nil {
+		if err := quarantineProcessorJournal(pc, "JSON журнала обработчика повреждён"); err != nil {
 			return forgeProcessorJournal{}, false, err
 		}
 		return fresh, true, nil
 	}
 	if journal.SchemaVersion != forgeProcessorJournalSchema || journal.Loader != fresh.Loader || journal.MinecraftVersion != fresh.MinecraftVersion || !strings.EqualFold(journal.InstallerSHA256, fresh.InstallerSHA256) || journal.Entries == nil {
-		if err := quarantineProcessorJournal(pc, "processor journal identity mismatch"); err != nil {
+		if err := quarantineProcessorJournal(pc, "Идентификатор журнала обработчика не совпадает"); err != nil {
 			return forgeProcessorJournal{}, false, err
 		}
 		return fresh, true, nil
@@ -93,7 +93,7 @@ func quarantineProcessorJournal(pc forgeProcessorContext, reason string) error {
 	path := forgeProcessorJournalPath(pc)
 	rel, err := filepath.Rel(pc.ClientDir, path)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return fmt.Errorf("processor journal is outside client root: %s", path)
+		return fmt.Errorf("Журнал обработчика находится вне корневого каталога клиента: %s", path)
 	}
 	_, err = quarantineCompatibilityArtifact(pc.ClientDir, filepath.ToSlash(rel), reason)
 	return err

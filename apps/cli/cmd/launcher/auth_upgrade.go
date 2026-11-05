@@ -55,7 +55,7 @@ func handleAuthUpgrade02911(args []string) error {
 		if err := authupgrade.Save(*snapshot, checkpoint); err != nil {
 			return err
 		}
-		printJSON(map[string]any{"status": "preflight-passed", "checkpoint": *snapshot, "counts": checkpoint.Identity, "providers": checkpoint.Providers, "passwordFormats": checkpoint.PasswordFormats, "note": "Checkpoint contains fingerprints, counts and provider IDs only. Stop source writes before apply."})
+		printJSON(map[string]any{"status": "preflight-passed", "checkpoint": *snapshot, "counts": checkpoint.Identity, "providers": checkpoint.Providers, "passwordFormats": checkpoint.PasswordFormats, "note": "Контрольная точка содержит только отпечатки, количества и идентификаторы провайдеров. Перед применением остановите запись в исходные данные."})
 		return nil
 	}
 	expected, err := authupgrade.Load(*snapshot)
@@ -84,7 +84,7 @@ func handleAuthUpgrade02911(args []string) error {
 	if err := authupgrade.Compare(expected, post); err != nil {
 		return fmt.Errorf("После обновления изменена идентичность компонента: %w", err)
 	}
-	printJSON(map[string]any{"status": "verified", "action": action, "checkpoint": *snapshot, "identity": post.Identity, "migrations": "sealed and current", "message": "No identity/UUID ownership drift detected. Re-enable traffic only after external-provider and Minecraft smoke tests."})
+	printJSON(map[string]any{"status": "verified", "action": action, "checkpoint": *snapshot, "identity": post.Identity, "migrations": "Зафиксировано и актуально", "message": "Изменений в принадлежности учётных записей и UUID не обнаружено. Возобновляйте трафик только после проверок внешнего провайдера и Minecraft."})
 	return nil
 }
 

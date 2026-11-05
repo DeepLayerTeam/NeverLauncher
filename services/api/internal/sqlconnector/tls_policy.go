@@ -31,14 +31,14 @@ func validatePostgresTLS(cfg RuntimeConfig) error {
 		case "require", "verify-ca", "verify-full":
 			return nil
 		default:
-			return fmt.Errorf("PostgreSQL TLS is required: sslmode=%s may use plaintext; use sslmode=require/verify-ca/verify-full", mode)
+			return fmt.Errorf("Требуется TLS для PostgreSQL: sslmode=%s допускает незашифрованное соединение; используйте sslmode=require/verify-ca/verify-full", mode)
 		}
 	}
 	switch mode {
 	case "verify-full", "verify-ca":
 		return nil
 	default:
-		return fmt.Errorf("PostgreSQL TLS verification is required: use sslmode=verify-full/verify-ca or explicitly allowInsecureTls")
+		return fmt.Errorf("Требуется проверка TLS PostgreSQL: используйте sslmode=verify-full/verify-ca или явно разрешите allowInsecureTls")
 	}
 }
 
@@ -48,7 +48,7 @@ func validateMySQLTLSMode(cfg RuntimeConfig, tlsMode string) error {
 	}
 	mode := strings.ToLower(strings.TrimSpace(tlsMode))
 	if mode == "" || mode == "false" {
-		return fmt.Errorf("MySQL/MariaDB TLS is required: configure tls=true")
+		return fmt.Errorf("Требуется TLS для MySQL/MariaDB: установите tls=true")
 	}
 	if cfg.AllowInsecureTLS {
 		switch mode {

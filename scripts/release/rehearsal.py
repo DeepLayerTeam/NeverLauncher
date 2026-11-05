@@ -619,7 +619,7 @@ def certify(bundle: Path, evidence: Path, key: Path, version: str, commit: str) 
             )
         )
         if target_shaped and name not in allowed:
-            raise Blocked("unapproved extra platform target: " + name)
+            raise Blocked("Дополнительная платформа не утверждена: " + name)
     rows = [exact_package(bundle, version, target) for target in sorted(TARGETS)]
     require(
         [(r["target"], r["binarySha256"], r["packageSha256"]) for r in rows]
@@ -796,7 +796,7 @@ def main() -> int:
         tarfile.TarError,
         subprocess.TimeoutExpired,
     ) as exc:
-        print("release rehearsal BLOCKED: " + str(exc), file=sys.stderr)
+        print("Репетиция релиза ЗАБЛОКИРОВАНА: " + str(exc), file=sys.stderr)
         return 3
 
 

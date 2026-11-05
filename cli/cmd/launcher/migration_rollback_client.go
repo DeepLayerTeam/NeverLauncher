@@ -16,7 +16,7 @@ func rollbackSend03312(req *http.Request, out string) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("rollback HTTP %d; check durable state before retry", resp.StatusCode)
+		return fmt.Errorf("Откат вернул HTTP %d; перед повторением проверьте сохранённое состояние", resp.StatusCode)
 	}
 	raw, e := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if e != nil {

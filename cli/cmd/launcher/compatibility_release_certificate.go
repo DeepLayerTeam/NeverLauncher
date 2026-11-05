@@ -130,11 +130,11 @@ func loaderCompatibilityEvidenceRoot01711(results []releaseCompatibilityResult, 
 func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, compatibilityCertificationRaw []byte, certification releaseCompatibilityCertification) (loaderCompatibilityReleaseCertificate01711, error) {
 	var targets releaseCompatibilityTargets
 	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
-		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("release certificate targets: %w", err)
+		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Ошибка целей сертификата релиза: %w", err)
 	}
 	var matrix releaseCompatibilityMatrix
 	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
-		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("release certificate matrix: %w", err)
+		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Ошибка матрицы сертификата релиза: %w", err)
 	}
 	if matrix.ProductVersion != certification.ProductVersion || matrix.Repository != certification.Repository || matrix.Commit != certification.Commit || matrix.RunID != certification.RunID {
 		return loaderCompatibilityReleaseCertificate01711{}, errors.New("Несовпадение: «loader compatibility release certificate cohort»")
@@ -276,7 +276,7 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 	}
 	for name, ok := range invariants {
 		if !ok {
-			return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("loader compatibility RC invariant %s=false", name)
+			return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Инвариант совместимости загрузчика RC не выполнен: %s=false", name)
 		}
 	}
 
@@ -298,7 +298,7 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 			want := loaderGAVersions0180(loader)
 			got := familyVersions[loader]
 			if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
-				return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Loader Compatibility GA 0.18.0 %s runtime support/certified evidence mismatch: got=%v want=%v", loader, got, want)
+				return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Совместимость загрузчиков GA 0.18.0 %s: несоответствие поддержки Runtime и подтверждённых данных; получено=%v, ожидалось=%v", loader, got, want)
 			}
 		}
 		status = "ga-certified"

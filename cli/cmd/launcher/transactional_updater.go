@@ -341,7 +341,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 			touched.OriginalSize = originalSize
 			touched.OriginalSHA256 = originalSHA
 			if err := copyUpdaterSource0156(dst, backup, info.Mode().Perm()); err != nil {
-				return nil, fmt.Errorf("backup %s: %w", rel, err)
+				return nil, fmt.Errorf("Ошибка резервного копирования %s: %w", rel, err)
 			}
 			if err := verifyUpdaterFile0156(backup, originalSize, originalSHA); err != nil {
 				return nil, fmt.Errorf("Ошибка проверки целостности резервной копии %s: %w", rel, err)
@@ -651,7 +651,7 @@ func (u *transactionalUpdater0156) recoverIncompleteLocked() ([]string, error) {
 			// Активные файлы не тронуты; сразу освободите файлы прерванной загрузки и подготовки, не удерживая место
 			// до следующего запуска.
 			journal.Phase = "rolled-back"
-			journal.Error = "recovered incomplete staging transaction"
+			journal.Error = "Восстановлена незавершённая транзакция подготовки"
 			if err := u.writeJournal(journal); err != nil {
 				return recovered, err
 			}

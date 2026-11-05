@@ -90,7 +90,7 @@ pub fn validate_windows_guard_policy_report(
     let details = policy
         .windows
         .as_ref()
-        .ok_or_else(|| "Guard Windows process policy is missing Protection Core details".to_string())?;
+        .ok_or_else(|| "В политике процессов Guard для Windows отсутствуют сведения Protection Core".to_string())?;
     if details.core_schema != GUARD_WINDOWS_PROTECTION_CORE_SCHEMA
         || details.core_version != GUARD_WINDOWS_PROTECTION_CORE_VERSION
         || details.capability_model_version != GUARD_WINDOWS_CAPABILITY_MODEL_VERSION
@@ -345,7 +345,7 @@ mod windows_impl {
         };
         if heap_ok == 0 {
             return Err(format!(
-                "Windows heap terminate-on-corruption hardening failed: {}",
+                "Не удалось включить завершение процесса при повреждении кучи Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -354,7 +354,7 @@ mod windows_impl {
         let dll_dir_ok = unsafe { SetDllDirectoryW(empty.as_ptr()) };
         if dll_dir_ok == 0 {
             return Err(format!(
-                "Windows DLL search hardening failed to remove current directory: {}",
+                "Не удалось исключить текущий каталог из поиска DLL Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -363,7 +363,7 @@ mod windows_impl {
         let default_dirs_ok = unsafe { SetDefaultDllDirectories(search_flags) };
         if default_dirs_ok == 0 {
             return Err(format!(
-                "Windows DLL search hardening failed to restrict default directories: {}",
+                "Не удалось ограничить стандартные каталоги поиска DLL Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -393,7 +393,7 @@ mod windows_impl {
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
             return Err(format!(
-                "Guard lifetime Job Object creation failed: {}",
+                "Guard: не удалось создать Job Object для времени жизни процесса: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -410,7 +410,7 @@ mod windows_impl {
         };
         if set_ok == 0 {
             return Err(format!(
-                "Guard lifetime Job Object policy setup failed: {}",
+                "Guard: не удалось настроить политику Job Object: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -425,7 +425,7 @@ mod windows_impl {
         let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
         if membership_ok == 0 || in_job == 0 {
             return Err(format!(
-                "Guard launcher lifetime Job Object verification failed: {}",
+                "Guard: не удалось проверить Job Object лаунчера: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -553,7 +553,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard failed to enforce Windows {name} process policy: {}",
+                "Guard: не удалось применить политику процессов Windows {name}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -585,7 +585,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard failed to query Windows {name} process policy: {}",
+                "Guard: не удалось запросить политику процессов Windows {name}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -603,7 +603,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard failed to query current Windows Job Object membership: {}",
+                "Guard: не удалось проверить принадлежность текущего процесса к Job Object Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -650,7 +650,7 @@ mod windows_impl {
                 std::ptr::read_unaligned(buffer.as_ptr().add(offset) as *const usize)
             };
             let pid = u32::try_from(raw)
-                .map_err(|_| format!("Guard Job Object PID does not fit u32: {raw}"))?;
+                .map_err(|_| format!("Guard: PID в Job Object превышает диапазон u32: {raw}"))?;
             if pid == 0 || !result.insert(pid) {
                 return Err(format!("Список процессов объекта заданий Guard содержит некорректный или повторяющийся PID {pid}"));
             }
@@ -662,7 +662,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "Guard process-tree snapshot failed: {}",
+                "Guard: не удалось получить снимок дерева процессов: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -691,7 +691,7 @@ mod windows_impl {
         let job_members = job_process_ids(job)?;
         if !job_members.contains(&root_pid) {
             return Err(format!(
-                "Guard process-tree integrity violation: runtime root PID {root_pid} is missing from Job Object"
+                "Guard: нарушена целостность дерева процессов — корневой PID Runtime {root_pid} отсутствует в Job Object"
             ));
         }
 
@@ -735,7 +735,7 @@ mod windows_impl {
                 let error = std::io::Error::last_os_error();
                 unsafe { let _ = CloseHandle(process); }
                 return Err(format!(
-                    "Guard cannot check process liveness for PID {pid}: {error}"
+                    "Guard: не удалось проверить активность процесса PID {pid}: {error}"
                 ));
             }
             if exit_code != STILL_ACTIVE_EXIT_CODE {
@@ -751,7 +751,7 @@ mod windows_impl {
                 let error = std::io::Error::last_os_error();
                 unsafe { let _ = CloseHandle(process); }
                 return Err(format!(
-                    "Guard Job Object membership query failed for PID {pid}: {error}"
+                    "Guard: не удалось проверить принадлежность PID {pid} к Job Object: {error}"
                 ));
             }
             if in_job == 0 {
@@ -763,7 +763,7 @@ mod windows_impl {
                     let error = std::io::Error::last_os_error();
                     unsafe { let _ = CloseHandle(process); }
                     return Err(format!(
-                        "Guard process liveness recheck failed for PID {pid}: {error}"
+                        "Guard: повторная проверка активности процесса PID {pid} завершилась ошибкой: {error}"
                     ));
                 }
                 unsafe { let _ = CloseHandle(process); }
@@ -771,7 +771,7 @@ mod windows_impl {
                     continue;
                 }
                 return Err(format!(
-                    "Guard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
+                    "Guard: нарушена целостность дерева процессов — дочерний PID {pid} вышел из Job Object Runtime"
                 ));
             }
             unsafe { let _ = CloseHandle(process); }
@@ -827,7 +827,7 @@ mod windows_impl {
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
             return Err(format!(
-                "Windows runtime Job Object creation failed: {}",
+                "Не удалось создать Job Object для Runtime Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -845,7 +845,7 @@ mod windows_impl {
         };
         if set_ok == 0 {
             return Err(format!(
-                "Windows runtime Job Object policy setup failed: {}",
+                "Не удалось настроить политику Job Object Runtime Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -862,7 +862,7 @@ mod windows_impl {
         let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
         if membership_ok == 0 || in_job == 0 {
             return Err(format!(
-                "Windows runtime Job Object membership verification failed: {}",
+                "Не удалось проверить принадлежность процесса Runtime к Job Object Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -879,7 +879,7 @@ mod windows_impl {
         };
         if query_ok == 0 {
             return Err(format!(
-                "Windows runtime Job Object policy verification failed: {}",
+                "Не удалось проверить политику Job Object Runtime Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -921,7 +921,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "Windows runtime thread snapshot failed for PID {pid}: {}",
+                "Не удалось получить снимок потоков Runtime Windows для PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -951,7 +951,7 @@ mod windows_impl {
                     }
                     if previous_suspend_count == u32::MAX {
                         return Err(format!(
-                            "Windows runtime primary thread resume failed for PID {pid}: {}",
+                            "Не удалось возобновить основной поток Runtime Windows для PID {pid}: {}",
                             std::io::Error::last_os_error()
                         ));
                     }

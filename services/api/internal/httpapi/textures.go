@@ -115,11 +115,11 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 	defer cancel()
 	updated, err := repo.UpdateTextureSelection0251(ctx, profile, kind, input.ExpectedRevision, input.Model, input.Visibility, *input.Active)
 	if errors.Is(err, repository.ErrTextureUploadDenied0252) {
-		writeError(w, http.StatusForbidden, "skin selection is not permitted by project policy")
+		writeError(w, http.StatusForbidden, "Выбор скина запрещён политикой проекта")
 		return
 	}
 	if errors.Is(err, repository.ErrTextureNotSelected0255) {
-		writeError(w, http.StatusConflict, "select a saved image before activation")
+		writeError(w, http.StatusConflict, "Перед активацией выберите сохранённое изображение")
 		return
 	}
 	if errors.Is(err, repository.ErrTextureCapeDenied0251) {
@@ -131,11 +131,11 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "texture assignment not found")
+		writeError(w, http.StatusNotFound, "Назначение текстуры не найдено")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture update failed")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось обновить текстуру")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("texture-selection-0251"), Actor: user.Email, Action: "texture:selection:update", Target: profile.UUID + ":" + kind, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -163,7 +163,7 @@ func (s Server) textureHistory0251(w http.ResponseWriter, r *http.Request) {
 	}
 	events, err := repo.ListTextureRevisions0251(ctx, profile, kind)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture history unavailable")
+		writeError(w, http.StatusServiceUnavailable, "История текстур недоступна")
 		return
 	}
 	out := make([]map[string]any, 0, len(events))

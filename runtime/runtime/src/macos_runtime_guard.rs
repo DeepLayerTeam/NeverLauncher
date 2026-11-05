@@ -66,8 +66,8 @@ fn actual_executable(pid: u32) -> Result<PathBuf, String> {
         return Err("Некорректный путь к исполняемому файлу JVM в macOS Guard".into());
     }
     let path = std::str::from_utf8(&buffer[..count as usize])
-        .map_err(|_| "macOS Guard non-UTF8 JVM executable path")?;
-    fs::canonicalize(path).map_err(|e| format!("macOS Guard JVM executable disappeared: {e}"))
+        .map_err(|_| "Путь к исполняемому файлу JVM для macOS Guard не соответствует UTF-8")?;
+    fs::canonicalize(path).map_err(|e| format!("Исполняемый файл JVM для macOS Guard исчез: {e}"))
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {

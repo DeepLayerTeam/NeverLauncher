@@ -92,7 +92,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 	}
 	executableSHA, err := shaFile(exe, 256<<20)
 	if err != nil {
-		return record, "", fmt.Errorf("Не удалось выполнить аутентификацию «psql executable:» %w", err)
+		return record, "", fmt.Errorf("Не удалось проверить исполняемый файл psql: %w", err)
 	}
 	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
 	sql := `BEGIN READ ONLY;\nSELECT json_build_object(\n` +
@@ -241,11 +241,11 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	for _, s := range []string{opts.Project, opts.Run, opts.Extension} {
 		if !auditIdentifier0491.MatchString(s) {
-			return errors.New("Некорректное значение: «project/run/extension identifier»")
+			return errors.New("Некорректный идентификатор проекта, запуска или расширения")
 		}
 	}
 	if !validAuditScope0491(opts.Scope, opts.ScopeID, opts.Project) || opts.DSN == "" || opts.Token == "" {
-		return errors.New("Некорректное значение: «scope, PostgreSQL DSN or admin token»")
+		return errors.New("Некорректная область действия, DSN PostgreSQL или токен администратора")
 	}
 	client := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	// Backend readiness must include a live PostgreSQL ping and schema status.
@@ -261,7 +261,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Ошибка: «Backend readiness»: %w", err)
+		return fmt.Errorf("Ошибка проверки готовности Backend: %w", err)
 	}
 	if res.StatusCode != 200 {
 		res.Body.Close()
@@ -282,7 +282,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	run, err := readRun()
 	if err != nil {
-		return fmt.Errorf("Ошибка: «Backend migration read»: %w", err)
+		return fmt.Errorf("Ошибка чтения состояния миграции Backend: %w", err)
 	}
 	if run.ID != opts.Run || run.ProjectID != opts.Project || run.SourceKind != "gravit" {
 		return errors.New("Миграция Backend относится к другому проекту или источнику")

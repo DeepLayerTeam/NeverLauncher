@@ -40,7 +40,7 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	}
 	db, err := openDatabase(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("SQL connector %q open database: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL-коннектор %q: не удалось открыть БД: %w", cfg.ID, err)
 	}
 	// Отказывайте уже при активации, если действующая схема SQL не совпадает с
 	// объявленным сопоставлением; не показывайте провайдера исправным до первого
@@ -58,14 +58,14 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	defer cancel()
 	if err := connector.Health(pingCtx); err != nil {
 		_ = connector.Close()
-		return nil, fmt.Errorf("SQL connector %q health check: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL-коннектор %q: ошибка проверки состояния: %w", cfg.ID, err)
 	}
 	return connector, nil
 }
 
 func newWithDB(ctx context.Context, cfg RuntimeConfig, db *sql.DB) (*Connector, error) {
 	if db == nil {
-		return nil, errors.New("SQL database handle is nil")
+		return nil, errors.New("Дескриптор SQL-базы данных отсутствует")
 	}
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
@@ -78,12 +78,12 @@ func newWithDB(ctx context.Context, cfg RuntimeConfig, db *sql.DB) (*Connector, 
 	defer cancel()
 	stmtByID, err := db.PrepareContext(prepareCtx, queryByID)
 	if err != nil {
-		return nil, fmt.Errorf("SQL connector %q prepare identifier lookup: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL-коннектор %q: не удалось подготовить поиск по идентификатору: %w", cfg.ID, err)
 	}
 	stmtBySub, err := db.PrepareContext(prepareCtx, queryBySub)
 	if err != nil {
 		_ = stmtByID.Close()
-		return nil, fmt.Errorf("SQL connector %q prepare subject lookup: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL-коннектор %q: не удалось подготовить поиск по субъекту: %w", cfg.ID, err)
 	}
 	return &Connector{cfg: cfg, db: db, stmtByID: stmtByID, stmtBySub: stmtBySub, identifierArgs: identifierArgs}, nil
 }
@@ -343,7 +343,7 @@ func buildQueries(cfg RuntimeConfig) (string, string, int, error) {
 		loginConditions = append(loginConditions, "LOWER("+literal(cfg.Columns.Email)+") = LOWER("+placeholder+")")
 	}
 	if len(loginConditions) == 0 {
-		return "", "", 0, errors.New("SQL connector has no login identifier columns")
+		return "", "", 0, errors.New("В SQL-коннекторе не заданы столбцы идентификатора входа")
 	}
 	byIdentifier := "SELECT " + selectList + " FROM " + quote(cfg.Table) + " WHERE (" + strings.Join(loginConditions, " OR ") + ") LIMIT 2"
 	bySubject := "SELECT " + selectList + " FROM " + quote(cfg.Table) + " WHERE " + literal(cfg.Columns.ID) + " = " + placeholder + " LIMIT 2"

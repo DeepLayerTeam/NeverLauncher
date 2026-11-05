@@ -112,7 +112,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 func verifyPermissionGrants0276(packSHA, planSHA string, files []modpackFile0275, p artifactPermissions0276) permissionGateReport0276 {
 	report := permissionGateReport0276{SchemaVersion: permissionSchema0276, PackSHA256: packSHA, PlanSHA256: planSHA, Status: "blocked", Checked: len(files)}
 	if p.PackSHA256 != packSHA {
-		report.Missing = append(report.Missing, modpackMissing0275{Code: "pack_identity_mismatch", Path: "manifest", Source: "permissions", Reason: "permission record is for a different modpack ZIP", ManualAction: "provide permission grants tied to the exact packSha256"})
+		report.Missing = append(report.Missing, modpackMissing0275{Code: "pack_identity_mismatch", Path: "manifest", Source: "permissions", Reason: "Запись разрешения относится к другому ZIP модпака", ManualAction: "Укажите разрешения, привязанные к точному packSha256"})
 		return report
 	}
 	grants := make(map[string]artifactGrant0276, len(p.Grants))
@@ -122,7 +122,7 @@ func verifyPermissionGrants0276(packSHA, planSHA string, files []modpackFile0275
 	for _, file := range files {
 		grant, ok := grants[strings.ToLower(file.Path)]
 		if !ok || grant.Path != file.Path || grant.SHA256 != file.SHA256 {
-			report.Missing = append(report.Missing, modpackMissing0275{Code: "redistribution_not_authorized", Path: file.Path, Source: file.Source, Reason: "missing exact SHA256-bound redistribution authorization", ManualAction: "obtain rights from the copyright owner and supply a matching permission record", ExpectedSHA256: file.SHA256, ExpectedSize: file.Size})
+			report.Missing = append(report.Missing, modpackMissing0275{Code: "redistribution_not_authorized", Path: file.Path, Source: file.Source, Reason: "Отсутствует разрешение на распространение, привязанное к точному SHA-256", ManualAction: "Получите права у правообладателя и предоставьте соответствующую запись разрешения", ExpectedSHA256: file.SHA256, ExpectedSize: file.Size})
 			continue
 		}
 		report.Authorized++
@@ -196,7 +196,7 @@ func evaluatePublishedArtifacts0276(dir, permissionsFile string) (permissionGate
 	}
 	permissions, err := readArtifactPermissions0276(permissionsFile)
 	if err != nil {
-		return permissionGateReport0276{SchemaVersion: permissionSchema0276, PackSHA256: receipt.PackSHA256, PlanSHA256: p.ReproducibilitySHA256, Status: "blocked", Checked: len(receipt.Imported), Missing: []modpackMissing0275{{Code: "permissions_unavailable", Path: "permissions", Source: "permissions", Reason: err.Error(), ManualAction: "provide exact SHA256-bound --permissions-file"}}}, receipt.Imported, nil
+		return permissionGateReport0276{SchemaVersion: permissionSchema0276, PackSHA256: receipt.PackSHA256, PlanSHA256: p.ReproducibilitySHA256, Status: "blocked", Checked: len(receipt.Imported), Missing: []modpackMissing0275{{Code: "permissions_unavailable", Path: "permissions", Source: "permissions", Reason: err.Error(), ManualAction: "Укажите --permissions-file с привязкой к точному SHA-256"}}}, receipt.Imported, nil
 	}
 	result := verifyPermissionGrants0276(receipt.PackSHA256, p.ReproducibilitySHA256, receipt.Imported, permissions)
 	return result, receipt.Imported, nil
@@ -333,14 +333,14 @@ func missingModpackArtifact0276(f modpackFile0275, cause error) modpackMissing02
 	message := cause.Error()
 	code := "download_failed"
 	switch {
-	case strings.Contains(message, "no permitted download URL"):
+	case strings.Contains(message, "Отсутствует разрешённый URL загрузки"):
 		code = "manual_required"
 	case strings.Contains(message, "HTTP 403") || strings.Contains(message, "HTTP 451"):
 		code = "download_forbidden"
-	case strings.Contains(message, "SHA-") || strings.Contains(message, "size mismatch"):
+	case strings.Contains(message, "SHA-") || strings.Contains(message, "Размер не совпадает"):
 		code = "checksum_mismatch"
 	}
-	return modpackMissing0275{Code: code, Path: f.Path, Source: f.Source, Reason: message, ManualAction: "provide a rights-compliant source or --manual-dir artifact matching the upstream hashes", ExpectedSHA1: f.SHA1, ExpectedSHA512: f.SHA512, ExpectedSHA256: f.SHA256, ExpectedSize: f.Size, CanManual: f.SHA1 != "" || f.SHA512 != "" || f.SHA256 != ""}
+	return modpackMissing0275{Code: code, Path: f.Path, Source: f.Source, Reason: message, ManualAction: "Укажите источник с законными правами или артефакт --manual-dir, совпадающий с исходными хешами", ExpectedSHA1: f.SHA1, ExpectedSHA512: f.SHA512, ExpectedSHA256: f.SHA256, ExpectedSize: f.Size, CanManual: f.SHA1 != "" || f.SHA512 != "" || f.SHA256 != ""}
 }
 
 // Находите ручные файлы без перехода по символьным ссылкам на каталоги или файлы.

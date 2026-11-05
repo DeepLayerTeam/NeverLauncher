@@ -68,7 +68,7 @@ def build_fixture(
     doc.pop("signature", None)
     doc["projectId"] = "certification"
     if version not in ("0.24.13", "0.25.0"):
-        raise ValueError("Не поддерживается: «component certification release»")
+        raise ValueError("Неподдерживаемый релиз сертификации компонентов")
     doc["version"] = version
     spec = doc["profileSnapshot"]["spec"]
     spec["projectId"] = "certification"
@@ -195,7 +195,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 runtime, ["verify", *base, "--preset", "minimal"], cache=cache
             )
             if verify.get("status") != "ready":
-                raise AssertionError("Ошибка: «minimal installed plan verification»")
+                raise AssertionError("Ошибка проверки минимального установленного плана")
             permitted = os_name in ("linux", "windows") and arch == "x86_64"
             if permitted:
                 install("optimized")
@@ -338,7 +338,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 raise AssertionError("Запрос с неверным публичным ключом вышел в сеть")
             # Сама проверка не считается успешным тестом, пока файлы действительно не просмотрены.
             if minimal_requests < 1:
-                raise AssertionError("Отсутствует: «real HTTP payload was transferred»")
+                raise AssertionError("Не подтверждена передача реальных данных HTTP")
             metrics = server.metrics()
         return {
             "status": "passed",

@@ -62,7 +62,7 @@ for token in (
     "Uninstall(",
     "Update(",
     "Rollback(",
-    "project scope requires scopeId",
+    "Для области project требуется scopeId",
     "PackageIdentity",
 ):
     require(token in manager, f"lifecycle manager missing {token}")

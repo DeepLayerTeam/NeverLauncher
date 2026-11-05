@@ -46,16 +46,16 @@ func verifyOfficialGAReceipt0270(dir, version, expectedCommit string) error {
 		} `json:"targets"`
 	}
 	if err := json.Unmarshal(raw, &receipt); err != nil {
-		return fmt.Errorf("official GA receipt JSON: %w", err)
+		return fmt.Errorf("Ошибка JSON квитанции официального GA: %w", err)
 	}
 	if receipt.SchemaVersion != "launcher.official-minecraft.ga-receipt.v1" || receipt.ProductVersion != version || receipt.Commit != expectedCommit || receipt.Status != "passed" || len(receipt.Targets) != 6 {
-		return errors.New("official GA receipt failed release/commit/status binding")
+		return errors.New("Квитанция официального GA не прошла проверку привязки релиза, коммита и статуса")
 	}
 	expected := map[string]bool{"windows-amd64": false, "windows-arm64": false, "linux-amd64": false, "linux-arm64": false, "darwin-amd64": false, "darwin-arm64": false}
 	for _, r := range receipt.Targets {
 		visited, valid := expected[r.Target]
 		if !valid || visited || r.Status != "passed" || !officialGASHA0270.MatchString(r.AttestationSHA256) || !officialGASHA0270.MatchString(r.SignedArtifactSHA256) {
-			return errors.New("missing/duplicate/invalid official GA platform certification")
+			return errors.New("Сертификация платформы для официального GA отсутствует, дублируется или некорректна")
 		}
 		expected[r.Target] = true
 	}

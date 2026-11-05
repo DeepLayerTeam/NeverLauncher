@@ -376,7 +376,7 @@ func loadJar(file string) (*zip.ReadCloser, string, error) {
 	}
 	if s.Size() > maxJarBytes {
 		f.Close()
-		return nil, "", errors.New("JAR exceeds size limit")
+		return nil, "", errors.New("Размер JAR превышает ограничение")
 	}
 	sum := sha256.New()
 	_, e = io.Copy(sum, f)
@@ -506,9 +506,9 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 		return report, nil, errors.New("JAR не содержит файлов классов")
 	}
 	if report.Signed {
-		report.Warnings = append(report.Warnings, "JAR signatures are present; class analysis does not verify trust chains")
+		report.Warnings = append(report.Warnings, "В JAR присутствуют подписи; анализ классов не проверяет цепочки доверия")
 	}
-	report.Warnings = append(report.Warnings, "Indicators are heuristic; absence of findings does not imply safe code")
+	report.Warnings = append(report.Warnings, "Признаки определяются эвристически; отсутствие находок не гарантирует безопасность кода")
 	if zw != nil {
 		if e = zw.Close(); e != nil {
 			return report, nil, e

@@ -7,14 +7,14 @@ import java.util.regex.*;
 /** Порядок версий Extensions SemVer и сопоставление ограничений совместимы с Go-резолвером. */
 public record SemVer(int major, int minor, int patch, List<String> prerelease) implements Comparable<SemVer> {
     private static final Pattern VERSION = Pattern.compile("^v?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\.(0|[1-9][0-9]*))?(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$");
-    public SemVer { if(major<0||minor<0||patch<0)throw new IllegalArgumentException("negative SemVer");prerelease=List.copyOf(prerelease); }
+    public SemVer { if(major<0||minor<0||patch<0)throw new IllegalArgumentException("Отрицательный компонент SemVer");prerelease=List.copyOf(prerelease); }
     public static SemVer parse(String raw) {
         Matcher m=VERSION.matcher(Objects.requireNonNull(raw,"version").trim());
-        if(!m.matches())throw new IllegalArgumentException("invalid SemVer: "+raw);
+        if(!m.matches())throw new IllegalArgumentException("Некорректная версия SemVer: "+raw);
         try { List<String> pre=m.group(4)==null?List.of():List.of(m.group(4).split("\\."));
-            for(String p:pre)if(p.matches("[0-9]+")&&p.length()>1&&p.charAt(0)=='0')throw new IllegalArgumentException("invalid numeric prerelease: "+raw);
+            for(String p:pre)if(p.matches("[0-9]+")&&p.length()>1&&p.charAt(0)=='0')throw new IllegalArgumentException("Некорректный числовой идентификатор предварительной версии: "+raw);
             return new SemVer(Integer.parseInt(m.group(1)),Integer.parseInt(m.group(2)),m.group(3)==null?0:Integer.parseInt(m.group(3)),pre);
-        }catch(NumberFormatException e){throw new IllegalArgumentException("SemVer segment overflow",e);}
+        }catch(NumberFormatException e){throw new IllegalArgumentException("Переполнение сегмента SemVer",e);}
     }
     @Override public int compareTo(SemVer b) {
         for(int x:new int[]{Integer.compare(major,b.major),Integer.compare(minor,b.minor),Integer.compare(patch,b.patch)})if(x!=0)return x;
@@ -28,11 +28,11 @@ public record SemVer(int major, int minor, int patch, List<String> prerelease) i
         return Integer.compare(prerelease.size(),b.prerelease.size());
     }
     public boolean matches(String expression) {
-        if(expression==null||expression.isBlank())throw new IllegalArgumentException("empty version constraint");
+        if(expression==null||expression.isBlank())throw new IllegalArgumentException("Пустое ограничение версии");
         boolean matched=false;
         for(String alt:expression.split("\\|\\|",-1)) {
             String normalized=alt.trim().replace(',',' ');
-            if(normalized.isBlank())throw new IllegalArgumentException("empty range alternative");
+            if(normalized.isBlank())throw new IllegalArgumentException("Пустой вариант диапазона версий");
             boolean valid=true;
             for(String part:normalized.split("\\s+")) { boolean current=matchToken(part); valid=valid&&current; }
             matched=matched||valid;
@@ -59,7 +59,7 @@ public record SemVer(int major, int minor, int patch, List<String> prerelease) i
             case "="->compare==0;case ">"->compare>0;case ">="->compare>=0;case "<"->compare<0;case "<="->compare<=0;
             case "^"->{SemVer upper=base.major>0?new SemVer(Math.addExact(base.major,1),0,0,List.of()):base.minor>0?new SemVer(0,Math.addExact(base.minor,1),0,List.of()):new SemVer(0,0,Math.addExact(base.patch,1),List.of());yield compare>=0&&compareTo(upper)<0;}
             case "~"->{SemVer upper=new SemVer(base.major,Math.addExact(base.minor,1),0,List.of());yield compare>=0&&compareTo(upper)<0;}
-            default->throw new IllegalArgumentException("unsupported range operator: "+op);
+            default->throw new IllegalArgumentException("Неподдерживаемый оператор диапазона: "+op);
         };
     }
     @Override public String toString(){return major+"."+minor+"."+patch+(prerelease.isEmpty()?"":"-"+String.join(".",prerelease));}

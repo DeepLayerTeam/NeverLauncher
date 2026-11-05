@@ -467,7 +467,7 @@ func runtimeMetadataPolicy740() map[string]any {
 			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
 			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-pinned", "validation": []string{"installer SHA-1", "legacy V1 universal installer for Forge 1.7.10/1.12.2", "processor-based install_profile (Forge 1.13.2+ / NeoForge)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
 		},
-		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "Range recovery requires final pinned checksum", "corrupt cache quarantined", "latest/snapshot stale metadata fallback denied", "native zip extraction bounded", "generated natives transactionally published", "remote URL credentials/fragments denied", "hash fields preserved", "signed manifest layer remains outside resolver", "Loader Compatibility GA exact support surface enforced before loader install"},
+		"security": []string{"Выход за пределы каталога запрещён", "Символические ссылки в компонентах запрещены", "Параллельная установка файлов заблокирована", "Количество повторных обращений к поставщику ограничено", "Для продолжения загрузки по Range требуется закреплённая итоговая контрольная сумма", "corrupt cache quarantined", "Возврат к устаревшим метаданным latest/snapshot запрещён", "Распаковка нативных ZIP ограничена", "Созданные нативные файлы опубликованы транзакционно", "Учётные данные и фрагменты в удалённом URL запрещены", "Поля контрольных сумм сохранены", "Слой подписанного манифеста остаётся вне обработчика зависимостей", "Точная матрица поддержки Loader Compatibility GA проверена перед установкой загрузчика"},
 	}
 }
 
@@ -476,7 +476,7 @@ func runtimeMetadataPolicy850() map[string]any {
 	payload["schemaVersion"] = "0.8.8"
 	payload["toolVersion"] = version
 	payload["status"] = "product-ready"
-	payload["productRules"] = []string{"runtime build-launch-plan requires --version-json", "fallback launch plans are rejected by verify-launch-plan", "classpath must not contain wildcards", "loader metadata source is recorded", "asset index is parsed when provided"}
+	payload["productRules"] = []string{"runtime build-launch-plan requires --version-json", "Резервные планы запуска отклоняются командой verify-launch-plan", "Путь классов не должен содержать подстановочные символы", "Источник метаданных загрузчика зарегистрирован", "Индекс ресурсов разбирается при наличии"}
 	payload["commands"] = []string{"nl runtime fetch-metadata", "nl runtime resolve-version", "nl runtime resolve-loader", "nl runtime build-classpath", "nl runtime build-launch-plan", "nl runtime verify-launch-plan"}
 	return payload
 }

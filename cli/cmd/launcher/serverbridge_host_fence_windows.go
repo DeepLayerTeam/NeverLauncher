@@ -36,7 +36,7 @@ func remoteKernelFence04112(dir string) (func(), error) {
 	ret, _, callErr := remoteKernel32Lock04112.Call(f.Fd(), 0x3, 0, 1, 0, uintptr(unsafe.Pointer(overlap)))
 	if ret == 0 {
 		_ = f.Close()
-		return nil, fmt.Errorf("another RemoteControl process owns the kernel fence: %w", callErr)
+		return nil, fmt.Errorf("Блокировку ядра удерживает другой процесс RemoteControl: %w", callErr)
 	}
 	return func() {
 		remoteKernel32Unlock04112.Call(f.Fd(), 0, 1, 0, uintptr(unsafe.Pointer(overlap)))

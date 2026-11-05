@@ -30,7 +30,7 @@ func remoteKernelFence04112(dir string) (func(), error) {
 	}
 	if err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		f.Close()
-		return nil, fmt.Errorf("another RemoteControl instance owns the kernel fence: %w", err)
+		return nil, fmt.Errorf("Блокировку ядра удерживает другой экземпляр RemoteControl: %w", err)
 	}
 	return func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN); _ = f.Close() }, nil
 }

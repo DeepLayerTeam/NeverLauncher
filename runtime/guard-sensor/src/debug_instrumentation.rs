@@ -112,7 +112,7 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
     let remote_ok = unsafe { CheckRemoteDebuggerPresent(process, &mut remote_present) } != 0;
     if !remote_ok {
         return Err(format!(
-            "Guard Debug & Instrumentation Guard CheckRemoteDebuggerPresent failed: {}",
+            "Guard: проверка CheckRemoteDebuggerPresent завершилась ошибкой: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -173,13 +173,13 @@ fn query_process_information(
             return Ok(());
         }
         return Err(format!(
-            "Guard Debug & Instrumentation Guard {label} query failed: NTSTATUS=0x{:08X}",
+            "Guard: не удалось выполнить запрос {label}, NTSTATUS=0x{:08X}",
             status as u32
         ));
     }
     if returned != 0 && returned > output_len {
         return Err(format!(
-            "Guard Debug & Instrumentation Guard {label} returned oversized state"
+            "Guard: {label} вернул состояние слишком большого размера"
         ));
     }
     Ok(())

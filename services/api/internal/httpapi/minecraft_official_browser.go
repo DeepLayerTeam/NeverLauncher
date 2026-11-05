@@ -87,7 +87,7 @@ func exchangeOfficialBrowser0263(ctx context.Context, provider officialBrowserPr
 		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, err
 	}
 	if !validOfficialProfile0263(profile) {
-		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("unverified Minecraft Java profile")
+		return officialminecraft.OAuthTokens{}, officialminecraft.MinecraftToken{}, officialminecraft.Profile{}, errors.New("Непроверенный профиль Minecraft Java")
 	}
 	return tokens, mc, profile, nil
 }

@@ -154,16 +154,16 @@ func applyCoreDDL0472(ctx context.Context, q sqlitedurable.Executor, stmt string
 	}
 	words := strings.Fields(stmt)
 	if len(words) < 3 || !strings.EqualFold(words[0], "CREATE") {
-		return errors.New("unrecognized core migration DDL")
+		return errors.New("Неизвестное DDL-выражение миграции ядра")
 	}
 	pos := 2
 	if strings.EqualFold(words[1], "UNIQUE") {
 		if len(words) < 4 || !strings.EqualFold(words[2], "INDEX") {
-			return errors.New("unrecognized core unique DDL")
+			return errors.New("Неизвестное DDL-выражение уникального ограничения ядра")
 		}
 		pos = 3
 	} else if !strings.EqualFold(words[1], "TABLE") && !strings.EqualFold(words[1], "INDEX") && !strings.EqualFold(words[1], "TRIGGER") {
-		return errors.New("unrecognized core migration object")
+		return errors.New("Неизвестный объект миграции ядра")
 	}
 	name := words[pos]
 	var existing string

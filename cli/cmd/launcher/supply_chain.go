@@ -348,7 +348,7 @@ func slsaProvenance(sourceRoot, artifactDir, ver string, sourceCommit ...string)
 		p := filepath.Join(sourceRoot, rel)
 		sum, _, err := hashFile(p)
 		if err != nil {
-			return nil, fmt.Errorf("provenance material %s: %w", rel, err)
+			return nil, fmt.Errorf("Ошибка исходных данных происхождения %s: %w", rel, err)
 		}
 		materials = append(materials, map[string]any{"uri": "file://" + filepath.ToSlash(rel), "digest": map[string]string{"sha256": sum}})
 	}

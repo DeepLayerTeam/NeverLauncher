@@ -226,7 +226,7 @@ func (s Server) serverBridgeSigningKeys01912() (serverBridgeSigningKey01912, *se
 		return serverBridgeSigningKey01912{}, nil, err
 	}
 	if previous.Fingerprint == active.Fingerprint {
-		return serverBridgeSigningKey01912{}, nil, fmt.Errorf("ServerBridge active and previous control signing keys must differ")
+		return serverBridgeSigningKey01912{}, nil, fmt.Errorf("Активный и предыдущий ключи подписи команд ServerBridge должны отличаться")
 	}
 	return active, &previous, nil
 }

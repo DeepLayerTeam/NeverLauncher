@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	ErrReplay       = errors.New("signed node request nonce already used")
-	ErrJoinRejected = errors.New("join ticket rejected, expired or already consumed")
-	ErrNodeProof    = errors.New("invalid, stale or unauthorized node proof")
+	ErrReplay       = errors.New("Одноразовый идентификатор подписанного запроса узла уже использован")
+	ErrJoinRejected = errors.New("Билет подключения отклонён, истёк или уже использован")
+	ErrNodeProof    = errors.New("Подтверждение узла некорректно, устарело или не авторизовано")
 )
 
 // NodeRegistration — управляемый оператором якорь доверия. Приватные ключи здесь НЕ хранятся.

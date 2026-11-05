@@ -77,7 +77,7 @@ func readLoaderResolutionLock(path, loader, minecraft, selector string) (*loader
 	}
 	expectedRepro := loaderResolutionReproducibilitySHA256(lock)
 	if lock.ReproducibilitySHA256 != expectedRepro {
-		return nil, fmt.Errorf("loader resolution lock reproducibility SHA-256 mismatch: expected %s got %s", expectedRepro, lock.ReproducibilitySHA256)
+		return nil, fmt.Errorf("Не совпадает SHA-256 воспроизводимости блокировки загрузчика: ожидалось %s, получено %s", expectedRepro, lock.ReproducibilitySHA256)
 	}
 	return &lock, nil
 }
@@ -87,7 +87,7 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 		return errors.New("loader resolution lock отсутствует")
 	}
 	if lock.SchemaVersion != loaderResolutionLockSchema {
-		return fmt.Errorf("loader resolution lock schemaVersion=%q, expected %s", lock.SchemaVersion, loaderResolutionLockSchema)
+		return fmt.Errorf("Неверная версия схемы блокировки загрузчика schemaVersion=%q, ожидалась %s", lock.SchemaVersion, loaderResolutionLockSchema)
 	}
 	expectedLoader := strings.ToLower(strings.TrimSpace(loader))
 	expectedSelector := strings.TrimSpace(selector)
@@ -96,7 +96,7 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 		selectorMatches = expectedSelector == lock.ResolvedVersion || expectedSelector == lock.ArtifactVersion
 	}
 	if lock.Loader != expectedLoader || lock.MinecraftVersion != strings.TrimSpace(minecraft) || !selectorMatches {
-		return fmt.Errorf("loader resolution lock identity mismatch: got %s/%s selector=%s resolved=%s, expected %s/%s selector=%s", lock.Loader, lock.MinecraftVersion, lock.Selector, lock.ResolvedVersion, expectedLoader, strings.TrimSpace(minecraft), expectedSelector)
+		return fmt.Errorf("Несоответствие идентификатора блокировки загрузчика: получено %s/%s selector=%s resolved=%s, ожидалось %s/%s selector=%s", lock.Loader, lock.MinecraftVersion, lock.Selector, lock.ResolvedVersion, expectedLoader, strings.TrimSpace(minecraft), expectedSelector)
 	}
 	if lock.ResolvedVersion == "" || isMutableLoaderSelector(lock.ResolvedVersion) {
 		return errors.New("loader resolution lock не содержит immutable resolvedVersion")
@@ -211,7 +211,7 @@ func assertPinnedRuntimeProfile(lock *loaderResolutionLock, actualSHA256 string)
 		return nil
 	}
 	if !strings.EqualFold(lock.RuntimeProfileSHA256, strings.TrimSpace(actualSHA256)) {
-		return fmt.Errorf("loader resolution lock runtime profile SHA-256 mismatch: pinned %s got %s", lock.RuntimeProfileSHA256, actualSHA256)
+		return fmt.Errorf("Не совпадает SHA-256 профиля Runtime в блокировке загрузчика: закреплён %s, получен %s", lock.RuntimeProfileSHA256, actualSHA256)
 	}
 	return nil
 }
@@ -249,7 +249,7 @@ func assertPinnedMaterialization(lock *loaderResolutionLock, actual string) erro
 	}
 	actual = strings.ToLower(strings.TrimSpace(actual))
 	if actual != strings.ToLower(strings.TrimSpace(lock.MaterializationSHA256)) {
-		return fmt.Errorf("loader materialization SHA-256 mismatch: lock=%s actual=%s", lock.MaterializationSHA256, actual)
+		return fmt.Errorf("Не совпадает SHA-256 установленного загрузчика: закреплён=%s, фактически=%s", lock.MaterializationSHA256, actual)
 	}
 	return nil
 }

@@ -329,7 +329,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 		src := filepath.Join(filesRoot, filepath.FromSlash(rel))
 		sum, size, err := hashFile(src)
 		if err != nil {
-			return nil, fmt.Errorf("snapshot file %s: %w", rel, err)
+			return nil, fmt.Errorf("Ошибка файла снимка %s: %w", rel, err)
 		}
 		info, err := os.Lstat(src)
 		if err != nil {
@@ -347,7 +347,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 		stateSrc := filepath.Join(targetDir, "client-state.json")
 		sum, size, err := hashFile(stateSrc)
 		if err != nil {
-			return nil, fmt.Errorf("snapshot state: %w", err)
+			return nil, fmt.Errorf("Ошибка состояния снимка: %w", err)
 		}
 		files = append(files, updaterFileSpec0156{Path: stateRel, Source: stateSrc, Size: size, SHA256: sum})
 		wanted[stateRel] = true

@@ -223,7 +223,7 @@ func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out s
 	if u.Scheme != "https" {
 		host := u.Hostname()
 		if u.Scheme != "http" || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
-			return errors.New("Gravit ZIP and admin token require HTTPS (except explicit IP loopback)")
+			return errors.New("Для ZIP Gravit и токена администратора требуется HTTPS (кроме явного IP обратной петли)")
 		}
 	}
 	source, err := os.Open(sourcePath)
@@ -253,10 +253,10 @@ func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out s
 	}
 	var payload map[string]any
 	if err = json.Unmarshal(data, &payload); err != nil {
-		return fmt.Errorf("compatibility endpoint returned invalid JSON (HTTP %d)", response.StatusCode)
+		return fmt.Errorf("Точка проверки совместимости вернула некорректный JSON (HTTP %d)", response.StatusCode)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("compatibility assessment HTTP %d: %v", response.StatusCode, payload["error"])
+		return fmt.Errorf("Оценка совместимости вернула HTTP %d: %v", response.StatusCode, payload["error"])
 	}
 	return writeOrPrintJSON(out, payload)
 }

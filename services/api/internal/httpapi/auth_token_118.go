@@ -53,7 +53,7 @@ func (s Server) authTokenKeys118() (string, map[string]string, error) {
 		nk := strings.TrimSpace(kid)
 		sv := strings.TrimSpace(secret)
 		if nk == "" || sv == "" {
-			return "", nil, errors.New("auth token keyring contains empty kid/secret")
+			return "", nil, errors.New("В хранилище ключей токенов авторизации отсутствует kid или secret")
 		}
 		if nk != kid {
 			delete(keys, kid)
@@ -63,7 +63,7 @@ func (s Server) authTokenKeys118() (string, map[string]string, error) {
 		}
 	}
 	if strings.TrimSpace(keys[active]) == "" {
-		return "", nil, fmt.Errorf("active auth token kid %q is absent from keyring", active)
+		return "", nil, fmt.Errorf("Активный kid токена авторизации %q отсутствует в хранилище ключей", active)
 	}
 	return active, keys, nil
 }

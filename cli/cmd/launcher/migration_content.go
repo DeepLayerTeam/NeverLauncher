@@ -75,7 +75,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	// Сохраняйте блокирующие отчёты при HTTP 422, не принимая их ошибочно за успешный результат.
 	var data any
 	if e = json.Unmarshal(raw, &data); e != nil {
-		return fmt.Errorf("HTTP %d: invalid JSON: %w", response.StatusCode, e)
+		return fmt.Errorf("HTTP %d: некорректный JSON: %w", response.StatusCode, e)
 	}
 	if out != "" {
 		if e = writePrivateIdentityReport0334(out, data); e != nil {
@@ -83,7 +83,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 		}
 	}
 	if response.StatusCode != 200 {
-		return fmt.Errorf("content migration HTTP %d: %s", response.StatusCode, string(raw))
+		return fmt.Errorf("Миграция содержимого вернула HTTP %d: %s", response.StatusCode, string(raw))
 	}
 	if commit {
 		var result struct {
@@ -95,7 +95,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(raw, &result); err != nil || !result.Data.Complete || len(result.Data.Plan.FilesSHA256) != 64 {
-			return errors.New("Backend did not confirm a complete, validated content workspace")
+			return errors.New("Backend не подтвердил полную проверенную рабочую область содержимого")
 		}
 	}
 	if out == "" {
@@ -139,7 +139,7 @@ func migrationApplyOptionalsCLI0337(endpoint, token, id, out string) error {
 		return e
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("apply optional catalog HTTP %d: %s", resp.StatusCode, string(b))
+		return fmt.Errorf("Применение каталога дополнительных компонентов вернуло HTTP %d: %s", resp.StatusCode, string(b))
 	}
 	var value any
 	if e = json.Unmarshal(b, &value); e != nil {

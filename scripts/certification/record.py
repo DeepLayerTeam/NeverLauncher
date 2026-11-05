@@ -50,7 +50,7 @@ def collect(
 ) -> dict:
     git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     if git_sha != commit or not re.fullmatch(r"[0-9a-f]{40}", commit):
-        raise ValueError("GITHUB_SHA and source git HEAD disagree")
+        raise ValueError("GITHUB_SHA не совпадает с git HEAD исходников")
     tree_clean = not subprocess.check_output(
         ["git", "status", "--porcelain", "--untracked-files=normal"], text=True
     ).strip()
@@ -117,7 +117,7 @@ def main():
     args = ap.parse_args()
     actual = "-".join(current_target())
     if args.target != actual:
-        raise SystemExit(f"runner mismatch: expected {args.target}, detected {actual}")
+        raise SystemExit(f"Несовпадение исполнителя: ожидался {args.target}, обнаружен {actual}")
     report = collect(
         component=args.component,
         minecraft=args.minecraft,

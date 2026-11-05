@@ -5,5 +5,5 @@ package main
 import "errors"
 
 func remoteKernelFence04112(string) (func(), error) {
-	return nil, errors.New("RemoteControl kernel singleton fencing is not implemented on this OS; refusing unsafe host commands")
+	return nil, errors.New("Блокировка единственного экземпляра RemoteControl на уровне ядра не реализована в этой ОС; небезопасные команды хоста отклонены")
 }

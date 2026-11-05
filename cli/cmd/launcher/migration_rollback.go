@@ -73,7 +73,7 @@ func handleMigrationRollback03312(args []string) error {
 		if cmd == "rollback-plan" {
 			body["evidenceReference"] = flagValue(args, "--evidence-reference", file)
 			if expected := flagValue(args, "--evidence-sha256", ""); expected != "" && expected != snapshotHash {
-				return errors.New("snapshot file SHA-256 differs from rollback evidence SHA-256")
+				return errors.New("SHA-256 файла снимка отличается от SHA-256 подтверждений отката")
 			}
 			body["evidenceSha256"] = snapshotHash
 			path += "/plan"
@@ -85,7 +85,7 @@ func handleMigrationRollback03312(args []string) error {
 			body["sourceWriterFenced"] = true
 			body["neverWriterFenced"] = true
 			if expected := flagValue(args, "--current-evidence-sha256", ""); expected != "" && expected != snapshotHash {
-				return errors.New("fresh snapshot SHA-256 differs from rollback evidence")
+				return errors.New("SHA-256 нового снимка отличается от подтверждения отката")
 			}
 			body["currentEvidenceSha256"] = snapshotHash
 			path += "/commit"
@@ -131,7 +131,7 @@ func rollbackReadSnapshot0448(path string) (any, string, error) {
 		return nil, "", err
 	}
 	if len(raw) > 8<<20 {
-		return nil, "", errors.New("rollback snapshot exceeds 8 MiB")
+		return nil, "", errors.New("Размер снимка отката превышает 8 МиБ")
 	}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()
@@ -141,7 +141,7 @@ func rollbackReadSnapshot0448(path string) (any, string, error) {
 	}
 	var extra any
 	if d.Decode(&extra) != io.EOF {
-		return nil, "", errors.New("snapshot has trailing data")
+		return nil, "", errors.New("Снимок содержит лишние данные")
 	}
 	sum := sha256.Sum256(raw)
 	return snapshot, hex.EncodeToString(sum[:]), nil

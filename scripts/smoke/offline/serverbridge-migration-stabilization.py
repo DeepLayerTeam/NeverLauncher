@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text().strip()
 if tuple(int(x) for x in version.split(".")[:3]) < (0, 14, 10):
-    raise SystemExit("VERSION is older than 0.14.10")
+    raise SystemExit("VERSION ниже 0.14.10")
 
 
 def read(p):
@@ -15,7 +15,7 @@ def read(p):
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 api = read(
@@ -23,7 +23,7 @@ api = read(
 )
 cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql")
 if api != cli:
-    raise SystemExit("0.14.10 API/CLI migrations differ")
+    raise SystemExit("Миграции API/CLI 0.14.10 отличаются")
 require(
     api,
     [
@@ -53,7 +53,7 @@ require(
     "0.14.10 maintenance",
 )
 if "ctid IN (SELECT ctid FROM server_bridge_" in repo:
-    raise SystemExit("legacy ctid maintenance path is still present")
+    raise SystemExit("Устаревший путь обслуживания ctid по-прежнему присутствует")
 model = read("services/api/internal/model/model.go")
 require(
     model,

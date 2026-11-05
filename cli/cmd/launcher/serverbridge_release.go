@@ -221,7 +221,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	}
 	targets := serverBridgeReleaseTargetsForVersion0150(ver)
 	if cert.TargetCount != len(targets) || len(cert.Artifacts) != len(targets) {
-		return fmt.Errorf("%s certification must contain %d artifacts", expectedRelease, len(targets))
+		return fmt.Errorf("Сертификация %s должна содержать %d артефактов", expectedRelease, len(targets))
 	}
 
 	allowRaw, err := os.ReadFile(filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json"))
@@ -245,7 +245,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		return fmt.Errorf("Некорректное значение: BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 	}
 	if len(allow) != 1 || allow[ver] == nil {
-		return errors.New("ServerBridge release allowlist must contain only exact bundle version")
+		return errors.New("Список разрешённых релизов ServerBridge должен содержать только точную версию пакета")
 	}
 	policy := allow[ver]
 
@@ -257,18 +257,18 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		}
 		expectedFile := fmt.Sprintf("launcher-%s-bridge-%s.jar", expectedID, ver)
 		if item.File != expectedFile || item.Bytes <= 0 {
-			return fmt.Errorf("%s: invalid certified artifact metadata", expectedID)
+			return fmt.Errorf("%s: некорректные метаданные сертифицированного артефакта", expectedID)
 		}
 		actual, size, err := hashFile(filepath.Join(dir, item.File))
 		if err != nil {
-			return fmt.Errorf("%s: hash release artifact: %w", expectedID, err)
+			return fmt.Errorf("%s: не удалось вычислить хеш артефакта релиза: %w", expectedID, err)
 		}
 		if !strings.EqualFold(actual, item.SHA256) || size != item.Bytes {
 			return fmt.Errorf("Несоответствие: %s: сертификация hash/size", expectedID)
 		}
 		normalized := strings.ToLower(strings.TrimSpace(item.SHA256))
 		if _, ok := seen[normalized]; ok {
-			return fmt.Errorf("%s: duplicate platform artifact SHA-256", expectedID)
+			return fmt.Errorf("%s: повторяющаяся контрольная сумма SHA-256 артефакта платформы", expectedID)
 		}
 		seen[normalized] = struct{}{}
 		values := policy[serverBridge2AllowlistFields0150[expectedID]]

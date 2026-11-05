@@ -19,7 +19,7 @@ def require(path: str, needles: list[str]) -> None:
     text = read(path)
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{path}: missing {missing}")
+        raise SystemExit(f"{path}: отсутствует {missing}")
 
 
 require(

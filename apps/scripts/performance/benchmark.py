@@ -40,7 +40,7 @@ SEED = "42" * 32  # начальное значение подписи толь�
 
 def percentile(values: list[float], fraction: float) -> float:
     if not values:
-        raise ValueError("cannot summarize empty measurements")
+        raise ValueError("Нельзя составить отчёт по пустым измерениям")
     a = sorted(values)
     rank = (len(a) - 1) * fraction
     lo = math.floor(rank)
@@ -71,7 +71,7 @@ def hash_file(path: Path) -> str:
 def binary(path: Path, name: str) -> dict:
     path = path.resolve()
     if not path.is_file():
-        raise ValueError(f"{name} executable not found: {path}")
+        raise ValueError(f"Исполняемый файл {name} не найден: {path}")
     if os.name != "nt" and not os.access(path, os.X_OK):
         raise ValueError(f"{name} is not executable: {path}")
     return {
@@ -157,7 +157,7 @@ class ProcessMonitor:
 
     def report(self) -> dict:
         if not self.samples:
-            raise RuntimeError("process exited before CPU/RAM could be sampled")
+            raise RuntimeError("Процесс завершился до измерения нагрузки CPU и RAM")
         cpu = [x["cpuSeconds"] for x in self.samples]
         delta = max(cpu) - min(cpu)
         # Процент загрузки CPU измеряется в единицах одного логического процессора
@@ -185,16 +185,16 @@ def run_native(
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
-                raise RuntimeError(f"native command exceeded {timeout}s")
+                raise RuntimeError(f"Нативная команда превысила лимит времени {timeout} с")
         elapsed = time.perf_counter_ns() - start
         stdout.seek(0)
         stderr.seek(0)
         if code:
-            raise RuntimeError(f"native command exited {code}: {stderr.read()[-1800:]}")
+            raise RuntimeError(f"Нативная команда завершилась с кодом {code}: {stderr.read()[-1800:]}")
         try:
             result = json.load(stdout)
         except (ValueError, TypeError) as exc:
-            raise RuntimeError("native process did not return a JSON result") from exc
+            raise RuntimeError("Нативный процесс не вернул результат JSON") from exc
         resources = monitor.report()
         resources["cpuCorePercentOfWallTime"] = (
             100 * resources["sampledCpuSeconds"] / (elapsed / 1e9)
@@ -486,10 +486,10 @@ def benchmark_download(
                 or not output.is_file()
                 or output.stat().st_size != size
             ):
-                raise RuntimeError("native download did not publish expected file")
+                raise RuntimeError("Нативная загрузка не опубликовала ожидаемый файл")
             # Независимый дайджест, без опоры только на нативный флаг ready.
             if hash_file(output) != digest:
-                raise RuntimeError("independent SHA-256 mismatch on downloaded file")
+                raise RuntimeError("Независимая проверка SHA-256 загруженного файла выявила несовпадение")
             if wire < size or wire > size * 1.05:
                 raise RuntimeError(
                     f"unexpected transferred wire bytes: {wire} vs {size}"
@@ -569,7 +569,7 @@ def benchmark_startup(
                             )
                         time.sleep(0.015)
                     else:
-                        raise RuntimeError("Desktop did not render UI-ready marker")
+                        raise RuntimeError("Desktop не показал маркер готовности интерфейса")
                 value = json.loads(marker.read_text(encoding="utf8"))
                 end_mono = time.perf_counter_ns()
                 elapsed_ms = (value["wallClockUnixNs"] - start_wall) / 1e6
@@ -657,7 +657,7 @@ def benchmark_api(
             ) as response:
                 content = response.read(2 * MIB + 1)
                 if len(content) > 2 * MIB:
-                    raise ValueError("API response exceeds measurement size cap")
+                    raise ValueError("Ответ API превышает ограничение размера измерений")
                 code = response.status
             return {"elapsedMs": (time.perf_counter_ns() - t0) / 1e6, "status": code}
         except Exception as exc:

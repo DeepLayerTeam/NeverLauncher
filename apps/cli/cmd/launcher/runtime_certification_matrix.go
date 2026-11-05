@@ -92,7 +92,7 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 	if allLoaders {
 		for _, loader := range []string{"vanilla", "fabric", "quilt", "forge", "neoforge"} {
 			if !families[loader] {
-				report.Results = append(report.Results, factoryMatrixResult02712{ID: "missing-" + loader, Status: "failed", Reason: "required loader family absent from matrix"})
+				report.Results = append(report.Results, factoryMatrixResult02712{ID: "missing-" + loader, Status: "failed", Reason: "Обязательное семейство загрузчиков отсутствует в матрице"})
 				report.Total++
 				report.Failed++
 			}

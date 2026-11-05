@@ -100,7 +100,7 @@ guard_purpose_migration_api = read(
 )
 guard_purpose_migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
 if guard_purpose_migration_api != guard_purpose_migration_cli:
-    raise SystemExit("0.16.1 API/CLI Guard challenge-purpose migration differs")
+    raise SystemExit("Миграция назначения проверочного запроса Guard 0.16.1 отличается между API и CLI")
 require(
     guard_purpose_migration_api,
     [

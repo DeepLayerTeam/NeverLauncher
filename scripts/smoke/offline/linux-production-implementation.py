@@ -11,7 +11,7 @@ def read(p):
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 def version_tuple(value):
@@ -19,7 +19,7 @@ def version_tuple(value):
 
 
 if version_tuple((root / "VERSION").read_text().strip()) < (0, 13, 7):
-    raise SystemExit("VERSION is older than 0.13.7")
+    raise SystemExit("VERSION ниже 0.13.7")
 policy = read("runtime/runtime/src/linux_policy.rs")
 require(
     policy,

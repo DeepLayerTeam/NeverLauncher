@@ -36,7 +36,7 @@ func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error)
 	switch loader {
 	case "vanilla", "fabric", "quilt", "forge", "neoforge":
 	default:
-		return "", fmt.Errorf("Guard unknown Trusted JVM loader %q", p.Loader)
+		return "", fmt.Errorf("Guard: неизвестный доверенный загрузчик JVM %q", p.Loader)
 	}
 	var library []guardCompatArtifact0502
 	for _, a := range p.Artifacts {
@@ -44,11 +44,11 @@ func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error)
 			continue
 		}
 		if !strings.HasSuffix(strings.ToLower(a.Path), ".jar") || !guardCompatRel0502(a.Path) {
-			return "", fmt.Errorf("Guard invalid loader library path %q", a.Path)
+			return "", fmt.Errorf("Guard: некорректный путь библиотеки загрузчика %q", a.Path)
 		}
 		for _, revoked := range p.RevokedDigests {
 			if revoked == a.SHA256 {
-				return "", errors.New("Guard revoked loader library")
+				return "", errors.New("Guard: библиотека загрузчика отозвана")
 			}
 		}
 		hash, err := guardCompatHashFile0502(root, a.Path)
@@ -61,7 +61,7 @@ func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error)
 		library = append(library, a)
 	}
 	if (loader == "vanilla" && len(library) != 0) || (loader != "vanilla" && len(library) == 0) || len(library) > 128 {
-		return "", errors.New("Guard loader library list inconsistent with signed loader identity")
+		return "", errors.New("Guard: список библиотек загрузчика не соответствует подписанному идентификатору загрузчика")
 	}
 	var out strings.Builder
 	fmt.Fprintf(&out, "loader.id=%s\nloader.count=%d\n", loader, len(library))
@@ -79,12 +79,12 @@ func guardLoaderConfig0504(root string, p guardCompatPolicy0502) (string, error)
 			base64.StdEncoding.EncodeToString([]byte(absolute)), i, a.SHA256)
 	}
 	if len(p.LoaderClassBytes) > 4096 {
-		return "", errors.New("Guard loader class-byte binding count exceeded")
+		return "", errors.New("Guard: превышен лимит привязок байткода классов загрузчика")
 	}
 	fmt.Fprintf(&out, "loader.class.count=%d\n", len(p.LoaderClassBytes))
 	for i, cls := range p.LoaderClassBytes {
 		if !guardCompatClassName0504(cls.Class) || !guardCompatHex0502(cls.SHA256) {
-			return "", errors.New("Guard invalid loader class-byte binding")
+			return "", errors.New("Guard: некорректная привязка байткода класса загрузчика")
 		}
 		fmt.Fprintf(&out, "loader.class.%d.name=%s\nloader.class.%d.sha256=%s\n", i,
 			base64.StdEncoding.EncodeToString([]byte(cls.Class)), i, cls.SHA256)

@@ -27,7 +27,7 @@ func (s Server) registerMigrationCutoverRoutes03311(mux *http.ServeMux) {
 func (s Server) cutoverAccess03311(w http.ResponseWriter, r *http.Request) (migrationCutoverStore03311, string, bool) {
 	store, ok := s.Repo.(migrationCutoverStore03311)
 	if !ok {
-		writeError(w, 503, "staged cutover requires PostgreSQL")
+		writeError(w, 503, "Для подготовленного переключения требуется PostgreSQL")
 		return nil, "", false
 	}
 	run, e := s.migrationStoreRead03310(w, r)
@@ -47,7 +47,7 @@ func (s Server) cutoverAccess03311(w http.ResponseWriter, r *http.Request) (migr
 func (s Server) cutoverKey03311(w http.ResponseWriter) (ed25519.PublicKey, bool) {
 	private, e := s.manifestSigningPrivateKey()
 	if e != nil {
-		writeError(w, 503, "Never release signing key not configured")
+		writeError(w, 503, "Ключ подписи релиза Never не настроен")
 		return nil, false
 	}
 	return private.Public().(ed25519.PublicKey), true
@@ -100,7 +100,7 @@ func (s Server) migrationCutoverActivate03311(w http.ResponseWriter, r *http.Req
 	// проверено оператором. Подтверждение сохраняется, но не является
 	// криптографическим доказательством.
 	if r.Header.Get("X-Migration-Cutover-Confirm") != id || r.Header.Get("X-Migration-Source-Fenced") != "true" {
-		writeError(w, 400, "migration run and independently fenced source must be confirmed")
+		writeError(w, 400, "Необходимо подтвердить запуск миграции и независимую блокировку записи источника")
 		return
 	}
 	input, ok := migrationRead0331[co.Activate](w, r)
@@ -115,7 +115,7 @@ func (s Server) migrationCutoverActivate03311(w http.ResponseWriter, r *http.Req
 	if repository.IsStableChannel0341(input.Channel) {
 		routes, routeErr := store.MigrationCutovers03311(ctx, id)
 		if routeErr != nil {
-			writeError(w, 409, "cannot read migration target: "+routeErr.Error())
+			writeError(w, 409, "Не удалось прочитать цель миграции: "+routeErr.Error())
 			return
 		}
 		var targetID string
@@ -126,17 +126,17 @@ func (s Server) migrationCutoverActivate03311(w http.ResponseWriter, r *http.Req
 			}
 		}
 		if targetID == "" {
-			writeError(w, 409, "stable cutover has no staged target release")
+			writeError(w, 409, "Для стабильного переключения не подготовлен целевой релиз")
 			return
 		}
 		lookup, loadErr := s.lookupPackage(targetID)
 		if loadErr != nil {
-			writeError(w, 409, "stable cutover target unavailable")
+			writeError(w, 409, "Целевая версия для стабильного переключения недоступна")
 			return
 		}
 		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)
 		if gateErr != nil {
-			writeError(w, 409, "stable cutover blocked: "+fmt.Sprint(coverage.TargetBlockers)+": "+gateErr.Error())
+			writeError(w, 409, "Стабильное переключение заблокировано: "+fmt.Sprint(coverage.TargetBlockers)+": "+gateErr.Error())
 			return
 		}
 		ctx = repository.WithStablePermit03411(ctx, token)

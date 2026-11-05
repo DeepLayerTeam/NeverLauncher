@@ -218,7 +218,7 @@ def execute(journeys, ids, timeout, report):
             key = "::".join(key)
             if key in runs:
                 continue
-            print("Executing production test:", " ".join(cmd), flush=True)
+            print("Выполняется рабочий тест:", " ".join(cmd), flush=True)
             try:
                 # Без shell и сериализации учётных данных или ключей в доказательствах; вывод хешируется, но
                 # не сохраняется, поскольку журналы тестов могут содержать секреты.

@@ -375,7 +375,7 @@ func (h *Handle) Started() error {
 			return
 		}
 		if string(buf[:n]) != "ready\n" {
-			result <- fmt.Errorf("sandbox-setup-refused: %s", strings.TrimSpace(string(buf[:n])))
+			result <- fmt.Errorf("Изолированная среда: настройка отклонена: %s", strings.TrimSpace(string(buf[:n])))
 			return
 		}
 		result <- nil
@@ -535,7 +535,7 @@ func childMain() error {
 	proxy.Stderr = os.Stderr
 	if e := proxy.Start(); e != nil {
 		_ = readyWrite.Close()
-		return fmt.Errorf("start isolated IPC proxy: %w", e)
+		return fmt.Errorf("Не удалось запустить изолированный IPC-прокси: %w", e)
 	}
 	_ = readyWrite.Close()
 	_ = guest.Close()

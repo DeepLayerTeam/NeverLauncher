@@ -17,7 +17,7 @@ def read(p):
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 cert = read("serverbridge/certify_release.py")

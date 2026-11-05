@@ -127,7 +127,7 @@ func ScanPSQL(ctx context.Context, executable, dsn string, allow []string) (Chec
 		_ = cmd.Process.Kill()
 	}
 	waitErr := cmd.Wait()
-	if waitErr != nil && stderr.Len() > 0 && (scanErr == nil || strings.Contains(scanErr.Error(), "Пустое значение: «PostgreSQL auth scan»") || strings.Contains(scanErr.Error(), "incomplete PostgreSQL auth scan")) {
+	if waitErr != nil && stderr.Len() > 0 && (scanErr == nil || strings.Contains(scanErr.Error(), "Пустое значение: «PostgreSQL auth scan»") || strings.Contains(scanErr.Error(), "Проверка авторизации PostgreSQL выполнена не полностью")) {
 		return Checkpoint{}, fmt.Errorf("PostgreSQL отклонил предварительную проверку миграции авторизации: %w (%s)", waitErr, strings.TrimSpace(stderr.String()))
 	}
 	if scanErr != nil {

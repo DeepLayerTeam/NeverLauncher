@@ -96,7 +96,7 @@ func (s Server) migrationList0331(w http.ResponseWriter, r *http.Request) {
 	}
 	project := r.URL.Query().Get("projectId")
 	if project == "" || len(project) > 128 {
-		writeError(w, 400, "projectId is required")
+		writeError(w, 400, "Требуется projectId")
 		return
 	}
 	result, err := store.ListMigrations0331(r.Context(), project)

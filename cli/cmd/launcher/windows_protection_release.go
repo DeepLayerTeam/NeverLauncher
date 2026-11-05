@@ -168,7 +168,7 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 		"sensorGuardContinuousCrossCheckPassed", "failClosedAttackBoundaryPassed", "exactScenarioSetBound", "sensorAndFixtureHashesBound",
 	} {
 		if !cert.Invariants[key] {
-			return fmt.Errorf("Windows adversarial certificate invariant %s is not satisfied", key)
+			return fmt.Errorf("Инвариант сертификата устойчивости Windows к атакам %s не соблюдён", key)
 		}
 	}
 	if cert.Policy != "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification" {
@@ -234,10 +234,10 @@ func windowsProtectionArtifacts01812(dir, ver string) ([]windowsProtectionArtifa
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("Windows protection artifact %s: %w", name, err)
+			return nil, fmt.Errorf("Артефакт защиты Windows %s: %w", name, err)
 		}
 		if size <= 0 || !sha256RE01812.MatchString(strings.ToLower(sum)) {
-			return nil, fmt.Errorf("Windows protection artifact %s is empty or has invalid SHA-256", name)
+			return nil, fmt.Errorf("Артефакт защиты Windows %s пуст или имеет неверную контрольную сумму SHA-256", name)
 		}
 		rows = append(rows, windowsProtectionArtifact01812{Name: name, Size: size, SHA256: strings.ToLower(sum)})
 	}
@@ -265,7 +265,7 @@ func buildWindowsProtectionReleaseDocument01812(dir, ver, expectedCommit string)
 		return windowsProtectionReleaseCertificate01812{}, err
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, true); err != nil {
-		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Authenticode production boundary: %w", err)
+		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Ошибка проверки рабочей границы Authenticode Windows: %w", err)
 	}
 	adversarial, adversarialHash, err := readWindowsAdversarialCertificate01812(dir, ver, commit)
 	if err != nil {
@@ -370,7 +370,7 @@ func verifyWindowsProtectionRelease01812(dir, ver string) error {
 	}
 	for key, value := range expected.Invariants {
 		if !value || !cert.Invariants[key] {
-			return fmt.Errorf("Windows Protection RC invariant %s is not satisfied", key)
+			return fmt.Errorf("Инвариант RC-защиты Windows %s не соблюдён", key)
 		}
 	}
 	if !strings.EqualFold(cert.BoundarySHA256, expected.BoundarySHA256) || cert.CertificateID != "sha256:"+strings.ToLower(expected.BoundarySHA256) {

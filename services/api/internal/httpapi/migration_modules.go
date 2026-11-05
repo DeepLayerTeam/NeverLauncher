@@ -178,12 +178,12 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if !report.Ready || len(report.Blockers) != 0 {
-		writeError(w, 409, "unresolved module blockers; enrollment denied")
+		writeError(w, 409, "Есть неустранённые препятствия в модулях; регистрация отклонена")
 		return
 	}
 	var req moduleEnrollmentRequest0338
 	if err = decodeMigrationEnrollment0446(http.MaxBytesReader(w, r.Body, 8192), &req); err != nil {
-		writeError(w, 400, "invalid enrollment JSON")
+		writeError(w, 400, "Некорректный JSON регистрации")
 		return
 	}
 	found := false
@@ -194,7 +194,7 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	if !found || !migrationSafeServerID0338.MatchString(req.ID) || !migrationSafeServerID0338.MatchString(req.ProfileID) || req.Kind == "" || req.PublicKey == "" || len(req.Name) > 128 {
-		writeError(w, 422, "invalid wrapper or ServerBridge enrollment request")
+		writeError(w, 422, "Некорректная оболочка или запрос регистрации ServerBridge")
 		return
 	}
 	// Регистрация должна относиться к профилю, который оператор действительно
@@ -205,7 +205,7 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if !validBridgeServerKindV2(strings.ToLower(strings.TrimSpace(req.Kind))) {
-		writeError(w, 422, "unsupported ServerBridge kind")
+		writeError(w, 422, "Неподдерживаемый тип ServerBridge")
 		return
 	}
 	_, key, fingerprint, err := validateBridgeNodeIdentity0142("ed25519", req.PublicKey)
@@ -232,7 +232,7 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		}
 	} else {
 		if !errors.Is(existingErr, os.ErrNotExist) && !isBridgeNotFoundV2(existingErr) {
-			writeError(w, 503, "ServerBridge lookup failed")
+			writeError(w, 503, "Не удалось найти ServerBridge")
 			return
 		}
 		// Сохраняем неизменяемое намерение регистрации ДО внешней записи
@@ -244,12 +244,12 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		}
 		node, err = s.State.ServerBridge.registerServer(registerBridgeServerRequest{ID: req.ID, Name: req.Name, Kind: req.Kind, ProjectID: run.ProjectID, ProfileID: req.ProfileID, KeyAlgorithm: "ed25519", PublicKey: key})
 		if err != nil {
-			writeError(w, 409, "ServerBridge registration: "+err.Error())
+			writeError(w, 409, "Регистрация ServerBridge: "+err.Error())
 			return
 		}
 	}
 	if err = s.flushPersistenceState950("migration-serverbridge-enroll"); err != nil {
-		writeError(w, 503, "ServerBridge enrollment persistence not confirmed; retry the same enrollment")
+		writeError(w, 503, "Сохранение регистрации ServerBridge не подтверждено; повторите тот же запрос")
 		return
 	}
 	s.audit(r, s.adminActor(r), "migration:serverbridge-new-identity", run.ProjectID)
@@ -349,7 +349,7 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 	}
 	path := r.URL.Query().Get("wrapperPath")
 	if len(path) == 0 || len(path) > 2048 {
-		writeError(w, 422, "wrapperPath required")
+		writeError(w, 422, "Требуется wrapperPath")
 		return
 	}
 	report, err := store.GetMigrationModules0338(r.Context(), run.ID)
@@ -365,7 +365,7 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 		}
 	}
 	if !valid {
-		writeError(w, 422, "wrapper not in pinned migration assessment")
+		writeError(w, 422, "Оболочка отсутствует в закреплённой оценке миграции")
 		return
 	}
 	serverID, fingerprint, err := store.GetMigrationWrapperEnrollment0338(r.Context(), run.ID, path)
@@ -377,7 +377,7 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 		GetMigrationPlan0442(context.Context, string) (gp.Plan, error)
 	})
 	if !ok {
-		writeError(w, 503, "durable migration plan required")
+		writeError(w, 503, "Требуется сохранённый план миграции")
 		return
 	}
 	plan, err := plans.GetMigrationPlan0442(r.Context(), run.ID)
@@ -395,7 +395,7 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 	} else if errors.Is(e, repository.ErrNotFound) || errors.Is(e, os.ErrNotExist) {
 		state, reason = "awaiting_registration", "node_not_registered"
 	} else {
-		writeError(w, 503, "ServerBridge lookup unavailable")
+		writeError(w, 503, "Поиск ServerBridge недоступен")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

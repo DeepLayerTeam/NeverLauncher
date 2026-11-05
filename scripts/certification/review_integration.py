@@ -35,7 +35,7 @@ REVISION = re.compile(r"[0-9a-f]{40}\Z")
 
 def review(paths: list[Path], revision: str) -> dict:
     if not REVISION.fullmatch(revision):
-        raise ValueError("expected a 40-character Git commit SHA")
+        raise ValueError("Ожидается 40-символьный SHA коммита Git")
     found = {}
     for path in paths:
         if path.is_symlink() or not path.is_file():
@@ -51,9 +51,9 @@ def review(paths: list[Path], revision: str) -> dict:
             or raw.get("release") != "0.30.12"
             or raw.get("revision") != revision
         ):
-            raise ValueError(f"wrong schema, release or checkout in {path}")
+            raise ValueError(f"Некорректная схема, релиз или рабочая копия в {path}")
         if raw.get("passed") is not True or raw.get("fullyCertified") is not False:
-            raise ValueError(f"failed case or unsupported full-parity claim in {path}")
+            raise ValueError(f"Неуспешный сценарий или неподтверждённое заявление о полной совместимости в {path}")
         results = raw.get("results")
         if (
             not isinstance(results, list)
@@ -61,7 +61,7 @@ def review(paths: list[Path], revision: str) -> dict:
             != REQUIRED[platform]
             or len(results) != len(REQUIRED[platform])
         ):
-            raise ValueError(f"incomplete required E2E suite on {platform}")
+            raise ValueError(f"Обязательные сквозные тесты на {platform} выполнены не полностью")
         for case in results:
             if (
                 case.get("status") != "passed"
@@ -108,7 +108,7 @@ def main():
     args = p.parse_args()
     # Не переходите по символьным ссылкам внутри собираемого дерева доказательств.
     if args.evidence.is_symlink():
-        p.error("Запрещено: «symlink evidence directory»")
+        p.error("Каталог подтверждающих данных не должен быть символической ссылкой")
     paths = sorted(args.evidence.rglob("integration-03012.json"))
     try:
         result = review(paths, args.revision)

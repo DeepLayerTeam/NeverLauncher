@@ -324,7 +324,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 	}
 	constraint, err := ParseConstraint(req.constraint)
 	if err != nil {
-		return state{}, fmt.Errorf("%s constraint %q: %w", req.id, req.constraint, err)
+		return state{}, fmt.Errorf("Ограничение %s %q: %w", req.id, req.constraint, err)
 	}
 	candidates := append([]model.ExtensionRegistryVersion(nil), byID[req.id]...)
 	var filtered []model.ExtensionRegistryVersion

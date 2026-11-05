@@ -6,7 +6,7 @@ import re
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 7):
-    raise SystemExit("VERSION is older than 0.14.7")
+    raise SystemExit("VERSION ниже 0.14.7")
 
 
 def read(path):
@@ -16,7 +16,7 @@ def read(path):
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 api_migration = read(
@@ -24,7 +24,7 @@ api_migration = read(
 )
 cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.7 API/CLI Forge/NeoForge migrations differ")
+    raise SystemExit("Миграции Forge/NeoForge API/CLI 0.14.7 отличаются")
 require(
     api_migration,
     ["server_bridge_nodes_v2_kind_check", "'forge'", "'neoforge'", "'fabric'"],
@@ -207,7 +207,7 @@ require(
 release_builder = read("scripts/release/build-release.sh")
 bridge_loop = re.search(r"for bridge in ([A-Za-z0-9_ ]+); do", release_builder)
 if not bridge_loop or not {"fabric", "forge", "neoforge"}.issubset(set(bridge_loop.group(1).split())):
-    raise SystemExit("release bundle Forge/NeoForge artifacts missing from actual build loop")
+    raise SystemExit("Артефакты Forge/NeoForge отсутствуют в фактическом цикле сборки релиза")
 require(
     read("cli/cmd/launcher/release_commands.go"),
     [

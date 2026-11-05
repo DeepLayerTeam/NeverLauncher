@@ -33,7 +33,7 @@ class MigrationError(Exception):
 def source_hash(path):
     size = os.stat(path).st_size
     if not 0 < size <= MAX_SOURCE:
-        raise MigrationError("Для исходный ZIP требуется: «non-empty and <= 512 MiB»")
+        raise MigrationError("Исходный ZIP должен быть непустым и не превышать 512 МиБ")
     sha = hashlib.sha256()
     with open(path, "rb") as reader:
         for part in iter(lambda: reader.read(1 << 20), b""):
@@ -98,7 +98,7 @@ class Backend:
     def __init__(self, url, token, timeout=40):
         parts = urlsplit(url)
         if parts.scheme != "https" or not parts.hostname or parts.username or parts.password or parts.path not in ("", "/") or parts.query or parts.fragment:
-            raise MigrationError("Для серверная часть требуется: «an HTTPS origin without credentials or path»")
+            raise MigrationError("Для серверной части требуется HTTPS-адрес без учётных данных и пути")
         if not token or "\n" in token or "\r" in token:
             raise MigrationError("set a valid operator token in the environment")
         self.url, self.token, self.timeout = url.rstrip("/"), token, timeout
@@ -207,7 +207,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     if counts["manual_reset"] and not allow_resets:
         raise MigrationError("manual password resets required; import withheld unless explicitly accepted")
     if counts["imported"] == 0:
-        raise MigrationError("Отсутствует: «new accounts to migrate; never reset trust for existing Never users»")
+        raise MigrationError("Нет новых учётных записей для переноса; доверие существующих пользователей Never изменять нельзя")
     imported = api.request("POST", root + "/credentials/import", source=source, headers={**h, "X-Migration-Import-Confirm": run_id})
     if imported.get("dryRun") or verify_preview(inventory, verified, imported, run_id, digest) != counts:
         raise MigrationError("credential import differs from confirmed preview")

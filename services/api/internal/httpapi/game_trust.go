@@ -44,7 +44,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 	rootHex := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY"))
 	path := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE"))
 	if rootHex == "" || path == "" {
-		return p, errors.New("trusted game policy path and provisioned root key required for production signing")
+		return p, errors.New("Для рабочей подписи требуются путь к доверенной игровой политике и подготовленный корневой ключ")
 	}
 	root, e := hex.DecodeString(rootHex)
 	if e != nil || len(root) != 32 {
@@ -92,7 +92,7 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 	}
 	now := time.Now().UTC()
 	if start.After(now.Add(5*time.Minute)) || !end.After(now) || end.Sub(start) > 90*24*time.Hour {
-		return p, errors.New("expired/future game trust policy")
+		return p, errors.New("Политика доверия игры просрочена или датирована будущим")
 	}
 	return p, nil
 }
@@ -102,7 +102,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 			continue
 		}
 		if k.Status == "revoked" {
-			return errors.New("revoked game signing key")
+			return errors.New("Ключ подписи игры отозван")
 		}
 		if k.Status != "active" && k.Status != "verify-only" {
 			return errors.New("Неизвестное значение: «game signing key status»")
@@ -115,7 +115,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 			return e
 		}
 		if signedAt.Before(first) || signedAt.After(time.Now().UTC().Add(5*time.Minute)) {
-			return errors.New("game signature timestamp outside key window")
+			return errors.New("Временная метка игровой подписи выходит за период действия ключа")
 		}
 		if k.Status == "verify-only" {
 			limit, e := gameTrustUTC02312(k.VerifyUntil)
@@ -128,7 +128,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 		}
 		return nil
 	}
-	return fmt.Errorf("game signing key not delegated by root: %s", pub)
+	return fmt.Errorf("Корневой ключ не делегировал право игровой подписи: %s", pub)
 }
 func (s Server) enforceGameTrustSigning02312(manifest *model.Manifest, private ed25519.PrivateKey) error {
 	configured := os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
@@ -158,7 +158,7 @@ func (s Server) enforceGameTrustVerify02312(manifest model.Manifest) error {
 		return e
 	}
 	if manifest.TrustEpoch == 0 || manifest.TrustEpoch > p.Epoch {
-		return errors.New("signed game manifest does not reference accepted trust epoch")
+		return errors.New("Подписанный игровой манифест не ссылается на принятую эпоху доверия")
 	}
 	at, e := time.Parse(time.RFC3339Nano, manifest.Signature.SignedAt)
 	if e != nil {

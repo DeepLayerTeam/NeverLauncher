@@ -306,7 +306,7 @@ func (r *Report) addInvalid(kind, p string, e error) {
 }
 func readBounded(f *zip.File, limit uint64) ([]byte, error) {
 	if f.UncompressedSize64 > limit {
-		return nil, errors.New("file exceeds inspection size limit")
+		return nil, errors.New("Файл превышает максимальный размер для проверки")
 	}
 	rd, e := f.Open()
 	if e != nil {
@@ -318,7 +318,7 @@ func readBounded(f *zip.File, limit uint64) ([]byte, error) {
 		return nil, e
 	}
 	if uint64(len(b)) != f.UncompressedSize64 || uint64(len(b)) > limit {
-		return nil, errors.New("truncated or oversized ZIP entry")
+		return nil, errors.New("Запись ZIP обрезана или слишком велика")
 	}
 	return b, nil
 }
@@ -331,7 +331,7 @@ func readObject(f *zip.File) (map[string]json.RawMessage, error) {
 		}
 		var trailing any
 		if err := dec.Decode(&trailing); err != io.EOF {
-			return nil, errors.New("multiple JSON values")
+			return nil, errors.New("Обнаружено несколько значений JSON")
 		}
 	}
 	if e != nil {
@@ -347,7 +347,7 @@ func readObject(f *zip.File) (map[string]json.RawMessage, error) {
 	}
 	var trailing any
 	if e = dec.Decode(&trailing); e != io.EOF {
-		return nil, errors.New("multiple JSON values")
+		return nil, errors.New("Обнаружено несколько значений JSON")
 	}
 	return v, nil
 }
@@ -506,7 +506,7 @@ func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool,
 		return "", false, err
 	}
 	if len(z.File) > 20000 {
-		return "", false, errors.New("JAR entry count exceeds limit")
+		return "", false, errors.New("Число записей JAR превышает ограничение")
 	}
 	for _, f := range z.File {
 		if strings.EqualFold(f.Name, "META-INF/MANIFEST.MF") {
@@ -643,7 +643,7 @@ func rejectDuplicateJSON0332(d *json.Decoder) error {
 		}
 		end, e := d.Token()
 		if e != nil || end != json.Delim('}') {
-			return errors.New("JSON object not closed")
+			return errors.New("Объект JSON не закрыт")
 		}
 	case '[':
 		i := 0
@@ -658,7 +658,7 @@ func rejectDuplicateJSON0332(d *json.Decoder) error {
 		}
 		end, e := d.Token()
 		if e != nil || end != json.Delim(']') {
-			return errors.New("JSON array not closed")
+			return errors.New("Массив JSON не закрыт")
 		}
 	default:
 		return errors.New("Некорректное значение: разделитель JSON")

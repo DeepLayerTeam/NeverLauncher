@@ -149,7 +149,7 @@ func ValidateComponentCatalog0241(m Manifest) error {
 		if !validComponentID0241(c.ID) || ids[c.ID] ||
 			strings.TrimSpace(c.Name) == "" || len(c.Name) > 256 || strings.ContainsAny(c.Name, "\x00\r\n") ||
 			len(c.Files) == 0 || len(c.Files) > 8192 {
-			return fmt.Errorf("invalid/duplicate v3 component id, name or files: %q", c.ID)
+			return fmt.Errorf("Некорректный или повторяющийся идентификатор, имя или файлы компонента v3: %q", c.ID)
 		}
 		ids[c.ID] = true
 		for _, path := range c.Files {

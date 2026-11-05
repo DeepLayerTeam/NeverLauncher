@@ -415,7 +415,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
     )
     if errors:
         for item in errors:
-            print(f"device trust matrix: {item}", flush=True)
+            print(f"Матрица доверия устройств: {item}", flush=True)
         return 1
     print(
         f"Device Trust matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}"

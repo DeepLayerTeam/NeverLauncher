@@ -111,12 +111,12 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 		req.Settings.ToolVersions = make(map[string]string)
 	}
 	if len(req.Settings.ToolVersions) > 32 {
-		writeError(w, 400, "too many tools")
+		writeError(w, 400, "Превышено допустимое число инструментов")
 		return
 	}
 	for k, v := range req.Settings.ToolVersions {
 		if len(k) == 0 || len(k) > 128 || len(v) == 0 || len(v) > 128 || strings.ContainsAny(k+v, "\x00\r\n") {
-			writeError(w, 400, "invalid tool fingerprint")
+			writeError(w, 400, "Некорректный отпечаток инструмента")
 			return
 		}
 	}
@@ -129,11 +129,11 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 		req.Settings.Minecraft.Loader = snapshot.Spec.Loader
 	}
 	if !strings.EqualFold(req.Settings.Minecraft.Loader, snapshot.Spec.Loader) {
-		writeError(w, 400, "workspace loader must match the pinned client profile")
+		writeError(w, 400, "Загрузчик рабочей области должен совпадать с закреплённым профилем клиента")
 		return
 	}
 	if snapshot.Spec.MinecraftVersion != "" && req.Settings.Minecraft.LoaderVersion != snapshot.Spec.LoaderVersion {
-		writeError(w, 409, "profile launch mismatch: exact loaderVersion required")
+		writeError(w, 409, "Конфигурация запуска не совпадает с профилем: требуется точная loaderVersion")
 		return
 	}
 	if err := model.ValidateProfileLaunch0382(snapshot.Spec, req.Settings.Minecraft, req.Settings.Runtime.Java.MajorVersion, true); err != nil {
@@ -141,12 +141,12 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Settings.Runtime.Java.MajorVersion <= 0 {
-		writeError(w, 400, "explicit runtime.java.majorVersion required")
+		writeError(w, 400, "Требуется явное значение runtime.java.majorVersion")
 		return
 	}
 	for _, v := range []string{req.ProjectID, req.ProfileID, req.Channel, req.Version} {
 		if len(v) > 128 || strings.ContainsAny(v, "/\\\r\n\x00") {
-			writeError(w, 400, "invalid workspace scope")
+			writeError(w, 400, "Некорректная область действия рабочей области")
 			return
 		}
 	}
@@ -159,12 +159,12 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 	preflightRuntime.Launch.MainModule = ""
 	probe := model.Manifest{SchemaVersion: model.ManifestSchemaV2, ProjectID: req.ProjectID, ProfileID: req.ProfileID, ProfileSnapshot: &snapshot, Minecraft: req.Settings.Minecraft, Runtime: preflightRuntime, Directories: req.Settings.Directories, FileRules: req.Settings.FileRules, Files: []model.ManifestFile{}}
 	if err = model.ValidateManifestSchema(probe); err != nil {
-		writeError(w, 400, "invalid build settings: "+err.Error())
+		writeError(w, 400, "Некорректные настройки сборки: "+err.Error())
 		return
 	}
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
-		writeError(w, 500, "unable to allocate ID")
+		writeError(w, 500, "Не удалось выделить идентификатор")
 		return
 	}
 	ws := repository.BuildWorkspace{ID: "ws-" + hex.EncodeToString(id[:]), ProjectID: req.ProjectID, OwnerID: claims.Sub, ProfileID: req.ProfileID, Channel: req.Channel, Version: req.Version, ProfileRevision: snapshot.Revision, ProfileDigest: snapshot.Digest, Settings: req.Settings, Files: []repository.BuildFile{}}
@@ -303,12 +303,12 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ws.State == "built" || ws.PackageID != "" {
-		writeError(w, 409, "workspace is locked to a release package; source files and staging are immutable")
+		writeError(w, 409, "Рабочая область закреплена за релизным пакетом; исходные файлы и подготовленное содержимое нельзя менять")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadBytes()+4096)
 	if err = r.ParseMultipartForm(s.maxUploadBytes()); err != nil {
-		writeError(w, 400, "invalid multipart or file too large")
+		writeError(w, 400, "Некорректный multipart-запрос или слишком большой файл")
 		return
 	}
 	var expected int64
@@ -318,7 +318,7 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 	}
 	src, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, 400, "file part required")
+		writeError(w, 400, "Требуется файловая часть запроса")
 		return
 	}
 	defer src.Close()
@@ -335,21 +335,21 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(ws.Files) >= maxWorkspaceFiles0226 {
-		writeError(w, 413, "workspace file limit reached")
+		writeError(w, 413, "Достигнут лимит файлов рабочей области")
 		return
 	}
 	// Вычисляйте хеш фактических байтов; хеш браузера, если он передан, является
 	// лишь заявлением.
 	data, err := io.ReadAll(io.LimitReader(src, s.maxUploadBytes()+1))
 	if err != nil || int64(len(data)) > s.maxUploadBytes() {
-		writeError(w, 413, "file too large")
+		writeError(w, 413, "Слишком большой файл")
 		return
 	}
 	file.Size = int64(len(data))
 	sum := sha256.Sum256(data)
 	file.SHA256 = hex.EncodeToString(sum[:])
 	if expectedSHA := r.FormValue("sha256"); expectedSHA != "" && !strings.EqualFold(expectedSHA, file.SHA256) {
-		writeError(w, 400, "sha256 mismatch")
+		writeError(w, 400, "Контрольная сумма SHA-256 не совпадает")
 		return
 	}
 	if err = normalizeBuildFile0226(file); err != nil {
@@ -358,17 +358,17 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, other := range ws.Files {
 		if strings.EqualFold(other.Path, file.Path) && other.Path != file.Path {
-			writeError(w, 409, "case-insensitive path collision")
+			writeError(w, 409, "Конфликт путей при сравнении без учёта регистра")
 			return
 		}
 	}
 	encrypted, encryptionErr := s.encryptWorkspace0226(ws, file, data)
 	if encryptionErr != nil {
-		writeError(w, 503, "workspace encryption failed: "+encryptionErr.Error())
+		writeError(w, 503, "Не удалось зашифровать рабочую область: "+encryptionErr.Error())
 		return
 	}
 	if _, _, err = s.Storage.Save(ws.ProjectID, ws.ID, workspaceObjectPath0226(file), bytes.NewReader(encrypted)); err != nil {
-		writeError(w, 503, "storage write failed: "+err.Error())
+		writeError(w, 503, "Не удалось записать в хранилище: "+err.Error())
 		return
 	}
 	replaced := false
@@ -415,7 +415,7 @@ func (s Server) workspaceRemoveFile0384(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if ws.State == "built" || ws.PackageID != "" {
-		writeError(w, 409, "workspace is locked to a release package; source files and staging are immutable")
+		writeError(w, 409, "Рабочая область закреплена за релизным пакетом; исходные файлы и подготовленное содержимое нельзя менять")
 		return
 	}
 	var req struct {
@@ -438,7 +438,7 @@ func (s Server) workspaceRemoveFile0384(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	if index < 0 {
-		writeError(w, 404, "workspace file not found")
+		writeError(w, 404, "Файл рабочей области не найден")
 		return
 	}
 	ws.Files = append(ws.Files[:index], ws.Files[index+1:]...)
@@ -506,7 +506,7 @@ func (s Server) workspaceDiff0226(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !found {
-			writeError(w, 400, "base version is not published in this profile")
+			writeError(w, 400, "Базовая версия не опубликована в этом профиле")
 			return
 		}
 		files, err := s.Repo.ListFiles(ws.ProjectID, baseID)
@@ -561,7 +561,7 @@ func (s Server) workspaceStage0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ws.State == "built" || ws.PackageID != "" {
-		writeError(w, 409, "workspace is locked to a release package; source files and staging are immutable")
+		writeError(w, 409, "Рабочая область закреплена за релизным пакетом; исходные файлы и подготовленное содержимое нельзя менять")
 		return
 	}
 	var req struct {
@@ -579,7 +579,7 @@ func (s Server) workspaceStage0226(w http.ResponseWriter, r *http.Request) {
 	selected := map[string]bool{}
 	for _, p := range req.Paths {
 		if selected[p] {
-			writeError(w, 400, "duplicate staged path")
+			writeError(w, 400, "Повторяющийся путь в подготовленных файлах")
 			return
 		}
 		selected[p] = true
@@ -593,7 +593,7 @@ func (s Server) workspaceStage0226(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(selected) != 0 || count == 0 {
-		writeError(w, 400, "stage must select existing nonempty files")
+		writeError(w, 400, "Для подготовки выберите существующие непустые файлы")
 		return
 	}
 	ws.State = "staged"
@@ -667,7 +667,7 @@ func (s Server) workspaceValidateHandler0226(w http.ResponseWriter, r *http.Requ
 	}
 	digest, err := s.workspaceValidate0226(ws)
 	if err != nil {
-		writeError(w, 409, "build validation failed: "+err.Error())
+		writeError(w, 409, "Проверка сборки завершилась ошибкой: "+err.Error())
 		return
 	}
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"valid": true, "buildDigest": digest, "fileCount": len(selectedFiles0226(ws)), "profileRevision": ws.ProfileRevision}})
@@ -705,7 +705,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 	}
 	digest, err := s.workspaceValidate0226(ws)
 	if err != nil {
-		writeError(w, 409, "cannot build: "+err.Error())
+		writeError(w, 409, "Не удалось собрать: "+err.Error())
 		return
 	}
 	// Зарезервируйте идентичность релиза ДО создания файлов. Блокировки рабочего
@@ -721,12 +721,12 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 	if ws.PackageID == "" {
 		versions, lookupErr := s.Repo.ListVersions(ws.ProjectID)
 		if lookupErr != nil {
-			writeError(w, 503, "cannot verify package reservation: "+lookupErr.Error())
+			writeError(w, 503, "Не удалось проверить резервирование пакета: "+lookupErr.Error())
 			return
 		}
 		for _, existing := range versions {
 			if existing.ID == packageID || (existing.ProfileID == ws.ProfileID && existing.Channel == ws.Channel && existing.Version == ws.Version) {
-				writeError(w, 409, "version already belongs to another release operation")
+				writeError(w, 409, "Версия уже относится к другой операции публикации релиза")
 				return
 			}
 		}
@@ -738,7 +738,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if ws.PackageID != packageID {
-		writeError(w, 409, "workspace is bound to another package")
+		writeError(w, 409, "Рабочая область привязана к другому пакету")
 		return
 	}
 	release, err := s.Repo.CreateVersion(ws.ProjectID, ws.ProfileID, ws.Channel, ws.Version)
@@ -757,19 +757,19 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !found {
-			writeError(w, 409, "version exists but is inaccessible")
+			writeError(w, 409, "Версия существует, но недоступна")
 			return
 		}
 		if release.ProjectID != ws.ProjectID || release.ProfileID != ws.ProfileID || release.Channel != ws.Channel || release.Version != ws.Version || release.Status != "draft" || release.Manifest.ProfileSnapshot == nil || release.Manifest.ProfileSnapshot.Digest != ws.ProfileDigest || release.Manifest.ProfileSnapshot.Revision != ws.ProfileRevision {
-			writeError(w, 409, "existing version does not match pinned workspace")
+			writeError(w, 409, "Существующая версия не совпадает с закреплённой рабочей областью")
 			return
 		}
 	} else if err != nil {
-		writeError(w, 409, "create package: "+err.Error())
+		writeError(w, 409, "Создание пакета: "+err.Error())
 		return
 	}
 	if release.Manifest.ProfileSnapshot == nil || release.Manifest.ProfileSnapshot.Digest != ws.ProfileDigest || release.Manifest.ProfileSnapshot.Revision != ws.ProfileRevision {
-		writeError(w, 409, "release snapshot differs from build workspace; cannot materialize")
+		writeError(w, 409, "Снимок релиза отличается от рабочей области сборки; создать пакет невозможно")
 		return
 	}
 	oldFiles, err := s.Repo.ListFiles(ws.ProjectID, release.ID)
@@ -783,7 +783,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 	}
 	selected := selectedFiles0226(ws)
 	if len(oldFiles) > len(selected) {
-		writeError(w, 409, "package already has external files")
+		writeError(w, 409, "Пакет уже содержит внешние файлы")
 		return
 	}
 	for _, f := range oldFiles {
@@ -795,7 +795,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !found {
-			writeError(w, 409, "package has foreign or mutated files")
+			writeError(w, 409, "Пакет содержит посторонние или изменённые файлы")
 			return
 		}
 	}
@@ -806,7 +806,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		// Каждый источник повторно проверяется по AEAD и SHA-256 до копирования.
 		data, e := s.readWorkspaceSource0226(ws, f)
 		if e != nil {
-			writeError(w, 409, "source content changed: "+e.Error())
+			writeError(w, 409, "Содержимое источника изменилось: "+e.Error())
 			return
 		}
 		if e = s.beforeStorageWrite0206(r, ws.ProjectID, release.ID, f.Path); e != nil {
@@ -815,13 +815,13 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		}
 		_, n, e := s.Storage.Save(ws.ProjectID, release.ID, f.Path, bytes.NewReader(data))
 		if e != nil || n != f.Size {
-			writeError(w, 503, "cannot store built file")
+			writeError(w, 503, "Не удалось сохранить собранный файл")
 			return
 		}
 		object := model.FileObject{ProjectID: ws.ProjectID, VersionID: release.ID, Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: s.deliveryURL(ws.ProjectID, release.ID, f.Path), Required: f.Ownership != "optional", Ownership: f.Ownership, Executable: f.Executable, TargetOS: f.TargetOS}
 		savedObject, addErr := s.Repo.AddFile(object)
 		if addErr != nil {
-			writeError(w, 503, "cannot index built file: "+addErr.Error())
+			writeError(w, 503, "Не удалось индексировать собранный файл: "+addErr.Error())
 			return
 		}
 		s.storageWritten0206(r, savedObject)
@@ -839,7 +839,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, e = s.Repo.UpdateVersionManifest(ws.ProjectID, release.ID, manifest); e != nil {
-		writeError(w, 409, "cannot save manifest: "+e.Error())
+		writeError(w, 409, "Не удалось сохранить манифест: "+e.Error())
 		return
 	}
 	ws.State = "built"
@@ -847,7 +847,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 	ws.BuildDigest = digest
 	saved, err := store.SaveBuildWorkspace(r.Context(), ws)
 	if err != nil {
-		writeError(w, 409, "workspace save failed; retry build: "+err.Error())
+		writeError(w, 409, "Не удалось сохранить рабочую область; повторите сборку: "+err.Error())
 		return
 	}
 	s.audit(r, ws.OwnerID, "build-workspace:build", ws.ID+":"+digest)

@@ -113,7 +113,7 @@ def live_pg_migrations(path):
         proc = subprocess.run(["psql", "-X", "-q", "-A", "-t", "-w", "-v", "ON_ERROR_STOP=1"],
                               input=sql, text=True, capture_output=True, env=env, timeout=20, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise CompatibilityError("live PostgreSQL schema probe could not execute") from exc
+        raise CompatibilityError("Не удалось проверить схему работающей PostgreSQL") from exc
     # stderr может содержать строки подключения, учётные данные или внутренние
     # сведения.
     require(proc.returncode == 0 and len(proc.stdout) <= 200_000, "live PostgreSQL schema probe failed")
@@ -125,7 +125,7 @@ def live_pg_migrations(path):
         try:
             data = json.loads(row)
         except (ValueError, TypeError) as exc:
-            raise CompatibilityError("PostgreSQL returned unparseable migration row") from exc
+            raise CompatibilityError("PostgreSQL вернул строку миграции, которую невозможно разобрать") from exc
         require(isinstance(data, dict) and isinstance(data.get("version"), str) and
                 isinstance(data.get("checksum"), str), "invalid migration tracking row")
         require(data["version"] not in actual, "duplicate applied migrations")
@@ -231,7 +231,7 @@ def main(argv=None):
                 "invalid remote directory/project")
         report = verify(args)
         inventory.write_report(args.output, report)
-        print("live N/N-1 compatibility verified; migration catalog unchanged; no DDL applied", file=sys.stderr)
+        print("Совместимость N/N−1 на работающей системе проверена; каталог миграций не изменён, DDL не выполнялись", file=sys.stderr)
         return 0
     except (CompatibilityError, multi.DeploymentError, inventory.InventoryError, OSError, ValueError) as exc:
         print("N/N-1 BLOCKED: " + str(exc), file=sys.stderr)

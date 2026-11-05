@@ -74,7 +74,7 @@ func handleModuleParity0301(args []string) error {
 	}
 	timeout, err := time.ParseDuration(flagValue(args, "--timeout", "180s"))
 	if err != nil || timeout <= 0 {
-		return errors.New("--timeout requires a positive duration")
+		return errors.New("Для --timeout требуется положительный интервал времени")
 	}
 	baseline := flagValue(args, "--baseline", "0.42.11")
 	var report moduleparity.Report
@@ -130,7 +130,7 @@ func handleModuleParity0301(args []string) error {
 	}
 	execute := paritySwitch0301(args, "--run-tests")
 	if paritySwitch0301(args, "--require-tests") && !execute {
-		return errors.New("--require-tests requires --run-tests")
+		return errors.New("Для --require-tests требуется --run-tests")
 	}
 	if execute {
 		err = moduleparity.RunTests(context.Background(), root, &report, registry, moduleparity.Options{RunTests: true, Timeout: timeout, Selected: selected})
@@ -144,7 +144,7 @@ func handleModuleParity0301(args []string) error {
 		return err
 	}
 	if paritySwitch0301(args, "--require-full-parity") {
-		return errors.New("full M01-M19 parity is not certified; registry contains partial/planned/blocked outcomes")
+		return errors.New("Полное соответствие M01–M19 не сертифицировано; реестр содержит частичные, запланированные и заблокированные результаты")
 	}
 	if paritySwitch0301(args, "--require-tests") {
 		for _, r := range report.Results {
@@ -152,7 +152,7 @@ func handleModuleParity0301(args []string) error {
 				continue
 			}
 			if r.Test.Status != "passed" {
-				return fmt.Errorf("%s: regression tests not passed (%s)", r.ModuleID, r.Test.Status)
+				return fmt.Errorf("%s: регрессионные тесты не пройдены (%s)", r.ModuleID, r.Test.Status)
 			}
 		}
 	}

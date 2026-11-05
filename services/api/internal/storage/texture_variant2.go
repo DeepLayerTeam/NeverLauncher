@@ -47,7 +47,7 @@ func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, 
 		}
 		resp, err := s3.client.Do(req)
 		if err != nil {
-			return "", 0, fmt.Errorf("S3 texture write: %w", err)
+			return "", 0, fmt.Errorf("Ошибка записи текстуры в S3: %w", err)
 		}
 		defer resp.Body.Close()
 		switch {
@@ -57,17 +57,17 @@ func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, 
 			// Конфликтующий неизменяемый объект может быть повреждён: проверить до дедупликации.
 			body, size, err := OpenTexture0252(s3, digest)
 			if err != nil {
-				return "", 0, fmt.Errorf("S3 texture collision read: %w", err)
+				return "", 0, fmt.Errorf("Ошибка проверки совпадения текстур S3: %w", err)
 			}
 			defer body.Close()
 			found, err := io.ReadAll(io.LimitReader(body, 4<<20+1))
 			if err != nil || size > 4<<20 || !bytes.Equal(found, png) {
-				return "", 0, errors.New("S3 digest collision or corrupted immutable object")
+				return "", 0, errors.New("Совпадение дайджестов S3 либо повреждение неизменяемого объекта")
 			}
 			return key, int64(len(png)), nil
 		default:
 			errorBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-			return "", 0, fmt.Errorf("S3 texture write HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(errorBody)))
+			return "", 0, fmt.Errorf("Ошибка записи текстуры S3: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(errorBody)))
 		}
 	}
 	return SaveTexture0252(store, digest, png)
@@ -110,7 +110,7 @@ func DeleteTexture0253(ctx context.Context, store Storage, digest string) error 
 			return closeErr
 		}
 		if n > 4<<20 || hex.EncodeToString(sum.Sum(nil)) != digest {
-			return errors.New("texture file corrupted, refusing GC")
+			return errors.New("Файл текстуры повреждён; очистка запрещена")
 		}
 		if err := os.Remove(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
@@ -143,5 +143,5 @@ func DeleteTexture0253(ctx context.Context, store Storage, digest string) error 
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusOK {
 		return nil
 	}
-	return fmt.Errorf("S3 texture delete HTTP %d", resp.StatusCode)
+	return fmt.Errorf("Ошибка удаления текстуры S3: HTTP %d", resp.StatusCode)
 }

@@ -12,7 +12,7 @@ def require(rel, tokens):
     text = read(rel)
     missing = [t for t in tokens if t not in text]
     if missing:
-        raise SystemExit(f"{rel}: missing {missing}")
+        raise SystemExit(f"{rel}: отсутствует {missing}")
 
 
 require(

@@ -129,13 +129,13 @@ checks = [
 for text, wants, label in checks:
     for want in wants:
         if want not in text:
-            raise SystemExit(f"{label} missing {want!r}")
+            raise SystemExit(f"{label}: отсутствует {want!r}")
 for text, want, label in [
     (preflight, "serverbridge-player-session-integration3-0197.py", "preflight"),
     (ci, "serverbridge-player-session-integration3-0197.py", "CI"),
 ]:
     if want not in text:
-        raise SystemExit(f"{label} missing {want!r}")
+        raise SystemExit(f"{label}: отсутствует {want!r}")
 for forbidden in ["ProcessBuilder(", "Runtime.getRuntime().exec"]:
     if forbidden in repo or forbidden in client:
         raise SystemExit(

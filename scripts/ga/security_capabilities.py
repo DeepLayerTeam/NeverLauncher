@@ -74,7 +74,7 @@ def checks(version: str) -> tuple[str, ...]:
 
 
 def blocked(message: str) -> None:
-    raise ValueError("security capability GA BLOCKED: " + message)
+    raise ValueError("Сертификация возможностей защиты GA ЗАБЛОКИРОВАНА: " + message)
 
 
 def ci_identity(run_id=None, run_attempt=None) -> tuple[str, int]:

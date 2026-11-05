@@ -88,12 +88,12 @@ def aggregate(
             or e.get("os") != target["os"]
             or e.get("status") != "pass"
         ):
-            raise SystemExit(f"invalid/non-PASS evidence for {target['id']}")
+            raise SystemExit(f"Недопустимые или неуспешные подтверждения для {target['id']}")
         missing = [c for c in checks if e.get("checks", {}).get(c) is not True]
         if missing:
-            raise SystemExit(f"{target['id']} missing checks: {missing}")
+            raise SystemExit(f"{target['id']}: отсутствуют проверки {missing}")
         if e.get("contract") != doc["contract"]:
-            raise SystemExit(f"{target['id']} contract mismatch")
+            raise SystemExit(f"{target['id']}: несоответствие контракта")
         results.append(e)
         evidence_hashes[target["id"]] = sha256(p)
     generated = datetime.now(timezone.utc).isoformat()

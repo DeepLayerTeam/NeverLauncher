@@ -36,7 +36,7 @@ STATUSES = {"PASS", "BLOCKED", "UNSUPPORTED"}
 
 def validate_report(raw: object) -> dict:
     if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
-        raise ValueError("Некорректное значение: «Guard inventory schema»")
+        raise ValueError("Некорректная схема инвентаризации Guard")
     if raw.get("productVersion") != EXPECTED_VERSION:
         raise ValueError(f"Инвентаризация Guard должна использовать версию продукта {EXPECTED_VERSION}")
     target = (raw.get("os"), raw.get("architecture"))
@@ -44,7 +44,7 @@ def validate_report(raw: object) -> dict:
         raise ValueError(f"Неизвестное значение: цель {target}")
     checks = raw.get("checks")
     if not isinstance(checks, list):
-        raise ValueError("Отсутствует: «Guard inventory checks»")
+        raise ValueError("Отсутствуют проверки инвентаризации Guard")
     by_id = {}
     for item in checks:
         if not isinstance(item, dict) or not isinstance(item.get("id"), str):
@@ -103,7 +103,7 @@ def run_local(args: argparse.Namespace) -> int:
         {"linux": "linux", "win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform),
         {"AMD64": "x86_64", "ARM64": "aarch64", "x86_64": "x86_64", "arm64": "aarch64", "aarch64": "aarch64"}.get(platform.machine(), platform.machine()),
     ):
-        raise ValueError("«native Guard target» не совпадает с «executing machine»")
+        raise ValueError("Целевая платформа нативного Guard не совпадает с выполняющей машиной")
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     # Операция без разрушений и атомарна; отчёт не содержит токенов и закрытых ключей.

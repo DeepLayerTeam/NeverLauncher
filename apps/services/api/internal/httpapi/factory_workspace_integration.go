@@ -168,7 +168,7 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	}
 	factoryStore, ok := store.(repository.FactoryWorkspaceStore0401)
 	if !ok {
-		writeError(w, 503, "factory workspace persistence unavailable")
+		writeError(w, 503, "Не удалось сохранить рабочую область фабрики сборок")
 		return
 	}
 	binary, root, err := factoryConfig02710()
@@ -178,7 +178,7 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	}
 	job, dir, err := factoryRead02710(root, r.PathValue("jobId"))
 	if err != nil || job.OwnerID != ws.OwnerID || job.ProjectID != ws.ProjectID || job.WorkspaceID != ws.ID || job.State != "completed" {
-		writeError(w, 404, "completed factory job not found")
+		writeError(w, 404, "Завершённое задание фабрики сборок не найдено")
 		return
 	}
 	var req struct {
@@ -201,7 +201,7 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := factoryLoadPlan02710(dir)
 	if err != nil || job.PlanDigest != p.ReproducibilitySHA256 {
-		writeError(w, 409, "factory job output/plan mismatch")
+		writeError(w, 409, "Результат задания фабрики сборок не соответствует плану")
 		return
 	}
 	client := filepath.Join(dir, "client")
@@ -210,7 +210,7 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	// Не записывайте файлы по пути внутри client; проверяющий CLI только изучает
 	// его.
 	if err = factoryInvoke02710(verifyCtx, binary, dir, io.Discard, "runtime", "client-factory", "verify", "--client-dir", client, "--output", filepath.Join(dir, "delivery-verify.json")); err != nil {
-		writeError(w, 409, "factory verification failed before delivery")
+		writeError(w, 409, "Проверка фабричной сборки перед доставкой завершилась ошибкой")
 		return
 	}
 	var verified factoryPlanView02710

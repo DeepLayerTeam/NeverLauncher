@@ -48,7 +48,7 @@ fn sorted_ids(values:Vec<String>)->Result<Vec<String>,String>{
 }
 
 pub fn export_from_installed_02410(manifest:&Manifest,preset:Option<&str>)->Result<String,String>{
-    let cat=manifest.component_catalog.as_ref().ok_or("signed component catalog required for export")?;
+    let cat=manifest.component_catalog.as_ref().ok_or("Для экспорта требуется подписанный каталог компонентов")?;
     let preview=component_catalog_0241::preview_components_0244(manifest,preset)?;
     let selected_ids=sorted_ids(preview.selected)?;
     let portable=PortableSelection02410{
@@ -87,7 +87,7 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
     }
     // На границе Tauri ОБЯЗАТЕЛЬНО проверять подпись Ed25519 по закреплённому ключу.
     component_catalog_0241::validate(target)?;
-    let cat: &ComponentCatalog=target.component_catalog.as_ref().ok_or("target release has no signed catalog")?;
+    let cat: &ComponentCatalog=target.component_catalog.as_ref().ok_or("Целевой релиз не содержит подписанного каталога")?;
     if cat.schema_version=="1.0" {return Err("Целевой каталог v1 не поддерживает миграцию выбора компонентов".into())}
     let existing:HashMap<&str,_>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
     let selected:BTreeSet<&str>=canonical.iter().map(String::as_str).collect();
@@ -136,7 +136,7 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
     if choice.len()>MAX_CHOICE_BYTES{blockers.push("migrated component choice exceeds 8192 bytes".into())}
     if blockers.is_empty(){
         if let Err(e)=component_catalog_0241::preview_components_0244(target,Some(&choice)) {
-            blockers.push(format!("target signed resolver rejected migrated selection: {e}"));
+            blockers.push(format!("Подписанный обработчик зависимостей целевого релиза отклонил перенесённый выбор: {e}"));
         }
     }
     let added_ids=if blockers.is_empty(){

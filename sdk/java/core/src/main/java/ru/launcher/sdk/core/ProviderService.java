@@ -6,10 +6,10 @@ import java.util.Objects;
 public record ProviderService<T extends JavaProvider>(String id, Class<T> type, SemVer version) {
     public ProviderService {
         if (id == null || !id.matches("[a-z][a-z0-9._-]{2,79}"))
-            throw new IllegalArgumentException("invalid SPI service id");
+            throw new IllegalArgumentException("Некорректный идентификатор службы SPI");
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(version, "version");
         if (!type.isInterface() || !JavaProvider.class.isAssignableFrom(type))
-            throw new IllegalArgumentException("SPI contract must be an interface extending JavaProvider");
+            throw new IllegalArgumentException("Контракт SPI должен быть интерфейсом, наследующим JavaProvider");
     }
 }

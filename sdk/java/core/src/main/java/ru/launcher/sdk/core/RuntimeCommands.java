@@ -12,19 +12,19 @@ public final class RuntimeCommands {
     private final Set<String> declared;
     RuntimeCommands(Set<String> declared){this.declared=Set.copyOf(declared);}
     public <T> void register(String name,JsonSchema schema,Decoder<T> decoder,Handler<T> handler){
-        if(!name.matches("[a-z][a-z0-9_-]{0,63}"))throw new IllegalArgumentException("invalid command name");
-        if(!declared.contains(name))throw new SecurityException("command is absent from signed cli manifest: "+name);
-        if(handlers.putIfAbsent(name,new Entry<>(schema,Objects.requireNonNull(decoder),Objects.requireNonNull(handler)))!=null)throw new IllegalArgumentException("duplicate command: "+name);
+        if(!name.matches("[a-z][a-z0-9_-]{0,63}"))throw new IllegalArgumentException("Некорректное имя команды");
+        if(!declared.contains(name))throw new SecurityException("Команда отсутствует в подписанном манифесте CLI: "+name);
+        if(handlers.putIfAbsent(name,new Entry<>(schema,Objects.requireNonNull(decoder),Objects.requireNonNull(handler)))!=null)throw new IllegalArgumentException("Повторяющаяся команда: "+name);
     }
     @SuppressWarnings("unchecked")
     public Object invoke(String name,Object payload)throws Exception {
-        Entry<?> entry=handlers.get(name);if(entry==null)throw new IllegalArgumentException("unregistered command: "+name);
+        Entry<?> entry=handlers.get(name);if(entry==null)throw new IllegalArgumentException("Незарегистрированная команда: "+name);
         return run((Entry<Object>)entry,payload);
     }
     private static <T> Object run(Entry<T> entry,Object payload)throws Exception {
         if(entry.schema()!=null)entry.schema().validate(payload);
         Object result=entry.handler().execute(entry.decoder().decode(payload));
-        if(Json.encode(result).length()>64<<10)throw new IllegalArgumentException("command output too large");
+        if(Json.encode(result).length()>64<<10)throw new IllegalArgumentException("Размер результата команды превышает ограничение");
         return result;
     }
 }

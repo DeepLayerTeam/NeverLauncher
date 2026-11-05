@@ -19,7 +19,7 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 api_migration = read(

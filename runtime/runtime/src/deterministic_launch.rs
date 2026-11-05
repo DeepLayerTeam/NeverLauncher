@@ -99,7 +99,7 @@ pub(super) fn plan_digest(
         jvm_args: plan.jvm_args.iter().map(|s| normalize(s)).collect(),
         game_args: plan.game_args.iter().map(|s| normalize(s)).collect(),
     };
-    let bytes = serde_json::to_vec(&input).map_err(|e| format!("resolved launch plan JSON: {e}"))?;
+    let bytes = serde_json::to_vec(&input).map_err(|e| format!("Ошибка JSON рассчитанного плана запуска: {e}"))?;
     Ok(hex::encode(Sha256::digest(bytes)))
 }
 

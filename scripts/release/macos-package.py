@@ -68,25 +68,25 @@ def inspect_macho(
     ncmds = struct.unpack_from("<I", data, 16)[0]
     sizeofcmds = struct.unpack_from("<I", data, 20)[0]
     if not ncmds or not sizeofcmds or 32 + sizeofcmds > len(data):
-        raise RuntimeError(f"{path}: invalid Mach-O load commands")
+        raise RuntimeError(f"{path}: некорректные команды загрузки Mach-O")
     offset = 32
     has_signature = False
     for _ in range(ncmds):
         if offset + 8 > len(data) or offset + 8 > 32 + sizeofcmds:
-            raise RuntimeError(f"{path}: truncated Mach-O load command")
+            raise RuntimeError(f"{path}: обрезанная команда загрузки Mach-O")
         cmd, cmdsize = struct.unpack_from("<II", data, offset)
         if (
             cmdsize < 8
             or offset + cmdsize > len(data)
             or offset + cmdsize > 32 + sizeofcmds
         ):
-            raise RuntimeError(f"{path}: invalid Mach-O load command size")
+            raise RuntimeError(f"{path}: некорректный размер команды загрузки Mach-O")
         if cmd == 0x1D:
             if cmdsize < 16:
-                raise RuntimeError(f"{path}: truncated LC_CODE_SIGNATURE")
+                raise RuntimeError(f"{path}: обрезан LC_CODE_SIGNATURE")
             dataoff, datasize = struct.unpack_from("<II", data, offset + 8)
             if dataoff <= 0 or datasize <= 0 or dataoff + datasize > len(data):
-                raise RuntimeError(f"{path}: invalid LC_CODE_SIGNATURE bounds")
+                raise RuntimeError(f"{path}: некорректные границы LC_CODE_SIGNATURE")
             has_signature = True
         offset += cmdsize
     if require_signature and not has_signature:
@@ -219,7 +219,7 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         )
     artifacts = payload.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
-        raise RuntimeError("embedded macOS package manifest contains no artifacts")
+        raise RuntimeError("Встроенный манифест пакета macOS не содержит артефактов")
     for artifact in artifacts:
         component = str(artifact.get("component", ""))
         if component not in COMPONENTS:
@@ -277,7 +277,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
             manifest.get("architecture") != arch
             or manifest.get("productVersion") != args.version
         ):
-            raise RuntimeError(f"{manifest_name}: identity mismatch")
+            raise RuntimeError(f"{manifest_name}: идентификаторы не совпадают")
         for artifact in manifest["artifacts"]:
             path = out / artifact["name"]
             inspect_macho(path, arch)
@@ -285,7 +285,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
                 sha256(path) != artifact["sha256"]
                 or path.stat().st_size != artifact["size"]
             ):
-                raise RuntimeError(f"{artifact['name']}: hash/size drift")
+                raise RuntimeError(f"{artifact['name']}: изменились хеш или размер")
         package_name = f"launcher-desktop-{args.version}-macos-{arch}.zip"
         package = out / package_name
         if not package.is_file() or package.stat().st_size <= 0:

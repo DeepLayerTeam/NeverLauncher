@@ -39,7 +39,7 @@ func init() {
 		return
 	}
 	if os.Getenv("LAUNCHER_INTERNAL_WORKER_0273") != "1" {
-		fmt.Fprintln(os.Stderr, "unauthorized internal build worker invocation")
+		fmt.Fprintln(os.Stderr, "Неавторизованный запуск внутреннего рабочего процесса сборки")
 		os.Exit(125)
 	}
 	if err := runInternalProcessorWorker0273(); err != nil {

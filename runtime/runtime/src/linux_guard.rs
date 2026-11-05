@@ -214,7 +214,7 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
     let raw_key:[u8;32]=key_bytes.try_into().map_err(|_|"Некорректное значение: «compiled Linux Guard public key length»")?;
     let key=VerifyingKey::from_bytes(&raw_key).map_err(|_|"Некорректное значение: встроенный публичный ключ Guard для Linux")?;
     let detached=path.with_file_name(format!("{}.ed25519",
-        path.file_name().and_then(|f|f.to_str()).ok_or("manifest filename invalid")?));
+        path.file_name().and_then(|f|f.to_str()).ok_or("Некорректное имя файла манифеста")?));
     validate_secure_file(&detached,false)?;
     let bytes=std::fs::read(&detached).map_err(|e|format!("Отсутствует: подпись манифеста Linux: {e}"))?;
     if bytes.len()!=129 || bytes.last()!=Some(&b'\n') {
@@ -242,7 +242,7 @@ fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
     if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Несовпадение: «Linux package manifest identity/hardening»".into())}
     let mut verified_guard_hash=None;
     for path in [&desktop,guard]{
-        let name=path.file_name().and_then(|v|v.to_str()).ok_or("artifact name invalid")?;
+        let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное имя артефакта")?;
         let a=m.artifacts.iter().find(|a|{
             if canonical&&!a.package_path.is_empty(){Path::new(&a.package_path).file_name().and_then(|v|v.to_str())==Some(name)}else{a.name==name}
         }).ok_or_else(||format!("artifact {name} missing from Linux package manifest"))?;
@@ -279,7 +279,7 @@ async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guar
     let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if !ready_matches_challenge(&ch,&ready){return Err("Несовпадение: идентичность процесса в сообщении готовности Guard".into())}
     let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"Некорректное подтверждение готовности")?){return Err("Некорректное значение: подтверждение готовности Guard".into())}
     if ready.process_policy_version!=GUARD_LINUX_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=GUARD_LINUX_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Политика Linux и усиленная защита Guard не применяются".into())}
-    Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:linux_platform().into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard Linux authenticated Unix IPC ready".into()}))
+    Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:linux_platform().into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Защищённый Unix IPC Guard для Linux готов".into()}))
 }
 
 async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Value,String>{
@@ -322,7 +322,7 @@ async fn build_integrity_evidence(
     let verified_guard = policy
         .linux
         .clone()
-        .ok_or_else(|| "Linux process policy details missing".to_string())?;
+        .ok_or_else(|| "Отсутствуют сведения о политике процессов Linux".to_string())?;
     let mut evidence = tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid))
         .await
         .map_err(|err| format!("Ошибка: обработчик проверки целостности Guard: {err}"))??;
@@ -450,7 +450,7 @@ async fn serve_commands(
                     Ok(attestation) => (
                         true,
                         serde_json::to_string(&attestation).map_err(|err| {
-                            format!("Guard attestation serialization failed: {err}")
+                            format!("Не удалось сериализовать подтверждение Guard: {err}")
                         })?,
                         false,
                     ),

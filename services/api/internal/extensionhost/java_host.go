@@ -105,7 +105,7 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 	switch method {
 	case "health", "command.invoke", "event.deliver", "hook.deliver", "auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke", "content.health", "content.source.resolve", "content.texture.resolve", "content.delivery.resolve", "content.metadata.enrich", "content.package.prepare", "ui.action.invoke", "ui.settings.get", "ui.settings.put", "state.migrate":
 	default:
-		return nil, errors.New("unsupported Java RPC method")
+		return nil, errors.New("Неподдерживаемый метод Java RPC")
 	}
 	if len(params) == 0 {
 		params = json.RawMessage(`{}`)
@@ -329,7 +329,7 @@ func (s *Supervisor) probeJava0304(st *processState) {
 	st.rpcFailures++
 	failures := st.rpcFailures
 	st.mu.Unlock()
-	s.addLog(st, "host", "warn", fmt.Sprintf("Java RPC liveness probe failed (%d/3): %v", failures, err), nil)
+	s.addLog(st, "host", "warn", fmt.Sprintf("Проверка работоспособности Java RPC не прошла (%d/3): %v", failures, err), nil)
 	if failures >= 3 {
 		s.failProcess(st, "Java RPC unresponsive after 3 probes", false)
 	}

@@ -59,11 +59,11 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 	families := map[string]bool{}
 	for _, t := range m.Targets {
 		if strings.TrimSpace(t.ID) == "" || strings.ContainsAny(t.ID, "/\\\n\t ") || seen[t.ID] {
-			return report, fmt.Errorf("duplicate/invalid target ID %q", t.ID)
+			return report, fmt.Errorf("Повторяющийся или некорректный идентификатор цели %q", t.ID)
 		}
 		seen[t.ID] = true
 		if t.ClientDir == "" || t.Certificate == "" || t.Loader == "" || t.Minecraft == "" || t.OS == "" || t.Arch == "" {
-			return report, fmt.Errorf("incomplete certification target %s", t.ID)
+			return report, fmt.Errorf("Неполная сертификация цели %s", t.ID)
 		}
 		families[t.Loader] = true
 		dir := t.ClientDir
@@ -92,7 +92,7 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 	if allLoaders {
 		for _, loader := range []string{"vanilla", "fabric", "quilt", "forge", "neoforge"} {
 			if !families[loader] {
-				report.Results = append(report.Results, factoryMatrixResult02712{ID: "missing-" + loader, Status: "failed", Reason: "required loader family absent from matrix"})
+				report.Results = append(report.Results, factoryMatrixResult02712{ID: "missing-" + loader, Status: "failed", Reason: "Обязательное семейство загрузчиков отсутствует в матрице"})
 				report.Total++
 				report.Failed++
 			}
@@ -108,7 +108,7 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 		}
 	}
 	if report.Failed != 0 {
-		return report, fmt.Errorf("certification incomplete: %d/%d targets failed", report.Failed, report.Total)
+		return report, fmt.Errorf("Сертификация не завершена: ошибок на %d из %d целей", report.Failed, report.Total)
 	}
 	return report, nil
 }

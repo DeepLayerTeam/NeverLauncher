@@ -44,13 +44,13 @@ type LiveConfig struct {
 // LoadLiveConfigs отклоняет неоднозначную и повреждённую конфигурацию при запуске.
 func LoadLiveConfigs(jsonValue, filePath string) ([]LiveConfig, error) {
 	if strings.TrimSpace(jsonValue) != "" && strings.TrimSpace(filePath) != "" {
-		return nil, errors.New("configure only one live FileAuth providers source")
+		return nil, errors.New("Укажите только один источник действующих провайдеров FileAuth")
 	}
 	raw := []byte(strings.TrimSpace(jsonValue))
 	if strings.TrimSpace(filePath) != "" {
 		data, err := os.ReadFile(strings.TrimSpace(filePath))
 		if err != nil {
-			return nil, fmt.Errorf("read live FileAuth provider configuration: %w", err)
+			return nil, fmt.Errorf("Ошибка чтения конфигурации действующих провайдеров FileAuth: %w", err)
 		}
 		raw = data
 	}
@@ -58,17 +58,17 @@ func LoadLiveConfigs(jsonValue, filePath string) ([]LiveConfig, error) {
 		return nil, nil
 	}
 	if len(raw) > maxLiveConfigBytes {
-		return nil, errors.New("live FileAuth provider configuration exceeds 64 KiB")
+		return nil, errors.New("Конфигурация действующих провайдеров FileAuth превышает 64 КиБ")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	var configs []LiveConfig
 	if err := decoder.Decode(&configs); err != nil {
-		return nil, fmt.Errorf("decode live FileAuth provider configuration: %w", err)
+		return nil, fmt.Errorf("Ошибка декодирования конфигурации действующих провайдеров FileAuth: %w", err)
 	}
 	var extra any
 	if decoder.Decode(&extra) != io.EOF {
-		return nil, errors.New("trailing data in live FileAuth provider configuration")
+		return nil, errors.New("В конфигурации действующих провайдеров FileAuth обнаружены лишние данные")
 	}
 	if len(configs) > 16 {
 		return nil, errors.New("Слишком много активных провайдеров FileAuth")
@@ -108,7 +108,7 @@ func normalizeLiveConfig(in LiveConfig) (LiveConfig, error) {
 		in.DisplayName = in.ID
 	}
 	if len(in.DisplayName) > 120 {
-		return in, errors.New("FileAuth displayName too long")
+		return in, errors.New("Поле FileAuth displayName слишком длинное")
 	}
 	if in.Provisioning.Mode == "" {
 		in.Provisioning.Mode = "explicit-only"
@@ -200,11 +200,11 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if len(data) > fileauth.MaxDatabaseBytes {
-		return nil, errors.New("FileAuth Database.json exceeds size limit")
+		return nil, errors.New("Файл FileAuth Database.json превышает допустимый размер")
 	}
 	after, err := os.Lstat(c.cfg.DatabasePath)
 	if err != nil || !os.SameFile(opened, after) || after.Size() != opened.Size() || !after.ModTime().Equal(opened.ModTime()) || int64(len(data)) != opened.Size() {
-		return nil, errors.New("FileAuth Database.json replaced or modified during read")
+		return nil, errors.New("Файл FileAuth Database.json заменён или изменён во время чтения")
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err

@@ -46,7 +46,7 @@ func SaveTexture0252(store Storage, digest string, png []byte) (string, int64, e
 		return "", 0, err
 	}
 	if n != int64(len(png)) {
-		return "", 0, fmt.Errorf("texture storage short write")
+		return "", 0, fmt.Errorf("Не все данные текстуры записаны в хранилище")
 	}
 	return key, n, nil
 }

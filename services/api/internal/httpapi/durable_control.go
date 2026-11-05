@@ -23,7 +23,7 @@ import (
 
 const durablePublishJobKind0213 = "package-publish"
 
-var errDurableAuthorizationRevoked0213 = errors.New("publish authorization revoked")
+var errDurableAuthorizationRevoked0213 = errors.New("Разрешение на публикацию отозвано")
 
 func randomWorkerID0213(prefix string) string {
 	var b [12]byte
@@ -36,7 +36,7 @@ func randomWorkerID0213(prefix string) string {
 func (s Server) durableControlPlane0213() (repository.DurableControlPlane, error) {
 	cp, ok := s.Repo.(repository.DurableControlPlane)
 	if !ok {
-		return nil, errors.New("repository does not implement durable control plane")
+		return nil, errors.New("Хранилище не поддерживает устойчивый контур управления")
 	}
 	return cp, nil
 }
@@ -187,7 +187,7 @@ func (s Server) publishDurably0213(r *http.Request, lookup packageLookup) (model
 		return current.Release, job, false, nil
 	}
 	if job.Status == model.DurableJobStatusRevoked || job.Status == model.DurableJobStatusFailed || job.Status == model.DurableJobStatusDead {
-		return model.ReleaseVersion{}, job, false, fmt.Errorf("durable publish job is %s: %s", job.Status, job.LastError)
+		return model.ReleaseVersion{}, job, false, fmt.Errorf("Состояние устойчивого задания публикации: %s — %s", job.Status, job.LastError)
 	}
 	cp, err := s.durableControlPlane0213()
 	if err != nil {

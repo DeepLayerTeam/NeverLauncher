@@ -215,6 +215,6 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 	if e = os.Link(tmp.Name(), out); e != nil {
 		return fmt.Errorf("«cannot safely publish export to %q (destination»: запрещено «exist):» %w", out, e)
 	}
-	fmt.Printf("Exported verified Gravit source: %s (manifest SHA-256 %s)\n", out, expected)
+	fmt.Printf("Экспортирован проверенный источник Gravit: %s (SHA-256 манифеста %s)\n", out, expected)
 	return nil
 }

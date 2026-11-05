@@ -38,29 +38,29 @@ final class LoaderGuard0504 implements ClassFileTransformer {
         String loader=config.getProperty("loader.id");
         if (loader == null || !(loader.equals("vanilla") || loader.equals("fabric") ||
             loader.equals("quilt") || loader.equals("forge") || loader.equals("neoforge"))) {
-            throw new SecurityException("Guard requires a known signed Minecraft loader identity");
+            throw new SecurityException("Guard: требуется известный подписанный идентификатор загрузчика Minecraft");
         }
         int count;
         try { count=Integer.parseInt(config.getProperty("loader.count", "-1")); }
-        catch (NumberFormatException ex) { throw new SecurityException("Guard loader source count invalid",ex); }
+        catch (NumberFormatException ex) { throw new SecurityException("Guard: некорректное число источников загрузчика",ex); }
         if (count<0 || count>128 || (!loader.equals("vanilla") && count==0) || (loader.equals("vanilla") && count!=0))
-            throw new SecurityException("Guard loader sources missing or inconsistent with loader identity");
+            throw new SecurityException("Guard: источники загрузчика отсутствуют или не соответствуют его идентификатору");
         Map<String,String> sources=new HashMap<String,String>();
         for(int i=0;i<count;i++) {
             String value=config.getProperty("loader."+i+".path");
             String sha=config.getProperty("loader."+i+".sha256");
             if(value==null || value.length()>16384 || sha==null || !sha.matches("[0-9a-f]{64}"))
-                throw new SecurityException("Guard loader source identity malformed");
+                throw new SecurityException("Guard: некорректный идентификатор источника загрузчика");
             String path=new String(Base64.getDecoder().decode(value),"UTF-8");
             File file=new File(path);
             if(!file.isAbsolute() || !file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".jar") ||
                 !file.isFile() || Files.isSymbolicLink(file.toPath()))
-                throw new SecurityException("Guard loader source must be an installed regular JAR");
+                throw new SecurityException("Guard: источник загрузчика должен быть установленным обычным JAR");
             String canonical=file.getCanonicalPath();
-            if(sources.put(canonical,sha)!=null) throw new SecurityException("Guard duplicate loader source");
+            if(sources.put(canonical,sha)!=null) throw new SecurityException("Guard: повторяющийся источник загрузчика");
             // Проверяйте заранее, до исполнения кода загрузчика, даже если маркерный класс не
             // загружен.
-            if(!sha.equals(digest(file))) throw new SecurityException("Guard loader JAR digest changed: "+file.getName());
+            if(!sha.equals(digest(file))) throw new SecurityException("Guard: контрольная сумма JAR загрузчика изменилась: "+file.getName());
         }
         // Необязательные байты классов, закреплённые оператором, наблюдаются
         // трансформером JVM после получения определения от загрузчика, но до хуков
@@ -68,7 +68,7 @@ final class LoaderGuard0504 implements ClassFileTransformer {
         // безусловным разрешением переписывания.
         int classes;
         try { classes=Integer.parseInt(config.getProperty("loader.class.count", "0")); }
-        catch(NumberFormatException ex) { throw new SecurityException("Guard loader class count invalid",ex); }
+        catch(NumberFormatException ex) { throw new SecurityException("Guard: некорректное число классов загрузчика",ex); }
         if(classes<0 || classes>4096) throw new SecurityException("Guard loader class limit exceeded");
         Map<String,String> classBytes=new HashMap<String,String>();
         for(int i=0;i<classes;i++) {

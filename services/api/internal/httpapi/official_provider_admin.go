@@ -31,15 +31,15 @@ func (s Server) officialProviderSettings02611(ctx context.Context) (repository.O
 func (s Server) officialProviderPolicy02611(w http.ResponseWriter, r *http.Request, flow string) (repository.OfficialProviderSettings02611, bool) {
 	v, err := s.officialProviderSettings02611(r.Context())
 	if err != nil {
-		writeError(w, 503, "official provider configuration unavailable")
+		writeError(w, 503, "Конфигурация официального провайдера недоступна")
 		return v.Settings, false
 	}
 	if !v.Settings.Enabled || (flow == "browser" && !v.Settings.BrowserEnabled) || (flow == "device" && !v.Settings.DeviceEnabled) {
-		writeError(w, 403, "official Minecraft authentication method disabled by administrator")
+		writeError(w, 403, "Администратор отключил официальный способ авторизации Minecraft")
 		return v.Settings, false
 	}
 	if err := v.Settings.Validate(); err != nil {
-		writeError(w, 503, "official provider configuration invalid")
+		writeError(w, 503, "Некорректная конфигурация официального провайдера")
 		return v.Settings, false
 	}
 	return v.Settings, true
@@ -95,12 +95,12 @@ func readOfficialProviderUpdate02611(w http.ResponseWriter, r *http.Request) (of
 func (s Server) officialProviderPut02611(w http.ResponseWriter, r *http.Request) {
 	update, err := readOfficialProviderUpdate02611(w, r)
 	if err != nil {
-		writeError(w, 400, "invalid official provider settings: "+err.Error())
+		writeError(w, 400, "Некорректные настройки официального провайдера: "+err.Error())
 		return
 	}
 	store, ok := s.Repo.(repository.OfficialProviderStore02611)
 	if !ok {
-		writeError(w, 503, "provider store unavailable")
+		writeError(w, 503, "Хранилище провайдера недоступно")
 		return
 	}
 	actor, err := s.adminClaims(r)
@@ -110,11 +110,11 @@ func (s Server) officialProviderPut02611(w http.ResponseWriter, r *http.Request)
 	}
 	changed, err := store.SaveOfficialProvider02611(r.Context(), update.ExpectedRevision, update.Settings, actor.Sub, update.Reason)
 	if errors.Is(err, repository.ErrOfficialProviderConflict02611) {
-		writeError(w, 409, "provider revision conflict; refresh settings")
+		writeError(w, 409, "Конфликт ревизий провайдера; обновите настройки")
 		return
 	}
 	if err != nil {
-		writeError(w, 503, "provider settings could not be saved")
+		writeError(w, 503, "Не удалось сохранить настройки провайдера")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: actor.Sub, Action: "official-provider:changed", Target: "revision:" + strconv.FormatInt(changed.Revision, 10), CreatedAt: time.Now().UTC()})

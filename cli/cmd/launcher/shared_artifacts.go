@@ -87,7 +87,7 @@ func (c *sharedArtifacts0277) restore(ctx context.Context, dst, sha string, expe
 		return false, "", 0, err
 	}
 	if !st.Mode().IsRegular() {
-		return false, "", 0, fmt.Errorf("nonregular cache entry %s", sha)
+		return false, "", 0, fmt.Errorf("Некорректный объект кеша %s", sha)
 	}
 	if expectedSize > 0 && st.Size() != expectedSize {
 		return false, "", 0, fmt.Errorf("Несовпадение: «cached artifact size»: %s", sha)

@@ -84,7 +84,7 @@ def package(bundle: Path, evidence: Path, key: Path, version: str, commit: str, 
 def extract_verified(archive_path: Path, destination: Path, version: str) -> None:
     if (archive_path.is_symlink() or not archive_path.is_file()
             or not 0 < archive_path.stat().st_size <= MAX_TOTAL):
-        raise ValueError("Отсутствует: «or unsafe GA execution archive»")
+        raise ValueError("Архив выполнения GA отсутствует или небезопасен")
     expected = set(evidence_files(version))
     with ZipFile(archive_path, "r") as archive:
         entries = archive.infolist()
@@ -107,11 +107,11 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
                 while remaining:
                     chunk = stream.read(min(1024 * 1024, remaining))
                     if not chunk:
-                        raise ValueError("truncated GA execution evidence")
+                        raise ValueError("Данные выполнения GA обрезаны")
                     out.write(chunk)
                     remaining -= len(chunk)
                 if stream.read(1):
-                    raise ValueError("Превышен допустимый размер: «GA execution evidence»")
+                    raise ValueError("Подтверждающие данные выполнения GA превышают допустимый размер")
 
 
 def main() -> int:
@@ -127,9 +127,9 @@ def main() -> int:
     try:
         package(args.bundle, args.evidence, args.trusted_key, args.version, args.commit, args.output)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        print("GA full evidence BLOCKED: " + str(exc), file=sys.stderr)
+        print("Полный комплект доказательств GA ЗАБЛОКИРОВАН: " + str(exc), file=sys.stderr)
         return 3
-    print("GA full execution evidence verified, packaged and reverified")
+    print("Полные данные выполнения GA проверены, упакованы и повторно проверены")
     return 0
 
 

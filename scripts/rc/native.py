@@ -324,7 +324,7 @@ def main() -> int:
     try:
         result = execute(args.runtime, args.signer, version, args.commit)
     except (RCBlocked, ValueError, OSError, RuntimeError, CertificationBlocked) as exc:
-        print("Native RC blocked: " + str(exc), file=sys.stderr)
+        print("Выпуск нативного RC заблокирован: " + str(exc), file=sys.stderr)
         return 3
     args.output.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.output.with_name("." + args.output.name + ".tmp")

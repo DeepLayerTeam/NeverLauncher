@@ -3207,4 +3207,4 @@ migration_extension = json.loads(
 spec["paths"].update(migration_extension["paths"])
 spec["components"]["schemas"].update(migration_extension["schemas"])
 OUT.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\n")
-print(f"generated {OUT}: {len(routes)} operations")
+print(f"Создан файл {OUT}: {len(routes)} операций")

@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text().strip()
 if tuple(int(x) for x in version.split(".")[:3]) < (0, 14, 9):
-    raise SystemExit("VERSION is older than 0.14.9")
+    raise SystemExit("VERSION ниже 0.14.9")
 
 
 def read(p):
@@ -15,7 +15,7 @@ def read(p):
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 api = read(
@@ -51,7 +51,7 @@ consume = repo[
     )
 ]
 if "DELETE FROM server_bridge_node_nonces_v2" in consume:
-    raise SystemExit("nonce hot path still performs global cleanup")
+    raise SystemExit("Критический участок обработки nonce по-прежнему выполняет глобальную очистку")
 public = read(
     "services/api/internal/httpapi/server_bridge_public_matrix_0149.go"
 ) + read("services/api/internal/httpapi/routes_public.go")

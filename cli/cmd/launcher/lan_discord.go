@@ -158,7 +158,7 @@ func handleDiscord0308(args []string) error {
 			// Повторно сообщайте текущее состояние, чтобы перезапущенный Discord-клиент
 			// восстановил его, даже если лаунчер больше не отправлял переходов.
 			if err := client.SetActivity(ctx, current); err != nil {
-				fmt.Fprintf(os.Stderr, "Discord presence refresh failed: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Не удалось обновить статус Discord: %v\n", err)
 			}
 		case err := <-readErr:
 			clean, cancel := context.WithTimeout(context.Background(), 2*time.Second)

@@ -145,7 +145,7 @@ func migrationBridgeStatus0446(endpoint, token, wrapper, out string) error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("ServerBridge status HTTP %d: %s", resp.StatusCode, raw)
+		return fmt.Errorf("Запрос статуса ServerBridge вернул HTTP %d: %s", resp.StatusCode, raw)
 	}
 	var payload struct {
 		Data struct {
@@ -168,7 +168,7 @@ func migrationBridgeStatus0446(endpoint, token, wrapper, out string) error {
 		fmt.Println(string(raw))
 	}
 	if payload.Data.State != "online" {
-		return fmt.Errorf("ServerBridge not online: %s (%s)", payload.Data.State, payload.Data.Reason)
+		return fmt.Errorf("ServerBridge не в сети: %s (%s)", payload.Data.State, payload.Data.Reason)
 	}
 	return nil
 }

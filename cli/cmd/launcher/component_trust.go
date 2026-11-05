@@ -71,7 +71,7 @@ func verifyComponentTrust02312(manifestPath string) error {
 		}
 	}
 	if len(pub) != ed25519.PublicKeySize {
-		return fmt.Errorf("component signer %s not delegated", env.KeyID)
+		return fmt.Errorf("Подписанту компонента %s не делегировано право подписи", env.KeyID)
 	}
 	sig, e := hex.DecodeString(env.Signature)
 	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(pub), componentTrustSignaturePayload02312(raw, env), sig) {

@@ -761,7 +761,7 @@ impl IdentityManager {
         if bytes.len()>32*1024 {return Err("Ответ подключения ServerBridge превышает допустимый размер".into());}
         let payload:Value=serde_json::from_slice(&bytes).map_err(|_|"Недопустимый ответ ServerBridge")?;
         let join=payload.pointer("/data/join").ok_or("Отсутствует пропуск для подключения ServerBridge")?;
-        let returned_uuid=join.get("uuid").and_then(Value::as_str).ok_or("ServerBridge UUID missing")?;
+        let returned_uuid=join.get("uuid").and_then(Value::as_str).ok_or("Отсутствует UUID ServerBridge")?;
         let returned_name=join.get("username").and_then(Value::as_str).ok_or("Отсутствует имя ServerBridge")?;
         if normalized_uuid(returned_uuid)?!=expected || returned_name!=record.profile.name ||
             join.get("identityRealm").and_then(Value::as_str)!=Some("official") ||

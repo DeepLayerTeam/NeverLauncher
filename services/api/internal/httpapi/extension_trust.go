@@ -121,7 +121,7 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 	}
 	blocked, sweepErr := s.enforceExtensionTrustRuntime02012(r.Context(), "publisher-key-revocation")
 	if quarantineErr != nil || sweepErr != nil {
-		writeError(w, 500, fmt.Sprintf("publisher key revoked; quarantine/enforcement incomplete: %v", errors.Join(quarantineErr, sweepErr)))
+		writeError(w, 500, fmt.Sprintf("Ключ издателя отозван; карантин или применение запрета не завершены: %v", errors.Join(quarantineErr, sweepErr)))
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:trust:key:revoke", publisher+"/"+fingerprint)
@@ -207,7 +207,7 @@ func (s Server) extensionQuarantineList02012(w http.ResponseWriter, r *http.Requ
 func (s Server) extensionQuarantineRelease02012(w http.ResponseWriter, r *http.Request) {
 	item, err := s.Repo.ReleaseExtensionQuarantine(r.Context(), r.PathValue("quarantineId"), s.adminActor(r))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "quarantine entry not found")
+		writeError(w, 404, "Запись карантина не найдена")
 		return
 	}
 	if err != nil {
@@ -229,11 +229,11 @@ func (s Server) extensionEmergencyDisableList02012(w http.ResponseWriter, r *htt
 func (s Server) extensionEmergencyDisable02012(w http.ResponseWriter, r *http.Request) {
 	var req emergencyDisableWrite02012
 	if err := decodeSingleJSON0203(r, &req); err != nil {
-		writeError(w, 400, "invalid emergency-disable payload: "+err.Error())
+		writeError(w, 400, "Некорректные данные аварийного отключения: "+err.Error())
 		return
 	}
 	if strings.TrimSpace(req.Reason) == "" {
-		writeError(w, 400, "reason is required")
+		writeError(w, 400, "Требуется указать причину")
 		return
 	}
 	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
@@ -248,13 +248,13 @@ func (s Server) extensionEmergencyDisable02012(w http.ResponseWriter, r *http.Re
 	}
 	if s.ExtensionHost != nil {
 		if stopErr := s.ExtensionHost.Stop(r.Context(), extensionhostKey02012(id, scope)); stopErr != nil && !errors.Is(stopErr, extensionhost.ErrHostNotRunning) && !errors.Is(stopErr, repository.ErrNotFound) {
-			writeError(w, 500, "kill-switch active but JVM stop failed: "+stopErr.Error())
+			writeError(w, 500, "Аварийная блокировка активна, но остановить JVM не удалось: "+stopErr.Error())
 			return
 		}
 	}
 	install, err := s.lifecycleManager0204().Disable(r.Context(), id, scope)
 	if err != nil && !errors.Is(err, repository.ErrNotFound) && !strings.Contains(strings.ToLower(err.Error()), "not installed") {
-		writeError(w, 500, "kill-switch active but persistent disable failed: "+err.Error())
+		writeError(w, 500, "Аварийная блокировка активна, но сохранить отключение не удалось: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:emergency:disable", item.ExtensionID+":"+item.Scope+":"+item.ScopeID)
@@ -267,7 +267,7 @@ func (s Server) extensionEmergencyClear02012(w http.ResponseWriter, r *http.Requ
 	scope := lifecycleScopeFromRequest0204(r.URL.Query().Get("scope"), r.URL.Query().Get("scopeId"))
 	item, err := s.Repo.ClearExtensionEmergencyDisable(r.Context(), r.PathValue("extensionId"), scope.Scope, scope.ScopeID, s.adminActor(r))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "active emergency disable not found")
+		writeError(w, 404, "Активное аварийное отключение не найдено")
 		return
 	}
 	if err != nil {
@@ -494,7 +494,7 @@ func (s Server) importExtensionRecoveryState02012(ctx context.Context, state mod
 func (s Server) extensionRecoveryImport02012(w http.ResponseWriter, r *http.Request) {
 	var req recoveryImportWrite02012
 	if err := decodeSingleJSON0203(r, &req); err != nil {
-		writeError(w, 400, "invalid recovery import: "+err.Error())
+		writeError(w, 400, "Некорректные данные импорта восстановления: "+err.Error())
 		return
 	}
 	counts, err := s.importExtensionRecoveryState02012(r.Context(), req.State, false)
@@ -508,11 +508,11 @@ func (s Server) extensionRecoveryImport02012(w http.ResponseWriter, r *http.Requ
 func (s Server) extensionRecoveryRestore02012(w http.ResponseWriter, r *http.Request) {
 	var backup recoveryBackup02012
 	if err := decodeSingleJSON0203(r, &backup); err != nil {
-		writeError(w, 400, "invalid recovery backup: "+err.Error())
+		writeError(w, 400, "Некорректная резервная копия для восстановления: "+err.Error())
 		return
 	}
 	if backup.SchemaVersion != "1.0" {
-		writeError(w, 400, "unsupported backup schemaVersion")
+		writeError(w, 400, "Неподдерживаемая версия схемы резервной копии schemaVersion")
 		return
 	}
 	raw, err := canonicalRecoveryState02012(backup.State)
@@ -522,7 +522,7 @@ func (s Server) extensionRecoveryRestore02012(w http.ResponseWriter, r *http.Req
 	}
 	sum := sha256.Sum256(raw)
 	if !strings.EqualFold(backup.StateSHA256, hex.EncodeToString(sum[:])) {
-		writeError(w, 409, "extension recovery backup SHA-256 mismatch")
+		writeError(w, 409, "Контрольная сумма SHA-256 резервной копии расширения не совпадает")
 		return
 	}
 	counts, err := s.importExtensionRecoveryState02012(r.Context(), backup.State, true)

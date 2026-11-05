@@ -25,7 +25,7 @@ public final class GreetingExtension implements Extension {
             if ("select".equals(operation)) {
                 String next=Json.string(input,"provider",true);
                 context.providers().select(GREETINGS.id(),next,Duration.ofMillis(800));
-            } else if (!"call".equals(operation)) throw new IllegalArgumentException("unsupported operation");
+            } else if (!"call".equals(operation)) throw new IllegalArgumentException("Неподдерживаемая операция");
             String name=Json.string(input,"name",false);
             if (name == null || name.isBlank()) name="World";
             final String inputName=name;

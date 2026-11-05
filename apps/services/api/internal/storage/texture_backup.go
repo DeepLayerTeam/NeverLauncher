@@ -106,7 +106,7 @@ func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBac
 		visited[obj.Digest] = true
 		payload, err := backupBytes0253(store, obj)
 		if err != nil {
-			return fmt.Errorf("backup %s: %w", obj.Digest, err)
+			return fmt.Errorf("Ошибка резервного копирования %s: %w", obj.Digest, err)
 		}
 		f, err := os.OpenFile(filepath.Join(blobs, obj.Digest+".png"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if err != nil {

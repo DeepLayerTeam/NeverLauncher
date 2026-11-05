@@ -11,7 +11,7 @@ import (
 // единственным источником решений о разрешениях, MFA и дополнительном подтверждении.
 func handleDurableOperation0217(args []string) error {
 	if len(args) == 0 {
-		return errors.New("operation subcommands: registry, validate, execute, status, attempts, cancel, retry")
+		return errors.New("Подкоманды операций: registry, validate, execute, status, attempts, cancel, retry")
 	}
 	if adminBackendURL(args) == "" {
 		return errors.New("Требуется: --backend")
@@ -26,7 +26,7 @@ func handleDurableOperation0217(args []string) error {
 		kind := strings.TrimSpace(flagValue(args, "--kind", ""))
 		project := strings.TrimSpace(flagValue(args, "--project", ""))
 		if kind == "" || project == "" {
-			return errors.New("--kind and --project are required")
+			return errors.New("Требуются --kind и --project")
 		}
 		body := map[string]any{"kind": kind, "projectId": project,
 			"resourceId":     flagValue(args, "--resource", flagValue(args, "--package", "")),

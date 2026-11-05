@@ -40,8 +40,8 @@ trust = read("services/api/internal/extensiontrust/trust_02012.go")
 for token in [
     "EvaluatePublisher",
     "EvaluatePublication",
-    "artifact signing key is revoked or inactive",
-    "artifact is quarantined",
+    "Ключ подписи артефакта отозван или неактивен",
+    "Артефакт помещён в карантин",
 ]:
     require(token in trust, f"trust engine missing {token}")
 host = read("services/api/internal/extensionhost/host_0205.go")

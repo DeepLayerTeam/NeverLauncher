@@ -78,7 +78,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		return res, e
 	}
 	if _, e := AnalyzeJar(opt.Jar); e != nil {
-		return res, fmt.Errorf("JAR preflight: %w", e)
+		return res, fmt.Errorf("Ошибка предварительной проверки JAR: %w", e)
 	}
 	jar, e := filepath.Abs(opt.Jar)
 	if e != nil {
@@ -159,7 +159,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		return res, errors.New("Время ожидания компонента истекло; его работа завершена")
 	}
 	if e != nil {
-		return res, fmt.Errorf("component exited: %w", e)
+		return res, fmt.Errorf("Компонент завершился: %w", e)
 	}
 	return res, nil
 }

@@ -91,7 +91,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, duplicate := fields[name]; duplicate {
 			part.Close()
-			writeError(w, http.StatusBadRequest, "duplicate multipart field")
+			writeError(w, http.StatusBadRequest, "Повторяющееся поле multipart")
 			return
 		}
 		value, readErr := io.ReadAll(io.LimitReader(part, 257))
@@ -101,13 +101,13 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if len(value) > 256 {
-			writeError(w, http.StatusBadRequest, "multipart field too long")
+			writeError(w, http.StatusBadRequest, "Слишком длинное поле multipart")
 			return
 		}
 		fields[name] = string(value)
 	}
 	if !sawFile || len(file) == 0 {
-		writeError(w, http.StatusBadRequest, "file PNG required")
+		writeError(w, http.StatusBadRequest, "Необходим PNG-файл")
 		return
 	}
 	if fields["profileUuid"] != "" && minecraftID119(fields["profileUuid"]) != minecraftID119(profile.UUID) {
@@ -116,12 +116,12 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 	}
 	revisionRaw, exists := fields["expectedRevision"]
 	if !exists || revisionRaw == "" {
-		writeError(w, http.StatusBadRequest, "expectedRevision required (0 for first upload)")
+		writeError(w, http.StatusBadRequest, "Требуется expectedRevision (0 для первой загрузки)")
 		return
 	}
 	expected, err := strconv.ParseInt(revisionRaw, 10, 64)
 	if err != nil || expected < 0 {
-		writeError(w, http.StatusBadRequest, "invalid expectedRevision")
+		writeError(w, http.StatusBadRequest, "Некорректное значение expectedRevision")
 		return
 	}
 	visibility := fields["visibility"]
@@ -129,7 +129,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		visibility = "public"
 	}
 	if visibility != "public" && visibility != "private" && visibility != "unlisted" {
-		writeError(w, http.StatusBadRequest, "invalid visibility")
+		writeError(w, http.StatusBadRequest, "Некорректное значение видимости")
 		return
 	}
 	modelName := fields["model"]
@@ -142,7 +142,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, texturepng.ErrTooLarge) {
 			status = http.StatusRequestEntityTooLarge
 		}
-		writeError(w, status, "invalid PNG: "+err.Error())
+		writeError(w, status, "Некорректный PNG: "+err.Error())
 		return
 	}
 	s.persistTexture0254(w, r, profile, user, normalized, kind, modelName, visibility, expected, "upload")
@@ -151,10 +151,10 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 func textureMultipartError0252(w http.ResponseWriter, err error) {
 	var maxErr *http.MaxBytesError
 	if errors.As(err, &maxErr) {
-		writeError(w, http.StatusRequestEntityTooLarge, "multipart upload exceeds size limit")
+		writeError(w, http.StatusRequestEntityTooLarge, "Размер multipart-загрузки превышает ограничение")
 		return
 	}
-	writeError(w, http.StatusBadRequest, "invalid multipart upload")
+	writeError(w, http.StatusBadRequest, "Некорректная multipart-загрузка")
 }
 
 func (s Server) textureBlobGet0252(w http.ResponseWriter, r *http.Request) {
@@ -190,7 +190,7 @@ func (s Server) textureMineImage0252(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeError(w, http.StatusNotFound, "managed texture not found")
+	writeError(w, http.StatusNotFound, "Управляемая текстура не найдена")
 }
 
 func (s Server) serveTextureBlob0252(w http.ResponseWriter, r *http.Request, digest string, profile model.MinecraftProfile, owner bool) {
@@ -213,7 +213,7 @@ func (s Server) serveTextureBlob0252(w http.ResponseWriter, r *http.Request, dig
 	defer cancel()
 	meta, found, err := repo.ReadTextureBlob0252(ctx, digest, profile, owner)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture metadata unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Метаданные текстуры недоступны")
 		return
 	}
 	if !found {
@@ -227,27 +227,27 @@ func (s Server) serveTextureBlob0252(w http.ResponseWriter, r *http.Request, dig
 // предпросмотров сохранённой библиотеки.
 func (s Server) serveVerifiedTexture0255(w http.ResponseWriter, r *http.Request, digest string, meta repository.TextureBlob0252, owner bool) {
 	if meta.StorageDriver != s.Storage.Driver() {
-		writeError(w, http.StatusServiceUnavailable, "texture storage driver mismatch")
+		writeError(w, http.StatusServiceUnavailable, "Драйвер хранилища текстур не совпадает с ожидаемым")
 		return
 	}
 	file, size, err := storage.OpenTexture0252(s.Storage, digest)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture blob unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Данные текстуры недоступны")
 		return
 	}
 	defer file.Close()
 	if size > texturepng.MaxEncodedBytes || meta.ByteSize > texturepng.MaxEncodedBytes || meta.ByteSize < 1 {
-		writeError(w, http.StatusServiceUnavailable, "texture blob size invalid")
+		writeError(w, http.StatusServiceUnavailable, "Некорректный размер данных текстуры")
 		return
 	}
 	content, err := io.ReadAll(io.LimitReader(file, texturepng.MaxEncodedBytes+1))
 	if err != nil || int64(len(content)) != meta.ByteSize {
-		writeError(w, http.StatusServiceUnavailable, "texture blob read failed")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось прочитать данные текстуры")
 		return
 	}
 	sum := sha256.Sum256(content)
 	if hex.EncodeToString(sum[:]) != digest {
-		writeError(w, http.StatusServiceUnavailable, "texture blob integrity failed")
+		writeError(w, http.StatusServiceUnavailable, "Нарушена целостность данных текстуры")
 		return
 	}
 	w.Header().Set("Content-Type", "image/png")

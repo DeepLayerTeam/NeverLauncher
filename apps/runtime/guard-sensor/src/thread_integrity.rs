@@ -217,7 +217,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
     let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
     if snapshot == INVALID_HANDLE_VALUE || snapshot.is_null() {
         return Err(format!(
-            "Guard Thread Integrity thread snapshot failed: {}",
+            "Guard: не удалось получить снимок потоков: {}",
             std::io::Error::last_os_error()
         ));
     }

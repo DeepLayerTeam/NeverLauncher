@@ -19,7 +19,7 @@ func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 	}
 	projectID := strings.TrimSpace(r.URL.Query().Get("projectId"))
 	if projectID == "" {
-		writeError(w, http.StatusBadRequest, "projectId is required")
+		writeError(w, http.StatusBadRequest, "Требуется projectId")
 		return
 	}
 	if !s.authorizeClaims(r, claims, "project:read", projectID, "project", projectID).Allowed {
@@ -30,7 +30,7 @@ func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 	switch status {
 	case "", "pending", "running", "succeeded", "failed", "revoked", "dead":
 	default:
-		writeError(w, http.StatusBadRequest, "invalid status")
+		writeError(w, http.StatusBadRequest, "Некорректный статус")
 		return
 	}
 	settings, settingsErr := s.operationalSettings02111(r)
@@ -53,12 +53,12 @@ func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 		limit = settings.JobsMaxPageSize
 	}
 	if offset < 0 || offset > 10000 {
-		writeError(w, http.StatusBadRequest, "offset out of range")
+		writeError(w, http.StatusBadRequest, "Смещение вне допустимого диапазона")
 		return
 	}
 	lister, ok := s.Repo.(repository.OperationLister)
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "operation list unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Список операций недоступен")
 		return
 	}
 	jobs, err := lister.ListProjectOperations(r.Context(), projectID, status, limit+1, offset)

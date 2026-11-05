@@ -36,7 +36,7 @@ migration_api = read(
 )
 migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
 if migration_api != migration_cli:
-    raise SystemExit("0.12.10 API/CLI migration 0018 differs")
+    raise SystemExit("Миграция 0018 API/CLI 0.12.10 отличается")
 require(
     migration_api,
     [
@@ -112,7 +112,7 @@ require(
 
 targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version:
-    raise SystemExit("Device Trust targets must track canonical VERSION")
+    raise SystemExit("Цели доверия устройств должны соответствовать канонической VERSION")
 protocol_targets = [
     row for row in targets.get("targets", []) if row.get("kind") == "protocol-e2e"
 ]

@@ -23,12 +23,12 @@ def verify(evidence: Path, revision: str, public_key: Path, signature: Path) -> 
     if not REVISION.fullmatch(revision):
         raise ValueError("revision: требуется «a full lowercase Git SHA»")
     if (ROOT / "VERSION").read_text(encoding="utf8").strip() != "0.31.0":
-        raise ValueError("GA approval only applies to VERSION 0.31.0")
+        raise ValueError("Одобрение GA распространяется только на VERSION 0.31.0")
     if not evidence.is_dir() or evidence.is_symlink():
         raise ValueError("Некорректное значение: каталог подтверждающих данных")
     for p in (public_key, signature):
         if p.is_symlink() or not p.is_file() or p.stat().st_size > 65536:
-            raise ValueError(f"absent/invalid release approval input: {p}")
+            raise ValueError(f"Данные одобрения релиза отсутствуют или некорректны: {p}")
         if p.resolve().is_relative_to(ROOT.resolve()):
             raise ValueError(
                 "approval trust anchors and signatures must be outside the source tree"

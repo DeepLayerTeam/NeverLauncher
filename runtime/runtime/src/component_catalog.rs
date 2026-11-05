@@ -275,13 +275,13 @@ fn condition_unavailable_0244(c:&CatalogComponent,env:&ComponentEnvironment0244)
     if !v.arch.is_empty()&&!v.arch.contains(&env.arch){return Ok(Some(format!("arch {} not in {:?}",env.arch,v.arch)))}
     if v.java_major_min!=0&&(env.java_major==0||env.java_major<v.java_major_min){return Ok(Some(format!("Java {} below {}",env.java_major,v.java_major_min)))}
     if v.java_major_max!=0&&(env.java_major==0||env.java_major>v.java_major_max){return Ok(Some(format!("Java {} above {}",env.java_major,v.java_major_max)))}
-    if !v.minecraft_versions.is_empty()&&!v.minecraft_versions.contains(&env.minecraft_version){return Ok(Some(format!("Minecraft {} not allowed",env.minecraft_version)))}
+    if !v.minecraft_versions.is_empty()&&!v.minecraft_versions.contains(&env.minecraft_version){return Ok(Some(format!("Версия Minecraft {} не разрешена",env.minecraft_version)))}
     if !v.minecraft_version_range.is_empty() {
         if !matches_range_0243(&env.minecraft_version,&v.minecraft_version_range).unwrap_or(false){return Ok(Some(format!("Minecraft {} outside {}",env.minecraft_version,v.minecraft_version_range)))}
     }
-    if !v.loaders.is_empty()&&!v.loaders.contains(&env.loader){return Ok(Some(format!("loader {} not allowed",env.loader)))}
-    if !v.loader_version_range.is_empty(){if !matches_range_0243(&env.loader_version,&v.loader_version_range).unwrap_or(false){return Ok(Some(format!("loader version {} outside {}",env.loader_version,v.loader_version_range)))}}
-    for name in &v.permissions{if !env.verified_permissions.contains(name){return Ok(Some(format!("missing verified permission: {name}")))}}
+    if !v.loaders.is_empty()&&!v.loaders.contains(&env.loader){return Ok(Some(format!("Загрузчик {} не разрешён",env.loader)))}
+    if !v.loader_version_range.is_empty(){if !matches_range_0243(&env.loader_version,&v.loader_version_range).unwrap_or(false){return Ok(Some(format!("Версия загрузчика {} не входит в диапазон {}",env.loader_version,v.loader_version_range)))}}
+    for name in &v.permissions{if !env.verified_permissions.contains(name){return Ok(Some(format!("Отсутствует подтверждённое разрешение: {name}")))}}
     Ok(None)
 }
 fn resolve_conditional_0244(cat:&ComponentCatalog,preset:&str,env:&ComponentEnvironment0244)->Result<HashSet<String>,String>{
@@ -420,7 +420,7 @@ fn matches_range_0243(actual:&str,expression:&str)->Result<bool,String>{
 fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     let items:HashMap<&str,&CatalogComponent>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
     for c in &cat.components {
-        parse_semver_0243(&c.version).map_err(|e|format!("invalid_version component {}: {e}",c.id))?;
+        parse_semver_0243(&c.version).map_err(|e|format!("Некорректная версия компонента {}: {e}",c.id))?;
         if !c.exclusive_group.is_empty()&&!valid_id(&c.exclusive_group){return Err(format!("Некорректная группа компонента {}: {}",c.id,c.exclusive_group))}
         if c.dependencies.len()>64||c.conflicts.len()>64{return Err(format!("Превышен лимит ограничений компонента {}",c.id))}
         for (kind,refs) in [("dependency",&c.dependencies),("conflict",&c.conflicts)] {

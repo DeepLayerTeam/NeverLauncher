@@ -722,7 +722,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	}
 	if spec.Format == "curseforge" && key == "" && len(spec.Files) > 0 {
 		for _, f := range spec.Files {
-			report.Missing = append(report.Missing, modpackMissing0275{Code: "api_key_required", Path: f.Source, Source: f.Source, Reason: "CurseForge API key required", ManualAction: "provide LAUNCHER_CURSEFORGE_API_KEY to resolve upstream hash; no unverified manual override is accepted"})
+			report.Missing = append(report.Missing, modpackMissing0275{Code: "api_key_required", Path: f.Source, Source: f.Source, Reason: "Требуется ключ API CurseForge", ManualAction: "Укажите LAUNCHER_CURSEFORGE_API_KEY для проверки исходного хеша; неподтверждённая ручная замена запрещена"})
 		}
 		report.Status = "blocked"
 		return report, errors.New("Необходим API-ключ CurseForge; артефакты не опубликованы")
@@ -735,7 +735,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 		f := spec.Files[i]
 		if spec.Format == "curseforge" {
 			if e := curseFileMetadata0275(ctx, client, api, key, &f); e != nil {
-				report.Missing = append(report.Missing, modpackMissing0275{Code: "metadata_unavailable", Path: f.Source, Source: f.Source, Reason: e.Error(), ManualAction: "resolve exact CurseForge project/file metadata and verified artifact"})
+				report.Missing = append(report.Missing, modpackMissing0275{Code: "metadata_unavailable", Path: f.Source, Source: f.Source, Reason: e.Error(), ManualAction: "Получите точные метаданные проекта и файла CurseForge, а также проверенный артефакт"})
 				continue
 			}
 		}
@@ -789,7 +789,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	if distribution == "redistributable" && len(report.Missing) == 0 {
 		permissions, e := readArtifactPermissions0276(permissionFile)
 		if e != nil {
-			report.Missing = append(report.Missing, modpackMissing0275{Code: "permissions_unavailable", Path: "permissions", Source: "permissions", Reason: e.Error(), ManualAction: "supply valid --permissions-file with exact per-file rights"})
+			report.Missing = append(report.Missing, modpackMissing0275{Code: "permissions_unavailable", Path: "permissions", Source: "permissions", Reason: e.Error(), ManualAction: "Укажите корректный --permissions-file с точными правами для каждого файла"})
 		} else {
 			result := verifyPermissionGrants0276(spec.PackSHA256, "", imported, permissions)
 			report.Missing = append(report.Missing, result.Missing...)

@@ -23,14 +23,14 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	}
 	client, transport, err := newHTTPClient(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP connector %q transport: %w", cfg.ID, err)
+		return nil, fmt.Errorf("HTTP-коннектор %q: ошибка транспорта: %w", cfg.ID, err)
 	}
 	connector := &Connector{cfg: cfg, signed: newSignedClient(cfg, client), transport: transport}
 	healthCtx, cancel := context.WithTimeout(ctx, cfg.RequestTimeoutDuration)
 	defer cancel()
 	if err := connector.Health(healthCtx); err != nil {
 		connector.Close()
-		return nil, fmt.Errorf("HTTP connector %q health check: %w", cfg.ID, err)
+		return nil, fmt.Errorf("HTTP-коннектор %q: ошибка проверки состояния: %w", cfg.ID, err)
 	}
 	return connector, nil
 }
@@ -237,7 +237,7 @@ func strictNormalizeStrings(values []string, maxItems, maxLength int) ([]string,
 			continue
 		}
 		if len(value) > maxLength {
-			return nil, fmt.Errorf("value exceeds %d bytes", maxLength)
+			return nil, fmt.Errorf("Значение превышает %d байт", maxLength)
 		}
 		if _, ok := seen[value]; ok {
 			continue

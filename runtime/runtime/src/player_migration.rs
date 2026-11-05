@@ -64,7 +64,7 @@ fn valid_relative(path: &str) -> Result<&Path, String> {
 
 fn safe_source(source: &Path) -> Result<PathBuf, String> {
     // Выбранный вручную корневой каталог должен существовать. Не создавайте его незаметно и не проходите по симлинку.
-    let meta = fs::symlink_metadata(source).map_err(|e| format!("legacy directory: {e}"))?;
+    let meta = fs::symlink_metadata(source).map_err(|e| format!("Ошибка старого каталога: {e}"))?;
     if !meta.is_dir() || meta.file_type().is_symlink() {
         return Err("legacy root: требуется «an existing real directory»".into());
     }
@@ -90,7 +90,7 @@ fn is_safe_file(root: &Path, path: &Path, size: u64) -> bool {
 }
 
 fn digest_file(path: &Path, expected: &ManifestFile) -> Result<bool, String> {
-    let mut file = fs::File::open(path).map_err(|e| format!("read legacy content: {e}"))?;
+    let mut file = fs::File::open(path).map_err(|e| format!("Не удалось прочитать старое содержимое: {e}"))?;
     let meta = file.metadata().map_err(|e| e.to_string())?;
     if !meta.is_file() || meta.len() != expected.size { return Ok(false); }
     let mut buffer = [0u8; 128 * 1024];
@@ -199,7 +199,7 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
         selected_preset: preset.unwrap_or_default().to_owned(), matched_files: verified.len(),
         missing_files: missing, matched_bytes: matched, matched_paths,
         optional_component_candidates, suggested_settings: options_from(&root, &layouts),
-        warning: "Only signed Never content is reused. Cached bytes are verified again during installation; login, device enrollment and component selection remain separate.".into(),
+        warning: "Повторно используется только подписанное содержимое Never. Файлы из кеша повторно проверяются во время установки; вход в систему, регистрация устройства и выбор компонентов выполняются отдельно.".into(),
     };
     Ok(Scan0339 { preview, verified })
 }
@@ -213,7 +213,7 @@ pub async fn adopt(manifest: &Manifest, pinned_public_key: &str, legacy_root: &P
     let signed = manifest.clone(); let pin = pinned_public_key.to_owned();
     let root = legacy_root.to_path_buf(); let choice = preset.map(str::to_owned);
     let scanned = tokio::task::spawn_blocking(move || scan(&signed, &pin, &root, choice.as_deref()))
-        .await.map_err(|e| format!("scan task: {e}"))??;
+        .await.map_err(|e| format!("Ошибка задания сканирования: {e}"))??;
     let cache = CacheStore::standard()?;
     adopt_scanned(scanned, &cache).await
 }

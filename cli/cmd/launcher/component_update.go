@@ -548,7 +548,7 @@ func findComponentManifest0157(root string) (string, error) {
 		return "", err
 	}
 	if len(matches) != 1 {
-		return "", fmt.Errorf("component package must contain exactly one %s, got %d", componentUpdateManifestFile0157, len(matches))
+		return "", fmt.Errorf("Пакет компонента должен содержать ровно один %s, найдено %d", componentUpdateManifestFile0157, len(matches))
 	}
 	return matches[0], nil
 }
@@ -567,13 +567,13 @@ func componentUpdateInstallRoot0157(currentDesktop, explicitRoot string, manifes
 		contents := filepath.Dir(macosDir)
 		bundle := filepath.Dir(contents)
 		if filepath.Base(macosDir) != "MacOS" || filepath.Base(contents) != "Contents" || !strings.HasSuffix(strings.ToLower(filepath.Base(bundle)), ".app") {
-			return "", "", errors.New("current Desktop is not inside a macOS .app/Contents/MacOS bundle")
+			return "", "", errors.New("Текущий Desktop запущен не из пакета macOS .app/Contents/MacOS")
 		}
 		parent := filepath.Dir(bundle)
 		if explicitRoot != "" {
 			explicit, e := filepath.Abs(explicitRoot)
 			if e != nil || filepath.Clean(explicit) != filepath.Clean(parent) {
-				return "", "", errors.New("--root does not match current macOS app parent")
+				return "", "", errors.New("--root не соответствует родительскому каталогу текущего приложения macOS")
 			}
 		}
 		return parent, filepath.Base(bundle), nil
@@ -844,7 +844,7 @@ func (u *transactionalUpdater0156) recoverComponentTreesLocked0157() ([]string, 
 			continue
 		case "prepared":
 			journal.Phase = "rolled-back"
-			journal.Error = "recovered prepared component tree transaction before live switch"
+			journal.Error = "Восстановлена подготовленная транзакция дерева компонентов до переключения работающей версии"
 			if err := writeComponentTreeJournal0157(u, journal); err != nil {
 				return recovered, err
 			}

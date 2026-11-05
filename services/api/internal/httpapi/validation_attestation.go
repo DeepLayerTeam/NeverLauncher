@@ -143,7 +143,7 @@ func validatePayload0345(p validationPayload0345) error {
 func verifyValidation0345(p signedValidation0345, publicKey string) error {
 	rawKey, e := base64.RawURLEncoding.DecodeString(publicKey)
 	if e != nil || len(rawKey) != ed25519.PublicKeySize {
-		return errors.New("trusted attestation key not configured")
+		return errors.New("Доверенный ключ подписания подтверждений не настроен")
 	}
 	if e = validatePayload0345(p.Evidence); e != nil {
 		return e
@@ -172,11 +172,11 @@ func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun034
 	}
 	begin, e := time.Parse(time.RFC3339Nano, p.StartedAt)
 	if e != nil || !begin.Equal(run.StartedAt) {
-		return errors.New("attestation start time differs from execution report")
+		return errors.New("Время начала в подтверждении отличается от отчёта о выполнении")
 	}
 	finish, e := time.Parse(time.RFC3339Nano, p.FinishedAt)
 	if e != nil || !finish.Equal(run.FinishedAt) {
-		return errors.New("attestation finish time differs from execution report")
+		return errors.New("Время окончания в подтверждении отличается от отчёта о выполнении")
 	}
 	var stages map[string]stagedStep0342
 	if e = json.Unmarshal(run.Stages, &stages); e != nil {
@@ -185,7 +185,7 @@ func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun034
 	for _, stage := range mandatoryStages0345 {
 		record, ok := stages[stage]
 		if !ok || record.Status != p.Stages[stage] || record.Status != "passed" {
-			return errors.New("signed stage conflicts with stored execution report: " + stage)
+			return errors.New("Подписанный этап противоречит сохранённому отчёту о выполнении: " + stage)
 		}
 		if name, ok := stageArtifacts0345[stage]; ok && record.EvidenceSHA256 != p.ArtifactHashes[name] {
 			return errors.New("«signed evidence artifact» не совпадает с «stored stage:»" + stage)
@@ -196,13 +196,13 @@ func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun034
 func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationAttestationRepository0345)
 	if !ok {
-		writeError(w, 503, "validation attestation storage unavailable")
+		writeError(w, 503, "Хранилище подтверждений проверки недоступно")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 	incoming, readErr := io.ReadAll(r.Body)
 	if readErr != nil {
-		writeError(w, 400, "invalid or oversized validation evidence")
+		writeError(w, 400, "Некорректные или слишком большие данные проверки")
 		return
 	}
 	dec := json.NewDecoder(bytes.NewReader(incoming))
@@ -221,7 +221,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
-		writeError(w, 400, "malformed validation evidence")
+		writeError(w, 400, "Неверный формат доказательств проверки")
 		return
 	}
 	deny := func(err error) {
@@ -248,7 +248,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	freshStore, ok := s.Repo.(validationFreshnessStore0346)
 	if !ok {
-		writeError(w, 503, "validation freshness store unavailable")
+		writeError(w, 503, "Хранилище актуальности проверок недоступно")
 		return
 	}
 	if e = validateFreshness0346(r.Context(), freshStore, p, time.Now().UTC(), true); e != nil {
@@ -274,7 +274,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	targets, matrixSHA, policyErr := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, p.ManifestSHA256, p.ArtifactSHA256)
 	if policyErr != nil || matrixSHA != p.TargetMatrixSHA256 {
-		deny(errors.New("attestation no longer matches required target policy"))
+		deny(errors.New("Подтверждение больше не соответствует обязательной целевой политике"))
 		return
 	}
 	targetMatched := false
@@ -305,12 +305,12 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	md, e := manifestDigest0212(lookup.Release.Manifest)
 	if e != nil || md != p.ManifestSHA256 {
-		deny(errors.New("manifest changed after execution"))
+		deny(errors.New("Манифест изменён после выполнения"))
 		return
 	}
 	fd, e := artifactDigest0212(lookup.Files)
 	if e != nil || fd != p.ArtifactSHA256 {
-		deny(errors.New("staged files changed after execution"))
+		deny(errors.New("Подготовленные файлы изменены после выполнения"))
 		return
 	}
 	if e = s.verifyManifestSignature(lookup.Release.Manifest); e != nil {
@@ -328,7 +328,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	runs, e := store.ListStagedRuns0342(r.Context(), p.PackageID)
 	if e != nil {
-		writeError(w, 503, "cannot read staged runtime runs")
+		writeError(w, 503, "Не удалось прочитать подготовленные запуски Runtime")
 		return
 	}
 	matched := false
@@ -355,13 +355,13 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	finalTargets, finalMatrix, finalErr := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, md, fd)
 	if finalErr != nil || finalMatrix != p.TargetMatrixSHA256 || len(finalTargets) != len(targets) {
-		deny(errors.New("target policy changed during attestation"))
+		deny(errors.New("Целевая политика изменилась во время подтверждения"))
 		return
 	}
 	raw, _ := json.Marshal(p)
 	record := model.ValidationAttestation0345{RunID: p.RunID, PackageID: p.PackageID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, Evidence: raw, Signature: signed.Signature, ReceivedAt: time.Now().UTC()}
 	if e = store.SaveValidationAttestation0345(r.Context(), record); e != nil {
-		deny(errors.New("attestation already recorded or storage conflict"))
+		deny(errors.New("Подтверждение уже записано или возник конфликт хранилища"))
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: s.adminActor(r), Action: "validation-attestation:recorded", Target: p.PackageID, JobID: p.RunID, ReasonCode: "trusted-runner-evidence-0345-not-stable-eligible", CreatedAt: time.Now().UTC()})
@@ -372,7 +372,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationAttestationRepository0345)
 	if !ok {
-		writeError(w, 503, "attestation storage unavailable")
+		writeError(w, 503, "Хранилище подтверждений недоступно")
 		return
 	}
 	rows, e := store.ListValidationAttestations0345(r.Context(), r.PathValue("packageId"))

@@ -27,11 +27,11 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 if version_tuple(VERSION) < (0, 15, 10):
-    raise SystemExit(f"VERSION is older than 0.15.10: {VERSION}")
+    raise SystemExit(f"VERSION ниже 0.15.10: {VERSION}")
 
 stabilization = read("cli/cmd/launcher/migration_stabilization_01510.go")
 trust = read("cli/cmd/launcher/release_verification_v2.go")

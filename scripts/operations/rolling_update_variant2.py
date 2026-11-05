@@ -62,7 +62,7 @@ def secure(path):
     try:
         st = path.lstat()
     except OSError as exc:
-        raise RollingError("required private file missing: " + path.name) from exc
+        raise RollingError("Отсутствует обязательный закрытый файл: " + path.name) from exc
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
             (stat.S_IMODE(st.st_mode) & 0o077) == 0 and
             0 < st.st_size <= MAX_BYTES,
@@ -549,7 +549,7 @@ def main(argv=None):
         return 0
     except (RollingError, multi.DeploymentError, nn.CompatibilityError,
             inventory.InventoryError, OSError, ValueError) as exc:
-        print("rolling update BLOCKED: " + str(exc), file=sys.stderr)
+        print("Последовательное обновление ЗАБЛОКИРОВАНО: " + str(exc), file=sys.stderr)
         return 3
 
 

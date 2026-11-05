@@ -214,7 +214,7 @@ func hashEntry0203(entry *zip.File, limit int64) (string, int64, error) {
 		return "", written, err
 	}
 	if written > limit || uint64(written) != entry.UncompressedSize64 {
-		return "", written, fmt.Errorf("entry %s exceeds size limit or changed size", entry.Name)
+		return "", written, fmt.Errorf("Запись %s превышает ограничение размера либо изменила размер", entry.Name)
 	}
 	return hex.EncodeToString(h.Sum(nil)), written, nil
 }
@@ -505,7 +505,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 		return nil, errors.New("Файл signature.ed25519 содержит недопустимое поле keyFingerprint")
 	}
 	if _, err := hex.DecodeString(strings.TrimPrefix(signature.KeyFingerprint, "sha256:")); err != nil {
-		return nil, errors.New("signature.ed25519 keyFingerprint is not SHA-256 hex")
+		return nil, errors.New("Значение signature.ed25519 keyFingerprint не является шестнадцатеричным SHA-256")
 	}
 	expectedSignatureBytes, err := canonicalJSON0203(signature)
 	if err != nil {

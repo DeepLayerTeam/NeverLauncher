@@ -39,7 +39,7 @@ def no_duplicate_pairs(pairs):
 def read_regular(path, max_bytes=MAX_BYTES, private=True):
     meta = path.lstat()
     if not stat.S_ISREG(meta.st_mode) or (private and meta.st_mode & 0o077):
-        raise WritebackError("Источник: требуется «a private regular file without symlinks»")
+        raise WritebackError("Источник должен быть закрытым обычным файлом без символических ссылок")
     if meta.st_size > max_bytes:
         raise WritebackError("Файл превышает допустимый размер")
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
@@ -64,7 +64,7 @@ def parse_database(data):
     except (UnicodeError, ValueError) as e:
         raise WritebackError("Некорректное значение: JSON системы FileAuth") from e
     if not isinstance(root, dict) or len(root) > 20000 or not root:
-        raise WritebackError("Превышен допустимый размер: «FileAuth UUID database is empty or»")
+        raise WritebackError("База UUID FileAuth пуста или превышает допустимый размер")
     usernames = set()
     for uuid, entry in root.items():
         if not isinstance(uuid, str) or not UUID.fullmatch(uuid) or not isinstance(entry, dict):
@@ -97,7 +97,7 @@ def change(data, *, operation, user_uuid, username="", secret=b"", allow_legacy=
         # Strict, explicit compat-only legacy hash to avoid any silent format
         # change which might lock all users out of the upstream Gravit server.
         if not allow_legacy or password_format != "sha256-hex":
-            raise WritebackError("Запись SHA-256 в прежнем формате: требуется «--password-format sha256-hex and --allow-weak-legacy-hash»")
+            raise WritebackError("Для записи SHA-256 в устаревшем формате нужны --password-format sha256-hex и --allow-weak-legacy-hash")
         if not 1 <= len(secret) <= 4096 or not DIGEST.fullmatch(account["password"].lower()):
             raise WritebackError("Некорректное значение: источник не является SHA-256 в hex-формате либо паролем")
         account["password"] = hashlib.sha256(secret).hexdigest()

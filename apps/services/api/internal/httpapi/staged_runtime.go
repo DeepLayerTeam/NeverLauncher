@@ -142,17 +142,17 @@ func (s Server) authorizeStaged0342(w http.ResponseWriter, r *http.Request) (sta
 	var no packageLookup
 	bearer := strings.TrimSpace(r.Header.Get("Authorization"))
 	if !strings.HasPrefix(bearer, "Bearer ") {
-		writeError(w, http.StatusUnauthorized, "staged runner grant required")
+		writeError(w, http.StatusUnauthorized, "Требуется разрешение на запуск подготовленной сборки")
 		return empty, no, false
 	}
 	g, err := s.parseGrant0342(strings.TrimSpace(strings.TrimPrefix(bearer, "Bearer ")))
 	if err != nil || g.PackageID != r.PathValue("packageId") {
-		writeError(w, http.StatusUnauthorized, "invalid or expired staged runner grant")
+		writeError(w, http.StatusUnauthorized, "Разрешение на запуск подготовленной сборки некорректно или просрочено")
 		return empty, no, false
 	}
 	lookup, err := s.stagedSnapshot0342(r.Context(), g)
 	if err != nil {
-		writeError(w, http.StatusConflict, "staged snapshot is no longer valid: "+err.Error())
+		writeError(w, http.StatusConflict, "Подготовленный снимок больше не действителен: "+err.Error())
 		return empty, no, false
 	}
 	return g, lookup, true
@@ -164,11 +164,11 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if lookup.Release.Status != "integrity-passed" {
-		writeError(w, http.StatusConflict, "package must have passed staged integrity check")
+		writeError(w, http.StatusConflict, "Пакет должен пройти проверку целостности подготовленной сборки")
 		return
 	}
 	if len(lookup.Files) == 0 {
-		writeError(w, http.StatusConflict, "staged package has no downloadable runtime content")
+		writeError(w, http.StatusConflict, "Подготовленный пакет не содержит загружаемых файлов Runtime")
 		return
 	}
 	md, e := manifestDigest0212(lookup.Release.Manifest)
@@ -188,12 +188,12 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !checksPassed0212(s.validatePackageFiles(lookup.Release, lookup.Files)) {
-		writeError(w, 409, "staged storage has missing or corrupted files")
+		writeError(w, 409, "В подготовленном хранилище отсутствуют или повреждены файлы")
 		return
 	}
 	var nonce [24]byte
 	if _, e = rand.Read(nonce[:]); e != nil {
-		writeError(w, 500, "secure run ID unavailable")
+		writeError(w, 500, "Не удалось получить защищённый идентификатор запуска")
 		return
 	}
 	// Сохраняйте отдельный одноразовый challenge ДО того, как воркер сможет сообщить
@@ -205,25 +205,25 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 		var pe error
 		targets, targetHash, pe = configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, md, fd)
 		if pe != nil {
-			writeError(w, 409, "runtime target policy rejected: "+pe.Error())
+			writeError(w, 409, "Политика целевого Runtime отклонила операцию: "+pe.Error())
 			return
 		}
 	}
 	var challengeNonce [32]byte
 	if _, e = rand.Read(challengeNonce[:]); e != nil {
-		writeError(w, 503, "challenge nonce unavailable")
+		writeError(w, 503, "Одноразовое значение проверочного запроса недоступно")
 		return
 	}
 	issuedAt := time.Now().UTC().Truncate(time.Microsecond)
 	grant := stagedGrant0342{Schema: stagedGrantSchema0342, PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, RunID: hex.EncodeToString(nonce[:]), Nonce: hex.EncodeToString(challengeNonce[:]), ExpiresAt: time.Now().UTC().Add(90 * time.Minute).Unix()}
 	freshStore, available := s.Repo.(validationFreshnessStore0346)
 	if !available {
-		writeError(w, 503, "validation challenge persistence unavailable")
+		writeError(w, 503, "Сохранение проверочного запроса недоступно")
 		return
 	}
 	challenge := model.ValidationChallenge0346{RunID: grant.RunID, Nonce: grant.Nonce, PackageID: grant.PackageID, ProjectID: grant.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, TargetMatrixSHA256: targetHash, IssuedAt: issuedAt, ExpiresAt: time.Unix(grant.ExpiresAt, 0).UTC()}
 	if e = freshStore.SaveValidationChallenge0346(r.Context(), challenge); e != nil {
-		writeError(w, 503, "cannot persist validation challenge")
+		writeError(w, 503, "Не удалось сохранить проверочный запрос")
 		return
 	}
 	token, e := s.issueGrant0342(grant)
@@ -265,7 +265,7 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 	}
 	requested := r.PathValue("path")
 	if requested == "" || path.Clean(requested) != requested || strings.HasPrefix(requested, "/") || strings.HasPrefix(requested, "../") || strings.Contains(requested, "\\") {
-		writeError(w, 400, "unsafe staged path")
+		writeError(w, 400, "Небезопасный путь подготовленного файла")
 		return
 	}
 	var file *model.FileObject
@@ -276,28 +276,28 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 		}
 	}
 	if file == nil {
-		writeError(w, 404, "file not in frozen staged manifest")
+		writeError(w, 404, "Файл отсутствует в зафиксированном манифесте подготовленной сборки")
 		return
 	}
 	reader, size, err := s.Storage.Open(lookup.Release.ProjectID, lookup.Release.ID, requested)
 	if err != nil {
-		writeError(w, 409, "staged object unavailable")
+		writeError(w, 409, "Подготовленный объект недоступен")
 		return
 	}
 	defer reader.Close()
 	if file.Size < 0 || file.Size > s.maxUploadBytes() {
-		writeError(w, http.StatusRequestEntityTooLarge, "staged object exceeds delivery size limit")
+		writeError(w, http.StatusRequestEntityTooLarge, "Размер подготовленного объекта превышает лимит доставки")
 		return
 	}
 	if size != file.Size {
-		writeError(w, 409, "staged object size mismatch")
+		writeError(w, 409, "Размер подготовленного объекта не совпадает")
 		return
 	}
 	// Читайте в ограниченный временный файл и вычисляйте хеш до отправки каких-либо
 	// байтов HTTP 200.
 	tmp, err := os.CreateTemp("", "launcher-staged-0342-*")
 	if err != nil {
-		writeError(w, 503, "staged temporary storage unavailable")
+		writeError(w, 503, "Временное хранилище подготовленной сборки недоступно")
 		return
 	}
 	defer os.Remove(tmp.Name())
@@ -305,16 +305,16 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 	h := sha256.New()
 	n, err := io.Copy(io.MultiWriter(tmp, h), io.LimitReader(reader, file.Size+1))
 	if err != nil || n != file.Size {
-		writeError(w, 409, "staged object read mismatch")
+		writeError(w, 409, "Прочитанные данные подготовленного объекта не совпадают")
 		return
 	}
 	sum := hex.EncodeToString(h.Sum(nil))
 	if sum != strings.ToLower(file.SHA256) {
-		writeError(w, 409, "staged object digest mismatch")
+		writeError(w, 409, "Контрольная сумма подготовленного объекта не совпадает")
 		return
 	}
 	if _, err = tmp.Seek(0, 0); err != nil {
-		writeError(w, 503, "staged temporary file unavailable")
+		writeError(w, 503, "Временный файл подготовленной сборки недоступен")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
@@ -361,7 +361,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 24<<10)
 	incoming, readErr := io.ReadAll(r.Body)
 	if readErr != nil {
-		writeError(w, 400, "invalid or oversized execution report")
+		writeError(w, 400, "Некорректный или слишком большой отчёт о выполнении")
 		return
 	}
 	dec := json.NewDecoder(bytes.NewReader(incoming))
@@ -379,7 +379,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 503, "Журнал проверок недоступен")
 			return
 		}
-		writeError(w, 400, "invalid execution report")
+		writeError(w, 400, "Некорректный отчёт о выполнении")
 		return
 	}
 	if err := validateStagedRunReport0342(g, p); err != nil {
@@ -402,7 +402,7 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 	raw, _ := json.Marshal(p.Stages)
 	report := model.StagedRuntimeRun0342{RunID: g.RunID, PackageID: g.PackageID, ProjectID: g.ProjectID, ManifestSHA256: g.ManifestSHA256, ArtifactSHA256: g.ArtifactSHA256, Stages: raw, StartedAt: p.StartedAt, FinishedAt: p.FinishedAt, ReceivedAt: time.Now().UTC()}
 	if err := writer.SaveStagedRun0342(r.Context(), report); err != nil {
-		writeError(w, 409, "execution report rejected: "+err.Error())
+		writeError(w, 409, "Отчёт о выполнении отклонён: "+err.Error())
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: "staged-runtime-runner", Action: "staged-runtime:report-received", Target: g.PackageID, JobID: g.RunID, ReasonCode: "untrusted-execution-observation", CreatedAt: time.Now().UTC()})

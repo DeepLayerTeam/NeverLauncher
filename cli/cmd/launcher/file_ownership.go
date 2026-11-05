@@ -74,7 +74,7 @@ func validateManifestFilePolicy0224(m Manifest) error {
 			return err
 		}
 		if strings.ContainsAny(f.Path, "*?[]") {
-			return fmt.Errorf("wildcards in file path %q", f.Path)
+			return fmt.Errorf("Подстановочные символы в пути файла %q", f.Path)
 		}
 		key := strings.ToLower(f.Path)
 		if seen[key] {
@@ -90,7 +90,7 @@ func validateManifestFilePolicy0224(m Manifest) error {
 			return fmt.Errorf("защищённый файл: запрещено «be required» %q", f.Path)
 		}
 		if f.Ownership == "required" && !f.Required || f.Ownership == "optional" && f.Required {
-			return fmt.Errorf("required/ownership conflict at %q", f.Path)
+			return fmt.Errorf("Конфликт обязательности и владения файлом %q", f.Path)
 		}
 		if protectedUpdatePath0224(f.Path) && manifestOwnership0224(f) != "user-owned" && manifestOwnership0224(f) != "generated" {
 			return fmt.Errorf("защищённый файл: запрещено «be updated» %q", f.Path)
@@ -118,12 +118,12 @@ func validateManifestFilePolicy0224(m Manifest) error {
 		for j := 0; j < i; j++ {
 			prev := m.FileRules[j].Pattern
 			if filePolicyMatch0224(prev, strings.TrimSuffix(r.Pattern, "/**")) || filePolicyMatch0224(r.Pattern, strings.TrimSuffix(prev, "/**")) {
-				return fmt.Errorf("overlapping file rules %q and %q", prev, r.Pattern)
+				return fmt.Errorf("Пересекающиеся правила файлов %q и %q", prev, r.Pattern)
 			}
 		}
 		for _, f := range m.Files {
 			if filePolicyMatch0224(r.Pattern, f.Path) && ((r.Action == "exclude" && managedUpdateFile0224(f)) || (r.Action == "include" && !managedUpdateFile0224(f))) {
-				return fmt.Errorf("file ownership rule conflicts with %q", f.Path)
+				return fmt.Errorf("Правило владения файлом конфликтует с %q", f.Path)
 			}
 		}
 	}

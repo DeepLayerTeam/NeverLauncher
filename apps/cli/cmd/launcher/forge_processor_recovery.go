@@ -58,13 +58,13 @@ func loadForgeProcessorJournal(pc forgeProcessorContext) (forgeProcessorJournal,
 	}
 	var journal forgeProcessorJournal
 	if err := json.Unmarshal(raw, &journal); err != nil {
-		if err := quarantineProcessorJournal(pc, "processor journal JSON is corrupt"); err != nil {
+		if err := quarantineProcessorJournal(pc, "JSON журнала обработчика повреждён"); err != nil {
 			return forgeProcessorJournal{}, false, err
 		}
 		return fresh, true, nil
 	}
 	if journal.SchemaVersion != forgeProcessorJournalSchema || journal.Loader != fresh.Loader || journal.MinecraftVersion != fresh.MinecraftVersion || !strings.EqualFold(journal.InstallerSHA256, fresh.InstallerSHA256) || journal.Entries == nil {
-		if err := quarantineProcessorJournal(pc, "processor journal identity mismatch"); err != nil {
+		if err := quarantineProcessorJournal(pc, "Идентификатор журнала обработчика не совпадает"); err != nil {
 			return forgeProcessorJournal{}, false, err
 		}
 		return fresh, true, nil

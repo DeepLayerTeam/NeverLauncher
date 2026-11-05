@@ -63,7 +63,7 @@ func operatorKey05011(key string) (ed25519.PrivateKey, error) {
 	}
 	derived := ed25519.NewKeyFromSeed(decoded[:ed25519.SeedSize])
 	if !bytes.Equal(derived, decoded) {
-		return nil, errors.New("private key halves inconsistent")
+		return nil, errors.New("Части закрытого ключа не согласованы")
 	}
 	return ed25519.PrivateKey(decoded), nil
 }
@@ -221,6 +221,6 @@ func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, dige
 	if err = writeExclusive(outFile, append(envelope, '\n')); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "signed Guard %s epoch %d (previous %d), revoked digests=%d transforms=%d\n", mode, next.Epoch, current.Epoch, len(next.RevokedDigests), len(next.RevokedTransformations))
+	fmt.Fprintf(os.Stderr, "Подписана политика Guard %s, эпоха %d (предыдущая %d), отозвано контрольных сумм=%d, преобразований=%d\n", mode, next.Epoch, current.Epoch, len(next.RevokedDigests), len(next.RevokedTransformations))
 	return nil
 }

@@ -26,7 +26,7 @@ const (
 
 var (
 	ErrAuthentication = errors.New("Некорректное значение: «or revoked credentials»")
-	ErrRefreshReuse   = errors.New("refresh-token reuse: entire session family revoked")
+	ErrRefreshReuse   = errors.New("Повторное использование токена обновления: все связанные сессии отозваны")
 	ErrMFARequired    = errors.New("Некорректное значение: «second factor required or»")
 )
 

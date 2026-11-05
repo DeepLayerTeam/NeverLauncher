@@ -262,7 +262,7 @@ func extensionRegistryPullCLI0203(backend, token, id, versionValue, dest string)
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("registry pull returned %s: %s", resp.Status, strings.TrimSpace(string(data)))
+		return fmt.Errorf("Загрузка из реестра вернула %s: %s", resp.Status, strings.TrimSpace(string(data)))
 	}
 	if err := os.MkdirAll(filepath.Dir(filepath.Clean(dest)), 0o755); err != nil && filepath.Dir(filepath.Clean(dest)) != "." {
 		return err

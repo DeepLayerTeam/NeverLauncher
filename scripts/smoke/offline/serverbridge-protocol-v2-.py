@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 1):
-    raise SystemExit("VERSION is older than 0.14.1")
+    raise SystemExit("VERSION ниже 0.14.1")
 
 
 def read(path: str) -> str:
@@ -15,7 +15,7 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 api_migration = read(
@@ -23,7 +23,7 @@ api_migration = read(
 )
 cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.1 API/CLI ServerBridge migrations differ")
+    raise SystemExit("Миграции ServerBridge API/CLI 0.14.1 отличаются")
 require(
     api_migration,
     [

@@ -329,7 +329,7 @@ func (s *Supervisor) probeJava0304(st *processState) {
 	st.rpcFailures++
 	failures := st.rpcFailures
 	st.mu.Unlock()
-	s.addLog(st, "host", "warn", fmt.Sprintf("Java RPC liveness probe failed (%d/3): %v", failures, err), nil)
+	s.addLog(st, "host", "warn", fmt.Sprintf("Проверка работоспособности Java RPC не прошла (%d/3): %v", failures, err), nil)
 	if failures >= 3 {
 		s.failProcess(st, "Java RPC unresponsive after 3 probes", false)
 	}

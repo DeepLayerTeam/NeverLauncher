@@ -89,7 +89,7 @@ fn content_length(response: &reqwest::Response) -> Result<Option<u64>, String> {
 fn expected_range(response: &reqwest::Response, start: u64, total: u64) -> Result<u64, String> {
     // Строгий разбор единственного диапазона. Без произвольного общего размера, multipart и неудовлетворимых диапазонов.
     let value = response.headers().get(CONTENT_RANGE)
-        .ok_or("206 response without Content-Range")?
+        .ok_or("Ответ HTTP 206 не содержит Content-Range")?
         .to_str().map_err(|_| "Некорректное значение: кодирование заголовка Content-Range")?;
     let range = value.strip_prefix("bytes ").ok_or("Некорректная единица диапазона Content-Range")?;
     let (bounds, total_str) = range.split_once('/').ok_or("Некорректный заголовок Content-Range")?;
@@ -142,7 +142,7 @@ async fn store_metadata(root: &Path, meta_path: &Path, data: &PartialMetadata) -
     let tmp = meta_path.with_file_name(format!("{name}.tmp-{:016x}", rand::random::<u64>()));
     let outcome = async {
         let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&tmp).await
-            .map_err(|e| format!("create partial metadata: {e}"))?;
+            .map_err(|e| format!("Не удалось создать метаданные частичной загрузки: {e}"))?;
         file.write_all(&payload).await.map_err(|e| format!("Не удалось записать метаданные частичного файла: {e}"))?;
         file.sync_all().await.map_err(|e| format!("Не удалось синхронизировать метаданные частичного файла: {e}"))?;
         drop(file);
@@ -250,7 +250,7 @@ async fn download_verified_segment(
     file_ownership::ensure_no_symlinks(root, &part)?;
     file_ownership::ensure_no_symlinks(root, &meta)?;
     fs::create_dir_all(part.parent().ok_or("Некорректный каталог частичных загрузок")?).await
-        .map_err(|e| format!("{}: create partial storage: {e}", file.path))?;
+        .map_err(|e| format!("{}: не удалось создать хранилище частичной загрузки: {e}", file.path))?;
     file_ownership::ensure_no_symlinks(root, &part)?;
     file_ownership::ensure_no_symlinks(root, &meta)?;
 

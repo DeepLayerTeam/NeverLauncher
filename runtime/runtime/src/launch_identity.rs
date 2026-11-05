@@ -36,7 +36,7 @@ pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<Game
             }
             Ok(GameIdentity::Yggdrasil)
         }
-        _ => Err("Minecraft credentials have a mismatched authentication realm".into()),
+        _ => Err("Учётные данные Minecraft принадлежат другой области аутентификации".into()),
     }
 }
 

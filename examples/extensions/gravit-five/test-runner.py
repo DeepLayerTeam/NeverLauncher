@@ -93,7 +93,7 @@ def test_game_hook():
         assert p.returncode==0 and 'GAME_HOOK_TRANSFORMED' in p.stdout,(p.returncode,p.stdout,p.stderr)
         conf.write_text(conf.read_text().replace(hashlib.sha256(jar.read_bytes()).hexdigest(),'0'*64))
         bad=subprocess.run(cmd,capture_output=True,text=True,timeout=12)
-        assert bad.returncode!=0 and 'digest mismatch' in bad.stderr,(bad.returncode,bad.stderr)
+        assert bad.returncode!=0 and 'Контрольная сумма не совпадает' in bad.stderr,(bad.returncode,bad.stderr)
 
 def main():
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Broker)

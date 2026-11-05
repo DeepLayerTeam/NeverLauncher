@@ -186,7 +186,7 @@ func validateFreshness0346(ctx context.Context, store validationFreshnessStore03
 func (s Server) validationKeyRevoke0346(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationFreshnessStore0346)
 	if !ok {
-		writeError(w, 503, "validation revocation store unavailable")
+		writeError(w, 503, "Хранилище отзыва проверок недоступно")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
@@ -197,21 +197,21 @@ func (s Server) validationKeyRevoke0346(w http.ResponseWriter, r *http.Request) 
 		Reason      string `json:"reason"`
 	}
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, 400, "invalid revocation request")
+		writeError(w, 400, "Некорректный запрос на отзыв")
 		return
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		writeError(w, 400, "invalid revocation trailing bytes")
+		writeError(w, 400, "В запросе на отзыв обнаружены лишние данные")
 		return
 	}
 	if !validationHex0345.MatchString(req.Fingerprint) || len(strings.TrimSpace(req.Reason)) < 8 || len(req.Reason) > 512 {
-		writeError(w, 400, "invalid fingerprint or revocation reason")
+		writeError(w, 400, "Некорректный отпечаток или причина отзыва")
 		return
 	}
 	actor := s.adminActor(r)
 	if err := store.RevokeValidationKey0346(r.Context(), req.Fingerprint, actor, req.Reason); err != nil {
-		writeError(w, 503, "could not durably revoke signer")
+		writeError(w, 503, "Не удалось надёжно сохранить отзыв подписанта")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: actor, Action: "validation-attestation:key-revoked", Target: req.Fingerprint, ReasonCode: "emergency-validation-signer-revocation-0346", CreatedAt: time.Now().UTC()})

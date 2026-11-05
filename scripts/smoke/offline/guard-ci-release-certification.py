@@ -7,7 +7,7 @@ import sys
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 13, 9):
-    raise SystemExit("VERSION is older than 0.13.9")
+    raise SystemExit("VERSION ниже 0.13.9")
 
 
 def read(path: str) -> str:
@@ -17,7 +17,7 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 targets = json.loads(read("guard-ci/targets.json"))

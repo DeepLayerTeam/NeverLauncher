@@ -19,7 +19,7 @@ pub struct ResolvedDownloadPlan {
 }
 
 fn string_field(hasher: &mut Sha256, value: &str) -> Result<(), String> {
-    let size = u32::try_from(value.len()).map_err(|_| "resolved field exceeds size limit")?;
+    let size = u32::try_from(value.len()).map_err(|_| "Размер вычисленного поля превышает ограничение")?;
     hasher.update(size.to_be_bytes());
     hasher.update(value.as_bytes());
     Ok(())

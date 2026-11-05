@@ -173,7 +173,7 @@ mod imp {
                     }
                 }
                 return Err(format!(
-                    "Guard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
+                    "Guard: отклонён параметр инструментирования при запуске {label}"
                 ));
             }
         }
@@ -181,7 +181,7 @@ mod imp {
             if let Some(value) = effective_command_env(command, name) {
                 if let Some(label) = java_options_contains_forbidden(&value) {
                     return Err(format!(
-                        "Guard Debug & Instrumentation Guard rejected {label} from {name}"
+                        "Guard: отклонён {label} от {name}"
                     ));
                 }
             }

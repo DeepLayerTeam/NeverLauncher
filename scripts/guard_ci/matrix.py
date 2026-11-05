@@ -468,7 +468,7 @@ def command_result(args: argparse.Namespace) -> int:
     args.output.write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    print(f"Guard CI result PASS: {target['id']} -> {args.output}")
+    print(f"Проверка Guard CI пройдена: {target['id']} -> {args.output}")
     return 0
 
 
@@ -609,7 +609,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
     )
     if errors:
         for item in errors:
-            print(f"Guard CI matrix: {item}")
+            print(f"Матрица Guard CI: {item}")
         return 1
     print(
         f"Guard CI matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}"

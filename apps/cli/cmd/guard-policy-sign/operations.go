@@ -221,6 +221,6 @@ func operatorRevise05011(mode, currentFile, previousFile, keyFile, outFile, dige
 	if err = writeExclusive(outFile, append(envelope, '\n')); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "signed Guard %s epoch %d (previous %d), revoked digests=%d transforms=%d\n", mode, next.Epoch, current.Epoch, len(next.RevokedDigests), len(next.RevokedTransformations))
+	fmt.Fprintf(os.Stderr, "Подписана политика Guard %s, эпоха %d (предыдущая %d), отозвано контрольных сумм=%d, преобразований=%d\n", mode, next.Epoch, current.Epoch, len(next.RevokedDigests), len(next.RevokedTransformations))
 	return nil
 }

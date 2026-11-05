@@ -390,7 +390,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
         ],
     }
     write_json_atomic(out / "MANAGED_JRE_EVIDENCE.json", evidence)
-    print(f"[ManagedJRE] distribution ready: {out}", file=sys.stderr)
+    print(f"[ManagedJRE] дистрибутив готов: {out}", file=sys.stderr)
 
 
 def main() -> int:
@@ -402,9 +402,9 @@ def main() -> int:
     parser.add_argument("--major", type=int, default=21)
     args = parser.parse_args()
     if args.major != 21:
-        parser.error("0.15.5 production distribution is pinned to Temurin 21")
+        parser.error("Рабочий дистрибутив 0.15.5 закреплён за Temurin 21")
     if not args.version.strip():
-        parser.error("--version is empty")
+        parser.error("Параметр --version пуст")
     try:
         build_distribution(args.out.resolve(), args.version.strip(), args.major)
         return 0

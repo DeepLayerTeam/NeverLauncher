@@ -129,7 +129,7 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 	result, err := wa.VerifyRegistration(s.webauthnVerifyConfig117(tx.Challenge), clientData, attObj, rawID)
 	if err != nil {
 		s.audit(r, claims.Email, "auth:passkey:registration-failed", err.Error())
-		writeError(w, http.StatusUnauthorized, "WebAuthn registration verification failed")
+		writeError(w, http.StatusUnauthorized, "Не удалось проверить регистрацию WebAuthn")
 		return
 	}
 	name, err := validateFriendlyName117(req.FriendlyName)
@@ -186,7 +186,7 @@ func (s Server) authPasskeyLoginComplete117(w http.ResponseWriter, r *http.Reque
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, "")
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "passkey verification failed")
+		writeError(w, http.StatusUnauthorized, "Проверка ключа доступа завершилась ошибкой")
 		return
 	}
 	user, err := s.Repo.GetUser(credential.UserID)
@@ -214,7 +214,7 @@ func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Re
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, tx.UserID)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "passkey MFA verification failed")
+		writeError(w, http.StatusUnauthorized, "Проверка MFA с ключом доступа завершилась ошибкой")
 		return
 	}
 	user, err := s.Repo.GetUser(tx.UserID)
@@ -274,7 +274,7 @@ func (s Server) authPasskeyStepUpComplete117(w http.ResponseWriter, r *http.Requ
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, claims.Sub)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "passkey step-up verification failed")
+		writeError(w, http.StatusUnauthorized, "Дополнительная проверка с ключом доступа завершилась ошибкой")
 		return
 	}
 	if err := s.State.Passkeys.updateUse(credential.ID, claims.Sub, result.SignCount, result.BackedUp); err != nil {

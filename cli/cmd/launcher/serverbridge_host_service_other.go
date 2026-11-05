@@ -5,5 +5,5 @@ package main
 import "errors"
 
 func hostServiceHandle02811(_ []string) error {
-	return errors.New("systemd service installer is supported on Linux only")
+	return errors.New("Установщик службы systemd поддерживается только в Linux")
 }

@@ -93,7 +93,7 @@ func DeleteTextureSafely02511(ctx context.Context, store Storage, digest string)
 	}
 	resp, err := s3.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("S3 GC read: %w", err)
+		return fmt.Errorf("Ошибка чтения S3 при очистке: %w", err)
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		resp.Body.Close()

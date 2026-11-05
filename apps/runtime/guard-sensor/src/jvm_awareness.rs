@@ -317,7 +317,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if foreign != 0 {
         let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "Guard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}, module={}",
+            "Guard: отклонено {foreign} переходов памяти MEM_PRIVATE в исполняемое состояние вне проверенного происхождения jvm.dll; последний вызов=0x{caller:X}, модуль={}",
             caller_module_basename(caller)
         ));
     }
@@ -325,7 +325,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if unknown != 0 {
         let caller = LAST_UNKNOWN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "Guard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}, module={}",
+            "Guard: отклонено {unknown} переходов памяти MEM_PRIVATE в исполняемое состояние с неизвестным происхождением JVM; последний вызов=0x{caller:X}, модуль={}",
             caller_module_basename(caller)
         ));
     }

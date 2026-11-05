@@ -86,13 +86,13 @@ func (s Server) migrationSecurityApply0336(w http.ResponseWriter, r *http.Reques
 	// старые доверенные корни или сопоставления учётных записей. Цели операции
 	// выводятся из зафиксированной квитанции MIG05.
 	if r.ContentLength > 0 {
-		writeError(w, 400, "security reset does not accept a request body")
+		writeError(w, 400, "Запрос сброса безопасности не допускает тело")
 		return
 	}
 	runID := r.PathValue("runId")
 	if !preview {
 		if r.Header.Get("X-Migration-Trust-Confirm") != runID || r.Header.Get("X-Migration-Fresh-Keys-Confirmed") != "true" {
-			writeError(w, 400, "explicit run confirmation and independently provisioned Never keys acknowledgement required")
+			writeError(w, 400, "Требуется подтверждение запуска и подтверждение независимо подготовленных ключей Never")
 			return
 		}
 	}

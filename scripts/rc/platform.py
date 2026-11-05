@@ -33,17 +33,17 @@ def sha256(path):
 def inspect(binary: Path, frontend: Path, commit: str) -> dict:
     version = (ROOT / "VERSION").read_text().strip()
     if not rc_extended(version) or not re.fullmatch("[0-9a-f]{40}", commit):
-        raise ValueError("wrong RC version or source commit")
+        raise ValueError("Некорректная версия RC или коммит исходников")
     if not binary.is_file() or binary.is_symlink() or binary.stat().st_size < 1_000_000:
-        raise ValueError("Отсутствует: «real compiled Desktop binary»")
+        raise ValueError("Отсутствует реально собранный исполняемый файл Desktop")
     if os.name != "nt" and not os.access(binary, os.X_OK):
-        raise ValueError("«compiled Desktop»: запрещено «be executed»")
+        raise ValueError("Исполняемый файл Desktop нельзя запустить")
     if not frontend.is_dir() or frontend.is_symlink():
-        raise ValueError("Отсутствует: «compiled frontend directory»")
+        raise ValueError("Отсутствует каталог собранного интерфейса")
     main = frontend / "index.html"
     js = list((frontend / "assets").glob("*.js"))
     if not main.is_file() or not js:
-        raise ValueError("Отсутствует: «production HTML and JavaScript bundle»")
+        raise ValueError("Отсутствует production-сборка HTML и JavaScript")
     # Используйте настоящие сгенерированные артефакты, а не свидетельство только
     # по исходникам или package.json.
     files = sorted([main, *js])
@@ -53,7 +53,7 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
             or path.stat().st_size == 0
             or not path.resolve().is_relative_to(frontend.resolve())
         ):
-            raise ValueError("Небезопасное значение: «or empty production asset»")
+            raise ValueError("Ресурс production-сборки небезопасен или пуст")
     return {
         "schemaVersion": "launcher.rc.desktop-build.v1",
         "version": version,
@@ -92,7 +92,7 @@ def main():
         a.output.parent.mkdir(parents=True, exist_ok=True)
         a.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     except (OSError, ValueError) as e:
-        print("Desktop production build BLOCKED: " + str(e), file=sys.stderr)
+        print("Рабочая сборка Desktop ЗАБЛОКИРОВАНА: " + str(e), file=sys.stderr)
         return 3
     print(
         "Desktop native and production renderer bytes verified on " + result["platform"]

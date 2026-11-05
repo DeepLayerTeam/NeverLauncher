@@ -170,16 +170,16 @@ func normalizeArchiveEntry0155(name string) (string, error) {
 
 func validateArchiveLink0155(entry, target string) error {
 	if strings.TrimSpace(target) == "" {
-		return errors.New("JRE archive contains empty symlink target")
+		return errors.New("Архив JRE содержит символическую ссылку с пустой целью")
 	}
 	target = strings.ReplaceAll(target, "\\", "/")
 	if strings.HasPrefix(target, "/") || filepath.IsAbs(target) {
-		return fmt.Errorf("JRE archive symlink %s has absolute target", entry)
+		return fmt.Errorf("Символическая ссылка %s в архиве JRE указывает на абсолютный путь", entry)
 	}
 	base := filepath.ToSlash(filepath.Dir(entry))
 	resolved := filepath.ToSlash(filepath.Clean(filepath.Join(base, target)))
 	if resolved == ".." || strings.HasPrefix(resolved, "../") {
-		return fmt.Errorf("JRE archive symlink %s escapes archive root", entry)
+		return fmt.Errorf("Символическая ссылка %s в архиве JRE выходит за пределы корня архива", entry)
 	}
 	return nil
 }
@@ -189,15 +189,15 @@ func validateManagedJREBinary0155(platform, arch string, data []byte) error {
 	case "windows":
 		info, err := inspectWindowsPEBytes0152(data)
 		if err != nil {
-			return fmt.Errorf("java.exe PE validation: %w", err)
+			return fmt.Errorf("Не удалось проверить формат PE java.exe: %w", err)
 		}
 		if info.Architecture != arch {
-			return fmt.Errorf("java.exe architecture=%s, expected %s", info.Architecture, arch)
+			return fmt.Errorf("Архитектура java.exe=%s, ожидалась %s", info.Architecture, arch)
 		}
 	case "linux":
 		info, err := inspectLinuxELFBytes0153(data)
 		if err != nil {
-			return fmt.Errorf("bin/java ELF validation: %w", err)
+			return fmt.Errorf("Не удалось проверить формат ELF bin/java: %w", err)
 		}
 		if info.Architecture != arch {
 			return fmt.Errorf("Архитектура bin/java=%s, ожидалась %s", info.Architecture, arch)
@@ -205,7 +205,7 @@ func validateManagedJREBinary0155(platform, arch string, data []byte) error {
 	case "macos":
 		info, err := inspectMacOSMachOBytes0154(data)
 		if err != nil {
-			return fmt.Errorf("bin/java Mach-O validation: %w", err)
+			return fmt.Errorf("Не удалось проверить формат Mach-O bin/java: %w", err)
 		}
 		if info.Architecture != arch {
 			return fmt.Errorf("Архитектура bin/java=%s, ожидалась %s", info.Architecture, arch)

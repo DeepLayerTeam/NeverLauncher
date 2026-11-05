@@ -169,7 +169,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
                 return Err("Для файла учётных данных аутентификации требуются права доступа 0600".into());
             }
         }
-        let raw = std::fs::read(&path).map_err(|_| "credential file unreadable")?;
+        let raw = std::fs::read(&path).map_err(|_| "Не удалось прочитать файл учётных данных")?;
         Some(serde_json::from_slice::<MinecraftLaunchCredentials>(&raw)
              .map_err(|_| "Некорректное значение: «Minecraft credential identity»")?)
     } else { None };

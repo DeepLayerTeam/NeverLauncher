@@ -116,7 +116,7 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 		input.Visibility = "public"
 	}
 	if input.Model != "classic" && input.Model != "slim" || kind == "cape" && input.Model != "classic" || (input.Visibility != "public" && input.Visibility != "private" && input.Visibility != "unlisted") {
-		writeError(w, http.StatusBadRequest, "invalid model or visibility")
+		writeError(w, http.StatusBadRequest, "Некорректная модель или настройка видимости")
 		return
 	}
 	// Отклоняйте заведомо устаревшие ревизии CAS до использования исходящих сетевых
@@ -146,12 +146,12 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 	}
 	if !admitTextureURLImport0254(user.ID) {
 		w.Header().Set("Retry-After", "60")
-		writeError(w, http.StatusTooManyRequests, "texture URL import rate limit exceeded")
+		writeError(w, http.StatusTooManyRequests, "Превышен лимит импорта текстур по URL")
 		return
 	}
 	fetcher, err := texturefetch.New(os.Getenv("LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST"))
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "texture fetch host policy invalid")
+		writeError(w, http.StatusServiceUnavailable, "Некорректная политика хоста для загрузки текстур")
 		return
 	}
 	normalized, err := fetcher.Fetch(r.Context(), input.URL, kind, input.Model)
@@ -168,7 +168,7 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusBadGateway
 		}
 		// Не отражайте удалённое содержимое, URL, результаты DNS или внутренние адреса.
-		writeError(w, status, "remote URL must be public HTTPS and return a valid bounded Minecraft PNG")
+		writeError(w, status, "Удалённый адрес должен использовать общедоступный HTTPS и возвращать корректный PNG Minecraft допустимого размера")
 		return
 	}
 	s.persistTexture0254(w, r, profile, user, normalized, kind, input.Model, input.Visibility, *input.ExpectedRevision, "import")
@@ -199,7 +199,7 @@ func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profi
 		StageTextureUpload0253(context.Context, model.MinecraftProfile, repository.VerifiedTexture0252) error
 	})
 	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture staging unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Подготовка текстуры недоступна")
 		return
 	}
 	stageCtx, stageCancel := context.WithTimeout(r.Context(), 10*time.Second)
@@ -210,21 +210,21 @@ func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profi
 		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 		return
 	case errors.Is(stageErr, repository.ErrTextureUploadDenied0252):
-		writeError(w, http.StatusForbidden, "texture upload denied by policy")
+		writeError(w, http.StatusForbidden, "Загрузка текстуры запрещена политикой")
 		return
 	case errors.Is(stageErr, repository.ErrTextureUploadLimit0252):
-		writeError(w, http.StatusRequestEntityTooLarge, "texture quota exceeded")
+		writeError(w, http.StatusRequestEntityTooLarge, "Превышена квота текстур")
 		return
 	case errors.Is(stageErr, repository.ErrNotFound):
-		writeError(w, http.StatusForbidden, "Minecraft profile ownership mismatch")
+		writeError(w, http.StatusForbidden, "Не совпадают данные владельца профиля Minecraft")
 		return
 	case stageErr != nil:
-		writeError(w, http.StatusServiceUnavailable, "texture staging transaction failed")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось выполнить транзакцию подготовки текстуры")
 		return
 	}
 	key, size, err := storage.PutTextureImmutable0253(r.Context(), s.Storage, normalized.Digest, normalized.PNG)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "failed to persist PNG")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось сохранить PNG")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
@@ -236,16 +236,16 @@ func (s Server) persistTexture0254(w http.ResponseWriter, r *http.Request, profi
 		writeError(w, http.StatusConflict, "Конфликт ревизии текстуры: обновите данные и повторите попытку")
 		return
 	case errors.Is(err, repository.ErrTextureUploadDenied0252), errors.Is(err, repository.ErrTextureCapeDenied0251):
-		writeError(w, http.StatusForbidden, "texture upload is not permitted by policy")
+		writeError(w, http.StatusForbidden, "Политика запрещает загрузку текстуры")
 		return
 	case errors.Is(err, repository.ErrTextureUploadLimit0252):
-		writeError(w, http.StatusRequestEntityTooLarge, "texture exceeds project quota")
+		writeError(w, http.StatusRequestEntityTooLarge, "Текстура превышает квоту проекта")
 		return
 	case errors.Is(err, repository.ErrNotFound):
-		writeError(w, http.StatusForbidden, "profile ownership verification failed")
+		writeError(w, http.StatusForbidden, "Не удалось подтвердить владение профилем")
 		return
 	case err != nil:
-		writeError(w, http.StatusServiceUnavailable, "texture upload transaction failed")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось выполнить транзакцию загрузки текстуры")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("texture-" + action + "-0254"), Actor: user.Email, Action: "texture:" + action, Target: profile.UUID + ":" + kind, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})

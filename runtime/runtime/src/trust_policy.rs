@@ -97,7 +97,7 @@ pub fn verify_manifest(manifest:&Manifest,root_key:&str,signer_hex:&str,signed_a
         }
         return Ok(())
     }
-    Err("game signer not delegated by embedded root".into())
+    Err("Право подписи игрового релиза не делегировано встроенным корневым ключом".into())
 }
 fn dir(root:&Path)->PathBuf{root.join(".launcher").join("game-trust")}
 fn slot(root:&Path,i:usize)->PathBuf{dir(root).join(format!("epoch-{i}.json"))}

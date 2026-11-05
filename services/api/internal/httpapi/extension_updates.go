@@ -42,7 +42,7 @@ func (s Server) updateManager02011() *extensionupdates.Manager {
 func (s Server) extensionUpdatePlan02011(w http.ResponseWriter, r *http.Request) {
 	var req extensionUpdateRequest02011
 	if err := decodeSingleJSON0203(r, &req); err != nil {
-		writeError(w, 400, "invalid update request: "+err.Error())
+		writeError(w, 400, "Некорректный запрос обновления: "+err.Error())
 		return
 	}
 	plan, err := s.resolveUpdatePlan02011(r, req)
@@ -55,7 +55,7 @@ func (s Server) extensionUpdatePlan02011(w http.ResponseWriter, r *http.Request)
 func (s Server) extensionUpdateApply02011(w http.ResponseWriter, r *http.Request) {
 	var req extensionUpdateRequest02011
 	if err := decodeSingleJSON0203(r, &req); err != nil {
-		writeError(w, 400, "invalid update request: "+err.Error())
+		writeError(w, 400, "Некорректный запрос обновления: "+err.Error())
 		return
 	}
 	plan, err := s.resolveUpdatePlan02011(r, req)
@@ -75,7 +75,7 @@ func (s Server) extensionUpdateApply02011(w http.ResponseWriter, r *http.Request
 func (s Server) extensionUpdateTransaction02011(w http.ResponseWriter, r *http.Request) {
 	tx, err := s.Repo.GetExtensionUpdateTransaction(r.Context(), r.PathValue("transactionId"))
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "update transaction not found")
+		writeError(w, 404, "Транзакция обновления не найдена")
 		return
 	}
 	if err != nil {
@@ -113,7 +113,7 @@ func (s Server) extensionUpdatePinDelete02011(w http.ResponseWriter, r *http.Req
 	scopeID := r.URL.Query().Get("scopeId")
 	err := s.Repo.DeleteExtensionUpdatePin(r.Context(), r.PathValue("extensionId"), scope, scopeID)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, 404, "pin not found")
+		writeError(w, 404, "Закреплённая версия не найдена")
 		return
 	}
 	if err != nil {

@@ -122,7 +122,7 @@ func (s *S3Storage) Delete(ctx context.Context, projectID, versionID, relativePa
 	}
 	response, err := s.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("S3 delete: %w", err)
+		return fmt.Errorf("Ошибка удаления из S3: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusNoContent || response.StatusCode == http.StatusAccepted || response.StatusCode == http.StatusNotFound {

@@ -129,19 +129,19 @@ func (s Server) playerSupportSubmit03510(w http.ResponseWriter, r *http.Request)
 	}
 	entries, e := os.ReadDir(dir)
 	if e != nil || len(entries) >= 1000 {
-		writeError(w, http.StatusServiceUnavailable, "support storage capacity reached")
+		writeError(w, http.StatusServiceUnavailable, "Исчерпана ёмкость хранилища обращений в поддержку")
 		return
 	}
 	var random [16]byte
 	if _, e = rand.Read(random[:]); e != nil {
-		writeError(w, http.StatusServiceUnavailable, "support identifier unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось выделить идентификатор обращения в поддержку")
 		return
 	}
 	id := hex.EncodeToString(random[:])
 	report := storedSupportReport03510{ID: id, ReceivedAt: time.Now().UTC().Format(time.RFC3339), Report: submitted.Report}
 	data, e := json.Marshal(report)
 	if e != nil {
-		writeError(w, http.StatusInternalServerError, "support serialization unavailable")
+		writeError(w, http.StatusInternalServerError, "Сериализация обращения в поддержку недоступна")
 		return
 	}
 	file, e := os.CreateTemp(dir, ".support-*")

@@ -44,7 +44,7 @@ func worldBackupHostGateAcquire04110(root, purpose string) (func(), error) {
 	}
 	if err := os.Mkdir(path, 0700); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return nil, fmt.Errorf("world maintenance gate occupied; JVM start and world backup blocked until owner releases or operator reconciles %s", path)
+			return nil, fmt.Errorf("Режим обслуживания мира занят; запуск JVM и резервное копирование заблокированы до освобождения владельцем или разрешения администратором %s", path)
 		}
 		return nil, err
 	}
@@ -92,13 +92,13 @@ func worldBackupHostGateRecover04110(root string) error {
 	}
 	var owner worldHostGate04110
 	if err = worldBackupReadJSON02810(filepath.Join(path, "owner.json"), &owner); err != nil {
-		return fmt.Errorf("unverifiable gate owner: %w; manual investigation required", err)
+		return fmt.Errorf("Не удалось проверить владельца блокировки: %w; требуется ручное расследование", err)
 	}
 	if owner.PID <= 0 || owner.ProcessIdentity == "" || (owner.Purpose != "backup" && owner.Purpose != "start") {
-		return errors.New("unverifiable gate identity")
+		return errors.New("Не удалось проверить идентификатор блокировки")
 	}
 	if hostIdentityMatches0282(owner.PID, owner.ProcessIdentity) {
-		return fmt.Errorf("host gate still owned by live process %d", owner.PID)
+		return fmt.Errorf("Блокировка хоста всё ещё удерживается работающим процессом %d", owner.PID)
 	}
 	paths := hostPaths01910(root)
 	state, stateErr := readServerBridgeHostRuntime01910(paths["runtime"])
@@ -110,7 +110,7 @@ func worldBackupHostGateRecover04110(root string) error {
 			hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity) ||
 			(state.ProcessPID > 0 && state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID)) ||
 			(state.SupervisorPID > 0 && state.SupervisorIdentity == "" && updaterProcessAlive0156(state.SupervisorPID)) {
-			return errors.New("JVM or supervisor still alive; refusing maintenance gate recovery")
+			return errors.New("JVM или управляющий процесс ещё работает; восстановление режима обслуживания отклонено")
 		}
 	}
 	lock, lockErr := readServerBridgeHostLock01910(paths["lock"])
@@ -118,7 +118,7 @@ func worldBackupHostGateRecover04110(root string) error {
 		return fmt.Errorf("Не удалось проверить «host lock:» %w", lockErr)
 	}
 	if lockErr == nil && (hostIdentityMatches0282(lock.PID, lock.Identity) || (lock.Identity == "" && updaterProcessAlive0156(lock.PID))) {
-		return errors.New("host supervisor lock remains active")
+		return errors.New("Блокировка управляющего процесса хоста остаётся активной")
 	}
 	entries, err := os.ReadDir(path)
 	if err != nil {

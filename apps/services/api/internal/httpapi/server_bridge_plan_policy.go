@@ -83,7 +83,7 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 		req.Channel = "stable"
 	}
 	if !s.canAccessProject(claims, req.ProjectID) || req.ServerID == "" || req.ProfileID == "" {
-		writeError(w, http.StatusForbidden, "project/profile/server access denied")
+		writeError(w, http.StatusForbidden, "Доступ к проекту, профилю или серверу запрещён")
 		return
 	}
 	scoped := false
@@ -94,7 +94,7 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 		}
 	}
 	if !scoped {
-		writeError(w, http.StatusForbidden, "no signed plan policy for server/profile/channel")
+		writeError(w, http.StatusForbidden, "Для сервера, профиля и канала отсутствует подписанная политика плана")
 		return
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)
@@ -121,7 +121,7 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 	record := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: claims.TrustedDeviceID, Purpose: planChallengePurpose02412, ChallengeHash: deviceChallengeHash0121(secret),
 		Metadata: map[string]any{"sessionId": claims.SessionID, "bindingEpoch": strconv.FormatInt(claims.BindingEpoch, 10), "serverId": req.ServerID, "projectId": req.ProjectID, "profileId": req.ProfileID, "channel": req.Channel, "policyEpoch": strconv.FormatUint(policy.Epoch, 10)}, CreatedAt: now, ExpiresAt: now.Add(60 * time.Second)}
 	if err = s.Repo.SaveDeviceChallenge(r.Context(), record); err != nil {
-		writeError(w, http.StatusServiceUnavailable, "plan challenge persistence unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Сохранение запроса проверки плана недоступно")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{"challengeId": challengeID, "challenge": secret, "expiresAt": record.ExpiresAt, "policyEpoch": policy.Epoch}})

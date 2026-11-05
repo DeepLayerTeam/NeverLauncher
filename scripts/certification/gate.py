@@ -35,16 +35,16 @@ _SHA = re.compile(r"^[0-9a-f]{40}$")
 def read_report(path: Path) -> tuple[dict, str]:
     blob = path.read_bytes()
     if len(blob) > 1024 * 1024:
-        raise ValueError("Превышен допустимый размер: «evidence report»")
+        raise ValueError("Отчёт с подтверждающими данными превышает допустимый размер")
     doc = json.loads(blob)
     if not isinstance(doc, dict):
-        raise ValueError("Некорректное значение: «evidence document»")
+        raise ValueError("Некорректный документ с подтверждающими данными")
     return doc, hashlib.sha256(blob).hexdigest()
 
 
 def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
     if not _SHA.fullmatch(expected_commit):
-        raise ValueError("Требуется: «a full, exact 40-character Git commit»")
+        raise ValueError("Требуется полный точный идентификатор коммита Git из 40 символов")
     result = {
         "schemaVersion": "1.0",
         "version": "0.24.13",

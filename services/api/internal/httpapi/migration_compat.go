@@ -24,7 +24,7 @@ func (s Server) registerMigrationCompatibilityRoutes0332(mux *http.ServeMux) {
 func (s Server) migrationCompatibilityStore0332(w http.ResponseWriter) (migrationCompatibilityStore0332, bool) {
 	v, ok := s.Repo.(migrationCompatibilityStore0332)
 	if !ok {
-		writeError(w, 503, "Gravit compatibility inspection requires PostgreSQL")
+		writeError(w, 503, "Для проверки совместимости Gravit требуется PostgreSQL")
 		return nil, false
 	}
 	return v, true
@@ -63,7 +63,7 @@ func (s Server) migrationCompatibilityAssess0332(w http.ResponseWriter, r *http.
 	// Двоичный запрос application/zip, а не путь на хосте Backend; исключает
 	// произвольное чтение и распаковку файлов. Загруженные байты не сохраняются.
 	if t := r.Header.Get("Content-Type"); !strings.EqualFold(strings.TrimSpace(strings.Split(t, ";")[0]), "application/zip") {
-		writeError(w, 415, "upload a ZIP as application/zip")
+		writeError(w, 415, "Загрузите ZIP-архив с типом application/zip")
 		return
 	}
 	// Те же ограниченные двумя слотами подготовка и проверка ZIP, что и для
@@ -73,22 +73,22 @@ func (s Server) migrationCompatibilityAssess0332(w http.ResponseWriter, r *http.
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "source inspection capacity is busy; retry after another upload finishes")
+		writeError(w, 429, "Сервис проверки источника занят; повторите после завершения другой загрузки")
 		return
 	}
 	if r.ContentLength > gd.MaxArchiveBytes {
-		writeError(w, 413, "Gravit source ZIP exceeds 512 MiB")
+		writeError(w, 413, "Размер исходного ZIP Gravit превышает 512 МиБ")
 		return
 	}
 	src, size, digest, err := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, gd.MaxArchiveBytes))
 	if err != nil {
-		writeError(w, 413, "unable to stage bounded Gravit ZIP: "+err.Error())
+		writeError(w, 413, "Не удалось подготовить ZIP Gravit с ограничением размера: "+err.Error())
 		return
 	}
 	defer func() { src.Close(); _ = os.Remove(src.Name()) }()
 	report, err := gd.AssessReader(r.Context(), src, size, digest, r.Header.Get("X-Gravit-Version"))
 	if err != nil {
-		writeError(w, 422, "invalid Gravit source archive: "+err.Error())
+		writeError(w, 422, "Некорректный исходный архив Gravit: "+err.Error())
 		return
 	}
 	saved, err := store.SaveMigrationCompatibility0332(r.Context(), id, report)
@@ -96,7 +96,7 @@ func (s Server) migrationCompatibilityAssess0332(w http.ResponseWriter, r *http.
 		if errors.Is(err, mw.ErrBusy) || errors.Is(err, mw.ErrConflict) || errors.Is(err, mw.ErrNotFound) {
 			migrationHTTPError0331(w, err)
 		} else {
-			writeError(w, 503, "unable to persist compatibility report")
+			writeError(w, 503, "Не удалось сохранить отчёт о совместимости")
 		}
 		return
 	}

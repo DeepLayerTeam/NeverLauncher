@@ -310,7 +310,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 			if req.optional {
 				return r.solve(rest, st, byID, pins)
 			}
-			return state{}, fmt.Errorf("dependency %s selected %s does not satisfy %s required by %s", req.id, existing.item.Version, req.constraint, req.from)
+			return state{}, fmt.Errorf("Зависимость %s версии %s не соответствует ограничению %s, требуемому для %s", req.id, existing.item.Version, req.constraint, req.from)
 		}
 		cp := cloneState(st)
 		x := cp.selected[req.id]
@@ -324,7 +324,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 	}
 	constraint, err := ParseConstraint(req.constraint)
 	if err != nil {
-		return state{}, fmt.Errorf("%s constraint %q: %w", req.id, req.constraint, err)
+		return state{}, fmt.Errorf("Ограничение %s %q: %w", req.id, req.constraint, err)
 	}
 	candidates := append([]model.ExtensionRegistryVersion(nil), byID[req.id]...)
 	var filtered []model.ExtensionRegistryVersion
@@ -369,7 +369,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 	var last error
 	for _, cand := range filtered {
 		if conflictsSelected02011(cand, st.selected) {
-			last = fmt.Errorf("candidate %s@%s conflicts with selected graph", cand.ExtensionID, cand.Version)
+			last = fmt.Errorf("Кандидат %s@%s конфликтует с выбранным графом зависимостей", cand.ExtensionID, cand.Version)
 			continue
 		}
 		cp := cloneState(st)
@@ -421,7 +421,7 @@ func (r *Resolver) validateFinalConflicts(ctx context.Context, selected map[stri
 		}
 		v, e := r.Repo.GetExtensionVersion(ctx, id, ins.CurrentVersion)
 		if e != nil {
-			return fmt.Errorf("load installed manifest %s@%s: %w", id, ins.CurrentVersion, e)
+			return fmt.Errorf("Не удалось загрузить установленный манифест %s@%s: %w", id, ins.CurrentVersion, e)
 		}
 		finals[id] = v.Manifest
 		versions[id] = ins.CurrentVersion
@@ -434,7 +434,7 @@ func (r *Resolver) validateFinalConflicts(ctx context.Context, selected map[stri
 	for i, a := range ids {
 		for _, b := range ids[i+1:] {
 			if conflictMatch(finals[a], b, versions[b]) || conflictMatch(finals[b], a, versions[a]) {
-				return fmt.Errorf("extension conflict: %s@%s conflicts with %s@%s", a, versions[a], b, versions[b])
+				return fmt.Errorf("Конфликт расширений: %s@%s несовместимо с %s@%s", a, versions[a], b, versions[b])
 			}
 		}
 	}
@@ -450,7 +450,7 @@ func topologicalOrder(selected map[string]selection) ([]string, error) {
 			return nil
 		}
 		if marks[id] == 1 {
-			return fmt.Errorf("dependency cycle detected: %s -> %s", strings.Join(stack, " -> "), id)
+			return fmt.Errorf("Обнаружен цикл зависимостей: %s -> %s", strings.Join(stack, " -> "), id)
 		}
 		marks[id] = 1
 		stack = append(stack, id)

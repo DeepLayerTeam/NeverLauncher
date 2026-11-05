@@ -315,7 +315,7 @@ def main() -> int:
         TypeError,
         json.JSONDecodeError,
     ) as exc:
-        print(f"NETWORK PRODUCTION RELEASE BLOCKED: {exc}", file=sys.stderr)
+        print(f"РАБОЧИЙ СЕТЕВОЙ РЕЛИЗ ЗАБЛОКИРОВАН: {exc}", file=sys.stderr)
         return 2
     serialized = (
         json.dumps(outcome, indent=2, ensure_ascii=False, sort_keys=True) + "\n"

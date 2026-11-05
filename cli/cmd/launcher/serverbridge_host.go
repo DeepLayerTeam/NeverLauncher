@@ -385,7 +385,7 @@ func resolveServerBridgeHostJava01910(explicit string, allowCustom bool) (string
 		}
 		info, err := os.Stat(resolved)
 		if err != nil || info.IsDir() {
-			failures = append(failures, candidate+": executable not found")
+			failures = append(failures, candidate+": исполняемый файл не найден")
 			continue
 		}
 		major, err := javaMajorVersion(resolved)
@@ -708,7 +708,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			_ = stderrFile.Close()
 			_ = combinedFile.Close()
 			state.Status = "failed"
-			state.LastError = "JVM start fenced by world maintenance gate: " + gateErr.Error()
+			state.LastError = "Запуск JVM заблокирован режимом обслуживания мира: " + gateErr.Error()
 			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
 			return errors.New(state.LastError)
 		}
@@ -735,7 +735,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			_ = stdoutFile.Close()
 			_ = stderrFile.Close()
 			_ = combinedFile.Close()
-			state.Status, state.LastError = "failed", "cannot verify newly started JVM identity"
+			state.Status, state.LastError = "failed", "Не удалось проверить идентификатор только что запущенной JVM"
 			state.ProcessPID = 0
 			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 				return err
@@ -831,7 +831,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			state.Status = "crashed"
 		}
 		if shouldRestart && len(restartEvents) >= config.MaxRestarts {
-			state.LastError = fmt.Sprintf("crash-loop restart limit reached (%d in %s)", config.MaxRestarts, window)
+			state.LastError = fmt.Sprintf("Достигнут лимит перезапусков после сбоев (%d за %s)", config.MaxRestarts, window)
 		}
 		if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 			return err

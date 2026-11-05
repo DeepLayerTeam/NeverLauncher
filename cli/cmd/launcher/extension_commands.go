@@ -260,7 +260,7 @@ func loadCanonicalExtension0201(path string) (CanonicalExtensionManifest0201, st
 		if err == nil {
 			err = errors.New("Лишнее значение после JSON")
 		}
-		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("%s contains trailing JSON data: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("%s содержит лишние данные после JSON: %w", path, err)
 	}
 	manifest, digest, err := normalizeCanonicalExtension0201(manifest)
 	if err != nil {

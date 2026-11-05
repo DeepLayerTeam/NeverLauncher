@@ -35,7 +35,7 @@ func (c *Core) SwapManaged(connector authconnector.Connector, policy ProviderPol
 	}
 	if _, exists := c.connectors[id]; exists {
 		if _, owned := c.managedRevisions[id]; !owned {
-			return fmt.Errorf("provider %q is controlled by bootstrap configuration", id)
+			return fmt.Errorf("Провайдер %q управляется конфигурацией первоначальной настройки", id)
 		}
 		c.retiredManaged = append(c.retiredManaged, c.connectors[id])
 	}
@@ -57,7 +57,7 @@ func (c *Core) DisableManaged(id string) error {
 	defer c.mu.Unlock()
 	if _, exists := c.connectors[id]; exists {
 		if _, managed := c.managedRevisions[id]; !managed {
-			return fmt.Errorf("provider %q is controlled by bootstrap configuration", id)
+			return fmt.Errorf("Провайдер %q управляется конфигурацией первоначальной настройки", id)
 		}
 		c.retiredManaged = append(c.retiredManaged, c.connectors[id])
 		delete(c.connectors, id)

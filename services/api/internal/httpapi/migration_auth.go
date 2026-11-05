@@ -69,23 +69,23 @@ func (s Server) migrationAuthUpload0335(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	if !dryRun && r.Header.Get("X-Migration-Import-Confirm") != run.ID {
-		writeError(w, 400, "explicit X-Migration-Import-Confirm run ID is required")
+		writeError(w, 400, "Требуется точный идентификатор запуска в X-Migration-Import-Confirm")
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]), "application/zip") {
-		writeError(w, 415, "source ZIP must use application/zip")
+		writeError(w, 415, "Исходный ZIP должен иметь тип application/zip")
 		return
 	}
 	algorithm := strings.TrimSpace(r.Header.Get("X-Gravit-Password-Format"))
 	if len(algorithm) > 40 {
-		writeError(w, 400, "invalid FileAuth password format")
+		writeError(w, 400, "Некорректный формат пароля FileAuth")
 		return
 	}
 	select {
 	case gravitinventorySlots0333 <- struct{}{}:
 		defer func() { <-gravitinventorySlots0333 }()
 	default:
-		writeError(w, 429, "source reader capacity exceeded")
+		writeError(w, 429, "Превышена пропускная способность чтения источника")
 		return
 	}
 	snapshot, e := inventoryStore.GetMigrationInventory0333(r.Context(), run.ID)
@@ -103,12 +103,12 @@ func (s Server) migrationAuthUpload0335(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	if r.ContentLength > inv.MaxSourceBytes {
-		writeError(w, 413, "source archive exceeds inventory limit")
+		writeError(w, 413, "Размер архива источника превышает лимит инвентаризации")
 		return
 	}
 	src, n, sha, e := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if e != nil {
-		writeError(w, 413, "could not stage source archive")
+		writeError(w, 413, "Не удалось подготовить исходный архив")
 		return
 	}
 	defer func() { _ = src.Close(); _ = os.Remove(src.Name()) }()
@@ -118,7 +118,7 @@ func (s Server) migrationAuthUpload0335(w http.ResponseWriter, r *http.Request, 
 	}
 	credentials, e := gc.Extract(r.Context(), src, n, snapshot, algorithm)
 	if e != nil {
-		writeError(w, 422, "unsupported credential source: "+e.Error())
+		writeError(w, 422, "Неподдерживаемый источник учётных данных: "+e.Error())
 		return
 	}
 	result, e := store.ImportMigrationCredentials0335(r.Context(), run.ID, sha, algorithm, credentials, dryRun)

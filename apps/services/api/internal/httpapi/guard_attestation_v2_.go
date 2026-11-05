@@ -325,7 +325,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	if req.MinecraftAccessToken != "" {
 		ms, _, _, err := s.validateMinecraftToken119(strings.TrimSpace(req.MinecraftAccessToken))
 		if err != nil || ms.ID == "" || ms.UserID != claims.Sub || ms.NeverSessionID != claims.SessionID || ms.TrustedDeviceID != deviceID || ms.BindingEpoch != claims.BindingEpoch || ms.LauncherVersion != req.LauncherVersion || !ms.IntegrityVerified {
-			writeError(w, http.StatusPreconditionFailed, "Minecraft runtime session does not match current Never session, device, epoch and release")
+			writeError(w, http.StatusPreconditionFailed, "Сеанс Minecraft Runtime не совпадает с текущим сеансом Never, устройством, эпохой или релизом")
 			return
 		}
 		minecraftSessionID = ms.ID
@@ -443,7 +443,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	// обновлении политики.
 	runtimePolicyDigest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, req.Attestation.ContinuousEvidence)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "Guard runtime denied: "+err.Error())
+		writeError(w, http.StatusPreconditionFailed, "Guard Runtime отклонил операцию: "+err.Error())
 		return
 	}
 	ticketID, err := randomToken("ngctid")

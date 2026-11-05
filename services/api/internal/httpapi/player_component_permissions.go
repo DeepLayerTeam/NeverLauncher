@@ -21,17 +21,17 @@ func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Re
 	digest := r.URL.Query().Get("catalogDigest")
 	if projectID == "" || profileID == "" || channel == "" || len(channel) > 128 || len(digest) != 64 ||
 		strings.ContainsAny(channel, "\r\n\x00") {
-		writeError(w, http.StatusBadRequest, "invalid component scope")
+		writeError(w, http.StatusBadRequest, "Некорректная область действия компонента")
 		return
 	}
 	if !s.authorizeClaims(r, claims, "profile:download", projectID, "profile", profileID).Allowed {
-		writeError(w, http.StatusForbidden, "profile download denied")
+		writeError(w, http.StatusForbidden, "Загрузка профиля запрещена")
 		return
 	}
 	manifest, err := s.Repo.GetManifest(projectID, profileID, channel)
 	if err != nil || manifest.SchemaVersion != model.ManifestSchemaV3 || manifest.ComponentCatalog == nil ||
 		!strings.EqualFold(manifest.ComponentCatalog.Digest, digest) || s.verifyManifestSignature(manifest) != nil {
-		writeError(w, http.StatusNotFound, "signed component catalog not available")
+		writeError(w, http.StatusNotFound, "Подписанный каталог компонентов недоступен")
 		return
 	}
 	permissions := make([]string, 0)
@@ -63,7 +63,7 @@ func (s Server) playerComponentPermissions0392(w http.ResponseWriter, r *http.Re
 		validUntil = claims.Exp
 	}
 	if validUntil <= time.Now().UTC().Unix() {
-		writeError(w, http.StatusUnauthorized, "expired session")
+		writeError(w, http.StatusUnauthorized, "Срок действия сеанса истёк")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")

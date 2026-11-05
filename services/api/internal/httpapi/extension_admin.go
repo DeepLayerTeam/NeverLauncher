@@ -113,7 +113,7 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if !allowed {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("ui:contribute is not granted")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("Не предоставлено разрешение ui:contribute")
 	}
 	return install, ver.Manifest, nil
 }
@@ -189,7 +189,7 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 		return "", err
 	}
 	if pathAbs != rootAbs && !strings.HasPrefix(pathAbs, rootAbs+string(filepath.Separator)) {
-		return "", errors.New("admin entrypoint escapes payload")
+		return "", errors.New("Точка входа Admin выходит за границы содержимого")
 	}
 	info, err := os.Lstat(pathAbs)
 	if err != nil {
@@ -199,7 +199,7 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 		return "", errors.New("Для точка входа Admin требуется: обычный файл без символических ссылок")
 	}
 	if info.Size() > maxAdminEntrypointBytes0208 {
-		return "", errors.New("admin entrypoint exceeds 2 MiB")
+		return "", errors.New("Размер точки входа Admin превышает 2 МиБ")
 	}
 	return pathAbs, nil
 }
@@ -281,7 +281,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	req.ID = strings.TrimSpace(req.ID)
 	req.Method = strings.TrimSpace(req.Method)
 	if req.Protocol != adminBridgeProtocol0208 || req.ID == "" || len(req.ID) > 160 || req.Method == "" || len(req.Method) > 64 || len(req.Params) > 256<<10 {
-		writeError(w, 400, "invalid Admin RPC envelope")
+		writeError(w, 400, "Некорректная оболочка запроса Admin RPC")
 		return
 	}
 	method := strings.ToLower(req.Method)
@@ -369,7 +369,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		respond(items, e)
 	case "audit.list":
 		if install.Scope == "project" {
-			respond(nil, errors.New("global audit data is unavailable to project-scoped extensions"))
+			respond(nil, errors.New("Расширения с областью действия проекта не могут получать глобальные данные аудита"))
 			return
 		}
 		if !s.authorizeClaims(r, claims, "audit:read", "", "audit", "").Allowed {

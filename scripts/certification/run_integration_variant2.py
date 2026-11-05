@@ -143,9 +143,9 @@ def run_cases(
     names: list[str], report_path: Path, *, timeout: float, cli: str, commit: str
 ) -> dict:
     if len(names) != len(set(names)) or not names or any(x not in CASES for x in names):
-        raise ValueError("unknown, duplicate or empty test case list")
+        raise ValueError("Список тестовых сценариев пуст, содержит дубликаты или неизвестные сценарии")
     if timeout <= 0:
-        raise ValueError("timeout: требуется «positive»")
+        raise ValueError("Тайм-аут должен быть положительным")
     report_path = report_path.resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
@@ -277,12 +277,12 @@ def main() -> int:
         print("\n".join(CASES))
         return 0
     if args.report is None:
-        parser.error("--report required unless --list is used")
+        parser.error("Требуется --report, если не указан --list")
     names = args.cases.split(",")
     if any(
         x in {"devtools-e2e", "module-parity", "java-signed-fixtures"} for x in names
     ) and not (args.cli and Path(args.cli).is_absolute()):
-        parser.error("--cli must be an absolute staging binary path for CLI cases")
+        parser.error("Для сценариев CLI параметр --cli должен содержать абсолютный путь к подготовленному исполняемому файлу")
     try:
         result = run_cases(
             names, args.report, timeout=args.timeout, cli=args.cli, commit=args.revision

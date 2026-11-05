@@ -390,7 +390,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
         ],
     }
     write_json_atomic(out / "MANAGED_JRE_EVIDENCE.json", evidence)
-    print(f"[ManagedJRE] distribution ready: {out}", file=sys.stderr)
+    print(f"[ManagedJRE] дистрибутив готов: {out}", file=sys.stderr)
 
 
 def main() -> int:

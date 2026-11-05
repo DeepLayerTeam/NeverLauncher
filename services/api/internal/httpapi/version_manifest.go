@@ -81,11 +81,11 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 	}
 	if req.ComponentCatalog != nil {
 		if manifest.SchemaVersion != model.ManifestSchemaV3 {
-			writeError(w, http.StatusBadRequest, "componentCatalog requires a v3 release; create with manifestSchemaVersion=3.0")
+			writeError(w, http.StatusBadRequest, "Для componentCatalog требуется релиз v3; создайте его с manifestSchemaVersion=3.0")
 			return
 		}
 		if manifest.ComponentCatalog == nil {
-			writeError(w, http.StatusConflict, "release v3 has no validated component catalog")
+			writeError(w, http.StatusConflict, "Релиз v3 не содержит проверенный каталог компонентов")
 			return
 		}
 		revision := manifest.ComponentCatalog.Revision + 1
@@ -100,7 +100,7 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 		} else if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0241 {
 			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0241(req.ComponentCatalog.Components, revision))
 		} else {
-			writeError(w, http.StatusBadRequest, "unsupported component catalog schemaVersion")
+			writeError(w, http.StatusBadRequest, "Неподдерживаемая версия схемы каталога компонентов schemaVersion")
 			return
 		}
 	}

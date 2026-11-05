@@ -521,7 +521,7 @@ func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, o
 			detail := ""
 			if !success {
 				status = "failed"
-				detail = "package failed, test skipped, or one or more expected tests did not execute"
+				detail = "Пакет завершился ошибкой, тест пропущен или часть ожидаемых тестов не выполнялась"
 				if commandErr != nil {
 					detail = commandErr.Error()
 				}
@@ -555,7 +555,7 @@ func RunTests(ctx context.Context, root string, report *Report, matrix Matrix, o
 			status, detail := "passed", ""
 			if !success {
 				status = "failed"
-				detail = "Node test failed or did not execute tests"
+				detail = "Тест Node завершился ошибкой или не выполнил проверки"
 				if e != nil {
 					detail = e.Error()
 				}

@@ -11,7 +11,7 @@ def read(path):
 def require(text, needles, label):
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 def version_tuple(value):
@@ -19,7 +19,7 @@ def version_tuple(value):
 
 
 if version_tuple((root / "VERSION").read_text().strip()) < (0, 13, 8):
-    raise SystemExit("VERSION is older than 0.13.8")
+    raise SystemExit("VERSION ниже 0.13.8")
 
 policy = read("runtime/runtime/src/macos_policy.rs")
 require(

@@ -51,11 +51,11 @@ def main():
     args = parser.parse_args()
     try: result = combine(args.reports)
     except (ValueError, OSError, json.JSONDecodeError) as exc:
-        print(f"evidence verification error: {exc}", file=sys.stderr)
+        print(f"Ошибка проверки подтверждающих данных: {exc}", file=sys.stderr)
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, ensure_ascii=False)+"\n")
-    print(f"0.24.0 platform certification: {result['status']}")
+    print(f"Сертификация платформы 0.24.0: {result['status']}")
     return 0 if result["status"]=="passed" else 1
 
 if __name__ == "__main__": raise SystemExit(main())

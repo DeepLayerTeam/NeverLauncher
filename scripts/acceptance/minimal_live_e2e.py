@@ -94,7 +94,7 @@ def request(port, method, path, payload=None, headers=None, *, timeout=5):
         try:
             doc = json.loads(body)
         except (ValueError, UnicodeError) as exc:
-            raise AcceptanceFailure(f"non-JSON response to {method} {path}") from exc
+            raise AcceptanceFailure(f"Ответ {method} {path} не является JSON") from exc
         return response.status, doc
     finally:
         conn.close()
@@ -185,7 +185,7 @@ class RealAPI:
                     pass
             time.sleep(0.15)
         if expect_failure:
-            raise AcceptanceFailure("invalid/colliding API did not exit")
+            raise AcceptanceFailure("API с некорректной конфигурацией или конфликтом портов не завершил работу")
         raise AcceptanceFailure(
             "real SQLite API did not achieve /ready within deadline"
         )
@@ -202,7 +202,7 @@ class RealAPI:
         except subprocess.TimeoutExpired as exc:
             os.killpg(proc.pid, signal.SIGKILL)
             proc.wait(timeout=8)
-            raise AcceptanceFailure("API failed to drain on SIGTERM") from exc
+            raise AcceptanceFailure("API не завершил обработку запросов после SIGTERM") from exc
         if crash:
             require(proc.returncode < 0, "SIGKILL did not terminate API")
         elif proc.returncode != 0:
@@ -236,7 +236,7 @@ def step(report, name, fn):
             "durationMs": round((time.monotonic() - start) * 1000),
         }
     )
-    print(f"PASS {name}", flush=True)
+    print(f"ПРОЙДЕНО {name}", flush=True)
     return value
 
 

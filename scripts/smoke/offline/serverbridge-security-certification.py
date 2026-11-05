@@ -12,7 +12,7 @@ def read(rel):
 def require(text, needles, label):
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{label}: missing {needle!r}")
+            raise SystemExit(f"{label}: отсутствует {needle!r}")
 
 
 version = read("VERSION").strip()

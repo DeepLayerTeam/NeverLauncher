@@ -48,7 +48,7 @@ def validate(log: Path, commit: str, version: str) -> dict:
         or log.is_symlink()
         or not 0 < log.stat().st_size <= 64 * 1024 * 1024
     ):
-        raise ValueError("real go test JSON log missing/invalid")
+        raise ValueError("Журнал JSON реального выполнения go test отсутствует или некорректен")
     raw = log.read_bytes()
     seen: dict[str, str] = {}
     package_pass = False
@@ -58,11 +58,11 @@ def validate(log: Path, commit: str, version: str) -> dict:
             type(row) is not dict
             or row.get("Package") != "gitflic.ru/skif4er/launcher/cli/cmd/launcher"
         ):
-            raise ValueError("incorrect Go test package/source")
+            raise ValueError("Некорректный пакет или источник теста Go")
         action = row.get("Action")
         test = row.get("Test")
         if action in ("fail", "skip"):
-            raise ValueError(f"Go test failed/skipped: {test or 'package'}")
+            raise ValueError(f"Тест Go завершился ошибкой или пропущен: {test or 'package'}")
         if test in REQUIRED and action in ("pass", "run"):
             if action == "pass" and seen.get(test) == "passed":
                 raise ValueError(f"Обнаружен дубликат: «completed Go test»: {test}")

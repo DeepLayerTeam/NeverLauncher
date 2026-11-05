@@ -24,7 +24,7 @@ func hostProcessIdentity0282(pid int) (string, error) {
 	}
 	fields := strings.Fields(string(raw[end+1:]))
 	if len(fields) < 20 || fields[0] == "Z" || fields[0] == "X" {
-		return "", fmt.Errorf("dead or invalid process")
+		return "", fmt.Errorf("Процесс завершён или некорректен")
 	}
 	start, err := strconv.ParseUint(fields[19], 10, 64)
 	if err != nil {

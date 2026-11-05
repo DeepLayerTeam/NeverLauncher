@@ -227,7 +227,7 @@ func (s Server) extensionEnable0204(w http.ResponseWriter, r *http.Request) {
 	if err := s.startEnabledExtensionHost0205(r.Context(), install); err != nil {
 		compensated, compErr := s.lifecycleManager0204().Disable(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
 		if compErr != nil {
-			writeError(w, http.StatusInternalServerError, "extension host start failed and disable compensation failed: "+err.Error()+"; "+compErr.Error())
+			writeError(w, http.StatusInternalServerError, "Не удалось запустить хост расширений и выполнить компенсирующее отключение: "+err.Error()+"; "+compErr.Error())
 			return
 		}
 		writeError(w, http.StatusConflict, "Не удалось запустить хост расширений; включение отменено, расширение отключено: "+err.Error()+" generation="+strconv.FormatInt(compensated.Generation, 10))
@@ -306,7 +306,7 @@ func (s Server) extensionUpdate0204(w http.ResponseWriter, r *http.Request) {
 	}
 	install, getErr := s.Repo.GetExtensionInstallState(r.Context(), root.ExtensionID, plan.Scope, plan.ScopeID)
 	if getErr != nil {
-		writeError(w, http.StatusInternalServerError, "update committed but final install state could not be loaded: "+getErr.Error())
+		writeError(w, http.StatusInternalServerError, "Обновление зафиксировано, но загрузить итоговое состояние установки не удалось: "+getErr.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:update", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)
@@ -335,7 +335,7 @@ func (s Server) extensionRollback0204(w http.ResponseWriter, r *http.Request) {
 		if install.CurrentState == model.ExtensionInstallStateEnabled {
 			_, _ = s.lifecycleManager0204().Disable(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
 		}
-		writeError(w, http.StatusConflict, "rollback payload restored but backend host failed to start; installation was disabled: "+err.Error())
+		writeError(w, http.StatusConflict, "Содержимое для отката восстановлено, но хост Backend не запустился; установка отключена: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:rollback", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)

@@ -131,7 +131,7 @@ func cutoverRequest03311(method, endpoint, token, run string, body any, fenced b
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("cutover request HTTP %d (check durable state before retry)", resp.StatusCode)
+		return fmt.Errorf("Запрос переключения вернул HTTP %d (перед повторением проверьте сохранённое состояние)", resp.StatusCode)
 	}
 	data, e := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if e != nil {

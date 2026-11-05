@@ -158,7 +158,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 		return errors.New("Нельзя публиковать неполные метаданные запуска Minecraft и среды выполнения")
 	}
 	if m.Signature == nil || !strings.EqualFold(m.Signature.Algorithm, "Ed25519") {
-		return errors.New("release must have Ed25519 signature")
+		return errors.New("Релиз должен иметь подпись Ed25519")
 	}
 	if m.RollbackSource != nil || m.GameReleaseGeneration != 0 || m.TrustEpoch != 0 {
 		return errors.New("DEP01 core does not implement game trust generation/rollback verification")
@@ -179,7 +179,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 		}
 	}
 	if !trusted {
-		return errors.New("manifest signer is not a configured trusted root")
+		return errors.New("Подписант манифеста не является настроенным доверенным корнем")
 	}
 	unsigned := m
 	unsigned.Signature = nil

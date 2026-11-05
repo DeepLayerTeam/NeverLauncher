@@ -587,7 +587,7 @@ def main():
         stage = pathlib.Path(tmp) / "bundle"
         key, cfg = collect_bundle(args, stage)
         if cfg["projectId"].lower() != args.project:
-            p.error("--project must match signed projectId")
+            p.error("Параметр --project должен совпадать с подписанным projectId")
         if args.platform == "windows":
             result = package_windows(args, stage, key, args.output, args.version)
         elif args.platform == "linux":

@@ -78,12 +78,12 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 		}
 		h := sha256.Sum256([]byte(payload))
 		if hex.EncodeToString(h[:]) != digest {
-			e = errors.New("bridge command payload corrupted")
+			e = errors.New("Повреждены данные команды моста")
 			break
 		}
 		requestHash := sha256.Sum256([]byte(runtime + "\n" + fmt.Sprint(epoch) + "\n" + kind + "\n" + payload + "\n" + fmt.Sprint(expires)))
 		if hex.EncodeToString(requestHash[:]) != request {
-			e = errors.New("bridge command identity corrupted")
+			e = errors.New("Повреждён идентификатор команды моста")
 			break
 		}
 	}

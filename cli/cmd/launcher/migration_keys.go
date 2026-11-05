@@ -75,6 +75,6 @@ func generateNeverMigrationKeys0336(path string) (err error) {
 		return err
 	}
 	completed = true
-	fmt.Fprintln(os.Stderr, "New independent Never keys created in 0600 file; provision via secret manager, never upload this file to Gravit or Never API.")
+	fmt.Fprintln(os.Stderr, "Новые независимые ключи Never созданы в файле с правами 0600; установите их через хранилище секретов и никогда не загружайте этот файл в Gravit или Never API.")
 	return nil
 }

@@ -5,7 +5,7 @@ import json
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 0):
-    raise SystemExit("VERSION is older than 0.14.0")
+    raise SystemExit("VERSION ниже 0.14.0")
 
 
 def read(path: str) -> str:
@@ -16,7 +16,7 @@ def require(path: str, needles: list[str]) -> None:
     text = read(path)
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{path}: missing {missing}")
+        raise SystemExit(f"{path}: отсутствует {missing}")
 
 
 for path, platform in [
@@ -117,13 +117,13 @@ for needle in [
     "releaseIdentityAuthenticated",
 ]:
     if needle not in matrix:
-        raise SystemExit(f"Guard CI matrix missing {needle}")
+        raise SystemExit(f"В матрице Guard CI отсутствует {needle}")
 targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("productVersion") != version:
-    raise SystemExit("Guard CI target productVersion is not aligned with VERSION")
+    raise SystemExit("productVersion цели Guard CI не совпадает с VERSION")
 for target in targets.get("targets", []):
     if "GuardRelease0140" not in target.get("requiredChecks", []):
-        raise SystemExit(f"{target.get('id')}: Guard 0.14 release check is missing")
+        raise SystemExit(f"{target.get('id')}: отсутствует проверка релиза Guard 0.14")
 
 require("scripts/release/preflight.sh", ["guard-release-0140.py"])
 require(".github/workflows/ci.yml", ["guard-release-0140.py"])

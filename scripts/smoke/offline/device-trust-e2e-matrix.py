@@ -37,7 +37,7 @@ if targets.get("productVersion") != version or targets.get("schemaVersion") != "
     raise SystemExit("Несовпадение: «Device Trust target document version/schema»")
 rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) < 4:
-    raise SystemExit("public Device Trust matrix is missing mandatory baseline targets")
+    raise SystemExit("В публичной матрице доверия устройств отсутствуют обязательные базовые цели")
 if any(row.get("required") is not True for row in rows):
     raise SystemExit("every Device Trust target: требуется «required»")
 if any("status" in row or "passed" in row for row in rows):
@@ -146,7 +146,7 @@ require(
 )
 for command in ("pkeyutl", "dgst"):
     if not re.search(r'"openssl"\s*,\s*"' + command + r'"', crypto):
-        raise SystemExit(f"E2E crypto helper missing actual openssl {command} invocation")
+        raise SystemExit(f"В криптографической утилите E2E отсутствует реальный вызов openssl {command}")
 crypto_tests = read("e2e/scripts/test_device_trust_crypto.py")
 require(
     crypto_tests,
@@ -215,13 +215,13 @@ if (
     "device-trust-e2e-matrix-0129.py" not in ci
     or "device-trust-e2e-matrix-0129.py" not in preflight
 ):
-    raise SystemExit("0.12.9 release gate is not wired into CI/preflight")
+    raise SystemExit("Проверка релиза 0.12.9 не подключена к CI или предварительным проверкам")
 if "run-device-trust-e2e.sh" not in ci:
     raise SystemExit(
         "main CI production E2E does not execute Device Trust PostgreSQL lifecycle"
     )
 if "RUN_DEVICE_TRUST_E2E" not in preflight:
-    raise SystemExit("strict preflight does not expose Device Trust E2E execution")
+    raise SystemExit("Строгая предварительная проверка не запускает сквозные тесты доверия устройств")
 
 subprocess.run(
     ["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-e2e.sh")], check=True

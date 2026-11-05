@@ -13,7 +13,7 @@ import (
 
 func guardRuntimeInventory0505(root string, p guardCompatPolicy0502) (string, error) {
 	if len(p.Artifacts) == 0 || len(p.Artifacts) > 4096 {
-		return "", fmt.Errorf("Guard runtime inventory empty/oversized")
+		return "", fmt.Errorf("Guard: инвентаризация Runtime пуста или слишком велика")
 	}
 	absoluteRoot, err := filepath.Abs(root)
 	if err != nil {
@@ -40,7 +40,7 @@ func guardRuntimeInventory0505(root string, p guardCompatPolicy0502) (string, er
 		}
 		for _, revoked := range p.RevokedDigests {
 			if revoked == a.SHA256 {
-				return "", fmt.Errorf("Guard runtime revoked artifact: %s", a.Path)
+				return "", fmt.Errorf("Guard: артефакт Runtime отозван: %s", a.Path)
 			}
 		}
 		kind := "code"

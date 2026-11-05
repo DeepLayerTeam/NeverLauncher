@@ -59,7 +59,7 @@ func EvaluatePublisher(ctx context.Context, repo repository.Repository, publishe
 	}
 	decision := Decision{Mode: policy.Mode, Allowed: true}
 	if len(policy.AllowedPublishers) > 0 && !contains(policy.AllowedPublishers, publisherID) {
-		decision.Violations = append(decision.Violations, fmt.Sprintf("publisher %s is not in registry allow-list", publisherID))
+		decision.Violations = append(decision.Violations, fmt.Sprintf("Издатель %s отсутствует в списке разрешённых реестром", publisherID))
 		if policy.Mode == model.ExtensionTrustModeStrict {
 			decision.Allowed = false
 		}

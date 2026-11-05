@@ -376,12 +376,12 @@ func (s Server) factoryCreate02710(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if ownJobs >= 20 {
-		writeError(w, 429, "job quota reached (20); delete completed jobs")
+		writeError(w, 429, "Достигнут лимит заданий (20); удалите завершённые задания")
 		return
 	}
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
-		writeError(w, 503, "cannot generate job ID")
+		writeError(w, 503, "Не удалось создать идентификатор задания")
 		return
 	}
 	job := factoryBuilderJob02710{ID: hex.EncodeToString(id[:]), WorkspaceID: ws.ID, ProjectID: ws.ProjectID, OwnerID: ws.OwnerID, Request: req, State: "queued", CreatedAt: time.Now().UTC()}
@@ -393,7 +393,7 @@ func (s Server) factoryCreate02710(w http.ResponseWriter, r *http.Request) {
 		err = factorySave02710(dir, job)
 	}
 	if err != nil {
-		writeError(w, 503, "cannot create job: "+err.Error())
+		writeError(w, 503, "Не удалось создать задание: "+err.Error())
 		return
 	}
 	s.audit(r, ws.OwnerID, "client-factory:build", ws.ID+":"+job.ID)
@@ -413,7 +413,7 @@ func (s Server) factoryOwnedJob02710(w http.ResponseWriter, r *http.Request) (fa
 	}
 	job, dir, err := factoryRead02710(root, r.PathValue("jobId"))
 	if err != nil || job.WorkspaceID != ws.ID || job.ProjectID != ws.ProjectID || job.OwnerID != ws.OwnerID {
-		writeError(w, 404, "factory job not found")
+		writeError(w, 404, "Задание фабрики сборок не найдено")
 		return zero, "", "", "", false
 	}
 	return job, dir, binary, root, true
@@ -425,7 +425,7 @@ func (s Server) factoryGet02710(w http.ResponseWriter, r *http.Request) {
 	}
 	log, err := os.ReadFile(filepath.Join(dir, "execution.log"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		writeError(w, 503, "cannot read execution log")
+		writeError(w, 503, "Не удалось прочитать журнал выполнения")
 		return
 	}
 	if len(log) > 24<<10 {
@@ -457,7 +457,7 @@ func (s Server) factoryCancel02710(w http.ResponseWriter, r *http.Request) {
 		factoryResult02710(w, map[string]string{"status": "cancellation_requested"})
 		return
 	}
-	writeError(w, 409, "worker is not running")
+	writeError(w, 409, "Рабочий процесс не запущен")
 }
 func (s Server) factoryDiff02710(w http.ResponseWriter, r *http.Request) {
 	job, dir, _, root, ok := s.factoryOwnedJob02710(w, r)
@@ -465,7 +465,7 @@ func (s Server) factoryDiff02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if job.State != "completed" {
-		writeError(w, 409, "build not verified")
+		writeError(w, 409, "Сборка не прошла проверку")
 		return
 	}
 	current, err := factoryLoadPlan02710(dir)
@@ -478,7 +478,7 @@ func (s Server) factoryDiff02710(w http.ResponseWriter, r *http.Request) {
 	if base != "" {
 		old, oldDir, e := factoryRead02710(root, base)
 		if e != nil || old.State != "completed" || old.OwnerID != job.OwnerID || old.ProjectID != job.ProjectID || old.WorkspaceID != job.WorkspaceID {
-			writeError(w, 404, "base job not found")
+			writeError(w, 404, "Базовое задание не найдено")
 			return
 		}
 		p, e := factoryLoadPlan02710(oldDir)
@@ -524,7 +524,7 @@ func factoryVerifyArtifact02710(root, path, digest string) (string, error) {
 		return "", err
 	}
 	if !stat.Mode().IsRegular() {
-		return "", errors.New("non-regular artifact")
+		return "", errors.New("Артефакт не является обычным файлом")
 	}
 	file, err := os.Open(full)
 	if err != nil {
@@ -683,7 +683,7 @@ func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if job.State != "completed" {
-		writeError(w, 409, "only verified jobs can be exported")
+		writeError(w, 409, "Экспортировать можно только проверенные задания")
 		return
 	}
 	p, err := factoryLoadPlan02710(dir)
@@ -696,34 +696,34 @@ func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	verifiedPath := filepath.Join(dir, "export-verification.json")
 	if err = factoryInvoke02710(ctx, binary, dir, io.Discard, "runtime", "client-factory", "verify", "--client-dir", client, "--output", verifiedPath); err != nil {
-		writeError(w, 409, "runtime integrity verification failed")
+		writeError(w, 409, "Проверка целостности Runtime завершилась ошибкой")
 		return
 	}
 	verified, err := os.ReadFile(verifiedPath)
 	if err != nil {
-		writeError(w, 409, "cannot inspect verified plan")
+		writeError(w, 409, "Не удалось проверить подтверждённый план")
 		return
 	}
 	var result factoryPlanView02710
 	if json.Unmarshal(verified, &result) != nil || result.ReproducibilitySHA256 != p.ReproducibilitySHA256 {
-		writeError(w, 409, "InstallPlan changed since job verification")
+		writeError(w, 409, "InstallPlan изменился после проверки задания")
 		return
 	}
 	zipPath, err := factoryPackageVerified0280(dir, client, result)
 	if err != nil {
-		writeError(w, 409, "export integrity/packaging failed: "+err.Error())
+		writeError(w, 409, "Не удалось проверить целостность или упаковать экспорт: "+err.Error())
 		return
 	}
 	defer os.Remove(zipPath)
 	file, err := os.Open(zipPath)
 	if err != nil {
-		writeError(w, 503, "cannot open verified export")
+		writeError(w, 503, "Не удалось открыть проверенный экспорт")
 		return
 	}
 	defer file.Close()
 	stat, err := file.Stat()
 	if err != nil {
-		writeError(w, 503, "cannot stat verified export")
+		writeError(w, 503, "Не удалось получить сведения о проверенном экспорте")
 		return
 	}
 	w.Header().Set("Content-Type", "application/zip")
@@ -783,15 +783,15 @@ func (s Server) factoryDelete02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, running := factoryProcesses02710.Load(job.ID); running || !endedFactoryJob02710(job.State) {
-		writeError(w, 409, "cancel and finish the worker before deleting its output")
+		writeError(w, 409, "Перед удалением результата отмените работу процесса и дождитесь его завершения")
 		return
 	}
 	if job.State == "interrupted" {
-		writeError(w, 409, "interrupted worker requires operator cleanup")
+		writeError(w, 409, "Прерванный рабочий процесс требует очистки администратором")
 		return
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		writeError(w, 503, "unable to remove completed build")
+		writeError(w, 503, "Не удалось удалить завершённую сборку")
 		return
 	}
 	s.audit(r, job.OwnerID, "client-factory:delete", job.ID)
@@ -810,7 +810,7 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if ws.State == "built" {
-		writeError(w, 409, "workspace is immutable")
+		writeError(w, 409, "Рабочая область не допускает изменений")
 		return
 	}
 	binary, root, err := factoryConfig02710()
@@ -820,18 +820,18 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 128<<20)
 	if err = r.ParseMultipartForm(8 << 20); err != nil {
-		writeError(w, 413, "invalid or oversized modpack archive")
+		writeError(w, 413, "Некорректный или слишком большой архив модпака")
 		return
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, 400, "modpack archive required")
+		writeError(w, 400, "Требуется архив модпака")
 		return
 	}
 	defer file.Close()
 	extension := strings.ToLower(filepath.Ext(header.Filename))
 	if extension != ".mrpack" && extension != ".zip" {
-		writeError(w, 400, "only .mrpack or CurseForge ZIP supported")
+		writeError(w, 400, "Поддерживаются только .mrpack или ZIP CurseForge")
 		return
 	}
 	req := factoryBuilderRequest02710{Minecraft: ws.Settings.Minecraft.Version, Loader: ws.Settings.Minecraft.Loader, LoaderVersion: ws.Settings.Minecraft.LoaderVersion, Target: r.FormValue("target"), Source: "modpack"}
@@ -840,11 +840,11 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 	// установки.
 	if req.Loader != "vanilla" && req.LoaderVersion == "" { // здесь проверяются только целевой объект и закреплённые версии Minecraft/загрузчика
 		if !factoryMinecraft02710.MatchString(req.Minecraft) || factoryMutableSelector02710(req.Minecraft) {
-			writeError(w, 409, "workspace Minecraft version must be exact")
+			writeError(w, 409, "Версия Minecraft в рабочей области должна быть указана точно")
 			return
 		}
 		if req.Target != "linux/x86_64" && req.Target != "windows/x86_64" && req.Target != "windows/x86" && req.Target != "linux/aarch64" && req.Target != "darwin/x86_64" && req.Target != "darwin/aarch64" {
-			writeError(w, 400, "unsupported target")
+			writeError(w, 400, "Неподдерживаемая целевая платформа")
 			return
 		}
 	} else if err = factoryValidateRequest02710(req); err != nil {
@@ -863,12 +863,12 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 		}
 	}
 	if own >= 20 {
-		writeError(w, 429, "job quota reached")
+		writeError(w, 429, "Достигнут лимит заданий")
 		return
 	}
 	var random [16]byte
 	if _, err = rand.Read(random[:]); err != nil {
-		writeError(w, 503, "cannot allocate job")
+		writeError(w, 503, "Не удалось выделить задание")
 		return
 	}
 	job := factoryBuilderJob02710{ID: hex.EncodeToString(random[:]), WorkspaceID: ws.ID, ProjectID: ws.ProjectID, OwnerID: ws.OwnerID, Request: req, State: "queued", CreatedAt: time.Now().UTC()}
@@ -882,7 +882,7 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 	}
 	dst, e := os.OpenFile(filepath.Join(dir, "source.zip"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if e != nil {
-		writeError(w, 503, "cannot store uploaded modpack")
+		writeError(w, 503, "Не удалось сохранить загруженный модпак")
 		return
 	}
 	var size int64
@@ -890,12 +890,12 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 	_ = dst.Close()
 	if e != nil || size < 4 || size >= 128<<20 {
 		_ = os.RemoveAll(dir)
-		writeError(w, 413, "modpack too large or invalid")
+		writeError(w, 413, "Модпак слишком большой или некорректный")
 		return
 	}
 	signature, e := os.Open(filepath.Join(dir, "source.zip"))
 	if e != nil {
-		writeError(w, 503, "cannot read uploaded modpack")
+		writeError(w, 503, "Не удалось прочитать загруженный модпак")
 		return
 	}
 	headerBytes := make([]byte, 4)
@@ -903,12 +903,12 @@ func (s Server) factoryModpackCreate02710(w http.ResponseWriter, r *http.Request
 	_ = signature.Close()
 	if e != nil || !strings.HasPrefix(string(headerBytes), "PK") {
 		_ = os.RemoveAll(dir)
-		writeError(w, 400, "invalid ZIP signature")
+		writeError(w, 400, "Некорректная сигнатура ZIP")
 		return
 	}
 	if err = factorySave02710(dir, job); err != nil {
 		_ = os.RemoveAll(dir)
-		writeError(w, 503, "cannot save modpack job")
+		writeError(w, 503, "Не удалось сохранить задание модпака")
 		return
 	}
 	s.audit(r, ws.OwnerID, "client-factory:modpack-import", ws.ID+":"+job.ID)

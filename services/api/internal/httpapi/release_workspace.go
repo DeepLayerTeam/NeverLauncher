@@ -154,7 +154,7 @@ func (s Server) ownedDraft0218(w http.ResponseWriter, r *http.Request) (reposito
 	}
 	d, err := store.GetReleaseDraft(r.Context(), r.PathValue("draftId"))
 	if err != nil {
-		writeError(w, 404, "draft not found")
+		writeError(w, 404, "Черновик не найден")
 		return store, d, false
 	}
 	claims, err := s.adminClaims(r)
@@ -163,7 +163,7 @@ func (s Server) ownedDraft0218(w http.ResponseWriter, r *http.Request) (reposito
 		return store, d, false
 	}
 	if d.OwnerID != claims.Sub || !s.authorizeClaims(r, claims, "release:prepare", d.ProjectID, "project", d.ProjectID).Allowed {
-		writeError(w, 404, "draft not found")
+		writeError(w, 404, "Черновик не найден")
 		return store, d, false
 	}
 	return store, d, true
@@ -174,7 +174,7 @@ func (s Server) draftJob0218(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if d.PackageID == "" {
-		writeError(w, 404, "draft has no package")
+		writeError(w, 404, "Черновик не содержит пакет")
 		return
 	}
 	journal, ok := s.Repo.(repository.OperationJournal)
@@ -184,7 +184,7 @@ func (s Server) draftJob0218(w http.ResponseWriter, r *http.Request) {
 	}
 	job, err := journal.FindOperationByKey(r.Context(), "package-publish", d.OwnerID, "release-workspace-"+d.ID)
 	if err != nil || job.ProjectID != d.ProjectID || job.ActorID != d.OwnerID || job.ResourceID != d.PackageID {
-		writeError(w, 404, "no publication operation found for this draft")
+		writeError(w, 404, "Для этого черновика не найдена операция публикации")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": publicOperation0217(job)})
@@ -210,7 +210,7 @@ func (s Server) draftUpdate0218(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if (d.ProjectID != "" && d.ProjectID != old.ProjectID) || (d.ID != "" && d.ID != old.ID) {
-		writeError(w, 409, "draft project and identity are immutable")
+		writeError(w, 409, "Нельзя менять проект и идентификатор черновика")
 		return
 	}
 	d.ID = old.ID

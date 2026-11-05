@@ -377,7 +377,7 @@ def main() -> int:
     try:
         receipt = verify_all(args.attestations, args.public_key, args.commit)
     except (GateError, OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"0.27.0 official Minecraft GA blocked: {exc}", file=sys.stderr)
+        print(f"GA официального Minecraft 0.27.0 заблокирована: {exc}", file=sys.stderr)
         return 2
     # Это квитанция о подписях и аттестациях оператора, а НЕ утверждение, что
     # неаутентифицированный JSON доказывает исполнение на платформе.
@@ -385,7 +385,7 @@ def main() -> int:
     args.output.write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    print("0.27.0 official Minecraft GA: six signed live attestations verified")
+    print("GA официального Minecraft 0.27.0: проверено шесть подписанных подтверждений реальных запусков")
     return 0
 
 

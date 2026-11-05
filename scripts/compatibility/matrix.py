@@ -1733,7 +1733,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
     )
     print(md_path.read_text(encoding="utf-8"))
     if errors:
-        print("Compatibility matrix validation failed:", file=sys.stderr)
+        print("Проверка матрицы совместимости завершилась ошибкой:", file=sys.stderr)
         for message in errors:
             print(f"- {message}", file=sys.stderr)
         return 1

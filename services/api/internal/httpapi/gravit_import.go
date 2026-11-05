@@ -52,23 +52,23 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.SourceSHA256 == "" || req.SourceSHA256 != result.SourceSHA256 {
-		writeError(w, 409, "sourceSha256 does not match inspected input")
+		writeError(w, 409, "Значение sourceSha256 не совпадает с проверенными входными данными")
 		return
 	}
 	if req.Version == "" || len(req.Version) > 128 || strings.ContainsAny(req.Version, "/\\\x00\r\n") {
-		writeError(w, 400, "new release version required")
+		writeError(w, 400, "Требуется версия нового релиза")
 		return
 	}
 	if req.Channel == "" {
 		req.Channel = "stable"
 	}
 	if len(req.Channel) > 128 || strings.ContainsAny(req.Channel, "/\\\x00\r\n") {
-		writeError(w, 400, "invalid channel")
+		writeError(w, 400, "Некорректный канал")
 		return
 	}
 	creator, ok := s.Repo.(repository.GravitImportWriter02210)
 	if !ok {
-		writeError(w, 503, "atomic profile/workspace import unavailable")
+		writeError(w, 503, "Атомарный импорт профиля и рабочей области недоступен")
 		return
 	}
 	if _, err = s.Repo.GetProject(project); err != nil {
@@ -88,7 +88,7 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 	settings := repository.BuildSettings{Minecraft: result.Settings.Minecraft, Runtime: result.Settings.Runtime, Directories: result.Settings.Directories, FileRules: result.Settings.FileRules, ToolVersions: map[string]string{"launcher-api": s.Version, "gravit-static-import": "0.22.10"}}
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
-		writeError(w, 500, "unable to allocate workspace ID")
+		writeError(w, 500, "Не удалось выделить идентификатор рабочей области")
 		return
 	}
 
@@ -96,7 +96,7 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 	profile, created, err := creator.CreateGravitProfileWorkspace02210(r.Context(), result.Profile, ws)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			writeError(w, 409, "destination profile or workspace already exists")
+			writeError(w, 409, "Целевой профиль или рабочая область уже существует")
 		} else {
 			writeError(w, 400, err.Error())
 		}

@@ -177,7 +177,7 @@ impl ProcessSupervisor {
             .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
         writeln!(log_file, "Runtime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
         writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
-        writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
+        writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
         log_file.flush().map_err(|e| e.to_string())?;
         let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
 

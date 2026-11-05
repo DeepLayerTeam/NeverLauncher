@@ -347,7 +347,7 @@ func (h *Handle) Started() error {
 					return
 				}
 				if strings.TrimSpace(string(m[:n])) != "ACTIVE" {
-					ch <- fmt.Errorf("sandbox child did not resume: %s", strings.TrimSpace(string(m[:n])))
+					ch <- fmt.Errorf("Дочерний процесс изолированной среды не возобновился: %s", strings.TrimSpace(string(m[:n])))
 					return
 				}
 				ch <- nil
@@ -364,7 +364,7 @@ func (h *Handle) Started() error {
 		return e
 	case <-time.After(15 * time.Second):
 		h.Close()
-		return errors.New("sandbox child startup timeout")
+		return errors.New("Превышено время ожидания запуска дочернего процесса изолированной среды")
 	}
 }
 func Prepare(o Options) (*Handle, error) {

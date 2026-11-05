@@ -37,7 +37,7 @@ def current_policy(path, expected_sha256, root_public):
         raise CertificateError("Требуется: «signed source and pinned SHA-256»")
     raw = path.read_bytes()
     if len(raw) > 128 * 1024 or hashlib.sha256(raw).hexdigest() != expected_sha256:
-        raise CertificateError("signed policy changed since review")
+        raise CertificateError("Подписанная политика изменилась после проверки")
     env = json.loads(raw, object_pairs_hook=root_signing._no_duplicate_keys)
     if env.get("schemaVersion") != "1.0":
         raise CertificateError("Неожиданное значение: «signed trust envelope»")
@@ -58,7 +58,7 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
         raise CertificateError("Некорректное значение: «delegated key ID»")
     existing = current_policy(signed_policy, expected_sha256, root_public)
     if existing['epoch'] >= 2**64 - 1:
-        raise CertificateError("trust epoch overflow")
+        raise CertificateError("Переполнение эпохи доверия")
     existing['epoch'] += 1
     ids = [entry['id'] for entry in existing['keys']]
     private = None
@@ -77,7 +77,7 @@ def rotate(*, signed_policy, expected_sha256, output, root_public, root_seed, op
             raise CertificateError("Не удалось отозвать «unknown key or write a private seed»")
         key = next(k for k in existing['keys'] if k['id'] == key_id)
         if key['status'] != 'active':
-            raise CertificateError("delegation already revoked")
+            raise CertificateError("Делегирование уже отозвано")
         key['status'] = 'revoked'
     else:
         raise CertificateError("Неизвестное значение: «certificate operation»")

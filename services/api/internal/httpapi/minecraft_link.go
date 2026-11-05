@@ -115,7 +115,7 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Header.Get("Content-Type") != "application/json" {
-		writeError(w, 415, "application/json required")
+		writeError(w, 415, "Требуется application/json")
 		return
 	}
 	var input officialLinkRequest0268
@@ -131,7 +131,7 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !input.Confirm {
-		writeError(w, 400, "explicit confirmation required")
+		writeError(w, 400, "Требуется явное подтверждение")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
@@ -141,11 +141,11 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	profile, err := verifiedLinkProfile0268(ctx, officialminecraft.New(), input.MinecraftAccessToken, input.ExpectedUUID)
 	input.MinecraftAccessToken = ""
 	if errors.Is(err, errLinkProofMalformed0268) {
-		writeError(w, 400, "invalid Minecraft proof request")
+		writeError(w, 400, "Некорректный запрос подтверждения Minecraft")
 		return
 	}
 	if errors.Is(err, errLinkProofMismatch0268) {
-		writeError(w, 403, "selected Minecraft UUID was not verified")
+		writeError(w, 403, "Выбранный UUID Minecraft не прошёл проверку")
 		return
 	}
 	if err != nil {
@@ -154,7 +154,7 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	}
 	link, err := store.UpsertOfficialLink0268(ctx, claims.Sub, strings.ToLower(profile.ID), profile.Name)
 	if errors.Is(err, repository.ErrOfficialLinkOwned0268) {
-		writeError(w, 409, "Minecraft UUID is already linked to another Never account")
+		writeError(w, 409, "UUID Minecraft уже привязан к другой учётной записи Never")
 		return
 	}
 	if err != nil {
@@ -174,7 +174,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, 403, "recent Never login required to unlink an account")
+		writeError(w, 403, "Для отвязки учётной записи требуется недавний вход в Never")
 		return
 	}
 	uuid, valid := canonicalMinecraftUUID0268(r.PathValue("minecraftUuid"))
@@ -191,7 +191,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	err = store.RemoveOfficialLink0268(ctx, claims.Sub, uuid)
 	if errors.Is(err, repository.ErrOfficialLinkAbsent0268) {
-		writeError(w, 404, "Minecraft UUID not linked to this Never account")
+		writeError(w, 404, "UUID Minecraft не привязан к этой учётной записи Never")
 		return
 	}
 	if err != nil {

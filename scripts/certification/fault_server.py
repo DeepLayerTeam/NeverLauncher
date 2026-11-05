@@ -31,7 +31,7 @@ class Object:
 class FaultServer:
     def __init__(self, objects: dict[str, Object]):
         if not objects or any(not p.startswith("/") or ".." in p for p in objects):
-            raise ValueError("objects must have safe absolute URL paths")
+            raise ValueError("Объекты должны иметь безопасные абсолютные пути URL")
         self.objects = objects
         self.requests: list[dict] = []
         self.active_requests = 0

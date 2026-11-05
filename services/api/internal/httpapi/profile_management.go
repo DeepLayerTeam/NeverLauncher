@@ -179,7 +179,7 @@ func readRevision0225(s string) (int64, error) {
 
 func profileReadError0225(w http.ResponseWriter, err error) {
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "profile or revision not found")
+		writeError(w, http.StatusNotFound, "Профиль или ревизия не найдены")
 		return
 	}
 	if strings.Contains(err.Error(), "revision") {

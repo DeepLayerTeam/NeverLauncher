@@ -18,7 +18,7 @@ if out.is_relative_to(src):
 members = []
 for path in sorted(src.rglob("*")):
     if path.is_symlink():
-        raise SystemExit(f"symlink forbidden in release directory: {path}")
+        raise SystemExit(f"Символические ссылки запрещены в каталоге релиза: {path}")
     if path.is_file():
         rel = path.relative_to(src).as_posix()
         arc = f"{ns.prefix.rstrip('/')}/{rel}" if ns.prefix else rel

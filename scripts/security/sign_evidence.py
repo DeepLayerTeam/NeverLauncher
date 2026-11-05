@@ -24,7 +24,7 @@ def main():
     p.add_argument("--source-sha256", required=True)
     args = p.parse_args()
     if args.evidence.is_symlink() or args.private_key_file.is_symlink():
-        raise SystemExit("refusing symlinked evidence or private key")
+        raise SystemExit("Символические ссылки на подтверждения или закрытый ключ запрещены")
     key_stat = args.private_key_file.stat()
     if not stat.S_ISREG(key_stat.st_mode) or (
         os.name == "posix" and key_stat.st_mode & 0o077
@@ -40,13 +40,13 @@ def main():
         password=password.encode() if password else None,
     )
     if not isinstance(private, Ed25519PrivateKey):
-        raise SystemExit("only Ed25519 signing keys accepted")
+        raise SystemExit("Принимаются только ключи подписи Ed25519")
     raw = args.evidence.read_bytes()
     # Подписывайте точно одобренные байты. Не меняйте форматирование после
     # подписи.
     sig_path = Path(str(args.evidence) + ".sig")
     if sig_path.exists() or sig_path.is_symlink():
-        raise SystemExit("signature already exists; remove explicitly after re-review")
+        raise SystemExit("Подпись уже существует; после повторной проверки удалите её явно")
     signature = private.sign(ga.DOMAIN + raw)
     try:
         with sig_path.open("x", encoding="ascii") as f:

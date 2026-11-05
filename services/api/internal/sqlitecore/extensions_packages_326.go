@@ -75,7 +75,7 @@ func (r *Repository) PutPackage(ctx context.Context, data []byte, actor string) 
 			return e
 		}
 		if size != len(data) || packageDigest(existing) != digest {
-			return errors.New("persisted package content corrupt")
+			return errors.New("Повреждено сохранённое содержимое пакета")
 		}
 		out = StoredPackage{digest, size, ts(createdAt)}
 		if created {

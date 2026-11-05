@@ -26,7 +26,7 @@ func (s Server) nextGameReleaseGeneration02311(project, profile, channel, except
 		}
 	}
 	if highest == math.MaxUint64 {
-		return 0, errors.New("game release generation exhausted")
+		return 0, errors.New("Исчерпан диапазон поколений игровых релизов")
 	}
 	return highest + 1, nil
 }
@@ -51,7 +51,7 @@ func (s Server) checkGameReleasePublishGeneration02311(candidate model.ReleaseVe
 			continue
 		}
 		if v.Manifest.GameReleaseGeneration >= candidate.Manifest.GameReleaseGeneration {
-			return fmt.Errorf("game anti-rollback: published generation %d is not below candidate %d", v.Manifest.GameReleaseGeneration, candidate.Manifest.GameReleaseGeneration)
+			return fmt.Errorf("Защита игры от отката: опубликованное поколение %d не меньше предлагаемого %d", v.Manifest.GameReleaseGeneration, candidate.Manifest.GameReleaseGeneration)
 		}
 	}
 	if source := candidate.Manifest.RollbackSource; source != nil {
@@ -72,7 +72,7 @@ func (s Server) checkGameReleasePublishGeneration02311(candidate model.ReleaseVe
 			}
 		}
 		if !matched {
-			return errors.New("game rollbackSource is not a published verified historical release")
+			return errors.New("Источник отката игры rollbackSource не является опубликованным проверенным историческим релизом")
 		}
 	}
 	return nil

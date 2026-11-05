@@ -376,7 +376,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	}
 	session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
 	if !ok || session.TrustedDeviceID != newDeviceID {
-		writeError(w, http.StatusInternalServerError, "replacement committed, but rebound session cannot be loaded")
+		writeError(w, http.StatusInternalServerError, "Замена завершена, но загрузить повторно привязанный сеанс не удалось")
 		return
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)

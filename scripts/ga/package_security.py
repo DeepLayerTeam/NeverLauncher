@@ -65,9 +65,9 @@ def main() -> int:
         approval, _, _ = approval_data(args.evidence, args.trusted_key, args.version, args.commit)
         package(args.evidence, approval, args.output)
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        print("security evidence shipping BLOCKED: " + str(exc), file=sys.stderr)
+        print("Поставка подтверждений безопасности ЗАБЛОКИРОВАНА: " + str(exc), file=sys.stderr)
         return 3
-    print("Independent security evidence is bound to exact signed targets and packaged")
+    print("Независимые подтверждения безопасности привязаны к точным подписанным целям и упакованы")
     return 0
 
 

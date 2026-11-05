@@ -115,7 +115,7 @@ def main() -> int:
     elif lower.endswith(".tar.gz") or lower.endswith(".tgz") or lower.endswith(".tar"):
         issues = scan_tar(path)
     else:
-        raise SystemExit(f"secret-scan: unsupported archive format: {path}")
+        raise SystemExit(f"Проверка секретов: неподдерживаемый формат архива: {path}")
     if issues:
         print("secret-scan: FAILED")
         for issue in issues:

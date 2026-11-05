@@ -307,12 +307,12 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	contentExtensionID := strings.TrimSpace(r.FormValue("contentExtensionId"))
 	if contentExtensionID != "" {
 		if lookup.Release.Status == "signed" {
-			writeError(w, http.StatusConflict, "signed package cannot be transformed; create a new unsigned version")
+			writeError(w, http.StatusConflict, "Подписанный пакет нельзя преобразовать; создайте новую неподписанную версию")
 			return
 		}
 		prepared, prepareErr := s.prepareJavaPackageFile0486(r.Context(), contentExtensionID, lookup.Release.ProjectID, relativePath, payload)
 		if prepareErr != nil {
-			writeError(w, http.StatusUnprocessableEntity, "Java content transformation refused: "+prepareErr.Error())
+			writeError(w, http.StatusUnprocessableEntity, "Преобразование Java-содержимого отклонено: "+prepareErr.Error())
 			return
 		}
 		payload = prepared
@@ -329,7 +329,7 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		ownership = "required"
 	}
 	if ownership != "required" && ownership != "managed" && ownership != "optional" {
-		writeError(w, http.StatusBadRequest, "file upload permits only required/managed/optional ownership")
+		writeError(w, http.StatusBadRequest, "При загрузке файлов допускаются только типы владения required, managed или optional")
 		return
 	}
 	if err := model.ValidateFileOwnership0224(model.Manifest{SchemaVersion: model.ManifestSchemaV2, Files: []model.ManifestFile{{Path: relativePath, Required: ownership != "optional", Ownership: ownership}}}); err != nil {
@@ -474,14 +474,14 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	}
 	manifest := storageBackedCandidate0526(lookup)
 	if err := validatePackageCandidate0526(lookup); err != nil {
-		writeError(w, http.StatusConflict, "invalid package manifest or component graph: "+err.Error())
+		writeError(w, http.StatusConflict, "Некорректный манифест пакета или граф компонентов: "+err.Error())
 		return
 	}
 	if guard, ok := s.Repo.(interface {
 		VerifyMigrationContentBeforeSign0337(context.Context, string, string, model.Manifest) error
 	}); ok {
 		if e := guard.VerifyMigrationContentBeforeSign0337(r.Context(), lookup.Release.ProjectID, lookup.Release.ID, manifest); e != nil {
-			writeError(w, http.StatusConflict, "migrated content is not verified for signing: "+e.Error())
+			writeError(w, http.StatusConflict, "Перенесённое содержимое не проверено для подписи: "+e.Error())
 			return
 		}
 	}
@@ -491,7 +491,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	}
 	generation, generationErr := s.nextGameReleaseGeneration02311(manifest.ProjectID, manifest.ProfileID, manifest.Channel, lookup.Release.ID)
 	if generationErr != nil {
-		writeError(w, http.StatusConflict, "game release generation: "+generationErr.Error())
+		writeError(w, http.StatusConflict, "Создание игрового релиза: "+generationErr.Error())
 		return
 	}
 	manifest.GameReleaseGeneration = generation

@@ -666,7 +666,7 @@ def main() -> int:
         output.write_text(
             json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8"
         )
-        print("Release publication: " + result["status"])
+        print("Публикация релиза: " + result["status"])
         return 0
     except (
         Blocked,
@@ -678,7 +678,7 @@ def main() -> int:
         json.JSONDecodeError,
         BadZipFile,
     ) as exc:
-        print("RELEASE PUBLICATION BLOCKED: " + str(exc), file=sys.stderr)
+        print("ПУБЛИКАЦИЯ РЕЛИЗА ЗАБЛОКИРОВАНА: " + str(exc), file=sys.stderr)
         return 2
 
 

@@ -37,10 +37,10 @@ func PreUpgradeBackup0472(ctx context.Context, source, label string) (string, er
 	}
 	dest := filepath.Join(dir, fmt.Sprintf("%s-%s-%d-%s.sqlite", filepath.Base(abs), label, time.Now().UTC().UnixNano(), token))
 	if _, err = OnlineBackup(ctx, abs, dest); err != nil {
-		return "", fmt.Errorf("mandatory SQLite upgrade backup: %w", err)
+		return "", fmt.Errorf("Не удалось создать обязательную резервную копию перед обновлением SQLite: %w", err)
 	}
 	if _, err = VerifyBackup(ctx, dest); err != nil {
-		return "", fmt.Errorf("SQLite upgrade backup verification: %w", err)
+		return "", fmt.Errorf("Не удалось проверить резервную копию перед обновлением SQLite: %w", err)
 	}
 	proof, err := os.MkdirTemp(dir, ".upgrade-proof-*")
 	if err != nil {
@@ -48,7 +48,7 @@ func PreUpgradeBackup0472(ctx context.Context, source, label string) (string, er
 	}
 	defer os.RemoveAll(proof)
 	if _, err = RestoreBackup(ctx, dest, filepath.Join(proof, "restored.sqlite"), false); err != nil {
-		return "", fmt.Errorf("SQLite upgrade restore proof: %w", err)
+		return "", fmt.Errorf("Не удалось подтвердить восстановление SQLite при обновлении: %w", err)
 	}
 	return dest, nil
 }

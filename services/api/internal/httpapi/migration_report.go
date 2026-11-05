@@ -23,7 +23,7 @@ func (s Server) registerMigrationReportRoutes03313(mux *http.ServeMux) {
 func (s Server) migrationReportAccess03313(w http.ResponseWriter, r *http.Request) (migrationReportStore03313, string, bool) {
 	store, ok := s.Repo.(migrationReportStore03313)
 	if !ok {
-		writeError(w, 503, "migration reports require PostgreSQL")
+		writeError(w, 503, "Для отчётов о миграции требуется PostgreSQL")
 		return nil, "", false
 	}
 	run, e := s.migrationStoreRead03310(w, r)
@@ -72,7 +72,7 @@ func (s Server) migrationReportReview03313(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if r.Header.Get("X-Migration-RC-Confirm") != id {
-		writeError(w, 400, "exact migration run ID confirmation required")
+		writeError(w, 400, "Требуется подтверждение точного идентификатора запуска миграции")
 		return
 	}
 	input, ok := migrationRead0331[struct {
@@ -84,7 +84,7 @@ func (s Server) migrationReportReview03313(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if len(input.ReportSHA256) != 64 || len(input.EvidenceSHA256) != 64 {
-		writeError(w, 400, "SHA-256 report and evidence required")
+		writeError(w, 400, "Требуются отчёт SHA-256 и подтверждающие данные")
 		return
 	}
 	out, e := store.ReviewMigrationReport03313(r.Context(), id, input.ReportSHA256, s.adminActor(r), input.EvidenceReference, input.EvidenceSHA256)

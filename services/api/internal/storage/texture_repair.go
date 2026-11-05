@@ -24,7 +24,7 @@ func RestoreTextureObject0253(ctx context.Context, store Storage, digest string,
 	}
 	hash := sha256.Sum256(png)
 	if hex.EncodeToString(hash[:]) != digest || len(png) < 1 || len(png) > 4<<20 {
-		return "", 0, errors.New("restore data failed SHA-256 verification")
+		return "", 0, errors.New("Восстановленные данные не прошли проверку SHA-256")
 	}
 	if _, ok := store.(*S3Storage); ok {
 		return restoreS3Texture0253(ctx, store.(*S3Storage), digest, rel, png)
@@ -115,7 +115,7 @@ func restoreS3Texture0253(ctx context.Context, s3 *S3Storage, digest, rel string
 	}
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
-		return "", 0, fmt.Errorf("S3 recovery read HTTP %d", res.StatusCode)
+		return "", 0, fmt.Errorf("Ошибка чтения S3 при восстановлении: HTTP %d", res.StatusCode)
 	}
 	etag := res.Header.Get("ETag")
 	existing, readErr := io.ReadAll(io.LimitReader(res.Body, 4<<20+1))
@@ -130,7 +130,7 @@ func restoreS3Texture0253(ctx context.Context, s3 *S3Storage, digest, rel string
 		return key, int64(len(png)), nil
 	}
 	if etag == "" || len(etag) > 256 {
-		return "", 0, errors.New("corrupt S3 object has no usable ETag for conditional recovery")
+		return "", 0, errors.New("У повреждённого объекта S3 нет пригодного ETag для условного восстановления")
 	}
 	hdr := http.Header{}
 	hdr.Set("If-Match", etag)
@@ -148,7 +148,7 @@ func restoreS3Texture0253(ctx context.Context, s3 *S3Storage, digest, rel string
 	}
 	defer update.Body.Close()
 	if update.StatusCode < 200 || update.StatusCode >= 300 {
-		return "", 0, fmt.Errorf("S3 conditional recovery HTTP %d", update.StatusCode)
+		return "", 0, fmt.Errorf("Условное восстановление S3 завершилось ошибкой HTTP %d", update.StatusCode)
 	}
 	// Проверить полную замену через конечную точку объекта, а не только PUT 200.
 	blob, sz, err := OpenTexture0252(s3, digest)
@@ -161,7 +161,7 @@ func restoreS3Texture0253(ctx context.Context, s3 *S3Storage, digest, rel string
 		return "", 0, err
 	}
 	if (sz >= 0 && sz != int64(len(png))) || !bytes.Equal(recovered, png) {
-		return "", 0, errors.New("S3 recovered object failed readback verification")
+		return "", 0, errors.New("Восстановленный объект S3 не прошёл проверку повторным чтением")
 	}
 	return key, int64(len(png)), nil
 }

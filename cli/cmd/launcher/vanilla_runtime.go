@@ -994,7 +994,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		if task.SHA1 == "" {
 			return vanillaDownloadedFile{}, fmt.Errorf("%s: существующий artifact нельзя безопасно переиспользовать без SHA-1", task.Path)
 		}
-		quarantined, err = quarantineCompatibilityArtifact(root, task.Path, "cached artifact failed Mojang SHA-1/size verification")
+		quarantined, err = quarantineCompatibilityArtifact(root, task.Path, "Артефакт в кеше не прошёл проверку SHA-1 или размера Mojang")
 		if err != nil {
 			return vanillaDownloadedFile{}, err
 		}

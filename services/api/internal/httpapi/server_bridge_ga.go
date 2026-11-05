@@ -173,7 +173,7 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		items, err := backend.ListServerBridgeTopology(ctx)
 		cancel()
 		if err != nil {
-			writeError(w, http.StatusServiceUnavailable, "ServerBridge topology unavailable")
+			writeError(w, http.StatusServiceUnavailable, "Топология ServerBridge недоступна")
 			return
 		}
 		if projectFilter == "" {
@@ -193,14 +193,14 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		items, networkErr := backend.ListServerBridgeNetworkStates(ctx, projectFilter, now)
 		cancel()
 		if networkErr != nil {
-			writeError(w, http.StatusServiceUnavailable, "ServerBridge network admission unavailable")
+			writeError(w, http.StatusServiceUnavailable, "Сетевой допуск ServerBridge недоступен")
 			return
 		}
 		network = items
 	}
 	controls, err := s.State.ServerBridge.recentControls0200(r.Context(), 100)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "ServerBridge control history unavailable")
+		writeError(w, http.StatusServiceUnavailable, "История команд управления ServerBridge недоступна")
 		return
 	}
 	if projectFilter != "" {

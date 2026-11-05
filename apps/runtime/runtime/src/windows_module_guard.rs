@@ -304,7 +304,7 @@ mod imp {
             })?;
             if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
                 return Err(format!(
-                    "Module Guard rejected non-regular/symlink module {}",
+                    "Module Guard отклонил нестандартный модуль или символическую ссылку {}",
                     path.display()
                 ));
             }
@@ -313,7 +313,7 @@ mod imp {
             if !self.is_trusted_root_path(&normalized) {
                 verify_windows_authenticode_trust(&canonical).map_err(|err| {
                     format!(
-                        "Module Guard rejected module outside trusted roots {}: {err}",
+                        "Module Guard отклонил модуль вне доверенных каталогов {}: {err}",
                         canonical.display()
                     )
                 })?;
@@ -576,7 +576,7 @@ mod imp {
         let jvm_ready = jvm_aware_report_from_event(&jvm_ready_event)?;
         if !jvm_ready.certified_major || !crate::GUARD_CERTIFIED_JAVA_MAJORS.contains(&jvm_ready.java_major) {
             return Err(format!(
-                "Guard JVM-Aware Protection rejected uncertified Java major {}",
+                "Guard: отклонена несертифицированная основная версия Java {}",
                 jvm_ready.java_major
             ));
         }
@@ -716,7 +716,7 @@ mod imp {
             match read {
                 Err(_) => {
                     if process_alive(pid) {
-                        let reason = debug_aware_stream_failure(pid, "Module Guard heartbeat timeout");
+                        let reason = debug_aware_stream_failure(pid, "Module Guard: превышено время ожидания сигнала работоспособности");
                         fail_closed(&state, pid, &reason, 0);
                     } else {
                         mark_stopped(&state);
@@ -765,7 +765,7 @@ mod imp {
                                 // Повторное использование базового адреса до аутентифицированного уведомления о выгрузке не может
                                 // незаметно снять ожидание проверки несоответствия.
                                 if pending_unload_notifications.contains_key(&event.base_address) {
-                                    fail_closed(&state, pid, "Module Guard module base reused before authenticated unload", 0);
+                                    fail_closed(&state, pid, "Module Guard: базовый адрес модуля использован повторно до подтверждённой выгрузки", 0);
                                     return;
                                 }
                                 module_hash = sha256;
@@ -840,7 +840,7 @@ mod imp {
                 MODULE_EVENT_REASON_HOOK_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "Guard Hook Engine integrity violation".to_string()
+                        "Guard: нарушена целостность движка перехватов".to_string()
                     } else {
                         format!("Нарушение целостности подсистемы перехвата Guard: {detail}")
                     })
@@ -890,7 +890,7 @@ mod imp {
                         Ok(mut thread_report) => {
                             match runtime_policy.verify_process_tree(pid) {
                                 Err(err) => Err(format!(
-                                    "Guard Thread & Process Integrity process-tree verification failed: {err}"
+                                    "Guard: не удалось проверить дерево процессов и потоков: {err}"
                                 )),
                                 Ok(tree) => {
                                     module_hash = thread_report.thread_set_sha256.clone();
@@ -927,7 +927,7 @@ mod imp {
                         "Guard Thread & Process Integrity suspicious runtime transition detected".to_string()
                     } else {
                         format!(
-                            "Guard Thread & Process Integrity suspicious runtime transition detected: {detail}"
+                            "Guard: обнаружен подозрительный переход Runtime: {detail}"
                         )
                     })
                 }
@@ -959,7 +959,7 @@ mod imp {
                         "Guard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected".to_string()
                     } else {
                         format!(
-                            "Guard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected: {detail}"
+                            "Guard: обнаружено неразрешённое подключение отладки или инструментирования: {detail}"
                         )
                     })
                 }
@@ -984,10 +984,10 @@ mod imp {
                 MODULE_EVENT_REASON_JVM_AWARE_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "Guard JVM-Aware Protection rejected non-JVM executable-memory transition".to_string()
+                        "Guard: отклонён переход памяти в исполняемое состояние вне JVM".to_string()
                     } else {
                         format!(
-                            "Guard JVM-Aware Protection rejected non-JVM executable-memory transition: {detail}"
+                            "Guard: отклонён переход памяти в исполняемое состояние вне JVM: {detail}"
                         )
                     })
                 }
@@ -1018,7 +1018,7 @@ mod imp {
                 MODULE_EVENT_REASON_CONTINUOUS_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "Guard Continuous Guard Sensor/Guard cross-check failed".to_string()
+                        "Guard: перекрёстная проверка Sensor и Guard завершилась ошибкой".to_string()
                     } else {
                         format!("Не удалось сопоставить данные сенсора и непрерывной защиты Guard: {detail}")
                     })
@@ -1046,7 +1046,7 @@ mod imp {
                 let next_guard_sequence = match guard_sequence.checked_add(1) {
                     Some(value) => value,
                     None => {
-                        fail_closed(&state, pid, "Guard Continuous Guard guard-sequence overflow", 0);
+                        fail_closed(&state, pid, "Guard: переполнение последовательности событий защиты", 0);
                         return;
                     }
                 };
@@ -1340,7 +1340,7 @@ mod imp {
     fn validate_jvm_aware_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!(
-                "Guard JVM-Aware Protection invalid {label} digest"
+                "Guard: некорректная контрольная сумма {label}"
             ));
         }
         Ok(value.to_ascii_lowercase())
@@ -1349,7 +1349,7 @@ mod imp {
     fn validate_thread_process_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!(
-                "Guard Thread & Process Integrity invalid {label} digest"
+                "Guard: некорректная контрольная сумма {label} для процессов и потоков"
             ));
         }
         Ok(value.to_ascii_lowercase())
@@ -1472,7 +1472,7 @@ mod imp {
             let (normalized, _sha256) = policy
                 .validate_loaded_module(&module.path)
                 .map_err(|err| format!(
-                    "Module Guard external snapshot drift: unobserved module at base 0x{:X} failed independent trust validation: {err}",
+                    "Module Guard: изменение внешнего снимка; неизвестный модуль по адресу 0x{:X} не прошёл независимую проверку доверия: {err}",
                     module.base_address
                 ))?;
             if !normalized.eq_ignore_ascii_case(&module.normalized_path) {
@@ -1529,7 +1529,7 @@ mod imp {
         };
         if unsafe { Module32FirstW(snapshot.raw(), &mut entry) } == 0 {
             return Err(format!(
-                "Module Guard module enumeration failed for PID {pid}: {}",
+                "Module Guard: не удалось перечислить модули процесса PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -1714,7 +1714,7 @@ mod imp {
         let mut debugged = 0i32;
         let success = unsafe { CheckRemoteDebuggerPresent(handle.raw(), &mut debugged) };
         if success != 0 && debugged != 0 {
-            "Guard Debug & Instrumentation Guard live debugger attached; sensor stream interrupted".to_string()
+            "Guard: обнаружен подключённый отладчик; поток данных датчика прерван".to_string()
         } else {
             default_reason.to_string()
         }

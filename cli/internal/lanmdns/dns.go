@@ -50,20 +50,20 @@ func getName(p []byte, pos *int) (string, error) {
 	seen := map[int]bool{}
 	for jumps := 0; jumps < 32; jumps++ {
 		if cur >= len(p) {
-			return "", errors.New("short DNS name")
+			return "", errors.New("Укороченное имя DNS")
 		}
 		if seen[cur] {
-			return "", errors.New("cyclic DNS compression")
+			return "", errors.New("Циклическая компрессия DNS")
 		}
 		seen[cur] = true
 		n := int(p[cur])
 		if n&0xc0 == 0xc0 {
 			if cur+1 >= len(p) {
-				return "", errors.New("short compression pointer")
+				return "", errors.New("Укороченный указатель компрессии")
 			}
 			ptr := int(n&0x3f)<<8 | int(p[cur+1])
 			if ptr >= cur {
-				return "", errors.New("forward DNS compression pointer")
+				return "", errors.New("Указатель компрессии DNS направлен вперёд")
 			}
 			if after == 0 {
 				after = cur + 2
@@ -87,15 +87,15 @@ func getName(p []byte, pos *int) (string, error) {
 			return strings.Join(labels, ".") + ".", nil
 		}
 		if cur+n > len(p) {
-			return "", errors.New("short DNS label")
+			return "", errors.New("Укороченная метка DNS")
 		}
 		labels = append(labels, string(p[cur:cur+n]))
 		cur += n
 		if len(strings.Join(labels, ".")) > 253 {
-			return "", errors.New("DNS name too long")
+			return "", errors.New("Слишком длинное имя DNS")
 		}
 	}
-	return "", errors.New("DNS compression recursion exceeded")
+	return "", errors.New("Превышена глубина рекурсии компрессии DNS")
 }
 func appendRecord(b *bytes.Buffer, name string, typ uint16, ttl uint32, data []byte) error {
 	if err := putName(b, name); err != nil {

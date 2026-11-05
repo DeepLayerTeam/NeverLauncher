@@ -83,7 +83,7 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 		req.Channel = "stable"
 	}
 	if !s.canAccessProject(claims, req.ProjectID) || req.ServerID == "" || req.ProfileID == "" {
-		writeError(w, http.StatusForbidden, "project/profile/server access denied")
+		writeError(w, http.StatusForbidden, "Доступ к проекту, профилю или серверу запрещён")
 		return
 	}
 	scoped := false
@@ -94,7 +94,7 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 		}
 	}
 	if !scoped {
-		writeError(w, http.StatusForbidden, "no signed plan policy for server/profile/channel")
+		writeError(w, http.StatusForbidden, "Для сервера, профиля и канала отсутствует подписанная политика плана")
 		return
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)
@@ -121,7 +121,7 @@ func (s Server) serverBridgePlanChallenge02412(w http.ResponseWriter, r *http.Re
 	record := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: claims.TrustedDeviceID, Purpose: planChallengePurpose02412, ChallengeHash: deviceChallengeHash0121(secret),
 		Metadata: map[string]any{"sessionId": claims.SessionID, "bindingEpoch": strconv.FormatInt(claims.BindingEpoch, 10), "serverId": req.ServerID, "projectId": req.ProjectID, "profileId": req.ProfileID, "channel": req.Channel, "policyEpoch": strconv.FormatUint(policy.Epoch, 10)}, CreatedAt: now, ExpiresAt: now.Add(60 * time.Second)}
 	if err = s.Repo.SaveDeviceChallenge(r.Context(), record); err != nil {
-		writeError(w, http.StatusServiceUnavailable, "plan challenge persistence unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Сохранение запроса проверки плана недоступно")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{"challengeId": challengeID, "challenge": secret, "expiresAt": record.ExpiresAt, "policyEpoch": policy.Epoch}})
@@ -148,12 +148,12 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 		return errors.New("Некорректный формат: «signed component plan measurements»")
 	}
 	if !planMatches02412(policy, e.ServerID, e.ProjectID, e.ProfileID, e.Channel, e.ReleaseSignature, e.CatalogDigest, e.PlanSHA256) {
-		return errors.New("signed policy denies resolved component plan")
+		return errors.New("Подписанная политика запрещает рассчитанный план компонентов")
 	}
 	// Для этого релиза необходима только что завершённая непрерывная аттестация Guard v2. Одного
 	// списка модов, хеша плана или подписи P-256 от пользователя НИКОГДА недостаточно.
 	if guardTicket.ID == "" || metadataString0121(guardTicket.Metadata, "attestationSha256") != e.GuardAttestationSHA256 {
-		return errors.New("verified plan is not bound to current continuous Guard evidence")
+		return errors.New("Проверенный план не привязан к актуальному подтверждению непрерывной защиты Guard")
 	}
 	if e.ChallengeID == "" || e.Challenge == "" || len(e.Challenge) > 160 || len(e.ChallengeID) > 160 || strings.ContainsAny(planEvidencePayload02412(*e), "\r") {
 		return errors.New("Некорректное значение: «verified plan challenge»")
@@ -171,7 +171,7 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 	}
 	consumed, err := s.Repo.ConsumeDeviceChallenge(r.Context(), e.ChallengeID, claims.Sub, claims.TrustedDeviceID, planChallengePurpose02412, deviceChallengeHash0121(e.Challenge), time.Now().UTC())
 	if err != nil {
-		return errors.New("verified plan challenge expired or replayed")
+		return errors.New("Проверочный запрос плана просрочен или использован повторно")
 	}
 	if metadataString0121(consumed.Metadata, "sessionId") != claims.SessionID || metadataString0121(consumed.Metadata, "bindingEpoch") != strconv.FormatInt(claims.BindingEpoch, 10) || metadataString0121(consumed.Metadata, "serverId") != req.ServerID || metadataString0121(consumed.Metadata, "projectId") != req.ProjectID || metadataString0121(consumed.Metadata, "profileId") != req.ProfileID || metadataString0121(consumed.Metadata, "channel") != req.Channel || metadataString0121(consumed.Metadata, "policyEpoch") != strconv.FormatUint(policy.Epoch, 10) {
 		return errors.New("Обнаружено изменение: «verified plan challenge binding/policy epoch»")
@@ -195,7 +195,7 @@ func planJoinEpochValid02412(created time.Time) error {
 		return err
 	}
 	if created.Before(issued) {
-		return errors.New("join ticket predates active verified plan policy")
+		return errors.New("Билет подключения выдан до активации проверенной политики плана")
 	}
 	return nil
 }

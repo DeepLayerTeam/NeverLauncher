@@ -62,7 +62,7 @@ public final class HostSession implements AutoCloseable {
         if(connected)throw new IllegalStateException("Сессия хоста уже подключена");
         Objects.requireNonNull(requiredCapabilities,"requiredCapabilities");
         for(String name:requiredCapabilities)validCapability(name);
-        if(callbackUrl==null)throw new IllegalArgumentException("callbackUrl is null");
+        if(callbackUrl==null)throw new IllegalArgumentException("Значение callbackUrl отсутствует");
         if(!callbackUrl.isEmpty())validateOrigin(callbackUrl);
         Map<String,Object> hello=new LinkedHashMap<>(Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId",instanceId,"extensionId",extensionId,"pid",ProcessHandle.current().pid()));
         if(!callbackUrl.isBlank())hello.put("callbackUrl",callbackUrl);
@@ -95,10 +95,10 @@ public final class HostSession implements AutoCloseable {
     }
     private static Set<String> parseNames(Object raw,String field)throws IOException {
         if(raw==null)return Set.of();
-        if(!(raw instanceof List<?> list)||list.size()>512)throw new IOException("invalid host "+field);
+        if(!(raw instanceof List<?> list)||list.size()>512)throw new IOException("Некорректный хост "+field);
         Set<String> result=new HashSet<>();
         for(Object item:list){
-            if(!(item instanceof String name)||name.length()>128||!name.matches("[a-z][a-z0-9.:-]*")||!result.add(name))throw new IOException("invalid host "+field+" entry");
+            if(!(item instanceof String name)||name.length()>128||!name.matches("[a-z][a-z0-9.:-]*")||!result.add(name))throw new IOException("Некорректный хост "+field+" entry");
         }
         return Set.copyOf(result);
     }

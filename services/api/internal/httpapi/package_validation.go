@@ -257,7 +257,7 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 	e.RunID = strings.TrimSpace(e.RunID)
 	e.Commit = strings.TrimSpace(e.Commit)
 	if e.SchemaVersion != runtimeValidationSchema0212 || e.PackageID != lookup.Release.ID || e.TargetID == "" || e.RunID == "" || !validSHA256Hex0212(e.ManifestDigest) || e.StartedAt.IsZero() || e.FinishedAt.IsZero() || e.FinishedAt.Before(e.StartedAt) {
-		writeError(w, http.StatusBadRequest, "runtime evidence identity/schema/timestamps invalid")
+		writeError(w, http.StatusBadRequest, "Некорректные идентификатор, схема или временные метки доказательств Runtime")
 		return
 	}
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)
@@ -400,7 +400,7 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 		if !coverage.Eligible {
 			s.Repo.AddAuditEvent(model.AuditEvent{Actor: "runtime-gate", Action: "release:publish-blocked", Target: lookup.Release.ID,
 				ReasonCode: "stable_runtime_targets_incomplete_03411", CreatedAt: time.Now().UTC()})
-			return fmt.Errorf("stable runtime gate: missing/failed/inconclusive required targets: %v", coverage.TargetBlockers)
+			return fmt.Errorf("Проверка стабильного Runtime: обязательные цели отсутствуют, завершились ошибкой или дали неопределённый результат: %v", coverage.TargetBlockers)
 		}
 		return nil
 	}

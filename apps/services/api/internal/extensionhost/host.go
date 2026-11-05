@@ -697,7 +697,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		st.sandboxReady = true
 		st.mu.Unlock()
 	}
-	s.addLog(st, "host", "info", fmt.Sprintf("process started pid=%d", cmd.Process.Pid), nil)
+	s.addLog(st, "host", "info", fmt.Sprintf("Процесс запущен: pid=%d", cmd.Process.Pid), nil)
 	s.wg.Add(3)
 	go s.captureStream(st, "stdout", stdout)
 	go s.captureStream(st, "stderr", stderr)
@@ -905,14 +905,14 @@ func (s *Supervisor) waitProcess(st *processState) {
 			if err != nil {
 				st.lastError = err.Error()
 			} else {
-				st.lastError = fmt.Sprintf("unexpected exit code %d", code)
+				st.lastError = fmt.Sprintf("Неожиданный код завершения %d", code)
 			}
 		}
 	}
 	close(st.doneCh)
 	st.mu.Unlock()
 	s.removeProcessToken(st)
-	s.addLog(st, "host", map[bool]string{true: "info", false: "error"}[expected], fmt.Sprintf("process exited code=%d expected=%t", code, expected), nil)
+	s.addLog(st, "host", map[bool]string{true: "info", false: "error"}[expected], fmt.Sprintf("Процесс завершился: код=%d, ожидаемое завершение=%t", code, expected), nil)
 	if !expected {
 		s.registerCrashAndRestart(st)
 	}
@@ -943,7 +943,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		s.mu.Unlock()
 		st.mu.Lock()
 		st.state = "crashloop"
-		st.lastError = fmt.Sprintf("crash loop: %d crashes within %s", len(n), s.cfg.CrashWindow)
+		st.lastError = fmt.Sprintf("Цикл аварий: %d сбоев за %s", len(n), s.cfg.CrashWindow)
 		reason := st.lastError
 		st.mu.Unlock()
 		if handler != nil {
@@ -1373,11 +1373,11 @@ func (s *Supervisor) monitorOnce(now time.Time) {
 				st.processCount = count
 				st.mu.Unlock()
 				if s.cfg.MaxMemoryBytes > 0 && rss > s.cfg.MaxMemoryBytes {
-					s.failProcess(st, fmt.Sprintf("memory limit exceeded: %d > %d", rss, s.cfg.MaxMemoryBytes), false)
+					s.failProcess(st, fmt.Sprintf("Превышен предел памяти: %d > %d", rss, s.cfg.MaxMemoryBytes), false)
 					continue
 				}
 				if s.cfg.MaxProcesses > 0 && count > s.cfg.MaxProcesses {
-					s.failProcess(st, fmt.Sprintf("process limit exceeded: %d > %d", count, s.cfg.MaxProcesses), false)
+					s.failProcess(st, fmt.Sprintf("Превышен предел числа процессов: %d > %d", count, s.cfg.MaxProcesses), false)
 				}
 			}
 		}

@@ -50,27 +50,27 @@ def audit() -> None:
         b = {part.filename.removeprefix("sql/"): hashlib.sha256(archive.read(part)).hexdigest()
              for part in archive.infolist()}
     if not a or a != b:
-        raise RuntimeError("Backend/CLI migration files or checksums differ")
+        raise RuntimeError("Файлы миграций Backend и CLI или их контрольные суммы отличаются")
     for migration in (
         "0053_release_workspace_0218.sql", "0054_serverbridge_operator_0219.sql",
         "0055_config_audit_02111.sql",
     ):
         if migration not in a:
-            raise RuntimeError(f"required migration absent: {migration}")
+            raise RuntimeError(f"Отсутствует обязательная миграция: {migration}")
 
     generated = {name: digest(ROOT / name) for name in SDK_GENERATED}
     run(sys.executable, "scripts/sdk/generate-types.py")
     drift = [name for name in SDK_GENERATED if digest(ROOT / name) != generated[name]]
     if drift:
-        raise RuntimeError("SDK generation drift: " + ", ".join(drift))
+        raise RuntimeError("Содержимое сгенерированного SDK изменилось: " + ", ".join(drift))
     if not (ROOT / "docs/administration/ga.md").is_file():
         raise RuntimeError("Отсутствует: «GA operations and rollback documentation»")
-    print(f"Admin GA source audit PASS: {version}, {len(a)} identical migrations, {len(generated)} reproducible SDK artifacts")
+    print(f"Проверка исходников Admin GA пройдена: {version}, совпадающих миграций — {len(a)}, воспроизводимых артефактов SDK — {len(generated)}")
 
 
 if __name__ == "__main__":
     try:
         audit()
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
-        print(f"Admin GA source audit FAIL: {error}", file=sys.stderr)
+        print(f"Проверка исходников Admin GA завершилась ошибкой: {error}", file=sys.stderr)
         raise SystemExit(1)

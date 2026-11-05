@@ -38,7 +38,7 @@ func verifyLocalPath(path string) error {
 		return errors.New("Каталог SQLite должен существовать и не быть символической ссылкой")
 	}
 	if info.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("sqlite directory %s permissions %04o unsafe; use chmod 0700", dir, info.Mode().Perm())
+		return fmt.Errorf("Для каталога SQLite %s небезопасны права %04o; используйте chmod 0700", dir, info.Mode().Perm())
 	}
 	st, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || st.Uid != uint32(os.Geteuid()) {
@@ -64,7 +64,7 @@ func verifyLocalPath(path string) error {
 			return errors.New("sqlite file: требуется «regular and a symlink»")
 		}
 		if f.Mode().Perm()&0077 != 0 {
-			return fmt.Errorf("sqlite file permissions %04o unsafe", f.Mode().Perm())
+			return fmt.Errorf("Небезопасные права %04o файла SQLite", f.Mode().Perm())
 		}
 		if st, ok := f.Sys().(*syscall.Stat_t); !ok || st.Uid != uint32(os.Geteuid()) {
 			return errors.New("Несовпадение: «sqlite database ownership»")
@@ -91,7 +91,7 @@ func rejectSymlinkSegments(dir string) error {
 			return err
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("sqlite path has symlink component %s", current)
+			return fmt.Errorf("Путь SQLite содержит символическую ссылку %s", current)
 		}
 	}
 	return nil
@@ -107,7 +107,7 @@ func splitPath(s string) []string {
 func exclusiveLock(name string) (*os.File, error) {
 	fd, err := syscall.Open(name, syscall.O_RDWR|syscall.O_CREAT|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("sqlite owner lock open: %w", err)
+		return nil, fmt.Errorf("Не удалось открыть блокировку владельца SQLite: %w", err)
 	}
 	f := os.NewFile(uintptr(fd), name)
 	info, err := f.Stat()
@@ -117,7 +117,7 @@ func exclusiveLock(name string) (*os.File, error) {
 	if err == nil {
 		st, ok := info.Sys().(*syscall.Stat_t)
 		if !ok || st.Uid != uint32(os.Geteuid()) {
-			err = errors.New("sqlite owner lock must belong to service user")
+			err = errors.New("Блокировка владельца SQLite должна принадлежать пользователю службы")
 		}
 	}
 	if err == nil {
@@ -125,7 +125,7 @@ func exclusiveLock(name string) (*os.File, error) {
 	}
 	if err != nil {
 		_ = f.Close()
-		return nil, fmt.Errorf("sqlite DB owned by another instance or unsafe lock: %w", err)
+		return nil, fmt.Errorf("База SQLite занята другим экземпляром или блокировка небезопасна: %w", err)
 	}
 	return f, nil
 }

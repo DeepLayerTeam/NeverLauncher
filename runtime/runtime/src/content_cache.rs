@@ -103,10 +103,10 @@ impl CacheStore {
         // действуют в масштабе ОС и автоматически снимаются при завершении процесса.
         let handle = tokio::task::spawn_blocking(move || -> Result<std::fs::File, String> {
             let handle = std::fs::OpenOptions::new().read(true).write(true).create(true)
-                .open(&lockpath).map_err(|e| format!("open cache lock: {e}"))?;
-            handle.lock_exclusive().map_err(|e| format!("lock cache object: {e}"))?;
+                .open(&lockpath).map_err(|e| format!("Не удалось открыть блокировку кеша: {e}"))?;
+            handle.lock_exclusive().map_err(|e| format!("Не удалось заблокировать объект кеша: {e}"))?;
             Ok(handle)
-        }).await.map_err(|e| format!("cache lock task: {e}"))??;
+        }).await.map_err(|e| format!("Ошибка задания блокировки кеша: {e}"))??;
         Ok(CacheLease { path: objdir.join(digest), _local: guard, _handle: handle })
     }
 }
@@ -122,13 +122,13 @@ impl CacheLease {
         if !existing_verified(&self.path, file).await? {
             // Повреждение, неправильный размер и замена симлинком делают объект недействительным.
             if fs::symlink_metadata(&self.path).await.is_ok() {
-                fs::remove_file(&self.path).await.map_err(|e| format!("invalidate cache object: {e}"))?;
+                fs::remove_file(&self.path).await.map_err(|e| format!("Не удалось аннулировать объект кеша: {e}"))?;
             }
             return Ok(false);
         }
         file_ownership::ensure_no_symlinks(root, target)?;
         let parent = target.parent().ok_or("invalid destination")?;
-        fs::create_dir_all(parent).await.map_err(|e| format!("create destination: {e}"))?;
+        fs::create_dir_all(parent).await.map_err(|e| format!("Не удалось создать целевой каталог: {e}"))?;
         file_ownership::ensure_no_symlinks(root, target)?;
         let staging = parent.join(format!(".nl-cache-{:016x}.tmp", rand::random::<u64>()));
         let outcome = async {
@@ -165,7 +165,7 @@ impl CacheLease {
             if fs::symlink_metadata(&self.path).await.is_ok() {
                 fs::remove_file(&self.path).await.map_err(|e| e.to_string())?;
             }
-            fs::rename(&staging, &self.path).await.map_err(|e| format!("publish cache object: {e}"))
+            fs::rename(&staging, &self.path).await.map_err(|e| format!("Не удалось опубликовать объект кеша: {e}"))
         }.await;
         if outcome.is_err() { let _ = fs::remove_file(&staging).await; }
         outcome

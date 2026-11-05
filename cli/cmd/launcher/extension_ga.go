@@ -79,7 +79,7 @@ func extensionUpgradeSource0210(args []string) error {
 	}
 	root = filepath.Clean(root)
 	if strings.EqualFold(filepath.Ext(root), ".nlext") {
-		return errors.New("signed .nlext packages are immutable; unpack source, change api to 1.0, rebuild and re-sign")
+		return errors.New("Подписанные пакеты .nlext неизменяемы; распакуйте исходники, измените api на 1.0, пересоберите и подпишите заново")
 	}
 	manifestPath := canonicalExtensionManifestPath0201(root)
 	data, err := os.ReadFile(manifestPath)
@@ -94,7 +94,7 @@ func extensionUpgradeSource0210(args []string) error {
 	}
 	previousAPI := strings.TrimSpace(manifest.API)
 	if !supportedExtensionAPI0210(previousAPI) {
-		return fmt.Errorf("source uses unsupported extension api %q", previousAPI)
+		return fmt.Errorf("Исходник использует неподдерживаемую версию API расширения %q", previousAPI)
 	}
 	manifest.API = ExtensionsAPIVersion0210
 	normalized, _, err := normalizeCanonicalExtension0201(manifest)

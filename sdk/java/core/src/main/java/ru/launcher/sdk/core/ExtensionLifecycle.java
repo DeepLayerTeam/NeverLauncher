@@ -32,7 +32,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
     public void start(Duration timeout) throws Exception {
         validateTimeout(timeout);
         synchronized(transition){
-            if(state!=State.NEW)throw new IllegalStateException("cannot start in state "+state);
+            if(state!=State.NEW)throw new IllegalStateException("Нельзя запустить в состоянии "+state);
             state=State.STARTING;
         }
         try {
@@ -61,12 +61,12 @@ public final class ExtensionLifecycle implements AutoCloseable {
                 state=State.STOPPED;
                 if(active!=null)active.cancel(true);
             }else if(previous==State.RUNNING){state=State.STOPPING;}
-            else if(previous!=State.STOPPING)throw new IllegalStateException("cannot stop in state "+state);
+            else if(previous!=State.STOPPING)throw new IllegalStateException("Нельзя остановить в состоянии "+state);
         }
         if(previous==State.STOPPING){
             if(!stopFinished.await(timeout.toNanos(),TimeUnit.NANOSECONDS))
                 throw new TimeoutException("concurrent extension stop deadline exceeded");
-            if(state==State.FAILED)throw new IllegalStateException("extension stop failed");
+            if(state==State.FAILED)throw new IllegalStateException("Не удалось остановить расширение");
             return;
         }
         cancellation.cancel();
@@ -93,7 +93,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
     }
     private static void validateTimeout(Duration timeout){
         Objects.requireNonNull(timeout,"timeout");
-        if(timeout.isZero()||timeout.isNegative())throw new IllegalArgumentException("timeout must be positive");
+        if(timeout.isZero()||timeout.isNegative())throw new IllegalArgumentException("Тайм-аут должен быть положительным");
     }
     private void invoke(CheckedAction action,Duration timeout,State expected) throws Exception {
         long nanos=timeout.toNanos();
@@ -110,7 +110,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
             Throwable root=e.getCause();
             if(root instanceof CompletionException&&root.getCause()!=null)root=root.getCause();
             if(root instanceof Exception ex)throw ex;
-            throw new IllegalStateException("extension lifecycle failed",root);
+            throw new IllegalStateException("Жизненный цикл расширения завершился ошибкой",root);
         }finally{
             synchronized(transition){if(active==task)active=null;}
         }

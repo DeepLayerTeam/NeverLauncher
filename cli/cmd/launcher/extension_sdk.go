@@ -551,7 +551,7 @@ func (h *localDevHost02010) capabilityHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 	if !allowed {
-		http.Error(w, "capability denied by local dev host", 403)
+		http.Error(w, "Локальный хост разработки запретил доступ к возможности", 403)
 		return
 	}
 	if raw, ok := h.fixtures[capName]; ok {
@@ -572,7 +572,7 @@ func (h *localDevHost02010) capabilityHandler(w http.ResponseWriter, r *http.Req
 	case "telemetry.emit":
 		writeJSON02010(w, 200, map[string]any{"accepted": true})
 	default:
-		http.Error(w, "provide --fixtures for this capability", 501)
+		http.Error(w, "Укажите --fixtures для этой возможности", 501)
 	}
 }
 func (h *localDevHost02010) subscriptionsHandler(w http.ResponseWriter, r *http.Request) {
@@ -586,7 +586,7 @@ func (h *localDevHost02010) subscribeHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if !h.grants["events:subscribe"] {
-		http.Error(w, "events:subscribe not granted", 403)
+		http.Error(w, "Разрешение events:subscribe не предоставлено", 403)
 		return
 	}
 	writeJSON02010(w, 201, map[string]any{"id": 1, "extensionId": h.manifest.ID, "eventType": "dev.event", "mode": "async"})
@@ -663,7 +663,7 @@ func extensionDev02010(args []string) error {
 	}
 	select {
 	case <-host.hello:
-		fmt.Fprintf(os.Stderr, "Extensions dev host: %s target authenticated (%s)\n", targetName, host.url())
+		fmt.Fprintf(os.Stderr, "Хост разработки расширений: цель %s аутентифицирована (%s)\n", targetName, host.url())
 	case <-time.After(10 * time.Second):
 		_ = cmd.Process.Kill()
 		return errors.New("Расширение не авторизовалось в локальном Host Protocol за 10 секунд")

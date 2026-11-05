@@ -334,7 +334,7 @@ func finishAttempt(ctx context.Context, q sqlitedurable.Executor, j model.Durabl
 }
 func (r *Repository) FailDurableJob(ctx context.Context, id, token, reason string, retryAfter time.Duration) (out model.DurableJob, err error) {
 	if !validRetryDelay(retryAfter) {
-		return out, errors.New("retry delay out of range")
+		return out, errors.New("Задержка повторной попытки вне допустимого диапазона")
 	}
 	if len(reason) > 2048 {
 		reason = reason[:2048]

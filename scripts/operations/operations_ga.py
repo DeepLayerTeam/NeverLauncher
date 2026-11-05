@@ -95,7 +95,7 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
         'stageReceipts': {name: operational.sha(receipts[name]) for name in NAMES},
         'openApiV1Sha256': operational.sha(spec),
         'targets': targets,
-        'scope': 'actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO',
+        'scope': 'Фактическая независимая эксплуатационная приёмка; оценён только RPO канареечного сценария, без утверждений об отказоустойчивости физических узлов и неизмеренном RPO нагрузки',
     }
 
 

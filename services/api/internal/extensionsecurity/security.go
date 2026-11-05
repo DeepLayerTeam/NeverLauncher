@@ -220,7 +220,7 @@ func (m *Manager) Grant(ctx context.Context, extensionID, version, scope, scopeI
 		return model.ExtensionPermissionGrant{}, err
 	}
 	if _, ok := setOf(requested)[permission]; !ok {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("permission %s is not requested by %s@%s", permission, extensionID, version)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("Разрешение %s не запрошено расширением %s@%s", permission, extensionID, version)
 	}
 	return m.repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: extensionID, Scope: scope, ScopeID: scopeID, Permission: permission, GrantedBy: actor, Reason: reason})
 }
@@ -265,7 +265,7 @@ func (m *Manager) SetSecret(ctx context.Context, extensionID, scope, scopeID, na
 		return model.ExtensionSecretMetadata{}, errors.New("Брокер секретов расширений не настроен")
 	}
 	if len(plaintext) == 0 || len(plaintext) > 1<<20 {
-		return model.ExtensionSecretMetadata{}, errors.New("secret value must contain 1..1048576 bytes")
+		return model.ExtensionSecretMetadata{}, errors.New("Секрет должен содержать от 1 до 1048576 байт")
 	}
 	block, err := aes.NewCipher(m.key)
 	if err != nil {

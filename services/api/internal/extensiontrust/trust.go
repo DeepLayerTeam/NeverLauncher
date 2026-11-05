@@ -48,7 +48,7 @@ func EvaluatePublisher(ctx context.Context, repo repository.Repository, publishe
 		return Decision{}, repository.ErrNotFound
 	}
 	if !active {
-		return Decision{Mode: model.ExtensionTrustModeStrict, Allowed: false, Violations: []string{"publisher identity is disabled"}}, errors.New("publisher identity is disabled")
+		return Decision{Mode: model.ExtensionTrustModeStrict, Allowed: false, Violations: []string{"Идентификатор издателя отключён"}}, errors.New("Идентификатор издателя отключён")
 	}
 	policy, err := repo.GetExtensionTrustPolicy(ctx)
 	if err != nil {
@@ -59,7 +59,7 @@ func EvaluatePublisher(ctx context.Context, repo repository.Repository, publishe
 	}
 	decision := Decision{Mode: policy.Mode, Allowed: true}
 	if len(policy.AllowedPublishers) > 0 && !contains(policy.AllowedPublishers, publisherID) {
-		decision.Violations = append(decision.Violations, fmt.Sprintf("publisher %s is not in registry allow-list", publisherID))
+		decision.Violations = append(decision.Violations, fmt.Sprintf("Издатель %s отсутствует в списке разрешённых реестром", publisherID))
 		if policy.Mode == model.ExtensionTrustModeStrict {
 			decision.Allowed = false
 		}
@@ -78,8 +78,8 @@ func EvaluatePublication(ctx context.Context, repo repository.Repository, item m
 	}
 	if !key.Active || key.RevokedAt != nil {
 		decision.Allowed = false
-		decision.Violations = append(decision.Violations, "artifact signing key is revoked or inactive")
-		return decision, errors.New("artifact signing key is revoked or inactive")
+		decision.Violations = append(decision.Violations, "Ключ подписи артефакта отозван или неактивен")
+		return decision, errors.New("Ключ подписи артефакта отозван или неактивен")
 	}
 	quarantined, err := repo.IsExtensionPackageQuarantined(ctx, item.Artifact.PackageIdentity)
 	if err != nil {
@@ -87,8 +87,8 @@ func EvaluatePublication(ctx context.Context, repo repository.Repository, item m
 	}
 	if quarantined {
 		decision.Allowed = false
-		decision.Violations = append(decision.Violations, "artifact is quarantined")
-		return decision, errors.New("artifact is quarantined")
+		decision.Violations = append(decision.Violations, "Артефакт помещён в карантин")
+		return decision, errors.New("Артефакт помещён в карантин")
 	}
 	if !decision.Allowed {
 		return decision, errors.New(strings.Join(decision.Violations, "; "))

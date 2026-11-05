@@ -137,7 +137,7 @@ func expectedMacOSPackage0154(ver, arch string) (string, string) {
 
 func inspectMacOSMachOBytes0154(data []byte) (macOSMachOInfo0154, error) {
 	if len(data) < 32 {
-		return macOSMachOInfo0154{}, errors.New("Mach-O header is truncated")
+		return macOSMachOInfo0154{}, errors.New("Заголовок Mach-O обрезан")
 	}
 	// 64-битная сигнатура Mach-O в обратном порядке байтов (MH_MAGIC_64) записана на диске как cf fa ed fe.
 	if !bytes.Equal(data[:4], []byte{0xcf, 0xfa, 0xed, 0xfe}) {

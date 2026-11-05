@@ -23,7 +23,7 @@ from reproducible_0470 import inspect_exe, contract, visit_archive
 def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path]) -> Path:
     target=f'{platform}-{arch}' if platform!='macos' else f'darwin-{arch}'
     if target not in contract()['targets']:
-        raise ValueError('unsupported target')
+        raise ValueError('Неподдерживаемая целевая платформа')
     if not mapping:
         raise ValueError('empty unsigned payload')
     # Используйте точные имена файлов из текущего проверенного контракта выпуска.

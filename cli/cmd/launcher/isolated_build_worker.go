@@ -39,7 +39,7 @@ func init() {
 		return
 	}
 	if os.Getenv("LAUNCHER_INTERNAL_WORKER_0273") != "1" {
-		fmt.Fprintln(os.Stderr, "unauthorized internal build worker invocation")
+		fmt.Fprintln(os.Stderr, "Неавторизованный запуск внутреннего рабочего процесса сборки")
 		os.Exit(125)
 	}
 	if err := runInternalProcessorWorker0273(); err != nil {
@@ -78,7 +78,7 @@ func runInternalProcessorWorker0273() error {
 		return errors.New("Некорректное значение: запрос рабочего процесса сборки")
 	}
 	if err := limitWorkerResources0273(req.TimeoutSeconds); err != nil {
-		return fmt.Errorf("resource limits: %w", err)
+		return fmt.Errorf("Ошибка ограничений ресурсов: %w", err)
 	}
 	if err := os.MkdirAll(req.TempDirectory, 0o700); err != nil {
 		return err
@@ -92,7 +92,7 @@ func runInternalProcessorWorker0273() error {
 	if req.StrictSandbox {
 		cmd, err = strictSandboxJavaCommand0273(ctx, req, args)
 		if err != nil {
-			return fmt.Errorf("strict worker sandbox: %w", err)
+			return fmt.Errorf("Ошибка строгой изоляции рабочего процесса: %w", err)
 		}
 	} else {
 		cmd = exec.CommandContext(ctx, req.Java, args...)
@@ -105,7 +105,7 @@ func runInternalProcessorWorker0273() error {
 	// процессов находится под управлением специализированного обработчика ОС родителя.
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
-			return fmt.Errorf("java timed out: %w", ctx.Err())
+			return fmt.Errorf("Превышено время ожидания Java: %w", ctx.Err())
 		}
 		return fmt.Errorf("Ошибка: Java процессор: %w", err)
 	}
@@ -181,7 +181,7 @@ func runIsolatedProcessor0273(ctx context.Context, pc forgeProcessorContext, ind
 		return logPath, err
 	}
 	if len(payload) > workerRequestLimit0273 {
-		return logPath, errors.New("processor request exceeds worker protocol limit")
+		return logPath, errors.New("Запрос обработчика превышает лимит протокола рабочего процесса")
 	}
 	workerExe, err := os.Executable()
 	if err != nil {
@@ -215,10 +215,10 @@ func runIsolatedProcessor0273(ctx context.Context, pc forgeProcessorContext, ind
 		return logPath, err
 	}
 	if runCtx.Err() != nil {
-		return logPath, fmt.Errorf("processor worker interrupted: %w", runCtx.Err())
+		return logPath, fmt.Errorf("Рабочий процесс обработчика прерван: %w", runCtx.Err())
 	}
 	if waitErr != nil {
-		return logPath, fmt.Errorf("processor worker exited: %w; log tail: %s", waitErr, limited.Tail())
+		return logPath, fmt.Errorf("Рабочий процесс обработчика завершился: %w; конец журнала: %s", waitErr, limited.Tail())
 	}
 	return logPath, nil
 }
@@ -230,7 +230,7 @@ func hashProcessorInputs0273(java string, classpath []string) (string, error) {
 	for _, f := range append([]string{java}, classpath...) {
 		digest, size, err := hashFile(f)
 		if err != nil {
-			return "", fmt.Errorf("processor input %s: %w", filepath.Base(f), err)
+			return "", fmt.Errorf("Ошибка входного файла обработчика %s: %w", filepath.Base(f), err)
 		}
 		_, _ = io.WriteString(h, digest+":"+strconv.FormatInt(size, 10)+"\n")
 	}

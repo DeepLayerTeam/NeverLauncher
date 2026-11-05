@@ -375,7 +375,7 @@ func (h *Handle) Started() error {
 			return
 		}
 		if string(buf[:n]) != "ready\n" {
-			result <- fmt.Errorf("sandbox-setup-refused: %s", strings.TrimSpace(string(buf[:n])))
+			result <- fmt.Errorf("Изолированная среда: настройка отклонена: %s", strings.TrimSpace(string(buf[:n])))
 			return
 		}
 		result <- nil

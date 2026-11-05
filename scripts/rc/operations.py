@@ -68,13 +68,13 @@ def check_args(
                 "real source/target readiness must use loopback HTTP /ready"
             )
     if not env_file.is_file() or env_file.is_symlink():
-        raise OperationsBlocked("isolated environment file missing or symlinked")
+        raise OperationsBlocked("Файл изолированного окружения отсутствует или является символической ссылкой")
     if snapshot.exists() or snapshot.is_symlink():
         raise OperationsBlocked(
             "fresh snapshot destination required; refusing overwrite"
         )
     if os.environ.get("LAUNCHER_RC_DR_ISOLATED") != "YES":
-        raise OperationsBlocked("Требуется: «explicit staging-only acknowledgment»")
+        raise OperationsBlocked("Требуется явное подтверждение использования только в тестовом окружении")
 
 
 def actual(*args: str, timeout: int = 3600) -> dict:
@@ -91,7 +91,7 @@ def actual(*args: str, timeout: int = 3600) -> dict:
             check=False,
         )
     except (subprocess.TimeoutExpired, OSError) as exc:
-        raise OperationsBlocked("actual DR operation could not complete") from exc
+        raise OperationsBlocked("Не удалось завершить реальную операцию аварийного восстановления") from exc
     if proc.returncode or len(proc.stdout) > 4 * 1024 * 1024:
         raise OperationsBlocked(
             "actual DR command failed or returned oversized evidence"
@@ -99,9 +99,9 @@ def actual(*args: str, timeout: int = 3600) -> dict:
     try:
         value = json.loads(proc.stdout)
     except ValueError as exc:
-        raise OperationsBlocked("DR command did not return JSON") from exc
+        raise OperationsBlocked("Команда аварийного восстановления не вернула JSON") from exc
     if not isinstance(value, dict):
-        raise OperationsBlocked("DR result is not an object")
+        raise OperationsBlocked("Результат аварийного восстановления не является объектом")
     return value
 
 
@@ -119,7 +119,7 @@ def run(
 ) -> dict:
     check_args(source, target, source_ready, target_ready, env_file, snapshot)
     if network_ha and (not s3_source or not s3_target or s3_source == s3_target):
-        raise OperationsBlocked("network-ha: требуется «distinct source/target S3 buckets»")
+        raise OperationsBlocked("network-ha: для источника и назначения требуются разные корзины S3")
     common = ["--env-file", str(env_file)] + (["--network-ha"] if network_ha else [])
     backup = [
         "backup",
@@ -151,7 +151,7 @@ def run(
         v.get("status") != "verified"
         or v.get("manifest", {}).get("sourceProject") != source
     ):
-        raise OperationsBlocked("Ошибка: «snapshot verification»")
+        raise OperationsBlocked("Ошибка проверки снимка")
     restore = [
         "restore-fresh",
         "--project",
@@ -175,7 +175,7 @@ def run(
         or r.get("target") != target
         or r.get("applicationVerified") is not True
     ):
-        raise OperationsBlocked("fresh site not application-verified")
+        raise OperationsBlocked("Новая площадка не прошла проверку приложения")
     c = actual(
         "chaos",
         "--project",
@@ -196,9 +196,9 @@ def run(
         or not isinstance(events, list)
         or {v.get("service") for v in events if isinstance(v, dict)} != expected
     ):
-        raise OperationsBlocked("actual isolated service failure checks incomplete")
+        raise OperationsBlocked("Проверки фактических отказов изолированных служб выполнены не полностью")
     if not isinstance(r.get("rtoSeconds"), (int, float)) or r["rtoSeconds"] <= 0:
-        raise OperationsBlocked("Отсутствует: «measured restore duration»")
+        raise OperationsBlocked("Отсутствует измеренная длительность восстановления")
     return {
         "schemaVersion": "launcher.rc.operations.v1",
         "status": "recovery-exercised",
@@ -255,7 +255,7 @@ def main():
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     except (OperationsBlocked, ValueError, OSError, KeyError) as exc:
-        print("0.35.14 isolated operations BLOCKED: " + str(exc), file=sys.stderr)
+        print("Изолированные операции 0.35.14 ЗАБЛОКИРОВАНЫ: " + str(exc), file=sys.stderr)
         return 3
     print(
         "Real fresh-site restore and isolated failure injection completed; HA/production RPO NOT certified."

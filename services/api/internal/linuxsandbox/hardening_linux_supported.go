@@ -39,7 +39,7 @@ func roRecursive(path string, nodev bool) error {
 	attr := mountAttr{Set: flags}
 	_, _, errno := syscall.RawSyscall6(sysMountSetattr, uintptr(unsafe.Pointer(p)), uintptr(unsafe.Pointer(&empty[0])), atRecursive, uintptr(unsafe.Pointer(&attr)), unsafe.Sizeof(attr), 0)
 	if errno != 0 {
-		return fmt.Errorf("mount_setattr recursive RO %s: %w", path, errno)
+		return fmt.Errorf("Ошибка рекурсивного монтирования только для чтения mount_setattr %s: %w", path, errno)
 	}
 	return nil
 }
@@ -72,10 +72,10 @@ func setupMounts(c childConfig) error {
 		return errors.New("Некорректное значение: «private root»")
 	}
 	if e := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); e != nil {
-		return fmt.Errorf("private mount tree: %w", e)
+		return fmt.Errorf("Ошибка создания приватного дерева монтирования: %w", e)
 	}
 	if e := syscall.Mount("tmpfs", c.RootDir, "tmpfs", syscall.MS_NOSUID|syscall.MS_NODEV, "mode=0755,size=32m"); e != nil {
-		return fmt.Errorf("private root tmpfs: %w", e)
+		return fmt.Errorf("Ошибка создания приватного корневого tmpfs: %w", e)
 	}
 	root := c.RootDir
 	for _, d := range []string{"package", "usr", "tmp", "scratch", "proc", "dev", ".oldroot"} {
@@ -84,7 +84,7 @@ func setupMounts(c childConfig) error {
 		}
 	}
 	if e := bindRO(c.PayloadRoot, filepath.Join(root, "package"), true); e != nil {
-		return fmt.Errorf("package readonly mount: %w", e)
+		return fmt.Errorf("Ошибка монтирования пакета только для чтения: %w", e)
 	}
 	// Предоставляйте только библиотеки и исполняемые файлы Runtime, но никогда
 	// /etc, /home, /var, /run и закрытые файлы Backend. Рекурсивный режим RO
@@ -155,7 +155,7 @@ func setupMounts(c childConfig) error {
 		}
 	}
 	if e := syscall.Mount("proc", filepath.Join(root, "proc"), "proc", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC|syscall.MS_RDONLY, ""); e != nil {
-		return fmt.Errorf("private procfs: %w", e)
+		return fmt.Errorf("Ошибка создания приватной procfs: %w", e)
 	}
 	if e := syscall.PivotRoot(root, filepath.Join(root, ".oldroot")); e != nil {
 		return fmt.Errorf("pivot_root: %w", e)
@@ -164,7 +164,7 @@ func setupMounts(c childConfig) error {
 		return e
 	}
 	if e := syscall.Unmount("/.oldroot", syscall.MNT_DETACH); e != nil {
-		return fmt.Errorf("old root detach: %w", e)
+		return fmt.Errorf("Ошибка отключения прежнего корневого каталога: %w", e)
 	}
 	return os.Remove("/.oldroot")
 }

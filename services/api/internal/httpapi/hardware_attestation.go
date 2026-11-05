@@ -45,13 +45,13 @@ func normalizedTPMPlatform0312(p string) string {
 func (s Server) authTPMCertifyBegin0312(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid bearer token")
+		writeError(w, http.StatusUnauthorized, "Некорректный токен Bearer")
 		return
 	}
 	id := strings.TrimSpace(r.PathValue("deviceId"))
 	session, err := sessionBoundToDevice0124(s, claims, id)
 	if err != nil || session.BindingEpoch < 1 || claims.BindingEpoch != session.BindingEpoch {
-		writeError(w, http.StatusConflict, "active device/session/binding epoch required")
+		writeError(w, http.StatusConflict, "Требуются активное устройство, сеанс и эпоха привязки")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, id)
@@ -60,12 +60,12 @@ func (s Server) authTPMCertifyBegin0312(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if err = attestationEligibleDevice0124(device); err != nil || normalizedTPMPlatform0312(device.Platform) == "" {
-		writeError(w, http.StatusPreconditionFailed, "TPM P-256 device on Windows/Linux required")
+		writeError(w, http.StatusPreconditionFailed, "Требуется устройство TPM P-256 в Windows или Linux")
 		return
 	}
 	now := canonicalDeviceAttestationTime0124(time.Now())
 	if _, err = hardwareRootStore0312(now); err != nil {
-		writeError(w, http.StatusPreconditionFailed, "TPM AK trust roots unavailable or invalid")
+		writeError(w, http.StatusPreconditionFailed, "Корневые сертификаты доверия TPM AK недоступны или некорректны")
 		return
 	}
 	challengeID, err := randomToken("htc")
@@ -83,12 +83,12 @@ func (s Server) authTPMCertifyBegin0312(w http.ResponseWriter, r *http.Request) 
 		"sessionId": session.ID, "bindingEpoch": strconv.FormatInt(session.BindingEpoch, 10), "keyFingerprint": device.KeyFingerprint, "platform": normalizedTPMPlatform0312(device.Platform),
 	}}
 	if err = s.Repo.SaveDeviceChallenge(r.Context(), ch); err != nil {
-		writeError(w, 500, "cannot persist challenge")
+		writeError(w, 500, "Не удалось сохранить проверочный запрос")
 		return
 	}
 	pub, err := base64.RawURLEncoding.DecodeString(device.PublicKey)
 	if err != nil {
-		writeError(w, 500, "device key corrupt")
+		writeError(w, 500, "Ключ устройства повреждён")
 		return
 	}
 	b := attestverify.Binding{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, ChallengeID: challengeID, Challenge: challenge, IssuedAt: now, ExpiresAt: expires, DevicePublicKey: pub, Platform: normalizedTPMPlatform0312(device.Platform)}
@@ -109,18 +109,18 @@ type hardwareCompleteRequest0312 struct {
 func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
-		writeError(w, 401, "invalid bearer token")
+		writeError(w, 401, "Некорректный токен Bearer")
 		return
 	}
 	id := strings.TrimSpace(r.PathValue("deviceId"))
 	session, err := sessionBoundToDevice0124(s, claims, id)
 	if err != nil || session.BindingEpoch < 1 || claims.BindingEpoch != session.BindingEpoch {
-		writeError(w, 409, "device/session epoch changed")
+		writeError(w, 409, "Эпоха устройства или сеанса изменилась")
 		return
 	}
 	var req hardwareCompleteRequest0312
 	if err = decodeDeviceJSON0121(w, r, &req, 96<<10); err != nil {
-		writeError(w, 400, "invalid TPM evidence JSON")
+		writeError(w, 400, "Некорректный JSON доказательств TPM")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, id)
@@ -129,34 +129,34 @@ func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err = attestationEligibleDevice0124(device); err != nil {
-		writeError(w, 412, "inactive or ineligible device")
+		writeError(w, 412, "Устройство неактивно или не соответствует требованиям")
 		return
 	}
 	now := time.Now().UTC()
 	store, err := hardwareRootStore0312(now)
 	if err != nil {
-		writeError(w, 412, "TPM AK roots unavailable")
+		writeError(w, 412, "Корневые сертификаты TPM AK недоступны")
 		return
 	}
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, id, "hardware-certify", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, 401, "expired, invalid or replayed TPM challenge")
+		writeError(w, 401, "Запрос TPM просрочен, некорректен или использован повторно")
 		return
 	}
 	platform := normalizedTPMPlatform0312(device.Platform)
 	if metadataString0121(ch.Metadata, "sessionId") != session.ID || metadataString0121(ch.Metadata, "bindingEpoch") != strconv.FormatInt(session.BindingEpoch, 10) || metadataString0121(ch.Metadata, "keyFingerprint") != device.KeyFingerprint || metadataString0121(ch.Metadata, "platform") != platform {
-		writeError(w, 401, "device identity/session/epoch has changed")
+		writeError(w, 401, "Идентификатор устройства, сеанс или эпоха изменились")
 		return
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		writeError(w, 500, "registered key integrity failure")
+		writeError(w, 500, "Нарушена целостность зарегистрированного ключа")
 		return
 	}
 	b := attestverify.Binding{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, ChallengeID: req.ChallengeID, Challenge: req.Challenge, IssuedAt: ch.CreatedAt, ExpiresAt: ch.ExpiresAt, DevicePublicKey: pub.raw, Platform: platform}
 	result, err := attestverify.Verify(req.Evidence, b, store, now)
 	if err != nil {
-		writeError(w, 401, "TPM Certify rejected: "+err.Error())
+		writeError(w, 401, "Проверка TPM Certify отклонена: "+err.Error())
 		return
 	}
 	// Криптографическая проверка может длиться несколько секунд: привязка и отзыв повторно
@@ -166,12 +166,12 @@ func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Reques
 	if sessionErr != nil || deviceErr != nil || currentSession.ID != session.ID ||
 		currentSession.BindingEpoch != session.BindingEpoch || currentDevice.KeyFingerprint != device.KeyFingerprint ||
 		attestationEligibleDevice0124(currentDevice) != nil {
-		writeError(w, 409, "TPM device/session revoked during verification")
+		writeError(w, 409, "Устройство TPM или сеанс отозваны во время проверки")
 		return
 	}
 	evidence := model.DeviceHardwareEvidence{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, KeyFingerprint: device.KeyFingerprint, RootID: result.RootID, RootFingerprint: result.RootFingerprint, AKFingerprint: result.AKFingerprint, ChallengeID: req.ChallengeID, VerifiedAt: now, ExpiresAt: result.ExpiresAt}
 	if err = s.Repo.SaveHardwareEvidence(r.Context(), evidence); err != nil {
-		writeError(w, 409, "cannot commit hardware evidence")
+		writeError(w, 409, "Не удалось сохранить аппаратное подтверждение")
 		return
 	}
 	// Не изменяйте устаревший challenge-response-v1 и не превращайте происхождение ключа в

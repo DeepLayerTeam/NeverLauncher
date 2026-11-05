@@ -281,7 +281,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	req.ID = strings.TrimSpace(req.ID)
 	req.Method = strings.TrimSpace(req.Method)
 	if req.Protocol != adminBridgeProtocol0208 || req.ID == "" || len(req.ID) > 160 || req.Method == "" || len(req.Method) > 64 || len(req.Params) > 256<<10 {
-		writeError(w, 400, "invalid Admin RPC envelope")
+		writeError(w, 400, "Некорректная оболочка запроса Admin RPC")
 		return
 	}
 	method := strings.ToLower(req.Method)

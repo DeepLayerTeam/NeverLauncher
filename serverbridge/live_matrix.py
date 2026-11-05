@@ -75,9 +75,9 @@ def verify_runtime(
     jar = jar / "artifacts/plugins" / f"launcher-{service}-bridge-{version}.jar"
     observed_digest = proof.get("bridgeJarSha256")
     if not isinstance(observed_digest, str) or not HEX64.fullmatch(observed_digest):
-        raise ValueError("Отсутствует: «exact deployed ServerBridge JAR digest»")
+        raise ValueError("Отсутствует точный дайджест развёрнутого JAR ServerBridge")
     if jar.is_symlink() or not jar.is_file() or jar.stat().st_size == 0:
-        raise ValueError("Отсутствует: «exact built ServerBridge JAR»")
+        raise ValueError("Отсутствует собранный JAR ServerBridge нужной версии")
     checksum(jar, observed_digest)
     meta = proof.get("runtime") or {}
     if (
@@ -93,7 +93,7 @@ def verify_runtime(
         or not isinstance(meta.get("startedAt"), str)
         or not meta["startedAt"]
     ):
-        raise ValueError("Отсутствует: «real container / JVM process identity»")
+        raise ValueError("Отсутствует идентификатор реального контейнера или процесса JVM")
     observations = proof.get("observations") or {}
     if not all(
         observations.get(field) is True
@@ -111,7 +111,7 @@ def verify_runtime(
     log_ref = proof.get("log") or {}
     log_file = log_ref.get("path")
     if log_file != f"live-{service}-04113.log":
-        raise ValueError("Несовпадение: «runtime log reference»")
+        raise ValueError("Не совпадает ссылка на журнал среды выполнения")
     checksum(runtime / log_file, log_ref.get("sha256"))
     log = (runtime / log_file).read_text(encoding="utf-8")
     allow = f"launcher.join.allowed username={player}"

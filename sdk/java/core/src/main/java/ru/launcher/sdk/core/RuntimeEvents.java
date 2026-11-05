@@ -17,7 +17,7 @@ public final class RuntimeEvents implements AutoCloseable {
     public record DetailedEnvelope<T>(Envelope<T> event,Metadata metadata){}
     public record HookDecision(boolean allowed,String reason){
         public HookDecision {reason=reason==null?"":reason;
-            if(reason.length()>512)throw new IllegalArgumentException("hook reason exceeds 512 characters");}
+            if(reason.length()>512)throw new IllegalArgumentException("Причина перехвата длиннее 512 символов");}
         public static HookDecision allow(){return new HookDecision(true,"");}
         public static HookDecision deny(String reason){return new HookDecision(false,reason);}
     }
@@ -41,15 +41,15 @@ public final class RuntimeEvents implements AutoCloseable {
     }
     /** Расширенная типизированная подписка; метаданные относятся к неизменяемой записи события Go. */
     public synchronized <T> long subscribeDetailed(String eventType,String mode,JsonSchema schema,Decoder<T> decoder,DetailedListener<T> listener)throws IOException,InterruptedException {
-        if(closed)throw new IllegalStateException("runtime events closed");
-        if(eventType==null||!eventType.matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(mode))throw new IllegalArgumentException("invalid event subscription");
+        if(closed)throw new IllegalStateException("Приём событий Runtime закрыт");
+        if(eventType==null||!eventType.matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(mode))throw new IllegalArgumentException("Некорректная подписка на события");
         Objects.requireNonNull(decoder);Objects.requireNonNull(listener);
         host.requireEvent(eventType);
         String key=eventType+":"+mode;
-        if(handlers.putIfAbsent(key,new Binding<>(schema,decoder,listener))!=null)throw new IllegalArgumentException("duplicate event subscription: "+key);
+        if(handlers.putIfAbsent(key,new Binding<>(schema,decoder,listener))!=null)throw new IllegalArgumentException("Повторяющаяся подписка на события: "+key);
         try{
             Map<String,Object> response=host.subscribe(eventType,mode);
-            Object id=response.get("id");if(!(id instanceof Number number)||number.longValue()<1)throw new IOException("host returned invalid subscription id");
+            Object id=response.get("id");if(!(id instanceof Number number)||number.longValue()<1)throw new IOException("Хост вернул некорректный идентификатор подписки");
             subscriptions.put(key,number.longValue());return number.longValue();
         }catch(IOException|InterruptedException|RuntimeException e){handlers.remove(key);throw e;}
     }
@@ -68,10 +68,10 @@ public final class RuntimeEvents implements AutoCloseable {
     }
     @SuppressWarnings("unchecked")
     void deliver(Map<String,Object> data,boolean sync)throws Exception {
-        if(!"1.0".equals(data.get("protocolVersion")))throw new IllegalArgumentException("event protocol mismatch");
+        if(!"1.0".equals(data.get("protocolVersion")))throw new IllegalArgumentException("Версия протокола событий не совпадает");
         var sub=Json.object(data.get("subscription"));var raw=Json.object(data.get("event"));
         String type=Json.string(raw,"type",true),mode=Json.string(sub,"mode",true);
-        if(!type.equals(sub.get("eventType"))||!mode.equals(sync?"sync":"async"))throw new IllegalArgumentException("event subscription mismatch");
+        if(!type.equals(sub.get("eventType"))||!mode.equals(sync?"sync":"async"))throw new IllegalArgumentException("Подписка на события не совпадает");
         Binding<?> binding=handlers.get(type+":"+mode);
         if(binding==null)throw new IllegalArgumentException("no event handler for "+type+":"+mode);
         String id=Json.string(raw,"id",true);

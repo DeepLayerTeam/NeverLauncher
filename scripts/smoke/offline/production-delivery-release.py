@@ -16,7 +16,7 @@ def triple(v: str) -> tuple[int, int, int]:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствует {missing}")
 
 
 if triple(VERSION) < (0, 16, 0):

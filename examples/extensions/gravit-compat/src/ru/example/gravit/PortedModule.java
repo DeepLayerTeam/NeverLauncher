@@ -28,7 +28,7 @@ public final class PortedModule extends LauncherModule implements AutoCloseable 
     }
     private void onRelease(ReleasePublishedEvent event) {
         try {context.extension().runtime().storage().put("last-release",Map.of("eventId",event.id,"projectId",event.projectId,"payload",event.payload),null);}
-        catch(Exception e){throw new IllegalStateException("failed to persist release event",e);}
+        catch(Exception e){throw new IllegalStateException("Не удалось сохранить событие релиза",e);}
     }
     @Override public void close(){context=null;}
 }

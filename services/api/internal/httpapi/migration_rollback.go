@@ -28,12 +28,12 @@ func migrationReadRollback03312[T any](w http.ResponseWriter, r *http.Request) (
 	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, 18<<20))
 	d.DisallowUnknownFields()
 	if e := d.Decode(&v); e != nil {
-		writeError(w, 400, "invalid or oversized rollback evidence")
+		writeError(w, 400, "Некорректные или слишком большие доказательства отката")
 		return v, false
 	}
 	var trailing any
 	if e := d.Decode(&trailing); !errors.Is(e, io.EOF) {
-		writeError(w, 400, "trailing or oversized rollback evidence")
+		writeError(w, 400, "Доказательства отката содержат лишние данные или превышают допустимый размер")
 		return v, false
 	}
 	return v, true
@@ -47,7 +47,7 @@ func (s Server) registerMigrationRollbackRoutes03312(mux *http.ServeMux) {
 func (s Server) rollbackAccess03312(w http.ResponseWriter, r *http.Request) (rollbackStore03312, string, bool) {
 	store, ok := s.Repo.(rollbackStore03312)
 	if !ok {
-		writeError(w, 503, "rollback requires PostgreSQL")
+		writeError(w, 503, "Для отката требуется PostgreSQL")
 		return nil, "", false
 	}
 	run, e := s.migrationStoreRead03310(w, r)
@@ -83,7 +83,7 @@ func (s Server) migrationRollbackPlan03312(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Writer-Fenced") != "true" {
-		writeError(w, 400, "exact run ID and separately fenced Never writer confirmation required")
+		writeError(w, 400, "Требуется точный идентификатор запуска и подтверждение независимой блокировки записи Never")
 		return
 	}
 	input, ok := migrationReadRollback03312[rb.PlanInput](w, r)
@@ -105,7 +105,7 @@ func (s Server) migrationRollbackCommit03312(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Writer-Fenced") != "true" || r.Header.Get("X-Migration-Source-Fenced") != "true" {
-		writeError(w, 400, "exact run ID and BOTH externally fenced writers required")
+		writeError(w, 400, "Требуется точный идентификатор запуска и внешняя блокировка записи ОБОИХ источников")
 		return
 	}
 	input, ok := migrationReadRollback03312[rb.CommitInput](w, r)
@@ -122,22 +122,22 @@ func (s Server) migrationRollbackCommit03312(w http.ResponseWriter, r *http.Requ
 			MigrationCutover03311(context.Context, string, string, string) (co.Route, error)
 		})
 		if !ok {
-			writeError(w, 503, "stable rollback route repository unavailable")
+			writeError(w, 503, "Хранилище маршрута отката стабильной версии недоступно")
 			return
 		}
 		route, routeErr := read.MigrationCutover03311(ctx, id, input.ProfileID, input.Channel)
 		if routeErr != nil || route.BaselineReleaseID == "" {
-			writeError(w, 409, "stable rollback requires a certified previous release (deleting stable head is prohibited)")
+			writeError(w, 409, "Для отката стабильной версии требуется сертифицированный предыдущий релиз (удалять текущий стабильный релиз запрещено)")
 			return
 		}
 		lookup, loadErr := s.lookupPackage(route.BaselineReleaseID)
 		if loadErr != nil {
-			writeError(w, 409, "stable rollback target unavailable")
+			writeError(w, 409, "Целевая версия для стабильного отката недоступна")
 			return
 		}
 		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)
 		if gateErr != nil {
-			writeError(w, 409, "stable rollback blocked: "+fmt.Sprint(coverage.TargetBlockers)+": "+gateErr.Error())
+			writeError(w, 409, "Стабильный откат заблокирован: "+fmt.Sprint(coverage.TargetBlockers)+": "+gateErr.Error())
 			return
 		}
 		ctx = repository.WithStablePermit03411(ctx, token)

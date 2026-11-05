@@ -61,7 +61,7 @@ func rehearsalReadLiveConfig0447(root string) (rehearsalLiveConfig0447, error) {
 	}
 	var extra any
 	if dec.Decode(&extra) != io.EOF {
-		return cfg, errors.New("trailing live-session configuration")
+		return cfg, errors.New("В конфигурации реального сеанса обнаружены лишние данные")
 	}
 	if !rehearsalPlayerName0447.MatchString(cfg.PlayerName) || !rehearsalUUID0447.MatchString(cfg.PlayerUUID) || len(cfg.ClientArgs) > 128 || cfg.TimeoutSeconds < 10 || cfg.TimeoutSeconds > 600 {
 		return cfg, errors.New("Некорректное значение: «player, client arguments or timeout»")
@@ -139,7 +139,7 @@ func rehearsalRCONList0447(ctx context.Context, address, password string) (strin
 			return "", e
 		}
 		if id == -1 {
-			return "", errors.New("RCON authentication rejected")
+			return "", errors.New("Аутентификация RCON отклонена")
 		}
 		if id == 71 && kind == 2 {
 			authorized = true
@@ -147,7 +147,7 @@ func rehearsalRCONList0447(ctx context.Context, address, password string) (strin
 		}
 	}
 	if !authorized {
-		return "", errors.New("RCON authentication not acknowledged")
+		return "", errors.New("Аутентификация RCON не подтверждена")
 	}
 	if err = rehearsalRCONPacket0447(c, 72, 2, "list uuids"); err != nil {
 		return "", err
@@ -205,7 +205,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 		}
 	}
 	if !mapped {
-		return proof, noverify, noop, errors.New("live player UUID not in source snapshot")
+		return proof, noverify, noop, errors.New("UUID активного игрока отсутствует в снимке источника")
 	}
 	executable, err := rehearsalPath03310(root, cfg.ClientPath)
 	if err != nil {
@@ -216,7 +216,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 		return proof, noverify, noop, err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0111 == 0 {
-		return proof, noverify, noop, errors.New("client is not an executable regular file")
+		return proof, noverify, noop, errors.New("Клиент не является обычным исполняемым файлом")
 	}
 	hash, err := rehearsalHashFile0447(executable)
 	if err != nil {
@@ -224,7 +224,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	}
 	passwordBytes, err := rehearsalRead03310(root, cfg.RCONPasswordFile, 4096)
 	if err != nil {
-		return proof, noverify, noop, fmt.Errorf("RCON credential file: %w", err)
+		return proof, noverify, noop, fmt.Errorf("Ошибка файла учётных данных RCON: %w", err)
 	}
 	password := strings.TrimRight(string(passwordBytes), "\r\n")
 	if password == "" || strings.ContainsAny(password, "\r\n\x00") {
@@ -242,7 +242,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 		return proof, noverify, noop, err
 	}
 	if rehearsalRCONHasPlayer0447(before, cfg.PlayerName, cfg.PlayerUUID) {
-		return proof, noverify, noop, errors.New("player already online before staged client launch")
+		return proof, noverify, noop, errors.New("Игрок уже в сети до запуска подготовленного клиента")
 	}
 	clientCtx, stop := context.WithCancel(ctx)
 	cmd := exec.CommandContext(clientCtx, executable, cfg.ClientArgs...)
@@ -267,18 +267,18 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	verify := func() error {
 		select {
 		case <-finished:
-			return errors.New("staged client process exited before rehearsal finished")
+			return errors.New("Процесс подготовленного клиента завершился до окончания репетиции")
 		default:
 		}
 		queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		answer, err := rehearsalRCONList0447(queryCtx, cfg.RCONAddress, password)
 		cancel()
 		if err != nil || !rehearsalRCONHasPlayer0447(answer, cfg.PlayerName, cfg.PlayerUUID) {
-			return errors.New("staging player left server before rehearsal finished")
+			return errors.New("Игрок покинул тестовый сервер до окончания репетиции")
 		}
 		select {
 		case <-finished:
-			return errors.New("staged client process exited during rehearsal")
+			return errors.New("Процесс подготовленного клиента завершился во время репетиции")
 		default:
 		}
 		return nil
@@ -304,11 +304,11 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	for {
 		select {
 		case e := <-exited:
-			return proof, noverify, noop, fmt.Errorf("client exited before observed server join: %v", e)
+			return proof, noverify, noop, fmt.Errorf("Клиент завершился до подтверждённого подключения к серверу: %v", e)
 		case <-ctx.Done():
 			return proof, noverify, noop, ctx.Err()
 		case <-deadline.C:
-			return proof, noverify, noop, errors.New("client did not join staging server before deadline")
+			return proof, noverify, noop, errors.New("Клиент не подключился к тестовому серверу за отведённое время")
 		case <-tick.C:
 			qctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			answer, qerr := rehearsalRCONList0447(qctx, cfg.RCONAddress, password)
@@ -323,7 +323,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 			// завершение лаунчера не заменяют активного подключения к многопользовательскому серверу.
 			select {
 			case e := <-exited:
-				return proof, noverify, noop, fmt.Errorf("client exited during join: %v", e)
+				return proof, noverify, noop, fmt.Errorf("Клиент завершился во время подключения: %v", e)
 			case <-ctx.Done():
 				return proof, noverify, noop, ctx.Err()
 			case <-time.After(2 * time.Second):
@@ -336,7 +336,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 			}
 			select {
 			case e := <-exited:
-				return proof, noverify, noop, fmt.Errorf("client exited during confirmation: %v", e)
+				return proof, noverify, noop, fmt.Errorf("Клиент завершился во время подтверждения: %v", e)
 			default:
 			}
 			h1 := sha256.Sum256([]byte(before))
