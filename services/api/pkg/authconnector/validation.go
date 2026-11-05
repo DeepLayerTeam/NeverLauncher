@@ -57,14 +57,14 @@ func ValidateAuthentication(auth Authentication) error {
 		return err
 	}
 	if len(auth.ProviderToken) > 16384 {
-		return NewError(ErrMisconfigured, "provider token exceeds size limit")
+		return NewError(ErrMisconfigured, "Токен провайдера превышает допустимый размер")
 	}
 	if len(auth.AuthMethods) > 32 {
-		return NewError(ErrMisconfigured, "too many authentication methods")
+		return NewError(ErrMisconfigured, "Слишком много методов аутентификации")
 	}
 	for _, method := range auth.AuthMethods {
 		if strings.TrimSpace(method) == "" || len(method) > 64 {
-			return NewError(ErrMisconfigured, "invalid authentication method")
+			return NewError(ErrMisconfigured, "Недопустимый метод аутентификации")
 		}
 	}
 	return nil
@@ -76,7 +76,7 @@ func ValidateIdentity(identity Identity) error {
 		return NewError(ErrMisconfigured, "Провайдер вернул некорректные поля учётной записи")
 	}
 	if len(identity.Groups) > 256 || len(identity.Roles) > 256 {
-		return NewError(ErrMisconfigured, "provider returned oversized identity memberships")
+		return NewError(ErrMisconfigured, "Провайдер вернул слишком большой список принадлежности учётной записи к группам и ролям")
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func ValidateIdentity(identity Identity) error {
 func ValidateProfile(profile Profile, expectedSubject string) error {
 	if strings.TrimSpace(profile.Subject) == "" || len(profile.Subject) > 512 ||
 		(expectedSubject != "" && profile.Subject != expectedSubject) {
-		return NewError(ErrMisconfigured, "provider profile subject mismatch")
+		return NewError(ErrMisconfigured, "Идентификатор субъекта профиля не совпадает с ожидаемым")
 	}
 	return nil
 }

@@ -60,7 +60,7 @@ def verify_minecraft(root, commit, run_id, attempt):
     report = inventory.inventory(root, commit, run_id, attempt, strict=True)
     entries = [row for row in report['targets'] if row['id'].startswith('minecraft/') and row['required']]
     require(len(entries) == 280 and all(e['status'] == 'observed' for e in entries),
-            '280 real Minecraft targets not all observed')
+            'Проверены не все 280 реальных целей Minecraft')
     return {'status': '280_REAL_CI_OBSERVATIONS_NOT_GA', 'targets': len(entries),
             'catalogSha256': report['catalogSha256']['minecraft'],
             'sha256': hashlib.sha256(inventory.canonical(report)).hexdigest()}
@@ -68,7 +68,7 @@ def verify_minecraft(root, commit, run_id, attempt):
 def signed_soak(root: Path, pubkey: Path, pin: str, commit: str, run_id: str, attempt: int, kind: str):
     summary = read_json(root / 'soak.json', 8*1024*1024)
     sig = inventory.safe_file(root / 'soak.sig', 128).read_bytes()
-    require(len(sig) == 64 and SHA.fullmatch(pin or '') is not None, 'signed soak receipt and pin required')
+    require(len(sig) == 64 and SHA.fullmatch(pin or '') is not None, 'Требуется подписанная квитанция нагрузочного прогона и закреплённый ключ')
     key = inventory.public_key(pubkey, pin)
     try:
         key.verify(sig, ('neverlauncher.soak.real.' + inventory.VERSION + '\x00').encode() + inventory.canonical(summary))
@@ -84,7 +84,7 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
             summary.get('commit') == commit and summary.get('runId') == run_id and
             summary.get('attempt') == attempt and summary.get('mode') == kind and
             type(summary.get('seconds')) in (float,int) and summary['seconds'] >= 3600,
-            'soak scope, identity or duration invalid')
+            'Недопустимая область, идентификатор или длительность длительного нагрузочного прогона')
     if kind == 'game':
         target_id = summary.get('target')
         require(target_id in SOAK_TARGETS, 'Длительная игровая проверка не охватывает пять обязательных загрузчиков')
@@ -93,21 +93,21 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
         require(type(sessions) is list and 8 <= len(sessions) <= 200, 'Отсутствуют реальные сеансы')
         actual = sorted(p.name for p in root.glob('session-*'))
         require(actual == [f'session-{i+1:03d}' for i in range(len(sessions))],
-                'gameplay soak execution evidence missing or duplicated')
+                'Доказательства длительного игрового прогона отсутствуют или повторяются')
         duration = 0
         for i, (sample, receipt) in enumerate(zip(actual,sessions),1):
             require(receipt.get('session') == i and type(receipt.get('seconds')) in (int,float)
-                    and receipt['seconds'] > 0, 'session identity/time invalid')
+                    and receipt['seconds'] > 0, 'Некорректные данные сеанса или времени')
             duration += receipt['seconds']
             sample_dir = root / sample
             log = inventory.safe_file(sample_dir / 'runner.log',32*1024*1024)
-            require(inventory.digest(log) == receipt.get('runnerLogSha256'), 'soak runner log changed')
+            require(inventory.digest(log) == receipt.get('runnerLogSha256'), 'Журнал длительного нагрузочного прогона изменён')
             path = sample_dir / 'compatibility-result/compatibility-result.json'
             raw = read_json(path)
             verified = inventory.verify_compatibility(targets[target_id], (path,raw), commit, run_id, attempt)
             require(verified['resultSha256'] == receipt.get('resultSha256') and
                     verified['files'].get('matching-server.log') == receipt.get('serverLogSha256'),
-                    'soak session evidence not from live joined game')
+                    'Данные длительного прогона получены не из реальной игровой сессии')
         require(duration >= 0.5 * summary['seconds'], 'Недостаточная продолжительность реальных сеансов')
         return {'targetId': target_id,'sessions':len(sessions),'seconds':summary['seconds'],
                 'receiptSha256': inventory.digest(root/'soak.json')}
@@ -115,29 +115,29 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
     # основанного только на заявлении p95/status. По 20 байт на реальный TLS-запрос.
     ledger = inventory.safe_file(root/'requests.bin', 210*1024*1024)
     require(inventory.digest(ledger) == summary.get('requestsSha256'),
-            'changed or missing HTTPS request ledger')
+            'Журнал HTTPS-запросов изменён или отсутствует')
     require(ledger.stat().st_size % 20 == 0 and
             ledger.stat().st_size // 20 == summary.get('requests'),
-            'incomplete or truncated HTTPS request measurements')
+            'Неполные или обрезанные измерения HTTPS-запросов')
     times, durations, total_bytes = [], [], 0
     with ledger.open('rb') as stream:
         while part := stream.read(20):
             require(len(part) == 20, 'Неполная выборка запросов')
             when, elapsed, size = struct.unpack('!QdI', part)
             require(0 < elapsed <= 30000 and 0 < size <= 256*1024 and
-                    (not times or times[-1] <= when), 'nonmonotonic or invalid TLS timing sample')
+                    (not times or times[-1] <= when), 'Неупорядоченное по времени или недопустимое измерение TLS')
             times.append(when); durations.append(elapsed); total_bytes += size
     require(len(times) >= 10000 and times[-1]-times[0] >= 3590*10**9,
-            'observed request timestamps do not span a real hour')
+            'Временные метки запросов не охватывают полный реальный час')
     import math
     p95 = sorted(durations)[math.ceil(.95*len(durations))-1]
     require(round(p95,3) == summary.get('p95Ms') and
             total_bytes == summary.get('responseBytes'),
-            'independent recomputation disagrees with reported latency/volume')
+            'Независимый пересчёт не совпадает с заявленными задержками или объёмом')
     require(type(summary.get('requests')) is int and summary['requests'] >= 10000 and
             summary.get('failed') == 0 and summary.get('concurrency',0) >= 1 and
             type(summary.get('p95Ms')) in (int,float) and 0 <= summary['p95Ms'] <= 1500,
-            'HTTPS soak failed minimum load budget')
+            'Длительная проверка HTTPS не достигла минимальной нагрузки')
     return {'requests': summary['requests'], 'p95Ms': summary['p95Ms'],
             'seconds':summary['seconds'],'receiptSha256':inventory.digest(root/'soak.json')}
 
@@ -156,7 +156,7 @@ def verify_repro(a):
 
 def verify_full(a):
     require(COMMIT.fullmatch(a.commit or '') is not None and inventory.VERSION == '0.53.0',
-            'current exact source commit and 0.53.0 required')
+            'Требуются точный актуальный коммит исходников и версия 0.53.0')
     report = {'schema':'neverlauncher.full-compatibility-sweep/' + inventory.VERSION,
               'version':inventory.VERSION,'commit':a.commit,'status':'BLOCKED'}
     report['minecraft'] = verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)
@@ -170,11 +170,11 @@ def verify_full(a):
           inventory.VERSION,a.commit,a.native_game_run_id)
     report['reproducibility'] = verify_repro(a)
     require(a.game_soaks.is_dir() and not a.game_soaks.is_symlink(),
-            'actual independently reviewed game soak directory missing')
+            'Отсутствует реальный каталог длительной игровой проверки, рассмотренный независимым проверяющим')
     directory_names = {entry.name for entry in a.game_soaks.iterdir()}
     require(directory_names == set(SOAK_TARGETS) or
             directory_names == set(SOAK_TARGETS) | {'https'},
-            'all five unique loader soak folders and no unexpected entries required')
+            'Необходимы пять отдельных каталогов длительных проверок загрузчиков без посторонних элементов')
     for name in sorted(SOAK_TARGETS):
         folder = a.game_soaks / name
         require(folder.is_dir() and not folder.is_symlink(), 'Небезопасный каталог длительной игровой проверки')
@@ -212,7 +212,7 @@ def main():
     a = p.parse_args()
     try:
         require(COMMIT.fullmatch(a.commit or '') is not None and RUN.fullmatch(a.compat_run_id or '') is not None,
-                'valid exact CI source/run required')
+                'Требуются корректные точные данные исходников и запуска CI')
         if a.mode == 'full':
             doc = verify_full(a)
         else:

@@ -459,7 +459,7 @@ class MatrixToolTests(unittest.TestCase):
                 "DeepLayerTeam/Launcher",
             )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("unexpectedly produced certification evidence", proc.stderr)
+            self.assertIn("неожиданно предоставила доказательства сертификации", proc.stderr)
 
     def test_validate_0178_requires_loader_native_integration_anchor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -536,7 +536,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("plan", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("unknown fields", proc.stderr)
+            self.assertIn("неизвестные поля", proc.stderr)
 
     def test_validate_rejects_missing_vanilla_baseline_anchor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -702,7 +702,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("exactly one required target", proc.stderr)
+            self.assertIn("ровно одна обязательная цель", proc.stderr)
 
     def test_validate_accepts_quilt_compatibility_ii_0172_grid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -802,7 +802,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("exactly one required target", proc.stderr)
+            self.assertIn("ровно одна обязательная цель", proc.stderr)
 
     def test_validate_accepts_forge_legacy_1122_0174(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -922,7 +922,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("exactly one required target", proc.stderr)
+            self.assertIn("ровно одна обязательная цель", proc.stderr)
 
     def test_validate_rejects_missing_java16_17_release_line_0166(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

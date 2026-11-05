@@ -53,12 +53,12 @@ def safe_file(root, name):
         and "\x00" not in name
         and p.as_posix() == name
         and all(x not in (".", "..", "") for x in name.split("/")),
-        "unsafe prior-release archive entry",
+        "Небезопасный элемент архива предыдущего выпуска",
     )
     target = root.joinpath(*p.parts)
     require(
         target.resolve().is_relative_to(root.resolve()),
-        "prior-release archive traversal",
+        "Выход за пределы архива предыдущего выпуска",
     )
     return target
 
@@ -66,14 +66,14 @@ def safe_file(root, name):
 def extract_pinned_prior(archive, expected, root, current, pinned_key):
     require(
         re.fullmatch("[0-9a-f]{64}", expected or "") is not None,
-        "operator-pinned previous-release ZIP digest required",
+        "Требуется закреплённый оператором хеш ZIP предыдущего выпуска",
     )
     require(
         Path(archive).is_file()
         and not Path(archive).is_symlink()
         and Path(archive).stat().st_size <= MAX_ZIP_BYTES
         and digest(archive) == expected,
-        "previous release bytes differ from host-pinned SHA-256",
+        "Байты предыдущего выпуска не совпадают с закреплённым на узле SHA-256",
     )
     root.mkdir(mode=0o700, parents=True, exist_ok=False)
     with zipfile.ZipFile(archive) as z:
@@ -81,7 +81,7 @@ def extract_pinned_prior(archive, expected, root, current, pinned_key):
         require(
             len(members) <= 50000
             and sum(i.file_size for i in members) <= MAX_ZIP_BYTES,
-            "previous-release archive exceeds bounded extraction limits",
+            "Архив предыдущего выпуска превышает ограничения распаковки",
         )
         seen = set()
         for info in members:
@@ -90,9 +90,9 @@ def extract_pinned_prior(archive, expected, root, current, pinned_key):
             require(
                 (info.external_attr >> 16) & 0o170000
                 not in (0o120000, 0o060000, 0o020000),
-                "special file in previous-release bundle",
+                "Специальный файл в пакете предыдущего выпуска",
             )
-            require(info.filename not in seen, "duplicate archive path")
+            require(info.filename not in seen, "Повторяющийся путь внутри архива")
             seen.add(info.filename)
             path = safe_file(root, info.filename)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -100,7 +100,7 @@ def extract_pinned_prior(archive, expected, root, current, pinned_key):
                 remaining = info.file_size
                 while remaining:
                     chunk = stream.read(min(1 << 20, remaining))
-                    require(chunk, "truncated prior-release entry")
+                    require(chunk, "Обрезанный элемент предыдущего выпуска")
                     f.write(chunk)
                     remaining -= len(chunk)
                 f.flush()
@@ -110,37 +110,37 @@ def extract_pinned_prior(archive, expected, root, current, pinned_key):
     require(
         pkg["packageId"] != current["packageId"]
         and pkg["version"] != current["version"],
-        "rollback baseline must be a different actual release",
+        "Исходной версией отката должен быть другой реальный выпуск",
     )
     for identity in ("projectId", "profileId"):
         require(
             pkg[identity] == current[identity]
             and signed[identity] == current[identity],
-            "previous release from unrelated project/profile",
+            "Предыдущий выпуск относится к другому проекту или профилю",
         )
     require(
         pkg["version"] == signed["version"]
         and pkg["channel"] == signed["channel"]
         and signed["signature"]["publicKey"].lower() == pinned_key.lower(),
-        "previous release signed identity does not match pinned key",
+        "Подписанная идентификация предыдущего выпуска не совпадает с закреплённым ключом",
     )
 
     # Отклоняйте случайно переданную новую или равную базовую версию. Сертификация
     # должна проверять настоящее обновление, а не произвольную другую версию.
     def release_key(value):
         m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:[-+][a-zA-Z0-9.\-]+)?", value)
-        require(bool(m), "release version must be semantic version")
+        require(bool(m), "Номер выпуска должен соответствовать семантическому версионированию")
         return tuple(int(x) for x in m.groups()[:3])
 
     require(
         release_key(pkg["version"]) < release_key(current["version"]),
-        "baseline must precede the candidate release",
+        "Исходный выпуск должен предшествовать проверяемому выпуску",
     )
     files = {x["path"]: x for x in pkg["files"]}
     manifest_files = {x["path"]: x for x in signed["files"]}
     require(
         files and len(files) == len(pkg["files"]) == len(manifest_files),
-        "prior-release signed file set incomplete",
+        "Неполный набор подписанных файлов предыдущего выпуска",
     )
     for name, item in files.items():
         f = safe_file(root, name)
@@ -151,7 +151,7 @@ def extract_pinned_prior(archive, expected, root, current, pinned_key):
             and digest(f) == item["sha256"].lower()
             and manifest_files[name]["sha256"].lower() == item["sha256"].lower()
             and manifest_files[name]["size"] == item["size"],
-            "previous release does not contain exact signed bytes: " + name,
+            "Предыдущий выпуск не содержит точные подписанные байты: " + name,
         )
     return pkg, signed
 
@@ -169,10 +169,10 @@ def invoke(cli, name, args, result_file, env, good=True):
     if good:
         require(
             proc.returncode == 0 and result_file.is_file(),
-            "production client " + name + " failed rc=" + str(proc.returncode),
+            "Рабочий клиент " + name + " failed rc=" + str(proc.returncode),
         )
         return json.loads(result_file.read_text())
-    require(proc.returncode != 0, "injected failure unexpectedly succeeded: " + name)
+    require(proc.returncode != 0, "Сценарий с искусственным отказом неожиданно завершился успешно: " + name)
     return {"exitCode": proc.returncode}
 
 
@@ -185,7 +185,7 @@ def verify_exact(root, pkg):
             and not p.is_symlink()
             and p.stat().st_size == item["size"]
             and digest(p) == item["sha256"].lower(),
-            "client content differs from required release: " + item["path"],
+            "Содержимое клиента отличается от требуемого выпуска: " + item["path"],
         )
         actual[item["path"]] = digest(p)
     return actual
@@ -223,7 +223,7 @@ def interrupted_download(actual_file, download_exact, scratch):
     payload = actual_file.read_bytes()
     require(
         len(payload) >= 2,
-        "cannot inject interrupted download into empty/single-byte file",
+        "Нельзя имитировать прерванную загрузку в пустом или однобайтовом файле",
     )
 
     class Handler(_InterruptHandler):
@@ -251,7 +251,7 @@ def interrupted_download(actual_file, download_exact, scratch):
             rejected
             and not target.exists()
             and not target.with_name(target.name + ".partial").exists(),
-            "interrupted download was accepted or left a corrupt cache file",
+            "Прерванная загрузка ошибочно принята или оставила повреждённый кеш-файл",
         )
         Handler.cut = False
         download_exact(
@@ -264,7 +264,7 @@ def interrupted_download(actual_file, download_exact, scratch):
         )
         require(
             digest(target) == digest(actual_file),
-            "retry did not restore exact signed bytes",
+            "Повторная попытка не восстановила точные подписанные байты",
         )
         return {
             "interruptedRejected": True,
@@ -316,7 +316,7 @@ def run_game_launch(
     )
     require(
         not observer.blocked,
-        "GUI runner incapable of validating lifecycle launch: " + str(observer.blocked),
+        "Среда GUI не может подтвердить запуск жизненного цикла: " + str(observer.blocked),
     )
     # Та же реализация, что и V03, с файлом для stdout во избежание взаимной блокировки.
     with (
@@ -339,12 +339,12 @@ def run_game_launch(
                 kill_tree(proc)
             proc.wait(timeout=20)
     raw = output.with_suffix(".stdout").read_bytes()
-    require(len(raw) <= 4 << 20, "lifecycle JVM stdout oversized")
+    require(len(raw) <= 4 << 20, "Вывод JVM при проверке жизненного цикла превышает допустимый размер")
     launch = json.loads(raw)
     status, detail = observer.conclude(launch)
     healthy, _ = log_health(root, observer.runtime_log, loader)
     require(
-        status == "passed" and healthy, "lifecycle startup not ready: " + str(detail)
+        status == "passed" and healthy, "Запуск жизненного цикла не готов: " + str(detail)
     )
     output.write_text(
         json.dumps(
@@ -384,7 +384,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     require(
         prior_manifest["minecraft"]["loader"].lower()
         == signed["minecraft"]["loader"].lower(),
-        "prior version loader differs; explicit supported previous target required",
+        "Загрузчик предыдущей версии отличается; необходимо явно указать поддерживаемую предыдущую цель",
     )
     current_path = work / "payload" / "staged-package-description.json"
     prior_path = previous / "staged-package-description.json"
@@ -415,7 +415,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     prior_install = call("install", prior_path, "prior-install")
     require(
         prior_install["status"] == "applied-and-verified",
-        "previous signed release not installed",
+        "Предыдущий подписанный выпуск не установлен",
     )
     verify_exact(client, prior_pkg)
     summary["checks"]["cleanPreviousInstall"] = "passed"
@@ -431,7 +431,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     original = source.read_bytes()
     require(
         len(original) <= 256 << 20,
-        "fault injection picks an unexpectedly large source; use another target",
+        "Имитация отказа выбрала слишком большой исходный файл; укажите другую цель",
     )
     try:
         source.write_bytes(bytes([original[0] ^ 1]) + original[1:])
@@ -443,7 +443,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     upd = call("update", current_path, "update")
     require(
         upd["status"] == "applied-and-verified" and upd["rollbackSnapshot"],
-        "production updater did not commit signed new release",
+        "Рабочий механизм обновления не зафиксировал новый подписанный выпуск",
     )
     verify_exact(client, current_pkg)
     summary["checks"]["upgrade"] = "passed"
@@ -462,11 +462,11 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     call("repair", current_path, "poisoned-cache", False)
     require(
         digest(live) != chosen["sha256"].lower(),
-        "corrupt cache unexpectedly restored damaged client",
+        "Повреждённый кеш неожиданно восстановил повреждённый клиент",
     )
     cache.unlink()
     repaired = call("repair", current_path, "repaired")
-    require(repaired["status"] == "repaired-and-verified", "production repair failed")
+    require(repaired["status"] == "repaired-and-verified", "Рабочая процедура восстановления не пройдена")
     verify_exact(client, current_pkg)
     summary["checks"]["corruptCacheRejected"] = "passed"
     summary["checks"]["repair"] = "passed"
@@ -491,11 +491,11 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         replacement.is_file()
         and not replacement.is_symlink()
         and replacement.stat().st_mode & 0o111,
-        "replacement Java executable unavailable",
+        "Исполняемый файл заменяющей Java недоступен",
     )
     require(
         digest(current_java) != digest(replacement),
-        "Java replacement is identical to original runtime",
+        "Заменяющая Java совпадает с исходным окружением выполнения",
     )
     actual_ver = subprocess.run(
         [str(replacement), "-version"],
@@ -504,7 +504,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         timeout=20,
         check=False,
     )
-    require(actual_ver.returncode == 0, "replacement Java failed version check")
+    require(actual_ver.returncode == 0, "Заменяющая Java не прошла проверку версии")
     required_major = int(
         signed["runtime"]["java"].get("recommendedMajorVersion")
         or signed["runtime"]["java"].get("majorVersion")
@@ -515,7 +515,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     m = re.search(r'(?:version\s+)?["\']?(1\.)?(\d+)(?:[.\+\-]|["\'])', version_line)
     require(
         m and int(m.group(2)) == required_major,
-        "replacement Java major differs from signed release",
+        "Основная версия заменяющей Java отличается от требуемой подписанным выпуском",
     )
     game_dir = root / "current-game"
     adopt = [
@@ -537,7 +537,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     )
     require(
         proc.returncode == 0 and json.loads(proc.stdout)["status"] == "ready",
-        "native current JVM installation failed",
+        "Нативная установка текущей JVM не удалась",
     )
     run_game_launch(
         args.runtime,
@@ -560,7 +560,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         and not managed_manifest.is_symlink()
         and re.fullmatch("[0-9a-f]{64}", args.managed_java_sha256 or "")
         and digest(managed_manifest) == args.managed_java_sha256,
-        "operator-pinned managed Java distribution manifest missing or changed",
+        "Манифест управляемого дистрибутива Java, закреплённый оператором, отсутствует или изменён",
     )
     managed_root = root / "managed-java"
     major = str(required_major)
@@ -592,7 +592,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         )
         require(
             proc.returncode == 0 and len(proc.stdout) <= 1 << 20,
-            "production Managed Java distribution install/repair failed",
+            "Установка или восстановление управляемого дистрибутива Java не удались",
         )
         result = json.loads(proc.stdout)
         require(
@@ -600,7 +600,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
             and result["majorVersion"] == required_major
             and result["distribution"] == "temurin"
             and Path(result["javaExecutable"]).is_file(),
-            "managed Java did not confirm pinned Temurin installation",
+            "Управляемая Java не подтвердила установку закреплённого Temurin",
         )
         return result
 
@@ -609,24 +609,24 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     original_java_sha = digest(java_bin)
     require(
         re.fullmatch("[0-9a-f]{64}", original_java_sha) is not None,
-        "initial Managed Java checksum missing",
+        "Отсутствует исходная контрольная сумма управляемой Java",
     )
     with open(java_bin, "r+b") as f:
         b = f.read(1)
-        require(bool(b), "managed Java binary empty")
+        require(bool(b), "Исполняемый файл управляемой Java пуст")
         f.seek(0)
         f.write(bytes([b[0] ^ 1]))
         f.flush()
         os.fsync(f.fileno())
     require(
-        digest(java_bin) != original_java_sha, "managed Java corruption not applied"
+        digest(java_bin) != original_java_sha, "Не удалось внести тестовое повреждение управляемой Java"
     )
     repaired_java = ensure_java()
     require(
         repaired_java.get("cached") is False
         and digest(repaired_java["javaExecutable"]) == original_java_sha
         and repaired_java["archiveSha256"] == installed["archiveSha256"],
-        "Managed Java manager did not quarantine and restore exact approved runtime",
+        "Менеджер управляемой Java не изолировал повреждённую среду и не восстановил точный одобренный вариант",
     )
     run_game_launch(
         args.runtime,
@@ -661,7 +661,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     require(
         rb["status"] == "rolled-back"
         and rb["restoredSnapshot"] == upd["rollbackSnapshot"],
-        "production rollback transaction did not restore prior snapshot",
+        "Транзакционный откат не восстановил предыдущий снимок",
     )
     summary["files"] = verify_exact(client, prior_pkg)
     prior_game = root / "previous-game"
@@ -682,7 +682,7 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
     )
     require(
         proc.returncode == 0 and json.loads(proc.stdout)["status"] == "ready",
-        "previous signed client failed native rollback adoption",
+        "Предыдущий подписанный клиент не прошёл нативное принятие после отката",
     )
 
     def major_version(manifest):
@@ -694,14 +694,14 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         envarch = "ARM64" if host_identity()["arch"] == "arm64" else "X64"
         home = env.get(f"JAVA_HOME_{major_version(prior_manifest)}_{envarch}", "")
         require(
-            bool(home), "previous signed release Java major not installed on runner"
+            bool(home), "Основная версия Java предыдущего подписанного выпуска не установлена в среде проверки"
         )
         prior_java = str(
             (
                 Path(home) / "bin" / ("java.exe" if sys.platform == "win32" else "java")
             ).resolve()
         )
-        require(Path(prior_java).is_file(), "previous release Java executable missing")
+        require(Path(prior_java).is_file(), "Исполняемый файл Java предыдущего выпуска отсутствует")
     run_game_launch(
         args.runtime,
         previous / "signed-release-manifest.json",
@@ -733,7 +733,7 @@ def interrupt_and_recover(
 
     Ненаблюдавшийся этап — INCONCLUSIVE, он никогда не превращается в PASS.
     """
-    require(target_phase in ("staging", "committing"), "invalid fault phase")
+    require(target_phase in ("staging", "committing"), "Недопустимый этап имитации отказа")
     case = parent / ("interrupted-" + target_phase)
     case.mkdir(mode=0o700)
     live = case / "client"
@@ -791,7 +791,7 @@ def interrupt_and_recover(
         p.wait(timeout=10)
     require(
         matched and p.returncode != 0,
-        "real updater " + target_phase + " interruption not observed; cannot certify",
+        "real updater " + target_phase + " Прерывание не обнаружено; сертификация невозможна",
     )
     # Используйте ПУБЛИЧНУЮ команду восстановления, а не прямое редактирование журнала или блокировок.
     recovered = subprocess.run(
@@ -804,7 +804,7 @@ def interrupt_and_recover(
     )
     require(
         recovered.returncode == 0,
-        "production updater did not recover interrupted "
+        "Рабочий механизм обновления не восстановился после прерывания "
         + target_phase
         + " transaction",
     )
@@ -815,7 +815,7 @@ def interrupt_and_recover(
     )
     require(
         updated["status"] == "applied-and-verified",
-        "update after interruption did not commit",
+        "Обновление после прерывания не зафиксировано",
     )
     current_pkg = json.loads(current_path.read_text())
     verify_exact(live, current_pkg)

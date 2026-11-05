@@ -198,20 +198,20 @@ def live_observe(directory, project, *, growth=True):
     actual = {item["service"]: item for item in node["containers"]}
     issues = list(node["observations"])
     if not growth:
-        issues.append("live PostgreSQL/Redis/S3 round-trip was deliberately skipped")
+        issues.append("Реальная сквозная проверка PostgreSQL/Redis/S3 была намеренно пропущена")
     for name in SERVICES:
         item = actual.get(name)
         if not item or not item["running"] or item["health"] != "healthy":
-            issues.append(name + " is not a running healthy container")
+            issues.append(name + " не является запущенным исправным контейнером")
             continue
         if name in ("api", "worker"):
             if item.get("readiness", {}).get("success") != 3:
-                issues.append(name + " did not pass three real /ready probes")
+                issues.append(name + " не прошёл три реальные проверки /ready")
             if item["environment"].get("LAUNCHER_REPLICA_ID") != expected["nodeId"] + "-" + name:
-                issues.append(name + " effective replica identity differs from deployment")
+                issues.append(name + " Фактический идентификатор реплики не совпадает с конфигурацией развёртывания")
     for name in ("postgres", "redis"):
         if name in actual:
-            issues.append("embedded " + name + " must not be running in the multi-host project")
+            issues.append("embedded " + name + " не должен запускаться в проекте с несколькими узлами")
     # Неизменяемая ссылка на образ контейнера должна соответствовать
     # развёртыванию, а не только его ID образа — это разные сущности в Docker
     # inspect.
@@ -223,7 +223,7 @@ def live_observe(directory, project, *, growth=True):
             running_refs[label] = cfg.get("Image")
     for name in SERVICES:
         if running_refs.get(name) != expected["imageDigestRefs"][name]:
-            issues.append(name + " container did not start from requested immutable image")
+            issues.append(name + " Контейнер запущен не из требуемого неизменяемого образа")
     return {**expected, "live": node, "issues": sorted(set(issues)),
             "ready": not issues and all(name in actual for name in SERVICES),
             "observedUtc": inventory.utc_now()}
@@ -402,20 +402,20 @@ def cluster_verify(reports, edge_url):
     issues = []
     engines = [r.get("live", {}).get("dockerEngineIdentity") for r in reports.values()]
     if not all(engines) or len(set(engines)) != len(engines):
-        issues.append("Docker Engine identities missing or duplicated across SSH hosts")
+        issues.append("Идентификаторы Docker Engine отсутствуют или повторяются на узлах SSH")
     for name, report in reports.items():
         if report.get("ready") is not True:
-            issues.append(name + " runtime readiness failed")
+            issues.append(name + " Проверка готовности окружения выполнения не пройдена")
     for name, report in reports.items():
         live = report.get("live")
         if not isinstance(live, dict):
-            issues.append(name + " has no actual Docker state")
+            issues.append(name + " не имеет фактического состояния Docker")
             continue
         roles = {i["service"]: i for i in live.get("containers", [])}
         for service in SERVICES:
             item = roles.get(service)
             if not item or not item.get("running"):
-                issues.append(name + ": missing running " + service)
+                issues.append(name + ": отсутствует запущенный " + service)
     ok, edge = edge_ready(edge_url)
     if not ok:
         issues.append("Внешний балансировщик HTTPS не вернул успешный ответ /ready на всех проверках")
@@ -477,7 +477,7 @@ def outage_drill(nodes, script, directory, project, edge_url, failed_node):
               "publicEdgeUnderOutage": observations,
               "survivorAvailable": bool(success), "restorationVerified": recovered,
               "testPassed": bool(stopped and success and recovered and restore_error is None),
-              "scope": "stopped complete Compose product stack, NOT physical power-off, network partition or dependency failover"}
+              "scope": "Остановлен весь стек приложения Compose; это НЕ физическое отключение питания, разделение сети или переключение зависимостей"}
     if restore_error:
         report["restorationFailure"] = restore_error
     if not success:

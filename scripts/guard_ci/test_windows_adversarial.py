@@ -107,8 +107,8 @@ class WindowsAdversarialTests(unittest.TestCase):
             commit=payload["commit"],
             run_id=payload["runId"],
         )
-        self.assertTrue(any("scenario failed" in err for err in errors))
-        self.assertTrue(any("evidenceRootSha256 mismatch" in err for err in errors))
+        self.assertTrue(any("Ошибка выполнения сценария" in err for err in errors))
+        self.assertTrue(any("Несовпадение evidenceRootSha256" in err for err in errors))
 
     def test_aggregate_requires_every_certified_java_major(self):
         with tempfile.TemporaryDirectory() as td:

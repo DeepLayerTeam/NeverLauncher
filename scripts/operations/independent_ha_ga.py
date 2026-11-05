@@ -77,10 +77,10 @@ def unique(pairs):
 
 def read_json(path, *, private=False):
     require(path.is_absolute() and path.is_file() and not path.is_symlink(),
-            'missing or unsafe JSON evidence')
+            'Доказательства JSON отсутствуют или небезопасны')
     info = path.stat()
     require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and 0 < info.st_size <= MAX_JSON,
-            'invalid evidence size/type')
+            'Недопустимый размер или тип доказательства')
     if private:
         require(stat.S_IMODE(info.st_mode) & 0o077 == 0, 'Файл закрытых подтверждений должен иметь права 0600')
     try:
@@ -93,12 +93,12 @@ def read_json(path, *, private=False):
 
 def fresh_output(path):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(),
-            'output must be an unused absolute path')
+            'Путь вывода должен быть абсолютным и ещё не использоваться')
     parent = path.parent
     require(parent.is_dir() and not parent.is_symlink() and
             stat.S_IMODE(parent.stat().st_mode) & 0o077 == 0 and
             parent.stat().st_uid == os.geteuid(),
-            'evidence directory must be private 0700 and owned by the executing operator')
+            'Каталог доказательств должен иметь права 0700 и принадлежать выполняющему оператору')
 
 
 def write_receipt(path, result):
@@ -118,13 +118,13 @@ def write_receipt(path, result):
 
 def operator(primary):
     # Не принимайте произвольную строку --reviewer вместо идентичности ОС.
-    require(bool(IDENTITY.fullmatch(primary or '')), 'valid publisher/primary operator is required')
+    require(bool(IDENTITY.fullmatch(primary or '')), 'Требуется действующий издатель или основной оператор')
     name = pwd.getpwuid(os.getuid()).pw_name
     if os.geteuid() == 0:
         name = os.environ.get('SUDO_USER', '')
         require(name and name != 'root', 'Для независимой операции от root требуется указанный источник sudo')
     require(bool(IDENTITY.fullmatch(name)) and name != primary,
-            'acceptance must be performed by a different, OS-authenticated operator')
+            'Приёмку должен проводить другой оператор, прошедший аутентификацию в ОС')
     machine = multi.inventory.machine_identity()
     require(machine, 'Машина наблюдателя должна иметь устойчивый независимый идентификатор')
     return name, machine
@@ -138,7 +138,7 @@ def execute(path, args, timeout, *, json_output=True):
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise Blocked('Реальная операция завершилась ошибкой или превысила время ожидания: ' + path.name) from exc
     require(completed.returncode == 0 and len(completed.stdout) <= MAX_JSON,
-            'live operation did not pass: ' + path.name)
+            'Проверка реальной эксплуатации не пройдена: ' + path.name)
     if not json_output:
         require(not completed.stdout.strip(), "Неожиданный стандартный вывод контроллера выпусков")
         return None
@@ -153,7 +153,7 @@ def execute(path, args, timeout, *, json_output=True):
 def nodes_from_args(args):
     nodes = multi.parse_nodes(args.node)
     require(len(nodes) >= 2, 'Для независимой многоузловой приёмки нужны минимум два физических узла')
-    require(args.directory.startswith('/'), 'deployment directory must be absolute')
+    require(args.directory.startswith('/'), 'Путь к каталогу развёртывания должен быть абсолютным')
     require(multi.PROJECT_REGEX.fullmatch(args.project), 'Недопустимый проект')
     multi.validate_edge_url(args.edge_url)
     return nodes
@@ -169,10 +169,10 @@ def observe(args, *, expected=VERSION):
     compat.validate_schema(compat.live_pg_migrations(Path(args.pg_dsn_file)), catalog)
     good, samples = multi.edge_ready(args.edge_url)
     require(good and samples.get('sampled') == samples.get('success'),
-            'external HTTPS ingress is not consistently ready')
+            'Внешний HTTPS-вход работает нестабильно')
     local_machine = multi.inventory.machine_identity()
     require(all(row.get('machineIdentity') != local_machine for row in reports.values()),
-            'observer must not be one of the Docker target machines')
+            'Узел наблюдения не должен совпадать с одной из целевых машин Docker')
     return {'nodes': {name: {'machineIdentity': row['machineIdentity'], 'nodeId': row['nodeId'],
                              'imageDigest': row['imageDigestRefs']['api'], 'version': versions[name]}
                       for name, row in sorted(reports.items())},
@@ -184,21 +184,21 @@ def verify_suite(home, nodes, iterations):
     summary_path = home / 'suite-report.json'
     data = read_json(summary_path, private=True)
     require(data.get('schema') == CHAOS_SCHEMA and data.get('status') == 'PASS' and
-            data.get('iterations') == iterations, 'multi-host chaos suite did not pass')
+            data.get('iterations') == iterations, 'Набор испытаний отказоустойчивости на нескольких узлах не пройден')
     rows = data.get('cases')
     require(isinstance(rows, list) and len(rows) == 2 * len(nodes) * iterations,
-            'chaos suite missing a fault or a host')
+            'В испытаниях отказоустойчивости отсутствует сценарий отказа или узел')
     seen, digests = set(), {}
     for row in rows:
         require(isinstance(row, dict), 'Недопустимый сценарий отказоустойчивости')
         key = (row.get('node'), row.get('fault'), row.get('iteration'))
         require(key not in seen and key[0] in nodes and key[1] in ('host-stop', 'network-partition')
                 and type(key[2]) is int and 1 <= key[2] <= iterations,
-                'unexpected or duplicated fault target')
+                'Неожиданная или повторяющаяся цель имитации отказа')
         seen.add(key)
         basename = f'{key[2]:02d}-{key[0]}-{key[1]}.report.json'
         require(row.get('reportFile') == basename and row.get('status') == 'PASS'
-                and row.get('recovered') is True, 'failed or unhealed chaos case')
+                and row.get('recovered') is True, 'Сценарий отказа завершился неуспешно или система не восстановилась')
         file = home / basename
         case = read_json(file, private=True)
         require(hash_file(file) == row.get('sha256') and
@@ -211,10 +211,10 @@ def verify_suite(home, nodes, iterations):
                 len(case['evidence']['ingressSamples']) >= 8 and
                 all(item.get('ingressReady') is True for item in
                     case['evidence']['ingressSamples'][-5:]),
-                'case bytes, alerts or sustained ingress outcome differ from suite receipt')
+                'Байты, оповещения или результат проверки входящего трафика не совпадают с квитанцией испытаний')
         digests[basename] = hash_file(file)
         require(not (home / basename.replace('.report.json', '.state.json')).exists(),
-                'unrecovered fault journal remains')
+                'Остался журнал невосстановленного отказа')
     return {'summarySha256': hash_file(summary_path), 'caseSha256': digests,
             'cases': len(rows), 'faultTypes': ['host-stop', 'network-partition']}
 
@@ -223,18 +223,18 @@ def validate_rolling(path, nodes):
     result = read_json(path, private=True)
     require(result.get('schema') == ROLL_SCHEMA and result.get('verified') is True and
             result.get('from') == '0.51.10' and result.get('to') == VERSION,
-            'rolling operation is not verified 0.51.10 -> 0.52.0')
+            'Поэтапная операция обновления 0.51.10 → 0.52.0 не подтверждена')
     versions = result.get('finalVersions')
     require(isinstance(versions, dict) and set(versions) == set(nodes) and
             all(value == VERSION for value in versions.values()),
-            'rolling update did not verify all target nodes')
+            'Поэтапное обновление проверено не на всех целевых узлах')
     steps = result.get('steps')
     require(isinstance(steps, list) and len(steps) == len(nodes) and
             all(item.get('verified') is True and item.get('edgeFailures') == 0 and
                 type(item.get('edgeSamples')) is int and item['edgeSamples'] >= 2 for item in steps),
-            'rolling update lacks continuous ingress verification for each host')
+            'При поэтапном обновлении не проверялась непрерывная доступность входящего трафика каждого узла')
     require(len({item.get('nodeId') for item in steps}) == len(nodes),
-            'rolling receipts contain duplicate physical node IDs')
+            'Квитанции поэтапного обновления содержат повторяющиеся идентификаторы физических узлов')
     return {'receiptSha256': hash_file(path), 'steps': len(steps),
             'finalVersions': versions, 'edgeFailures': 0}
 
@@ -245,26 +245,26 @@ def validate_recovery(work, maximum_rto, maximum_sample_rpo, nodes):
     result_path = work / 'recovery-result-0519.json'
     state, result = read_json(state_path, private=True), read_json(result_path, private=True)
     require(isinstance(state.get('nodes'), dict) and state['nodes'] == nodes,
-            'recovered DR machines differ from the independently observed targets')
+            'Восстановленные аварийные узлы не совпадают с независимо проверенными целями')
     require(state.get('schema') == DR_SCHEMA and state.get('phase') == 'recovery-ready'
             and result.get('schema') == DR_SCHEMA and result.get('status') == 'recovery-ready'
             and result.get('runId') == state.get('runId') and
             type(result.get('nodesReady')) is int and result['nodesReady'] == len(nodes) and
             type(result.get('worlds')) is int and result['worlds'] > 0,
-            'DR cohort did not restore on all target nodes with backed-up worlds')
+            'Аварийное восстановление миров не выполнено на всех целевых узлах')
     rto = result.get('rtoSeconds')
     require(type(rto) in (int, float) and 0 <= rto <= maximum_rto,
-            'measured DR ingress RTO exceeds acceptance limit')
+            'Измеренное время восстановления внешнего доступа (RTO) превышает допустимое значение')
     sample = result.get('sampledRpo')
     require(isinstance(sample, dict) and sample.get('sampledAuditRpoSeconds') is not None,
-            'independent acknowledgement ledger is needed to measure sampled RPO')
+            'Для измерения выборочного RPO нужен независимый журнал подтверждений')
     rpo = sample['sampledAuditRpoSeconds']
     require(type(rpo) in (int, float) and 0 <= rpo <= maximum_sample_rpo,
-            'measured audit RPO exceeds acceptance limit')
+            'Измеренное RPO аудита превышает допустимое значение')
     return {'recoveryStateSha256': hash_file(state_path),
             'recoveryResultSha256': hash_file(result_path), 'runId': result['runId'],
             'rtoSeconds': rto, 'sampledAuditRpoSeconds': rpo,
-            'scopeLimit': 'control-plane ingress and sampled audit RPO; not game-world RPO'}
+            'scopeLimit': 'RPO входящего трафика управляющего контура и выборочного аудита; не RPO игрового мира'}
 
 
 def receipt(args, stage, actor, machine, details, observed=None):
@@ -277,7 +277,7 @@ def receipt(args, stage, actor, machine, details, observed=None):
 
 def stage(args):
     actor, machine = operator(args.publisher)
-    require(COMMIT.fullmatch(args.commit or '') is not None, '40-character release source commit required')
+    require(COMMIT.fullmatch(args.commit or '') is not None, 'Требуется хеш коммита выпуска длиной 40 символов')
     require((ROOT / 'VERSION').read_text().strip() == VERSION, 'Рабочая копия исходников имеет неверную версию')
     nodes = nodes_from_args(args)
     target = Path(args.output)
@@ -285,12 +285,12 @@ def stage(args):
     before = None
     if args.stage == 'chaos':
         require(args.allow_disruption and 1 <= args.iterations <= 3 and args.alertmanager_url,
-                'explicit --allow-disruption, --alertmanager-url and iterations 1..3 required')
+                'Необходимо явно указать --allow-disruption, --alertmanager-url и число повторов от 1 до 3')
         multi.validate_edge_url(args.alertmanager_url)
         before = observe(args, expected=VERSION)
         home = Path(args.suite_directory)
         require(home.is_absolute() and home.is_dir() and not home.is_symlink(),
-                'private empty chaos-suite directory must be prepared')
+                'Необходимо подготовить пустой закрытый каталог испытаний отказоустойчивости')
         outcome = execute(COMMANDS['chaos'], ['suite', '--directory', args.directory,
             '--project', args.project, '--edge-url', args.edge_url,
             '--suite-directory', str(home), '--iterations', str(args.iterations),
@@ -304,7 +304,7 @@ def stage(args):
         # Перед поэтапным обновлением требуйте N-1 работающих процессов; смешанное исходное
         # состояние не является свежим испытанием GA.
         before = observe(args, expected='0.51.10')
-        require(args.allow_update, 'explicit --allow-update required for real OCI rollout')
+        require(args.allow_update, 'Для реального развёртывания OCI необходимо явно указать --allow-update')
         roll_path = target.with_name(target.name + '.rolling.json')
         fresh_output(roll_path)
         execute(COMMANDS['rolling'], ['cluster-roll', '--directory', args.directory,
@@ -324,10 +324,10 @@ def stage(args):
     after = observe(args, expected=VERSION)
     if before is not None:
         require(after['postgresCatalogSha256'] == before['postgresCatalogSha256'],
-                'schema changed during rolling/chaos without expand-contract compatibility')
+                'Схема изменилась при обновлении или испытаниях без совместимости expand-contract')
         require(set(after['nodes']) == set(before['nodes']) and
                 all(after['nodes'][n]['machineIdentity'] == before['nodes'][n]['machineIdentity']
-                    for n in nodes), 'physical host identities changed during acceptance')
+                    for n in nodes), 'Идентификаторы физических узлов изменились во время приёмки')
     write_receipt(target, receipt(args, args.stage, actor, machine, details, after))
     return target
 
@@ -341,15 +341,15 @@ def validate_stage_receipts(files, *, commit, publisher):
         require(data.get('schema') == SCHEMA and data.get('status') == 'OBSERVED'
                 and data.get('version') == VERSION and data.get('commit') == commit
                 and data.get('publisher') == publisher and name in STAGES
-                and name not in seen, 'incorrect, duplicated or cross-release receipt')
+                and name not in seen, 'Некорректная, повторная или относящаяся к другому выпуску квитанция')
         seen.add(name)
         require(isinstance(data.get('operator'), str) and data['operator'] != publisher and
                 IDENTITY.fullmatch(data['operator']) is not None and
                 isinstance(data.get('liveCluster'), (dict, type(None))),
-                'invalid independent operator receipt')
+                'Недопустимая квитанция независимого оператора')
         # ID машин-наблюдателей в инвентаризации — сокращённые отпечатки хостов.
         require(isinstance(data.get('observerMachine'), str) and
-                data['observerMachine'].startswith('machine:'), 'missing observer host fingerprint')
+                data['observerMachine'].startswith('machine:'), 'Отсутствует отпечаток узла наблюдения')
         machine = machine or data['observerMachine']
         require(data['observerMachine'] == machine, 'Данные независимых машин-наблюдателей противоречат друг другу')
         docs[name] = data
@@ -365,7 +365,7 @@ def final_bundle(args):
     require(bundle.is_absolute(), 'Конечный каталог загрузки должен иметь абсолютный путь')
     verified = verify_bundle(bundle, release_manifest=True)
     require(verified.get('version') == VERSION and len(verified.get('targets', {})) == 6,
-            'complete final six-platform delivery not verified')
+            'Полная итоговая поставка для шести платформ не подтверждена')
     return {'releaseManifestSha256': hash_file(bundle / 'RELEASE_MANIFEST.json'),
             'targets': {k: v['sha256'] for k, v in verified['targets'].items()},
             'status': verified['status']}
@@ -373,7 +373,7 @@ def final_bundle(args):
 
 def bundle_stage(args):
     actor, machine = operator(args.publisher)
-    require(COMMIT.fullmatch(args.commit or '') is not None, 'source commit required')
+    require(COMMIT.fullmatch(args.commit or '') is not None, 'Требуется коммит исходного кода')
     data = final_bundle(args)
     write_receipt(Path(args.output), receipt(args, 'bundle', actor, machine, data))
 
@@ -382,19 +382,19 @@ def gate(args):
     # Это намеренно независимая проверка с отказом по умолчанию, а НЕ
     # кнопка самоодобрения. Подпись и физическая сертификация инфраструктуры
     # нельзя установить по сетевым сбоям Docker и HTTP-проверкам.
-    require(COMMIT.fullmatch(args.commit or '') is not None, 'source commit required')
+    require(COMMIT.fullmatch(args.commit or '') is not None, 'Требуется коммит исходного кода')
     docs, receipts = validate_stage_receipts([Path(x) for x in args.receipt],
                                             commit=args.commit, publisher=args.publisher)
     expected = final_bundle(args)
     require(docs['bundle']['details'] == expected,
-            'final release bytes have changed since the independent package check')
+            'Байты итогового выпуска изменились после независимой проверки пакета')
     require(docs['rolling'].get('liveCluster') and docs['chaos'].get('liveCluster'),
-            'live rolling and chaos observations missing')
+            'Отсутствуют наблюдения реального обновления и испытаний отказоустойчивости')
     require(docs['rolling']['liveCluster']['nodes'] == docs['chaos']['liveCluster']['nodes'],
-            'chaos and rolling acceptance used different final host/image cohort')
+            'В испытаниях отказоустойчивости и поэтапной приёмке использовались разные наборы узлов или образов')
     require(docs['rolling']['details']['edgeFailures'] == 0 and
             docs['recovery']['details']['rtoSeconds'] <= args.maximum_rto,
-            'rollback/recovery measurements exceed acceptance limits')
+            'Показатели отката или восстановления превышают допустимые значения')
     # Полный GA требует машинно-проверяемых свидетельств физических хостов/сети и внешних
     # свидетельства кворума, игровой процесс JVM и нативные подписи. Предыдущие этапы
     # не могут подтвердить их, и мы не должны незаметно превращать их в PASS.
@@ -437,7 +437,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         if args.stage == 'bundle':
-            require(args.output, '--output required')
+            require(args.output, 'Требуется --output')
             bundle_stage(args)
         elif args.stage == 'gate':
             result = gate(args)
@@ -447,7 +447,7 @@ def main(argv=None):
             return 3
         else:
             require(args.output and args.pg_dsn_file and args.edge_url,
-                    'live acceptance needs --output, --pg-dsn-file, --edge-url')
+                    'Для реальной приёмки необходимы --output, --pg-dsn-file и --edge-url')
             stage(args)
         print(json.dumps({'status': 'OBSERVED', 'stage': args.stage, 'version': VERSION}))
         return 0

@@ -53,7 +53,7 @@ def load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
-        die(f"{path}: invalid JSON: {exc}")
+        die(f"{path}: недопустимый JSON: {exc}")
 
 
 def sha256_file(path: Path) -> str:
@@ -69,7 +69,7 @@ def artifact_record(path: Path) -> dict[str, Any]:
         die(f"artifact is: отсутствует {path}")
     size = path.stat().st_size
     if size <= 0:
-        die(f"artifact is empty: {path}")
+        die(f"Артефакт пуст: {path}")
     return {"name": path.name, "size": size, "sha256": sha256_file(path)}
 
 
@@ -80,17 +80,17 @@ def load_targets(path: Path) -> dict[str, Any]:
         "productVersion",
         "targets",
     }:
-        die("guard CI targets must contain only schemaVersion/productVersion/targets")
+        die("Целевые данные Guard CI могут содержать только schemaVersion/productVersion/targets")
     if (
         payload.get("schemaVersion") != "1.0"
         or payload.get("productVersion") != PRODUCT_VERSION
     ):
         die(
-            f"guard CI targets must use schemaVersion=1.0 and productVersion={PRODUCT_VERSION}"
+            f"Целевые данные Guard CI должны использовать schemaVersion=1.0 и productVersion={PRODUCT_VERSION}"
         )
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:
-        die("guard CI targets must contain a non-empty targets array")
+        die("Целевые данные Guard CI должны содержать непустой массив targets")
     allowed = {
         "id",
         "runner",
@@ -108,7 +108,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"Целевая конфигурация №{index + 1} должна быть объектом")
         unknown = sorted(set(raw) - allowed)
         if unknown:
-            die(f"target #{index + 1}: unknown fields: {', '.join(unknown)}")
+            die(f"target #{index + 1}: неизвестные поля: {', '.join(unknown)}")
         target_id = str(raw.get("id", "")).strip()
         os_name = str(raw.get("os", "")).strip().lower()
         arch = str(raw.get("arch", "")).strip().lower()
@@ -117,27 +117,27 @@ def load_targets(path: Path) -> dict[str, Any]:
         required = raw.get("required")
         checks = raw.get("requiredChecks")
         if not ID_RE.fullmatch(target_id) or target_id in seen:
-            die(f"target #{index + 1}: invalid or duplicate id {target_id!r}")
+            die(f"target #{index + 1}: недопустимый или повторяющийся идентификатор {target_id!r}")
         seen.add(target_id)
         if os_name not in ALLOWED_OS or arch not in ALLOWED_ARCH:
-            die(f"{target_id}: unsupported os/arch {os_name}/{arch}")
+            die(f"{target_id}: неподдерживаемая ОС или архитектура {os_name}/{arch}")
         if os_name != "macos" and arch != "x86_64":
-            die(f"{target_id}: {os_name} certification currently requires x86_64")
+            die(f"{target_id}: {os_name} Сейчас для сертификации требуется x86_64")
         if os_name == "macos" and arch != "universal":
-            die(f"{target_id}: macOS certification must be universal")
+            die(f"{target_id}: сборка macOS для сертификации должна быть универсальной")
         if not runner or not signing or not isinstance(required, bool):
-            die(f"{target_id}: runner/ciSigningMode/required are mandatory")
+            die(f"{target_id}: обязательны runner/ciSigningMode/required")
         if (
             not isinstance(checks, list)
             or not checks
             or any(not isinstance(v, str) or not CHECK_RE.fullmatch(v) for v in checks)
         ):
-            die(f"{target_id}: requiredChecks must be a non-empty string array")
+            die(f"{target_id}: requiredChecks должен быть непустым массивом строк")
         if len(checks) != len(set(checks)):
-            die(f"{target_id}: duplicate requiredChecks")
+            die(f"{target_id}: повторяющиеся requiredChecks")
         missing = sorted((COMMON_CHECKS | {OS_CHECK[os_name]}) - set(checks))
         if missing:
-            die(f"{target_id}: weakened Guard baseline, missing {', '.join(missing)}")
+            die(f"{target_id}: ослаблена базовая защита Guard, отсутствует {', '.join(missing)}")
         if required:
             required_os.add(os_name)
         normalized.append(
@@ -153,7 +153,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         )
     if required_os != ALLOWED_OS:
         die(
-            f"required Guard CI coverage must be linux/windows/macos, got {sorted(required_os)}"
+            f"Обязательное покрытие Guard CI: linux/windows/macos; получено {sorted(required_os)}"
         )
     return {
         "schemaVersion": "1.0",
@@ -187,7 +187,7 @@ def expected_artifact_names(os_name: str) -> dict[str, str]:
             "manifest": "MACOS_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",
         }
-    die(f"unsupported Guard CI OS: {os_name}")
+    die(f"Неподдерживаемая ОС Guard CI: {os_name}")
 
 
 def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, str]:
@@ -199,10 +199,10 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
         die("package manifest version/schema: обнаружено несоответствие")
     if manifest.get("platform") != expected_platform:
         die(
-            f"package manifest platform mismatch: expected {expected_platform!r}, got {manifest.get('platform')!r}"
+            f"Платформа манифеста пакета не совпадает; ожидалась {expected_platform!r}, got {manifest.get('platform')!r}"
         )
     if int(manifest.get("GuardProtocolVersion", 0)) != 4:
-        die("package manifest does not enforce Guard protocol v4")
+        die("Манифест пакета не требует протокол Guard v4")
     if os_name in {"linux", "windows"}:
         rows = manifest.get("artifacts")
         if not isinstance(rows, list) or len(rows) < 2:
@@ -224,7 +224,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
                 None,
             )
         if not isinstance(desktop, dict) or not isinstance(guard, dict):
-            die("package manifest does not contain Desktop/Guard records")
+            die("В манифесте пакета отсутствуют записи Desktop/Guard")
         return (
             str(desktop.get("sha256", "")).lower(),
             str(guard.get("sha256", "")).lower(),
@@ -245,7 +245,7 @@ def verify_package_metadata(
 ) -> dict[str, Any]:
     manifest = load_json(manifest_path)
     if not isinstance(manifest, dict):
-        die("package manifest must be an object")
+        die("Манифест пакета должен быть объектом")
     desktop_hash, guard_hash, package_platform = manifest_hashes(target["os"], manifest)
     if (
         desktop_hash != artifacts["launcher"]["sha256"]
@@ -263,11 +263,11 @@ def verify_package_metadata(
         release = allowlist.get("releases", {}).get(PRODUCT_VERSION, {})
         if not isinstance(release, dict) or release.get("protocolVersion") != 4:
             die(
-                "Guard release policy v2 does not contain current productVersion/protocolVersion"
+                "Политика выпуска Guard v2 не содержит актуальные productVersion/protocolVersion"
             )
         platform_policy = release.get("platforms", {}).get(expected_policy_platform, {})
         if not isinstance(platform_policy, dict):
-            die("Guard release policy v2 does not contain expected platform")
+            die("Политика выпуска Guard v2 не содержит ожидаемую платформу")
         signing_mode = str(platform_policy.get("signingMode", ""))
         pairs = platform_policy.get("artifacts", [])
         exact_pair = any(
@@ -278,7 +278,7 @@ def verify_package_metadata(
         )
         if not exact_pair:
             die(
-                "Guard release policy v2 is not bound to emitted Desktop/Guard artifact pair"
+                "Политика выпуска Guard v2 не привязана к сформированной паре артефактов Desktop/Guard"
             )
     elif isinstance(allowlist, dict) and isinstance(
         allowlist.get(PRODUCT_VERSION), dict
@@ -287,13 +287,13 @@ def verify_package_metadata(
         guard_values = [str(v).lower() for v in row.get("guardSha256", [])]
         launcher_values = [str(v).lower() for v in row.get("launcherSha256", [])]
         if guard_hash not in guard_values or desktop_hash not in launcher_values:
-            die("Guard release allowlist is not bound to emitted Desktop/Guard hashes")
+            die("Список разрешённых выпусков Guard не привязан к хешам Desktop/Guard")
         signing_mode = "legacy"
     else:
-        die("Guard release allowlist does not contain current productVersion")
+        die("Список разрешённых выпусков Guard не содержит актуальную productVersion")
     for digest in (desktop_hash, guard_hash):
         if not SHA256_RE.fullmatch(digest):
-            die("invalid SHA-256 in package metadata")
+            die("Некорректный SHA-256 в метаданных пакета")
     return {
         "packagePlatform": package_platform,
         "guardProtocolVersion": 4,
@@ -328,12 +328,12 @@ def verify_result(
         if str(result.get(key, "")) != str(value):
             errors.append(f"{key}: expected {value!r}, got {result.get(key)!r}")
     if result.get("status") != "passed" or result.get("exitCode") != 0:
-        errors.append("status/exitCode must be passed/0")
+        errors.append("Значения status/exitCode должны быть passed/0")
     if not str(result.get("runtimeArch", "")).strip():
-        errors.append("runtimeArch is missing")
+        errors.append("Отсутствует runtimeArch")
     checks = result.get("checks")
     if not isinstance(checks, dict):
-        errors.append("checks are missing")
+        errors.append("Отсутствуют проверки")
     else:
         for check in target["requiredChecks"]:
             if checks.get(check) is not True:
@@ -341,7 +341,7 @@ def verify_result(
     artifacts = result.get("artifacts")
     if not isinstance(artifacts, dict) or set(artifacts) != set(ARTIFACT_ROLES):
         errors.append(
-            "artifacts must contain exactly package/launcher/guard/manifest/allowlist"
+            "Артефакты должны содержать только package/launcher/guard/manifest/allowlist"
         )
     else:
         names: set[str] = set()
@@ -354,38 +354,38 @@ def verify_result(
             digest = str(item.get("sha256", "")).lower()
             size = item.get("size")
             if not name or Path(name).name != name or name in names:
-                errors.append(f"artifact {role} has unsafe/duplicate name")
+                errors.append(f"artifact {role} имеет небезопасное или повторяющееся имя")
             names.add(name)
             if (
                 not SHA256_RE.fullmatch(digest)
                 or not isinstance(size, int)
                 or size <= 0
             ):
-                errors.append(f"artifact {role} has invalid digest/size")
+                errors.append(f"artifact {role} имеет недопустимый хеш или размер")
     claims = result.get("claims")
     if not isinstance(claims, dict):
-        errors.append("claims are missing")
+        errors.append("Отсутствуют утверждения проверки")
     else:
         if (
             claims.get("guardProtocolVersion") != 4
             or claims.get("releaseCertification") != PRODUCT_VERSION
             or claims.get("releasePolicySchema") != "2.0"
         ):
-            errors.append("Guard protocol/release certification claim mismatch")
+            errors.append("Утверждения о сертификации протокола или выпуска Guard не совпадают")
         if claims.get("packagePlatform") != EXPECTED_PLATFORM[target["os"]]:
-            errors.append("packagePlatform claim mismatch")
+            errors.append("Утверждение packagePlatform не совпадает")
         if claims.get("ciSigningMode") != target["ciSigningMode"]:
-            errors.append("ciSigningMode claim mismatch")
+            errors.append("Утверждение ciSigningMode не совпадает")
         if claims.get("vendorSigningProvenance") != "not-certified-by-ci":
-            errors.append("vendor signing provenance must not be overclaimed")
+            errors.append("Нельзя указывать неподтверждённое происхождение подписи поставщика")
         if (
             claims.get("packageManifestBound") is not True
             or claims.get("artifactSetComplete") is not True
         ):
-            errors.append("artifact/package manifest claims must be true")
+            errors.append("Утверждения о манифесте артефакта или пакета должны соответствовать действительности")
     limitations = result.get("limitations")
     if not isinstance(limitations, list) or GENERIC_LIMITATION not in limitations:
-        errors.append("CI limitation about vendor signing credentials is missing")
+        errors.append("Не указано ограничение CI, связанное с учётными данными подписи поставщика")
     return errors
 
 
@@ -407,7 +407,7 @@ def command_result(args: argparse.Namespace) -> int:
     targets = load_targets(args.targets)["targets"]
     target = next((row for row in targets if row["id"] == args.target_id), None)
     if target is None:
-        die(f"unknown Guard CI target: {args.target_id}")
+        die(f"Неизвестная цель Guard CI: {args.target_id}")
     if args.signing_mode != target["ciSigningMode"]:
         die(f"{args.target_id}: signing mode: обнаружено несоответствие")
     paths = {
@@ -421,7 +421,7 @@ def command_result(args: argparse.Namespace) -> int:
     for role, path in paths.items():
         if path.name != expected_names[role]:
             die(
-                f"{target['id']}: non-canonical {role} artifact name: expected {expected_names[role]!r}, got {path.name!r}"
+                f"{target['id']}: неканоническое значение {role} Имя артефакта: ожидалось {expected_names[role]!r}, got {path.name!r}"
             )
     artifacts = {role: artifact_record(path) for role, path in paths.items()}
     meta = verify_package_metadata(target, artifacts, args.manifest, args.allowlist)
@@ -463,7 +463,7 @@ def command_result(args: argparse.Namespace) -> int:
         repository=args.repository,
     )
     if errors:
-        die("generated Guard CI result failed self-validation: " + "; ".join(errors))
+        die("Сформированный результат Guard CI не прошёл самопроверку: " + "; ".join(errors))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -478,12 +478,12 @@ def discover_results(
     found: dict[str, tuple[Path, dict[str, Any]]] = {}
     errors: list[str] = []
     if not root.exists():
-        return found, [f"results root does not exist: {root}"]
+        return found, [f"Корневой каталог результатов отсутствует: {root}"]
     for path in sorted(root.rglob("guard-ci-result.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError) as exc:
-            errors.append(f"{path}: invalid result JSON: {exc}")
+            errors.append(f"{path}: недопустимый JSON результата: {exc}")
             continue
         target_id = (
             str(payload.get("targetId", "")).strip()
@@ -491,10 +491,10 @@ def discover_results(
             else ""
         )
         if not ID_RE.fullmatch(target_id):
-            errors.append(f"{path}: invalid targetId")
+            errors.append(f"{path}: недопустимый targetId")
             continue
         if target_id in found:
-            errors.append(f"duplicate Guard CI result for {target_id}")
+            errors.append(f"Повторяющийся результат Guard CI для {target_id}")
             continue
         found[target_id] = (path, payload)
     return found, errors
@@ -541,14 +541,14 @@ def command_aggregate(args: argparse.Namespace) -> int:
     results, errors = discover_results(args.results_root)
     expected_ids = {row["id"] for row in targets}
     for extra in sorted(set(results) - expected_ids):
-        errors.append(f"unexpected Guard CI result: {extra}")
+        errors.append(f"Неожиданный результат Guard CI: {extra}")
     records: dict[str, dict[str, Any]] = {}
     artifact_names: set[str] = set()
     for target in targets:
         found = results.get(target["id"])
         if found is None:
             if target["required"]:
-                errors.append(f"missing required Guard CI result: {target['id']}")
+                errors.append(f"Отсутствует обязательный результат Guard CI: {target['id']}")
             records[target["id"]] = {
                 "targetId": target["id"],
                 "status": "missing",
@@ -571,7 +571,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
                 name = str(item.get("name", "")) if isinstance(item, dict) else ""
                 if name in artifact_names:
                     result_errors.append(
-                        f"artifact filename collision across platforms: {name}"
+                        f"Совпадают имена файлов артефактов разных платформ: {name}"
                     )
                 artifact_names.add(name)
         if result_errors:

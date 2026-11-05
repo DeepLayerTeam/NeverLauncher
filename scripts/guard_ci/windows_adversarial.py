@@ -136,7 +136,7 @@ def command_output(argv: list[str], env: dict[str, str] | None = None) -> str:
     )
     output = proc.stdout.strip()
     if proc.returncode != 0:
-        die(f"command failed ({proc.returncode}): {' '.join(argv)}\n{output}")
+        die(f"Команда завершилась ошибкой ({proc.returncode}): {' '.join(argv)}\n{output}")
     return output
 
 
@@ -246,52 +246,52 @@ def validate_result(
 ) -> list[str]:
     errors: list[str] = []
     if payload.get("schemaVersion") != SCHEMA_VERSION:
-        errors.append("schemaVersion mismatch")
+        errors.append("Несовпадение schemaVersion")
     if payload.get("kind") != "launcher-windows-adversarial-result":
-        errors.append("kind mismatch")
+        errors.append("Несовпадение kind")
     if payload.get("productVersion") != PRODUCT_VERSION:
-        errors.append("productVersion mismatch")
+        errors.append("Несовпадение productVersion")
     java_major = payload.get("javaMajor")
     if java_major not in CERTIFIED_JAVA_MAJORS:
-        errors.append(f"unsupported javaMajor {java_major!r}")
+        errors.append(f"Неподдерживаемый javaMajor {java_major!r}")
     if str(payload.get("runtimeArch", "")).lower() not in {"amd64", "x86_64"}:
-        errors.append("runtimeArch is not x86_64/amd64")
+        errors.append("runtimeArch не соответствует x86_64/amd64")
     for field in ("javaVersionOutputSha256", "rustcVersionOutputSha256"):
         if not SHA256_RE.fullmatch(str(payload.get(field, ""))):
             errors.append(f"invalid {field}")
     if repository is not None and payload.get("repository") != repository:
-        errors.append("repository mismatch")
+        errors.append("Несовпадение репозитория")
     if commit is not None and payload.get("commit") != commit:
-        errors.append("commit mismatch")
+        errors.append("Несовпадение коммита")
     if run_id is not None and payload.get("runId") != run_id:
-        errors.append("runId mismatch")
+        errors.append("Несовпадение runId")
     scenarios = payload.get("scenarios")
     if not isinstance(scenarios, list):
-        errors.append("scenarios missing")
+        errors.append("Отсутствуют сценарии")
         scenarios = []
     ids = [row.get("id") for row in scenarios if isinstance(row, dict)]
     expected_ids = [row.id for row in SCENARIOS]
     if ids != expected_ids:
-        errors.append("scenario set/order mismatch")
+        errors.append("Несовпадение набора или порядка сценариев")
     for row in scenarios:
         if not isinstance(row, dict):
-            errors.append("invalid scenario row")
+            errors.append("Недопустимая строка сценария")
             continue
         sid = row.get("id")
         expected = SCENARIO_BY_ID.get(str(sid))
         if expected is None:
-            errors.append(f"unknown scenario {sid!r}")
+            errors.append(f"Неизвестный сценарий {sid!r}")
             continue
         if row.get("kind") != expected.kind or row.get("test") != expected.test_name:
-            errors.append(f"scenario metadata mismatch for {sid}")
+            errors.append(f"Несовпадение метаданных сценария для {sid}")
         if (
             row.get("status") != "passed"
             or row.get("exitCode") != 0
             or row.get("timedOut") is not False
         ):
-            errors.append(f"scenario failed: {sid}")
+            errors.append(f"Ошибка выполнения сценария: {sid}")
         if not SHA256_RE.fullmatch(str(row.get("outputSha256", ""))):
-            errors.append(f"invalid outputSha256 for {sid}")
+            errors.append(f"Недопустимый outputSha256 для {sid}")
     artifacts = payload.get("artifacts")
     expected_artifacts = {
         "sensor",
@@ -301,7 +301,7 @@ def validate_result(
         "jvmProbe",
     }
     if not isinstance(artifacts, dict) or set(artifacts) != expected_artifacts:
-        errors.append("artifact set mismatch")
+        errors.append("Несовпадение набора артефактов")
     else:
         for name, item in artifacts.items():
             if (
@@ -310,7 +310,7 @@ def validate_result(
                 or not isinstance(item.get("size"), int)
                 or item["size"] <= 0
             ):
-                errors.append(f"invalid artifact evidence: {name}")
+                errors.append(f"Недопустимые доказательства артефакта: {name}")
     compatibility_count = sum(
         1
         for row in scenarios
@@ -322,27 +322,27 @@ def validate_result(
         if isinstance(row, dict) and row.get("kind") == "adversarial"
     )
     if payload.get("compatibilityScenarioCount") != compatibility_count:
-        errors.append("compatibilityScenarioCount mismatch")
+        errors.append("Несовпадение compatibilityScenarioCount")
     if payload.get("adversarialScenarioCount") != adversarial_count:
-        errors.append("adversarialScenarioCount mismatch")
+        errors.append("Несовпадение adversarialScenarioCount")
     if (
         payload.get("status") != "passed"
         or payload.get("allRequiredScenariosPassed") is not True
     ):
-        errors.append("result is not passed")
+        errors.append("Результат не имеет статуса passed")
     expected_root = (
         result_evidence_root(payload)
         if isinstance(payload.get("artifacts"), dict)
         else ""
     )
     if payload.get("evidenceRootSha256") != expected_root:
-        errors.append("evidenceRootSha256 mismatch")
+        errors.append("Несовпадение evidenceRootSha256")
     return errors
 
 
 def cmd_run(args: argparse.Namespace) -> int:
     if args.java_major not in CERTIFIED_JAVA_MAJORS:
-        die(f"Java {args.java_major} is outside certified set {CERTIFIED_JAVA_MAJORS}")
+        die(f"Java {args.java_major} не входит в сертифицированный набор {CERTIFIED_JAVA_MAJORS}")
     artifacts = {
         "sensor": required_file(args.sensor, "Guard Sensor"),
         "memoryProbe": required_file(args.memory_probe, "Memory probe"),
@@ -416,11 +416,11 @@ def discover_results(root: Path) -> tuple[dict[int, dict[str, Any]], list[str]]:
         try:
             payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError) as exc:
-            errors.append(f"{path}: invalid JSON: {exc}")
+            errors.append(f"{path}: недопустимый JSON: {exc}")
             continue
         major = payload.get("javaMajor") if isinstance(payload, dict) else None
         if not isinstance(major, int) or major in found:
-            errors.append(f"{path}: invalid or duplicate javaMajor {major!r}")
+            errors.append(f"{path}: недопустимый или повторяющийся javaMajor {major!r}")
             continue
         found[major] = payload
     return found, errors
@@ -440,9 +440,9 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
     missing = sorted(expected - set(results))
     extra = sorted(set(results) - expected)
     if missing:
-        errors.append(f"missing Java results: {missing}")
+        errors.append(f"Отсутствуют результаты Java: {missing}")
     if extra:
-        errors.append(f"unexpected Java results: {extra}")
+        errors.append(f"Неожиданные результаты Java: {extra}")
     for major, payload in sorted(results.items()):
         errors.extend(
             f"Java {major}: {err}"
@@ -454,7 +454,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             )
         )
     if errors:
-        die("Windows adversarial certification failed: " + "; ".join(errors))
+        die("Сертификация Windows-тестов на обход защиты не пройдена: " + "; ".join(errors))
 
     compatibility_ids = [row.id for row in SCENARIOS if row.kind == "compatibility"]
     adversarial_ids = [row.id for row in SCENARIOS if row.kind == "adversarial"]

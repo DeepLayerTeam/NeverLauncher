@@ -482,7 +482,7 @@ def load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        die(f"{path}: invalid JSON: {exc}")
+        die(f"{path}: недопустимый JSON: {exc}")
 
 
 def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
@@ -492,7 +492,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
     missing_loaders = sorted(ALLOWED_LOADERS - required_loaders)
     if missing_loaders:
         die(
-            "Compatibility 0.16.2+ missing required loader families: "
+            "В совместимости 0.16.2+ отсутствуют обязательные семейства загрузчиков: "
             + ", ".join(missing_loaders)
         )
     required_vanilla = {
@@ -507,14 +507,14 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 f"Vanilla Compatibility Baseline II: отсутствует required Minecraft {minecraft}"
             )
         if target["javaMajor"] != java_major:
-            die(f"Vanilla {minecraft}: Baseline II requires Java {java_major}")
+            die(f"Vanilla {minecraft}: для Baseline II требуется Java {java_major}")
         if target["scope"] != scope:
-            die(f"Vanilla {minecraft}: Baseline II requires scope={scope}")
+            die(f"Vanilla {minecraft}: для Baseline II требуется scope={scope}")
     java_coverage = {target["javaMajor"] for target in required_vanilla.values()}
     required_java = {8, 16, 17, 21}
     if not required_java.issubset(java_coverage):
         die(
-            f"Vanilla Compatibility Baseline II requires Java coverage {sorted(required_java)}"
+            f"Для базовой совместимости Vanilla II необходимо покрытие Java {sorted(required_java)}"
         )
     if legacy_vanilla_java8_required():
         for minecraft in LEGACY_VANILLA_JAVA8_0163:
@@ -522,14 +522,14 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             if target is None:
                 die(f"Legacy Vanilla 0.16.3: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
-                die(f"Legacy Vanilla {minecraft}: 0.16.3 requires Java 8 scope=client")
+                die(f"Legacy Vanilla {minecraft}: для 0.16.3 требуется Java 8 с scope=client")
     if legacy_vanilla_pre17_required():
         for minecraft in LEGACY_VANILLA_PRE17_0164:
             target = required_vanilla.get(minecraft)
             if target is None:
                 die(f"Legacy Vanilla 0.16.4: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
-                die(f"Legacy Vanilla {minecraft}: 0.16.4 requires Java 8 scope=client")
+                die(f"Legacy Vanilla {minecraft}: для 0.16.4 требуется Java 8 с scope=client")
     if java16_17_vanilla_required():
         for minecraft, java_major in JAVA16_17_VANILLA_0166.items():
             target = required_vanilla.get(minecraft)
@@ -537,7 +537,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Java 16/17 Vanilla 0.16.6: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(
-                    f"Java 16/17 Vanilla {minecraft}: 0.16.6 requires Java {java_major} scope=client"
+                    f"Java 16/17 Vanilla {minecraft}: для 0.16.6 требуется Java {java_major} scope=client"
                 )
     if java21_vanilla_required():
         for minecraft in JAVA21_VANILLA_0167:
@@ -547,7 +547,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             expected_scope = "integration" if minecraft == "1.21.1" else "client"
             if target["javaMajor"] != 21 or target["scope"] != expected_scope:
                 die(
-                    f"Java 21 Vanilla {minecraft}: 0.16.7 requires Java 21 scope={expected_scope}"
+                    f"Java 21 Vanilla {minecraft}: для 0.16.7 требуется Java 21 с scope={expected_scope}"
                 )
     if java25_vanilla_required():
         for minecraft in JAVA25_VANILLA_0168:
@@ -556,7 +556,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Java 25 Vanilla 0.16.8: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(
-                    f"Java 25 Vanilla {minecraft}: 0.16.8 requires Java 25 scope=client"
+                    f"Java 25 Vanilla {minecraft}: для 0.16.8 требуется Java 25 с scope=client"
                 )
     if cross_platform_vanilla_required():
         platform_targets = {
@@ -574,7 +574,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 )
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(
-                    f"Cross-platform Vanilla 26.3 {os_name}/{arch}: 0.16.9 requires Java 25 scope=client"
+                    f"Cross-platform Vanilla 26.3 {os_name}/{arch}: для 0.16.9 требуется Java 25 с scope=client"
                 )
     if actual_client_e2e_ii_required():
         for minecraft, java_major in ACTUAL_CLIENT_E2E_II_01610.items():
@@ -590,12 +590,12 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             ]
             if len(matching) != 1:
                 die(
-                    f"Actual Client E2E II 0.16.10 requires one matching-server target for Minecraft {minecraft}"
+                    f"Для реальных E2E-проверок клиента II 0.16.10 требуется одна цель с соответствующим сервером Minecraft {minecraft}"
                 )
             target = matching[0]
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(
-                    f"Actual Client E2E II {minecraft}: requires Java {java_major} scope=client on linux/x86_64"
+                    f"Actual Client E2E II {minecraft}: требуется Java {java_major} с scope=client на linux/x86_64"
                 )
     if legacy_vanilla_0170v1_required():
         for minecraft in LEGACY_VANILLA_0170V1:
@@ -604,7 +604,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Legacy Vanilla 0.17.0v1: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(
-                    f"Legacy Vanilla {minecraft}: 0.17.0v1 requires Java 8 scope=client"
+                    f"Legacy Vanilla {minecraft}: для 0.17.0v1 требуется Java 8 с scope=client"
                 )
     if java16_17_vanilla_0170v2_required():
         for minecraft, java_major in JAVA16_17_VANILLA_0170V2.items():
@@ -620,7 +620,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 or target["arch"] != "x86_64"
             ):
                 die(
-                    f"Java 16/17 Vanilla {minecraft}: 0.17.0v2 requires Java {java_major} scope=client linux/x86_64"
+                    f"Java 16/17 Vanilla {minecraft}: для 0.17.0v2 требуется Java {java_major} с scope=client на linux/x86_64"
                 )
     if java21_25_vanilla_0170v3_required():
         for minecraft, java_major in JAVA21_25_VANILLA_0170V3.items():
@@ -636,7 +636,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 or target["arch"] != "x86_64"
             ):
                 die(
-                    f"Java 21/25 Vanilla {minecraft}: 0.17.0v3 requires Java {java_major} scope=client linux/x86_64"
+                    f"Java 21/25 Vanilla {minecraft}: для 0.17.0v3 требуется Java {java_major} с scope=client на linux/x86_64"
                 )
     if compatibility_ii_ga_required():
         required_vanilla_rows = [
@@ -651,15 +651,15 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             < COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS
         ):
             die(
-                f"Minecraft Compatibility II GA requires at least {COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS} required Vanilla targets"
+                f"Для Minecraft Compatibility II GA требуется не менее {COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS} обязательных целей Vanilla"
             )
         if len(unique_versions) < COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA:
             die(
-                f"Minecraft Compatibility II GA requires at least {COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA} unique Vanilla releases"
+                f"Для Minecraft Compatibility II GA требуется не менее {COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA} отдельных выпусков Vanilla"
             )
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(java_majors):
             die(
-                f"Minecraft Compatibility II GA requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
+                f"Для Minecraft Compatibility II GA требуется покрытие JRE {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
             )
     if fabric_compatibility_ii_0171_required():
         required_fabric_rows = [
@@ -680,7 +680,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             )
         if len(required_fabric_rows) != len(FABRIC_COMPATIBILITY_II_0171):
             die(
-                "Fabric Compatibility II 0.17.1 requires exactly one required target per stable Minecraft release"
+                "Для Fabric Compatibility II 0.17.1 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft"
             )
         for target in required_fabric_rows:
             minecraft = target["minecraft"]
@@ -691,20 +691,20 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 or target["scope"] != expected_scope
             ):
                 die(
-                    f"Fabric {minecraft}: 0.17.1 requires Java {expected_java} scope={expected_scope}"
+                    f"Fabric {minecraft}: для 0.17.1 требуется Java {expected_java} scope={expected_scope}"
                 )
             if target["os"] != "linux" or target["arch"] != "x86_64":
                 die(
-                    f"Fabric {minecraft}: 0.17.1 requires linux/x86_64 certification target"
+                    f"Fabric {minecraft}: для 0.17.1 требуется цель сертификации linux/x86_64"
                 )
             if target["loaderVersion"] != "latest-stable":
                 die(
-                    f"Fabric {minecraft}: 0.17.1 requires loaderVersion=latest-stable selector with immutable resolution evidence"
+                    f"Fabric {minecraft}: для 0.17.1 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
                 )
         fabric_java = {target["javaMajor"] for target in required_fabric_rows}
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(fabric_java):
             die(
-                f"Fabric Compatibility II 0.17.1 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
+                f"Для Fabric Compatibility II 0.17.1 необходимо покрытие JRE {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
             )
 
     if quilt_compatibility_ii_0172_required():
@@ -726,7 +726,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             )
         if len(required_quilt_rows) != len(QUILT_COMPATIBILITY_II_0172):
             die(
-                "Quilt Compatibility II 0.17.2 requires exactly one required target per stable Minecraft release"
+                "Для Quilt Compatibility II 0.17.2 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft"
             )
         for target in required_quilt_rows:
             minecraft = target["minecraft"]
@@ -737,20 +737,20 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 or target["scope"] != expected_scope
             ):
                 die(
-                    f"Quilt {minecraft}: 0.17.2 requires Java {expected_java} scope={expected_scope}"
+                    f"Quilt {minecraft}: для 0.17.2 требуется Java {expected_java} scope={expected_scope}"
                 )
             if target["os"] != "linux" or target["arch"] != "x86_64":
                 die(
-                    f"Quilt {minecraft}: 0.17.2 requires linux/x86_64 certification target"
+                    f"Quilt {minecraft}: для 0.17.2 требуется цель сертификации linux/x86_64"
                 )
             if target["loaderVersion"] != "latest-stable":
                 die(
-                    f"Quilt {minecraft}: 0.17.2 requires loaderVersion=latest-stable selector with immutable resolution evidence"
+                    f"Quilt {minecraft}: для 0.17.2 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
                 )
         quilt_java = {target["javaMajor"] for target in required_quilt_rows}
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(quilt_java):
             die(
-                f"Quilt Compatibility II 0.17.2 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
+                f"Для Quilt Compatibility II 0.17.2 необходимо покрытие JRE {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
             )
 
     if forge_modern_0173_required():
@@ -776,7 +776,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             )
         if len(required_forge_rows) != len(FORGE_MODERN_0173):
             die(
-                "Forge Modern 0.17.3 requires exactly one required target per processor-based Forge release"
+                "Для Forge Modern 0.17.3 нужна ровно одна обязательная цель для каждого выпуска Forge на основе процессора"
             )
         for target in required_forge_rows:
             minecraft = target["minecraft"]
@@ -787,20 +787,20 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 or target["scope"] != expected_scope
             ):
                 die(
-                    f"Forge {minecraft}: 0.17.3 requires Java {expected_java} scope={expected_scope}"
+                    f"Forge {minecraft}: для 0.17.3 требуется Java {expected_java} scope={expected_scope}"
                 )
             if target["os"] != "linux" or target["arch"] != "x86_64":
                 die(
-                    f"Forge {minecraft}: 0.17.3 requires linux/x86_64 certification target"
+                    f"Forge {minecraft}: для 0.17.3 требуется цель сертификации linux/x86_64"
                 )
             if target["loaderVersion"] != "latest-stable":
                 die(
-                    f"Forge {minecraft}: 0.17.3 requires loaderVersion=latest-stable selector with immutable resolution evidence"
+                    f"Forge {minecraft}: для 0.17.3 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
                 )
         forge_java = {target["javaMajor"] for target in required_forge_rows}
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(forge_java):
             die(
-                f"Forge Modern 0.17.3 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
+                f"Для Forge Modern 0.17.3 необходимо покрытие JRE {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
             )
         allowed_extra = set()
         if forge_legacy_1122_0174_required():
@@ -832,12 +832,12 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             )
         target = legacy_rows[0]
         if target["javaMajor"] != 8 or target["scope"] != "client":
-            die("Forge Legacy 1.12.2 0.17.4 requires Java 8 scope=client")
+            die("Для Forge Legacy 1.12.2 0.17.4 требуется Java 8 с scope=client")
         if target["os"] != "linux" or target["arch"] != "x86_64":
-            die("Forge Legacy 1.12.2 0.17.4 requires linux/x86_64 certification target")
+            die("Для Forge Legacy 1.12.2 0.17.4 требуется цель сертификации linux/x86_64")
         if target["loaderVersion"] != "latest-stable":
             die(
-                "Forge Legacy 1.12.2 0.17.4 requires loaderVersion=latest-stable selector with immutable resolution evidence"
+                "Для Forge Legacy 1.12.2 0.17.4 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
             )
 
     if forge_legacy_1710_0175_required():
@@ -854,12 +854,12 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             )
         target = legacy_rows[0]
         if target["javaMajor"] != 8 or target["scope"] != "client":
-            die("Forge Legacy 1.7.10 0.17.5 requires Java 8 scope=client")
+            die("Для Forge Legacy 1.7.10 0.17.5 требуется Java 8 с scope=client")
         if target["os"] != "linux" or target["arch"] != "x86_64":
-            die("Forge Legacy 1.7.10 0.17.5 requires linux/x86_64 certification target")
+            die("Для Forge Legacy 1.7.10 0.17.5 требуется цель сертификации linux/x86_64")
         if target["loaderVersion"] != "latest-stable":
             die(
-                "Forge Legacy 1.7.10 0.17.5 requires loaderVersion=latest-stable selector with immutable resolution evidence"
+                "Для Forge Legacy 1.7.10 0.17.5 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
             )
 
     if neoforge_compatibility_ii_0176_required():
@@ -881,7 +881,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             )
         if len(required_rows) != len(NEOFORGE_COMPATIBILITY_II_0176):
             die(
-                "NeoForge Compatibility II 0.17.6 requires exactly one required target per stable NeoForge Minecraft release"
+                "Для NeoForge Compatibility II 0.17.6 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft с NeoForge"
             )
         for target in required_rows:
             minecraft = target["minecraft"]
@@ -892,18 +892,18 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 or target["scope"] != expected_scope
             ):
                 die(
-                    f"NeoForge {minecraft}: 0.17.6 requires Java {expected_java} scope={expected_scope}"
+                    f"NeoForge {minecraft}: для 0.17.6 требуется Java {expected_java} scope={expected_scope}"
                 )
             if target["os"] != "linux" or target["arch"] != "x86_64":
                 die(
-                    f"NeoForge {minecraft}: 0.17.6 requires linux/x86_64 certification target"
+                    f"NeoForge {minecraft}: для 0.17.6 требуется цель сертификации linux/x86_64"
                 )
             if target["loaderVersion"] != "latest-stable":
                 die(
-                    f"NeoForge {minecraft}: 0.17.6 requires loaderVersion=latest-stable selector with immutable resolution evidence"
+                    f"NeoForge {minecraft}: для 0.17.6 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
                 )
         if 25 not in {target["javaMajor"] for target in required_rows}:
-            die("NeoForge Compatibility II 0.17.6 requires Java 25 coverage for 26.x")
+            die("Для NeoForge Compatibility II 0.17.6 требуется покрытие Java 25 для Minecraft 26.x")
 
     if cross_platform_loaders_0179_required():
         expected_platforms = set(CROSS_PLATFORM_LOADER_PLATFORMS_0179)
@@ -928,20 +928,20 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             for target in rows:
                 if target["javaMajor"] != java_major or target["scope"] != "client":
                     die(
-                        f"Cross-platform Loaders 0.17.9 {loader} {minecraft} requires Java {java_major} scope=client on every platform"
+                        f"Cross-platform Loaders 0.17.9 {loader} {minecraft} требуется Java {java_major} с scope=client на каждой платформе"
                     )
                 if target["loaderVersion"] != "latest-stable":
                     die(
-                        f"Cross-platform Loaders 0.17.9 {loader} {minecraft} requires loaderVersion=latest-stable with immutable resolution"
+                        f"Cross-platform Loaders 0.17.9 {loader} {minecraft} требуется loaderVersion=latest-stable с неизменяемым разрешением версии"
                     )
 
 
 def load_targets(path: Path) -> dict[str, Any]:
     payload = load_json(path)
     if not isinstance(payload, dict):
-        die("targets document must be an object")
+        die("Документ целей должен быть объектом")
     if payload.get("schemaVersion") != "1.0":
-        die("targets schemaVersion must be 1.0")
+        die("Значение targets schemaVersion должно быть 1.0")
     declared_version = str(payload.get("productVersion", "")).strip()
     if declared_version and declared_version != PRODUCT_VERSION:
         die(
@@ -949,7 +949,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         )
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:
-        die("targets must contain a non-empty array")
+        die("Поле targets должно содержать непустой массив")
     seen: set[str] = set()
     normalized: list[dict[str, Any]] = []
     allowed_target_keys = {
@@ -971,7 +971,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         unknown = sorted(set(raw) - allowed_target_keys)
         if unknown:
             die(
-                f"target #{index + 1}: unknown fields are forbidden: {', '.join(unknown)}"
+                f"target #{index + 1}: неизвестные поля запрещены: {', '.join(unknown)}"
             )
         target_id = str(raw.get("id", "")).strip()
         minecraft = str(raw.get("minecraft", "")).strip()
@@ -985,32 +985,32 @@ def load_targets(path: Path) -> dict[str, Any]:
         matching_server = raw.get("matchingServer", False)
         unavailable_reason = raw.get("unavailableReason")
         if not ID_RE.fullmatch(target_id):
-            die(f"target #{index + 1}: invalid id {target_id!r}")
+            die(f"target #{index + 1}: недопустимый идентификатор {target_id!r}")
         if target_id in seen:
-            die(f"duplicate target id: {target_id}")
+            die(f"Повторяющийся идентификатор цели: {target_id}")
         seen.add(target_id)
         if not VERSION_RE.fullmatch(minecraft):
-            die(f"{target_id}: invalid Minecraft version")
+            die(f"{target_id}: недопустимая версия Minecraft")
         if loader not in ALLOWED_LOADERS:
-            die(f"{target_id}: unsupported loader {loader}")
+            die(f"{target_id}: неподдерживаемый загрузчик {loader}")
         if loader == "vanilla" and selector:
-            die(f"{target_id}: Vanilla target cannot specify loaderVersion")
+            die(f"{target_id}: для цели Vanilla нельзя задавать loaderVersion")
         if loader != "vanilla" and not selector:
-            die(f"{target_id}: loaderVersion is required")
+            die(f"{target_id}: необходимо указать loaderVersion")
         if selector and not VERSION_RE.fullmatch(selector):
-            die(f"{target_id}: invalid loaderVersion")
+            die(f"{target_id}: недопустимое значение loaderVersion")
         if os_name not in ALLOWED_OS:
-            die(f"{target_id}: unsupported CI OS {os_name}")
+            die(f"{target_id}: неподдерживаемая ОС CI {os_name}")
         if arch not in ALLOWED_ARCH:
-            die(f"{target_id}: unsupported CI architecture {arch}")
+            die(f"{target_id}: неподдерживаемая архитектура CI {arch}")
         if (
             not isinstance(java_major, int)
             or isinstance(java_major, bool)
             or java_major not in ALLOWED_JAVA_MAJORS
         ):
-            die(f"{target_id}: javaMajor must be one of {sorted(ALLOWED_JAVA_MAJORS)}")
+            die(f"{target_id}: javaMajor должен быть одним из {sorted(ALLOWED_JAVA_MAJORS)}")
         if scope not in ALLOWED_SCOPES:
-            die(f"{target_id}: scope must be one of {sorted(ALLOWED_SCOPES)}")
+            die(f"{target_id}: scope должен быть одним из {sorted(ALLOWED_SCOPES)}")
         client_loader_allowed = (
             loader == "vanilla"
             or (loader == "fabric" and fabric_compatibility_ii_0171_required())
@@ -1020,10 +1020,10 @@ def load_targets(path: Path) -> dict[str, Any]:
         )
         if scope == "client" and not client_loader_allowed:
             die(
-                f"{target_id}: client scope is not enabled for loader {loader} in VERSION={PRODUCT_VERSION}"
+                f"{target_id}: область client не включена для загрузчика {loader} in VERSION={PRODUCT_VERSION}"
             )
         if not isinstance(required, bool):
-            die(f"{target_id}: required must be boolean")
+            die(f"{target_id}: required должен быть логическим значением")
         expected_blocker = (
             BLOCKED_UPSTREAM_REASONS.get((loader, minecraft))
             if (os_name, arch) == ("linux", "x86_64")
@@ -1031,15 +1031,15 @@ def load_targets(path: Path) -> dict[str, Any]:
         )
         if expected_blocker is None:
             if unavailable_reason is not None:
-                die(f"{target_id}: unverified upstream blocker is forbidden")
+                die(f"{target_id}: неподтверждённая блокировка исходного проекта запрещена")
         elif required or unavailable_reason != expected_blocker:
             die(
-                f"{target_id}: upstream {expected_blocker} requires required=false and matching unavailableReason"
+                f"{target_id}: upstream {expected_blocker} требуются required=false и соответствующее unavailableReason"
             )
         if not required and expected_blocker is None and unavailable_reason is None:
-            die(f"{target_id}: optional targets require a reviewed unavailableReason")
+            die(f"{target_id}: для необязательных целей требуется проверенное unavailableReason")
         if not isinstance(matching_server, bool):
-            die(f"{target_id}: matchingServer must be boolean")
+            die(f"{target_id}: matchingServer должен быть логическим значением")
         if matching_server and not (
             loader == "vanilla"
             and scope == "client"
@@ -1047,7 +1047,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             and arch == "x86_64"
         ):
             die(
-                f"{target_id}: matchingServer requires Vanilla client scope on linux/x86_64"
+                f"{target_id}: matchingServer требует Vanilla client на linux/x86_64"
             )
         normalized.append(
             {
@@ -1103,7 +1103,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         )
         if len(blocked_rows) != 1:
             die(
-                f"{feature} requires exactly one catalogue target for upstream-unavailable Minecraft {minecraft}"
+                f"{feature} требуется ровно одна цель каталога для недоступной исходной версии Minecraft {minecraft}"
             )
         target = blocked_rows[0]
         if (
@@ -1112,7 +1112,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             or target["loaderVersion"] != "latest-stable"
         ):
             die(
-                f"{feature} upstream-unavailable {minecraft} must retain Java {java} client/latest-stable declaration"
+                f"{feature} upstream-unavailable {minecraft} должно сохранять Java {java} объявление client/latest-stable"
             )
     validate_baseline_ii(normalized)
     if loader_native_e2e_0178_required():
@@ -1129,14 +1129,14 @@ def load_targets(path: Path) -> dict[str, Any]:
             ]
             if len(native) != 1:
                 die(
-                    f"Loader-native E2E 0.17.8 requires exactly one {loader} 1.21.1 integration target on linux/x86_64"
+                    f"Для Loader-native E2E 0.17.8 требуется ровно одна {loader} интеграционная цель 1.21.1 на linux/x86_64"
                 )
             if (
                 native[0].get("javaMajor") != 21
                 or native[0].get("loaderVersion") != "latest-stable"
             ):
                 die(
-                    f"Loader-native E2E {loader} 1.21.1 requires Java 21 and loaderVersion=latest-stable"
+                    f"Loader-native E2E {loader} для 1.21.1 необходимы Java 21 и loaderVersion=latest-stable"
                 )
 
     return {
@@ -1159,7 +1159,7 @@ def command_validate(args: argparse.Namespace) -> int:
     vanilla = [target for target in payload["targets"] if target["loader"] == "vanilla"]
     java = sorted({target["javaMajor"] for target in vanilla})
     print(
-        f"Compatibility targets OK: {len(payload['targets'])} targets for {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}"
+        f"Цели совместимости проверены: {len(payload['targets'])} targets for {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}"
     )
     return 0
 
@@ -1177,7 +1177,7 @@ def runner_for_target(target: dict[str, Any]) -> str:
     try:
         return runners[key]
     except KeyError:
-        die(f"no GitHub-hosted runner mapping for {key[0]}/{key[1]}")
+        die(f"Нет соответствия среде выполнения GitHub-hosted для {key[0]}/{key[1]}")
 
 
 def java_distribution_for_target(target: dict[str, Any]) -> str:
@@ -1217,17 +1217,17 @@ def discover_results(
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            errors.append(f"{path}: invalid result JSON: {exc}")
+            errors.append(f"{path}: недопустимый JSON результата: {exc}")
             continue
         if not isinstance(payload, dict):
-            errors.append(f"{path}: result must be an object")
+            errors.append(f"{path}: результат должен быть объектом")
             continue
         target_id = str(payload.get("targetId", "")).strip()
         if not ID_RE.fullmatch(target_id):
-            errors.append(f"{path}: invalid targetId")
+            errors.append(f"{path}: недопустимый targetId")
             continue
         if target_id in found:
-            errors.append(f"duplicate compatibility result for {target_id}")
+            errors.append(f"Повторяющийся результат совместимости для {target_id}")
             continue
         found[target_id] = (path, payload)
     return found, errors
@@ -1254,19 +1254,19 @@ def verify_result(
     if semver_core(PRODUCT_VERSION) >= (0, 52, 1):
         attempt = result.get('runAttempt')
         if type(attempt) is not int or attempt < 1:
-            errors.append('runAttempt: positive CI run attempt required')
+            errors.append('runAttempt: требуется положительный номер попытки запуска CI')
     for key, value in expected.items():
         if str(result.get(key, "")) != str(value):
             errors.append(f"{key}: expected {value!r}, got {result.get(key)!r}")
     selector = str(result.get("loaderSelector", ""))
     if selector != target["loaderVersion"]:
-        errors.append(f"loaderSelector mismatch: {selector!r}")
+        errors.append(f"Несовпадение loaderSelector: {selector!r}")
     resolved = str(result.get("resolvedLoaderVersion", ""))
     if target["loader"] == "vanilla":
         if resolved:
-            errors.append("Vanilla result must not have resolvedLoaderVersion")
+            errors.append("Результат Vanilla не должен содержать resolvedLoaderVersion")
     elif not resolved or resolved.lower() in MUTABLE_SELECTORS:
-        errors.append("loader result did not resolve to a concrete immutable version")
+        errors.append("Не удалось определить конкретную неизменяемую версию загрузчика")
     if target["loader"] != "vanilla" and loader_resolution_pinning_0177_required():
         for key in (
             "resolutionLockSha256",
@@ -1275,7 +1275,7 @@ def verify_result(
         ):
             value = str(result.get(key, "")).lower()
             if not re.fullmatch(r"[0-9a-f]{64}", value):
-                errors.append(f"{key} is missing or invalid")
+                errors.append(f"{key} отсутствует или некорректен")
 
     checks = result.get("checks")
     mandatory = (
@@ -1340,7 +1340,7 @@ def verify_result(
                 "loaderProcessorRecovery",
             ]
     if not isinstance(checks, dict):
-        errors.append("checks is missing")
+        errors.append("Отсутствует checks")
     else:
         for key in mandatory:
             if checks.get(key) is not True:
@@ -1350,20 +1350,20 @@ def verify_result(
 
     evidence = result.get("evidence")
     if not isinstance(evidence, dict):
-        errors.append("evidence is missing")
+        errors.append("Отсутствуют доказательства")
     else:
         if str(evidence.get("manifestLoader", "")) != target["loader"]:
-            errors.append("evidence manifestLoader mismatch")
+            errors.append("Несовпадение evidence manifestLoader")
         runtime = evidence.get("javaRuntime")
         if (
             not isinstance(runtime, dict)
             or runtime.get("matched") is not True
             or runtime.get("detectedMajor") != target["javaMajor"]
         ):
-            errors.append("evidence javaRuntime mismatch")
+            errors.append("Несовпадение evidence javaRuntime")
         if compatibility_ii_ga_required():
             if not isinstance(runtime, dict) or runtime.get("certified") is not True:
-                errors.append("evidence JRE certification is missing")
+                errors.append("Отсутствует сертификация JRE в доказательстве")
             else:
                 sha = str(runtime.get("executableSha256", ""))
                 vendor = str(runtime.get("vendor", "")).strip()
@@ -1371,20 +1371,20 @@ def verify_result(
                 java_home = str(runtime.get("javaHome", "")).strip()
                 vm_name = str(runtime.get("vmName", "")).strip()
                 if not re.fullmatch(r"[0-9a-f]{64}", sha):
-                    errors.append("evidence JRE executableSha256 is invalid")
+                    errors.append("Некорректный executableSha256 JRE в доказательстве")
                 if not vendor or not runtime_version or not java_home or not vm_name:
-                    errors.append("evidence JRE identity is incomplete")
+                    errors.append("Неполная идентификация JRE в доказательстве")
                 if (
                     runtime.get("detectedOS") != target["os"]
                     or runtime.get("detectedArch") != target["arch"]
                 ):
-                    errors.append("evidence JRE OS/arch mismatch")
+                    errors.append("Несовпадение ОС или архитектуры JRE в доказательстве")
                 if str(result.get("jreVendor", "")).strip() != vendor:
-                    errors.append("jreVendor mismatch")
+                    errors.append("Несовпадение jreVendor")
                 if str(result.get("jreRuntimeVersion", "")).strip() != runtime_version:
-                    errors.append("jreRuntimeVersion mismatch")
+                    errors.append("Несовпадение jreRuntimeVersion")
                 if str(result.get("jreExecutableSha256", "")).strip() != sha:
-                    errors.append("jreExecutableSha256 mismatch")
+                    errors.append("Несовпадение jreExecutableSha256")
         platform_runtime = evidence.get("platformRuntime")
         if (
             not isinstance(platform_runtime, dict)
@@ -1392,7 +1392,7 @@ def verify_result(
             or platform_runtime.get("detectedOS") != target["os"]
             or platform_runtime.get("detectedArch") != target["arch"]
         ):
-            errors.append("evidence platformRuntime mismatch")
+            errors.append("Несовпадение evidence platformRuntime")
         files = evidence.get("files")
         if target["scope"] == "client":
             if target["loader"] in {"fabric", "quilt", "forge", "neoforge"}:
@@ -1464,7 +1464,7 @@ def verify_result(
         if not isinstance(files, list) or not mandatory_files.issubset(
             {str(value) for value in files}
         ):
-            errors.append("evidence files are incomplete")
+            errors.append("Неполный набор файлов доказательств")
     if result.get("status") != "passed":
         errors.append(f"status is {result.get('status')!r}")
     return errors
@@ -1481,11 +1481,11 @@ EVIDENCE_MAX_BYTES = 128 * 1024 * 1024
 def verify_evidence_files(result_path: Path, result: dict[str, Any]) -> list[str]:
     evidence = result.get("evidence")
     if not isinstance(evidence, dict):
-        return ["evidence object is missing"]
+        return ["Отсутствует объект доказательства"]
     files = evidence.get("files")
     hashes = evidence.get("sha256")
     if not isinstance(files, list) or not isinstance(hashes, dict):
-        return ["evidence files and sha256 are required"]
+        return ["Требуются файлы доказательств и sha256"]
     if (
         not files
         or len(files) != len(set(map(str, files)))
@@ -1496,9 +1496,9 @@ def verify_evidence_files(result_path: Path, result: dict[str, Any]) -> list[str
             for name in files
         )
     ):
-        return ["invalid, duplicate or unsafe evidence filename"]
+        return ["Недопустимое, повторяющееся или небезопасное имя файла доказательства"]
     if set(hashes) != set(files):
-        return ["evidence sha256 does not cover exactly the submitted files"]
+        return ["Поле sha256 доказательства не охватывает точно набор предоставленных файлов"]
     evidence_root = result_path.parent
     if evidence_root.name == "compatibility-result":
         runtime_root = evidence_root.parent / "runtime"
@@ -1508,7 +1508,7 @@ def verify_evidence_files(result_path: Path, result: dict[str, Any]) -> list[str
     for name in files:
         digest = hashes.get(name)
         if not isinstance(digest, str) or not EVIDENCE_HASH.fullmatch(digest):
-            errors.append(f"invalid evidence digest for {name}")
+            errors.append(f"Недопустимый хеш доказательства для {name}")
             continue
         base = (
             evidence_root
@@ -1518,15 +1518,15 @@ def verify_evidence_files(result_path: Path, result: dict[str, Any]) -> list[str
         file = base / name
         try:
             if file.is_symlink() or not file.is_file():
-                errors.append(f"missing/unsafe evidence artifact: {name}")
+                errors.append(f"Артефакт доказательства отсутствует или небезопасен: {name}")
                 continue
             if file.stat().st_size > EVIDENCE_MAX_BYTES:
-                errors.append(f"oversized evidence artifact: {name}")
+                errors.append(f"Артефакт доказательства превышает допустимый размер: {name}")
                 continue
             if sha256_file(file) != digest:
-                errors.append(f"evidence artifact sha256 mismatch: {name}")
+                errors.append(f"Несовпадение sha256 артефакта доказательства: {name}")
         except OSError as exc:
-            errors.append(f"cannot verify evidence artifact {name}: {exc}")
+            errors.append(f"Не удалось проверить артефакт доказательства {name}: {exc}")
     return errors
 
 
@@ -1653,12 +1653,12 @@ def command_aggregate(args: argparse.Namespace) -> int:
     allowed_ids = {target["id"] for target in targets}
     extras = sorted(set(results) - allowed_ids)
     if extras:
-        errors.append("unexpected result targets: " + ", ".join(extras))
+        errors.append("Неожиданные целевые результаты: " + ", ".join(extras))
     for target in targets:
         target_id = target["id"]
         if target_id not in results:
             if target["required"]:
-                errors.append(f"missing required result: {target_id}")
+                errors.append(f"Отсутствует обязательный результат: {target_id}")
             records[target_id] = (
                 {
                     "status": "unsupported",
@@ -1671,7 +1671,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
             continue
         if not target["required"]:
             errors.append(
-                f"{target_id}: upstream-unavailable target unexpectedly produced certification evidence"
+                f"{target_id}: недоступная исходная цель неожиданно предоставила доказательства сертификации"
             )
             records[target_id] = {"status": "invalid", "checks": {}}
             continue
@@ -1679,14 +1679,14 @@ def command_aggregate(args: argparse.Namespace) -> int:
         product_version = str(result.get("productVersion", ""))
         if product_version != targets_doc["productVersion"]:
             errors.append(
-                f"{target_id}: productVersion expected {targets_doc['productVersion']}, got {product_version}"
+                f"{target_id}: ожидалось значение productVersion {targets_doc['productVersion']}, got {product_version}"
             )
         result_errors = verify_result(
             target, result, commit=args.commit, run_id=args.run_id
         )
         if semver_core(PRODUCT_VERSION) >= (0, 52, 1) and args.attempt is not None:
             if result.get('runAttempt') != args.attempt:
-                result_errors.append('CI attempt does not match actual workflow invocation')
+                result_errors.append('Попытка CI не совпадает с фактическим запуском рабочего процесса')
         result_errors.extend(verify_evidence_files(path, result))
         result = dict(result)
         if result_errors:

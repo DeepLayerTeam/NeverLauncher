@@ -28,7 +28,7 @@ func runPGFiles0474(args []string) int {
 		return 2
 	}
 	if !*offline || !*targetS3 && *targetRoot == "" || *targetS3 && *targetRoot != "" || *timeout <= 0 || *sourceRoot == "" || fs.NArg() != 0 || strings.TrimSpace(*dsnEnv) == "" || strings.ContainsAny(*dsnEnv, "= \t\r\n\x00") {
-		fmt.Fprintln(os.Stderr, "requires --source-root, one of --target-root or --target-s3, --ack-offline, positive timeout")
+		fmt.Fprintln(os.Stderr, "Требуются --source-root, один из --target-root или --target-s3, --ack-offline и положительное время ожидания")
 		return 2
 	}
 	dsn := os.Getenv(*dsnEnv)

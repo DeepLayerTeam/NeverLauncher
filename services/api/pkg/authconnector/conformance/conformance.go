@@ -57,7 +57,7 @@ func (r *Report) add(name string, err error) {
 		if errors.As(err, &e) && e.Code != "" {
 			c.Message = "Ошибка провайдера: " + string(e.Code)
 		} else {
-			c.Message = "check failed"
+			c.Message = "Проверка не пройдена"
 		}
 	}
 	r.Checks = append(r.Checks, c)

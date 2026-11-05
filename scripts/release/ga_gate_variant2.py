@@ -42,11 +42,11 @@ def require(value: bool, reason: str):
 def verify_approval(evidence_root: Path, approval: Path, signature: Path, key: Path, acceptance: dict) -> dict:
     """Проверять отдельную подпись одобрения Ed25519 для каждого сохранённого файла и финального артефакта."""
     require(evidence_root.is_absolute() and evidence_root.is_dir() and not evidence_root.is_symlink(),
-            'absolute real evidence root required')
+            'Требуется абсолютный путь к корневому каталогу реальных доказательств')
     raw = ga.regular(approval, 128 << 10, private=True)
     sig = ga.regular(signature, 128, private=True)
     key_raw = ga.regular(key, 128, private=True)
-    require(len(sig) == 64 and len(key_raw) == 32, 'Ed25519 raw public key and signature required')
+    require(len(sig) == 64 and len(key_raw) == 32, 'Требуются открытый ключ Ed25519 в исходном формате и подпись')
     try:
         Ed25519PublicKey.from_public_bytes(key_raw).verify(sig, DOMAIN + raw)
     except (InvalidSignature, ValueError) as exc:
@@ -59,7 +59,7 @@ def verify_approval(evidence_root: Path, approval: Path, signature: Path, key: P
             and meta.get('version') == VERSION and meta.get('commitSha') == acceptance['commitSha']
             and meta.get('targetReleaseSha256') == acceptance['targetReleaseSha256']
             and isinstance(meta.get('reviewer'), str) and 3 <= len(meta['reviewer']) <= 128,
-            'approval for different release or missing reviewer')
+            'Одобрение относится к другому выпуску или не указан проверяющий')
     files = meta.get('files')
     actual = {p.relative_to(evidence_root).as_posix() for p in evidence_root.rglob('*')
               if p.is_file() or p.is_symlink()}
@@ -67,21 +67,21 @@ def verify_approval(evidence_root: Path, approval: Path, signature: Path, key: P
             and 'acceptance-0500.json' in files and
             all((module + '.evidence') in files for module in ga.MODULE_IDS)
             and any(name.startswith('signed/') for name in files),
-            'independent signature does not bind every module check and signed release file')
+            'Независимая подпись не охватывает все проверки модулей и подписанные файлы выпуска')
     for name, expected in files.items():
         require(type(name) is str and bool(re.fullmatch(r'[A-Za-z0-9_./-]{1,240}', name))
                 and not name.startswith('/') and '..' not in Path(name).parts
                 and type(expected) is str and ga.HEX.fullmatch(expected) is not None,
-                'unsafe signed evidence inventory')
+                'Небезопасная опись подписанных доказательств')
         path = evidence_root / name
         require(path.resolve().is_relative_to(evidence_root.resolve()) and
-                ga.sha(path) == expected, 'signed evidence file missing or changed: ' + name)
+                ga.sha(path) == expected, 'Подписанный файл доказательства отсутствует или изменён: ' + name)
     return meta
 
 
 def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, key: Path) -> dict:
     require((ROOT / 'VERSION').read_text().strip() == VERSION,
-            'source version must be the exact final 0.50.0 release')
+            'Версия исходников должна точно соответствовать итоговому выпуску 0.50.0')
     report = ga.doc(evidence_root / 'acceptance-0500.json', private=True)
     require(report.get('format') == ga.FORMAT and
             report.get('status') == 'LIVE_CHECKS_PASSED_REVIEW_REQUIRED' and
@@ -89,18 +89,18 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
             report.get('moduleCheckCount') == 19 and
             type(report.get('references')) is list and len(report['references']) == 3 and
             type(report.get('moduleChecks')) is list and len(report['moduleChecks']) == 19,
-            'missing verified real-project rehearsal/36 migration tests/19 module checks')
+            'Отсутствуют подтверждённые испытания реального проекта, 36 тестов миграции или 19 проверок модулей')
     try:
         completed = datetime.fromisoformat(report['completedAt'].replace('Z', '+00:00'))
     except (KeyError, AttributeError, ValueError) as exc:
         raise Blocked('В приёмке отсутствует дата') from exc
     now = datetime.now(timezone.utc)
     require(completed.tzinfo is not None and now - timedelta(hours=72) <= completed <= now + timedelta(minutes=1),
-            'acceptance evidence is stale or future-dated')
+            'Доказательства приёмки устарели или имеют дату в будущем')
     classes = {x.get('referenceClass') for x in report['references'] if type(x) is dict}
     modules = {x.get('moduleId') for x in report['moduleChecks'] if type(x) is dict}
     require(classes == set(ga.CLASSES) and modules == set(ga.MODULE_IDS),
-            'incorrect final migration project or module coverage')
+            'Неверный итоговый проект миграции или покрытие модулей')
     # Независимое подписанное одобрение должно покрывать РЕАЛЬНЫЕ финальные байты,
     # включая подписанный устанавливаемый выпуск и исходные незамаскированные
     # закрытые доказательства каждого модуля.
@@ -108,7 +108,7 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
     signed = evidence_root / 'signed'
     delivery = verify_bundle(signed, release_manifest=True)
     require(delivery.get('releaseManifestMatchesAssets') is True and delivery.get('version') == VERSION,
-            '0.50.0 signed delivery assets did not pass real manifest/signature checks')
+            'Подписанные артефакты поставки 0.50.0 не прошли реальные проверки манифеста или подписи')
     # Сравнивайте идентичность независимого проверяющего с авторами трёх подписанных
     # сертификатов Migration GA; самопроверка собственной квитанции GA запрещена.
     refs = config.get('references')
@@ -116,9 +116,9 @@ def promote(config: dict, evidence_root: Path, approval: Path, signature: Path, 
     for cls in ga.CLASSES:
         certificate = ga.doc(Path(refs[cls]['certificate']), private=True)
         require(signed_review['reviewer'] != certificate.get('reviewedBy'),
-                'independent approver must not be the original migration operator')
+                'Независимый утверждающий не должен быть оператором исходной миграции')
     require(report['commitSha'] == signed_review['commitSha'],
-            'release commit mismatch')
+            'Несовпадение коммита выпуска')
     # Повторно проверьте исходные 36 источников свидетельств и живой Backend после
     # внешней проверки. Откат или отзыв во время проверки блокирует окончательное
     # продвижение.

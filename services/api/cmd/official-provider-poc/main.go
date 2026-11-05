@@ -224,7 +224,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 				fmt.Fprint(w, "Авторизация получена. Вернитесь в терминал.\n")
 			}
 		default:
-			http.Error(w, "Already handled", http.StatusConflict)
+			http.Error(w, "Запрос уже обработан", http.StatusConflict)
 		}
 	})
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second, MaxHeaderBytes: 8 << 10}

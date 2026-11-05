@@ -28,7 +28,7 @@ class Acceptance0529(unittest.TestCase):
     def test_duplicate_json_field_is_not_overwritten(self):
         target=self.root/'evidence.json'
         target.write_text('{"status":"failed","status":"passed"}')
-        with self.assertRaisesRegex(suite.Blocked, 'duplicate'):
+        with self.assertRaisesRegex(suite.Blocked, 'Повторяющийся ключ'):
             suite.read_json(target)
 
     def test_signed_input_is_not_allowed_from_symlinks_or_hardlinks(self):

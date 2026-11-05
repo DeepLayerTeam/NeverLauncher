@@ -29,11 +29,11 @@ func runPGLive0473(args []string) int {
 		return 2
 	}
 	if !*ack || *timeout <= 0 || flags.NArg() != 0 || (*fromStaging == (*backup != "")) {
-		fmt.Fprintln(os.Stderr, "required: --ack-live-import and exactly one of --backup PATH or --from-staging, with positive --timeout")
+		fmt.Fprintln(os.Stderr, "Требуются --ack-live-import, ровно один из параметров --backup PATH или --from-staging и положительный --timeout")
 		return 2
 	}
 	if *dsnEnv == "" || strings.ContainsAny(*dsnEnv, "=\x00 \r\n\t") {
-		fmt.Fprintln(os.Stderr, "invalid --dsn-env")
+		fmt.Fprintln(os.Stderr, "Недопустимое значение --dsn-env")
 		return 2
 	}
 	dsn := os.Getenv(*dsnEnv)
@@ -48,25 +48,25 @@ func runPGLive0473(args []string) int {
 		// неизменяемая резервная копия источника. Разрушающая перезапись staging
 		// запрещена.
 		if _, err := sqlitepg.Import(ctx, *backup, dsn); err != nil {
-			fmt.Fprintf(os.Stderr, "immutable staging failed; no SQLRepository changes: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Ошибка неизменяемого промежуточного импорта; SQLRepository не изменён: %v\n", err)
 			return 1
 		}
 	}
 	var keys sqlitepg.MFASecrets0474
 	if *mfaFile != "" || *secretEnv != "" {
 		if *mfaFile == "" || *secretEnv == "" || strings.ContainsAny(*secretEnv, "=\x00 \r\n\t") {
-			fmt.Fprintln(os.Stderr, "Требуется: «both MFA key-file and PostgreSQL secret environment name are»")
+			fmt.Fprintln(os.Stderr, "Требуются одновременно файл ключа MFA и имя переменной окружения с секретом PostgreSQL")
 			return 2
 		}
 		var err error
 		keys.SQLiteMFAKey, err = readAuthKey(*mfaFile)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Не удалось прочитать «private SQLite MFA key:»", err)
+			fmt.Fprintln(os.Stderr, "Не удалось прочитать закрытый ключ MFA SQLite:", err)
 			return 2
 		}
 		keys.PostgreSQLSecret = os.Getenv(*secretEnv)
 		if keys.PostgreSQLSecret == "" {
-			fmt.Fprintln(os.Stderr, "Пустое значение: «PostgreSQL API secret env»")
+			fmt.Fprintln(os.Stderr, "Пустая переменная окружения с секретом API PostgreSQL")
 			return 2
 		}
 		defer func() {
@@ -77,7 +77,7 @@ func runPGLive0473(args []string) int {
 	}
 	report, err := sqlitepg.PopulateLiveWithMFA0474(ctx, dsn, keys)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "SQLRepository live import failed/rolled back; existing staging retained (commit errors require reconciliation): %v\n", err)
+		fmt.Fprintf(os.Stderr, "Рабочий импорт SQLRepository не удался или был отменён; промежуточные данные сохранены (ошибки фиксации требуют согласования): %v\n", err)
 		return 1
 	}
 	if err = json.NewEncoder(os.Stdout).Encode(report); err != nil {

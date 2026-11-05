@@ -65,20 +65,20 @@ def require(ok: bool, message: str) -> None:
 def unique(pairs):
     out = {}
     for key, value in pairs:
-        require(key not in out, 'duplicate JSON field: ' + key)
+        require(key not in out, 'Повторяющееся поле JSON: ' + key)
         out[key] = value
     return out
 
 
 def safe_file(path: Path, limit: int):
     require(path.is_absolute() and not path.is_symlink() and path.is_file(),
-            'missing, relative or symlinked evidence: ' + str(path))
+            'Доказательство отсутствует, имеет относительный путь или символическую ссылку: ' + str(path))
     st = path.stat()
     require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and 0 < st.st_size <= limit,
-            'empty, hardlinked or oversized evidence: ' + str(path))
+            'Доказательство пусто, имеет жёсткую ссылку или превышает размер: ' + str(path))
     # Отклоняйте также символьные ссылки на родительские каталоги, включая распакованные архивы.
     require(not any(parent.is_symlink() for parent in path.parents),
-            'symlink in evidence path: ' + str(path))
+            'Символическая ссылка в пути доказательства: ' + str(path))
     return path
 
 
@@ -86,12 +86,12 @@ def read_json(path: Path) -> dict:
     raw = safe_file(path, MAX_JSON).read_bytes()
     try:
         doc = json.loads(raw.decode('utf-8'), object_pairs_hook=unique,
-                         parse_constant=lambda token: (_ for _ in ()).throw(Blocked('nonfinite JSON value')))
+                         parse_constant=lambda token: (_ for _ in ()).throw(Blocked('Недопустимое нечисловое значение JSON')))
     except Blocked:
         raise
     except (UnicodeError, ValueError) as exc:
         raise Blocked('invalid JSON: ' + str(path)) from exc
-    require(type(doc) is dict, 'JSON root must be an object: ' + str(path))
+    require(type(doc) is dict, 'Корневой элемент JSON должен быть объектом: ' + str(path))
     return doc
 
 
@@ -114,20 +114,20 @@ def catalogs():
         doc = read_json(path)
         require(doc.get('schemaVersion') == '1.0' and
                 doc.get('productVersion', VERSION) == VERSION,
-                group + ': catalog version/schema drift')
+                group + ': несовпадение версии каталога или схемы')
         targets = doc.get('targets')
         require(type(targets) is list and len(targets) >= minimum,
-                group + ': mandatory matrix shrunk')
+                group + ': обязательная матрица сокращена')
         ids = set()
         for target in targets:
             require(type(target) is dict and type(target.get('required')) is bool and
                     isinstance(target.get('id'), str) and
                     compatibility.ID_RE.fullmatch(target['id']) is not None,
-                    group + ': invalid matrix target')
+                    group + ': недопустимая цель матрицы')
             require(target['id'] not in ids, group + ': повторяющийся идентификатор цели')
             ids.add(target['id'])
         require(sum(row['required'] for row in targets) >= minimum,
-                group + ': required targets dropped below verified baseline')
+                group + ': число обязательных целей стало меньше проверенной базовой конфигурации')
         require((ROOT / RUNNERS[group]).is_file(), group + ': отсутствует реальный исполняющий компонент')
         loaded[group] = {'rows': targets, 'sha256': digest(path), 'runner': RUNNERS[group]}
     # Повторно используйте существующую глубокую семантическую проверку загрузчика, Java и политики поддержки.
@@ -141,7 +141,7 @@ def locate_result_roots(results_root: Path):
     if not results_root.exists():
         return {}, []
     require(results_root.is_absolute() and results_root.is_dir() and not results_root.is_symlink(),
-            'results directory is unsafe')
+            'Каталог результатов небезопасен')
     found, errors = {}, []
     for current, dirs, files in os.walk(results_root, followlinks=False):
         current_path = Path(current)
@@ -153,7 +153,7 @@ def locate_result_roots(results_root: Path):
         doc = read_json(result_path)
         name = doc.get('targetId')
         require(isinstance(name, str) and compatibility.ID_RE.fullmatch(name),
-                'invalid targetId in evidence')
+                'Недопустимый targetId в доказательстве')
         require(name not in found, 'Повторяющаяся проверенная цель: ' + name)
         found[name] = (result_path, doc)
     return found, errors
@@ -179,15 +179,15 @@ def verify_runtime_bytes(target, result_path: Path):
                 install.get('minecraftVersion') == target['minecraft'] and
                 verify.get('status') == 'valid' and
                 isinstance(verify.get('verify'), dict) and verify['verify'].get('valid') is True,
-                target['id'] + ': underlying JVM/loader/install evidence contradicts PASS')
+                target['id'] + ': данные JVM, загрузчика или установки противоречат статусу PASS')
         if loader == 'vanilla':
             require(cert.get('minecraftVersion') == target['minecraft'],
-                    target['id'] + ': wrong real Minecraft build')
+                    target['id'] + ': неверная реальная сборка Minecraft')
         else:
             require(cert.get('minecraftVersion') == install.get('profileId') and
                     cert.get('mainClass') == install.get('mainClass') and
                     install.get('loader') == loader,
-                    target['id'] + ': incorrect loader runtime identity')
+                    target['id'] + ': неверная идентификация окружения загрузчика')
         if not target.get('matchingServer'):
             live = read_json(runtime / 'live-join.json')
             witness = read_json(runtime / 'live-server-witness.json')
@@ -220,23 +220,23 @@ def verify_runtime_bytes(target, result_path: Path):
                     cert.get('matchingServer') == '127.0.0.1' and
                     cert.get('matchingServerPort') == live.get('serverPort') and
                     re.search(rb'(?im)\bNL_Cert_Client\b.*(?:joined the game|logged in with entity id)', server_log),
-                    target['id'] + ': live multiplayer join evidence invalid or altered')
+                    target['id'] + ': доказательство реального многопользовательского входа недопустимо или изменено')
         if target.get('matchingServer'):
             match = read_json(runtime / 'matching-server.json')
             require(match.get('status') == 'passed' and match.get('clientJoinedServer') is True,
-                    target['id'] + ': no verified real matching-server join')
+                    target['id'] + ': отсутствует подтверждённый реальный вход на соответствующий сервер')
     else:
         launch = read_json(runtime / 'runtime-launch-minecraft.json')
         require(base.get('mode') == 'compatibility' and
                 (launch.get('success') is True or launch.get('timedOut') is True),
-                target['id'] + ': no actual full-stack JVM runtime')
+                target['id'] + ': не обнаружена реальная среда исполнения полного стека JVM')
     return runtime
 
 
 def verify_compatibility(target, record, commit, run_id, attempt):
     path, doc = record
     require(doc.get('productVersion') == VERSION and doc.get('runAttempt') == attempt,
-            target['id'] + ': product version / CI attempt mismatch')
+            target['id'] + ': несовпадение версии продукта или попытки CI')
     problems = compatibility.verify_result(target, doc, commit=commit, run_id=run_id)
     problems += compatibility.verify_evidence_files(path, doc)
     require(not problems, target['id'] + ': ' + '; '.join(problems[:5]))
@@ -248,24 +248,24 @@ def verify_compatibility(target, record, commit, run_id, attempt):
             require(binding.get('sourceCommit') == commit and
                     binding.get('ciRunId') == run_id and
                     binding.get('ciRunAttempt') == attempt,
-                    target['id'] + ': server observation from an unrelated CI run/attempt')
+                    target['id'] + ': наблюдение сервера относится к другому запуску или попытке CI')
         require(live.get('sourceCommit') == commit and live.get('ciRunId') == run_id and
                 live.get('ciRunAttempt') == attempt,
-                target['id'] + ': live multiplayer evidence from a different CI run/attempt')
+                target['id'] + ': данные многопользовательской игры относятся к другому запуску или попытке CI')
     raw = doc.get('evidence', {})
     hashes = raw.get('sha256') or {}
     require('compatibility-execution.log' in (raw.get('files') or []) and
             SHA.fullmatch(hashes.get('compatibility-execution.log', '')) is not None,
-            target['id'] + ': missing hashed real execution log')
+            target['id'] + ': отсутствует настоящий журнал выполнения с хешем')
     log = safe_file(path.parent / 'compatibility-execution.log', MAX_LOG).read_bytes()
     require(b'\x00' not in log and len(log) >= 32 and
             b'[compat]' in log and b'actual' in log.lower(),
-            target['id'] + ': no meaningful actual-client execution log')
+            target['id'] + ': отсутствует содержательный журнал выполнения реального клиента')
     # Журналы могут содержать сведения учётных записей; никогда не публикуйте bearer-токены авторизации.
     require(not re.search(rb'(?i)(authorization:\s*bearer\s+\S+|refresh[_ -]?token\s*[=:]\s*\S+)', log),
-            target['id'] + ': unredacted credentials in execution log')
+            target['id'] + ': в журнале выполнения обнаружены незамаскированные учётные данные')
     require(digest(path.parent / 'compatibility-execution.log') == hashes['compatibility-execution.log'],
-            target['id'] + ': execution log mutated')
+            target['id'] + ': журнал выполнения изменён')
     return {
         'targetId': target['id'], 'status': 'observed',
         'resultSha256': digest(path), 'logSha256': hashes['compatibility-execution.log'],
@@ -276,7 +276,7 @@ def verify_compatibility(target, record, commit, run_id, attempt):
 
 def inventory(results_root: Path, commit: str, run_id: str, attempt: int, *, strict=False):
     require(COMMIT.fullmatch(commit) is not None and RUN.fullmatch(run_id) is not None and
-            type(attempt) is int and attempt > 0, 'real Git commit/run ID/attempt required')
+            type(attempt) is int and attempt > 0, 'Требуются настоящий коммит Git, идентификатор запуска и номер попытки')
     tables = catalogs()
     found, errors = locate_result_roots(results_root)
     required = {t['id']: t for t in tables['minecraft']['rows'] if t['required']}
@@ -318,22 +318,22 @@ def inventory(results_root: Path, commit: str, run_id: str, attempt: int, *, str
     if strict:
         need = [t for t in rows if t['id'].startswith('minecraft/') and t['required']]
         require(all(t['status'] == 'observed' for t in need),
-                f'incomplete Minecraft evidence: {sum(t["status"] == "observed" for t in need)}/{len(need)}')
+                f'Неполные доказательства Minecraft: {sum(t["status"] == "observed" for t in need)}/{len(need)}')
     return result
 
 
 def public_key(path: Path, pinned_sha: str):
-    require(SHA.fullmatch(pinned_sha) is not None, 'independently pinned public key SHA256 required')
+    require(SHA.fullmatch(pinned_sha) is not None, 'Требуется независимо закреплённый SHA-256 открытого ключа')
     key = serialization.load_pem_public_key(safe_file(path, 8192).read_bytes())
     require(isinstance(key, Ed25519PublicKey), 'Допустимы только открытые ключи независимых проверяющих Ed25519')
     der = key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
-    require(hashlib.sha256(der).hexdigest() == pinned_sha, 'reviewer key does not match independent pin')
+    require(hashlib.sha256(der).hexdigest() == pinned_sha, 'Ключ проверяющего не совпадает с независимо закреплённым ключом')
     return key
 
 
 def write_exclusive(path: Path, data: bytes):
     require(path.is_absolute() and not path.exists() and not path.is_symlink(),
-            'new absolute output path required')
+            'Требуется новый абсолютный путь вывода')
     require(path.parent.is_dir() and not path.parent.is_symlink(), 'Небезопасный каталог вывода')
     descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     with os.fdopen(descriptor, 'wb') as stream:
@@ -344,7 +344,7 @@ def write_exclusive(path: Path, data: bytes):
 
 def signed_payload(args):
     receipt = inventory(args.results_root.resolve(), args.commit, args.run_id, args.attempt, strict=True)
-    require(IDENTITY.fullmatch(args.reviewer) is not None, 'named reviewer identity required')
+    require(IDENTITY.fullmatch(args.reviewer) is not None, 'Требуется указать личность проверяющего')
     return {'schema': SCHEMA + '/review', 'reviewer': args.reviewer, 'reviewType': 'independent-observation-not-GA',
             'observation': receipt}
 
@@ -365,14 +365,14 @@ def command_inventory(args):
 
 def command_sign(args):
     require(args.private_key.resolve().is_relative_to(ROOT) is False,
-            'independent signing private key must be outside source checkout')
+            'Закрытый ключ независимой подписи должен храниться вне рабочей копии исходников')
     require(args.private_key.stat().st_mode & 0o077 == 0, 'Закрытый ключ подписанта должен иметь права 0600')
     pinned = public_key(args.public_key.resolve(), args.public_key_sha256)
     key = serialization.load_pem_private_key(safe_file(args.private_key.resolve(), 8192).read_bytes(), password=None)
     require(isinstance(key, Ed25519PrivateKey) and key.public_key().public_bytes(
         serialization.Encoding.Raw, serialization.PublicFormat.Raw) == pinned.public_bytes(
         serialization.Encoding.Raw, serialization.PublicFormat.Raw),
-        'reviewer private/public keys do not match')
+        'Закрытый и открытый ключи проверяющего не совпадают')
     payload = signed_payload(args)
     raw = DOMAIN + canonical(payload)
     envelope = {'payload': payload, 'signatureEd25519': key.sign(raw).hex(),
@@ -389,13 +389,13 @@ def command_verify(args):
             sealed['publicKeySha256'] == args.public_key_sha256 and
             isinstance(sealed['signatureEd25519'], str) and
             re.fullmatch(r'[0-9a-f]{128}', sealed['signatureEd25519']) is not None,
-            'malformed signature envelope / wrong signing key')
+            'Некорректная оболочка подписи или неверный ключ подписи')
     try:
         key.verify(bytes.fromhex(sealed['signatureEd25519']), DOMAIN + canonical(sealed['payload']))
     except (InvalidSignature, TypeError, ValueError) as exc:
         raise Blocked('Независимая проверка подписи завершилась ошибкой') from exc
     require(sealed['payload'] == signed_payload(args),
-            'signed evidence differs from replayed raw observations or current catalogs')
+            'Подписанные доказательства отличаются от повторно проверенных наблюдений или актуальных каталогов')
     print('PASS: повторно проверены подписанные результаты CI для 280 целей; GA остаётся заблокированной')
     return 0
 

@@ -22,11 +22,11 @@ func runPGTransfer(args []string) int {
 		return 2
 	}
 	if *backup == "" || *timeout <= 0 || flags.NArg() != 0 || !*acknowledge {
-		fmt.Fprintln(os.Stderr, "--backup, --ack-staging-only and positive --timeout are required")
+		fmt.Fprintln(os.Stderr, "Требуются --backup, --ack-staging-only и положительное значение --timeout")
 		return 2
 	}
 	if *dsnEnv == "" || strings.ContainsAny(*dsnEnv, "=\x00 \n") {
-		fmt.Fprintln(os.Stderr, "invalid --dsn-env")
+		fmt.Fprintln(os.Stderr, "Недопустимое значение --dsn-env")
 		return 2
 	}
 	dsn := os.Getenv(*dsnEnv)
@@ -38,7 +38,7 @@ func runPGTransfer(args []string) int {
 	defer cancel()
 	report, err := sqlitepg.Import(ctx, *backup, dsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "SQLite -> PostgreSQL staging transfer failed; transaction rolled back or commit must be reconciled: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Ошибка промежуточного переноса SQLite → PostgreSQL; транзакция отменена или требуется согласование фиксации: %v\n", err)
 		return 1
 	}
 	if err = json.NewEncoder(os.Stdout).Encode(report); err != nil {

@@ -48,9 +48,9 @@ def require(ok, reason):
 
 
 def read_safe(root: Path, name: str):
-    require(isinstance(name, str) and re.fullmatch(r'[a-zA-Z0-9._/-]{1,240}', name) and '..' not in Path(name).parts and name.startswith(('signed/','full-game/','matching-1.17.1/','matching-1.21.1/')) or name in REQUIRED.values(), 'unknown GA evidence path')
+    require(isinstance(name, str) and re.fullmatch(r'[a-zA-Z0-9._/-]{1,240}', name) and '..' not in Path(name).parts and name.startswith(('signed/','full-game/','matching-1.17.1/','matching-1.21.1/')) or name in REQUIRED.values(), 'Неизвестный путь к доказательствам GA')
     p = root / name
-    require(p.resolve().is_relative_to(root.resolve()) and p.is_file() and not p.is_symlink() and 0 < p.stat().st_size <= 8*1024*1024, f'unsafe or missing GA evidence {name}')
+    require(p.resolve().is_relative_to(root.resolve()) and p.is_file() and not p.is_symlink() and 0 < p.stat().st_size <= 8*1024*1024, f'Доказательства GA отсутствуют или небезопасны {name}')
     return p.read_bytes()
 
 
@@ -59,12 +59,12 @@ def report(root: Path, key: str):
 
 
 def validate_signed_attestation(root: Path, approval: Path, signature: Path, key: Path, commit: str):
-    require(re.fullmatch('[a-f0-9]{40}', commit) is not None, 'exact release commit required')
+    require(re.fullmatch('[a-f0-9]{40}', commit) is not None, 'Требуется точный коммит выпуска')
     raw = approval.read_bytes()
     require(len(raw) <= 128*1024 and raw and not approval.is_symlink(), 'Недопустимое содержимое подтверждения')
     sig = signature.read_bytes()
     key_raw = key.read_bytes()
-    require(not key.is_symlink() and not signature.is_symlink() and len(sig) == 64 and len(key_raw) == 32, 'pinned Ed25519 key and detached signature required')
+    require(not key.is_symlink() and not signature.is_symlink() and len(sig) == 64 and len(key_raw) == 32, 'Требуются закреплённый ключ Ed25519 и отдельная подпись')
     try:
         Ed25519PublicKey.from_public_bytes(key_raw).verify(sig, DOMAIN + raw)
     except (ValueError, InvalidSignature) as exc:
@@ -75,14 +75,14 @@ def validate_signed_attestation(root: Path, approval: Path, signature: Path, key
     actual = {p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file() or p.is_symlink()}
     require(isinstance(files, dict) and set(REQUIRED.values()) <= set(files) and set(files) == actual, 'Независимое подписанное подтверждение должно охватывать каждый файл свидетельств и пакета')
     for name, expected in files.items():
-        require(isinstance(expected, str) and re.fullmatch('[a-f0-9]{64}', expected) and hashlib.sha256(read_safe(root,name)).hexdigest() == expected, f'independent acceptance bytes mismatch: {name}')
+        require(isinstance(expected, str) and re.fullmatch('[a-f0-9]{64}', expected) and hashlib.sha256(read_safe(root,name)).hexdigest() == expected, f'Байты независимой приёмки не совпадают: {name}')
     return meta
 
 
 def inspect_live(root: Path):
     live = report(root,'live')
     require(live.get('schema') == 'neverlauncher.live-upgrade-acceptance-0480-v1' and live.get('version') == VERSION, 'Нет реальной независимой приёмки обновления')
-    require(isinstance(live.get('sourceBaselineSHA256'), str) and re.fullmatch('[a-f0-9]{64}',live['sourceBaselineSHA256']), 'missing original SQLite baseline SHA')
+    require(isinstance(live.get('sourceBaselineSHA256'), str) and re.fullmatch('[a-f0-9]{64}',live['sourceBaselineSHA256']), 'Отсутствует исходный контрольный SHA SQLite')
     require(isinstance(live.get('ownerId'), str) and bool(live['ownerId']) and isinstance(live.get('project'), str) and bool(live['project']), 'Не определены прежний владелец или проект')
     require(live.get('ownerLogin') == 'actual-session' and all(live.get(field) is True for field in ('apiEquivalent','sourceSQLiteVerified','storageVerified','cutoverVerified','backendPostgresVerified')), 'Не подтверждена работоспособность обновлённого Backend на PostgreSQL')
 

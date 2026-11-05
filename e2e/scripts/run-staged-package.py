@@ -349,7 +349,7 @@ def execute(args):
         )
         report["stages"][stage_name] = {
             "status": "passed",
-            "detail": f"{len(pkg['files'])} staged files fetched and SHA-256 verified",
+            "detail": f"{len(pkg['files'])} Промежуточные файлы загружены, SHA-256 проверен",
         }
         stage_name = "materialization"
         install = work / "install.json"
@@ -798,7 +798,7 @@ def execute(args):
         if args.auth_mode == "official" and runtime_identity["guardMode"] != "disabled":
             report["stages"][stage_name] = {
                 "status": "blocked",
-                "detail": "official Guard-enabled target requires additional real Guard-policy proof",
+                "detail": "Для официальной цели с Guard требуется дополнительное реальное подтверждение политики Guard",
             }
             raise RuntimeError(
                 "Официальную цель Guard нельзя сертифицировать без независимого доказательства соблюдения политики"
@@ -806,7 +806,7 @@ def execute(args):
         if args.auth_mode == "custom" and not args.server_bundle:
             report["stages"][stage_name] = {
                 "status": "blocked",
-                "detail": "custom authentication requires actual matching ServerBridge bundle",
+                "detail": "Пользовательская аутентификация требует реальный соответствующий пакет ServerBridge",
             }
             raise RuntimeError(
                 "Пользовательский провайдер не может использовать автономный сервер проверки vanilla"
@@ -814,7 +814,7 @@ def execute(args):
         if args.auth_mode == "custom" and not args.guard_denied_credentials_file:
             report["stages"][stage_name] = {
                 "status": "blocked",
-                "detail": "custom auth requires live device/Guard trust-denied test identity",
+                "detail": "Для пользовательской аутентификации требуется реальная тестовая учётная запись с отказом по доверию устройства или Guard",
             }
             raise RuntimeError(
                 "Доверие устройства и Guard нельзя сертифицировать без отрицательного теста реальной сессии"
@@ -854,25 +854,25 @@ def execute(args):
             )
             report["stages"][stage_name] = {
                 "status": "passed",
-                "detail": "live provider join/hasJoined and policy checks verified",
+                "detail": "Проверены реальный вход через провайдера, hasJoined и политики",
                 "evidenceSha256": sha_file(auth_path),
             }
         except ProviderUnavailable:
             report["stages"][stage_name] = {
                 "status": "inconclusive",
-                "detail": "external authentication provider unavailable (not a successful certification)",
+                "detail": "Внешний провайдер аутентификации недоступен (сертификация не считается успешной)",
             }
             raise RuntimeError("Результат проверки внешнего провайдера авторизации неоднозначен")
         except ProviderRejected:
             report["stages"][stage_name] = {
                 "status": "failed",
-                "detail": "real provider or trust policy rejected required authentication proof",
+                "detail": "Реальный провайдер или политика доверия отклонили обязательное подтверждение аутентификации",
             }
             raise
         except ProviderMisconfigured:
             report["stages"][stage_name] = {
                 "status": "blocked",
-                "detail": "live provider prerequisites or policy test account missing",
+                "detail": "Отсутствуют условия реального запуска провайдера или тестовая учётная запись политики",
             }
             raise
         stage_name = "server-readiness"
@@ -912,7 +912,7 @@ def execute(args):
         )
         report["stages"][stage_name] = {
             "status": "passed",
-            "detail": "exact matching server/version, loader and required bridge booted; RCON world clock available",
+            "detail": "Запущены точно соответствующие сервер, версия, загрузчик и обязательный мост; доступно игровое время через RCON",
             "evidenceSha256": sha_file(server_report),
         }
         stage_name = "matching-server"
@@ -997,7 +997,7 @@ def execute(args):
             game.status = "failed"
             game.failure = (
                 game.failure
-                or "client/server crashed or loader readiness lost after join"
+                or "Клиент или сервер аварийно завершился либо загрузчик потерял готовность после входа"
             )
         joined = (
             game.joined
@@ -1007,14 +1007,14 @@ def execute(args):
         )
         report["stages"]["matching-server"] = {
             "status": "blocked" if game.blocked else ("passed" if joined else "failed"),
-            "detail": "matching server confirms login and player online; client log and PID-bound GUI observed"
+            "detail": "Соответствующий сервер подтвердил вход и присутствие игрока; получены журнал клиента и GUI, связанный с PID"
             if joined
             else (
-                "matching client/server join not established: "
+                "Вход клиента на соответствующий сервер не подтверждён: "
                 + (
                     launch_error
                     or game.failure
-                    or getattr(game, "last_error", "no positive join evidence")
+                    or getattr(game, "last_error", "Нет положительного подтверждения входа")
                 )
             )[:2048],
             "evidenceSha256": proof_hash,
@@ -1025,14 +1025,14 @@ def execute(args):
             else (
                 "passed" if game.status == "passed" and not launch_error else "failed"
             ),
-            "detail": "real GUI movement changed server-side position; world rendered and game ticks advanced"
+            "detail": "Реальное перемещение через GUI изменило положение на сервере; мир отрисован и игровые тики продолжились"
             if game.status == "passed" and not launch_error
             else (
-                "real gameplay state not confirmed: "
+                "Реальное состояние игры не подтверждено: "
                 + (
                     launch_error
                     or game.failure
-                    or getattr(game, "last_error", "no positive gameplay proof")
+                    or getattr(game, "last_error", "Нет положительного доказательства игрового процесса")
                 )
             )[:2048],
             "evidenceSha256": proof_hash,
@@ -1043,7 +1043,7 @@ def execute(args):
                 + (
                     launch_error
                     or game.failure
-                    or getattr(game, "last_error", "missing required positive signals")
+                    or getattr(game, "last_error", "Отсутствуют обязательные положительные сигналы")
                 )
             )
         stage_name = "update-recovery"
@@ -1066,7 +1066,7 @@ def execute(args):
         )
         report["stages"][stage_name] = {
             "status": "passed",
-            "detail": "production install/update/repair/recover/rollback plus both real JVM menu launches verified",
+            "detail": "Подтверждены рабочие установка, обновление, исправление, восстановление, откат и оба реальных запуска меню JVM",
             "evidenceSha256": sha_file(lifecycle_path),
         }
     except Exception as exc:
@@ -1099,7 +1099,7 @@ def execute(args):
         except Exception as exc:
             print(f"Не удалось загрузить отчёт: {exc}", file=sys.stderr)
             if error is None:
-                error = "cannot persist execution report"
+                error = "Не удалось сохранить отчёт о выполнении"
         for file in ("worker.key",):
             (work / file).unlink(missing_ok=True)
     if error:
