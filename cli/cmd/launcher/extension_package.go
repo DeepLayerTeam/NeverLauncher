@@ -394,7 +394,7 @@ func collectExtensionPayload0202(root, outputAbs string) ([]extensionPackageSour
 		}
 		packagePath := extensionPackagePayloadPrefix0202 + rel
 		if err := validateExtensionArchivePath0202(packagePath); err != nil {
-			return fmt.Errorf("payload path %q: %w", rel, err)
+			return fmt.Errorf("Путь к содержимому пакета %q: %w", rel, err)
 		}
 		fold := strings.ToLower(packagePath)
 		if previous, exists := seen[fold]; exists {
@@ -492,7 +492,7 @@ func writeDeterministicZipSource0202(zw *zip.Writer, src extensionPackageSourceF
 		return ExtensionPackageFile0202{}, err
 	}
 	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
-		return ExtensionPackageFile0202{}, fmt.Errorf("payload file changed type during packaging: %s", src.Rel)
+		return ExtensionPackageFile0202{}, fmt.Errorf("Тип файла пакета изменился при упаковке: %s", src.Rel)
 	}
 	file, err := os.Open(src.Abs)
 	if err != nil {
@@ -504,7 +504,7 @@ func writeDeterministicZipSource0202(zw *zip.Writer, src extensionPackageSourceF
 		return ExtensionPackageFile0202{}, err
 	}
 	if !os.SameFile(before, opened) {
-		return ExtensionPackageFile0202{}, fmt.Errorf("payload file changed during packaging: %s", src.Rel)
+		return ExtensionPackageFile0202{}, fmt.Errorf("Файл пакета изменился во время упаковки: %s", src.Rel)
 	}
 	if opened.Size() > extensionPackageMaxSingleFile0202 {
 		return ExtensionPackageFile0202{}, fmt.Errorf("payload file %s превышает лимит %d bytes", src.Rel, extensionPackageMaxSingleFile0202)
@@ -526,7 +526,7 @@ func writeDeterministicZipSource0202(zw *zip.Writer, src extensionPackageSourceF
 		return ExtensionPackageFile0202{}, err
 	}
 	if written != opened.Size() {
-		return ExtensionPackageFile0202{}, fmt.Errorf("payload file changed size during packaging: %s", src.Rel)
+		return ExtensionPackageFile0202{}, fmt.Errorf("Размер файла пакета изменился во время упаковки: %s", src.Rel)
 	}
 	return ExtensionPackageFile0202{Path: src.Rel, Size: written, SHA256: hex.EncodeToString(hash.Sum(nil)), Mode: fmt.Sprintf("%04o", src.Mode.Perm())}, nil
 }
@@ -721,7 +721,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	}
 	reader, err := zip.OpenReader(packagePath)
 	if err != nil {
-		return nil, fmt.Errorf("open .nlext: %w", err)
+		return nil, fmt.Errorf("Открытие файла .nlext: %w", err)
 	}
 	analysis := &extensionPackageAnalysis0202{Path: packagePath, Reader: reader, Entries: map[string]*zip.File{}}
 	failed := true
@@ -925,7 +925,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 func decodeCanonicalExtensionManifestBytes0202(data []byte) (CanonicalExtensionManifest0201, string, error) {
 	var manifest CanonicalExtensionManifest0201
 	if err := decodeStrictJSON0202(data, &manifest); err != nil {
-		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("decode packaged manifest: %w", err)
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Декодирование манифеста внутри пакета: %w", err)
 	}
 	normalized, digest, err := normalizeCanonicalExtension0201(manifest)
 	return normalized, digest, err
@@ -949,7 +949,7 @@ func decodeStrictJSON0202(data []byte, out any) error {
 
 func readExtensionZipEntry0202(entry *zip.File, limit int64) ([]byte, error) {
 	if entry == nil {
-		return nil, errors.New("nil zip entry")
+		return nil, errors.New("Пустая запись ZIP")
 	}
 	if entry.UncompressedSize64 > uint64(limit) {
 		return nil, fmt.Errorf("metadata entry %s превышает limit", entry.Name)
@@ -964,7 +964,7 @@ func readExtensionZipEntry0202(entry *zip.File, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(data)) > limit || uint64(len(data)) != entry.UncompressedSize64 {
-		return nil, fmt.Errorf("metadata entry %s size mismatch/limit exceeded", entry.Name)
+		return nil, fmt.Errorf("Размер записи метаданных %s не совпадает или превышает лимит", entry.Name)
 	}
 	return data, nil
 }
@@ -984,7 +984,7 @@ func hashExtensionZipEntry0202(entry *zip.File, limit int64) (string, int64, err
 		return "", 0, err
 	}
 	if size > limit || uint64(size) != entry.UncompressedSize64 {
-		return "", 0, fmt.Errorf("entry %s size mismatch/limit exceeded", entry.Name)
+		return "", 0, fmt.Errorf("Размер записи %s не совпадает или превышает лимит", entry.Name)
 	}
 	return hex.EncodeToString(h.Sum(nil)), size, nil
 }
@@ -1020,7 +1020,7 @@ func signExtensionPackage0202(packagePath, outputPath, privateKeyPath string, fo
 	}
 	privateKey, err := loadEd25519PrivateKey(privateKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("extension signing key: %w", err)
+		return nil, fmt.Errorf("Ключ подписи расширения: %w", err)
 	}
 	pub := privateKey.Public().(ed25519.PublicKey)
 	pubDigest := sha256.Sum256(pub)
@@ -1142,7 +1142,7 @@ func copyCanonicalZipEntry0202(zw *zip.Writer, source *zip.File, modified time.T
 		return err
 	}
 	if uint64(written) != source.UncompressedSize64 {
-		return fmt.Errorf("entry %s changed during signing copy", source.Name)
+		return fmt.Errorf("Запись %s изменилась при копировании для подписи", source.Name)
 	}
 	return nil
 }
@@ -1173,12 +1173,12 @@ func verifyExtensionPackage0202(packagePath, publicKeyPath string, allowUnsigned
 		}
 		publicKey, err := loadEd25519PublicKey(publicKeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("extension verification key: %w", err)
+			return nil, fmt.Errorf("Ключ проверки расширения: %w", err)
 		}
 		pubDigest := sha256.Sum256(publicKey)
 		keyFingerprint = "sha256:" + hex.EncodeToString(pubDigest[:])
 		if !strings.EqualFold(keyFingerprint, analysis.Signature.KeyFingerprint) {
-			return nil, fmt.Errorf("signature key mismatch: package=%s trusted=%s", analysis.Signature.KeyFingerprint, keyFingerprint)
+			return nil, fmt.Errorf("Несовпадение ключа подписи: пакет=%s, доверенный=%s", analysis.Signature.KeyFingerprint, keyFingerprint)
 		}
 		sig, _ := base64.StdEncoding.DecodeString(analysis.Signature.Signature)
 		if !ed25519.Verify(publicKey, extensionSigningMessage0202(analysis.Descriptor.PackageIdentity), sig) {

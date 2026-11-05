@@ -345,7 +345,7 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 	}
 	serverBytes, cached, _, err := fetchVerifiedBytesWithLocalCache(ctx, client, serverDir, "server.jar", serverDownload.URL, serverDownload.SHA1, serverDownload.Size, 512<<20)
 	if err != nil {
-		return vanillaServerInstallResult{}, fmt.Errorf("server.jar %s: %w", selectedID, err)
+		return vanillaServerInstallResult{}, fmt.Errorf("Серверный файл server.jar версии %s: %w", selectedID, err)
 	}
 	h256 := sha256.Sum256(serverBytes)
 	return vanillaServerInstallResult{
@@ -527,11 +527,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 					}
 					t := target
 					if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTargets: []vanillaTarget{t}}); err != nil {
-						return vanillaInstallResult{}, fmt.Errorf("native library %s: %w", lib.Name, err)
+						return vanillaInstallResult{}, fmt.Errorf("Нативная библиотека %s: %w", lib.Name, err)
 					}
 				}
 			} else if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "library", TargetOS: uniqueStrings(applicableTargets)}); err != nil {
-				return vanillaInstallResult{}, fmt.Errorf("library %s: %w", lib.Name, err)
+				return vanillaInstallResult{}, fmt.Errorf("Библиотека %s: %w", lib.Name, err)
 			}
 		}
 		for _, target := range opts.Targets {
@@ -548,11 +548,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 					upstream := defaultLWJGLMavenBase + "/" + nativeRel
 					shaData, err := fetchLimitedBytes(ctx, client, upstream+".sha1", 256)
 					if err != nil {
-						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 checksum %s: %w", lib.Name, err)
+						return vanillaInstallResult{}, fmt.Errorf("Контрольная сумма LWJGL Linux ARM64 для %s: %w", lib.Name, err)
 					}
 					sha := parseSHA1Sidecar(string(shaData))
 					if sha == "" {
-						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 checksum invalid for %s", lib.Name)
+						return vanillaInstallResult{}, fmt.Errorf("Неверная контрольная сумма LWJGL Linux ARM64 для %s", lib.Name)
 					}
 					t := target
 					if err := addTask(vanillaDownloadTask{Path: "libraries/" + nativeRel, URL: upstream, SHA1: sha, Kind: "native-archive", TargetOS: []string{target.OS}, NativeTargets: []vanillaTarget{t}}); err != nil {
@@ -583,7 +583,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			}
 			t := target
 			if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(nativePath), "libraries/"), URL: nativeURL, SHA1: native.SHA1, Size: native.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTargets: []vanillaTarget{t}}); err != nil {
-				return vanillaInstallResult{}, fmt.Errorf("native %s: %w", lib.Name, err)
+				return vanillaInstallResult{}, fmt.Errorf("Нативный компонент %s: %w", lib.Name, err)
 			}
 		}
 	}
@@ -598,7 +598,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	assetIndexPath := filepath.ToSlash(filepath.Join("assets", "indexes", assetIndexID+".json"))
 	assetBytes, assetIndexCached, assetIndexQuarantined, err := fetchVerifiedBytesWithLocalCache(ctx, client, opts.ClientDir, assetIndexPath, metadata.AssetIndex.URL, metadata.AssetIndex.SHA1, metadata.AssetIndex.Size, 64<<20)
 	if err != nil {
-		return vanillaInstallResult{}, fmt.Errorf("asset index: %w", err)
+		return vanillaInstallResult{}, fmt.Errorf("Индекс игровых ресурсов: %w", err)
 	}
 	if err := factoryRecorderFromContext0271(ctx).recordSource(factorySource0271{Path: assetIndexPath, Kind: "asset-index", URL: metadata.AssetIndex.URL, SHA1: metadata.AssetIndex.SHA1, SHA256: sha256HexBytes(assetBytes), Size: int64(len(assetBytes))}); err != nil {
 		return vanillaInstallResult{}, err
@@ -676,7 +676,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return vanillaInstallResult{}, err
 		}
 		if err := os.MkdirAll(stagingDir, 0o755); err != nil {
-			return vanillaInstallResult{}, fmt.Errorf("native staging %s: %w", key, err)
+			return vanillaInstallResult{}, fmt.Errorf("Подготовка нативного компонента %s: %w", key, err)
 		}
 		publishFiles := make([]vanillaDownloadedFile, 0)
 		// Два проверенных нативных архива могут содержать одинаковый бинарный файл. Для
@@ -689,7 +689,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			extracted, err := extractNativeJar(archivePath, stagingDir, task.NativeExclude)
 			if err != nil {
 				_ = os.RemoveAll(stagingDir)
-				return vanillaInstallResult{}, fmt.Errorf("native extraction %s: %w", task.Path, err)
+				return vanillaInstallResult{}, fmt.Errorf("Распаковка нативного компонента %s: %w", task.Path, err)
 			}
 			// Архивы LWJGL для нативного ARM64 содержат разделяемые объекты
 			// в linux/arm64/org/lwjgl/*.so. В отличие от классификаторов,
@@ -700,7 +700,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				aliases, aliasErr := flattenLWJGLARM64Natives(stagingDir, extracted)
 				if aliasErr != nil {
 					_ = os.RemoveAll(stagingDir)
-					return vanillaInstallResult{}, fmt.Errorf("LWJGL ARM64 aliases: %w", aliasErr)
+					return vanillaInstallResult{}, fmt.Errorf("Псевдонимы LWJGL ARM64: %w", aliasErr)
 				}
 				extracted = append(extracted, aliases...)
 			}
@@ -713,7 +713,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				aliases, aliasErr := flattenLWJGLWindowsNatives(stagingDir, extracted, target.Arch)
 				if aliasErr != nil {
 					_ = os.RemoveAll(stagingDir)
-					return vanillaInstallResult{}, fmt.Errorf("LWJGL Windows aliases: %w", aliasErr)
+					return vanillaInstallResult{}, fmt.Errorf("Псевдонимы LWJGL Windows: %w", aliasErr)
 				}
 				extracted = append(extracted, aliases...)
 			}
@@ -724,7 +724,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				aliases, aliasErr := flattenLWJGLMacOSNatives(stagingDir, extracted, target.Arch)
 				if aliasErr != nil {
 					_ = os.RemoveAll(stagingDir)
-					return vanillaInstallResult{}, fmt.Errorf("LWJGL macOS aliases: %w", aliasErr)
+					return vanillaInstallResult{}, fmt.Errorf("Псевдонимы LWJGL macOS: %w", aliasErr)
 				}
 				extracted = append(extracted, aliases...)
 			}
@@ -739,7 +739,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				if previous, exists := publishedNative[file.Path]; exists {
 					if previous.Size != file.Size || previous.SHA256 != file.SHA256 {
 						_ = os.RemoveAll(stagingDir)
-						return vanillaInstallResult{}, fmt.Errorf("native file changed during extraction: %s", file.Path)
+						return vanillaInstallResult{}, fmt.Errorf("Нативный файл изменился при распаковке: %s", file.Path)
 					}
 					continue
 				}
@@ -760,7 +760,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		if err := replaceDirectoryAtomicPortable(stagingDir, finalDir); err != nil {
 			_ = os.RemoveAll(stagingDir)
-			return vanillaInstallResult{}, fmt.Errorf("native publish %s: %w", key, err)
+			return vanillaInstallResult{}, fmt.Errorf("Публикация нативного компонента %s: %w", key, err)
 		}
 		downloadedFiles = append(downloadedFiles, publishFiles...)
 	}
@@ -805,14 +805,14 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 
 		virtualTree, err := prepareTree(virtualAssets, filepath.Join("assets", "virtual", virtualIndexID), "virtual-asset")
 		if err != nil {
-			return vanillaInstallResult{}, fmt.Errorf("virtual assets staging %s: %w", virtualIndexID, err)
+			return vanillaInstallResult{}, fmt.Errorf("Подготовка виртуальных ресурсов %s: %w", virtualIndexID, err)
 		}
 		resourcesTree, err := prepareTree(assets.MapToResources, "resources", "resource-asset")
 		if err != nil {
 			if virtualTree.staging != "" {
 				_ = os.RemoveAll(virtualTree.staging)
 			}
-			return vanillaInstallResult{}, fmt.Errorf("resources staging: %w", err)
+			return vanillaInstallResult{}, fmt.Errorf("Подготовка ресурсов: %w", err)
 		}
 		defer func() {
 			if virtualTree.staging != "" {
@@ -845,7 +845,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				sum, size, err := hashFile(dest)
 				if err != nil {
-					return vanillaInstallResult{}, fmt.Errorf("%s %s hash: %w", tree.kind, name, err)
+					return vanillaInstallResult{}, fmt.Errorf("Контрольная сумма %s %s: %w", tree.kind, name, err)
 				}
 				generatedFiles = append(generatedFiles, vanillaDownloadedFile{
 					Path:   filepath.ToSlash(filepath.Join(tree.finalRel, filepath.FromSlash(name))),
@@ -861,7 +861,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				continue
 			}
 			if err := replaceDirectoryAtomicPortable(tree.staging, tree.finalDir); err != nil {
-				return vanillaInstallResult{}, fmt.Errorf("%s publish: %w", tree.kind, err)
+				return vanillaInstallResult{}, fmt.Errorf("Публикация %s: %w", tree.kind, err)
 			}
 			tree.staging = ""
 		}
@@ -1012,7 +1012,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	if cache := sharedArtifactsFromContext0277(ctx); cache != nil && task.SHA1 != "" && eligibleSharedArtifact0277(task.Kind) {
 		hit, digest, size, cacheErr := cache.restore(ctx, dest, task.SHA1, task.Size)
 		if cacheErr != nil {
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: shared artifact cache: %w", task.Path, cacheErr)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: общий кэш артефактов: %w", task.Path, cacheErr)
 		}
 		if hit {
 			return vanillaDownloadedFile{Path: task.Path, Kind: task.Kind, Size: size, SHA1: strings.ToLower(task.SHA1), SHA256: digest, TargetOS: uniqueStrings(task.TargetOS), Cached: true, SharedCacheHit: true, Quarantined: quarantined}, nil
@@ -1022,7 +1022,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	tmp := dest + ".nlpart"
 	resumeOffset, completedPartial, err := inspectVanillaPartial(tmp, task)
 	if err != nil {
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: partial recovery: %w", task.Path, err)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: восстановление частичной загрузки: %w", task.Path, err)
 	}
 	if completedPartial {
 		ok, sha256sum, size := existingFileMatchesSHA1(tmp, task.SHA1, task.Size)
@@ -1044,7 +1044,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 
 	resp, resumed, err := fetchVanillaArtifactResponse(ctx, client, task, resumeOffset)
 	if err != nil {
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: download: %w", task.Path, err)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: загрузка: %w", task.Path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -1125,7 +1125,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	}
 	if cache := sharedArtifactsFromContext0277(ctx); cache != nil && task.SHA1 != "" && eligibleSharedArtifact0277(task.Kind) {
 		if err := cache.store(ctx, dest, task.SHA1, gotSHA256, totalWritten); err != nil {
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: shared cache store: %w", task.Path, err)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: сохранение в общий кэш: %w", task.Path, err)
 		}
 	}
 	return vanillaDownloadedFile{Path: task.Path, Kind: task.Kind, Size: totalWritten, SHA1: gotSHA1, SHA256: gotSHA256, TargetOS: uniqueStrings(task.TargetOS), Cached: false, Resumed: resumed, Quarantined: quarantined}, nil
@@ -1233,7 +1233,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		}
 		clean := path.Clean(name)
 		if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") || clean != name {
-			return nil, fmt.Errorf("archive traversal entry: %s", entry.Name)
+			return nil, fmt.Errorf("Запись архива выходит за разрешённый путь: %s", entry.Name)
 		}
 		mode := entry.Mode()
 		if mode&os.ModeSymlink != 0 {
@@ -1254,7 +1254,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		}
 		rel, err := filepath.Rel(targetDir, dst)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
-			return nil, fmt.Errorf("native archive path escape: %s", entry.Name)
+			return nil, fmt.Errorf("Путь нативного компонента выходит за пределы архива: %s", entry.Name)
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return nil, err
@@ -1283,18 +1283,18 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		}
 		if copied != int64(entry.UncompressedSize64) || copied > maxCompatibilityNativeEntry {
 			_ = os.Remove(tmp)
-			return nil, fmt.Errorf("native %s uncompressed size mismatch: got %d expected %d", entry.Name, copied, entry.UncompressedSize64)
+			return nil, fmt.Errorf("Нативный компонент %s: размер после распаковки не совпадает (получено %d, ожидалось %d)", entry.Name, copied, entry.UncompressedSize64)
 		}
 		if info, err := os.Lstat(dst); err == nil {
 			if !info.Mode().IsRegular() {
 				_ = os.Remove(tmp)
-				return nil, fmt.Errorf("native path collision: %s", name)
+				return nil, fmt.Errorf("Конфликт путей нативных компонентов: %s", name)
 			}
 			oldHash, oldSize, e1 := hashFile(dst)
 			newHash, newSize, e2 := hashFile(tmp)
 			if e1 != nil || e2 != nil || oldHash != newHash || oldSize != newSize {
 				_ = os.Remove(tmp)
-				return nil, fmt.Errorf("native content collision: %s", name)
+				return nil, fmt.Errorf("Конфликт содержимого нативных компонентов: %s", name)
 			}
 			_ = os.Remove(tmp)
 		} else if errors.Is(err, os.ErrNotExist) {
@@ -1339,7 +1339,7 @@ func copyFileVerified(src, dst string, expectedSize int64, expectedSHA1 string) 
 	if copyErr != nil || copied != expectedSize || !strings.EqualFold(hex.EncodeToString(copiedHash.Sum(nil)), expectedSHA1) {
 		out.Close()
 		_ = os.Remove(tmp)
-		return fmt.Errorf("source asset changed while copying: size=%d expected=%d error=%v", copied, expectedSize, copyErr)
+		return fmt.Errorf("Исходный ресурс изменился при копировании: размер=%d, ожидалось=%d, ошибка=%v", copied, expectedSize, copyErr)
 	}
 	if err := out.Sync(); err != nil {
 		out.Close()
@@ -1621,7 +1621,7 @@ func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([
 			return nil, err
 		}
 		if _, err := os.Lstat(to); err == nil {
-			return nil, fmt.Errorf("LWJGL Windows native filename collision: %s", base)
+			return nil, fmt.Errorf("Конфликт имён нативных файлов LWJGL Windows: %s", base)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -1688,12 +1688,12 @@ func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]s
 		}
 		if existing, err := os.Lstat(to); err == nil {
 			if !existing.Mode().IsRegular() || existing.Size() != int64(len(data)) {
-				return nil, fmt.Errorf("LWJGL macOS native filename collision: %s", base)
+				return nil, fmt.Errorf("Конфликт имён нативных файлов LWJGL macOS: %s", base)
 			}
 			sum, _, err := hashFile(to)
 			want := sha256.Sum256(data)
 			if err != nil || sum != hex.EncodeToString(want[:]) {
-				return nil, fmt.Errorf("LWJGL macOS native content collision: %s", base)
+				return nil, fmt.Errorf("Конфликт содержимого нативных файлов LWJGL macOS: %s", base)
 			}
 			// Несколько подписанных архивов могут включать одинаковые байты. Повторно используйте
 			// извлечённый алиас вместо отклонения корректной установки.
@@ -1733,7 +1733,7 @@ func flattenLWJGLARM64Natives(root string, extracted []string) ([]string, error)
 			return nil, err
 		}
 		if _, err := os.Lstat(to); err == nil {
-			return nil, fmt.Errorf("LWJGL native filename collision: %s", base)
+			return nil, fmt.Errorf("Конфликт имён нативных файлов LWJGL: %s", base)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}

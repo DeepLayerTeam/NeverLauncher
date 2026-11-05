@@ -70,7 +70,7 @@ func (r *SQLRepository) UpdateDraftComponentCatalog0248(projectID, versionID str
 	next.ComponentCatalog = &cat
 	next.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	if err = model.ValidateManifestSchema(next); err != nil {
-		return model.ReleaseVersion{}, fmt.Errorf("catalog validation: %w", err)
+		return model.ReleaseVersion{}, fmt.Errorf("Проверка каталога: %w", err)
 	}
 	body, err := json.Marshal(next)
 	if err != nil {

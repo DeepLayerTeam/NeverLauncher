@@ -54,13 +54,13 @@ fn validate_id(id: &str) -> Result<(), String> {
 fn io_err(context: &str, err: std::io::Error) -> String { format!("{context}: {err}") }
 fn safe_dir(root: &Path, path: &Path) -> Result<(), String> {
     file_ownership::ensure_no_symlinks(root, path)?;
-    fs::create_dir_all(path).map_err(|e| io_err("create release directory", e))?;
+    fs::create_dir_all(path).map_err(|e| io_err("Создание каталога релиза", e))?;
     file_ownership::ensure_no_symlinks(root, path)
 }
 fn sync_dir(path: &Path) -> Result<(), String> {
     #[cfg(unix)] {
         fs::File::open(path).and_then(|f| f.sync_all())
-            .map_err(|e| format!("persist directory {}: {e}", path.display()))?;
+            .map_err(|e| format!("Сохранение каталога {}: {e}", path.display()))?;
     }
     #[cfg(not(unix))] { let _ = path; }
     Ok(())
@@ -129,7 +129,7 @@ fn lock(root: &Path) -> Result<fs::File, String> {
     let path = base(&root).join("release.lock");
     file_ownership::ensure_no_symlinks(&root, &path)?;
     let file = fs::OpenOptions::new().read(true).write(true).create(true).open(path).map_err(|e| e.to_string())?;
-    file.try_lock_exclusive().map_err(|e| format!("client release is busy (Minecraft may be running): {e}"))?;
+    file.try_lock_exclusive().map_err(|e| format!("Файлы релиза заняты (возможно, запущен Minecraft): {e}"))?;
     Ok(file)
 }
 fn validate_release(release: &Release, key: &str) -> Result<(), String> {
@@ -261,15 +261,15 @@ fn copy_durable(src: &Path, dest: &Path) -> Result<(), String> {
     if let Some(parent) = dest.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
     let mut created = false;
     let result = (|| {
-        let mut input = fs::File::open(src).map_err(|e| format!("read backup source {}: {e}", src.display()))?;
+        let mut input = fs::File::open(src).map_err(|e| format!("Чтение источника резервной копии {}: {e}", src.display()))?;
         // create_new отклоняет подставленную символическую ссылку или существующий путь резервной копии.
         let mut output = fs::OpenOptions::new().write(true).create_new(true).open(dest)
-            .map_err(|e| format!("create durable copy {}: {e}", dest.display()))?;
+            .map_err(|e| format!("Создание надёжной копии {}: {e}", dest.display()))?;
         created = true;
-        std::io::copy(&mut input, &mut output).map_err(|e| format!("stream durable copy: {e}"))?;
+        std::io::copy(&mut input, &mut output).map_err(|e| format!("Потоковое копирование данных: {e}"))?;
         output.set_permissions(input.metadata().map_err(|e| e.to_string())?.permissions())
-            .map_err(|e| format!("preserve managed file permissions: {e}"))?;
-        output.sync_all().map_err(|e| format!("flush durable copy: {e}"))?;
+            .map_err(|e| format!("Сохранение разрешений управляемых файлов: {e}"))?;
+        output.sync_all().map_err(|e| format!("Сброс надёжной копии на диск: {e}"))?;
         drop(output);
         if let Some(parent) = dest.parent() { sync_dir(parent)?; }
         Ok(())
@@ -423,7 +423,7 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => (),
             Err(e) => return Err(format!("Ошибка блокировки запуска релиза: {e}")),
         }
-        file.lock_shared().map_err(|e| format!("shared release launch lock: {e}"))?;
+        file.lock_shared().map_err(|e| format!("Общая блокировка релиза на время запуска: {e}"))?;
         if journal(&root)?.is_some_and(|j| j.state != "complete") {
             return Err("Транзакция релиза не завершена: перед запуском требуется восстановление".into());
         }
@@ -536,7 +536,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         if reusable_file(root,current.active.as_ref(),&next,path)? {continue}
         let file_path = safe_join(stage, path)?;
         fs::File::open(&file_path).and_then(|f| f.sync_all())
-            .map_err(|e| format!("persist staged file {path}: {e}"))?;
+            .map_err(|e| format!("Сохранение подготовленного файла {path}: {e}"))?;
         if let Some(parent) = file_path.parent() { parents.insert(parent.to_path_buf()); }
     }
     for parent in parents { sync_dir(&parent)?; }
@@ -637,7 +637,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 switch_file(root, &staged, &target)?;
             } else if target.exists() {
                 platform_fs::check_target(root, &target)?;
-                fs::remove_file(&target).map_err(|e| format!("remove registered retired file: {e}"))?;
+                fs::remove_file(&target).map_err(|e| format!("Удаление зарегистрированного устаревшего файла: {e}"))?;
                 if let Some(parent) = target.parent() { sync_dir(parent)?; }
             }
         }
@@ -815,7 +815,7 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     let plan=resolved_download_0246::resolve(manifest,preset.as_deref())?;
     if plan.files.is_empty() {return Err("Подготовленный набор не содержит файлов для установки".into())}
     let source=source.canonicalize().map_err(|e|format!("Недоступно: «verified source»: {e}"))?;
-    fs::create_dir_all(root).map_err(|e|format!("create runtime root: {e}"))?;
+    fs::create_dir_all(root).map_err(|e|format!("Создание корневого каталога Runtime: {e}"))?;
     let root=root.canonicalize().map_err(|e|format!("Недоступно: «runtime root»: {e}"))?;
     if root.starts_with(&source) || source.starts_with(&root) {
         return Err("Источник и корневой каталог транзакционного Runtime не должны пересекаться".into());
@@ -845,7 +845,7 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
         let output=safe_join(&stage,&f.path)?;
         if let Some(parent)=output.parent() {safe_dir(&root,parent)?;}
         file_ownership::ensure_no_symlinks(&root,&output)?;
-        fs::copy(&input,&output).map_err(|e|format!("offline stage {}: {e}",f.path))?;
+        fs::copy(&input,&output).map_err(|e|format!("Автономная подготовка {}: {e}",f.path))?;
         if !matches_digest(&output,&f.sha256,f.size) {
             return Err(format!("При автономной подготовке изменились подписанные байты: {}",f.path));
         }

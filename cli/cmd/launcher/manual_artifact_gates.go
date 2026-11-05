@@ -56,7 +56,7 @@ func validSHA2560276(s string) bool {
 func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 	var p artifactPermissions0276
 	if file == "" {
-		return p, errors.New("--permissions-file required for redistribution")
+		return p, errors.New("Для распространения необходим параметр --permissions-file")
 	}
 	st, err := os.Lstat(file)
 	if err != nil {
@@ -75,7 +75,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		return p, err
 	}
 	if err = dec.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return p, errors.New("extra JSON after permissions")
+		return p, errors.New("После документа разрешений обнаружены лишние данные JSON")
 	}
 	if p.SchemaVersion != permissionSchema0276 || !validSHA2560276(p.PackSHA256) {
 		return p, errors.New("Не поддерживается: «permission schema or invalid pack SHA256»")
@@ -95,7 +95,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 			return p, fmt.Errorf("Отсутствует: «authorizing party for» %q", g.Path)
 		}
 		if err = validateRemoteURL(g.EvidenceURL); err != nil {
-			return p, fmt.Errorf("%s: evidence URL: %w", g.Path, err)
+			return p, fmt.Errorf("%s: URL доказательств: %w", g.Path, err)
 		}
 		u, _ := url.Parse(g.EvidenceURL)
 		if u.Scheme != "https" {
@@ -163,10 +163,10 @@ func readModpackReceipt0276(dir string) (modpackReport0275, factoryPlan0271, err
 		return report, p, err
 	}
 	if err = decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return report, p, errors.New("extra receipt JSON")
+		return report, p, errors.New("После квитанции обнаружены лишние данные JSON")
 	}
 	if report.Status != "complete" || !validSHA2560276(report.PackSHA256) || len(report.Imported) > 4000 {
-		return report, p, errors.New("incomplete or invalid modpack import receipt")
+		return report, p, errors.New("Квитанция импорта модпака неполна либо недействительна")
 	}
 	found := map[string]factoryOutput0271{}
 	for _, out := range p.Outputs {
@@ -208,16 +208,16 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 		return result, err
 	}
 	if result.Status != "ready" {
-		return result, fmt.Errorf("%d artifact permissions missing; export blocked", len(result.Missing))
+		return result, fmt.Errorf("Отсутствуют разрешения на %d артефактов; экспорт заблокирован", len(result.Missing))
 	}
 	if output == "" {
-		return result, errors.New("--file export output ZIP required")
+		return result, errors.New("Для экспорта необходимо указать выходной ZIP через --file")
 	}
 	if err = rejectFactoryOutputPath0271(dir, output); err != nil {
 		return result, err
 	}
 	if _, e := os.Lstat(output); e == nil {
-		return result, errors.New("export output already exists")
+		return result, errors.New("Выходной файл экспорта уже существует")
 	} else if !errors.Is(e, os.ErrNotExist) {
 		return result, e
 	}
@@ -241,7 +241,7 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 		}
 		st, e := os.Lstat(src)
 		if e != nil || !st.Mode().IsRegular() {
-			return fail(fmt.Errorf("export source not regular: %s", item.Path))
+			return fail(fmt.Errorf("Источник экспорта не является обычным файлом: %s", item.Path))
 		}
 		in, e := os.Open(src)
 		if e != nil {
@@ -256,7 +256,7 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 		n, e := io.Copy(io.MultiWriter(out, digest), io.LimitReader(in, modpackMaxFile0275+1))
 		_ = in.Close()
 		if e != nil || n != item.Size || hex.EncodeToString(digest.Sum(nil)) != item.SHA256 {
-			return fail(fmt.Errorf("source changed during export: %s", item.Path))
+			return fail(fmt.Errorf("Исходный файл изменился во время экспорта: %s", item.Path))
 		}
 	}
 	meta, e := w.Create("artifact-bundle.json")
@@ -360,7 +360,7 @@ func secureManualSource0276(root, rel string) (string, error) {
 		return "", e
 	}
 	if !base.IsDir() || base.Mode()&os.ModeSymlink != 0 {
-		return "", errors.New("manual directory is not a real directory")
+		return "", errors.New("Каталог ручной установки не является настоящим каталогом")
 	}
 	for i, segment := range parts[1:] {
 		cur = filepath.Join(cur, segment)
@@ -373,10 +373,10 @@ func secureManualSource0276(root, rel string) (string, error) {
 		}
 		if i == len(parts)-2 {
 			if !st.Mode().IsRegular() {
-				return "", errors.New("manual artifact not regular")
+				return "", errors.New("Артефакт ручной установки не является обычным файлом")
 			}
 		} else if !st.IsDir() {
-			return "", errors.New("manual parent not a directory")
+			return "", errors.New("Родительский путь ручной установки не является каталогом")
 		}
 	}
 	return cur, nil

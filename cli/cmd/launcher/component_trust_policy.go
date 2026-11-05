@@ -59,7 +59,7 @@ func strictTime02312(s string) (time.Time, error) {
 func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, string, error) {
 	var p TrustPolicy
 	if len(raw) == 0 || len(raw) > 128*1024 {
-		return p, "", errors.New("trust policy absent/oversized")
+		return p, "", errors.New("Политика доверия отсутствует либо превышает допустимый размер")
 	}
 	root, e := hex.DecodeString(strings.TrimSpace(rootHex))
 	if e != nil || len(root) != 32 {
@@ -70,7 +70,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		return p, "", e
 	}
 	if env.SchemaVersion != "1.0" {
-		return p, "", errors.New("trust policy envelope version")
+		return p, "", errors.New("Неверная версия конверта политики доверия")
 	}
 	payload, e := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if e != nil || len(payload) > 96*1024 {
@@ -95,7 +95,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		return p, "", e
 	}
 	if issued.After(now.Add(5*time.Minute)) || !expiry.After(now) || !expiry.After(issued) || expiry.Sub(issued) > 90*24*time.Hour {
-		return p, "", errors.New("trust policy expired, future-dated or validity exceeds 90 days")
+		return p, "", errors.New("Срок политики доверия истёк, ещё не начался либо превышает 90 дней")
 	}
 	ids, pubs := map[string]bool{}, map[string]bool{}
 	active := 0
@@ -144,21 +144,21 @@ func (p TrustPolicy) Authorize(role, id, pubHex string, signedAt, timeNow time.T
 			return fmt.Errorf("Отозвано: %s ключ %s", role, id)
 		}
 		if requireActive && k.Status != "active" {
-			return fmt.Errorf("%s signer %s retired", role, id)
+			return fmt.Errorf("Подписывающий ключ %s роли %s выведен из эксплуатации", role, id)
 		}
 		t, _ := strictTime02312(k.NotBefore)
 		if signedAt.Before(t) || signedAt.After(timeNow.Add(5*time.Minute)) {
-			return errors.New("signature timestamp outside delegated key validity")
+			return errors.New("Временная метка подписи вне срока действия делегированного ключа")
 		}
 		if k.Status == "verify-only" {
 			until, _ := strictTime02312(k.VerifyUntil)
 			if !signedAt.Before(until) || !timeNow.Before(until) {
-				return errors.New("delegated key overlap window ended")
+				return errors.New("Период одновременного действия делегированных ключей завершён")
 			}
 		}
 		return nil
 	}
-	return fmt.Errorf("%s signer %s not delegated by trusted root", role, id)
+	return fmt.Errorf("Подписывающий ключ %s роли %s не делегирован доверенным корнем", role, id)
 }
 func SignedTrustPolicy(payload []byte, rootPrivate ed25519.PrivateKey) ([]byte, error) {
 	var p TrustPolicy
@@ -181,7 +181,7 @@ func readPolicyState02312(path string) (trustPolicyState, error) {
 		return st, e
 	}
 	if len(b) > 4096 || decodeStrict(b, &st) != nil || st.Epoch == 0 || len(st.Digest) != 64 || len(st.RootSHA256) != 64 {
-		return st, errors.New("trust policy state corrupted")
+		return st, errors.New("Состояние политики доверия повреждено")
 	}
 	return st, nil
 }
@@ -201,7 +201,7 @@ func AcceptTrustPolicy(path, rootHex string, raw []byte, now time.Time) (TrustPo
 		return p, e
 	}
 	if previous.Epoch > p.Epoch || (previous.Epoch == p.Epoch && previous.Epoch > 0 && previous.Digest != digest) || (previous.Epoch > 0 && previous.RootSHA256 != hex.EncodeToString(fp[:])) {
-		return p, errors.New("trust policy rollback/equivocation/root change")
+		return p, errors.New("Попытка отката, противоречивое состояние или смена корня политики доверия")
 	}
 	if e = os.MkdirAll(path, 0o700); e != nil {
 		return p, e

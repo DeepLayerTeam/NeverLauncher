@@ -104,23 +104,23 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 			return e
 		}
 		if found != 1 {
-			return errors.New("SQLite HTTP state table missing from existing database")
+			return errors.New("В существующей базе отсутствует таблица состояния SQLite HTTP")
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("sqlite HTTP preflight: %w", err)
+		return nil, fmt.Errorf("Предварительная проверка SQLite HTTP: %w", err)
 	}
 	legacy, upgraded, e := preflightHTTPUpgrade0472(ctx, store, existing)
 	if e != nil {
-		return nil, fmt.Errorf("sqlite HTTP compatibility preflight: %w", e)
+		return nil, fmt.Errorf("Предварительная проверка совместимости SQLite HTTP: %w", e)
 	}
 	if legacy {
 		if _, e = sqlitedurable.PreUpgradeBackup0472(ctx, path, "http-v1-upgrade"); e != nil {
 			return nil, e
 		}
 		if e = migrateHTTPSnapshot0472(ctx, store, upgraded); e != nil {
-			return nil, fmt.Errorf("sqlite HTTP upgrade: %w", e)
+			return nil, fmt.Errorf("Обновление SQLite HTTP: %w", e)
 		}
 	}
 	err = store.Write(ctx, func(q sqlitedurable.Executor) error {
@@ -143,7 +143,7 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("sqlite HTTP schema: %w", err)
+		return nil, fmt.Errorf("Схема SQLite HTTP: %w", err)
 	}
 	var raw []byte
 	var sha string
@@ -154,7 +154,7 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		if existing {
-			return nil, errors.New("SQLite HTTP snapshot missing from existing database; refusing to initialize empty state")
+			return nil, errors.New("В существующей базе отсутствует снимок SQLite HTTP; инициализация пустого состояния запрещена")
 		}
 		err = r.persist(ctx)
 		if err != nil {
@@ -173,7 +173,7 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 		}
 		state, e := decodeSQLiteHTTPDocument0471(raw)
 		if e != nil {
-			return nil, fmt.Errorf("corrupt SQLite HTTP state: %w", e)
+			return nil, fmt.Errorf("Повреждено состояние SQLite HTTP: %w", e)
 		}
 		r.digest = sha
 		restoreSQLiteHTTP0372(r.mem, state)
@@ -187,7 +187,7 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 func (r *SQLiteHTTPRepository0372) persist(ctx context.Context) error {
 	raw, err := json.Marshal(snapshotSQLiteHTTP0372(r.mem))
 	if err != nil {
-		return fmt.Errorf("serialize SQLite HTTP state: %w", err)
+		return fmt.Errorf("Сериализация состояния SQLite HTTP: %w", err)
 	}
 	sum := sha256.Sum256(raw)
 	digest := hex.EncodeToString(sum[:])
@@ -229,7 +229,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		field := typ.Field(i)
 		name := strings.Split(field.Tag.Get("json"), ",")[0]
 		if name == "" || name == "-" {
-			return state, fmt.Errorf("unversioned SQLite snapshot field %s", field.Name)
+			return state, fmt.Errorf("Поле снимка SQLite без версии: %s", field.Name)
 		}
 		expected[name] = struct{}{}
 	}
@@ -249,7 +249,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		}
 		name, ok := tok.(string)
 		if !ok {
-			return state, errors.New("SQLite HTTP snapshot property is not a string")
+			return state, errors.New("Свойство снимка SQLite HTTP не является строкой")
 		}
 		if _, ok = expected[name]; !ok {
 			return state, fmt.Errorf("Неизвестное значение: поле снимка HTTP SQLite %q", name)
@@ -272,12 +272,12 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		return state, err
 	}
 	if len(seen) != len(expected) {
-		return state, fmt.Errorf("SQLite HTTP snapshot missing fields (%d/%d)", len(seen), len(expected))
+		return state, fmt.Errorf("В снимке SQLite HTTP отсутствуют поля (%d/%d)", len(seen), len(expected))
 	}
 	var trailing any
 	if err = decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return state, errors.New("trailing SQLite HTTP snapshot values")
+			return state, errors.New("После снимка SQLite HTTP обнаружены лишние значения")
 		}
 		return state, err
 	}
@@ -315,7 +315,7 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 		}
 		key, ok := token.(string)
 		if !ok {
-			return errors.New("SQLite HTTP private property is not a string")
+			return errors.New("Приватное свойство SQLite HTTP не является строкой")
 		}
 		if _, ok = expected[key]; !ok {
 			return fmt.Errorf("Неизвестное значение: приватное свойство HTTP SQLite %q", key)
@@ -333,12 +333,12 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 		return err
 	}
 	if len(seen) != len(expected) {
-		return fmt.Errorf("SQLite HTTP private snapshot missing properties (%d/%d)", len(seen), len(expected))
+		return fmt.Errorf("В приватном снимке SQLite HTTP отсутствуют свойства (%d/%d)", len(seen), len(expected))
 	}
 	var trailing any
 	if err = d.Decode(&trailing); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return errors.New("trailing SQLite HTTP private state")
+			return errors.New("После приватного состояния SQLite HTTP обнаружены лишние данные")
 		}
 		return err
 	}
@@ -357,7 +357,7 @@ func (r *SQLiteHTTPRepository0372) Health(ctx context.Context) error {
 			return e
 		}
 		if result != "ok" {
-			return fmt.Errorf("sqlite HTTP quick_check: %s", result)
+			return fmt.Errorf("Быстрая проверка SQLite HTTP: %s", result)
 		}
 		var seq int64
 		var sha string

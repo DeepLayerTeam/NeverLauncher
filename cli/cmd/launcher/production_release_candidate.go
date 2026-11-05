@@ -110,7 +110,7 @@ func productionReleaseCandidateCohort01511(dir string) ([]productionReleaseCandi
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("hash release candidate cohort %s: %w", name, err)
+			return nil, fmt.Errorf("Расчёт контрольной суммы набора кандидата релиза %s: %w", name, err)
 		}
 		cohort = append(cohort, productionReleaseCandidateArtifact01511{Name: name, Size: size, SHA256: strings.ToLower(sum)})
 	}
@@ -172,18 +172,18 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 			return fmt.Errorf("Для промышленный релиз-кандидат требуется «%s with exact source commit:» %w", file, err)
 		}
 		if !strings.EqualFold(certCommit, commit) {
-			return fmt.Errorf("%s source commit mismatch: candidate=%s certification=%s", file, commit, certCommit)
+			return fmt.Errorf("Коммит исходников %s не совпадает: кандидат=%s, сертификация=%s", file, commit, certCommit)
 		}
 	}
 	provCommit, err := provenanceSourceCommit01511(filepath.Join(dir, "PROVENANCE.json"))
 	if err != nil {
-		return fmt.Errorf("production provenance source commit: %w", err)
+		return fmt.Errorf("Коммит исходников в сведениях о происхождении производственного релиза: %w", err)
 	}
 	if !strings.EqualFold(provCommit, commit) {
-		return fmt.Errorf("PROVENANCE.json sourceCommit mismatch: candidate=%s provenance=%s", commit, provCommit)
+		return fmt.Errorf("Несовпадение sourceCommit в PROVENANCE.json: кандидат=%s, происхождение=%s", commit, provCommit)
 	}
 	if err := verifyCompatibilityCertificationInBundle(dir, ver); err != nil {
-		return fmt.Errorf("Minecraft Compatibility certification: %w", err)
+		return fmt.Errorf("Сертификация совместимости Minecraft: %w", err)
 	}
 	if err := verifyDeviceTrustCertificationInBundle(dir, ver); err != nil {
 		return fmt.Errorf("Сертификация доверия к устройствам: %w", err)
@@ -195,10 +195,10 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 		return fmt.Errorf("Ошибка сертификации ServerBridge: %w", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
-		return fmt.Errorf("Delivery Manifest: %w", err)
+		return fmt.Errorf("Манифест поставки: %w", err)
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, strict); err != nil {
-		return fmt.Errorf("Windows production signing: %w", err)
+		return fmt.Errorf("Производственная подпись Windows: %w", err)
 	}
 	if windowsProtectionReleaseRequired01812(ver) {
 		if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
@@ -211,10 +211,10 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 		}
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
-		return fmt.Errorf("Linux production packages: %w", err)
+		return fmt.Errorf("Производственные пакеты Linux: %w", err)
 	}
 	if err := verifyMacOSNotarizationEvidence0154(dir, ver, strict); err != nil {
-		return fmt.Errorf("macOS production notarization: %w", err)
+		return fmt.Errorf("Нотариальное заверение производственного пакета macOS: %w", err)
 	}
 	if err := verifyManagedJREDistribution0155(dir, ver, true); err != nil {
 		return fmt.Errorf("Доставка управляемой JRE: %w", err)
@@ -293,7 +293,7 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 	}
 	for i := range expectedGates {
 		if cert.RequiredGates[i] != expectedGates[i] {
-			return "", fmt.Errorf("production release candidate gate #%d mismatch: expected=%s actual=%s", i+1, expectedGates[i], cert.RequiredGates[i])
+			return "", fmt.Errorf("Проверка кандидата производственного релиза №%d не совпадает: ожидалось=%s, получено=%s", i+1, expectedGates[i], cert.RequiredGates[i])
 		}
 	}
 	actualCohort, err := productionReleaseCandidateCohort01511(dir)
@@ -301,12 +301,12 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 		return "", err
 	}
 	if len(actualCohort) != len(cert.Cohort) {
-		return "", fmt.Errorf("production release candidate cohort size mismatch: certified=%d actual=%d", len(cert.Cohort), len(actualCohort))
+		return "", fmt.Errorf("Размер набора кандидата производственного релиза не совпадает: сертифицировано=%d, фактически=%d", len(cert.Cohort), len(actualCohort))
 	}
 	for i := range actualCohort {
 		a, c := actualCohort[i], cert.Cohort[i]
 		if a.Name != c.Name || a.Size != c.Size || !strings.EqualFold(a.SHA256, c.SHA256) {
-			return "", fmt.Errorf("production release candidate cohort mismatch at %s", a.Name)
+			return "", fmt.Errorf("Набор кандидата производственного релиза не совпадает в %s", a.Name)
 		}
 	}
 	digest := productionReleaseCandidateCohortDigest01511(actualCohort)

@@ -23,17 +23,17 @@ func validateForgeLikeVersionToken0272(version string) error {
 func validateModernLoaderEntry0272(loader string, e loaderMetaEntry) error {
 	ver := strings.TrimSpace(e.Loader.Version)
 	if !modernLoaderVersion0272.MatchString(ver) || isMutableLoaderSelector(ver) {
-		return fmt.Errorf("%s: invalid loader version %q", loader, ver)
+		return fmt.Errorf("%s: некорректная версия загрузчика %q", loader, ver)
 	}
 	// Координата Maven из авторитетного API должна точно соответствовать
 	// версии загрузчика, иначе правдоподобный профиль установит не тот
 	// бинарный файл, который видел администратор.
 	if e.Loader.Maven == "" {
-		return fmt.Errorf("%s %s: no loader Maven identity", loader, ver)
+		return fmt.Errorf("%s %s: отсутствует идентификатор загрузчика в Maven", loader, ver)
 	}
 	parts := strings.Split(e.Loader.Maven, ":")
 	if len(parts) != 3 || parts[2] != ver {
-		return fmt.Errorf("%s %s: conflicting loader Maven identity %q", loader, ver, e.Loader.Maven)
+		return fmt.Errorf("%s %s: конфликтующий идентификатор загрузчика в Maven: %q", loader, ver, e.Loader.Maven)
 	}
 	if _, err := strictMavenPath(e.Loader.Maven); err != nil {
 		return fmt.Errorf("%s %s Maven: %w", loader, ver, err)
@@ -43,11 +43,11 @@ func validateModernLoaderEntry0272(loader string, e loaderMetaEntry) error {
 		expected = "org.quiltmc:quilt-loader"
 	}
 	if strings.Join(parts[:2], ":") != expected {
-		return fmt.Errorf("%s %s: wrong loader Maven artifact %q", loader, ver, e.Loader.Maven)
+		return fmt.Errorf("%s %s: неверный артефакт загрузчика Maven: %q", loader, ver, e.Loader.Maven)
 	}
 	if e.Intermediary.Maven != "" {
 		if _, err := strictMavenPath(e.Intermediary.Maven); err != nil {
-			return fmt.Errorf("%s %s intermediary Maven: %w", loader, ver, err)
+			return fmt.Errorf("%s %s: промежуточный артефакт Maven: %w", loader, ver, err)
 		}
 	}
 	return nil
@@ -158,7 +158,7 @@ func selectModernMetaEntry0272(loader, minecraft, selector string, entries []loa
 		return loaderMetaEntry{}, fmt.Errorf("Неизвестное значение: «modern meta adapter» %q", loader)
 	}
 	if len(entries) == 0 {
-		return loaderMetaEntry{}, fmt.Errorf("%s has no loader versions for Minecraft %s", loader, minecraft)
+		return loaderMetaEntry{}, fmt.Errorf("Для %s отсутствуют версии загрузчика для Minecraft %s", loader, minecraft)
 	}
 	// Дублирующиеся версии с конфликтующими координатами артефактов неоднозначны, даже
 	// если первая строка иначе победила бы при выборе latest.
@@ -169,7 +169,7 @@ func selectModernMetaEntry0272(loader, minecraft, selector string, entries []loa
 	for i, e := range entries {
 		if previous, ok := seen[e.Loader.Version]; ok {
 			if previous.Loader.Maven != e.Loader.Maven || previous.Intermediary.Maven != e.Intermediary.Maven || previous.Loader.Stable != e.Loader.Stable {
-				return loaderMetaEntry{}, fmt.Errorf("%s %s metadata has conflicting duplicate version", loader, e.Loader.Version)
+				return loaderMetaEntry{}, fmt.Errorf("Метаданные %s %s содержат конфликтующие повторяющиеся версии", loader, e.Loader.Version)
 			}
 			continue
 		}
@@ -204,10 +204,10 @@ func selectModernMetaEntry0272(loader, minecraft, selector string, entries []loa
 		if explicit >= 0 {
 			return entries[explicit], nil
 		}
-		return loaderMetaEntry{}, fmt.Errorf("%s loader %s is unavailable for Minecraft %s", loader, selector, minecraft)
+		return loaderMetaEntry{}, fmt.Errorf("Загрузчик %s версии %s недоступен для Minecraft %s", loader, selector, minecraft)
 	}
 	if best < 0 {
-		return loaderMetaEntry{}, fmt.Errorf("%s has no compatible %s loader for Minecraft %s (valid entries: %d)", loader, selector, minecraft, valid)
+		return loaderMetaEntry{}, fmt.Errorf("Для %s нет совместимого загрузчика %s для Minecraft %s (корректных записей: %d)", loader, selector, minecraft, valid)
 	}
 	return entries[best], nil
 }

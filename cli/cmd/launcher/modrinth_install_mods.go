@@ -70,17 +70,17 @@ func modrinthFetch0274(ctx context.Context, client *http.Client, base, endpoint 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Modrinth HTTP %d for %s", resp.StatusCode, endpoint)
+		return fmt.Errorf("Modrinth вернул HTTP %d для %s", resp.StatusCode, endpoint)
 	}
 	if resp.ContentLength > 4<<20 {
-		return errors.New("Modrinth metadata response oversized")
+		return errors.New("Ответ с метаданными Modrinth слишком велик")
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20+1))
 	if err != nil {
 		return err
 	}
 	if len(data) > 4<<20 {
-		return errors.New("Modrinth metadata response exceeded 4 MiB")
+		return errors.New("Ответ с метаданными Modrinth превысил 4 МиБ")
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	if err = dec.Decode(out); err != nil {
@@ -157,13 +157,13 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 	var walk func(id string, depth int) error
 	walk = func(id string, depth int) error {
 		if depth > 16 || len(completed) > 128 || len(mods) > 128 {
-			return errors.New("Modrinth dependency graph exceeds safe limits")
+			return errors.New("Граф зависимостей Modrinth превышает безопасные лимиты")
 		}
 		if completed[id] {
 			return nil
 		}
 		if visiting[id] {
-			return fmt.Errorf("cyclic required Modrinth dependency involving %s", id)
+			return fmt.Errorf("Циклическая обязательная зависимость Modrinth с участием %s", id)
 		}
 		if err := modrinthID0274(id); err != nil {
 			return err
@@ -178,10 +178,10 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 			return fmt.Errorf("Некорректное значение: «Modrinth version/project identity»: %s", id)
 		}
 		if !modrinthContains0274(v.GameVersions, plan.MinecraftVersion) || !modrinthContains0274(v.Loaders, plan.Loader) {
-			return fmt.Errorf("Modrinth version %s incompatible with pinned %s/%s", id, plan.MinecraftVersion, plan.Loader)
+			return fmt.Errorf("Версия Modrinth %s несовместима с закреплённой конфигурацией %s/%s", id, plan.MinecraftVersion, plan.Loader)
 		}
 		if previous, exists := byProject[v.ProjectID]; exists && previous != id {
-			return fmt.Errorf("conflicting versions of Modrinth project %s: %s and %s", v.ProjectID, previous, id)
+			return fmt.Errorf("Конфликт версий проекта Modrinth %s: %s и %s", v.ProjectID, previous, id)
 		}
 		byProject[v.ProjectID] = id
 		var project modrinthProject0274
@@ -189,7 +189,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 			return err
 		}
 		if project.ID != v.ProjectID || project.ClientSide == "unsupported" {
-			return fmt.Errorf("Modrinth project %s does not allow client installation", v.ProjectID)
+			return fmt.Errorf("Проект Modrinth %s не разрешает установку на клиенте", v.ProjectID)
 		}
 		for _, dep := range v.Dependencies {
 			if dep.Type != "required" {
@@ -198,7 +198,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 			depID := dep.VersionID
 			if depID == "" {
 				if dep.ProjectID == "" {
-					return fmt.Errorf("required Modrinth dependency of %s lacks both IDs", id)
+					return fmt.Errorf("У обязательной зависимости Modrinth для %s отсутствуют оба идентификатора", id)
 				}
 				resolved, err := modrinthSelectProjectVersion0274(ctx, client, base, dep.ProjectID, plan)
 				if err != nil {
@@ -211,13 +211,13 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 			}
 		}
 		if len(v.Files) == 0 {
-			return fmt.Errorf("Modrinth version %s has no downloadable file", id)
+			return fmt.Errorf("У версии Modrinth %s нет файла для загрузки", id)
 		}
 		var selected int = -1
 		for i, f := range v.Files {
 			if f.Primary {
 				if selected >= 0 {
-					return errors.New("multiple primary Modrinth files")
+					return errors.New("Обнаружено несколько основных файлов Modrinth")
 				}
 				selected = i
 			}
@@ -230,17 +230,17 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 		}
 		f := v.Files[selected]
 		if f.Filename == "" || path.Base(f.Filename) != f.Filename || !strings.HasSuffix(strings.ToLower(f.Filename), ".jar") {
-			return fmt.Errorf("unsafe/unsupported Modrinth filename %q", f.Filename)
+			return fmt.Errorf("Небезопасное или неподдерживаемое имя файла Modrinth %q", f.Filename)
 		}
 		if !isSHA256Hex0271(f.Hashes.SHA256) {
-			return fmt.Errorf("Modrinth version %s missing SHA-256", id)
+			return fmt.Errorf("У версии Modrinth %s отсутствует SHA-256", id)
 		}
 		if err := validateRemoteURL(f.URL); err != nil {
 			return err
 		}
 		rel := "mods/" + f.Filename
 		if seenPaths[rel] {
-			return fmt.Errorf("Modrinth filename collision: %s", rel)
+			return fmt.Errorf("Конфликт имён файлов Modrinth: %s", rel)
 		}
 		seenPaths[rel] = true
 		mods = append(mods, mirrorArtifact0274{Path: rel, URL: f.URL, SHA256: strings.ToLower(f.Hashes.SHA256), Side: "client", ProjectID: v.ProjectID, VersionID: id})
@@ -251,7 +251,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 		return nil, err
 	}
 	if len(mods) == 0 {
-		return nil, errors.New("Modrinth version resolved to no files")
+		return nil, errors.New("Для версии Modrinth не найдено ни одного файла")
 	}
 	return mods, nil
 }

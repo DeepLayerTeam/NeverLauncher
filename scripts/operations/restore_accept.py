@@ -28,7 +28,7 @@ def parse_utc(value: str) -> datetime:
     except ValueError as exc:
         raise dr.DrillError("Некорректное значение: «incident UTC timestamp»") from exc
     if date.tzinfo is None:
-        raise dr.DrillError("incident UTC timestamp needs timezone")
+        raise dr.DrillError("Временная метка инцидента в UTC должна содержать часовой пояс")
     return date.astimezone(timezone.utc)
 
 
@@ -37,7 +37,7 @@ def exposure_seconds(snapshot_time: str, incident: datetime) -> float:
     if incident < saved:
         raise dr.DrillError("Некорректное значение: «incident predates snapshot; recovery window»")
     if incident > datetime.now(timezone.utc):
-        raise dr.DrillError("incident timestamp is in the future")
+        raise dr.DrillError("Временная метка инцидента находится в будущем")
     return round((incident - saved).total_seconds(), 3)
 
 
@@ -51,7 +51,7 @@ def write_report(path: Path, report: dict) -> None:
         out.write("\n"); out.flush(); os.fsync(out.fileno())
     try:
         if path.exists() or path.is_symlink():
-            raise dr.DrillError("report target appeared during restore")
+            raise dr.DrillError("Файл назначения отчёта появился во время восстановления")
         stage.rename(path)
     finally:
         if stage.exists(): stage.unlink()
@@ -63,12 +63,12 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
                 checkpoint: str | None, checksum: str | None) -> dict:
     dr.ensure_isolated(project, confirm)
     if report_path.exists() or report_path.is_symlink():
-        raise dr.DrillError("report exists")
+        raise dr.DrillError("Отчёт уже существует")
     manifest = dr.verify_snapshot(snapshot)
     if manifest.get("schema") != 3 or manifest.get("mode") != "network-ha":
         raise dr.DrillError("fresh-host acceptance: требуется «verified Network-HA snapshot»")
     if manifest.get("version") != dr.target_release(env_file):
-        raise dr.DrillError("restore version must match snapshot, not target upgrade version")
+        raise dr.DrillError("Версия восстановления должна соответствовать снимку, а не версии целевого обновления")
     upper_bound = exposure_seconds(manifest["createdUtc"], incident)
     if bool(checkpoint) != bool(checksum):
         raise dr.DrillError("checkpoint token and SHA-256: требуется «supplied together»")
@@ -83,7 +83,7 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
                                world_destinations=destinations)
     try:
         if not outcome.get("applicationVerified") or not outcome.get("serverbridgeFenced") or outcome.get("redisRestored") is not False:
-            raise dr.DrillError("incomplete Network-HA restore may not be accepted")
+            raise dr.DrillError("Неполное восстановление Network-HA нельзя принять")
         if checkpoint:
             # Проверяйте реальные восстановленные байты PostgreSQL, а не исходную
             # квитанцию.
@@ -92,7 +92,7 @@ def run_restore(project: str, confirm: str, env_file: Path, snapshot: Path,
                 stdin=io.BytesIO(
                     (f"SELECT payload_sha256 FROM launcher_chaos_canaries_0456 WHERE token='{checkpoint}';\n").encode()), timeout=30)
             if result.stdout.decode().strip() != checksum:
-                raise dr.DrillError("acknowledged checkpoint was not retained in restored PostgreSQL")
+                raise dr.DrillError("Подтверждённая контрольная точка не сохранилась в восстановленном PostgreSQL")
     except Exception:
         # Не открывайте восстановленное приложение, если дополнительные независимые
         # приёмочные проверки провалились после успешного завершения базового скрипта

@@ -235,7 +235,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if cert.PublicKey != base64.StdEncoding.EncodeToString(pub) {
-		return cert, errors.New("certificate signed by a different trust root")
+		return cert, errors.New("Сертификат подписан другим корнем доверия")
 	}
 	signature, err := base64.StdEncoding.DecodeString(cert.Signature)
 	if err != nil {
@@ -269,7 +269,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		return cert, err
 	}
 	if cert.ProfileID != profile {
-		return cert, errors.New("certified profile differs from plan")
+		return cert, errors.New("Сертифицированный профиль отличается от плана")
 	}
 	found := false
 	for _, t := range plan.Targets {
@@ -279,7 +279,7 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 		}
 	}
 	if !found {
-		return cert, errors.New("certified target was not in InstallPlan")
+		return cert, errors.New("Сертифицированная цель отсутствует в InstallPlan")
 	}
 	var probe factoryProbe02712
 	pr, err := os.ReadFile(filepath.Join(filepath.Dir(certificateFile), cert.ProbeFile))
@@ -304,10 +304,10 @@ func certVerify02712(clientDir, certificateFile, publicKeyPath string) (factoryR
 func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expectedRuntimeSHA, privateKeyPath, out string, maxSeconds int) (factoryRuntimeCertificate02712, error) {
 	cert := factoryRuntimeCertificate02712{}
 	if out == "" || out == "-" {
-		return cert, errors.New("--output must name a certificate file outside client root")
+		return cert, errors.New("Параметр --output должен указывать на файл сертификата вне корневого каталога клиента")
 	}
 	if maxSeconds < 15 || maxSeconds > 3600 {
-		return cert, errors.New("--max-runtime-seconds must be 15..3600")
+		return cert, errors.New("Параметр --max-runtime-seconds должен быть в диапазоне 15–3600")
 	}
 	if err := rejectFactoryOutputPath0271(clientDir, out); err != nil {
 		return cert, err
@@ -394,7 +394,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	}
 	var probe factoryProbe02712
 	if err = json.Unmarshal(stdout.Bytes(), &probe); err != nil {
-		return cert, fmt.Errorf("Runtime returned invalid JSON: %w", err)
+		return cert, fmt.Errorf("Runtime вернул некорректный JSON: %w", err)
 	}
 	// Не доверяйте предоставленному пути к журналу: нужен обычный файл под одноразовым корнем.
 	absLog, err := filepath.Abs(probe.LogPath)
@@ -403,7 +403,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	}
 	rel, err := filepath.Rel(copyRoot, absLog)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return cert, errors.New("runtime log escaped isolated client root")
+		return cert, errors.New("Путь журнала Runtime вышел за пределы изолированного каталога клиента")
 	}
 	// Запрещайте символьные ссылки на родительские каталоги, созданные проверяемой JVM. Синтаксически
 	// внутренний путь недостаточен, если logs/ указывает за пределы одноразового дерева.
@@ -425,13 +425,13 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if after, e := certHashFile02712(rt); e != nil || after != rtSHA {
-		return cert, errors.New("Runtime executable changed during probe")
+		return cert, errors.New("Исполняемый файл Runtime изменился во время проверки")
 	}
 	if after, e := certHashFile02712(java); e != nil || after != javaSHA {
-		return cert, errors.New("Java executable changed during probe")
+		return cert, errors.New("Исполняемый файл Java изменился во время проверки")
 	}
 	if err = verifyFactoryPlan0271(clientDir, plan); err != nil {
-		return cert, fmt.Errorf("installed client mutated during certification: %w", err)
+		return cert, fmt.Errorf("Установленный клиент изменился во время сертификации: %w", err)
 	}
 	absOut, err := filepath.Abs(out)
 	if err != nil {
@@ -491,7 +491,7 @@ type boundedWriter02712 struct {
 
 func (b *boundedWriter02712) Write(p []byte) (int, error) {
 	if b.w.Len()+len(p) > b.max {
-		return 0, errors.New("probe output exceeded limit")
+		return 0, errors.New("Вывод проверки превысил лимит")
 	}
 	return b.w.Write(p)
 }
@@ -548,7 +548,7 @@ func handleRuntimeCertification02712(args []string) error {
 				return e
 			}
 			if sum != binary.hash {
-				return errors.New("certification binary identity changed: " + binary.name)
+				return errors.New("Идентификатор сертифицируемого исполняемого файла изменился: " + binary.name)
 			}
 		}
 		return writeOrPrintJSON(flagValue(tail, "--output", "-"), cert)

@@ -64,7 +64,7 @@ func normalized(a Account) (Account, error) {
 		return a, fmt.Errorf("Некорректное значение: имя пользователя Minecraft %q", a.Username)
 	}
 	if a.SourceID == "" || len(a.SourceID) > 256 || strings.TrimSpace(a.SourceID) != a.SourceID {
-		return a, errors.New("missing/invalid stable source account ID")
+		return a, errors.New("Отсутствует или неверен стабильный ID исходной учётной записи")
 	}
 	var e error
 	a.UUID, e = UUID(a.UUID)
@@ -77,7 +77,7 @@ func strictRootMap(b []byte) (map[string]json.RawMessage, error) {
 	d := json.NewDecoder(bytes.NewReader(b))
 	t, e := d.Token()
 	if e != nil || t != json.Delim('{') {
-		return nil, errors.New("expected FileAuth JSON UUID map")
+		return nil, errors.New("Ожидался JSON-словарь UUID FileAuth")
 	}
 	out := map[string]json.RawMessage{}
 	for d.More() {
@@ -103,7 +103,7 @@ func strictRootMap(b []byte) (map[string]json.RawMessage, error) {
 	}
 	var extra any
 	if e = d.Decode(&extra); e != io.EOF {
-		return nil, errors.New("trailing data in FileAuth JSON")
+		return nil, errors.New("После JSON FileAuth обнаружены лишние данные")
 	}
 	return out, nil
 }
@@ -145,7 +145,7 @@ func uniqueUserFields(raw []byte) error {
 	}
 	var trailing any
 	if err = dec.Decode(&trailing); err != io.EOF {
-		return errors.New("trailing FileAuth user fields")
+		return errors.New("После полей пользователя FileAuth обнаружены лишние данные")
 	}
 	return nil
 }
@@ -161,23 +161,23 @@ func parseFileAuth(b []byte, pathname string) ([]Account, error) {
 	accounts := make([]Account, 0, len(root))
 	for key, raw := range root {
 		if err := uniqueUserFields(raw); err != nil {
-			return nil, fmt.Errorf("FileAuth user %s: %w", key, err)
+			return nil, fmt.Errorf("Пользователь FileAuth %s: %w", key, err)
 		}
 		var obj struct {
 			Username string `json:"username"`
 			UUID     string `json:"uuid"`
 		}
 		if e = json.Unmarshal(raw, &obj); e != nil {
-			return nil, fmt.Errorf("FileAuth user %s: %w", key, e)
+			return nil, fmt.Errorf("Пользователь FileAuth %s: %w", key, e)
 		}
 		canonicalKey, e := UUID(key)
 		if e != nil {
-			return nil, fmt.Errorf("FileAuth map key: %w", e)
+			return nil, fmt.Errorf("Ключ словаря FileAuth: %w", e)
 		}
 		if obj.UUID != "" {
 			embedded, e := UUID(obj.UUID)
 			if e != nil || canonicalKey != embedded {
-				return nil, fmt.Errorf("FileAuth UUID mismatch for %q", key)
+				return nil, fmt.Errorf("Несоответствие UUID FileAuth для %q", key)
 			}
 		}
 		a, e := normalized(Account{Provider: "fileauth", SourceID: canonicalKey, Username: obj.Username, UUID: canonicalKey, SourcePath: pathname})
@@ -208,7 +208,7 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 	// нормализуется оператором до id,username,uuid, а не угадывается по SQL.
 	for _, c := range []string{"id", "username", "uuid"} {
 		if _, ok := cols[c]; !ok {
-			return nil, fmt.Errorf("SQL CSV missing %s column", c)
+			return nil, fmt.Errorf("В CSV SQL отсутствует столбец %s", c)
 		}
 	}
 	out := []Account{}
@@ -218,14 +218,14 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 			break
 		}
 		if e != nil {
-			return nil, fmt.Errorf("SQL CSV row %d: %w", row, e)
+			return nil, fmt.Errorf("Строка %d CSV SQL: %w", row, e)
 		}
 		if len(fields) != len(header) {
-			return nil, fmt.Errorf("SQL CSV row %d: unexpected column count", row)
+			return nil, fmt.Errorf("Строка %d CSV SQL: неожиданное число столбцов", row)
 		}
 		a, e := normalized(Account{Provider: "sql", SourceID: fields[cols["id"]], Username: fields[cols["username"]], UUID: fields[cols["uuid"]], SourcePath: pathname})
 		if e != nil {
-			return nil, fmt.Errorf("SQL CSV row %d: %w", row, e)
+			return nil, fmt.Errorf("Строка %d CSV SQL: %w", row, e)
 		}
 		out = append(out, a)
 		if len(out) > MaxAccounts {
@@ -244,7 +244,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		return nil, e
 	}
 	if checked.ManifestSHA256 != snapshot.ManifestSHA256 || checked.SourceBytes != snapshot.SourceBytes {
-		return nil, errors.New("source archive changed after inventory")
+		return nil, errors.New("Исходный архив изменился после инвентаризации")
 	}
 	z, e := zip.NewReader(src, size)
 	if e != nil {
@@ -276,7 +276,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 			return nil, closeErr
 		}
 		if int64(len(b)) > MaxIdentityFile {
-			return nil, errors.New("identity source overflow")
+			return nil, errors.New("Превышен лимит исходных учётных записей")
 		}
 		var parsed []Account
 		if isFileAuth {
@@ -296,7 +296,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		return nil, errors.New("Отсутствует: «supported FileAuthSystem/Database.json or sql-export/users.csv identity snapshot found»")
 	}
 	if len(accounts) == 0 {
-		return nil, errors.New("source identity snapshot has no accounts")
+		return nil, errors.New("Снимок исходных учётных записей не содержит аккаунтов")
 	}
 	sort.Slice(accounts, func(i, j int) bool {
 		a, b := accounts[i], accounts[j]

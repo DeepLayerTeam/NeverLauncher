@@ -55,10 +55,10 @@ func Load(path string, now time.Time) (*Store, error) {
 	}
 	fi, err := os.Lstat(path)
 	if err != nil {
-		return nil, fmt.Errorf("tpm roots: %w", err)
+		return nil, fmt.Errorf("Корневые сертификаты TPM: %w", err)
 	}
 	if !fi.Mode().IsRegular() || fi.Size() > 1<<20 || fi.Mode().Perm()&0022 != 0 {
-		return nil, errors.New("tpm roots: invalid file type or size")
+		return nil, errors.New("Корневые сертификаты TPM: неверный тип или размер файла")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -68,32 +68,32 @@ func Load(path string, now time.Time) (*Store, error) {
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&config); err != nil {
-		return nil, fmt.Errorf("tpm roots: %w", err)
+		return nil, fmt.Errorf("Корневые сертификаты TPM: %w", err)
 	}
 	var trailing any
 	if dec.Decode(&trailing) != io.EOF {
-		return nil, errors.New("tpm roots: trailing JSON")
+		return nil, errors.New("Корневые сертификаты TPM: после JSON есть лишние данные")
 	}
 	if config.Schema != rootSchema || len(config.Roots) == 0 || len(config.Roots) > 64 {
-		return nil, errors.New("tpm roots: bad schema or empty/oversized list")
+		return nil, errors.New("Корневые сертификаты TPM: неверная схема, пустой или слишком большой список")
 	}
 	store := &Store{revokedAK: make(map[string]bool)}
 	ids := make(map[string]bool)
 	fps := make(map[string]bool)
 	for _, f := range config.RevokedAKFingerprints {
 		if !isSHA256(f) {
-			return nil, errors.New("tpm roots: invalid revoked AK fingerprint")
+			return nil, errors.New("Корневые сертификаты TPM: неверный отпечаток отозванного ключа AK")
 		}
 		store.revokedAK[f] = true
 	}
 	for _, r := range config.Roots {
 		if r.ID == "" || len(r.ID) > 96 || ids[r.ID] || (r.Status != "active" && r.Status != "revoked") {
-			return nil, errors.New("tpm roots: invalid/duplicate root id or status")
+			return nil, errors.New("Корневые сертификаты TPM: неверный либо повторяющийся идентификатор или статус")
 		}
 		ids[r.ID] = true
 		block, rest := pem.Decode([]byte(r.CertificatePEM))
 		if block == nil || block.Type != "CERTIFICATE" || len(strings.TrimSpace(string(rest))) != 0 {
-			return nil, errors.New("tpm roots: expected one PEM certificate")
+			return nil, errors.New("Корневые сертификаты TPM: ожидался один сертификат PEM")
 		}
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
@@ -104,15 +104,15 @@ func Load(path string, now time.Time) (*Store, error) {
 		}
 		fingerprint := Fingerprint(cert.Raw)
 		if fps[fingerprint] {
-			return nil, errors.New("tpm roots: duplicate certificate")
+			return nil, errors.New("Корневые сертификаты TPM: повторяющийся сертификат")
 		}
 		fps[fingerprint] = true
 		if r.NotBefore.IsZero() || r.NotAfter.IsZero() || !r.NotAfter.After(r.NotBefore) {
-			return nil, errors.New("tpm roots: invalid validity policy")
+			return nil, errors.New("Корневые сертификаты TPM: неверная политика срока действия")
 		}
 		for _, p := range r.Platforms {
 			if p != "windows" && p != "linux" {
-				return nil, errors.New("tpm roots: only windows/linux supported")
+				return nil, errors.New("Корневые сертификаты TPM: поддерживаются только Windows и Linux")
 			}
 		}
 		store.roots = append(store.roots, parsedRoot{Root: r, certificate: cert, fingerprint: fingerprint})

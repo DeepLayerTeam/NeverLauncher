@@ -35,7 +35,7 @@ func distributionHash04511(dir, name string) (string, error) {
 		return "", err
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 {
-		return "", fmt.Errorf("not a regular, nonempty package: %s", name)
+		return "", fmt.Errorf("Пакет отсутствует, пуст или не является обычным файлом: %s", name)
 	}
 	digest, _, err := hashFile(filepath.Join(dir, name))
 	return digest, err
@@ -59,7 +59,7 @@ func bindDistributionSBOM04511(document map[string]any, dir, ver string) error {
 	for _, t := range distributionTargets04511(ver) {
 		h, err := distributionHash04511(dir, t.packageFile)
 		if err != nil {
-			return fmt.Errorf("signed distribution %s: %w", t.target, err)
+			return fmt.Errorf("Подписанный дистрибутив %s: %w", t.target, err)
 		}
 		packages = append(packages, sbomPackage{
 			SPDXID: distributionSPDXID04511(t.target), Name: t.packageFile, VersionInfo: ver,
@@ -115,7 +115,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 	found := map[string]bool{}
 	for _, p := range sbom.Packages {
 		if p.SPDXID == "" || ids[p.SPDXID] {
-			return fmt.Errorf("duplicate/empty SPDX package id: %s", p.SPDXID)
+			return fmt.Errorf("Повторяющийся или пустой идентификатор пакета SPDX: %s", p.SPDXID)
 		}
 		ids[p.SPDXID] = true
 		if !strings.HasPrefix(p.SPDXID, "SPDXRef-Distribution-") {
@@ -142,13 +142,13 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		}
 	}
 	if len(found) != 6 {
-		return errors.New("SPDX must describe exactly six final platform packages")
+		return errors.New("SPDX должен описывать ровно шесть финальных пакетов для платформ")
 	}
 	// Таблица из шести пакетов не является SBOM зависимостей. Сохраняйте исходные корни
 	// приложений и граф зависимостей в подписанном документе.
 	for _, root := range []string{"SPDXRef-Package-CLI", "SPDXRef-Package-BackendAPI", "SPDXRef-Package-Admin", "SPDXRef-Package-Desktop", "SPDXRef-Package-Runtime", "SPDXRef-Package-Bridges"} {
 		if !ids[root] {
-			return fmt.Errorf("dependency SBOM missing existing application root: %s", root)
+			return fmt.Errorf("В SBOM зависимостей отсутствует существующий корень приложения: %s", root)
 		}
 	}
 	dependencyEdges := 0
@@ -168,7 +168,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 			}
 		}
 		if linked != 1 {
-			return fmt.Errorf("SPDX shipping relationship missing/duplicated: %s", t.target)
+			return fmt.Errorf("В SPDX отсутствует либо дублируется связь поставки: %s", t.target)
 		}
 	}
 	var provenance struct {
@@ -214,12 +214,12 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 			return err
 		}
 		if len(s.Digest) != 1 || s.Digest["sha256"] != digest {
-			return fmt.Errorf("provenance subject differs from actual file: %s", s.Name)
+			return fmt.Errorf("Объект происхождения артефакта не соответствует фактическому файлу: %s", s.Name)
 		}
 		subjects[s.Name] = true
 	}
 	if !subjects["SBOM.spdx.json"] {
-		return errors.New("provenance does not bind SPDX")
+		return errors.New("Сведения о происхождении не привязаны к SPDX")
 	}
 	// Хеши исходных материалов должны совпадать с независимо закреплёнными
 	// входами BOM; это реальные разрешённые зависимости SLSA, а не
@@ -240,11 +240,11 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 	materials := map[string]string{}
 	for _, m := range provenance.Predicate.BuildDefinition.ResolvedDependencies {
 		if !strings.HasPrefix(m.URI, "file://") || len(m.Digest) != 1 || !bomSHA03214(m.Digest["sha256"]) || materials[m.URI] != "" {
-			return errors.New("invalid/duplicate SLSA material")
+			return errors.New("Некорректный или повторяющийся исходный материал SLSA")
 		}
 		materials[m.URI] = m.Digest["sha256"]
 		if hash, ok := componentHashes[strings.TrimPrefix(m.URI, "file://")]; ok && hash != m.Digest["sha256"] {
-			return fmt.Errorf("SLSA material differs from BOM: %s", m.URI)
+			return fmt.Errorf("Исходный материал SLSA не соответствует BOM: %s", m.URI)
 		}
 	}
 	for _, source := range []string{"cli/go.mod", "services/api/go.mod", "apps/admin/package-lock.json", "apps/desktop/package-lock.json"} {
@@ -255,7 +255,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 	}
 	for _, t := range distributionTargets04511(ver) {
 		if !subjects[t.packageFile] {
-			return fmt.Errorf("provenance missing signed package: %s", t.target)
+			return fmt.Errorf("В сведениях о происхождении отсутствует подписанный пакет: %s", t.target)
 		}
 	}
 	var receipt struct {
@@ -269,7 +269,7 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 		} `json:"targets"`
 	}
 	if err := read("GA_VERIFIED_TARGETS.json", &receipt); err != nil {
-		return fmt.Errorf("independent GA: %w", err)
+		return fmt.Errorf("Независимая приёмка GA: %w", err)
 	}
 	if receipt.Version != ver || receipt.Commit != manifest.SourceCommit || receipt.Status != "approved-for-release-signing" || len(receipt.Targets) != 6 {
 		return errors.New("Несовпадение: «independent GA identity or number of targets»")
@@ -285,13 +285,13 @@ func verifyDistributionSupplyChain04511(dir, ver string) error {
 					return err
 				}
 				if seen[t.target] || r.Package != t.packageFile || r.PackageSHA256 != digest {
-					return fmt.Errorf("GA approval package differs from final signed package: %s", t.target)
+					return fmt.Errorf("Пакет, одобренный GA, не совпадает с финальным подписанным пакетом: %s", t.target)
 				}
 				seen[t.target] = true
 			}
 		}
 		if !match {
-			return errors.New("independent GA contains unexpected target")
+			return errors.New("Независимая приёмка GA содержит непредусмотренную целевую платформу")
 		}
 	}
 	return nil

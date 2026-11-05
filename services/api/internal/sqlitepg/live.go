@@ -58,7 +58,7 @@ func instant0473(v any, optional bool) (any, error) {
 		return nil, nil
 	}
 	if n < 0 {
-		return nil, fmt.Errorf("negative timestamp %d", n)
+		return nil, fmt.Errorf("Отрицательная временная метка %d", n)
 	}
 	return time.Unix(0, n).UTC(), nil
 }
@@ -199,11 +199,11 @@ func validateCatalog0473(ctx context.Context, tx pgx.Tx) error {
 		return err
 	}
 	if len(applied) != len(migrations) {
-		return fmt.Errorf("SQLRepository migrations incomplete or unknown: got %d, expected %d", len(applied), len(migrations))
+		return fmt.Errorf("Миграции SQLRepository неполны или неизвестны: получено %d, ожидалось %d", len(applied), len(migrations))
 	}
 	for _, m := range migrations {
 		if applied[m.Version] != m.Checksum {
-			return fmt.Errorf("unapplied or changed SQLRepository migration %s", m.Version)
+			return fmt.Errorf("Миграция SQLRepository %s не применена или изменена", m.Version)
 		}
 	}
 	return nil
@@ -245,17 +245,17 @@ func emptyLive0473(ctx context.Context, tx pgx.Tx) error {
 		}
 		if expected, ok := seeded[name]; ok {
 			if count != 1 {
-				return fmt.Errorf("SQLRepository seed %s has %d rows, expected 1", name, count)
+				return fmt.Errorf("Начальные данные SQLRepository %s содержат %d записей вместо одной", name, count)
 			}
 			var valid int64
 			if err = tx.QueryRow(ctx, `SELECT count(*) FROM `+safe+` WHERE `+expected).Scan(&valid); err != nil {
 				return err
 			}
 			if valid != 1 {
-				return fmt.Errorf("SQLRepository seed %s is modified", name)
+				return fmt.Errorf("Начальные данные SQLRepository %s изменены", name)
 			}
 		} else if count != 0 {
-			return fmt.Errorf("SQLRepository target %s is not empty (%d rows)", name, count)
+			return fmt.Errorf("Целевая таблица SQLRepository %s не пуста (%d записей)", name, count)
 		}
 	}
 	return nil
@@ -301,7 +301,7 @@ func sourceRows0473(ctx context.Context, tx pgx.Tx, name string, expected TableR
 			}
 			count++
 			if seq, ok := vals[len(cs)].(int64); !ok || seq != count {
-				e = fmt.Errorf("staged row ordinal mismatch in %s", name)
+				e = fmt.Errorf("Несовпадение порядка подготовленных строк в %s", name)
 				break
 			}
 			out := make(map[string]any, len(cs))
@@ -323,7 +323,7 @@ func sourceRows0473(ctx context.Context, tx pgx.Tx, name string, expected TableR
 				break
 			}
 			if stored, ok := vals[len(cs)+1].(string); !ok || stored != digest {
-				e = fmt.Errorf("staged row digest mismatch %s at %d", name, count)
+				e = fmt.Errorf("Контрольная сумма подготовленной строки %s не совпадает на позиции %d", name, count)
 				break
 			}
 			addDigest(h, hashBytes)
@@ -431,7 +431,7 @@ func checkManifest0473(src map[string]any) error {
 		}
 	}
 	if src["status"] == "published" && m.Signature == nil {
-		return errors.New("published release missing signature")
+		return errors.New("У опубликованного релиза отсутствует подпись")
 	}
 	return nil
 }
@@ -445,7 +445,7 @@ func verifyLive0473(ctx context.Context, tx pgx.Tx, table string, expected int64
 		return err
 	}
 	if count != expected {
-		return fmt.Errorf("live %s row count differs: %d != %d", table, count, expected)
+		return fmt.Errorf("Число строк в работающей таблице %s не совпадает: %d != %d", table, count, expected)
 	}
 	return nil
 }
@@ -494,7 +494,7 @@ func fileRows0473(ctx context.Context, tx pgx.Tx) (int64, error) {
 			}
 			_, er = tx.Exec(ctx, `INSERT INTO files(id,project_id,version_id,path,size,sha256,url,required,executable,target_os,ownership,mirrors) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::text::jsonb,$11,$12::text::jsonb)`, id, r.project, r.id, f.Path, f.Size, f.SHA256, f.URL, f.Required, f.Executable, string(targetOS), f.Ownership, string(mirrors))
 			if er != nil {
-				return 0, fmt.Errorf("release %s file %s: %w", r.id, f.Path, er)
+				return 0, fmt.Errorf("Релиз %s, файл %s: %w", r.id, f.Path, er)
 			}
 			count++
 		}
@@ -538,7 +538,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	}
 	pg, err := pgx.Connect(ctx, postgresDSN)
 	if err != nil {
-		return report, fmt.Errorf("PostgreSQL connection (%T; credentials redacted)", err)
+		return report, fmt.Errorf("Подключение PostgreSQL (%T; учётные данные скрыты)", err)
 	}
 	defer pg.Close(context.Background())
 	tx, err := pg.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
@@ -558,7 +558,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 		return report, err
 	}
 	if current != "public" {
-		return report, fmt.Errorf("SQLRepository must use public schema, got %s", current)
+		return report, fmt.Errorf("SQLRepository должен использовать схему public, получено %s", current)
 	}
 	if err = validateCatalog0473(ctx, tx); err != nil {
 		return report, err
@@ -592,7 +592,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 	seen := map[string]bool{}
 	for _, table := range original.Tables {
 		if seen[table.Name] || table.Rows < 0 || len(table.SHA256) != 64 {
-			return report, fmt.Errorf("invalid/duplicate staged table receipt %q", table.Name)
+			return report, fmt.Errorf("Некорректная или повторяющаяся квитанция подготовленной таблицы %q", table.Name)
 		}
 		seen[table.Name] = true
 		if !allow[table.Name] {
@@ -607,7 +607,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 				return report, fmt.Errorf("Не поддерживается: «staging table %s count mismatch»", table.Name)
 			}
 			if n > 0 {
-				return report, fmt.Errorf("cannot live-import %d records in unsupported SQLite table %s", n, table.Name)
+				return report, fmt.Errorf("Нельзя импортировать в рабочую систему %d записей из неподдерживаемой таблицы SQLite %s", n, table.Name)
 			}
 		}
 	}
@@ -621,7 +621,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 			break
 		}
 		if !seen[name] {
-			e = fmt.Errorf("unrecorded staging table %s", name)
+			e = fmt.Errorf("Незарегистрированная таблица подготовки %s", name)
 			break
 		}
 	}
@@ -686,7 +686,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 			})
 		}
 		if err != nil {
-			return report, fmt.Errorf("live import %s -> %s: %w", rule.source, rule.target, err)
+			return report, fmt.Errorf("Импорт в работающую систему %s -> %s: %w", rule.source, rule.target, err)
 		}
 		if err = verifyLive0473(ctx, tx, rule.target, expected.Rows); err != nil {
 			return report, err
@@ -710,7 +710,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 		return report, err
 	}
 	if report.Files, err = fileRows0473(ctx, tx); err != nil {
-		return report, fmt.Errorf("manifest file import: %w", err)
+		return report, fmt.Errorf("Импорт файла манифеста: %w", err)
 	}
 	if err = verifyLive0473(ctx, tx, "files", report.Files); err != nil {
 		return report, err

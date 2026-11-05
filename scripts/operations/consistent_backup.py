@@ -88,7 +88,7 @@ def execute(args, *, timeout=120, env=None, input=None, cwd=None):
         cp = subprocess.run(args, timeout=timeout, env=env, input=input, cwd=cwd,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise BackupError("unavailable or timed out: " + args[0]) from exc
+        raise BackupError("Недоступно или превышено время ожидания: " + args[0]) from exc
     require(cp.returncode == 0 and len(cp.stdout) <= 16 * 1024 * 1024,
             "command failed: " + args[0])
     return cp.stdout
@@ -103,7 +103,7 @@ def stream_command(args, target: Path, *, timeout=7200, cwd=None):
                 _, stderr = proc.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
                 proc.kill(); proc.communicate()
-                raise BackupError("stream operation timed out")
+                raise BackupError("Превышено время ожидания потоковой операции")
             require(proc.returncode == 0, "stream command failed: " + args[0])
         except BaseException:
             target.unlink(missing_ok=True)
@@ -172,7 +172,7 @@ def frozen_record(directory, project, run_id):
     try:
         data = json.loads(safe_file(directory / STATE_FILE))
     except (OSError, ValueError) as exc:
-        raise BackupError("missing/corrupt host freeze journal") from exc
+        raise BackupError("Журнал приостановки хоста отсутствует или повреждён") from exc
     require(data.get("schema") == SCHEMA and data.get("project") == project and
             data.get("runId") == run_id, "host belongs to a different backup operation")
     return data
@@ -212,7 +212,7 @@ def stream_volume(directory, project, run_id, logical, image):
         _, _ = out.communicate(timeout=7200)
     except subprocess.TimeoutExpired:
         out.kill(); out.communicate()
-        raise BackupError("volume archive timed out")
+        raise BackupError("Превышено время ожидания архивации тома")
     require(out.returncode == 0, "volume backup failed")
 
 
@@ -266,7 +266,7 @@ def backup_physical(stanza):
 
 
 def s3_version_inventory(bucket, endpoint):
-    require(bool(re.fullmatch(r"[a-z0-9][a-z0-9.-]{2,62}", bucket)), "invalid S3 bucket")
+    require(bool(re.fullmatch(r"[a-z0-9][a-z0-9.-]{2,62}", bucket)), "Некорректное имя корзины S3")
     options = dr.s3_options(endpoint)
     versioning = json.loads(execute(["aws", *options, "s3api", "get-bucket-versioning",
                                      "--bucket", bucket, "--output", "json"]))
@@ -380,7 +380,7 @@ def local_world_stream(backup_root, backup_id):
         proc.communicate(timeout=7200)
     except subprocess.TimeoutExpired:
         proc.kill(); proc.communicate()
-        raise BackupError("world archive timed out")
+        raise BackupError("Превышено время ожидания архивации игрового мира")
     require(proc.returncode == 0, "world archive failed")
 
 
@@ -669,7 +669,7 @@ def orchestrate(args):
         if not success and stage.exists():
             shutil.rmtree(stage)
         if resume_errors:
-            raise BackupError("manual recovery required: API/worker could not restart on " + ",".join(resume_errors))
+            raise BackupError("Необходимо ручное восстановление: API или рабочий процесс не перезапустились на " + ",".join(resume_errors))
 
 
 def restore_pg_fresh(args):

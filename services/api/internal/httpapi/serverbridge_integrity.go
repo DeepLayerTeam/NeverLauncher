@@ -92,59 +92,59 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 		}
 		velocity, err := normalizeHashList0134(policy.VelocitySHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge velocity release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Velocity %s: %w", version, err)
 		}
 		bungeecord, err := normalizeOptionalBridgeHashes0144(policy.BungeeCordSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge bungeecord release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge BungeeCord %s: %w", version, err)
 		}
 		waterfall, err := normalizeOptionalBridgeHashes0144(policy.WaterfallSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge waterfall release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Waterfall %s: %w", version, err)
 		}
 		paper, err := normalizeHashList0134(policy.PaperSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge paper release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Paper %s: %w", version, err)
 		}
 		purpur, err := normalizeHashList0134(policy.PurpurSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge purpur release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Purpur %s: %w", version, err)
 		}
 		bukkit, err := normalizeOptionalBridgeHashes0144(policy.BukkitSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge bukkit release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Bukkit %s: %w", version, err)
 		}
 		spigot, err := normalizeOptionalBridgeHashes0144(policy.SpigotSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge spigot release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Spigot %s: %w", version, err)
 		}
 		folia, err := normalizeOptionalBridgeHashes0144(policy.FoliaSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge folia release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Folia %s: %w", version, err)
 		}
 		fabric, err := normalizeOptionalBridgeHashes0144(policy.FabricSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge fabric release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Fabric %s: %w", version, err)
 		}
 		forge, err := normalizeOptionalBridgeHashes0144(policy.ForgeSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge forge release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Forge %s: %w", version, err)
 		}
 		neoforge, err := normalizeOptionalBridgeHashes0144(policy.NeoForgeSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge neoforge release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge NeoForge %s: %w", version, err)
 		}
 		quilt, err := normalizeOptionalBridgeHashes0144(policy.QuiltSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge quilt release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Quilt %s: %w", version, err)
 		}
 		sponge, err := normalizeOptionalBridgeHashes0144(policy.SpongeSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge sponge release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Sponge %s: %w", version, err)
 		}
 		vanilla, err := normalizeOptionalBridgeHashes0144(policy.VanillaSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge vanilla release %s: %w", version, err)
+			return nil, fmt.Errorf("Релиз ServerBridge Vanilla %s: %w", version, err)
 		}
 		policy.VelocitySHA256 = velocity
 		policy.BungeeCordSHA256 = bungeecord

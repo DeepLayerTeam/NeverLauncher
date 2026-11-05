@@ -53,8 +53,8 @@ impl Drop for ActiveGuard {
 }
 
 async fn normalized(root: &Path) -> Result<PathBuf, String> {
-    fs::create_dir_all(root).await.map_err(|e| format!("create install root: {e}"))?;
-    let resolved = fs::canonicalize(root).await.map_err(|e| format!("resolve install root: {e}"))?;
+    fs::create_dir_all(root).await.map_err(|e| format!("Создание корня установки: {e}"))?;
+    let resolved = fs::canonicalize(root).await.map_err(|e| format!("Определение корня установки: {e}"))?;
     file_ownership::ensure_no_symlinks(&resolved, &resolved.join(".launcher"))?;
     Ok(resolved)
 }
@@ -85,9 +85,9 @@ async fn read(root: &Path) -> Option<SavedJob> {
 
 async fn write(root: &Path, job: &SavedJob) -> Result<(), String> {
     let dir = root.join(".launcher");
-    fs::create_dir_all(&dir).await.map_err(|e| format!("create journal directory: {e}"))?;
+    fs::create_dir_all(&dir).await.map_err(|e| format!("Создание каталога журнала: {e}"))?;
     crate::file_ownership::ensure_no_symlinks(root, &dir)?;
-    let bytes = serde_json::to_vec(job).map_err(|e| format!("serialize job: {e}"))?;
+    let bytes = serde_json::to_vec(job).map_err(|e| format!("Сериализация задания: {e}"))?;
     if bytes.len() as u64 > MAX_JOURNAL_BYTES { return Err("Журнал загрузок превышает допустимый размер".into()); }
     let target = journal_path(root, (job.generation % 2) as usize);
     let tmp = dir.join(format!("download-job-{:016x}.tmp", rand::random::<u64>()));
@@ -204,7 +204,7 @@ pub async fn pending(root: &Path, expected_pinned_key: &str) -> Result<Option<Pe
 pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<ProgressSink>) -> Result<DownloadResult, String> {
     let root = normalized(root).await?;
     let (_guard, rx) = register(&root)?;
-    let mut job = read(&root).await.ok_or("no durable download job to resume")?;
+    let mut job = read(&root).await.ok_or("Нет сохранённого задания загрузки для возобновления")?;
     if expected_pinned_key.trim().is_empty() || !job.pinned_public_key.eq_ignore_ascii_case(expected_pinned_key.trim()) {
         return Err("Сохранённый публичный ключ загрузок отличается от доверенного ключа, закреплённого в Desktop".into());
     }
@@ -234,7 +234,7 @@ pub async fn control(root: &Path, action: &str) -> Result<(), String> {
     if action == "cancel" {
         erase(&root).await;
     } else {
-        let mut job = read(&root).await.ok_or("no durable job to pause")?;
+        let mut job = read(&root).await.ok_or("Нет сохранённого задания для приостановки")?;
         job.generation += 1;
         job.status = "paused".into();
         write(&root, &job).await?;

@@ -105,7 +105,7 @@ func LoadMappings(data []byte) (map[string]string, error) {
 		return nil, err
 	}
 	if rows == nil || len(rows) > 100000 {
-		return nil, errors.New("expected non-null mapping array with at most 100000 entries")
+		return nil, errors.New("Ожидался непустой массив сопоставлений без null, максимум 100000 записей")
 	}
 	result := make(map[string]string, len(rows))
 	reverse := make(map[string]string, len(rows))
@@ -119,10 +119,10 @@ func LoadMappings(data []byte) (map[string]string, error) {
 			return nil, err
 		}
 		if old, ok := result[from]; ok && old != to {
-			return nil, fmt.Errorf("ambiguous mapping for %s", from)
+			return nil, fmt.Errorf("Неоднозначное сопоставление для %s", from)
 		}
 		if prior, exists := reverse[to]; exists && prior != from {
-			return nil, fmt.Errorf("distinct source UUIDs %s and %s map to the same target UUID", prior, from)
+			return nil, fmt.Errorf("Разные исходные UUID %s и %s соответствуют одному целевому UUID", prior, from)
 		}
 		result[from] = to
 		reverse[to] = from
@@ -136,10 +136,10 @@ func LoadJSON(data []byte) ([]SourceRow, error) {
 	}
 	var rows []SourceRow
 	if err := json.Unmarshal(data, &rows); err != nil {
-		return nil, fmt.Errorf("expected TextureProvider textures JSON array: %w", err)
+		return nil, fmt.Errorf("Ожидался JSON-массив текстур TextureProvider: %w", err)
 	}
 	if rows == nil || len(rows) > 100000 {
-		return nil, errors.New("expected non-null TextureProvider array with at most 100000 records")
+		return nil, errors.New("Ожидался массив TextureProvider без null, максимум 100000 записей")
 	}
 	return rows, nil
 }
@@ -172,7 +172,7 @@ func ValidateObjectKey(key string) error {
 	}
 	for _, v := range strings.Split(key, "/") {
 		if v == "" || v == "." || v == ".." {
-			return errors.New("path traversal or empty component in object key")
+			return errors.New("В ключе объекта обнаружен выход за пределы каталога либо пустой компонент")
 		}
 	}
 	return nil
@@ -197,7 +197,7 @@ func RenderKey(template, kind, hash string) (string, error) {
 func VerifySourceHash(hash string, b []byte) error {
 	hash = strings.ToLower(strings.TrimSpace(hash))
 	if !shaHex.MatchString(hash) {
-		return errors.New("unrecognized TextureProvider digest format (expected SHA-1 or SHA-256)")
+		return errors.New("Неизвестный формат контрольной суммы TextureProvider (ожидался SHA-1 или SHA-256)")
 	}
 	var sum string
 	if len(hash) == 40 {
@@ -292,14 +292,14 @@ func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error 
 	for source, target := range mapping {
 		from, err := CanonicalUUID(source)
 		if err != nil || from != source {
-			return errors.New("mapping contains a noncanonical source UUID")
+			return errors.New("Сопоставление содержит исходный UUID в неканоническом формате")
 		}
 		to, err := CanonicalUUID(target)
 		if err != nil || to != target {
-			return errors.New("mapping contains a noncanonical target UUID")
+			return errors.New("Сопоставление содержит целевой UUID в неканоническом формате")
 		}
 		if prev, ok := reverse[to]; ok && prev != from {
-			return fmt.Errorf("ambiguous target UUID %s from %s and %s", to, prev, from)
+			return fmt.Errorf("Неоднозначный целевой UUID %s для %s и %s", to, prev, from)
 		}
 		reverse[to] = from
 	}
@@ -318,11 +318,11 @@ func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error 
 			to = mapped
 		}
 		if prev, ok := reverse[to]; ok && prev != from {
-			return fmt.Errorf("source UUID %s and %s target the same Never UUID %s", prev, from, to)
+			return fmt.Errorf("Исходные UUID %s и %s указывают на один UUID Never %s", prev, from, to)
 		}
 		reverse[to] = from
 		if prev, ok := seenSource[to]; ok && prev != from {
-			return fmt.Errorf("source UUID %s and %s target the same Never UUID %s", prev, from, to)
+			return fmt.Errorf("Исходные UUID %s и %s указывают на один UUID Never %s", prev, from, to)
 		}
 		seenSource[to] = from
 		kind := strings.ToLower(row.TextureType)
@@ -331,7 +331,7 @@ func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error 
 		}
 		key := to + "/" + kind
 		if old, ok := selections[key]; ok && old != row.ID {
-			return fmt.Errorf("multiple %s records (%s and %s) for target UUID %s; select one explicitly before import", kind, old, row.ID, to)
+			return fmt.Errorf("Несколько записей %s (%s и %s) для целевого UUID %s; явно выберите одну до импорта", kind, old, row.ID, to)
 		}
 		selections[key] = row.ID
 	}
@@ -368,7 +368,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 		return fail("unmatched", errors.New("«official or non-local UUID»: запрещено «be imported»"))
 	}
 	if canonical, err := CanonicalUUID(profile.UUID); err != nil || canonical != target {
-		return fail("unmatched", errors.New("target profile UUID is not canonical"))
+		return fail("unmatched", errors.New("UUID целевого профиля имеет неканонический формат"))
 	}
 	imported, rev, exists, err := r.Database.GravitImportState02510(ctx, r.SourceID, row.ID, profile, rec.Kind)
 	if err != nil {
@@ -379,7 +379,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 		return rec
 	}
 	if exists && !r.Replace {
-		return fail("skipped-existing", errors.New("local texture selection exists; use explicit --replace to overwrite"))
+		return fail("skipped-existing", errors.New("Локальный выбор текстуры уже существует; для перезаписи явно укажите --replace"))
 	}
 	modelName := "classic"
 	if len(row.Metadata) > 0 && string(row.Metadata) != "null" {
@@ -394,7 +394,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 			}
 			if strings.EqualFold(name, "slim") {
 				if rec.Kind == "cape" {
-					return fail("quarantined", errors.New("cape cannot select a slim model"))
+					return fail("quarantined", errors.New("Для плаща нельзя выбрать модель slim"))
 				}
 				modelName = "slim"
 			} else if name != "" && !strings.EqualFold(name, "default") && !strings.EqualFold(name, "classic") {
@@ -420,7 +420,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	// Источники читаются из локального корня либо заранее настроенного S3.
 	body, err := r.Source.Open(ctx, key)
 	if err != nil {
-		return fail("quarantined", fmt.Errorf("missing/corrupt source object: %w", err))
+		return fail("quarantined", fmt.Errorf("Исходный объект отсутствует или повреждён: %w", err))
 	}
 	payload, readErr := io.ReadAll(io.LimitReader(body, texturepng.MaxEncodedBytes+1))
 	closeErr := body.Close()
@@ -431,7 +431,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 		return fail("quarantined", closeErr)
 	}
 	if len(payload) > texturepng.MaxEncodedBytes {
-		return fail("quarantined", errors.New("source image exceeds 4 MiB"))
+		return fail("quarantined", errors.New("Исходное изображение превышает 4 МиБ"))
 	}
 	if err = VerifySourceHash(hash, payload); err != nil {
 		return fail("quarantined", err)
@@ -495,7 +495,7 @@ func (s LocalSource) Open(ctx context.Context, key string) (io.ReadCloser, error
 		return nil, err
 	}
 	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return nil, errors.New("source object escapes local root")
+		return nil, errors.New("Исходный объект выходит за пределы локального корневого каталога")
 	}
 	if err = ctx.Err(); err != nil {
 		return nil, err

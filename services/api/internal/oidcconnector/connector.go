@@ -62,14 +62,14 @@ func NewWithIssuerPolicy(ctx context.Context, input Config, policy IssuerPolicy)
 	}
 	client, transport, err := newHTTPClient(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("OIDC connector %q transport: %w", cfg.ID, err)
+		return nil, fmt.Errorf("Транспорт OIDC-коннектора %q: %w", cfg.ID, err)
 	}
 	c := &Connector{cfg: cfg, client: client, transport: transport, issuerPolicy: policy}
 	refreshCtx, cancel := context.WithTimeout(ctx, cfg.RequestTimeoutValue)
 	defer cancel()
 	if err := c.refreshMetadata(refreshCtx); err != nil {
 		c.Close()
-		return nil, fmt.Errorf("OIDC connector %q discovery: %w", cfg.ID, err)
+		return nil, fmt.Errorf("Обнаружение OIDC-коннектора %q: %w", cfg.ID, err)
 	}
 	return c, nil
 }
@@ -311,7 +311,7 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 		}
 	}
 	if len(doc.TokenEndpointAuthMethodsSupported) > 0 && !contains(doc.TokenEndpointAuthMethodsSupported, c.cfg.TokenEndpointAuthMethod) {
-		return fmt.Errorf("provider does not advertise token endpoint auth method %q", c.cfg.TokenEndpointAuthMethod)
+		return fmt.Errorf("Провайдер не объявляет способ авторизации эндпоинта токенов %q", c.cfg.TokenEndpointAuthMethod)
 	}
 	if len(doc.IDTokenSigningAlgs) > 0 {
 		ok := false
@@ -322,7 +322,7 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 			}
 		}
 		if !ok {
-			return fmt.Errorf("provider and connector have no common ID token signing algorithm")
+			return fmt.Errorf("У провайдера и коннектора нет общего алгоритма подписи ID-токенов")
 		}
 	}
 	jwksReq, err := http.NewRequestWithContext(ctx, http.MethodGet, doc.JWKSURI, nil)
@@ -332,13 +332,13 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 	jwksReq.Header.Set("Accept", "application/json")
 	var set jwkSet
 	if err := c.doJSON(jwksReq, &set); err != nil {
-		return fmt.Errorf("fetch JWKS: %w", err)
+		return fmt.Errorf("Загрузка JWKS: %w", err)
 	}
 	if len(set.Keys) == 0 {
-		return errors.New("JWKS contains no keys")
+		return errors.New("JWKS не содержит ключей")
 	}
 	if len(set.Keys) > 128 {
-		return errors.New("JWKS contains too many keys")
+		return errors.New("JWKS содержит слишком много ключей")
 	}
 	if err := validateJWKS(set.Keys, c.cfg); err != nil {
 		return err
@@ -425,7 +425,7 @@ func (c *Connector) validateDiscoveredURL(name, raw string) error {
 		return fmt.Errorf("Для «discovery» %s требуется: абсолютный URL HTTPS", name)
 	}
 	if !hostAllowed(strings.ToLower(u.Hostname()), c.cfg.HostAllowlist) {
-		return fmt.Errorf("discovery %s host %q is not in hostAllowlist", name, u.Hostname())
+		return fmt.Errorf("Хост обнаружения %s %q отсутствует в hostAllowlist", name, u.Hostname())
 	}
 	return nil
 }
@@ -490,14 +490,14 @@ func claimStrings(claims map[string]any, path string) ([]string, error) {
 		for _, raw := range x {
 			s, ok := raw.(string)
 			if !ok {
-				return nil, errors.New("array contains non-string value")
+				return nil, errors.New("Массив содержит значение, не являющееся строкой")
 			}
 			s = strings.TrimSpace(s)
 			if s == "" {
 				continue
 			}
 			if len(s) > 256 {
-				return nil, errors.New("value too long")
+				return nil, errors.New("Слишком длинное значение")
 			}
 			if _, ok := seen[s]; !ok {
 				seen[s] = struct{}{}
@@ -506,7 +506,7 @@ func claimStrings(claims map[string]any, path string) ([]string, error) {
 		}
 		return out, nil
 	default:
-		return nil, errors.New("claim is not string or string array")
+		return nil, errors.New("Утверждение токена не является строкой или массивом строк")
 	}
 }
 func cloneMap(input map[string]any) map[string]any {

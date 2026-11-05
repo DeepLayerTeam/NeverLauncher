@@ -38,13 +38,13 @@ func acquireCompatibilityMaterializationLock(clientDir string) (*compatibilityMa
 	}
 	root, err := filepath.Abs(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("clientDir abs: %w", err)
+		return nil, fmt.Errorf("Получение абсолютного пути clientDir: %w", err)
 	}
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		return nil, fmt.Errorf("clientDir create: %w", err)
+		return nil, fmt.Errorf("Создание clientDir: %w", err)
 	}
 	if info, err := os.Lstat(root); err != nil {
-		return nil, fmt.Errorf("clientDir stat: %w", err)
+		return nil, fmt.Errorf("Чтение сведений о clientDir: %w", err)
 	} else if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return nil, errors.New("clientDir должен быть реальным каталогом, а не symlink")
 	}
@@ -53,7 +53,7 @@ func acquireCompatibilityMaterializationLock(clientDir string) (*compatibilityMa
 		return nil, err
 	}
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
-		return nil, fmt.Errorf("materialization state dir: %w", err)
+		return nil, fmt.Errorf("Каталог состояния подготовки файлов: %w", err)
 	}
 	lockPath := filepath.Join(stateDir, "materialize.lock")
 	deadline := time.Now().Add(compatibilityLockWait)
@@ -64,16 +64,16 @@ func acquireCompatibilityMaterializationLock(clientDir string) (*compatibilityMa
 			if syncErr := file.Sync(); syncErr != nil {
 				_ = file.Close()
 				_ = os.Remove(lockPath)
-				return nil, fmt.Errorf("materialization lock fsync: %w", syncErr)
+				return nil, fmt.Errorf("Сброс блокировки подготовки файлов на диск: %w", syncErr)
 			}
 			if closeErr := file.Close(); closeErr != nil {
 				_ = os.Remove(lockPath)
-				return nil, fmt.Errorf("materialization lock close: %w", closeErr)
+				return nil, fmt.Errorf("Закрытие блокировки подготовки файлов: %w", closeErr)
 			}
 			return &compatibilityMaterializationLock{path: lockPath}, nil
 		}
 		if !errors.Is(err, os.ErrExist) {
-			return nil, fmt.Errorf("materialization lock: %w", err)
+			return nil, fmt.Errorf("Блокировка подготовки файлов: %w", err)
 		}
 		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > compatibilityLockStale {
 			stale := lockPath + ".stale-" + strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -99,7 +99,7 @@ func secureClientDestination(root, relative string) (string, error) {
 	}
 	rootInfo, err := os.Lstat(absoluteRoot)
 	if err != nil {
-		return "", fmt.Errorf("client root stat: %w", err)
+		return "", fmt.Errorf("Чтение сведений о корне клиента: %w", err)
 	}
 	if rootInfo.Mode()&os.ModeSymlink != 0 || !rootInfo.IsDir() {
 		return "", errors.New("client root должен быть реальным каталогом")
@@ -114,7 +114,7 @@ func secureClientDestination(root, relative string) (string, error) {
 				// Отсутствующий суффикс безопасен: он будет создан внутри уже проверенного префикса.
 				break
 			}
-			return "", fmt.Errorf("client path stat %s: %w", current, statErr)
+			return "", fmt.Errorf("Чтение сведений о пути клиента %s: %w", current, statErr)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
 			return "", fmt.Errorf("client path содержит symlink: %s", filepath.Join(parts[:i+1]...))
@@ -193,7 +193,7 @@ func compatibilityGETWithHeaders(ctx context.Context, client *http.Client, rawUR
 			return nil, err
 		}
 	}
-	return nil, fmt.Errorf("upstream GET failed after %d attempts: %w", compatibilityHTTPAttempts, lastErr)
+	return nil, fmt.Errorf("Запрос GET к вышестоящему серверу не выполнен после %d попыток: %w", compatibilityHTTPAttempts, lastErr)
 }
 
 func retryableCompatibilityStatus(status int) bool {
@@ -240,22 +240,22 @@ func replaceDirectoryAtomicPortable(staging, dst string) error {
 		return errors.New("atomic directory replace требует staging/destination")
 	}
 	if info, err := os.Lstat(staging); err != nil {
-		return fmt.Errorf("atomic directory staging: %w", err)
+		return fmt.Errorf("Атомарная подготовка каталога: %w", err)
 	} else if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return errors.New("atomic directory staging должен быть реальным каталогом")
 	}
 	if _, err := os.Lstat(dst); errors.Is(err, os.ErrNotExist) {
 		return os.Rename(staging, dst)
 	} else if err != nil {
-		return fmt.Errorf("atomic directory destination: %w", err)
+		return fmt.Errorf("Целевой каталог атомарного обновления: %w", err)
 	}
 	backup := dst + ".nlreplace-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	if err := os.Rename(dst, backup); err != nil {
-		return fmt.Errorf("atomic directory backup %s: %w", dst, err)
+		return fmt.Errorf("Резервная копия каталога при атомарном обновлении %s: %w", dst, err)
 	}
 	if err := os.Rename(staging, dst); err != nil {
 		_ = os.Rename(backup, dst)
-		return fmt.Errorf("atomic directory publish %s: %w", dst, err)
+		return fmt.Errorf("Публикация каталога при атомарном обновлении %s: %w", dst, err)
 	}
 	_ = os.RemoveAll(backup)
 	return nil
@@ -277,15 +277,15 @@ func replaceFileAtomicPortable(tmp, dst string) error {
 		return nil
 	}
 	if _, err := os.Lstat(dst); err != nil {
-		return fmt.Errorf("atomic rename %s: %w", dst, err)
+		return fmt.Errorf("Атомарное переименование %s: %w", dst, err)
 	}
 	backup := dst + ".nlreplace-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	if err := os.Rename(dst, backup); err != nil {
-		return fmt.Errorf("atomic replace backup %s: %w", dst, err)
+		return fmt.Errorf("Резервная копия перед атомарной заменой %s: %w", dst, err)
 	}
 	if err := os.Rename(tmp, dst); err != nil {
 		_ = os.Rename(backup, dst)
-		return fmt.Errorf("atomic replace %s: %w", dst, err)
+		return fmt.Errorf("Атомарная замена %s: %w", dst, err)
 	}
 	_ = os.RemoveAll(backup)
 	return nil

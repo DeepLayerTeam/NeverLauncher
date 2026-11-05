@@ -52,7 +52,7 @@ func extensionTargets02010(args []string) ([]string, error) {
 			continue
 		}
 		if !containsString([]string{"backend", "admin", "desktop", "cli"}, value) {
-			return nil, fmt.Errorf("--target contains unsupported target %q", value)
+			return nil, fmt.Errorf("Параметр --target содержит неподдерживаемую цель %q", value)
 		}
 		if !seen[value] {
 			seen[value] = true
@@ -78,7 +78,7 @@ func extensionInit02010(args []string) error {
 	if st, err := os.Stat(out); err == nil && st.IsDir() {
 		entries, _ := os.ReadDir(out)
 		if len(entries) > 0 && !flagBool(args, "--force", false) {
-			return fmt.Errorf("output directory %s is not empty; use --force", out)
+			return fmt.Errorf("Выходной каталог %s не пуст; используйте --force", out)
 		}
 	}
 	if err := os.MkdirAll(out, 0o755); err != nil {
@@ -251,7 +251,7 @@ func extensionBuildCommand02010(args []string) error {
 			continue
 		}
 		if err := buildTarget02010(root, target, sdkRoot); err != nil {
-			return fmt.Errorf("build %s: %w", target.Kind, err)
+			return fmt.Errorf("Сборка %s: %w", target.Kind, err)
 		}
 		built = append(built, target.Kind)
 	}
@@ -268,7 +268,7 @@ func buildTarget02010(root string, target CanonicalExtensionTarget0201, sdkRoot 
 		dir := filepath.Join(root, target.Kind)
 		goMod := filepath.Join(dir, "go.mod")
 		if _, err := os.Stat(goMod); err != nil {
-			return fmt.Errorf("%s source go.mod: %w", target.Kind, err)
+			return fmt.Errorf("Исходный go.mod для %s: %w", target.Kind, err)
 		}
 		out := filepath.Join(root, filepath.FromSlash(target.Entrypoint))
 		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
@@ -369,7 +369,7 @@ func extensionTest02010(args []string) error {
 		}
 		if target.Kind == "backend" || target.Kind == "cli" {
 			if err := runGo02010(filepath.Join(root, target.Kind), sdkRoot, target.Kind, "test", "./..."); err != nil {
-				return fmt.Errorf("go test %s: %w", target.Kind, err)
+				return fmt.Errorf("Тесты Go для %s: %w", target.Kind, err)
 			}
 		}
 	}
@@ -382,10 +382,10 @@ func extensionTest02010(args []string) error {
 	_ = os.Remove(tmpPath)
 	defer os.Remove(tmpPath)
 	if _, err := packExtensionPackage0202(root, tmpPath); err != nil {
-		return fmt.Errorf("package test: %w", err)
+		return fmt.Errorf("Тестирование пакета: %w", err)
 	}
 	if _, err := verifyExtensionPackage0202(tmpPath, "", true); err != nil {
-		return fmt.Errorf("package verify test: %w", err)
+		return fmt.Errorf("Проверка тестового пакета: %w", err)
 	}
 	printJSON(map[string]any{"tested": true, "extensionId": manifest.ID, "version": manifest.Version, "targets": manifest.Targets, "packageVerified": true})
 	return nil
@@ -429,7 +429,7 @@ func newLocalDevHost02010(manifest CanonicalExtensionManifest0201, grants []stri
 			continue
 		}
 		if !requested[g] {
-			return nil, fmt.Errorf("local dev grant %s was not requested by the manifest", g)
+			return nil, fmt.Errorf("Разрешение локальной разработки %s не запрошено манифестом", g)
 		}
 		h.grants[g] = true
 	}
@@ -439,7 +439,7 @@ func newLocalDevHost02010(manifest CanonicalExtensionManifest0201, grants []stri
 			return nil, err
 		}
 		if err := json.Unmarshal(data, &h.fixtures); err != nil {
-			return nil, fmt.Errorf("decode fixtures: %w", err)
+			return nil, fmt.Errorf("Декодирование тестовых данных: %w", err)
 		}
 	}
 	return h, nil
@@ -624,7 +624,7 @@ func extensionDev02010(args []string) error {
 	if raw := strings.TrimSpace(flagValue(args, "--duration", "")); raw != "" {
 		duration, err = time.ParseDuration(raw)
 		if err != nil {
-			return fmt.Errorf("--duration: %w", err)
+			return fmt.Errorf("Параметр --duration: %w", err)
 		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -666,7 +666,7 @@ func extensionDev02010(args []string) error {
 		fmt.Fprintf(os.Stderr, "Extensions dev host: %s target authenticated (%s)\n", targetName, host.url())
 	case <-time.After(10 * time.Second):
 		_ = cmd.Process.Kill()
-		return errors.New("extension did not authenticate to local Host Protocol within 10s")
+		return errors.New("Расширение не авторизовалось в локальном Host Protocol за 10 секунд")
 	case <-ctx.Done():
 		_ = cmd.Process.Kill()
 		return ctx.Err()

@@ -41,12 +41,12 @@ func VerifyGrowth(ctx context.Context, cfg config.Config, plan Plan) (GrowthRepo
 		return r, nil
 	}
 	if err := verifyPostgresGrowth(ctx, cfg.DatabaseDSN); err != nil {
-		return r, fmt.Errorf("PostgreSQL transactional fencing: %w", err)
+		return r, fmt.Errorf("Транзакционная блокировка PostgreSQL: %w", err)
 	}
 	r.PostgreSQL = true
 	if plan.Mode == NetworkHA {
 		if err := verifyRedisGrowth(ctx, cfg.RedisURL); err != nil {
-			return r, fmt.Errorf("Redis distributed lease fencing: %w", err)
+			return r, fmt.Errorf("Распределённая блокировка аренды Redis: %w", err)
 		}
 		r.RedisLease = true
 	}
@@ -55,7 +55,7 @@ func VerifyGrowth(ctx context.Context, cfg config.Config, plan Plan) (GrowthRepo
 			Bucket: cfg.StorageS3Bucket, Region: cfg.StorageS3Region, AccessKey: cfg.StorageS3AccessKey,
 			SecretKey: cfg.StorageS3SecretKey, PathStyle: cfg.StorageS3PathStyle}
 		if err := verifyS3Growth(ctx, s3); err != nil {
-			return r, fmt.Errorf("S3 cross-client read/write/delete: %w", err)
+			return r, fmt.Errorf("Проверка чтения, записи и удаления S3 разными клиентами: %w", err)
 		}
 		r.S3RoundTrip = true
 	} else if plan.Mode == NetworkHA {
@@ -113,7 +113,7 @@ func verifyPostgresGrowth(ctx context.Context, dsn string) error {
 		return err
 	}
 	if concurrent {
-		return errors.New("independent PostgreSQL session bypassed advisory lock")
+		return errors.New("Независимый сеанс PostgreSQL обошёл консультативную блокировку")
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -122,7 +122,7 @@ func verifyPostgresGrowth(ctx context.Context, dsn string) error {
 		return err
 	}
 	if !concurrent {
-		return errors.New("PostgreSQL fencing lock did not release on transaction commit")
+		return errors.New("Блокировка PostgreSQL не снялась при фиксации транзакции")
 	}
 	return nil
 }
@@ -151,7 +151,7 @@ func verifyRedisGrowth(ctx context.Context, rawURL string) (err error) {
 	tokenA, tokenB := "fence-a-"+nonce, "fence-b-"+nonce
 	acquired, err := a.AcquireCommandLease(ctx, serverID, commandID, ownerA, tokenA, 15*time.Second)
 	if err != nil || !acquired {
-		return fmt.Errorf("first Redis lease acquisition: acquired=%t error=%w", acquired, err)
+		return fmt.Errorf("Первая попытка захвата аренды Redis: получена=%t, ошибка=%w", acquired, err)
 	}
 	defer func() {
 		cleanCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -161,28 +161,28 @@ func verifyRedisGrowth(ctx context.Context, rawURL string) (err error) {
 	}()
 	acquired, err = b.AcquireCommandLease(ctx, serverID, commandID, ownerB, tokenB, 15*time.Second)
 	if err != nil || acquired {
-		return fmt.Errorf("second Redis client bypassed lease: acquired=%t error=%w", acquired, err)
+		return fmt.Errorf("Второй клиент Redis обошёл аренду: получена=%t, ошибка=%w", acquired, err)
 	}
 	if err = b.ReleaseCommandLease(ctx, serverID, commandID, ownerB, tokenB); err != nil {
 		return err
 	}
 	valid, err := a.VerifyCommandLease(ctx, serverID, commandID, ownerA, tokenA)
 	if err != nil || !valid {
-		return fmt.Errorf("non-owner removed lease: %v / %w", valid, err)
+		return fmt.Errorf("Сторонний клиент удалил аренду: %v / %w", valid, err)
 	}
 	if err = a.ReleaseCommandLease(ctx, serverID, commandID, ownerA, tokenA); err != nil {
 		return err
 	}
 	acquired, err = b.AcquireCommandLease(ctx, serverID, commandID, ownerB, tokenB, 15*time.Second)
 	if err != nil || !acquired {
-		return fmt.Errorf("lease takeover after release: acquired=%t error=%w", acquired, err)
+		return fmt.Errorf("Перехват аренды после освобождения: получена=%t, ошибка=%w", acquired, err)
 	}
 	if err = a.ReleaseCommandLease(ctx, serverID, commandID, ownerA, tokenA); err != nil {
 		return err
 	}
 	valid, err = b.VerifyCommandLease(ctx, serverID, commandID, ownerB, tokenB)
 	if err != nil || !valid {
-		return fmt.Errorf("stale owner removed new lease: %v / %w", valid, err)
+		return fmt.Errorf("Прежний владелец удалил новую аренду: %v / %w", valid, err)
 	}
 	return nil
 }
@@ -212,7 +212,7 @@ func verifyS3Growth(ctx context.Context, cfg storage.S3Config) (err error) {
 		cleanCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if removeErr := writer.Delete(cleanCtx, projectID, versionID, path); removeErr != nil {
-			err = errors.Join(err, fmt.Errorf("remove S3 probe object: %w", removeErr))
+			err = errors.Join(err, fmt.Errorf("Удаление тестового объекта S3: %w", removeErr))
 		}
 	}()
 	stream, _, err := reader.OpenContext(ctx, projectID, versionID, path)
@@ -234,15 +234,15 @@ func verifyS3Growth(ctx context.Context, cfg storage.S3Config) (err error) {
 		return ctx.Err()
 	}
 	if err = writer.Delete(ctx, projectID, versionID, path); err != nil {
-		return fmt.Errorf("delete S3 probe: %w", err)
+		return fmt.Errorf("Удаление тестового объекта S3: %w", err)
 	}
 	afterDelete, _, readErr := reader.OpenContext(ctx, projectID, versionID, path)
 	if afterDelete != nil {
 		_ = afterDelete.Close()
-		return errors.New("S3 deleted probe remains readable")
+		return errors.New("Удалённый тестовый объект S3 по-прежнему доступен для чтения")
 	}
 	if !errors.Is(readErr, storage.ErrObjectNotFound) {
-		return fmt.Errorf("S3 deleted probe did not return 404: %w", readErr)
+		return fmt.Errorf("Удалённый тестовый объект S3 не вернул HTTP 404: %w", readErr)
 	}
 	return nil
 }

@@ -108,7 +108,7 @@ func columns(ctx context.Context, db *sql.DB, table string) ([]column, error) {
 		return nil, err
 	}
 	if len(cs) == 0 {
-		return nil, fmt.Errorf("%s: table has no columns", table)
+		return nil, fmt.Errorf("Таблица %s не содержит столбцов", table)
 	}
 	return cs, nil
 }
@@ -149,7 +149,7 @@ func requireCoreTables(ts []tableInfo) error {
 	}
 	for _, name := range []string{"projects", "profiles", "profile_revisions", "releases", "channel_heads", "users", "roles", "project_user_roles", "audit_events", "auth_sessions", "refresh_tokens", "refresh_families", "access_tokens", "mfa_totp", "mfa_recovery", "minecraft_profiles", "minecraft_sessions", "bridge_join_tickets", "bridge_nonces", "durable_jobs", "durable_job_attempts", "durable_scope_leases", "durable_outbox", "bridge_nodes", "extension_kv"} {
 		if !m[name] {
-			return fmt.Errorf("SQLite schema 326 is missing mandatory durable table %q", name)
+			return fmt.Errorf("В схеме SQLite 326 отсутствует обязательная таблица постоянного хранения %q", name)
 		}
 	}
 	return nil
@@ -283,15 +283,15 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	}
 	manifest, err := sqlitedurable.VerifyBackup(ctx, backupPath)
 	if err != nil {
-		return report, fmt.Errorf("backup verification: %w", err)
+		return report, fmt.Errorf("Проверка резервной копии: %w", err)
 	}
 	if manifest.SchemaVersion != sqlitecore.SchemaVersion {
-		return report, fmt.Errorf("required SQLite schema %d, got %d", sqlitecore.SchemaVersion, manifest.SchemaVersion)
+		return report, fmt.Errorf("Требуется схема SQLite %d, получено %d", sqlitecore.SchemaVersion, manifest.SchemaVersion)
 	}
 	// Проверить инварианты приложения на изолированной восстановленной копии.
 	// Открыть резервную копию с проверкой контрольной суммы в режиме записи/WAL.
 	if err = verifyRestoredCore(ctx, backupPath); err != nil {
-		return report, fmt.Errorf("SQLite application consistency: %w", err)
+		return report, fmt.Errorf("Проверка согласованности приложения SQLite: %w", err)
 	}
 	report.SnapshotSHA256 = manifest.SHA256
 	report.SQLiteSchema = manifest.SchemaVersion
@@ -301,7 +301,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	}
 	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		if _, e := os.Lstat(abs + suffix); e == nil {
-			return report, fmt.Errorf("snapshot has unsafe %s sidecar", suffix)
+			return report, fmt.Errorf("Снимок содержит небезопасный сопутствующий файл %s", suffix)
 		} else if !os.IsNotExist(e) {
 			return report, e
 		}
@@ -321,7 +321,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, err
 	}
 	if report.SQLiteSchema != sqlitecore.SchemaVersion {
-		return report, errors.New("snapshot schema changed after verification")
+		return report, errors.New("Схема снимка изменилась после проверки")
 	}
 	// Удерживайте одну транзакцию чтения SQLite, исключая изменение между проверкой и использованием.
 	if _, err = src.ExecContext(ctx, "BEGIN"); err != nil {
@@ -337,7 +337,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	}
 	pg, err := pgx.Connect(ctx, postgresDSN)
 	if err != nil {
-		return report, fmt.Errorf("PostgreSQL connection failed (%T; credentials redacted)", err)
+		return report, fmt.Errorf("Ошибка подключения PostgreSQL (%T; учётные данные скрыты)", err)
 	}
 	defer pg.Close(context.Background())
 	tx, err := pg.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
@@ -354,7 +354,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, err
 	}
 	if exists {
-		return report, fmt.Errorf("target schema %s already exists (refusing overwrite)", Schema)
+		return report, fmt.Errorf("Целевая схема %s уже существует (перезапись запрещена)", Schema)
 	}
 	if _, err = tx.Exec(ctx, "CREATE SCHEMA "+quoted(Schema)); err != nil {
 		return report, err
@@ -371,7 +371,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	for _, t := range tableDefs {
 		result, e := copyAndVerify(ctx, src, tx, t)
 		if e != nil {
-			return report, fmt.Errorf("copy %s: %w", t.Name, e)
+			return report, fmt.Errorf("Копирование %s: %w", t.Name, e)
 		}
 		report.Tables = append(report.Tables, result)
 		report.TotalRows += result.Rows
@@ -393,7 +393,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	// Обратный перенос сможет восстановить схему SQLite, индексы, триггеры, значения
 	// и бинарное состояние без потерь при преобразовании типов SQL и DDL.
 	if err = storeSnapshot(ctx, tx, backupPath, manifest); err != nil {
-		return report, fmt.Errorf("store SQLite snapshot: %w", err)
+		return report, fmt.Errorf("Сохранение снимка SQLite: %w", err)
 	}
 	// Схема импорта намеренно защищена от append/UPDATE/DELETE. Рабочий
 	// код должен начать обслуживать авторизацию из этого зеркала совместимости.
@@ -434,7 +434,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, e
 	}
 	if again.SHA256 != manifest.SHA256 {
-		return report, errors.New("source snapshot changed during import")
+		return report, errors.New("Исходный снимок изменился при импорте")
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return report, fmt.Errorf("PostgreSQL commit outcome: требуется «reconciled before retry:» %w", err)
@@ -467,7 +467,7 @@ func copyAndVerify(ctx context.Context, db *sql.DB, tx pgx.Tx, t tableInfo) (Tab
 			return e
 		}
 		if n != int64(len(buffer)) {
-			return errors.New("PostgreSQL COPY wrote fewer rows")
+			return errors.New("PostgreSQL COPY записал меньше строк, чем ожидалось")
 		}
 		buffer = nil
 		return nil
@@ -524,7 +524,7 @@ func verifyPG(ctx context.Context, tx pgx.Tx, t tableInfo, results []TableResult
 		return err
 	}
 	if n != expected.Rows {
-		return fmt.Errorf("%s row count mismatch SQLite %d PG %d", t.Name, expected.Rows, n)
+		return fmt.Errorf("В таблице %s не совпало число строк: SQLite %d, PostgreSQL %d", t.Name, expected.Rows, n)
 	}
 	fields := make([]string, 0, len(t.Columns)+2)
 	for _, c := range t.Columns {
@@ -570,7 +570,7 @@ func verifyPG(ctx context.Context, tx pgx.Tx, t tableInfo, results []TableResult
 		}
 		stored, ok := values[len(values)-1].(string)
 		if !ok || stored != digest {
-			err = fmt.Errorf("%s PG payload mismatch on row %d", t.Name, got)
+			err = fmt.Errorf("В таблице %s содержимое PostgreSQL не совпадает в строке %d", t.Name, got)
 			break
 		}
 		addDigest(h, b)
@@ -641,7 +641,7 @@ func addUniqueIndexes(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInf
 			indexName := fmt.Sprintf("nl_u_%d_%d", ti, ii)
 			_, e = tx.Exec(ctx, "CREATE UNIQUE INDEX "+quoted(indexName)+" ON "+qualified(t.Name)+" ("+strings.Join(names, ",")+")")
 			if e != nil {
-				return fmt.Errorf("unique index %s: %w", item.name, e)
+				return fmt.Errorf("Уникальный индекс %s: %w", item.name, e)
 			}
 		}
 	}
@@ -679,11 +679,11 @@ func addForeignKeys(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInfo)
 		for _, k := range keys {
 			name := fmt.Sprintf("nl_fk_%d_%d", ti, k.id)
 			if len(k.to) == 0 || k.to[0] == `""` {
-				return fmt.Errorf("implicit SQLite FK on %s needs explicit target PK mapping", t.Name)
+				return fmt.Errorf("Для неявного внешнего ключа SQLite в %s требуется явное сопоставление целевого первичного ключа", t.Name)
 			}
 			_, e = tx.Exec(ctx, "ALTER TABLE "+qualified(t.Name)+" ADD CONSTRAINT "+quoted(name)+" FOREIGN KEY ("+strings.Join(k.from, ",")+") REFERENCES "+qualified(k.target)+" ("+strings.Join(k.to, ",")+") DEFERRABLE INITIALLY DEFERRED")
 			if e != nil {
-				return fmt.Errorf("%s FK %d: %w", t.Name, k.id, e)
+				return fmt.Errorf("Внешний ключ %d таблицы %s: %w", t.Name, k.id, e)
 			}
 		}
 	}
@@ -733,7 +733,7 @@ func storeSnapshot(ctx context.Context, tx pgx.Tx, path string, manifest sqlited
 		}
 	}
 	if total != manifest.Bytes || hex.EncodeToString(digest.Sum(nil)) != manifest.SHA256 {
-		return errors.New("source SQLite snapshot changed while transferring")
+		return errors.New("Исходный снимок SQLite изменился при передаче")
 	}
 	return nil
 }

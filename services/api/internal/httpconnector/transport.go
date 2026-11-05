@@ -44,14 +44,14 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 			return nil, nil, fmt.Errorf("Чтение: mTLS CA файл: %w", err)
 		}
 		if !roots.AppendCertsFromPEM(pem) {
-			return nil, nil, errors.New("mTLS CA file contains no valid certificates")
+			return nil, nil, errors.New("Файл центра сертификации mTLS не содержит действительных сертификатов")
 		}
 		tlsConfig.RootCAs = roots
 	}
 	if cfg.MTLS.CertFile != "" {
 		cert, err := tls.LoadX509KeyPair(cfg.MTLS.CertFile, cfg.MTLS.KeyFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load mTLS client certificate: %w", err)
+			return nil, nil, fmt.Errorf("Загрузка клиентского сертификата mTLS: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
@@ -90,11 +90,11 @@ type ssrfSafeDialer struct {
 func (d *ssrfSafeDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP connector invalid dial address: %w", err)
+		return nil, fmt.Errorf("HTTP-коннектор: неверный адрес подключения: %w", err)
 	}
 	normalizedHost := strings.ToLower(strings.TrimSuffix(host, "."))
 	if !hostAllowed(normalizedHost, d.cfg.HostAllowlist) {
-		return nil, fmt.Errorf("HTTP connector SSRF protection rejected host %q", normalizedHost)
+		return nil, fmt.Errorf("Защита HTTP-коннектора от SSRF отклонила хост %q", normalizedHost)
 	}
 
 	ips := []net.IP{}
@@ -103,12 +103,12 @@ func (d *ssrfSafeDialer) DialContext(ctx context.Context, network, address strin
 	} else {
 		resolved, err := d.resolver.LookupIP(ctx, "ip", normalizedHost)
 		if err != nil {
-			return nil, fmt.Errorf("HTTP connector DNS resolution failed for %q: %w", normalizedHost, err)
+			return nil, fmt.Errorf("HTTP-коннектор: не удалось разрешить DNS-имя %q: %w", normalizedHost, err)
 		}
 		ips = resolved
 	}
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("HTTP connector DNS resolution returned no addresses for %q", normalizedHost)
+		return nil, fmt.Errorf("HTTP-коннектор: DNS не вернул адресов для %q", normalizedHost)
 	}
 
 	for _, ip := range ips {
@@ -124,7 +124,7 @@ func (d *ssrfSafeDialer) DialContext(ctx context.Context, network, address strin
 		}
 		lastErr = err
 	}
-	return nil, fmt.Errorf("HTTP connector failed to connect to validated addresses for %q: %w", normalizedHost, lastErr)
+	return nil, fmt.Errorf("HTTP-коннектор: не удалось подключиться к проверенным адресам для %q: %w", normalizedHost, lastErr)
 }
 
 func (d *ssrfSafeDialer) validateIP(ip net.IP) error {
@@ -135,11 +135,11 @@ func (d *ssrfSafeDialer) validateIP(ip net.IP) error {
 	}
 	for _, blocked := range specialUseCIDRs {
 		if blocked.Contains(ip) {
-			return fmt.Errorf("HTTP connector SSRF protection rejected special-use address %s", ip)
+			return fmt.Errorf("Защита HTTP-коннектора от SSRF отклонила адрес специального назначения %s", ip)
 		}
 	}
 	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return fmt.Errorf("HTTP connector SSRF protection rejected non-public address %s", ip)
+		return fmt.Errorf("Защита HTTP-коннектора от SSRF отклонила непубличный адрес %s", ip)
 	}
 	return nil
 }

@@ -40,12 +40,12 @@ fn is_executable(name: &str) -> bool {
 }
 
 fn digest_file(root: &Path, candidate: &Path) -> Result<String, String> {
-    let rel = candidate.strip_prefix(root).map_err(|_| "live Guard file escaped installation root")?;
+    let rel = candidate.strip_prefix(root).map_err(|_| "Файл работающего Guard вышел за пределы корня установки")?;
     let mut path = root.to_path_buf();
     for component in rel.components() {
         let Component::Normal(name) = component else {return Err("Небезопасный путь к файлу Runtime при активном Guard".into())};
         path.push(name);
-        if fs::symlink_metadata(&path).map_err(|e| format!("live Guard file missing {}: {e}", path.display()))?.file_type().is_symlink() {
+        if fs::symlink_metadata(&path).map_err(|e| format!("Файл работающего Guard отсутствует {}: {e}", path.display()))?.file_type().is_symlink() {
             return Err(format!("Символическая ссылка в пути к исполняемому файлу при активном Guard: {}", path.display()));
         }
     }
@@ -144,7 +144,7 @@ impl LiveGameGuard0506 {
 
     #[cfg(target_os = "linux")]
     pub async fn verify_linux_daemon(&self) -> Result<(),String> {
-        self.linux_daemon.as_ref().ok_or("Linux Guard daemon not bound")?.ping_running().await
+        self.linux_daemon.as_ref().ok_or("Демон Linux Guard не привязан")?.ping_running().await
     }
 
     #[cfg(target_os = "macos")]
@@ -163,7 +163,7 @@ impl LiveGameGuard0506 {
 
     #[cfg(target_os = "macos")]
     pub async fn verify_macos_daemon(&self) -> Result<(), String> {
-        self.macos_daemon.as_ref().ok_or("macOS Guard daemon not bound")?.ping_running().await
+        self.macos_daemon.as_ref().ok_or("Демон macOS Guard не привязан")?.ping_running().await
     }
 
     /// Вызывается в блокирующем обработчике; хеширование никогда не выполняется
@@ -213,7 +213,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         if wait_for.is_zero() {
             #[cfg(target_os = "macos")]
             if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
-            child.kill().await.map_err(|e|format!("runtime timeout kill: {e}"))?;
+            child.kill().await.map_err(|e|format!("Принудительное завершение Runtime по тайм-ауту: {e}"))?;
             let _=child.wait().await;
             return Ok(ProtectedExit0506{status:None,timed_out:true,violation:None});
         }

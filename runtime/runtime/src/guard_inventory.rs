@@ -137,19 +137,19 @@ pub async fn collect_guard_inventory_0501(
             let authenticated = status.authenticated && status.secure_pipe_acl &&
                 status.lifetime_job_enforced && status.process_policy_enforced && status.hardening_enforced;
             checks.push(check("guard.authenticated-ipc", if authenticated { "PASS" } else { "BLOCKED" },
-                format!("Guard PID {}; authenticated={}, processPolicy={}, hardening={}, boundToParent={}",
+                format!("PID Guard {}; авторизован={}, политика процесса={}, усиленная защита={}, привязка к родителю={}",
                     status.pid, status.authenticated, status.process_policy_enforced, status.hardening_enforced, status.lifetime_job_enforced)));
             checks.push(check("guard.release-package", if status.package_manifest_verified { "PASS" } else { "BLOCKED" },
                 if status.package_manifest_verified { "Release package manifest verified" } else { "Release package verification not demonstrated (debug or unverified package)" }));
             match supervisor.process_policy().await {
                 Ok(policy) if policy.enforced && policy.pid == status.pid =>
-                    checks.push(check("guard.process-policy", "PASS", format!("Guard enforced {} on PID {}", policy.schema, policy.pid))),
+                    checks.push(check("guard.process-policy", "PASS", format!("Guard применил {} к PID {}", policy.schema, policy.pid))),
                 Ok(_) => checks.push(check("guard.process-policy", "BLOCKED", "Policy absent, unenforced or PID mismatch")),
                 Err(err) => checks.push(check("guard.process-policy", "BLOCKED", err)),
             }
             match supervisor.integrity_evidence().await {
                 Ok(evidence) if evidence.guard.pid == status.pid && evidence.boundary.parent_matches =>
-                    checks.push(check("guard.integrity-evidence", "PASS", format!("Validated {} for PID {}", evidence.schema, evidence.guard.pid))),
+                    checks.push(check("guard.integrity-evidence", "PASS", format!("Проверено {} для PID {}", evidence.schema, evidence.guard.pid))),
                 Ok(_) => checks.push(check("guard.integrity-evidence", "BLOCKED", "Integrity evidence PID or process boundary mismatch")),
                 Err(err) => checks.push(check("guard.integrity-evidence", "BLOCKED", err)),
             }
@@ -165,7 +165,7 @@ pub async fn collect_guard_inventory_0501(
         }
     }
     if let Err(err) = supervisor.shutdown().await {
-        checks.push(check("guard.shutdown", "BLOCKED", format!("Guard could not stop cleanly: {err}")));
+        checks.push(check("guard.shutdown", "BLOCKED", format!("Guard не удалось корректно остановить: {err}")));
     }
     // Для этого требуется НАСТОЯЩИЙ процесс Minecraft и сертифицированный нативный исполнитель.
     // Локальный список никогда не повышает статус до PASS только из-за наличия библиотек.

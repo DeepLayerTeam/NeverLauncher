@@ -53,7 +53,7 @@ require(
         "stabilizeTerminalPayloads01510",
         "migrateUpdaterState01510",
         "runMigrationStabilizationSelfTest01510",
-        "same-version release manifest equivocation was not rejected",
+        "Противоречивые манифесты релиза одной версии не были отклонены",
     ],
     "0.15.10 stabilization core",
 )

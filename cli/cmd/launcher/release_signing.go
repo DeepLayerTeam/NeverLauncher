@@ -42,23 +42,23 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	}
 	privateKey, err := loadEd25519PrivateKey(privateKeyPath)
 	if err != nil {
-		return fmt.Errorf("release signing key: %w", err)
+		return fmt.Errorf("Ключ подписи релиза: %w", err)
 	}
 	bundleVersion, versionErr := releaseBundleVersion(dir)
 	if versionErr != nil {
-		return fmt.Errorf("release BOM gate: %w", versionErr)
+		return fmt.Errorf("Проверка BOM релиза: %w", versionErr)
 	}
 	if err := verifyReleaseBOM03214(dir, bundleVersion); err != nil {
-		return fmt.Errorf("refusing to sign inconsistent release BOM: %w", err)
+		return fmt.Errorf("Подпись отклонена: BOM релиза не согласован: %w", err)
 	}
 	if err := verifyReleaseBOMBinding03214(dir, bundleVersion); err != nil {
-		return fmt.Errorf("refusing to sign unbound release BOM: %w", err)
+		return fmt.Errorf("Подпись отклонена: BOM релиза не привязан к исходникам: %w", err)
 	}
 	if err := verifyDistributionSupplyChain04511(dir, bundleVersion); err != nil {
-		return fmt.Errorf("refusing to sign inconsistent distribution: %w", err)
+		return fmt.Errorf("Подпись отклонена: состав дистрибутива не согласован: %w", err)
 	}
 	if err := verifyOperationsGA0460(dir, bundleVersion, privateKey.Public().(ed25519.PublicKey)); err != nil {
-		return fmt.Errorf("refusing to sign unapproved operational GA: %w", err)
+		return fmt.Errorf("Подпись отклонена: эксплуатационная приёмка GA не одобрена: %w", err)
 	}
 	if singleNodeGARequired0330(bundleVersion) {
 		raw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
@@ -72,7 +72,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return err
 		}
 		if err := verifySingleNodeGABundle0330(dir, bundleVersion, m.SourceCommit, ""); err != nil {
-			return fmt.Errorf("refusing GA signature without independent certification: %w", err)
+			return fmt.Errorf("Подпись GA отклонена: нет независимой сертификации: %w", err)
 		}
 		pubPath := os.Getenv("LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE")
 		gaKey, err := loadEd25519PublicKey(pubPath)
@@ -97,7 +97,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return err
 		}
 		if err := verifyGATargets0361(dir, bundleVersion, m.SourceCommit, privateKey.Public().(ed25519.PublicKey)); err != nil {
-			return fmt.Errorf("refusing GA release signature: %w", err)
+			return fmt.Errorf("Подпись релиза GA отклонена: %w", err)
 		}
 	}
 	if rehearsalRequired0365(bundleVersion) {
@@ -112,7 +112,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return err
 		}
 		if err := verifyRehearsal0365(dir, bundleVersion, manifest.SourceCommit); err != nil {
-			return fmt.Errorf("refusing GA release signature without valid production rehearsal: %w", err)
+			return fmt.Errorf("Подпись релиза GA отклонена: нет действительной производственной проверки: %w", err)
 		}
 	}
 	if bundleVersion, err := releaseBundleVersion(dir); err == nil && releaseVerificationV2Required0158(bundleVersion) {
@@ -161,7 +161,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 	}
 	publicKey, err := loadEd25519PublicKey(publicKeyPath)
 	if err != nil {
-		return fmt.Errorf("release verification key: %w", err)
+		return fmt.Errorf("Ключ проверки подписи релиза: %w", err)
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {
@@ -195,7 +195,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 		return errors.New("Ed25519 verification failed для SHA256SUMS")
 	}
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), publicKey); err != nil {
-		return fmt.Errorf("SLSA provenance attestation: %w", err)
+		return fmt.Errorf("Подтверждение происхождения SLSA: %w", err)
 	}
 	return nil
 }
@@ -231,7 +231,7 @@ func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
 	case ed25519.PrivateKeySize:
 		canonical := ed25519.NewKeyFromSeed(decoded[:ed25519.SeedSize])
 		if !bytes.Equal(decoded, canonical) {
-			return nil, errors.New("Ed25519 private key has inconsistent public component")
+			return nil, errors.New("Публичная часть закрытого ключа Ed25519 не совпадает")
 		}
 		return canonical, nil
 	default:

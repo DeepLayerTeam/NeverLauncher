@@ -407,13 +407,13 @@ func safeEntrypoint(root, rel string) (string, error) {
 	}
 	clean := filepath.Clean(filepath.FromSlash(rel))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", errors.New("backend extension entrypoint escapes payload")
+		return "", errors.New("Точка входа серверного расширения выходит за пределы содержимого пакета")
 	}
 	full := filepath.Join(root, clean)
 	rootAbs, _ := filepath.Abs(root)
 	fullAbs, _ := filepath.Abs(full)
 	if fullAbs == rootAbs || !strings.HasPrefix(fullAbs, rootAbs+string(os.PathSeparator)) {
-		return "", errors.New("backend extension entrypoint escapes payload")
+		return "", errors.New("Точка входа серверного расширения выходит за пределы содержимого пакета")
 	}
 	// Установщик пакетов отклоняет символические ссылки. Повторно обеспечьте это правило
 	// при запуске, включая каждый родительский каталог внутри доверенного корня данных.
@@ -594,7 +594,7 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 	baseURL := s.baseURL
 	s.mu.Unlock()
 	if baseURL == "" {
-		return s.abortUnstarted0422(st, errors.New("extension host protocol server is not started"))
+		return s.abortUnstarted0422(st, errors.New("Сервер протокола хоста расширений не запущен"))
 	}
 	var cmd *exec.Cmd
 	if st.javaHost {
@@ -780,7 +780,7 @@ func (s *Supervisor) registerTransient0209(st *processState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.baseURL == "" {
-		return errors.New("extension host protocol server is not started")
+		return errors.New("Сервер протокола хоста расширений не запущен")
 	}
 	key := st.key.String()
 	if s.transients[key] == nil {
@@ -995,7 +995,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		if errors.Is(startErr, ErrNoBackendTarget) {
 			return
 		}
-		log.Printf("extension host recovery attempt failed %s: %v", st.key.ExtensionID, startErr)
+		log.Printf("Не удалось восстановить хост расширения %s: %v", st.key.ExtensionID, startErr)
 		s.mu.RLock()
 		failed := s.processes[k]
 		sameEpoch := s.recoveryEpoch[k] == epoch
@@ -1823,14 +1823,14 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		defer reader.Close()
 		if size > s.cfg.MaxStorageReadBytes {
-			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("storage object exceeds capability read limit")}
+			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("Объект хранилища превышает лимит чтения для выданного разрешения")}
 		}
 		data, err := io.ReadAll(io.LimitReader(reader, s.cfg.MaxStorageReadBytes+1))
 		if err != nil {
 			return capabilityResult0205{status: http.StatusInternalServerError, err: err}
 		}
 		if int64(len(data)) > s.cfg.MaxStorageReadBytes {
-			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("storage object exceeds capability read limit")}
+			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("Объект хранилища превышает лимит чтения для выданного разрешения")}
 		}
 		return capabilityResult0205{value: map[string]any{"size": len(data), "contentBase64": base64.StdEncoding.EncodeToString(data)}, status: http.StatusOK}
 	case "secret.get":
@@ -1918,11 +1918,11 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("Секрет не разрешён подписанной политикой изоляции")}
 			}
 			if _, exists := req.Headers["Authorization"]; exists {
-				return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("conflicting authorization header")}
+				return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("Конфликтующие заголовки авторизации")}
 			}
 			for k := range req.Headers {
 				if http.CanonicalHeaderKey(k) == "Authorization" {
-					return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("conflicting authorization header")}
+					return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("Конфликтующие заголовки авторизации")}
 				}
 			}
 			secretAllowed, secretErr := s.permissionAllowed0207(ctx, st, "secrets:read", st.key.ScopeID)
@@ -2053,10 +2053,10 @@ func (s *Supervisor) reconcileManifestSubscriptions0206(ctx context.Context, st 
 	for _, raw := range st.manifest.Hooks {
 		eventType, mode := parseManifestHook0206(raw)
 		if err := s.validateEventPermission0206(st, eventType, mode); err != nil {
-			return fmt.Errorf("manifest hook %q: %w", raw, err)
+			return fmt.Errorf("Обработчик манифеста %q: %w", raw, err)
 		}
 		if _, err := bus.Subscribe(ctx, model.ExtensionEventSubscription{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, EventType: eventType, Mode: mode, Enabled: true}); err != nil {
-			return fmt.Errorf("manifest hook %q: %w", raw, err)
+			return fmt.Errorf("Обработчик манифеста %q: %w", raw, err)
 		}
 	}
 	return nil

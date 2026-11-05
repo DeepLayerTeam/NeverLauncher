@@ -281,7 +281,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		return CLIResult0209{}, ctx.Err()
 	case <-s.ctx.Done():
 		_ = killProcessTree(cmd.Process)
-		return CLIResult0209{}, errors.New("extension host is shutting down")
+		return CLIResult0209{}, errors.New("Хост расширений завершает работу")
 	}
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
@@ -291,7 +291,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			// Краткоживущая команда может закончиться между проверками монитора. Не
 			// сообщайте об успешном исполнении после отзыва полномочий.
 			if err := s.enforceCLITrust04312(ctx, st); err != nil {
-				return CLIResult0209{}, fmt.Errorf("cli extension authority revoked: %w", err)
+				return CLIResult0209{}, fmt.Errorf("Полномочия CLI-расширения отозваны: %w", err)
 			}
 			st.mu.Lock()
 			terminated := st.expectedStop || st.terminationInitiated
@@ -313,7 +313,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			// текущие разрешения и поколение установки во время исполнения кода CLI.
 			if err := s.enforceCLITrust04312(ctx, st); err != nil {
 				_ = killProcessTree(cmd.Process)
-				return CLIResult0209{}, fmt.Errorf("cli extension authority revoked: %w", err)
+				return CLIResult0209{}, fmt.Errorf("Полномочия CLI-расширения отозваны: %w", err)
 			}
 			if cmd.Process != nil {
 				if rss, count, e := processTreeUsage(cmd.Process.Pid); e == nil {
@@ -342,7 +342,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			case <-time.After(s.cfg.StopTimeout):
 				_ = killProcessTree(cmd.Process)
 			}
-			return CLIResult0209{}, errors.New("extension host is shutting down")
+			return CLIResult0209{}, errors.New("Хост расширений завершает работу")
 		}
 	}
 }

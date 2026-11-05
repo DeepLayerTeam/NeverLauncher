@@ -42,7 +42,7 @@ fn user_cache_root() -> Result<PathBuf, String> {
 async fn directory(path: &Path) -> Result<(), String> {
     // Отклоняйте символические ссылки в собственном дереве каталога хранилища, включая
     // конечный каталог объекта. При публикации объекта переход по симлинку запрещён.
-    fs::create_dir_all(path).await.map_err(|e| format!("create content cache {}: {e}", path.display()))?;
+    fs::create_dir_all(path).await.map_err(|e| format!("Создание кэша содержимого {}: {e}", path.display()))?;
     if fs::symlink_metadata(path).await.map_err(|e| e.to_string())?.file_type().is_symlink() {
         return Err(format!("Каталог кэша является символической ссылкой: {}", path.display()));
     }
@@ -58,12 +58,12 @@ async fn existing_verified(path: &Path, file: &ManifestFile) -> Result<bool, Str
     if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() != file.size {
         return Ok(false);
     }
-    let mut reader = fs::File::open(path).await.map_err(|e| format!("open cache object: {e}"))?;
+    let mut reader = fs::File::open(path).await.map_err(|e| format!("Открытие объекта кэша: {e}"))?;
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 65536];
     let mut count = 0u64;
     loop {
-        let n = reader.read(&mut buffer).await.map_err(|e| format!("read cache object: {e}"))?;
+        let n = reader.read(&mut buffer).await.map_err(|e| format!("Чтение объекта кэша: {e}"))?;
         if n == 0 { break; }
         hasher.update(&buffer[..n]);
         count += n as u64;

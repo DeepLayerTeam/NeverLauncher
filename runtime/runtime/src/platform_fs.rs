@@ -9,7 +9,7 @@ const SAFETY_RESERVE: u64 = 16 * 1024 * 1024;
 /// места для возврата старых байтов после частичного переключения, а не только объём
 /// для новых скачанных файлов. Ошибки арифметики приводят к отказу.
 fn check_capacity(available: u64, required: u64) -> Result<(), String> {
-    let need = required.checked_add(SAFETY_RESERVE).ok_or("disk reservation overflow")?;
+    let need = required.checked_add(SAFETY_RESERVE).ok_or("Переполнение при расчёте резерва диска")?;
     if available < need {
         return Err(format!("Недостаточно свободного места для восстанавливаемого обновления клиента: требуется {need} байт, доступно {available} байт"));
     }
@@ -23,7 +23,7 @@ pub(crate) fn require_free_space(root: &Path, bytes: u64) -> Result<(), String> 
 }
 
 pub(crate) fn checked_add(total: u64, additional: u64) -> Result<u64, String> {
-    total.checked_add(additional).ok_or_else(|| "client release disk requirement overflow".into())
+    total.checked_add(additional).ok_or_else(|| "Переполнение при расчёте требуемого места для релиза клиента".into())
 }
 
 /// Не заменяйте незаметно каталог, точку соединения, файл только для чтения,
@@ -51,12 +51,12 @@ pub(crate) fn check_target(root: &Path, target: &Path) -> Result<(), String> {
     }
     match fs::symlink_metadata(target) {
         Ok(meta) if !meta.is_file() || meta.file_type().is_symlink() =>
-            Err(format!("managed destination is not a regular file: {}", target.display())),
+            Err(format!("Целевой объект управляемого файла не является обычным файлом: {}", target.display())),
         Ok(meta) if meta.permissions().readonly() =>
-            Err(format!("managed destination is read-only: {}", target.display())),
+            Err(format!("Целевой объект управляемого файла доступен только для чтения: {}", target.display())),
         Ok(_) => Ok(()),
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(format!("inspect managed destination {}: {e}", target.display())),
+        Err(e) => Err(format!("Проверка целевого управляемого файла {}: {e}", target.display())),
     }
 }
 
@@ -74,7 +74,7 @@ pub(crate) fn preflight_targets(root: &Path, targets: &[PathBuf]) -> Result<(), 
             if cursor.is_dir() {
                 if !cache.contains_key(&cursor) {
                     let mut entries = HashMap::new();
-                    for entry in fs::read_dir(&cursor).map_err(|e| format!("inspect directory casing: {e}"))? {
+                    for entry in fs::read_dir(&cursor).map_err(|e| format!("Проверка регистра имени каталога: {e}"))? {
                         let name = entry.map_err(|e| e.to_string())?.file_name();
                         let lowered = name.to_string_lossy().to_lowercase();
                         if entries.insert(lowered, name.clone()).is_some() {
@@ -99,7 +99,7 @@ fn sync_parent(dest: &Path) -> Result<(), String> {
     #[cfg(unix)] {
         if let Some(parent) = dest.parent() {
             fs::File::open(parent).and_then(|d| d.sync_all())
-                .map_err(|e| format!("persist switched directory {}: {e}", parent.display()))?;
+                .map_err(|e| format!("Сохранение переключённого каталога {}: {e}", parent.display()))?;
         }
     }
     #[cfg(not(unix))] { let _ = dest; }
@@ -114,7 +114,7 @@ pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Re
     file_ownership::ensure_no_symlinks(root, source)?;
     check_target(root, destination)?;
     if !source.starts_with(root) { return Err("Подготовленный файл находится вне корневого каталога клиента".into()); }
-    let meta = fs::symlink_metadata(source).map_err(|e| format!("inspect staged file: {e}"))?;
+    let meta = fs::symlink_metadata(source).map_err(|e| format!("Проверка подготовленного файла: {e}"))?;
     if !meta.is_file() || meta.file_type().is_symlink() {
         return Err(format!("Подготовленный объект не является обычным файлом: {}", source.display()));
     }
@@ -134,16 +134,16 @@ pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Re
                 return Err(format!("Не удалось атомарно заменить файл через Windows ReplaceFile (файл может быть заблокирован, нарушены правила совместного доступа или отказано ACL) {}: {err}", destination.display()));
             }
         } else {
-            fs::rename(source, destination).map_err(|e| format!("install new managed file {}: {e}", destination.display()))?;
+            fs::rename(source, destination).map_err(|e| format!("Установка нового управляемого файла {}: {e}", destination.display()))?;
         }
     }
     #[cfg(not(windows))] {
-        fs::rename(source, destination).map_err(|e| format!("atomically switch managed file {}: {e}", destination.display()))?;
+        fs::rename(source, destination).map_err(|e| format!("Атомарное переключение управляемого файла {}: {e}", destination.display()))?;
     }
     #[cfg(windows)] {
         // После успешного ReplaceFileW сбросьте содержимое и метаданные файла на диск.
         fs::File::open(destination).and_then(|f| f.sync_all())
-            .map_err(|e| format!("persist Windows replaced file: {e}"))?;
+            .map_err(|e| format!("Сохранение заменённого файла Windows: {e}"))?;
     }
     sync_parent(destination)
 }

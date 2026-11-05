@@ -32,9 +32,9 @@ const (
 )
 
 var (
-	ErrClosed        = errors.New("sqlite storage closed")
+	ErrClosed        = errors.New("Хранилище SQLite закрыто")
 	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome: требуется «reconciled before replay»")
-	ErrPoisoned      = errors.New("sqlite transaction state uncertain; close store and reconcile with a fresh connection before serving requests")
+	ErrPoisoned      = errors.New("Состояние транзакции SQLite неопределённо; закройте хранилище и проверьте его через новое подключение до обработки запросов")
 )
 
 // Options требует обычный абсолютный или относительный путь на диске;
@@ -130,7 +130,7 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	s.writer.SetMaxIdleConns(1)
 	s.writer.SetConnMaxLifetime(0)
 	if err = s.writer.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("sqlite writer opening: %w", err)
+		return nil, fmt.Errorf("Открытие подключения SQLite на запись: %w", err)
 	}
 	if err = checkExistingRegularFile(path); err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 	s.readers.SetMaxIdleConns(opt.Readers)
 	s.readers.SetConnMaxLifetime(0)
 	if err = s.readers.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("sqlite reader opening: %w", err)
+		return nil, fmt.Errorf("Открытие подключения SQLite на чтение: %w", err)
 	}
 	if err = s.verifyReaders(ctx, timeout); err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func checkExistingRegularFile(path string) error {
 		return fmt.Errorf("Требуется обычный файл: SQLite база данных")
 	}
 	if f.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("sqlite database %s has unsafe permissions %04o; require 0600", path, f.Mode().Perm())
+		return fmt.Errorf("База SQLite %s имеет небезопасные разрешения %04o; требуется 0600", path, f.Mode().Perm())
 	}
 	return nil
 }
@@ -228,7 +228,7 @@ func verifyDatabaseIntegrity(ctx context.Context, q Executor) error {
 		if err != nil {
 			return err
 		}
-		return errors.New("SQLite integrity_check returned no rows")
+		return errors.New("Проверка integrity_check SQLite не вернула строк")
 	}
 	if err = rows.Scan(&result); err != nil {
 		_ = rows.Close()
@@ -236,11 +236,11 @@ func verifyDatabaseIntegrity(ctx context.Context, q Executor) error {
 	}
 	if result != "ok" {
 		_ = rows.Close()
-		return fmt.Errorf("SQLite integrity_check: %s", result)
+		return fmt.Errorf("Проверка integrity_check SQLite: %s", result)
 	}
 	if rows.Next() {
 		_ = rows.Close()
-		return errors.New("SQLite integrity_check produced unexpected additional rows")
+		return errors.New("Проверка integrity_check SQLite вернула неожиданные дополнительные строки")
 	}
 	err = errors.Join(rows.Err(), rows.Close())
 	if err != nil {
@@ -278,7 +278,7 @@ func checkEngine(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 	if got != EngineVersion {
-		return fmt.Errorf("sqlite engine %q is unsupported (pinned %s, driver %s)", got, EngineVersion, DriverVersion)
+		return fmt.Errorf("Движок SQLite %q не поддерживается (закреплённая версия %s, драйвер %s)", got, EngineVersion, DriverVersion)
 	}
 	var sourceID string
 	if err := conn.QueryRowContext(ctx, "SELECT sqlite_source_id()").Scan(&sourceID); err != nil {
@@ -302,14 +302,14 @@ func checkEngine(ctx context.Context, conn *sql.Conn) error {
 			threadsafe = true
 		}
 		if strings.HasPrefix(v, "OMIT_WAL") || v == "OMIT_FOREIGN_KEY" {
-			return fmt.Errorf("sqlite compiled without mandatory feature: %s", v)
+			return fmt.Errorf("SQLite собран без обязательной возможности: %s", v)
 		}
 	}
 	if err = opts.Err(); err != nil {
 		return err
 	}
 	if !threadsafe {
-		return errors.New("sqlite THREADSAFE compile option not confirmed")
+		return errors.New("Параметр сборки THREADSAFE SQLite не подтверждён")
 	}
 	return nil
 }
@@ -328,7 +328,7 @@ func (s *Store) verifyWriter(ctx context.Context, timeout string) error {
 		return err
 	}
 	if !strings.EqualFold(journal, "wal") {
-		return fmt.Errorf("SQLite WAL mandatory; got %s", journal)
+		return fmt.Errorf("Требуется режим WAL SQLite, получено %s", journal)
 	}
 	for k, v := range map[string]int{"foreign_keys": 1, "synchronous": 2, "trusted_schema": 0, "secure_delete": 1} {
 		if err = pragmaInt(ctx, conn, k, v); err != nil {
@@ -340,7 +340,7 @@ func (s *Store) verifyWriter(ctx context.Context, timeout string) error {
 		return err
 	}
 	if err = verifyDatabaseIntegrity(ctx, conn); err != nil {
-		return fmt.Errorf("sqlite open integrity failure: %w", err)
+		return fmt.Errorf("Ошибка проверки целостности при открытии SQLite: %w", err)
 	}
 	return nil
 }
@@ -384,7 +384,7 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 		return ErrPoisoned
 	}
 	if fn == nil {
-		return errors.New("nil sqlite write callback")
+		return errors.New("Не задан обработчик записи SQLite")
 	}
 	conn, err := s.writer.Conn(ctx)
 	if err != nil {
@@ -392,7 +392,7 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 	}
 	defer conn.Close()
 	if _, err = conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
-		return fmt.Errorf("sqlite BEGIN IMMEDIATE: %w", err)
+		return fmt.Errorf("SQLite BEGIN IMMEDIATE: %w", err)
 	}
 	active := true
 	defer func() {
@@ -408,7 +408,7 @@ func (s *Store) Write(ctx context.Context, fn func(Executor) error) (err error) 
 				// иначе делаем соединение недействительным и аварийно закрываем хранилище.
 				if !errors.Is(rbErr, sql.ErrConnDone) && !errors.Is(rbErr, driver.ErrBadConn) {
 					s.poisoned.Store(true)
-					err = errors.Join(err, fmt.Errorf("sqlite rollback unresolved: %w", rbErr))
+					err = errors.Join(err, fmt.Errorf("Откат SQLite не завершён: %w", rbErr))
 				}
 				_ = conn.Raw(func(any) error { return driver.ErrBadConn })
 			}
@@ -440,7 +440,7 @@ func (s *Store) Read(ctx context.Context, fn func(Executor) error) error {
 		return ErrPoisoned
 	}
 	if fn == nil {
-		return errors.New("nil sqlite read callback")
+		return errors.New("Не задан обработчик чтения SQLite")
 	}
 	conn, err := s.readers.Conn(ctx)
 	if err != nil {
@@ -469,7 +469,7 @@ func (s *Store) Checkpoint(ctx context.Context) (status WALStatus, err error) {
 		return status, err
 	}
 	if status.Busy != 0 || (status.LogFrames >= 0 && status.CheckpointedFrames < status.LogFrames) {
-		return status, fmt.Errorf("sqlite checkpoint incomplete: busy=%d frames=%d checkpointed=%d", status.Busy, status.LogFrames, status.CheckpointedFrames)
+		return status, fmt.Errorf("Контрольная точка SQLite не завершена: занято=%d, кадров=%d, сохранено=%d", status.Busy, status.LogFrames, status.CheckpointedFrames)
 	}
 	return status, nil
 }

@@ -117,7 +117,7 @@ def invoke(
             f"runtime {' '.join(argv[:1])} failed: {completed.stderr[-2400:]}"
         )
     if not success and completed.returncode == 0:
-        raise AssertionError(f"runtime unexpectedly accepted prohibited {argv[:1]}")
+        raise AssertionError(f"Runtime неожиданно принял запрещённую команду {argv[:1]}")
     if completed.returncode:
         return {
             "rejected": True,
@@ -126,7 +126,7 @@ def invoke(
     try:
         response = json.loads(completed.stdout)
     except ValueError as exc:
-        raise AssertionError("runtime did not produce structured JSON") from exc
+        raise AssertionError("Runtime не создал структурированный JSON") from exc
     return response
 
 
@@ -143,7 +143,7 @@ def assert_bytes(root: Path, doc: dict, expected: set[str]) -> None:
             not local.is_file()
             or hashlib.sha256(local.read_bytes()).hexdigest() != record["sha256"]
         ):
-            raise AssertionError(f"selected file missing/corrupted: {record['path']}")
+            raise AssertionError(f"Выбранный файл отсутствует или повреждён: {record['path']}")
 
 
 def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> dict:
@@ -178,7 +178,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     runtime, ["sync-local", *base, "--preset", preset], cache=cache
                 )
                 if result.get("status") != "ready":
-                    raise AssertionError(f"installation did not finish: {result}")
+                    raise AssertionError(f"Установка не завершилась: {result}")
                 return result
 
             install("minimal")
@@ -203,19 +203,19 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 if not any(
                     e["path"] == "/poison/0" for e in server.metrics()["requests"]
                 ):
-                    raise AssertionError("poisoned mirror was not exercised")
+                    raise AssertionError("Недоверенное зеркало не было проверено")
                 if not any(
                     e["path"] == "/files/0" for e in server.metrics()["requests"]
                 ):
-                    raise AssertionError("verified fallback did not run")
+                    raise AssertionError("Проверенный резервный способ не был использован")
                 optimized_requests = len(server.metrics()["requests"])
                 install("quality")
                 assert_bytes(installation, doc, quality)
                 delta = server.metrics()["requests"][optimized_requests:]
                 if not delta or any(item["path"] != "/files/3" for item in delta):
-                    raise AssertionError("unchanged component was fetched again")
+                    raise AssertionError("Неизменённый компонент был загружен повторно")
                 if len(delta) < 2:
-                    raise AssertionError("truncated HTTP body was not retried/resumed")
+                    raise AssertionError("При усечённом HTTP-ответе не было повтора или возобновления загрузки")
                 # Изменение подписанного действия или снимка должно отклоняться ДО любой загрузки.
                 modified = copy.deepcopy(json.loads(signed.read_text()))
                 modified["componentCatalog"]["components"][1]["actions"][2]["args"][
@@ -258,7 +258,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     cache=cache,
                 )
                 if rollback.get("status") != "rolled-back":
-                    raise AssertionError("rollback did not complete")
+                    raise AssertionError("Откат не завершился")
                 assert_bytes(installation, doc, quality)
                 invoke(
                     runtime,
@@ -277,7 +277,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     player.read_text(encoding="utf-8")
                     != "player's file; not in signed manifest"
                 ):
-                    raise AssertionError("player file was mutated during preset switch")
+                    raise AssertionError("Файл игрока изменился при переключении пресета")
                 # Пользовательский файл на новом управляемом пути блокирует операцию ДО загрузки.
                 conflict = installation / "mods/sodium.jar"
                 conflict.write_bytes(b"player-selected replacement")
@@ -335,7 +335,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                 success=False,
             )
             if len(server.metrics()["requests"]) != count:
-                raise AssertionError("incorrect public key reached network")
+                raise AssertionError("Запрос с неверным публичным ключом вышел в сеть")
             # Сама проверка не считается успешным тестом, пока файлы действительно не просмотрены.
             if minimal_requests < 1:
                 raise AssertionError("Отсутствует: «real HTTP payload was transferred»")

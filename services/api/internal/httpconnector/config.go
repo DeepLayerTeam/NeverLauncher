@@ -168,7 +168,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	cfg.HostAllowlist = normalizedHosts
 	if !hostAllowed(host, cfg.HostAllowlist) {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: baseUrl host %q is not in hostAllowlist", cfg.ID, host)
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: хост baseUrl %q отсутствует в hostAllowlist", cfg.ID, host)
 	}
 
 	allowedCIDRs := make([]*net.IPNet, 0, len(cfg.AllowedCIDRs))
@@ -219,7 +219,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.HMAC.KeyID = cfg.ID
 	}
 	if len(cfg.HMAC.KeyID) > 128 {
-		return RuntimeConfig{}, fmt.Errorf("HTTP connector %q: HMAC keyId exceeds 128 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("HTTP-коннектор %q: значение HMAC keyId превышает 128 символов", cfg.ID)
 	}
 	for _, r := range cfg.HMAC.KeyID {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
@@ -297,7 +297,7 @@ func validateProviderID(id string) error {
 		return errors.New("Идентификатор коннектора HTTP обязателен и не может быть local")
 	}
 	if len(id) > 64 {
-		return fmt.Errorf("HTTP connector id %q exceeds 64 characters", id)
+		return fmt.Errorf("Идентификатор HTTP-коннектора %q превышает 64 символа", id)
 	}
 	for _, r := range id {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {

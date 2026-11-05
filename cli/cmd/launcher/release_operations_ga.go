@@ -68,10 +68,10 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	pub, err := loadEd25519PublicKey(keyPath)
 	if err != nil {
-		return fmt.Errorf("operator trust anchor: %w", err)
+		return fmt.Errorf("Корень доверия оператора: %w", err)
 	}
 	if len(releasePublic) == ed25519.PublicKeySize && string(pub) == string(releasePublic) {
-		return errors.New("operator and release signer must use independent Ed25519 keys")
+		return errors.New("Оператор и подписывающая сторона релиза должны использовать независимые ключи Ed25519")
 	}
 	raw, err := operationsGARead0460(dir, operationsGAFile0460, 64*1024)
 	if err != nil {
@@ -112,7 +112,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	issued, err := time.Parse(time.RFC3339Nano, a.IssuedAt)
 	if err != nil || time.Since(issued) > 14*24*time.Hour || time.Until(issued) > 5*time.Minute {
-		return errors.New("operations GA expired or invalid timestamp")
+		return errors.New("Эксплуатационная приёмка GA просрочена либо имеет неверную временную метку")
 	}
 	hex64 := regexp.MustCompile(`^[0-9a-f]{64}$`)
 	if a.Operator == "" || a.SourceMachine == a.RestoreMachine || !hex64.MatchString(a.SourceMachine) || !hex64.MatchString(a.RestoreMachine) || !hex64.MatchString(a.OpenApiV1Sha256) {
@@ -122,7 +122,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	// произвольного отдельного дайджеста API в утверждении недостаточно.
 	bomRaw, err := operationsGARead0460(dir, releaseBOMFile03214, 16*1024*1024)
 	if err != nil {
-		return fmt.Errorf("frozen API BOM: %w", err)
+		return fmt.Errorf("Закреплённый BOM API: %w", err)
 	}
 	var bom struct {
 		Components []struct {
@@ -138,12 +138,12 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 		if c.SourceFile == "schemas/openapi.yaml" {
 			apiEntries++
 			if c.SourceSHA256 != a.OpenApiV1Sha256 {
-				return errors.New("approved API v1 differs from release BOM source bytes")
+				return errors.New("Одобренный API v1 отличается от содержимого исходных данных BOM релиза")
 			}
 		}
 	}
 	if apiEntries != 1 {
-		return errors.New("release BOM must pin exactly one canonical API contract")
+		return errors.New("BOM релиза должен закреплять ровно один основной контракт API")
 	}
 	if a.Scope != "actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO" {
 		return errors.New("Не поддерживается: «operations GA evidence scope»")
@@ -158,7 +158,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 		}
 	}
 	if len(a.Targets) != 6 {
-		return errors.New("operations GA must attest six platform packages")
+		return errors.New("Эксплуатационная приёмка GA должна подтверждать шесть пакетов платформ")
 	}
 	for _, t := range distributionTargets04511(version) {
 		r, ok := a.Targets[t.target]
@@ -190,7 +190,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 			}
 		}
 		if !required || !artifact {
-			return fmt.Errorf("operations GA not bound into signed release manifest: %s", name)
+			return fmt.Errorf("Эксплуатационная приёмка GA не привязана к подписанному манифесту релиза: %s", name)
 		}
 	}
 	return nil

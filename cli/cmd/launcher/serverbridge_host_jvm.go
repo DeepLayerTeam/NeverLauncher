@@ -59,11 +59,11 @@ func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) (
 		}
 		if strings.ContainsAny(item, "*?") {
 			if !allowWildcard || !strings.HasSuffix(item, string(filepath.Separator)+"*") || strings.Count(item, "*") != 1 || strings.Contains(item, "?") {
-				return nil, fmt.Errorf("only trailing directory/* classpath wildcards are supported: %q", item)
+				return nil, fmt.Errorf("В пути классов поддерживаются только завершающие шаблоны directory/*: %q", item)
 			}
 			dir, err := hostResolveDirectory0282(root, strings.TrimSuffix(item, string(filepath.Separator)+"*"))
 			if err != nil {
-				return nil, fmt.Errorf("JVM classpath wildcard %q: %w", item, err)
+				return nil, fmt.Errorf("Шаблон пути классов JVM %q: %w", item, err)
 			}
 			item = dir + string(filepath.Separator) + "*"
 		} else {
@@ -73,7 +73,7 @@ func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) (
 			}
 			info, err := os.Stat(path)
 			if err != nil {
-				return nil, fmt.Errorf("JVM path %q: %w", item, err)
+				return nil, fmt.Errorf("Путь JVM %q: %w", item, err)
 			}
 			if info.IsDir() {
 				item, err = hostResolveDirectory0282(root, path)
@@ -83,11 +83,11 @@ func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) (
 				return nil, fmt.Errorf("Путь JVM %q: требуется «a directory or .jar file»", item)
 			}
 			if err != nil {
-				return nil, fmt.Errorf("JVM path %q: %w", path, err)
+				return nil, fmt.Errorf("Путь JVM %q: %w", path, err)
 			}
 		}
 		if strings.ContainsRune(item, os.PathListSeparator) {
-			return nil, fmt.Errorf("JVM path contains path-list separator: %q", item)
+			return nil, fmt.Errorf("Путь JVM содержит разделитель списка путей: %q", item)
 		}
 		if !seen[item] {
 			result = append(result, item)
@@ -120,7 +120,7 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 		return err
 	}
 	if config.MainClass != "" && len(config.MainClass) > 512 || len(config.Module) > 256 {
-		return errors.New("JVM entry point too long")
+		return errors.New("Слишком длинная точка входа JVM")
 	}
 	if err := hostValidateJvmArguments0283(config.JVMArgs, config.ServerArgs); err != nil {
 		return err
@@ -131,16 +131,16 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 		return err
 	}
 	if len(normalized.Classpath) != len(config.Classpath) || len(normalized.Modulepath) != len(config.Modulepath) {
-		return errors.New("stored JVM paths are not canonical")
+		return errors.New("Сохранённые пути JVM имеют неканонический формат")
 	}
 	for i := range config.Classpath {
 		if normalized.Classpath[i] != config.Classpath[i] {
-			return errors.New("stored classpath is not canonical")
+			return errors.New("Сохранённый путь классов JVM имеет неканонический формат")
 		}
 	}
 	for i := range config.Modulepath {
 		if normalized.Modulepath[i] != config.Modulepath[i] {
-			return errors.New("stored modulepath is not canonical")
+			return errors.New("Сохранённый путь модулей JVM имеет неканонический формат")
 		}
 	}
 	switch config.LaunchMode {
@@ -160,7 +160,7 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 			return errors.New("«module mode»: запрещено «mix jar/argfile launch settings»")
 		}
 		if config.JavaMajor > 0 && config.JavaMajor < 9 {
-			return errors.New("Java modules require Java 9 or newer")
+			return errors.New("Для модулей Java необходима Java 9 или новее")
 		}
 		if !hostJavaModule0283.MatchString(config.Module) || len(config.Modulepath) == 0 || len(config.Classpath) != 0 {
 			return errors.New("java-module: требуется «--module and --modulepath-entry; classpath is not supported in this mode»")
@@ -180,7 +180,7 @@ func hostValidateJvmArguments0283(jvm, server []string) error {
 	}
 	for _, arg := range jvm {
 		if len(arg) > 256 || !hostJvmHeap0283.MatchString(arg) && !hostJvmNumber0283.MatchString(arg) && !hostJvmBoolean0283.MatchString(arg) && !hostJvmProperty0283.MatchString(arg) {
-			return fmt.Errorf("JVM argument %q is not approved; agents, arbitrary -D and JVM argument files require a separately reviewed launch configuration", arg)
+			return fmt.Errorf("Аргумент JVM %q не одобрен; агенты, произвольные -D и файлы аргументов JVM требуют отдельно проверенной конфигурации запуска", arg)
 		}
 		// Флаги кучи должны задавать размер; отклоняйте неправдоподобно большие целые значения, вызывающие переполнение.
 		if hostJvmHeap0283.MatchString(arg) {
@@ -197,10 +197,10 @@ func hostValidateJvmArguments0283(jvm, server []string) error {
 				n *= 1024
 			}
 			if n > 1024*1024 {
-				return errors.New("JVM memory limit exceeds 1 TiB")
+				return errors.New("Лимит памяти JVM превышает 1 ТиБ")
 			}
 			if strings.HasPrefix(arg, "-Xss") && n > 64 {
-				return errors.New("JVM thread stack exceeds 64 MiB")
+				return errors.New("Размер стека потока JVM превышает 64 МиБ")
 			}
 		}
 	}
@@ -226,7 +226,7 @@ func hostJavaProfileCommand0283(config serverBridgeHostConfig01910) ([]string, e
 		}
 		return args, nil
 	}
-	return nil, fmt.Errorf("not a JVM profile mode: %s", config.LaunchMode)
+	return nil, fmt.Errorf("Неизвестный режим профиля JVM: %s", config.LaunchMode)
 }
 
 // Minecraft Forge использует отдельный установленный и одобренный оператором файл аргументов
@@ -255,7 +255,7 @@ func hostReadUserJVMArgs0283(path string) ([]string, error) {
 		}
 		// Не допускаются неоднозначности токенизации оболочки или Java argfile.
 		if strings.ContainsAny(line, "\"'\\") {
-			return nil, errors.New("quoted or escaped user JVM arguments are not approved")
+			return nil, errors.New("Пользовательские аргументы JVM в кавычках или с экранированием не разрешены")
 		}
 		for _, token := range strings.Fields(line) {
 			if strings.HasPrefix(token, "#") {

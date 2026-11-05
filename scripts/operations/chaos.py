@@ -59,12 +59,12 @@ def check_scope(project: str, confirm: str, env_file: Path, ready_url: str, s3_u
     if rp.scheme != "https":
         raise dr.DrillError("HA readiness: требуется «HTTPS with trusted certificate»")
     if not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"):
-        raise dr.DrillError("set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for isolated S3")
+        raise dr.DrillError("Для изолированного S3 задайте AWS_ACCESS_KEY_ID и AWS_SECRET_ACCESS_KEY")
     if dotenv_value(env_file, "LAUNCHER_STORAGE_S3_BUCKET") != bucket:
-        raise dr.DrillError("S3 bucket must match isolated Compose configuration")
+        raise dr.DrillError("Корзина S3 должна совпадать с конфигурацией изолированного Compose")
     if (dotenv_value(env_file, "LAUNCHER_STORAGE_S3_ACCESS_KEY") != os.environ.get("AWS_ACCESS_KEY_ID")
             or dotenv_value(env_file, "LAUNCHER_STORAGE_S3_SECRET_KEY") != os.environ.get("AWS_SECRET_ACCESS_KEY")):
-        raise dr.DrillError("AWS CLI credentials must match isolated MinIO lab secrets")
+        raise dr.DrillError("Учётные данные AWS CLI должны соответствовать секретам изолированного тестового MinIO")
 
 
 def dotenv_value(path: Path, key: str) -> str | None:
@@ -95,7 +95,7 @@ def check_lab_endpoint(project: str, env_file: Path, endpoint: str) -> None:
     actual = {line.strip() for line in raw.splitlines()}
     expected = "127.0.0.1:" + str(urlsplit(endpoint).port)
     if actual != {expected}:
-        raise dr.DrillError("S3 endpoint is not the loopback port of the isolated Compose s3")
+        raise dr.DrillError("Эндпоинт S3 не использует локальный порт изолированного Compose S3")
 
 
 def check_services(project: str, env_file: Path) -> None:
@@ -171,7 +171,7 @@ def poll(check, expected: bool, limit: float, name: str) -> float:
             if not expected:
                 return round(monotonic() - start, 3)
         time.sleep(0.5)
-    raise dr.DrillError(f"{name} did not reach {'healthy' if expected else 'failed'} state within {limit}s")
+    raise dr.DrillError(f"{name} не достиг состояния {'healthy' if expected else 'failed'} за {limit} с")
 
 
 def public_ready(url: str) -> bool:
@@ -191,7 +191,7 @@ def direct_ready(project: str, env_file: Path, service: str) -> bool:
 def container_id(project: str, env_file: Path, service: str) -> str:
     ident = dr.compose(project, env_file, "ps", "-q", service, timeout=20).stdout.decode().strip()
     if not re.fullmatch(r"[0-9a-f]{12,64}", ident):
-        raise dr.DrillError("cannot identify isolated container " + service)
+        raise dr.DrillError("Не удалось определить изолированный контейнер " + service)
     return ident
 
 
@@ -200,7 +200,7 @@ def lab_network(project: str, ident: str) -> str:
     networks = json.loads(raw)
     matched = [name for name in networks if name == project + "_launcher"]
     if len(matched) != 1:
-        raise dr.DrillError("worker is not connected to expected isolated Compose network")
+        raise dr.DrillError("Рабочий процесс не подключён к ожидаемой изолированной сети Compose")
     return matched[0]
 
 
@@ -317,7 +317,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
             handle.flush(); os.fsync(handle.fileno())
         try:
             if report.exists() or report.is_symlink():
-                raise dr.DrillError("report path appeared during experiment")
+                raise dr.DrillError("Путь отчёта появился во время эксперимента")
             staging.rename(report)
         finally:
             if staging.exists(): staging.unlink()
@@ -328,7 +328,7 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
                 s3_delete(s3_url, bucket, key)
             except (dr.DrillError, OSError, subprocess.TimeoutExpired):
                 # Не скрывайте основную ошибку; оставьте точный ключ для очистки оператором.
-                print("Warning: S3 canary cleanup failed; key: " + key, file=sys.stderr)
+                print("Предупреждение: не удалось удалить тестовый объект S3; ключ: " + key, file=sys.stderr)
 
 
 def main() -> int:

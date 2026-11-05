@@ -925,12 +925,12 @@ mod macos_impl {
     }
 
     fn sha256_file(path: &Path) -> Result<String, String> {
-        let file = File::open(path).map_err(|err| format!("open {} failed: {err}", path.display()))?;
+        let file = File::open(path).map_err(|err| format!("Не удалось открыть {}: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut hasher = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
-            let count = reader.read(&mut buffer).map_err(|err| format!("read {} failed: {err}", path.display()))?;
+            let count = reader.read(&mut buffer).map_err(|err| format!("Не удалось прочитать {}: {err}", path.display()))?;
             if count == 0 { break; }
             hasher.update(&buffer[..count]);
         }

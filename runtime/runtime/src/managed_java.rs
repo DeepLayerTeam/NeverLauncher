@@ -860,7 +860,7 @@ async fn resolve_adoptium_latest_asset(
         &format!("Launcher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
     )
     .await
-    .map_err(|err| format!("Adoptium latest API request: {err}"))?;
+    .map_err(|err| format!("Запрос API последних выпусков Adoptium: {err}"))?;
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
@@ -870,7 +870,7 @@ async fn resolve_adoptium_latest_asset(
     let assets = response
         .json::<Vec<AdoptiumAsset>>()
         .await
-        .map_err(|err| format!("Adoptium latest API JSON: {err}"))?;
+        .map_err(|err| format!("Обработка JSON API последних выпусков Adoptium: {err}"))?;
     Ok(assets.into_iter().find(|asset| {
         asset.version.major == major
             && asset.binary.image_type == image_type
@@ -896,7 +896,7 @@ async fn resolve_adoptium_feature_release_asset(
         &format!("Launcher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
     )
     .await
-    .map_err(|err| format!("Adoptium feature release API request: {err}"))?;
+    .map_err(|err| format!("Запрос API релизов Adoptium: {err}"))?;
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
@@ -906,7 +906,7 @@ async fn resolve_adoptium_feature_release_asset(
     let releases = response
         .json::<Vec<AdoptiumFeatureRelease>>()
         .await
-        .map_err(|err| format!("Adoptium feature release API JSON: {err}"))?;
+        .map_err(|err| format!("Обработка JSON API релизов Adoptium: {err}"))?;
     for release in releases {
         if release.version_data.major != major {
             continue;
@@ -952,7 +952,7 @@ async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
     let quarantine = path.with_file_name(format!(".broken-{name}-{stamp}-{:016x}", rand::random::<u64>()));
     fs::rename(path, &quarantine)
         .await
-        .map_err(|err| format!("Managed Java corrupt archive quarantine: {err}"))
+        .map_err(|err| format!("Помещение повреждённого архива управляемой Java в карантин: {err}"))
 }
 
 async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> Result<bool, String> {
@@ -964,12 +964,12 @@ async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> 
     if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() != expected_size {
         return Ok(false);
     }
-    let mut file = fs::File::open(path).await.map_err(|err| format!("runtime archive open: {err}"))?;
+    let mut file = fs::File::open(path).await.map_err(|err| format!("Открытие архива Runtime: {err}"))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; 1024 * 1024];
     loop {
         use tokio::io::AsyncReadExt;
-        let n = file.read(&mut buffer).await.map_err(|err| format!("runtime archive read: {err}"))?;
+        let n = file.read(&mut buffer).await.map_err(|err| format!("Чтение архива Runtime: {err}"))?;
         if n == 0 {
             break;
         }
@@ -982,20 +982,20 @@ async fn sha256_file(path: &Path) -> Result<(String, u64), String> {
     use tokio::io::AsyncReadExt;
     let metadata = fs::metadata(path)
         .await
-        .map_err(|err| format!("runtime file metadata {}: {err}", path.display()))?;
+        .map_err(|err| format!("Чтение метаданных файла Runtime {}: {err}", path.display()))?;
     if !metadata.is_file() {
         return Err(format!("Файл Runtime не является обычным файлом: {}", path.display()));
     }
     let mut file = fs::File::open(path)
         .await
-        .map_err(|err| format!("runtime file open {}: {err}", path.display()))?;
+        .map_err(|err| format!("Открытие файла Runtime {}: {err}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; 1024 * 1024];
     loop {
         let n = file
             .read(&mut buffer)
             .await
-            .map_err(|err| format!("runtime file read {}: {err}", path.display()))?;
+            .map_err(|err| format!("Чтение файла Runtime {}: {err}", path.display()))?;
         if n == 0 {
             break;
         }
@@ -1026,7 +1026,7 @@ async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String
         .arg(destination)
         .output()
         .await
-        .map_err(|err| format!("tar extraction: {err}"))?;
+        .map_err(|err| format!("Распаковка архива tar: {err}"))?;
     if !output.status.success() {
         return Err(format!("Не удалось извлечь архив tar: {}", String::from_utf8_lossy(&output.stderr)));
     }
@@ -1058,7 +1058,7 @@ try {
   }
 } finally { $zip.Dispose() }
 "#;
-    fs::write(&script, script_body).await.map_err(|err| format!("PowerShell extractor script: {err}"))?;
+    fs::write(&script, script_body).await.map_err(|err| format!("Скрипт распаковки PowerShell: {err}"))?;
     let output = Command::new("powershell.exe")
         .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(&script)
@@ -1068,7 +1068,7 @@ try {
         .arg(destination)
         .output()
         .await
-        .map_err(|err| format!("PowerShell extraction: {err}"))?;
+        .map_err(|err| format!("Распаковка через PowerShell: {err}"))?;
     let _ = fs::remove_file(&script).await;
     if !output.status.success() {
         return Err(format!("Не удалось извлечь архив через PowerShell: {}", String::from_utf8_lossy(&output.stderr)));
@@ -1094,15 +1094,15 @@ fn validate_archive_entry(entry: &str) -> Result<(), String> {
 }
 
 fn validate_extracted_symlinks(root: &Path) -> Result<(), String> {
-    let canonical_root = std::fs::canonicalize(root).map_err(|err| format!("runtime staging canonicalize: {err}"))?;
+    let canonical_root = std::fs::canonicalize(root).map_err(|err| format!("Определение канонического пути подготовки Runtime: {err}"))?;
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        for entry in std::fs::read_dir(&dir).map_err(|err| format!("runtime staging scan: {err}"))? {
-            let entry = entry.map_err(|err| format!("runtime staging entry: {err}"))?;
+        for entry in std::fs::read_dir(&dir).map_err(|err| format!("Сканирование каталога подготовки Runtime: {err}"))? {
+            let entry = entry.map_err(|err| format!("Запись каталога подготовки Runtime: {err}"))?;
             let path = entry.path();
-            let metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("runtime staging metadata: {err}"))?;
+            let metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("Метаданные каталога подготовки Runtime: {err}"))?;
             if metadata.file_type().is_symlink() {
-                let resolved = std::fs::canonicalize(&path).map_err(|err| format!("runtime symlink {}: {err}", path.display()))?;
+                let resolved = std::fs::canonicalize(&path).map_err(|err| format!("Символическая ссылка Runtime {}: {err}", path.display()))?;
                 if !resolved.starts_with(&canonical_root) {
                     return Err(format!("runtime archive содержит внешний symlink: {}", path.display()));
                 }
@@ -1122,7 +1122,7 @@ async fn find_cached_runtime(root: &Path, major: u32, distribution: &str) -> Res
         Err(_) => return Ok(None),
     };
     let mut candidates = Vec::new();
-    while let Some(entry) = entries.next_entry().await.map_err(|err| format!("runtime cache scan: {err}"))? {
+    while let Some(entry) = entries.next_entry().await.map_err(|err| format!("Сканирование кэша Runtime: {err}"))? {
         let name = entry.file_name().to_string_lossy().to_string();
         if name.starts_with('.') {
             continue;
@@ -1152,7 +1152,7 @@ async fn restore_cached_managed_java(
     };
     let extension = if os == "windows" { ".zip" } else { ".tar.gz" };
     let mut candidates = Vec::new();
-    while let Some(entry) = entries.next_entry().await.map_err(|e| format!("Java recovery scan: {e}"))? {
+    while let Some(entry) = entries.next_entry().await.map_err(|e| format!("Сканирование Java для восстановления: {e}"))? {
         if entry.file_name().to_string_lossy().starts_with('.') { continue; }
         candidates.push(entry.path());
     }
@@ -1259,7 +1259,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
         let mut files = BTreeMap::new();
         let mut pending = vec![root.clone()];
         while let Some(dir) = pending.pop() {
-            for entry in std::fs::read_dir(&dir).map_err(|e| format!("Java inventory scan: {e}"))? {
+            for entry in std::fs::read_dir(&dir).map_err(|e| format!("Сканирование установленных Java: {e}"))? {
                 let entry = entry.map_err(|e| e.to_string())?;
                 let path = entry.path();
                 let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
@@ -1294,7 +1294,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
         }
         if files.is_empty() { return Err("Пустое значение: среда выполнения Java".into()); }
         Ok(files)
-    }).await.map_err(|e| format!("Java inventory worker: {e}"))?
+    }).await.map_err(|e| format!("Обработка списка установленных Java: {e}"))?
 }
 
 async fn verify_runtime_inventory(root: &Path, expected: &BTreeMap<String, String>) -> Result<bool, String> {
@@ -1314,10 +1314,10 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
     if expected_arch != "x86_64" && expected_arch != "aarch64" {
         return Err(format!("Не поддерживается: «native Java architecture» {arch}"));
     }
-    let mut file = std::fs::File::open(java).map_err(|e| format!("Java executable open: {e}"))?;
+    let mut file = std::fs::File::open(java).map_err(|e| format!("Открытие исполняемого файла Java: {e}"))?;
     let len = file.metadata().map_err(|e| e.to_string())?.len();
     let mut header = [0u8; 64];
-    file.read_exact(&mut header).map_err(|e| format!("Java executable header: {e}"))?;
+    file.read_exact(&mut header).map_err(|e| format!("Чтение заголовка исполняемого файла Java: {e}"))?;
     let le16 = |bytes: &[u8]| u16::from_le_bytes([bytes[0], bytes[1]]);
     let le32 = |bytes: &[u8]| u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     let be32 = |bytes: &[u8]| u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
@@ -1388,7 +1388,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
 
 /// Запускайте настоящую JVM с ограниченным временем жизни, проверяя сообщаемые Runtime архитектуру и ОС, а не только основную версию java -version.
 async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result<(), String> {
-    let meta = std::fs::symlink_metadata(java).map_err(|e| format!("Java executable metadata: {e}"))?;
+    let meta = std::fs::symlink_metadata(java).map_err(|e| format!("Метаданные исполняемого файла Java: {e}"))?;
     if !meta.is_file() || meta.file_type().is_symlink() {
         return Err("«Managed Java executable»: требуется обычный файл".into());
     }
@@ -1405,7 +1405,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
         command.env_remove(key);
     }
     let output = tokio::time::timeout(Duration::from_secs(20), command.output())
-        .await.map_err(|_| "Managed Java self-test exceeded 20 seconds".to_string())?
+        .await.map_err(|_| "Самопроверка управляемой Java превысила 20 секунд".to_string())?
         .map_err(|e| format!("Ошибка: «Managed Java self-test»: {e}"))?;
     if !output.status.success() { return Err("Ошибка: «Managed Java JVM self-test»".into()); }
     let details = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
@@ -1434,11 +1434,11 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     let temp = std::env::temp_dir().join(format!(
         "launcher-java-probe-{}-{:016x}", std::process::id(), rand::random::<u64>()
     ));
-    fs::create_dir(&temp).await.map_err(|e| format!("Java probe directory: {e}"))?;
+    fs::create_dir(&temp).await.map_err(|e| format!("Создание каталога проверки Java: {e}"))?;
     let _cleanup = StagingCleanup(temp.clone());
     fs::write(temp.join("LauncherJvmProbe.class"),
         include_bytes!("../fixtures/LauncherJvmProbe.class"))
-        .await.map_err(|e| format!("Java bytecode probe write: {e}"))?;
+        .await.map_err(|e| format!("Запись тестового байт-кода Java: {e}"))?;
     let nonce = format!("{:016x}{:016x}", rand::random::<u64>(), rand::random::<u64>());
     let mut command = Command::new(java);
     command.arg("-cp").arg(&temp).arg("LauncherJvmProbe").arg(&nonce)
@@ -1447,20 +1447,20 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
         command.env_remove(key);
     }
     let output = tokio::time::timeout(Duration::from_secs(20), command.output())
-        .await.map_err(|_| "Managed Java bytecode execution exceeded 20 seconds".to_string())?
+        .await.map_err(|_| "Выполнение тестового байт-кода управляемой Java превысило 20 секунд".to_string())?
         .map_err(|e| format!("Ошибка: «Managed Java bytecode execution»: {e}"))?;
     if !output.status.success() {
         return Err(format!("Управляемая Java не смогла выполнить байткод, совместимый с Java 8: {}",
             String::from_utf8_lossy(&output.stderr)));
     }
     let output_text = String::from_utf8(output.stdout)
-        .map_err(|_| "Managed Java probe emitted non-UTF8 output".to_string())?;
+        .map_err(|_| "Проверка управляемой Java вернула вывод не в UTF-8".to_string())?;
     let parts = output_text.splitn(4, '|').collect::<Vec<_>>();
     if parts.len() != 4 || parts[0] != "LAUNCHER_JVM_PROBE" || parts[1] != nonce {
         return Err("Управляемая Java не выполнила ожидаемую проверку байткода".into());
     }
     let probed_major = if parts[2] == "1.8" { 8 } else {
-        parts[2].parse::<u32>().map_err(|_| "Managed Java probe returned invalid specification version".to_string())?
+        parts[2].parse::<u32>().map_err(|_| "Проверка управляемой Java вернула неверную версию спецификации".to_string())?
     };
     if probed_major != major {
         return Err(format!("Несовпадение: «Managed Java bytecode major»: {probed_major} vs {major}"));
@@ -1469,9 +1469,9 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     let packaged_home = java.parent().and_then(Path::parent)
         .ok_or_else(|| "Managed Java executable is not under bin/".to_string())?;
     let packaged_home = std::fs::canonicalize(packaged_home)
-        .map_err(|e| format!("Managed Java package home: {e}"))?;
+        .map_err(|e| format!("Корневой каталог пакета управляемой Java: {e}"))?;
     let actual_home = std::fs::canonicalize(parts[3])
-        .map_err(|e| format!("Managed Java java.home: {e}"))?;
+        .map_err(|e| format!("Параметр java.home управляемой Java: {e}"))?;
     if !actual_home.starts_with(&packaged_home) {
         return Err(format!("Управляемая Java запущена за пределами установленного образа: {}", actual_home.display()));
     }
@@ -1497,9 +1497,9 @@ fn safe_record_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let candidate = root.join(rel);
     if candidate.exists() {
         let canonical_root = std::fs::canonicalize(root)
-            .map_err(|err| format!("runtime root canonicalize: {err}"))?;
+            .map_err(|err| format!("Определение канонического корня Runtime: {err}"))?;
         let canonical_candidate = std::fs::canonicalize(&candidate)
-            .map_err(|err| format!("runtime java canonicalize: {err}"))?;
+            .map_err(|err| format!("Определение канонического пути Java в Runtime: {err}"))?;
         if !canonical_candidate.starts_with(&canonical_root) {
             return Err("runtime record java path вышел за Managed Java root через symlink".to_string());
         }
@@ -1643,20 +1643,20 @@ fn safe_release_component(value: &str) -> String {
 
 async fn cleanup_interrupted_java_staging(platform_dir: &Path) -> Result<(), String> {
     let mut entries = fs::read_dir(platform_dir).await
-        .map_err(|e| format!("Java staging scan: {e}"))?;
+        .map_err(|e| format!("Сканирование каталога подготовки Java: {e}"))?;
     while let Some(entry) = entries.next_entry().await
-        .map_err(|e| format!("Java staging entry: {e}"))? {
+        .map_err(|e| format!("Запись каталога подготовки Java: {e}"))? {
         if !entry.file_name().to_string_lossy().starts_with(".staging-") { continue; }
         let path = entry.path();
         let meta = fs::symlink_metadata(&path).await
-            .map_err(|e| format!("Java abandoned staging metadata: {e}"))?;
+            .map_err(|e| format!("Метаданные незавершённой подготовки Java: {e}"))?;
         if meta.file_type().is_symlink() {
             // Удаляйте ссылку без следования по пути, управляемому злоумышленником.
-            fs::remove_file(&path).await.map_err(|e| format!("Java abandoned staging link: {e}"))?;
+            fs::remove_file(&path).await.map_err(|e| format!("Удаление ссылки незавершённой подготовки Java: {e}"))?;
         } else if meta.is_dir() {
-            fs::remove_dir_all(&path).await.map_err(|e| format!("Java abandoned staging: {e}"))?;
+            fs::remove_dir_all(&path).await.map_err(|e| format!("Удаление каталога незавершённой подготовки Java: {e}"))?;
         } else {
-            fs::remove_file(&path).await.map_err(|e| format!("Java abandoned staging file: {e}"))?;
+            fs::remove_file(&path).await.map_err(|e| format!("Удаление файла незавершённой подготовки Java: {e}"))?;
         }
     }
     Ok(())
@@ -1675,7 +1675,7 @@ async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
     let path = dir.join(".install.lock");
     // Сохраняйте файл постоянно: удаление inode активной блокировки flock/LockFileEx позволяет второму процессу создать новый файл и войти одновременно.
     let file = std::fs::OpenOptions::new().read(true).write(true).create(true)
-        .open(&path).map_err(|e| format!("Managed Java lock open: {e}"))?;
+        .open(&path).map_err(|e| format!("Открытие блокировки управляемой Java: {e}"))?;
     for _ in 0..120 {
         match file.try_lock_exclusive() {
             Ok(()) => return Ok(InstallLock { _file: file }),
@@ -1683,7 +1683,7 @@ async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
             Err(e) => return Err(format!("Не удалось получить блокировку управляемой Java: {e}")),
         }
     }
-    Err("Managed Java installation occupied by another process".into())
+    Err("Установка управляемой Java занята другим процессом".into())
 }
 
 fn now_unix() -> Result<u64, String> {

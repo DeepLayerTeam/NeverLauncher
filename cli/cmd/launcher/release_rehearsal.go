@@ -48,7 +48,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 	path := filepath.Join(dir, rehearsalReceipt0365)
 	stat, err := os.Lstat(path)
 	if err != nil || !stat.Mode().IsRegular() || stat.Size() > 1<<20 {
-		return errors.New("0.36.5+: missing/unsafe final-package rehearsal receipt")
+		return errors.New("0.36.5+: отсутствует или небезопасна квитанция пробного запуска финального пакета")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -63,7 +63,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 	}
 	if r.SchemaVersion != "launcher.release.rehearsal.v1" || r.Version != version ||
 		r.Commit != commit || r.Status != "package-and-ga-verified" || len(r.Targets) != 6 {
-		return errors.New("0.36.5+: stale/incomplete release rehearsal")
+		return errors.New("0.36.5+: устаревшая или неполная проверка релиза")
 	}
 	runID := strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_RUN_ID"))
 	if runID == "" {
@@ -74,7 +74,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 		attempt = strings.TrimSpace(os.Getenv("GITHUB_RUN_ATTEMPT"))
 	}
 	if runID == "" || attempt == "" || r.RunID != runID || r.RunAttempt != attempt {
-		return errors.New("0.36.5+: rehearsal belongs to a different CI run/attempt")
+		return errors.New("0.36.5+: проверка относится к другому запуску или попытке CI")
 	}
 	gaRaw, err := os.ReadFile(filepath.Join(dir, "GA_VERIFIED_TARGETS.json"))
 	if err != nil {
@@ -97,17 +97,17 @@ func verifyRehearsal0365(dir, version, commit string) error {
 	seen := map[string]bool{}
 	for _, item := range r.Targets {
 		if seen[item.Target] || item.PackageMembers < 4 {
-			return errors.New("0.36.5+: duplicate/incomplete platform package")
+			return errors.New("0.36.5+: дублирующийся или неполный пакет платформы")
 		}
 		seen[item.Target] = true
 		binary, pack := gaTargetPaths0361(version, item.Target)
 		if binary == "" || item.Binary != binary || item.Package != pack {
-			return fmt.Errorf("0.36.5+: unapproved platform %q", item.Target)
+			return fmt.Errorf("0.36.5+: неподтверждённая платформа %q", item.Target)
 		}
 		for _, entry := range []struct{ file, digest string }{{binary, item.BinarySHA}, {pack, item.PackageSHA}} {
 			actual, _, err := hashFile(filepath.Join(dir, entry.file))
 			if err != nil || !strings.EqualFold(actual, entry.digest) {
-				return fmt.Errorf("0.36.5+: changed release bytes: %s", entry.file)
+				return fmt.Errorf("0.36.5+: содержимое релиза изменилось: %s", entry.file)
 			}
 		}
 		matched := false
@@ -122,7 +122,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 		}
 	}
 	if len(seen) != 6 {
-		return errors.New("0.36.5+: missing mandatory target")
+		return errors.New("0.36.5+: отсутствует обязательная целевая платформа")
 	}
 	sums, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {
@@ -135,13 +135,13 @@ func verifyRehearsal0365(dir, version, commit string) error {
 		fields := strings.Fields(line)
 		if len(fields) == 2 && fields[1] == rehearsalReceipt0365 {
 			if fields[0] != target {
-				return errors.New("0.36.5+: unsigned/stale rehearsal digest")
+				return errors.New("0.36.5+: контрольная сумма проверки не подписана или устарела")
 			}
 			matches++
 		}
 	}
 	if matches != 1 {
-		return errors.New("0.36.5+: rehearsal omitted/duplicated in signed SHA256SUMS")
+		return errors.New("0.36.5+: проверка пропущена либо продублирована в подписанном SHA256SUMS")
 	}
 	return nil
 }

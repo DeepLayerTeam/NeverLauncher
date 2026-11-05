@@ -122,7 +122,7 @@ func sensitive(n, kind string) bool {
 }
 func validName(n string, isDir bool) error {
 	if n == "" || strings.HasPrefix(n, "/") || strings.ContainsAny(n, "\\:\x00\r\n\t") || strings.HasPrefix(strings.ToLower(n), ".migration/") || strings.EqualFold(n, ".migration") {
-		return fmt.Errorf("unsafe/reserved ZIP path %q", n)
+		return fmt.Errorf("Небезопасный или зарезервированный путь ZIP %q", n)
 	}
 	p := strings.TrimSuffix(n, "/")
 	if path.Clean(p) != p || p == "." || p == ".." || strings.HasPrefix(p, "../") || len(n) > 2048 {
@@ -135,7 +135,7 @@ func validName(n string, isDir bool) error {
 }
 func safeFiles(z *zip.Reader) ([]*zip.File, error) {
 	if len(z.File) == 0 || len(z.File) > MaxFiles {
-		return nil, errors.New("ZIP entry count exceeds limit (30000)")
+		return nil, errors.New("Число записей ZIP превышает лимит (30000)")
 	}
 	seen := make(map[string]struct{}, len(z.File))
 	names := make(map[string]bool, len(z.File))
@@ -159,24 +159,24 @@ func safeFiles(z *zip.Reader) ([]*zip.File, error) {
 			continue
 		}
 		if f.Flags&1 != 0 || (f.Method != zip.Store && f.Method != zip.Deflate) {
-			return nil, fmt.Errorf("encrypted/unsupported ZIP member %q", f.Name)
+			return nil, fmt.Errorf("Зашифрованный или неподдерживаемый элемент ZIP %q", f.Name)
 		}
 		if f.UncompressedSize64 > uint64(MaxExpandedBytes) || f.UncompressedSize64 > uint64(MaxExpandedBytes)-uint64(total) {
-			return nil, errors.New("ZIP expanded size exceeds 2 GiB")
+			return nil, errors.New("Размер распакованного ZIP превышает 2 ГиБ")
 		}
 		total += int64(f.UncompressedSize64)
 		if f.UncompressedSize64 > f.CompressedSize64*1000+8192 {
-			return nil, fmt.Errorf("ZIP expansion ratio too high at %q", f.Name)
+			return nil, fmt.Errorf("Слишком высокий коэффициент распаковки ZIP для %q", f.Name)
 		}
 		files = append(files, f)
 	}
 	if len(files) == 0 {
-		return nil, errors.New("ZIP does not contain source files")
+		return nil, errors.New("ZIP не содержит исходных файлов")
 	}
 	for n, isDir := range names {
 		for p := path.Dir(n); p != "."; p = path.Dir(p) {
 			if dir, ok := names[p]; ok && !dir {
-				return nil, fmt.Errorf("file/directory conflict: %q", n)
+				return nil, fmt.Errorf("Конфликт файла и каталога: %q", n)
 			}
 		}
 		_ = isDir
@@ -200,7 +200,7 @@ func copyChecked(ctx context.Context, src *zip.File, dst io.Writer) (int64, erro
 		if n > 0 {
 			size += int64(n)
 			if size > int64(src.UncompressedSize64) {
-				return size, errors.New("ZIP expanded beyond declared size")
+				return size, errors.New("ZIP распакован до размера, превышающего заявленный")
 			}
 			wrote, writeErr := dst.Write(buf[:n])
 			if writeErr != nil {
@@ -218,7 +218,7 @@ func copyChecked(ctx context.Context, src *zip.File, dst io.Writer) (int64, erro
 		}
 	}
 	if size != int64(src.UncompressedSize64) {
-		return size, errors.New("ZIP member size differs from header")
+		return size, errors.New("Размер элемента ZIP не соответствует заголовку")
 	}
 	return size, nil
 }
@@ -229,7 +229,7 @@ func readObject(data []byte) (map[string]json.RawMessage, error) {
 	}
 	var trailing any
 	if e := d.Decode(&trailing); e != io.EOF {
-		return nil, errors.New("extra JSON data")
+		return nil, errors.New("После JSON обнаружены лишние данные")
 	}
 	var obj map[string]json.RawMessage
 	if e := json.Unmarshal(data, &obj); e != nil || obj == nil {
@@ -252,7 +252,7 @@ func uniqueJSON(d *json.Decoder) error {
 			}
 			s, ok := k.(string)
 			if !ok || seen[s] {
-				return errors.New("duplicate/invalid JSON key")
+				return errors.New("Повторяющийся или некорректный ключ JSON")
 			}
 			seen[s] = true
 			if len(seen) > 100000 {
@@ -377,10 +377,10 @@ func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest 
 	sourceHash := sha256.New()
 	n, e := copyLimited(ctx, sourceHash, io.NewSectionReader(src, 0, archiveSize), archiveSize)
 	if e != nil || n != archiveSize {
-		return Inventory{}, errors.New("unable to hash complete source ZIP")
+		return Inventory{}, errors.New("Не удалось вычислить контрольную сумму полного исходного ZIP")
 	}
 	if hex.EncodeToString(sourceHash.Sum(nil)) != sourceDigest {
-		return Inventory{}, errors.New("source ZIP SHA-256 differs from supplied digest")
+		return Inventory{}, errors.New("Контрольная сумма SHA-256 исходного ZIP не совпадает с переданной")
 	}
 	z, e := zip.NewReader(src, archiveSize)
 	if e != nil {
@@ -398,18 +398,18 @@ func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest 
 		var capture bytes.Buffer
 		if parse && parseConfigs {
 			if f.UncompressedSize64 > uint64(MaxConfigBytes) {
-				return Inventory{}, fmt.Errorf("configuration %q exceeds 2 MiB", f.Name)
+				return Inventory{}, fmt.Errorf("Конфигурация %q превышает 2 МиБ", f.Name)
 			}
 			target = io.MultiWriter(h, &capture)
 		}
 		n, e := copyChecked(ctx, f, target)
 		if e != nil {
-			return Inventory{}, fmt.Errorf("ZIP member %q: %w", f.Name, e)
+			return Inventory{}, fmt.Errorf("Элемент ZIP %q: %w", f.Name, e)
 		}
 		item := File{Path: f.Name, Kind: kind, Size: n, SHA256: hex.EncodeToString(h.Sum(nil)), Sensitive: sensitive(f.Name, kind)}
 		if parseConfigs && parse && strings.HasSuffix(strings.ToLower(f.Name), ".json") {
 			if e := gather(&v, kind, capture.Bytes()); e != nil {
-				return Inventory{}, fmt.Errorf("invalid %s at %q: %w", kind, f.Name, e)
+				return Inventory{}, fmt.Errorf("Некорректный объект %s по пути %q: %w", kind, f.Name, e)
 			}
 		}
 		v.TotalBytes += n
@@ -439,7 +439,7 @@ func Export(ctx context.Context, out io.Writer, src io.ReaderAt, size int64, v I
 		return e
 	}
 	if actual.ManifestSHA256 != v.ManifestSHA256 {
-		return errors.New("source changed since inventory")
+		return errors.New("Исходные файлы изменились после инвентаризации")
 	}
 	z, e := zip.NewReader(src, size)
 	if e != nil {

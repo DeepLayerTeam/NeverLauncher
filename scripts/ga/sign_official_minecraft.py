@@ -31,7 +31,7 @@ def sign_attestation(
     if not GITSHA.fullmatch(commit):
         raise GateError("Требуется: точный коммит исходников")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", seed_hex):
-        raise GateError("protected Ed25519 seed is missing/invalid")
+        raise GateError("Защищённый исходный ключ Ed25519 отсутствует либо недействителен")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", expected_public):
         raise GateError("Некорректное значение: «pinned operator public key»")
     if (
@@ -56,15 +56,15 @@ def sign_attestation(
         raise GateError("Превышен допустимый размер: аттестация")
     data = strict_json(raw)
     if data.get("commit") != commit or data.get("productVersion") != "0.27.0":
-        raise GateError("attestation does not describe requested exact source")
+        raise GateError("Подтверждение относится не к указанным исходникам")
     if data.get("target") not in {
         f"{p}-{a}" for p, a in TARGETS
     } or folder.name != data.get("target"):
-        raise GateError("attestation target mismatches its directory")
+        raise GateError("Целевая платформа подтверждения не совпадает с каталогом")
     if (folder / "attestation.sig").exists() or (
         folder / "attestation.sig"
     ).is_symlink():
-        raise GateError("signature already exists; do not overwrite operator approvals")
+        raise GateError("Подпись уже существует; не перезаписывайте подтверждения оператора")
     signature = private.sign(DOMAIN + raw).hex().encode("ascii") + b"\n"
     # Разрешены только создание и права пользователя. Сбой не оставляет успешной квитанции выпуска:
     # вызывающая сторона обязана явно изучить или удалить незавершённую подпись.
@@ -104,9 +104,9 @@ def main() -> int:
     try:
         sign_attestation(args.target_dir, args.public_key, seed, args.commit)
     except (GateError, OSError, ValueError) as exc:
-        print(f"GA operator signing refused: {exc}", file=sys.stderr)
+        print(f"Подпись оператора GA отклонена: {exc}", file=sys.stderr)
         return 2
-    print("Verified and signed exact live evidence for", args.target_dir.name)
+    print("Проверены и подписаны фактические доказательства для", args.target_dir.name)
     return 0
 
 

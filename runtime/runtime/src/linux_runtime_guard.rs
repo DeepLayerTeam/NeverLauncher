@@ -57,23 +57,23 @@ fn read_proc(pid: u32, file: &str) -> Result<String, String> {
     if meta.len() > MAX_PROC_BYTES { return Err(format!("Linux Guard: превышен допустимый размер файла {path}")); }
     let bytes = fs::read(&path).map_err(|e| format!("Guard для Linux: не удалось прочитать {path}: {e}"))?;
     if bytes.len() as u64 > MAX_PROC_BYTES { return Err(format!("Linux Guard: превышен допустимый размер файла {path}")); }
-    String::from_utf8(bytes).map_err(|e| format!("Linux Guard invalid {path}: {e}"))
+    String::from_utf8(bytes).map_err(|e| format!("Linux Guard: некорректный файл {path}: {e}"))
 }
 
 fn start_ticks_from_stat(stat: &str) -> Result<u64, String> {
     // Поле comm (второе) само может содержать пробелы и скобки.
-    let end = stat.rfind(") ").ok_or("Linux Guard invalid /proc stat comm")?;
+    let end = stat.rfind(") ").ok_or("Linux Guard: некорректное поле comm в /proc/stat")?;
     let tail = &stat[end + 2..];
     let ticks = tail.split_whitespace().nth(19)
-        .ok_or("Linux Guard missing process starttime")?
-        .parse::<u64>().map_err(|_| "Linux Guard invalid process starttime")?;
+        .ok_or("Linux Guard: отсутствует время запуска процесса")?
+        .parse::<u64>().map_err(|_| "Linux Guard: неверное время запуска процесса")?;
     if ticks == 0 { return Err("Guard Linux: время запуска процесса равно нулю".into()); }
     Ok(ticks)
 }
 
 fn status_value<'a>(status: &'a str, field: &str) -> Result<&'a str, String> {
     status.lines().find_map(|line| line.strip_prefix(field)).map(str::trim)
-        .ok_or_else(|| format!("Linux Guard missing process status field {field}"))
+        .ok_or_else(|| format!("Linux Guard: отсутствует поле статуса процесса {field}"))
 }
 
 fn native_name(path: &Path) -> bool {
@@ -89,7 +89,7 @@ fn collect_java_natives(home: &Path) -> Result<BTreeMap<PathBuf, String>, String
     let mut pending = vec![home.to_path_buf()];
     let mut visited = 0usize;
     while let Some(dir) = pending.pop() {
-        for entry in fs::read_dir(&dir).map_err(|e| format!("Linux Guard JRE inventory {}: {e}", dir.display()))? {
+        for entry in fs::read_dir(&dir).map_err(|e| format!("Linux Guard: инвентаризация JRE {}: {e}", dir.display()))? {
             let entry = entry.map_err(|e| e.to_string())?;
             visited += 1;
             if visited > MAX_FDS { return Err("Guard Linux: превышен лимит обхода файлов JRE".into()); }
@@ -168,9 +168,9 @@ fn verify_inode(path: &Path, proc_object: &Path) -> Result<(), String> {
 impl LinuxRuntimeGuard0508 {
     pub fn attach(pid: u32, java: &Path, verified: &LiveGameGuard0506) -> Result<Self, String> {
         if pid == 0 { return Err("Отсутствует: PID процесса JVM Guard в Linux".into()); }
-        let java = fs::canonicalize(java).map_err(|e| format!("Linux Guard Java executable: {e}"))?;
+        let java = fs::canonicalize(java).map_err(|e| format!("Linux Guard: исполняемый файл Java: {e}"))?;
         let java_home = java.parent().and_then(Path::parent)
-            .ok_or("Linux Guard Java home unavailable")?.to_path_buf();
+            .ok_or("Linux Guard: корневой каталог Java недоступен")?.to_path_buf();
         let expected = fs::metadata(&java).map_err(|e| e.to_string())?;
         if !expected.is_file() { return Err("Исполняемый файл Java для Linux Guard не является обычным файлом".into()); }
         let root = verified.linux_root().to_path_buf();
@@ -226,7 +226,7 @@ impl LinuxRuntimeGuard0508 {
             }
             if path.starts_with(&self.root) && native_name(path) {
                 let expected = self.java_native_baseline.get(path)
-                    .ok_or_else(|| format!("Linux Guard unapproved Java native module: {}", path.display()))?;
+                    .ok_or_else(|| format!("Linux Guard: неподтверждённый нативный модуль Java: {}", path.display()))?;
                 if &sha256_file(path)? != expected {
                     return Err(format!("Изменён нативный модуль Java в Linux Guard: {}", path.display()));
                 }
@@ -247,7 +247,7 @@ impl LinuxRuntimeGuard0508 {
         }
         if !executable && !game_code_name(path) { return Ok(()); } // data files / non-executable fd
         let expected = self.signed.get(path)
-            .ok_or_else(|| format!("Linux Guard unauthorized game module: {}", path.display()))?;
+            .ok_or_else(|| format!("Linux Guard: неразрешённый модуль игры: {}", path.display()))?;
         if fs::symlink_metadata(path).map_err(|e| e.to_string())?.file_type().is_symlink() {
             return Err(format!("Обнаружена символическая ссылка на игровой модуль Linux Guard: {}", path.display()));
         }
@@ -282,8 +282,8 @@ impl LinuxRuntimeGuard0508 {
             // кодом независимо от расширения; .dat не служит обходом.
             self.verify_mapped_file(path, None, true)?;
             if self.external.contains_key(path) {
-                let mapped_inode=inode.parse::<u64>().map_err(|_|"Linux Guard bad overlay mapping inode")?;
-                let actual_inode=fs::metadata(path).map_err(|e|format!("Linux Guard overlay map vanished: {e}"))?.ino();
+                let mapped_inode=inode.parse::<u64>().map_err(|_|"Linux Guard: неверный inode отображения OverlayFS")?;
+                let actual_inode=fs::metadata(path).map_err(|e|format!("Linux Guard: отображение OverlayFS исчезло: {e}"))?.ino();
                 if mapped_inode==0 || mapped_inode!=actual_inode {
                     return Err(format!("Заменён inode внешнего оверлея Linux Guard: {}",path.display()));
                 }

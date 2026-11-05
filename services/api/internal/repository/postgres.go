@@ -161,7 +161,7 @@ func scanProfile0221(scanner interface{ Scan(...any) error }) (model.Profile, er
 		return p, err
 	}
 	if p.SchemaVersion != model.ProfileSchemaV2 || p.Revision < 1 || p.Digest != model.ProfileDigest(model.ProfileSpecOf(p)) {
-		return p, fmt.Errorf("profile %s/%s has inconsistent v2 schema/revision/digest", p.ProjectID, p.ID)
+		return p, fmt.Errorf("Профиль %s/%s имеет несогласованные схему v2, ревизию или контрольную сумму", p.ProjectID, p.ID)
 	}
 	return p, nil
 }
@@ -528,7 +528,7 @@ func (r *SQLRepository) SaveUser(user model.User) (model.User, error) {
 		projectID = strings.TrimSpace(projectID)
 		roleID = strings.TrimSpace(roleID)
 		if projectID == "*" {
-			return model.User{}, fmt.Errorf("wildcard project role is not supported; use a global role")
+			return model.User{}, fmt.Errorf("Роль проекта с подстановочным символом не поддерживается; используйте глобальную роль")
 		}
 		if projectID == "" || roleID == "" {
 			continue
@@ -564,7 +564,7 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 		if _, err = tx.Exec(`INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at) VALUES($1,$2,$3,now(),now())
 ON CONFLICT (project_id,user_id) DO UPDATE SET role_id=EXCLUDED.role_id,updated_at=now()
 WHERE project_user_roles.role_id IS DISTINCT FROM EXCLUDED.role_id`, projectID, user.ID, roleID); err != nil {
-			return model.User{}, fmt.Errorf("project role %s/%s: %w", projectID, roleID, err)
+			return model.User{}, fmt.Errorf("Роль проекта %s/%s: %w", projectID, roleID, err)
 		}
 	}
 	if strings.TrimSpace(user.PasswordHash) != "" {
@@ -856,12 +856,12 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	// связывания идентичностей сравнивает адреса без учёта регистра. Консультативная
 	// блокировка на уровне транзакции закрывает гонку «проверить, затем вставить».
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(lower($1), 0))`, user.Email); err != nil {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("lock federated canonical email: %w", err)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("Блокировка основного адреса почты федеративной учётной записи: %w", err)
 	}
 	var emailOwner string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM users WHERE lower(email)=lower($1) LIMIT 1`, user.Email).Scan(&emailOwner)
 	if err == nil && emailOwner != user.ID {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another user", ErrConflict)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: основной адрес почты уже используется другим пользователем", ErrConflict)
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.User{}, model.AuthIdentity{}, err
@@ -873,7 +873,7 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 VALUES($1,$2,$3,$4,$5,$6,'',NULL,NULL,NULL,$7,$8)
 ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, user.Status, string(projectRoles), user.CreatedAt, user.UpdatedAt)
 	if err != nil {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated canonical user: %w", err)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("Сохранение основного федеративного пользователя: %w", err)
 	}
 	inserted, err := result.RowsAffected()
 	if err != nil {
@@ -883,12 +883,12 @@ ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, use
 		var existingEmail string
 		if err := tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id=$1`, user.ID).Scan(&existingEmail); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another user", ErrConflict)
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: основной адрес почты уже используется другим пользователем", ErrConflict)
 			}
 			return model.User{}, model.AuthIdentity{}, err
 		}
 		if !strings.EqualFold(strings.TrimSpace(existingEmail), user.Email) {
-			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: deterministic canonical user id already exists with another email", ErrConflict)
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: детерминированный ID основного пользователя уже связан с другим адресом почты", ErrConflict)
 		}
 	}
 
@@ -896,14 +896,14 @@ ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, use
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12)
 ON CONFLICT DO NOTHING`, identity.ID, identity.UserID, identity.Provider, identity.Issuer, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, identity.UpdatedAt, identity.LastAuthenticatedAt)
 	if err != nil {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated identity: %w", err)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("Сохранение федеративной учётной записи: %w", err)
 	}
 	var linkedUserID string
 	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM auth_identities WHERE provider=$1 AND issuer=$2 AND subject=$3`, identity.Provider, identity.Issuer, identity.Subject).Scan(&linkedUserID); err != nil {
 		return model.User{}, model.AuthIdentity{}, err
 	}
 	if linkedUserID != user.ID {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked to another user", ErrConflict)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: внешняя учётная запись уже связана с другим пользователем", ErrConflict)
 	}
 	if err := tx.Commit(); err != nil {
 		return model.User{}, model.AuthIdentity{}, err
@@ -1621,7 +1621,7 @@ func (r *SQLRepository) SaveProviderCredential(item model.ProviderCredential) (m
 		return model.ProviderCredential{}, err
 	}
 	if linkedUserID != item.UserID {
-		return model.ProviderCredential{}, fmt.Errorf("provider credential identity belongs to another user")
+		return model.ProviderCredential{}, fmt.Errorf("Учётные данные провайдера принадлежат другому пользователю")
 	}
 	if item.ID == "" {
 		item.ID = "provider-credential-" + item.IdentityID
@@ -1635,7 +1635,7 @@ ON CONFLICT(identity_id) DO UPDATE SET encrypted_refresh_token=EXCLUDED.encrypte
 WHERE provider_credentials.user_id=EXCLUDED.user_id AND provider_credentials.provider=EXCLUDED.provider AND provider_credentials.subject=EXCLUDED.subject`, item.ID, item.UserID, item.IdentityID, item.Provider, item.Subject, item.EncryptedRefreshToken, item.CreatedAt, nullTime(item.LastRefreshedAt))
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
-			return model.ProviderCredential{}, fmt.Errorf("%w: provider credential identity already belongs to another user", ErrConflict)
+			return model.ProviderCredential{}, fmt.Errorf("%w: учётные данные провайдера уже принадлежат другому пользователю", ErrConflict)
 		}
 		return model.ProviderCredential{}, err
 	}

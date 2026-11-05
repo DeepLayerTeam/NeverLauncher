@@ -79,7 +79,7 @@ def strict_json(raw: bytes) -> dict:
 
 def bounded(path: Path) -> bytes:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_FILE:
-        raise Blocked(f"missing, linked or oversized evidence: {path.name}")
+        raise Blocked(f"Доказательство отсутствует, является ссылкой или превышает лимит: {path.name}")
     return path.read_bytes()
 
 
@@ -107,10 +107,10 @@ def validate_rc(rc: dict, commit: str):
     ):
         raise Blocked("Несовпадение: «RC evidence version/format/commit»")
     if not re.search(r"go1\.(?:2[7-9]|[3-9]\d)\.", str(rc.get("toolchain", ""))):
-        raise Blocked("RC must have used Go 1.27+")
+        raise Blocked("Кандидат релиза RC должен быть собран с Go 1.27+")
     suites = rc.get("suites")
     if not isinstance(suites, list) or len(suites) != len(SUITES):
-        raise Blocked("incomplete RC suite set")
+        raise Blocked("Неполный набор тестов RC")
     seen = set()
     for suite in suites:
         if not isinstance(suite, dict):
@@ -126,7 +126,7 @@ def validate_rc(rc: dict, commit: str):
             or len(set(tests)) != len(tests)
             or suite.get("count") != SUITES[name]
         ):
-            raise Blocked("RC tests incomplete or duplicated: " + name)
+            raise Blocked("Тесты RC не завершены либо дублируются: " + name)
     if seen != set(SUITES):
         raise Blocked("Отсутствует: «required RC suites»")
 
@@ -139,7 +139,7 @@ def validate_attestation(report: dict, commit: str, rc_hash: str):
     ):
         raise Blocked("Несовпадение: «GA attestation version/commit»")
     if report.get("rc_receipt_sha256") != rc_hash:
-        raise Blocked("GA attestation is not bound to RC test receipt")
+        raise Blocked("Подтверждение GA не привязано к квитанции тестов RC")
     env = report.get("environment")
     if not isinstance(env, dict) or not all(
         (
@@ -153,7 +153,7 @@ def validate_attestation(report: dict, commit: str, rc_hash: str):
             env.get("durable_data_after_restart") is True,
         )
     ):
-        raise Blocked("SQLite-only production deployment has NOT been proven")
+        raise Blocked("Производственное развёртывание только на SQLite НЕ подтверждено")
     checks = report.get("checks")
     if (
         not isinstance(checks, dict)
@@ -183,7 +183,7 @@ def validate_attestation(report: dict, commit: str, rc_hash: str):
 
 def verify(evidence_dir: Path, pinned_public_key: Path, commit: str) -> dict:
     if not COMMIT.fullmatch(commit):
-        raise Blocked("expected full exact source commit")
+        raise Blocked("Требуется полный точный хеш коммита исходников")
     report_raw = bounded(evidence_dir / "SINGLE_NODE_GA_ATTESTATION.json")
     sig_raw = bounded(evidence_dir / "SINGLE_NODE_GA_ATTESTATION.sig").strip()
     rc_raw = bounded(evidence_dir / "SINGLE_NODE_GA_RC.json")
@@ -228,13 +228,13 @@ def main() -> int:
     try:
         result = verify(args.evidence_dir, args.public_key, args.commit)
         if args.output.exists() or args.output.is_symlink():
-            raise Blocked("refusing to overwrite an existing certification file")
+            raise Blocked("Перезапись существующего файла сертификации запрещена")
         with args.output.open("x", encoding="utf-8") as f:
             json.dump(result, f, sort_keys=True, indent=2)
             f.write("\n")
         args.output.chmod(0o644)
     except (Blocked, OSError, ValueError, TypeError) as err:
-        print(f"SINGLE-NODE GA BLOCKED: {err}", file=sys.stderr)
+        print(f"Одноузловая приёмка GA заблокирована: {err}", file=sys.stderr)
         return 2
     print(
         "Independent signed GA evidence verified; release still requires BOM and release signing."

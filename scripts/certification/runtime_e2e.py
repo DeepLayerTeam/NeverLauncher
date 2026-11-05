@@ -76,7 +76,7 @@ def sign(signer: Path, source: Path, target: Path, doc: dict) -> str:
     )
     key = result.stdout.strip()
     if len(key) != 64:
-        raise AssertionError("signer produced no Ed25519 public key")
+        raise AssertionError("Подписывающая программа не выдала публичный ключ Ed25519")
     return key
 
 
@@ -112,12 +112,12 @@ def sync(
     if expect_success and result.returncode:
         raise AssertionError(f"Ошибка: «real runtime sync-local»: {result.stderr[-2500:]}")
     if not expect_success and not result.returncode:
-        raise AssertionError("tampered manifest accepted")
+        raise AssertionError("Изменённый манифест ошибочно принят")
     if not expect_success:
         return {"rejected": True, "elapsedNs": elapsed}
     report = json.loads(result.stdout)
     if report.get("status") != "ready":
-        raise AssertionError(f"not ready: {report}")
+        raise AssertionError(f"Не готово: {report}")
     return {"elapsedNs": elapsed, "result": report}
 
 
@@ -138,15 +138,15 @@ def integration(runtime: Path, signer: Path, out: Path) -> dict:
             first = sync(runtime, signed, root / "first", key, cache)
             metrics = server.metrics()
             if not any(r["path"] == "/bad/0" for r in metrics["requests"]):
-                raise AssertionError("poison mirror never used")
+                raise AssertionError("Недоверенное зеркало не было задействовано")
             if not any(r["path"] == "/good/0" for r in metrics["requests"]):
-                raise AssertionError("mirror fallback was not used")
+                raise AssertionError("Переход на резервное зеркало не выполнен")
             for i, data in enumerate(files):
                 installed = (
                     root / "first" / "libraries" / "certification" / f"{i}.jar"
                 ).read_bytes()
                 if installed != data:
-                    raise AssertionError(f"incorrect verified file {i}")
+                    raise AssertionError(f"Неверный проверенный файл {i}")
             original_requests = len(metrics["requests"])
             # Явно измените подписанный путь и проверьте отклонение подписи до установки.
             changed = json.loads(signed.read_text())
@@ -157,7 +157,7 @@ def integration(runtime: Path, signer: Path, out: Path) -> dict:
                 runtime, invalid, root / "rejected", key, cache, expect_success=False
             )
             if (root / "rejected" / "libraries").exists():
-                raise AssertionError("unsigned file installed")
+                raise AssertionError("Установлен неподписанный файл")
             if len(server.metrics()["requests"]) != original_requests:
                 raise AssertionError("Недоверенное значение: «manifest caused HTTP requests»")
         # Сокет сервера уже закрыт. Второй профиль не может получить удалённый файл.
@@ -167,11 +167,11 @@ def integration(runtime: Path, signer: Path, out: Path) -> dict:
             if (
                 root / "second" / "libraries" / "certification" / f"{i}.jar"
             ).read_bytes() != data:
-                raise AssertionError("cache restored incorrect bytes")
+                raise AssertionError("Кэш восстановил неверные данные")
         actual = second["result"]["download"]
         transferred = actual.get("bytesTransferred", actual.get("transferredBytes"))
         if transferred != 0:
-            raise AssertionError(f"offline cache used network bytes: {transferred}")
+            raise AssertionError(f"Автономный кэш использовал сетевые данные: {transferred}")
         return {
             "id": "runtime-signed-e2e",
             "status": "passed",

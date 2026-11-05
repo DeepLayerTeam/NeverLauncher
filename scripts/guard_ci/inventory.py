@@ -38,7 +38,7 @@ def validate_report(raw: object) -> dict:
     if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
         raise ValueError("Некорректное значение: «Guard inventory schema»")
     if raw.get("productVersion") != EXPECTED_VERSION:
-        raise ValueError(f"Guard inventory must use product version {EXPECTED_VERSION}")
+        raise ValueError(f"Инвентаризация Guard должна использовать версию продукта {EXPECTED_VERSION}")
     target = (raw.get("os"), raw.get("architecture"))
     if target not in TARGETS:
         raise ValueError(f"Неизвестное значение: цель {target}")
@@ -72,7 +72,7 @@ def validate_report(raw: object) -> dict:
             raise ValueError(f"«local inventory»: запрещено «certify» {item_id}")
     is_blocked = any(c["status"] == "BLOCKED" for c in checks)
     if raw.get("status") != ("BLOCKED" if is_blocked else "PASS"):
-        raise ValueError("inventory summary is inconsistent with observed checks")
+        raise ValueError("Итоги инвентаризации не соответствуют фактическим проверкам")
     return raw
 
 
@@ -86,7 +86,7 @@ def run_local(args: argparse.Namespace) -> int:
         command.extend(("--java", args.java))
     if args.game_root or args.minecraft_version:
         if not args.game_root or not args.minecraft_version:
-            raise ValueError("--game-root and --minecraft-version must be supplied together")
+            raise ValueError("Параметры --game-root и --minecraft-version необходимо указывать вместе")
         command.extend(("--game-root", args.game_root, "--minecraft-version", args.minecraft_version))
     # Linux IPC Guard требует принадлежащий процессу каталог Runtime с правами 0700. Изолируйте
     # его для этого вызова и очищайте после остановки процесса Guard.
@@ -97,7 +97,7 @@ def run_local(args: argparse.Namespace) -> int:
             env["XDG_RUNTIME_DIR"] = private
         proc = subprocess.run(command, env=env, text=True, capture_output=True, timeout=50, check=False)
     if proc.returncode:
-        raise ValueError(f"native Guard inventory exited {proc.returncode}: {proc.stderr[-2000:]}")
+        raise ValueError(f"Нативная инвентаризация Guard завершилась с кодом {proc.returncode}: {proc.stderr[-2000:]}")
     report = validate_report(json.loads(proc.stdout))
     if (report["os"], report["architecture"]) != (
         {"linux": "linux", "win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform),
@@ -117,7 +117,7 @@ def run_local(args: argparse.Namespace) -> int:
         os.replace(scratch, output)
     finally:
         scratch.unlink(missing_ok=True)
-    print(f"{report['os']}/{report['architecture']}: {report['status']} (native inventory; NOT game/GA certification)")
+    print(f"{report['os']}/{report['architecture']}: {report['status']} (инвентаризация нативной ОС; НЕ сертификация игры или GA)")
     return 0
 
 
@@ -130,7 +130,7 @@ def merge(args: argparse.Namespace) -> int:
             raise ValueError(f"Обнаружен дубликат: «native target report» {key}")
         reports[key] = doc
     if len({doc["productVersion"] for doc in reports.values()}) > 1:
-        raise ValueError("different product versions in one Guard inventory matrix")
+        raise ValueError("В одной матрице инвентаризации Guard указаны разные версии продукта")
     rows = []
     for os_name, arch in TARGETS:
         item = reports.get((os_name, arch))
@@ -154,7 +154,7 @@ def merge(args: argparse.Namespace) -> int:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"matrix: {result['status']}; {len(reports)}/{len(TARGETS)} native OS/CPU reports; certified=false")
+    print(f"Матрица: {result['status']}; отчётов ОС/ЦП: {len(reports)}/{len(TARGETS)}; сертифицировано=false")
     return 0
 
 
@@ -177,7 +177,7 @@ def main() -> int:
     try:
         return args.handler(args)
     except (OSError, ValueError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-        print(f"Guard inventory: {exc}", file=sys.stderr)
+        print(f"Инвентаризация Guard: {exc}", file=sys.stderr)
         return 2
 
 

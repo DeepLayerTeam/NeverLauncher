@@ -204,12 +204,12 @@ fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
-    let file = File::open(path).map_err(|err| format!("open {} failed: {err}", path.display()))?;
+    let file = File::open(path).map_err(|err| format!("Не удалось открыть {}: {err}", path.display()))?;
     let mut reader = BufReader::with_capacity(128 * 1024, file);
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 128 * 1024];
     loop {
-        let count = reader.read(&mut buffer).map_err(|err| format!("read {} failed: {err}", path.display()))?;
+        let count = reader.read(&mut buffer).map_err(|err| format!("Не удалось прочитать {}: {err}", path.display()))?;
         if count == 0 { break; }
         hasher.update(&buffer[..count]);
     }
@@ -284,7 +284,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
 fn resolve_guard_executable()->Result<PathBuf,String>{
     let exe=std::env::current_exe().map_err(|e|e.to_string())?;
     let macos=exe.parent().ok_or("Каталог Desktop для macOS отсутствует")?;
-    let contents=macos.parent().ok_or("desktop Contents directory missing")?;
+    let contents=macos.parent().ok_or("Отсутствует каталог Contents настольного приложения")?;
     let helper=contents.join("Helpers").join("guard");
     if helper.is_file(){return Ok(helper)}
     // Резервный путь для разработческих схем до 0.16.1;
@@ -298,7 +298,7 @@ async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
 }
 fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),String>{
     let cred=stream.peer_cred().map_err(|e|format!("Ошибка: запрос учётных данных второй стороны Unix-соединения macOS: {e}"))?;
-    let pid=cred.pid().ok_or_else(||"macOS Unix peer PID unavailable".to_string())?;
+    let pid=cred.pid().ok_or_else(||"Не удалось определить PID удалённого Unix-процесса macOS".to_string())?;
     if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("Учётные данные однорангового процесса Guard не совпадают: PID={pid}, UID={}",cred.uid()))}
     Ok(())
 }

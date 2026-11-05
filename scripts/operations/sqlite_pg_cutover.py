@@ -157,10 +157,10 @@ def check_stage_chain(state: dict):
     """После сбоя можно повторно воспроизвести только префикс устойчивых квитанций этапов."""
     completed = state.get("completed")
     if not isinstance(completed, list) or completed != list(STAGES[:len(completed)]):
-        raise CutoverError("corrupt or out-of-order migration stage journal")
+        raise CutoverError("Журнал этапов миграции повреждён либо содержит нарушения порядка")
     receipts = state.get("receipts", {})
     if not isinstance(receipts, dict):
-        raise CutoverError("corrupt migration receipts")
+        raise CutoverError("Повреждены квитанции миграции")
     if any(stage not in completed for stage in receipts):
         raise CutoverError("Обнаружено подтверждение незафиксированного этапа миграции")
     if state.get("importOutcomeUnknown") and "import" in completed:
@@ -186,7 +186,7 @@ def run_cmd(args, *, env=None):
         raise CutoverError(f"Ошибка: «subprocess»: {args[0]}: {type(exc).__name__}") from exc
     if p.returncode:
         # stderr может содержать аргументы команд, пути и секреты. Нельзя выводить его без фильтрации.
-        raise CutoverError(f"{Path(args[0]).name} {args[1] if len(args)>1 else ''} failed (exit {p.returncode}); see private operator service logs")
+        raise CutoverError(f"Команда {Path(args[0]).name} {args[1] if len(args)>1 else ''} завершилась с ошибкой (код {p.returncode}); подробности в закрытых журналах службы оператора")
     if len(p.stdout) > MAX_OUTPUT:
         raise CutoverError("Неожиданно большой ответ CLI")
     try:
@@ -289,7 +289,7 @@ def verify_http_snapshot(path: Path):
         try:
             data = json.loads(document, object_pairs_hook=reject_duplicate)
         except (UnicodeError, ValueError) as exc:
-            raise CutoverError("corrupt HTTP Repository JSON") from exc
+            raise CutoverError("Некорректный JSON HTTP-репозитория") from exc
         if not isinstance(data, dict) or not data:
             raise CutoverError("Некорректное значение: «HTTP Repository JSON state»")
 
@@ -624,16 +624,16 @@ Backend до объявления завершения миграции опер
                 raise CutoverError("Ошибка: «live PostgreSQL Backend login or project operation»") from exc
         health = request("/ready")
         if not isinstance(health, dict) or health.get("status") != "ok":
-            raise CutoverError("Backend health JSON is not ready")
+            raise CutoverError("JSON проверки состояния Backend сообщает о неготовности")
         login = request("/api/v1/admin/login", payload=values)
         if not isinstance(login, dict) or not isinstance(login.get("token"), str) or len(login["token"]) <= 20:
-            raise CutoverError("original owner did not obtain a real administrative session")
+            raise CutoverError("Исходный владелец не получил действительную административную сессию")
         user = login.get("user") or {}
         if not isinstance(user, dict) or user.get("email", "").casefold() != self.a.owner_email.casefold():
-            raise CutoverError("authenticated owner differs from the imported owner")
+            raise CutoverError("Авторизованный владелец не совпадает с импортированным")
         expected = (self.state.get("receipts", {}).get("verify", {}) or {}).get("ownerId")
         if not expected or user.get("id") != expected:
-            raise CutoverError("authenticated owner ID differs from migrated PostgreSQL identity")
+            raise CutoverError("Идентификатор авторизованного владельца не совпадает с перенесённой учётной записью PostgreSQL")
         project_path = "/api/v1/projects/" + quote(self.a.project, safe="")
         project = request(project_path, token=login["token"])
         if not isinstance(project, dict) or project.get("id") != self.a.project:
@@ -653,12 +653,12 @@ Backend до объявления завершения миграции опер
                 try:
                     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError as exc:
-                    raise CutoverError("operator is already running") from exc
+                    raise CutoverError("Оператор уже запущен") from exc
                 check_stage_chain(self.state)
                 if self.state.get("rolledBack"):
-                    raise CutoverError("previous operation rolled back; use a fresh work directory")
+                    raise CutoverError("Предыдущая операция отменена; используйте новый рабочий каталог")
                 if self.state.get("importOutcomeUnknown"):
-                    raise CutoverError("previous import outcome unknown: manually reconcile PostgreSQL before continuing")
+                    raise CutoverError("Результат предыдущего импорта неизвестен: перед продолжением вручную проверьте состояние PostgreSQL")
                 pipeline = [self.preflight, self.do_backup, self.freeze, self.frozen_backup, self.importing, self.files, self.verify, self.cutover, self.health_check]
                 for stage, function in zip(STAGES, pipeline):
                     self.stage(stage, function)
@@ -710,7 +710,7 @@ Backend до объявления завершения миграции опер
                     validate_sqlite_backup(self.coordinator_backup)
                 result = run_cmd([self.a.launcher_sqlite, "backup-verify", "--backup", str(self.backup)], env=self.env)
                 if result.get("manifest", {}).get("sha256") != self.state.get("sourceSHA256"):
-                    raise CutoverError("source backup damaged; rollback blocked")
+                    raise CutoverError("Исходная резервная копия повреждена; откат заблокирован")
             elif any(path.exists() for path in (self.backup, self.http_backup, self.coordinator_backup)):
                 self.log("rollback", "partial_frozen_backups_ignored_source_only")
             # Проверьте, что все исходные БД по-прежнему читаются; не перезаписывайте исходную БД только потому, что
@@ -727,7 +727,7 @@ Backend до объявления завершения миграции опер
                             self.service("stop", stopped)
                         except Exception:
                             pass
-                    raise CutoverError("SQLite service restart failed; services stopped for investigation")
+                    raise CutoverError("Перезапуск службы SQLite не удался; службы остановлены для диагностики")
             self.state["rolledBack"] = True
             self.save()
             self.log("rollback", "completed")
@@ -762,7 +762,7 @@ def main(argv=None):
             return 0
         required = ("source_env", "core_db", "http_db", "storage_source", "storage_target", "project", "owner_email")
         if any(not getattr(args, field) for field in required):
-            raise CutoverError("required source paths, local storage, project and owner-email")
+            raise CutoverError("Необходимо указать пути исходных данных, локальное хранилище, проект и owner-email")
         if args.action == "rollback":
             result = operator.rollback()
         else:
@@ -770,7 +770,7 @@ def main(argv=None):
         print(json.dumps(result, sort_keys=True))
         return 0
     except (CutoverError, OSError, ValueError, KeyError) as exc:
-        print(f"cutover rejected: {exc}", file=sys.stderr)
+        print(f"Переключение хранилища отклонено: {exc}", file=sys.stderr)
         return 1
 
 

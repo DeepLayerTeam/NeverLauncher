@@ -63,7 +63,7 @@ func rejectDuplicateJSON0249(data []byte) error {
 	var walk func(int) error
 	walk = func(depth int) error {
 		if depth > 64 {
-			return errors.New("JSON nesting exceeds limit")
+			return errors.New("Превышена допустимая глубина вложенности JSON")
 		}
 		token, e := d.Token()
 		if e != nil {
@@ -83,7 +83,7 @@ func rejectDuplicateJSON0249(data []byte) error {
 				}
 				name, ok := key.(string)
 				if !ok {
-					return errors.New("expected JSON object key")
+					return errors.New("Ожидался ключ объекта JSON")
 				}
 				if seen[name] {
 					return fmt.Errorf("Обнаружен дубликат: ключ JSON %q", name)
@@ -131,7 +131,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		return out, e
 	}
 	if info.Size() > 32<<20 {
-		return out, errors.New("component manifest exceeds 32 MiB")
+		return out, errors.New("Манифест компонентов превышает 32 МиБ")
 	}
 	data, e := os.ReadFile(filename)
 	if e != nil {
@@ -140,13 +140,13 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 	dec := json.NewDecoder(strings.NewReader(string(data)))
 	dec.DisallowUnknownFields()
 	if e = dec.Decode(&out.Wire); e != nil {
-		return out, fmt.Errorf("manifest JSON: %w", e)
+		return out, fmt.Errorf("JSON манифеста: %w", e)
 	}
 	if e = dec.Decode(new(any)); e != io.EOF {
-		return out, errors.New("trailing JSON after manifest")
+		return out, errors.New("После манифеста обнаружены лишние данные JSON")
 	}
 	if out.Wire.SchemaVersion != "3.0" {
-		return out, fmt.Errorf("components require Manifest v3, got %q", out.Wire.SchemaVersion)
+		return out, fmt.Errorf("Для компонентов необходим Manifest v3, получено %q", out.Wire.SchemaVersion)
 	}
 	if len(out.Wire.ComponentCatalog) == 0 || len(out.Wire.Files) == 0 || len(out.Wire.ProfileSnapshot) == 0 {
 		return out, errors.New("v3 manifest: требуется «catalog, files and profile snapshot»")
@@ -157,18 +157,18 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 	// Доверие никогда не выводится из publicKey, встроенного в недоверенный манифест.
 	if !allowUnsigned {
 		if trustedKey == "" {
-			return out, errors.New("--public-key is required; use --allow-unsigned only for a local draft")
+			return out, errors.New("Необходим параметр --public-key; --allow-unsigned допустим только для локального черновика")
 		}
 		if out.Wire.Signature == nil || out.Wire.Signature.Algorithm != "Ed25519" {
-			return out, errors.New("missing/unsupported Ed25519 manifest signature")
+			return out, errors.New("Подпись манифеста Ed25519 отсутствует или не поддерживается")
 		}
 		key, e := loadEd25519PublicKey(trustedKey)
 		if e != nil {
-			return out, fmt.Errorf("trusted public key: %w", e)
+			return out, fmt.Errorf("Доверенный публичный ключ: %w", e)
 		}
 		embedded, e := hex.DecodeString(out.Wire.Signature.PublicKey)
 		if e != nil || !ed25519.PublicKey(embedded).Equal(key) {
-			return out, errors.New("manifest public key differs from trusted public key")
+			return out, errors.New("Публичный ключ манифеста не совпадает с доверенным")
 		}
 		sig, e := hex.DecodeString(out.Wire.Signature.Signature)
 		if e != nil || len(sig) != ed25519.SignatureSize {
@@ -186,7 +186,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		out.SignatureVerified = true
 	}
 	if e = cm.ValidateComponentCatalog0241(out.Manifest); e != nil {
-		return out, fmt.Errorf("catalog validation: %w", e)
+		return out, fmt.Errorf("Проверка каталога: %w", e)
 	}
 	// Проверяйте ссылки на подписанные файлы и принадлежность до разрешения экспорта или
 	// плана, иначе корректный граф может ссылаться на подменённые метаданные файлов.
@@ -199,7 +199,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 			return out, fmt.Errorf("Некорректные метаданные подписанного файла %q", f.Path)
 		}
 		if _, e = hex.DecodeString(f.SHA256); e != nil {
-			return out, fmt.Errorf("file %q invalid SHA-256", f.Path)
+			return out, fmt.Errorf("Файл %q содержит неверную контрольную сумму SHA-256", f.Path)
 		}
 		lower := strings.ToLower(f.Path)
 		if seen[lower] {
@@ -328,7 +328,7 @@ func resolveComponents0249(input componentsInput0249, preset string, env cm.Comp
 		}
 		out.Files = append(out.Files, componentsFile0249{Path: f.Path, Size: f.Size, SHA256: f.SHA256, Owner: owner})
 		if out.DownloadBytes > int64(^uint64(0)>>1)-f.Size {
-			return out, errors.New("download size overflow")
+			return out, errors.New("Переполнение при расчёте размера загрузки")
 		}
 		out.DownloadBytes += f.Size
 	}
@@ -471,7 +471,7 @@ func executeComponents0249(args []string) error {
 		return errors.New("Требуется: --manifest")
 	}
 	if *javaMajor > 99 {
-		return errors.New("--java-major outside supported range")
+		return errors.New("Значение --java-major выходит за поддерживаемый диапазон")
 	}
 	if *osName == "" {
 		if runtime.GOOS == "darwin" {
@@ -513,11 +513,11 @@ func executeComponents0249(args []string) error {
 		}
 		before, e := resolveComponents0249(a, *oldPreset, env)
 		if e != nil {
-			return fmt.Errorf("old resolve: %w", e)
+			return fmt.Errorf("Определение старого набора: %w", e)
 		}
 		after, e := resolveComponents0249(b, *preset, env)
 		if e != nil {
-			return fmt.Errorf("new resolve: %w", e)
+			return fmt.Errorf("Определение нового набора: %w", e)
 		}
 		add, remove, update := componentDifference0249(a.Manifest.ComponentCatalog.Components, b.Manifest.ComponentCatalog.Components)
 		filesAdded, filesRemoved, filesChanged := fileDifference0249(before.Files, after.Files)
@@ -544,7 +544,7 @@ func executeComponents0249(args []string) error {
 		// Проверяйте статически разрешимый граф каждого именованного пресета, а не только одного.
 		for _, p := range cat.Presets {
 			if _, e = cm.PreviewCatalogGraph0248(*cat, p.ID); e != nil {
-				return fmt.Errorf("preset %s: %w", p.ID, e)
+				return fmt.Errorf("Пресет %s: %w", p.ID, e)
 			}
 		}
 		if _, e = cm.PreviewCatalogGraph0248(*cat, ""); e != nil {

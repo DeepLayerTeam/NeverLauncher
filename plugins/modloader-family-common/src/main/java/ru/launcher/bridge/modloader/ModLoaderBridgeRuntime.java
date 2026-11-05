@@ -92,7 +92,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         try {
             return CompletableFuture.supplyAsync(() -> validateJoin(username, uuid, ip), validationExecutor);
         } catch (RejectedExecutionException e) {
-            logger.warn("Launcher {} Server Bridge join validation queue saturated; failing closed", displayName);
+            logger.warn("Launcher {} ServerBridge: очередь проверки входов заполнена; новые входы отклоняются", displayName);
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
         }
     }
@@ -198,7 +198,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             boolean heartbeatStopped = heartbeatExecutor.awaitTermination(2, TimeUnit.SECONDS);
             boolean validationStopped = validationExecutor.awaitTermination(2, TimeUnit.SECONDS);
             if (!heartbeatStopped || !validationStopped) {
-                logger.warn("Launcher {} Server Bridge workers did not terminate within shutdown window", displayName);
+                logger.warn("Launcher {} ServerBridge: рабочие процессы не завершились за отведённое время", displayName);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -228,7 +228,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             Path path = artifactPathSupplier.get();
             return path == null ? null : path.toAbsolutePath().normalize();
         } catch (RuntimeException e) {
-            logger.warn("Launcher {} Server Bridge could not resolve loader-owned artifact path; trying CodeSource fallback", displayName, e);
+            logger.warn("Launcher {} ServerBridge: не удалось определить путь артефакта загрузчика; выполняется попытка через CodeSource", displayName, e);
             return null;
         }
     }
@@ -280,7 +280,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     }
 
     private static String requireText(String value, String label) {
-        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " is required");
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " обязательно для заполнения");
         return value.trim();
     }
 

@@ -48,7 +48,7 @@ def run(argv, *, cwd=None, timeout=30, codes=(0,)):
     if p.returncode not in codes:
         raise DeploymentError("Команда завершилась ошибкой: " + argv[0] + " (exit " + str(p.returncode) + ")")
     if len(p.stdout) > 4_000_000:
-        raise DeploymentError("command produced unexpectedly large output")
+        raise DeploymentError("Команда вернула слишком большой объём вывода")
     return p.stdout.decode("utf-8", errors="replace")
 
 
@@ -66,7 +66,7 @@ def url_host(value, scheme):
     except ValueError as exc:
         raise DeploymentError("Некорректный URL внешней конечной точки") from exc
     if parsed.scheme not in scheme or not parsed.hostname or parsed.fragment:
-        raise DeploymentError("external dependency must use the required TLS URL scheme")
+        raise DeploymentError("Внешняя зависимость должна использовать требуемую схему URL с TLS")
     if parsed.hostname.lower() in ("localhost", "127.0.0.1", "::1", "postgres", "redis", "minio", "s3"):
         raise DeploymentError("«external dependency»: запрещено «resolve to a localhost or embedded Compose service»")
     return parsed.hostname.lower()
@@ -74,10 +74,10 @@ def url_host(value, scheme):
 
 def check_secure_file(path, *, strict=False):
     if not path.is_file() or path.is_symlink():
-        raise DeploymentError("required file is absent or is a symlink: " + path.name)
+        raise DeploymentError("Обязательный файл отсутствует либо является символической ссылкой: " + path.name)
     mode = stat.S_IMODE(path.stat().st_mode)
     if strict and (mode & 0o077):
-        raise DeploymentError("secret file is accessible to group/other: " + path.name)
+        raise DeploymentError("Файл секрета доступен группе или другим пользователям: " + path.name)
 
 
 def resolved_compose(directory, project, *, env_file=None):
@@ -90,9 +90,9 @@ def resolved_compose(directory, project, *, env_file=None):
     try:
         data = json.loads(raw)
     except ValueError as exc:
-        raise DeploymentError("Docker Compose configuration is not valid JSON") from exc
+        raise DeploymentError("Конфигурация Docker Compose не является корректным JSON") from exc
     if not isinstance(data, dict) or not isinstance(data.get("services"), dict):
-        raise DeploymentError("Docker Compose configuration missing services")
+        raise DeploymentError("В конфигурации Docker Compose отсутствуют службы")
     services = data["services"]
     if set(services) != set(ALL_SERVICES):
         raise DeploymentError("Неожиданное значение: «Compose services; embedded database or other processes are prohibited»")
@@ -100,7 +100,7 @@ def resolved_compose(directory, project, *, env_file=None):
     worker = services["worker"]["environment"]
     for name, env in (("api", api), ("worker", worker)):
         if env.get("LAUNCHER_PROCESS_ROLE") != name:
-            raise DeploymentError("incorrect process role for " + name)
+            raise DeploymentError("Неверная роль процесса для " + name)
         for key, expected in (("LAUNCHER_DEPLOYMENT_MODE", "network-ha"),
                               ("LAUNCHER_REPOSITORY_DRIVER", "postgres"),
                               ("LAUNCHER_STORAGE_DRIVER", "s3"),
@@ -111,7 +111,7 @@ def resolved_compose(directory, project, *, env_file=None):
                               ("LAUNCHER_DATABASE_AUTO_MIGRATE", "false"),
                               ("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "")):
             if str(env.get(key, "")).lower() != expected:
-                raise DeploymentError(name + " has unsafe " + key)
+                raise DeploymentError(name + " содержит небезопасное значение " + key)
         if env.get("LAUNCHER_STORAGE_S3_BUCKET", "") == "":
             raise DeploymentError("Отсутствует: «S3 bucket»")
     ids = (api.get("LAUNCHER_REPLICA_ID"), worker.get("LAUNCHER_REPLICA_ID"))
@@ -119,7 +119,7 @@ def resolved_compose(directory, project, *, env_file=None):
         raise DeploymentError("Для LAUNCHER_NODE_ID требуется: «a stable lowercase hostname-compatible identifier»")
     node_id = ids[0][:-4]
     if ids[1] != node_id + "-worker":
-        raise DeploymentError("API and worker must share one node prefix but use different replica IDs")
+        raise DeploymentError("API и рабочий процесс должны иметь общий префикс узла, но разные идентификаторы реплик")
     pg = url_host(api.get("LAUNCHER_DATABASE_DSN", ""), ("postgres", "postgresql"))
     if parse_qs(urlsplit(api["LAUNCHER_DATABASE_DSN"]).query).get("sslmode") != ["verify-full"]:
         raise DeploymentError("Для PostgreSQL требуется «TLS sslmode=verify-full on multi-host network»")
@@ -132,23 +132,23 @@ def resolved_compose(directory, project, *, env_file=None):
     for key in ("LAUNCHER_DATABASE_DSN", "LAUNCHER_REDIS_URL", "LAUNCHER_STORAGE_S3_ENDPOINT",
                 "LAUNCHER_STORAGE_S3_BUCKET", "LAUNCHER_STORAGE_S3_REGION", "LAUNCHER_PUBLIC_URL"):
         if api.get(key) != worker.get(key):
-            raise DeploymentError("worker and API target different shared dependency " + key)
+            raise DeploymentError("Рабочий процесс и API используют разные общие зависимости: " + key)
     refs = {}
     for name in ALL_SERVICES:
         ref = services[name].get("image", "")
         if not DIGEST_REGEX.fullmatch(ref):
-            raise DeploymentError("production image for " + name + " must have immutable @sha256 digest")
+            raise DeploymentError("Производственный образ для " + name + " должен иметь неизменяемую контрольную сумму @sha256")
         refs[name] = ref
     if refs["api"] != refs["worker"]:
-        raise DeploymentError("API and worker must use exactly the same binary/image")
+        raise DeploymentError("API и рабочий процесс должны использовать точно один и тот же исполняемый файл или образ")
     if "ports" in services["api"] or "ports" in services["worker"]:
         raise DeploymentError("«API/worker»: запрещено «publish host ports»")
     ingress_ports = services["ingress"].get("ports", [])
     if len(ingress_ports) != 1:
-        raise DeploymentError("ingress must publish exactly one restricted HTTPS port")
+        raise DeploymentError("Входящий прокси должен публиковать ровно один ограниченный HTTPS-порт")
     for bind in ingress_ports:
         if bind.get("target") != 443 or bind.get("published") != "443" or bind.get("protocol", "tcp") != "tcp":
-            raise DeploymentError("only port 443 of local ingress may be published")
+            raise DeploymentError("У локального входящего прокси можно публиковать только порт 443")
         host_ip = str(bind.get("host_ip", ""))
         if not host_ip or host_ip in ("0.0.0.0", "::", "127.0.0.1"):
             raise DeploymentError("ingress: требуется «an explicit reachable, restricted interface IP»")
@@ -174,7 +174,7 @@ def resolved_compose(directory, project, *, env_file=None):
         redisport = urlsplit(api["LAUNCHER_REDIS_URL"]).port or 6379
         s3port = urlsplit(api["LAUNCHER_STORAGE_S3_ENDPOINT"]).port or 443
     except ValueError as exc:
-        raise DeploymentError("external endpoint has an invalid TCP port") from exc
+        raise DeploymentError("У внешнего эндпоинта указан некорректный TCP-порт") from exc
     return {"schema": SCHEMA, "version": VERSION, "nodeId": node_id,
             "machineIdentity": machine, "project": project, "roles": list(SERVICES),
             "imageDigestRefs": refs, "sharedEndpoints": {"postgres": pg, "redis": redis,
@@ -238,14 +238,14 @@ def local_compat_observe_0516(directory, project):
     import hashlib
     report = live_observe(directory, project, growth=True)
     if not report.get("ready"):
-        raise DeploymentError("cannot inspect compatibility on an unhealthy node")
+        raise DeploymentError("Нельзя проверить совместимость неисправного узла")
     running = {c.get("service"): c for c in report["live"]["containers"]}
     for role in ("api", "worker"):
         ready = (running.get(role) or {}).get("readiness") or {}
         if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6", "0.51.7")):
             raise DeploymentError("Не поддерживается: «or unverified live /ready version for»" + role)
     if running["api"]["readiness"]["version"] != running["worker"]["readiness"]["version"]:
-        raise DeploymentError("API/worker live version mismatch on the same host")
+        raise DeploymentError("На одном хосте версии работающих API и рабочего процесса не совпадают")
     container = running["api"]["containerId"]
     def get(path):
         raw = inventory.execute(["docker", "exec", container, "wget", "-qO-", "-T", "5",
@@ -262,13 +262,13 @@ def local_compat_observe_0516(directory, project):
     v = running["api"]["readiness"]["version"]
     status = get("/api/v1/status")
     if status.get("status") != "ok" or status.get("version") != v:
-        raise DeploymentError("live API status differs from live readiness version")
+        raise DeploymentError("Статус работающего API не совпадает с версией из проверки готовности")
     loaders = get("/api/v1/loaders")
     if loaders.get("version") != v or not isinstance(loaders.get("items"), list) or not loaders["items"]:
-        raise DeploymentError("live loader API contract incompatible")
+        raise DeploymentError("Контракт работающего API загрузчика несовместим")
     runtime = get("/api/v1/runtime/requirements")
     if runtime.get("version") != v or not isinstance(runtime.get("java"), dict):
-        raise DeploymentError("live runtime requirements API incompatible")
+        raise DeploymentError("API требований работающего Runtime несовместим")
     bridge = get("/api/v1/server-bridge/capabilities?protocols=3,2")
     data = bridge.get("data")
     if (not isinstance(data, dict) or data.get("toolVersion") != v or
@@ -276,7 +276,7 @@ def local_compat_observe_0516(directory, project):
             data.get("supportedProtocolVersions") != [3, 2] or
             data.get("rollingUpgrade") is not True or
             not data.get("activeSigningKeyFingerprint")):
-        raise DeploymentError("live signed ServerBridge capability negotiation incompatible")
+        raise DeploymentError("Согласование подписанных возможностей ServerBridge несовместимо")
     # Сравнивайте настоящие контракты ответов, а не строки, зависящие от версии.
     protocols = {key: data.get(key) for key in (
         "schemaVersion", "preferredProtocolVersion", "minimumProtocolVersion",
@@ -326,9 +326,9 @@ def remote_call(target, installed_script, directory, project, mode, *, growth=Tr
     try:
         result = json.loads(raw)
     except ValueError as exc:
-        raise DeploymentError("remote node returned invalid report") from exc
+        raise DeploymentError("Удалённый узел вернул некорректный отчёт") from exc
     if not isinstance(result, dict) or result.get("schema") != SCHEMA or result.get("project") != project:
-        raise DeploymentError("remote node returned mismatched report schema/project")
+        raise DeploymentError("Удалённый узел вернул отчёт с неверной схемой или проектом")
     return result
 
 
@@ -346,7 +346,7 @@ def parse_nodes(specs):
         if not sep or not LABEL_REGEX.fullmatch(name) or not HOST_REGEX.fullmatch(host) or host.startswith("-") or name in nodes:
             raise DeploymentError("each --node: требуется «a unique label=trusted-ssh-host»")
         if host in nodes.values():
-            raise DeploymentError("same SSH target specified more than once")
+            raise DeploymentError("Одна цель SSH указана несколько раз")
         nodes[name] = host
     if len(nodes) < 2:
         raise DeploymentError("Требуется: «at least two independent SSH hosts are»")
@@ -359,7 +359,7 @@ def assert_peer_config(reports):
     first = next(iter(reports.values()))
     for name, report in reports.items():
         if not report.get("configurationValidated"):
-            raise DeploymentError(name + " does not have a valid multi-host configuration")
+            raise DeploymentError(name + " не имеет корректной многоузловой конфигурации")
         machine = report.get("machineIdentity")
         node_id = report.get("nodeId")
         if not machine or machine in seen_machine or not node_id or node_id in seen_node:
@@ -367,9 +367,9 @@ def assert_peer_config(reports):
         seen_machine.add(machine)
         seen_node.add(node_id)
         if report.get("imageDigestRefs") != first.get("imageDigestRefs"):
-            raise DeploymentError("different pinned images on hosts; cluster version skew not supported in 0.51.2")
+            raise DeploymentError("На хостах закреплены разные образы; различие версий в кластере не поддерживается в 0.51.2")
         if report.get("sharedEndpoints") != first.get("sharedEndpoints"):
-            raise DeploymentError("hosts target different public origins or shared dependency endpoints")
+            raise DeploymentError("Хосты используют разные публичные источники или эндпоинты общих зависимостей")
 
 
 def collect_cluster(nodes, script, directory, project, mode, *, growth=True):
@@ -427,11 +427,11 @@ def cluster_verify(reports, edge_url):
 
 def outage_drill(nodes, script, directory, project, edge_url, failed_node):
     if failed_node not in nodes:
-        raise DeploymentError("failed node not in target cluster")
+        raise DeploymentError("Отказавший узел отсутствует в целевом кластере")
     before = collect_cluster(nodes, script, directory, project, "local-observe")
     normal = cluster_verify(before, edge_url)
     if not normal["multiHostControlPlaneObserved"]:
-        raise DeploymentError("cannot begin outage test when baseline is not healthy")
+        raise DeploymentError("Нельзя начинать проверку отказоустойчивости при неисправном исходном состоянии")
     survivor_name = next(n for n in nodes if n != failed_node)
     stopped = False
     restore_error = None
@@ -449,10 +449,10 @@ def outage_drill(nodes, script, directory, project, edge_url, failed_node):
                 break
             time.sleep(3)
         else:
-            raise DeploymentError("external HTTPS LB did not recover after stopping one full node")
+            raise DeploymentError("Внешний балансировщик HTTPS не восстановился после остановки целого узла")
         survivor = remote_call(nodes[survivor_name], script, directory, project, "local-observe")
         if not survivor.get("ready"):
-            raise DeploymentError("surviving node does not have healthy API and worker after simulated host loss")
+            raise DeploymentError("После имитации отказа хоста API и рабочий процесс уцелевшего узла неработоспособны")
         success = True
     except DeploymentError as exc:
         success = False
@@ -531,19 +531,19 @@ def main(argv=None):
                 "configurationValidated": True, "hostFailureTested": False}
         elif args.mode == "cluster-up":
             if not args.edge_url:
-                raise DeploymentError("--edge-url required before deploying any hosts")
+                raise DeploymentError("Перед развёртыванием хостов необходимо указать --edge-url")
             validate_edge_url(args.edge_url)
             collect_cluster(nodes, args.remote_script, args.directory, args.project, "local-check")
             for name, target in nodes.items():
                 deployed = remote_call(target, args.remote_script, args.directory, args.project,
                                        "local-up", timeout=520)
                 if not deployed.get("ready"):
-                    raise DeploymentError(name + " did not pass live startup verification")
+                    raise DeploymentError(name + " не прошёл проверку фактического запуска")
             report = cluster_verify(collect_cluster(nodes, args.remote_script, args.directory, args.project,
                                                      "local-observe"), args.edge_url)
         elif args.mode == "cluster-verify":
             if not args.edge_url:
-                raise DeploymentError("--edge-url required for cluster verification")
+                raise DeploymentError("Для проверки кластера необходимо указать --edge-url")
             validate_edge_url(args.edge_url)
             report = cluster_verify(collect_cluster(nodes, args.remote_script, args.directory, args.project,
                                                      "local-observe", growth=not args.skip_growth), args.edge_url)
@@ -557,7 +557,7 @@ def main(argv=None):
         return 0 if (report.get("configurationValidated") or report.get("multiHostControlPlaneObserved")
                      or report.get("testPassed")) else 3
     except (DeploymentError, inventory.InventoryError) as exc:
-        print("multi-host operation unavailable: " + str(exc), file=sys.stderr)
+        print("Многоузловая операция недоступна: " + str(exc), file=sys.stderr)
         return 2
 
 if __name__ == "__main__":

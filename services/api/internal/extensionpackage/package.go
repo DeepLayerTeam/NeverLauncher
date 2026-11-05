@@ -326,7 +326,7 @@ func sameZipTimestamp0203(actual, expected time.Time) bool {
 func analyze0203(packagePath string) (*analysis0203, error) {
 	reader, err := zip.OpenReader(packagePath)
 	if err != nil {
-		return nil, fmt.Errorf("open .nlext: %w", err)
+		return nil, fmt.Errorf("Открытие файла .nlext: %w", err)
 	}
 	a := &analysis0203{reader: reader, entries: map[string]*zip.File{}}
 	failed := true
@@ -533,7 +533,7 @@ func VerifyFile(packagePath string, publicKey ed25519.PublicKey) (VerifiedPackag
 	pubDigest := sha256.Sum256(publicKey)
 	fingerprint := "sha256:" + hex.EncodeToString(pubDigest[:])
 	if a.signature == nil || !strings.EqualFold(fingerprint, a.signature.KeyFingerprint) {
-		return VerifiedPackage{}, fmt.Errorf("signature key mismatch: package=%s trusted=%s", a.signature.KeyFingerprint, fingerprint)
+		return VerifiedPackage{}, fmt.Errorf("Несовпадение ключа подписи: пакет=%s, доверенный=%s", a.signature.KeyFingerprint, fingerprint)
 	}
 	sig, _ := base64.StdEncoding.DecodeString(a.signature.Signature)
 	if !ed25519.Verify(publicKey, signingMessage0203(a.descriptor.PackageIdentity), sig) {

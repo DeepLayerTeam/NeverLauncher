@@ -33,7 +33,7 @@ def sha(path: Path) -> str:
 
 def checked_file(path: Path) -> Path:
     if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
-        raise ValueError(f"missing, empty or symlink file: {path}")
+        raise ValueError(f"Файл отсутствует, пуст либо является символической ссылкой: {path}")
     return path
 
 
@@ -47,7 +47,7 @@ def verify_matrix(path: Path) -> str:
         or {m.get("id") for m in rows if isinstance(m, dict)}
         != {f"M{i:02}" for i in range(1, 20)}
     ):
-        raise ValueError("Gravit matrix must contain 19 unique named module outcomes")
+        raise ValueError("Матрица Gravit должна содержать 19 уникальных именованных результатов модулей")
     for m in rows:
         if m.get("status") not in ("partial", "blocked", "verified") or not m.get(
             "limitations"
@@ -66,12 +66,12 @@ def verify_matrix(path: Path) -> str:
         for rel in m["sourceRefs"] + m["testRefs"]:
             candidate = ROOT / rel
             if not checked_file(candidate).resolve().is_relative_to(ROOT.resolve()):
-                raise ValueError("module reference escaped the source root")
+                raise ValueError("Ссылка на модуль вышла за пределы корня исходников")
     if (
         next(m for m in rows if m["upstreamModule"] == "UnsafeCommandPack")["status"]
         != "blocked"
     ):
-        raise ValueError("UnsafeCommandPack must remain explicitly blocked")
+        raise ValueError("UnsafeCommandPack должен оставаться явно заблокированным")
     return sha(path)
 
 
@@ -127,7 +127,7 @@ def certify(
                 )
             digest = hashlib.sha256(zf.read(f"payload/{inner_jar}")).hexdigest()
             if not re.fullmatch("[0-9a-f]{64}", digest):
-                raise ValueError(f"{identifier}: invalid JAR")
+                raise ValueError(f"{identifier}: некорректный JAR-файл")
         packages[identifier] = {
             "file": filename,
             "sha256": sha(package),
@@ -183,7 +183,7 @@ def main() -> int:
         zipfile.BadZipFile,
         subprocess.TimeoutExpired,
     ) as err:
-        print(f"extension production certification BLOCKED: {err}", file=sys.stderr)
+        print(f"Производственная сертификация расширения заблокирована: {err}", file=sys.stderr)
         return 2
     print(
         "PASS: six real-target extension E2E results AND exact signed extension packages"

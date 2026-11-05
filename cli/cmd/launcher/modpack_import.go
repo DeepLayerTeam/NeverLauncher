@@ -164,7 +164,7 @@ func readPackJSON0275(z *zip.File, v any) error {
 		return err
 	}
 	if len(b) > 4<<20 {
-		return errors.New("manifest exceeds 4 MiB")
+		return errors.New("Манифест превышает 4 МиБ")
 	}
 	dec := json.NewDecoder(bytes.NewReader(b))
 	if err = dec.Decode(v); err != nil {
@@ -193,13 +193,13 @@ func modrinthDownloadURL0275(raw string) error {
 func loaderFromModrinth0275(deps map[string]string) (string, string, string, error) {
 	mc := strings.TrimSpace(deps["minecraft"])
 	if mc == "" || isMutableMinecraft0271(mc) {
-		return "", "", "", errors.New("modpack must pin minecraft version")
+		return "", "", "", errors.New("Модпак должен закреплять версию Minecraft")
 	}
 	var loader, version string
 	for _, p := range []struct{ key, loader string }{{"fabric-loader", "fabric"}, {"quilt-loader", "quilt"}, {"forge", "forge"}, {"neoforge", "neoforge"}} {
 		if value := strings.TrimSpace(deps[p.key]); value != "" {
 			if loader != "" {
-				return "", "", "", errors.New("multiple modloaders in Modrinth pack")
+				return "", "", "", errors.New("В пакете Modrinth указано несколько загрузчиков модов")
 			}
 			loader, version = p.loader, value
 		}
@@ -220,7 +220,7 @@ func loaderFromModrinth0275(deps map[string]string) (string, string, string, err
 func loaderFromCurse0275(m curseIndex0275) (string, string, string, error) {
 	mc := strings.TrimSpace(m.Minecraft.Version)
 	if mc == "" || isMutableMinecraft0271(mc) {
-		return "", "", "", errors.New("CurseForge manifest must pin Minecraft")
+		return "", "", "", errors.New("Манифест CurseForge должен закреплять версию Minecraft")
 	}
 	if len(m.Minecraft.ModLoaders) == 0 {
 		return mc, "vanilla", "", nil
@@ -233,7 +233,7 @@ func loaderFromCurse0275(m curseIndex0275) (string, string, string, error) {
 			}
 		}
 		if primary != 1 {
-			return "", "", "", errors.New("ambiguous primary CurseForge loader")
+			return "", "", "", errors.New("Неоднозначно выбран основной загрузчик CurseForge")
 		}
 	}
 	var id string
@@ -294,7 +294,7 @@ func parseModpack0275(archive string, includeOptional bool) (modpackSpec0275, *z
 			continue
 		}
 		if !f.Mode().IsRegular() || f.UncompressedSize64 > uint64(modpackMaxFile0275) {
-			return fail(fmt.Errorf("unsafe/oversized ZIP entry %q", p))
+			return fail(fmt.Errorf("Небезопасная или слишком большая запись ZIP %q", p))
 		}
 		total += f.UncompressedSize64
 		if total > uint64(modpackMaxBytes0275) {
@@ -528,7 +528,7 @@ func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir stri
 			} else if f.SHA512 != "" && !strings.EqualFold(f.SHA512, hex.EncodeToString(h512.Sum(nil))) {
 				err = errors.New("Несоответствие: SHA-512")
 			} else if f.SHA256 != "" && !strings.EqualFold(f.SHA256, hex.EncodeToString(h256.Sum(nil))) {
-				err = errors.New("SHA-256 mismatch")
+				err = errors.New("Контрольная сумма SHA-256 не совпадает")
 			}
 			if err == nil {
 				err = tmp.Sync()
@@ -563,7 +563,7 @@ func curseFileMetadata0275(ctx context.Context, client *http.Client, api, key st
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("CurseForge API HTTP %d", resp.StatusCode)
+		return fmt.Errorf("API CurseForge вернул HTTP %d", resp.StatusCode)
 	}
 	var data struct {
 		Data struct {

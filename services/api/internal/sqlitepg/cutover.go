@@ -59,7 +59,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 		return result, err
 	}
 	if report.Format != liveImportVersion0473 || !report.Verified || report.SourceSHA256 != sourceSHA || report.StateVersion != stateVersion0474 || report.ReadyForBackendCutover || len(report.LiveTables) != len(rules0473())+len(stateRules0474()) {
-		return result, errors.New("unverified or inconsistent live import receipt")
+		return result, errors.New("Квитанция импорта в работающую систему не проверена или противоречива")
 	}
 	allowed := make(map[string]string)
 	for _, rule := range rules0473() {
@@ -87,7 +87,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 			return result, fmt.Errorf("%s: %w", table.Destination, err)
 		}
 		if count != table.Rows {
-			return result, fmt.Errorf("%s changed since import: %d != %d", table.Destination, count, table.Rows)
+			return result, fmt.Errorf("Таблица %s изменилась после импорта: %d != %d", table.Destination, count, table.Rows)
 		}
 	}
 	result.CheckedTables = len(seen)
@@ -98,14 +98,14 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 		return result, fmt.Errorf("Отсутствует: «matching verified file-copy receipt»: %w", err)
 	}
 	if count != report.Files || (driver != "local" && driver != "s3") {
-		return result, errors.New("file receipt inconsistent with live import")
+		return result, errors.New("Квитанция файлов не соответствует импорту в работающую систему")
 	}
 	var actual int64
 	if err = tx.QueryRow(ctx, `SELECT count(*) FROM files`).Scan(&actual); err != nil {
 		return result, err
 	}
 	if actual != count {
-		return result, errors.New("files catalog modified since verified file copy")
+		return result, errors.New("Каталог файлов изменился после проверенного копирования")
 	}
 	// Квитанция 0.47.4 только со счётчиками не доказывает идентичность каталога. Запросить
 	// полный канонический набор строк и сравнить с квитанцией копирования файлов.
@@ -135,7 +135,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	}
 	digest := sha256.Sum256(bytes)
 	if catalogDigest == "" || catalogDigest != hex.EncodeToString(digest[:]) {
-		return result, errors.New("file catalog fingerprint mismatches verified copy; rerun offline copy")
+		return result, errors.New("Отпечаток каталога файлов не соответствует проверенной копии; повторите автономное копирование")
 	}
 	result.FilesVerified = true
 	result.FileObjects = count
@@ -151,13 +151,13 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	}
 	var belongs bool
 	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM projects WHERE id=$1)`, projectID).Scan(&belongs); err != nil || !belongs {
-		return result, errors.New("imported project absent")
+		return result, errors.New("Импортированный проект отсутствует")
 	}
 	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM project_user_roles WHERE user_id=$1 AND project_id=$2)`, ownerID, projectID).Scan(&belongs); err != nil {
 		return result, err
 	}
 	if !belongs && role != "owner" && role != "admin" {
-		return result, errors.New("owner has no project access")
+		return result, errors.New("У владельца нет доступа к проекту")
 	}
 	result.OwnerID = ownerID
 	if err = tx.Commit(ctx); err != nil {
@@ -176,14 +176,14 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	}
 	owner, err := r.GetUserByEmail(ownerEmail)
 	if err != nil || owner.ID != ownerID || owner.PasswordHash == "" || owner.Status != "active" {
-		return result, errors.New("SQLRepository failed to read migrated owner")
+		return result, errors.New("SQLRepository не смог прочитать перенесённого владельца")
 	}
 	project, err := r.GetProject(projectID)
 	if err != nil || project.ID != projectID {
-		return result, errors.New("SQLRepository failed to read migrated project")
+		return result, errors.New("SQLRepository не смог прочитать перенесённый проект")
 	}
 	if _, err = r.ListProfiles(projectID); err != nil {
-		return result, fmt.Errorf("SQLRepository failed to list profiles: %w", err)
+		return result, fmt.Errorf("SQLRepository не смог получить список профилей: %w", err)
 	}
 	result.RepositoryVerified = true
 	// НИКАКОГО автоматического одобрения. Версия 0.47.4 не переносит HTTP/Coordinator и т. п.

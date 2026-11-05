@@ -19,7 +19,7 @@ func decodeCBOR(b []byte) (any, int, error) {
 
 func (d *cborDecoder) read() (any, error) {
 	if d.i >= len(d.b) {
-		return nil, errors.New("CBOR: unexpected EOF")
+		return nil, errors.New("CBOR: неожиданный конец данных")
 	}
 	h := d.b[d.i]
 	d.i++
@@ -33,19 +33,19 @@ func (d *cborDecoder) read() (any, error) {
 		return n, nil
 	case 1:
 		if n > uint64(^uint64(0)>>1) {
-			return nil, errors.New("CBOR: negative integer overflow")
+			return nil, errors.New("CBOR: переполнение отрицательного целого")
 		}
 		return -1 - int64(n), nil
 	case 2:
 		if n > uint64(len(d.b)-d.i) {
-			return nil, errors.New("CBOR: byte string overflow")
+			return nil, errors.New("CBOR: переполнение длины байтовой строки")
 		}
 		out := append([]byte(nil), d.b[d.i:d.i+int(n)]...)
 		d.i += int(n)
 		return out, nil
 	case 3:
 		if n > uint64(len(d.b)-d.i) {
-			return nil, errors.New("CBOR: text overflow")
+			return nil, errors.New("CBOR: переполнение длины текста")
 		}
 		out := string(d.b[d.i : d.i+int(n)])
 		d.i += int(n)
@@ -80,7 +80,7 @@ func (d *cborDecoder) read() (any, error) {
 			switch k.(type) {
 			case string, int64, uint64:
 			default:
-				return nil, errors.New("CBOR: unsupported map key")
+				return nil, errors.New("CBOR: неподдерживаемый ключ словаря")
 			}
 			out[k] = v
 		}
@@ -96,10 +96,10 @@ func (d *cborDecoder) read() (any, error) {
 		case 22, 23:
 			return nil, nil
 		default:
-			return nil, fmt.Errorf("CBOR: unsupported simple value %d", ai)
+			return nil, fmt.Errorf("CBOR: неподдерживаемое простое значение %d", ai)
 		}
 	default:
-		return nil, errors.New("CBOR: unsupported major type")
+		return nil, errors.New("CBOR: неподдерживаемый основной тип")
 	}
 }
 
@@ -109,34 +109,34 @@ func (d *cborDecoder) argument(ai byte) (uint64, error) {
 		return uint64(ai), nil
 	case ai == 24:
 		if d.i+1 > len(d.b) {
-			return 0, errors.New("CBOR: EOF")
+			return 0, errors.New("CBOR: конец данных")
 		}
 		v := uint64(d.b[d.i])
 		d.i++
 		return v, nil
 	case ai == 25:
 		if d.i+2 > len(d.b) {
-			return 0, errors.New("CBOR: EOF")
+			return 0, errors.New("CBOR: конец данных")
 		}
 		v := uint64(binary.BigEndian.Uint16(d.b[d.i:]))
 		d.i += 2
 		return v, nil
 	case ai == 26:
 		if d.i+4 > len(d.b) {
-			return 0, errors.New("CBOR: EOF")
+			return 0, errors.New("CBOR: конец данных")
 		}
 		v := uint64(binary.BigEndian.Uint32(d.b[d.i:]))
 		d.i += 4
 		return v, nil
 	case ai == 27:
 		if d.i+8 > len(d.b) {
-			return 0, errors.New("CBOR: EOF")
+			return 0, errors.New("CBOR: конец данных")
 		}
 		v := binary.BigEndian.Uint64(d.b[d.i:])
 		d.i += 8
 		return v, nil
 	default:
-		return 0, errors.New("CBOR: indefinite/reserved length is not accepted")
+		return 0, errors.New("CBOR: неопределённая или зарезервированная длина недопустима")
 	}
 }
 

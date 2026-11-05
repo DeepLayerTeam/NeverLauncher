@@ -45,12 +45,12 @@ def _artifact_redirect_request(
         or parsed.username is not None
         or parsed.password is not None
     ):
-        raise RuntimeError(f"artifact redirect URL is not a safe HTTPS URL: {newurl}")
+        raise RuntimeError(f"URL перенаправления артефакта не является безопасным HTTPS-адресом: {newurl}")
     if not any(
         host.endswith(suffix) or host == suffix[1:]
         for suffix in ARTIFACT_REDIRECT_SUFFIXES
     ):
-        raise RuntimeError(f"artifact redirect host is not trusted: {host}")
+        raise RuntimeError(f"Хост перенаправления артефакта не является доверенным: {host}")
     # Никогда не пересылайте токен GitHub Bearer на хосты перенаправлений
     # подписанных артефактов.
     # Никогда не передавайте bearer-токен GitHub на подписанный источник артефакта. URL
@@ -104,7 +104,7 @@ class GitHubAPI:
                 f"GitHub API HTTP {exc.code} for {url}: {body[:500]}"
             ) from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError(f"GitHub API request failed for {url}: {exc}") from exc
+            raise RuntimeError(f"Запрос API GitHub для {url} завершился ошибкой: {exc}") from exc
 
     def json(self, path_or_url: str) -> dict[str, Any]:
         url = (
@@ -116,9 +116,9 @@ class GitHubAPI:
         try:
             doc = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(f"GitHub API returned invalid JSON for {url}") from exc
+            raise RuntimeError(f"API GitHub вернул некорректный JSON для {url}") from exc
         if not isinstance(doc, dict):
-            raise RuntimeError(f"GitHub API returned non-object JSON for {url}")
+            raise RuntimeError(f"API GitHub вернул JSON, не являющийся объектом, для {url}")
         return doc
 
     def bytes(self, url: str) -> bytes:
@@ -192,9 +192,9 @@ def validate_matrix_document(
             )
     targets = doc.get("targets")
     if not isinstance(targets, list) or not targets:
-        raise RuntimeError(f"{label} matrix contains no certified targets")
+        raise RuntimeError(f"Матрица {label} не содержит сертифицированных целевых платформ")
     if doc.get("errors") not in ([], None):
-        raise RuntimeError(f"{label} matrix contains errors: {doc.get('errors')!r}")
+        raise RuntimeError(f"Матрица {label} содержит ошибки: {doc.get('errors')!r}")
 
 
 def matrix_from_zip(raw: bytes, *, label: str) -> bytes:
@@ -211,9 +211,9 @@ def matrix_from_zip(raw: bytes, *, label: str) -> bytes:
                 )
             data = archive.read(candidates[0])
     except zipfile.BadZipFile as exc:
-        raise RuntimeError(f"{label} artifact is not a valid ZIP") from exc
+        raise RuntimeError(f"Артефакт {label} не является корректным ZIP-архивом") from exc
     if len(data) > 4 * 1024 * 1024:
-        raise RuntimeError(f"{label} matrix.json is unexpectedly large")
+        raise RuntimeError(f"Файл matrix.json для {label} неожиданно велик")
     return data
 
 
@@ -226,7 +226,7 @@ def workflow_runs(
     doc = api.json(f"/repos/{repo}/actions/workflows/{wf}/runs?{q}")
     runs = doc.get("workflow_runs")
     if not isinstance(runs, list):
-        raise RuntimeError(f"workflow run response for {workflow} is malformed")
+        raise RuntimeError(f"Некорректный ответ о выполнении рабочего процесса {workflow}")
     return [r for r in runs if isinstance(r, dict)]
 
 
@@ -252,7 +252,7 @@ def fetch_matrix(
     conclusion = run.get("conclusion")
     run_id = int(run.get("id", 0))
     if run_id <= 0:
-        raise RuntimeError(f"{label} exact-commit workflow run has invalid id")
+        raise RuntimeError(f"У запуска рабочего процесса {label} для точного коммита некорректный ID")
     if status != "completed":
         print(
             f"[release-certification] {label}: run {run_id} status={status}; waiting",
@@ -274,7 +274,7 @@ def fetch_matrix(
             if not started.endswith("Z") or type(attempt) is not int or attempt < 1:
                 raise ValueError("Отсутствует: «run attempt or UTC start time»")
         except (ValueError, TypeError) as exc:
-            raise RuntimeError(f"{label} run lacks fresh execution provenance") from exc
+            raise RuntimeError(f"У запуска {label} отсутствуют актуальные сведения о происхождении выполнения") from exc
         delta = datetime.now(timezone.utc) - stamp
         if not timedelta(0) <= delta <= timedelta(hours=24):
             raise RuntimeError(
@@ -287,7 +287,7 @@ def fetch_matrix(
     )
     artifacts = artifacts_doc.get("artifacts")
     if not isinstance(artifacts, list):
-        raise RuntimeError(f"{label} artifact response is malformed")
+        raise RuntimeError(f"Некорректный ответ об артефакте {label}")
     expected_name = artifact_prefix + str(run_id)
     matches = [
         a
@@ -302,14 +302,14 @@ def fetch_matrix(
         )
     archive_url = str(matches[0].get("archive_download_url", "")).strip()
     if not archive_url.startswith("https://api.github.com/"):
-        raise RuntimeError(f"{label} artifact download URL is invalid")
+        raise RuntimeError(f"Некорректный URL загрузки артефакта {label}")
     matrix_raw = matrix_from_zip(api.bytes(archive_url), label=label)
     try:
         matrix = json.loads(matrix_raw)
     except json.JSONDecodeError as exc:
-        raise RuntimeError(f"{label} matrix.json is invalid JSON") from exc
+        raise RuntimeError(f"Файл matrix.json для {label} содержит некорректный JSON") from exc
     if not isinstance(matrix, dict):
-        raise RuntimeError(f"{label} matrix.json must be an object")
+        raise RuntimeError(f"Файл matrix.json для {label} должен содержать объект")
     validate_matrix_document(
         matrix,
         repository=repository,
@@ -339,15 +339,15 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.repository or "/" not in args.repository:
-        raise SystemExit("invalid --repository")
+        raise SystemExit("Некорректный параметр --repository")
     if len(args.commit) not in (40, 64) or any(
         ch not in "0123456789abcdefABCDEF" for ch in args.commit
     ):
-        raise SystemExit("--commit must be an exact 40/64-hex source commit")
+        raise SystemExit("Параметр --commit должен содержать точный хеш коммита исходников из 40 или 64 шестнадцатеричных символов")
     if args.timeout_seconds < 1 or args.timeout_seconds > 3600:
-        raise SystemExit("--timeout-seconds must be between 1 and 3600")
+        raise SystemExit("Параметр --timeout-seconds должен иметь значение от 1 до 3600")
     if args.poll_seconds < 1 or args.poll_seconds > 60:
-        raise SystemExit("--poll-seconds must be between 1 and 60")
+        raise SystemExit("Параметр --poll-seconds должен иметь значение от 1 до 60")
 
     api = GitHubAPI(args.token)
     outputs = {

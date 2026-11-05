@@ -25,7 +25,7 @@ var hostSystemctl02811 = func(args ...string) error {
 	cmd := exec.Command("/usr/bin/systemctl", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("systemctl %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Команда systemctl %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }
@@ -39,14 +39,14 @@ type hostServiceSpec02811 struct {
 
 func hostServiceFile02811(scope, name string) (string, error) {
 	if !hostServiceName02811.MatchString(name) {
-		return "", errors.New("--name must be 1-48 lowercase ASCII letters, digits or hyphens, starting with a letter")
+		return "", errors.New("Параметр --name должен содержать от 1 до 48 строчных латинских букв, цифр или дефисов и начинаться с буквы")
 	}
 	unit := "launcher-" + name + ".service"
 	if scope == "system" {
 		return filepath.Join("/etc/systemd/system", unit), nil
 	}
 	if scope != "user" {
-		return "", errors.New("--scope must be user or system")
+		return "", errors.New("Параметр --scope должен быть user либо system")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -71,7 +71,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 		return "", errors.New("Некорректное значение: «service name»")
 	}
 	if spec.Component != "host" && spec.Component != "remote" {
-		return "", errors.New("invalid component")
+		return "", errors.New("Некорректный компонент")
 	}
 	if !filepath.IsAbs(spec.Root) || !filepath.IsAbs(spec.Binary) {
 		return "", errors.New("service root and binary: требуется «absolute»")
@@ -118,7 +118,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	}
 	workingDirectory := strings.ReplaceAll(spec.Root, "%", "%%")
 	if strings.ContainsAny(workingDirectory, `\"`) {
-		return "", errors.New("working directory contains characters unsupported by systemd")
+		return "", errors.New("Рабочий каталог содержит символы, не поддерживаемые systemd")
 	}
 	unit := hostServiceMarker02811 + "\n" +
 		"[Unit]\nDescription=Launcher " + strings.ToUpper(spec.Component[:1]) + spec.Component[1:] + " (" + spec.Name + ")\nAfter=network-online.target\nWants=network-online.target\nStartLimitIntervalSec=300\nStartLimitBurst=5\n\n" +
@@ -179,7 +179,7 @@ func hostServiceAbsoluteFile02811(input string) (string, error) {
 		return "", err
 	}
 	if !info.Mode().IsRegular() {
-		return "", errors.New("expected regular file: " + path)
+		return "", errors.New("Ожидался обычный файл: " + path)
 	}
 	return path, nil
 }
@@ -195,7 +195,7 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 		return errors.New("system service installation: требуется «root; no implicit privilege escalation»")
 	}
 	if !hostServiceName02811.MatchString(spec.User) {
-		return errors.New("--service-user must name an existing unprivileged account")
+		return errors.New("Параметр --service-user должен указывать существующего непривилегированного пользователя")
 	}
 	u, err := user.Lookup(spec.User)
 	if err != nil {
@@ -206,14 +206,14 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 		return err
 	}
 	if uid == 0 {
-		return errors.New("refusing root service account")
+		return errors.New("Запуск службы от root запрещён")
 	}
 	group, err := user.LookupGroupId(u.Gid)
 	if err != nil {
 		return err
 	}
 	if !hostServiceName02811.MatchString(group.Name) {
-		return errors.New("service account primary group name is not safe for systemd unit")
+		return errors.New("Имя основной группы служебной учётной записи небезопасно для юнита systemd")
 	}
 	// Закрытый корень состояния хоста — граница доверия, а не общий каталог.
 	fi, err := os.Stat(spec.Root)
@@ -254,7 +254,7 @@ func hostServiceHandle02811(args []string) error {
 				return readErr
 			}
 			if !strings.HasPrefix(string(data), hostServiceMarker02811+"\n") {
-				return errors.New("refusing to remove service not managed by Launcher")
+				return errors.New("Удаление службы, не управляемой Launcher, запрещено")
 			}
 			if err = hostServiceSystemctl02811(scope, "disable", "--now", unit); err != nil {
 				return err
@@ -271,7 +271,7 @@ func hostServiceHandle02811(args []string) error {
 			}
 			output, e := exec.Command("/usr/bin/systemctl", parameters...).CombinedOutput()
 			if e != nil {
-				return fmt.Errorf("service status: %w: %s", e, strings.TrimSpace(string(output)))
+				return fmt.Errorf("Статус службы: %w: %s", e, strings.TrimSpace(string(output)))
 			}
 			fmt.Print(string(output))
 			return nil
@@ -279,7 +279,7 @@ func hostServiceHandle02811(args []string) error {
 		return hostServiceSystemctl02811(scope, action, unit)
 	}
 	if _, err = os.Lstat(path); err == nil {
-		return errors.New("service already installed; uninstall before replacing it")
+		return errors.New("Служба уже установлена; удалите её перед заменой")
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -304,14 +304,14 @@ func hostServiceHandle02811(args []string) error {
 		return err
 	}
 	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
-		return errors.New("service binary must reside outside writable game server root")
+		return errors.New("Исполняемый файл службы должен находиться вне доступного для записи каталога игрового сервера")
 	}
 	component := flagValue(args, "--component", "host")
 	spec := hostServiceSpec02811{Name: name, Root: root, Binary: binary, Scope: scope, Component: component, User: flagValue(args, "--service-user", ""), StopSeconds: 30}
 	if component == "host" {
 		conf, err := readServerBridgeHostConfig01910(hostPaths01910(root)["config"])
 		if err != nil {
-			return fmt.Errorf("configure host before installing service: %w", err)
+			return fmt.Errorf("Настройте хост перед установкой службы: %w", err)
 		}
 		if err = validateServerBridgeHostConfig01910(conf); err != nil {
 			return err
@@ -319,7 +319,7 @@ func hostServiceHandle02811(args []string) error {
 		spec.StopSeconds = hostDefaultInt0282(conf.StopTimeoutSeconds, 30)
 	} else if component == "remote" {
 		if _, err = remoteLoad0284(root); err != nil {
-			return fmt.Errorf("initialize RemoteControl before installing: %w", err)
+			return fmt.Errorf("Инициализируйте RemoteControl перед установкой: %w", err)
 		}
 		spec.TLSCert, err = hostServiceAbsoluteFile02811(flagValue(args, "--tls-cert", ""))
 		if err != nil {
@@ -335,7 +335,7 @@ func hostServiceHandle02811(args []string) error {
 		spec.Listen = flagValue(args, "--listen", "127.0.0.1:9443")
 		address, _, e := net.SplitHostPort(spec.Listen)
 		if e != nil || net.ParseIP(address) == nil {
-			return errors.New("--listen must be a numeric IP:port")
+			return errors.New("Параметр --listen должен содержать числовой IP-адрес и порт")
 		}
 		spec.Sources = multiFlagValues01910(args, "--allow-source")
 		if len(spec.Sources) == 0 {
@@ -351,7 +351,7 @@ func hostServiceHandle02811(args []string) error {
 			}
 		}
 	} else {
-		return errors.New("--component must be host or remote")
+		return errors.New("Параметр --component должен быть host либо remote")
 	}
 	if err = hostServiceValidateIdentity02811(spec); err != nil {
 		return err

@@ -102,7 +102,7 @@ class TextureGAGate0260Tests(unittest.TestCase):
         folder = self.root / "linux-amd64"
         report = folder / "gameplay.json"
         report.write_bytes(report.read_bytes() + b" ")
-        with self.assertRaisesRegex(GateError, "SHA-256 mismatch"):
+        with self.assertRaisesRegex(GateError, "Контрольная сумма SHA-256 не совпадает"):
             verify(self.root, COMMIT, self.public)
 
     def test_missing_real_platform_rejected(self):
@@ -145,7 +145,7 @@ class TextureGAGate0260Tests(unittest.TestCase):
     def test_installer_tampering_rejected(self):
         with (self.root / "linux-amd64" / "installer.bin").open("ab") as f:
             f.write(b"tamper")
-        with self.assertRaisesRegex(GateError, "SHA-256 mismatch"):
+        with self.assertRaisesRegex(GateError, "Контрольная сумма SHA-256 не совпадает"):
             verify(self.root, COMMIT, self.public)
 
     def test_symlinked_report_rejected(self):

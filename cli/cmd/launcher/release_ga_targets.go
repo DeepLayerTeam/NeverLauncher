@@ -128,7 +128,7 @@ func gaUniqueJSON0361(raw []byte) error {
 		return err
 	}
 	if _, err := d.Token(); err != io.EOF {
-		return errors.New("trailing GA JSON bytes")
+		return errors.New("После JSON-документа GA обнаружены лишние данные")
 	}
 	return nil
 }
@@ -154,7 +154,7 @@ func gaRead0361(path string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() <= 0 || st.Size() > limit {
-		return nil, fmt.Errorf("GA file not regular/nonempty/within limit: %s", path)
+		return nil, fmt.Errorf("Файл GA пуст, слишком велик либо не является обычным файлом: %s", path)
 	}
 	return os.ReadFile(path)
 }
@@ -238,26 +238,26 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	}
 	sig, err := hex.DecodeString(strings.TrimSpace(string(signatureRaw)))
 	if err != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(keyBytes), append([]byte(gaTargetsDomain0361), approvalRaw...), sig) {
-		return errors.New("GA 0.36.1+ BLOCKED: missing/invalid independent Ed25519 approval (legacy signature not accepted)")
+		return errors.New("GA 0.36.1+: операция заблокирована — независимое одобрение Ed25519 отсутствует или недействительно (устаревшая подпись не принимается)")
 	}
 	var approval gaApproval0361
 	if err := gaDecode0361(approvalRaw, &approval); err != nil {
 		return err
 	}
 	if approval.Schema != "launcher.ga.targets.v2" || approval.Version != version || approval.Commit != commit || len(approval.Targets) != 6 {
-		return errors.New("GA signature does not bind this exact version, commit and six targets")
+		return errors.New("Подпись GA не закрепляет точные версию, коммит и шесть целевых платформ")
 	}
 	issued, err := time.Parse("2006-01-02T15:04:05Z", approval.Issued)
 	if err != nil || issued.UTC().Format("2006-01-02T15:04:05Z") != approval.Issued {
-		return errors.New("bad issue timestamp")
+		return errors.New("Некорректная дата выдачи")
 	}
 	expires, err := time.Parse("2006-01-02T15:04:05Z", approval.Expires)
 	if err != nil || expires.UTC().Format("2006-01-02T15:04:05Z") != approval.Expires {
-		return errors.New("bad expiry timestamp")
+		return errors.New("Некорректная дата истечения срока")
 	}
 	now := time.Now().UTC()
 	if issued.After(now) || expires.Before(now) || expires.Sub(issued) > 7*24*time.Hour || !expires.After(issued) {
-		return errors.New("GA operator authorization expired/future/too long")
+		return errors.New("Разрешение оператора GA истекло, ещё не действует или имеет чрезмерный срок")
 	}
 	storedApproval, err := gaRead0361(filepath.Join(dir, "GA_TARGET_APPROVAL.json"), 1<<20)
 	if err != nil {
@@ -279,7 +279,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		return err
 	}
 	if receipt.Schema != "launcher.ga.verified-targets.v2" || receipt.Status != "approved-for-release-signing" || receipt.Version != version || receipt.Commit != commit || receipt.ApprovalSHA != gaSHA0361(approvalRaw) || receipt.PublicKeySHA != gaSHA0361(keyBytes) || len(receipt.Targets) != 6 {
-		return errors.New("GA verified receipt inconsistent with independent approval")
+		return errors.New("Проверенная квитанция GA не соответствует независимому одобрению")
 	}
 	seen := map[string]bool{}
 	expected := map[string]bool{}
@@ -288,7 +288,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	}
 	for _, t := range approval.Targets {
 		if !expected[t.Target] || seen[t.Target] || t.Status != "certified" || !gaHex0361.MatchString(t.BinarySHA) || !gaHex0361.MatchString(t.PackageSHA) || len(t.Checks) != len(gaCheckNames0361) {
-			return fmt.Errorf("GA target missing/duplicated/incomplete: %s", t.Target)
+			return fmt.Errorf("Целевая платформа GA отсутствует, дублируется или описана неполностью: %s", t.Target)
 		}
 		seen[t.Target] = true
 		binaryName, packageName := gaTargetPaths0361(version, t.Target)
@@ -301,7 +301,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 			return err
 		}
 		if binarySHA != t.BinarySHA || packageSHA != t.PackageSHA {
-			return fmt.Errorf("GA actual package or executable differs: %s", t.Target)
+			return fmt.Errorf("Фактический пакет или исполняемый файл GA не совпадает с ожидаемым: %s", t.Target)
 		}
 		matching := false
 		for _, r := range receipt.Targets {
@@ -313,31 +313,31 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 			}
 		}
 		if !matching {
-			return fmt.Errorf("GA target not in receipt: %s", t.Target)
+			return fmt.Errorf("Целевая платформа GA отсутствует в квитанции: %s", t.Target)
 		}
 		for _, check := range gaCheckNames0361 {
 			meta, ok := t.Checks[check]
 			if !ok || !gaHex0361.MatchString(meta.SHA) {
-				return fmt.Errorf("GA missing check: %s/%s", t.Target, check)
+				return fmt.Errorf("Отсутствует проверка GA: %s/%s", t.Target, check)
 			}
 			raw, err := gaRead0361(filepath.Join(evidence, "targets", t.Target, check+".json"), 1<<20)
 			if err != nil {
 				return err
 			}
 			if gaSHA0361(raw) != meta.SHA {
-				return fmt.Errorf("GA changed execution record: %s/%s", t.Target, check)
+				return fmt.Errorf("Изменилась запись выполнения GA: %s/%s", t.Target, check)
 			}
 			var trace gaTrace0361
 			if err := gaDecode0361(raw, &trace); err != nil {
 				return err
 			}
 			if trace.Schema != "launcher.ga.execution.v2" || trace.Version != version || trace.Commit != commit || trace.Target != t.Target || trace.Kind != check || trace.Status != "passed" || !trace.Actual || trace.Simulated || trace.ArtifactSHA != t.BinarySHA || !gaExecutionID0361.MatchString(trace.ExecutionID) {
-				return fmt.Errorf("GA check not real or wrong binary: %s/%s", t.Target, check)
+				return fmt.Errorf("Проверка GA не подтверждена реальным запуском или использует неверный бинарный файл: %s/%s", t.Target, check)
 			}
 		}
 	}
 	if len(seen) != 6 {
-		return errors.New("GA incomplete six-target coverage")
+		return errors.New("Приёмка GA не охватывает все шесть целевых платформ")
 	}
 	// Не допускайте незаметной поставки седьмого платформенного архива вне выданного разрешения.
 	items, err := os.ReadDir(dir)
@@ -353,7 +353,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	for _, item := range items {
 		name := item.Name()
 		if (strings.HasPrefix(name, "launcher-desktop-windows-") || strings.HasPrefix(name, "launcher-desktop-linux-") || strings.HasPrefix(name, "launcher-desktop-macos-") || strings.HasPrefix(name, "launcher-linux-") || strings.HasPrefix(name, "launcher-desktop-"+version+"-windows-") || strings.HasPrefix(name, "launcher-desktop-"+version+"-macos-")) && !permitted[name] && (strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, "-riscv64") || strings.HasSuffix(name, "-riscv64.exe")) {
-			return fmt.Errorf("unapproved target artifact: %s", name)
+			return fmt.Errorf("Артефакт для неподтверждённой целевой платформы: %s", name)
 		}
 	}
 	return nil

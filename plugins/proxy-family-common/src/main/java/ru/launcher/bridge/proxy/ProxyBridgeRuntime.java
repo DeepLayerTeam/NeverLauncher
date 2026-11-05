@@ -115,7 +115,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         if (platformControlExecutor != null) next.api.startControlChannel(this::executeControl);
         next.api.publishEvent("server.ready", Map.of("platform", platformId, "reason", "reload"));
         triggerHeartbeat();
-        logger.info("Launcher " + displayName + " Bridge configuration reloaded; serverId=" + next.config.serverId +
+        logger.info("Launcher " + displayName + " Bridge: конфигурация перезагружена; serverId=" + next.config.serverId +
             "; nodeKeyFingerprint=" + next.identity.fingerprint());
     }
 
@@ -194,7 +194,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         try {
             return CompletableFuture.supplyAsync(() -> createHandoff(username, targetServer), validationExecutor);
         } catch (RejectedExecutionException e) {
-            logger.warning("Launcher " + displayName + " Bridge handoff queue saturated; failing closed");
+            logger.warning("Launcher " + displayName + " Bridge: очередь передачи игроков заполнена; запросы отклоняются");
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
         }
     }
@@ -209,7 +209,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         try {
             return CompletableFuture.supplyAsync(() -> validateJoin(username, uuid, ip, onlineModeVerified), validationExecutor);
         } catch (RejectedExecutionException e) {
-            logger.warning("Launcher " + displayName + " Bridge join validation queue saturated; failing closed");
+            logger.warning("Launcher " + displayName + " Bridge: очередь проверки входов заполнена; запросы отклоняются");
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
         }
     }
@@ -325,7 +325,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
             boolean heartbeatStopped = heartbeatExecutor.awaitTermination(2, TimeUnit.SECONDS);
             boolean validationStopped = validationExecutor.awaitTermination(2, TimeUnit.SECONDS);
             if (!heartbeatStopped || !validationStopped) {
-                logger.warning("Launcher proxy bridge I/O workers did not terminate within shutdown window");
+                logger.warning("Рабочие процессы ввода-вывода прокси Launcher Bridge не завершились за отведённое время");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -379,7 +379,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            logger.severe("Launcher proxy bridge " + role + " worker failed: " + error.getMessage());
+            logger.severe("Прокси Launcher Bridge " + role + ": ошибка рабочего процесса: " + error.getMessage());
         });
         return thread;
     }
@@ -396,7 +396,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     private static String requireText(String value, String label) {
-        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " is required");
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " обязательно для заполнения");
         return value.trim();
     }
 

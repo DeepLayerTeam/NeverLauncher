@@ -86,7 +86,7 @@ def verify_config(path, key, policy_path=None):
             )
 
         if not utc(policy["issuedAt"]) <= now < utc(policy["expiresAt"]):
-            raise ValueError("stale trust policy")
+            raise ValueError("Устаревшая политика доверия")
         signer = next(
             (
                 k
@@ -98,7 +98,7 @@ def verify_config(path, key, policy_path=None):
             None,
         )
         if not signer or utc(signer["notBefore"]) > utc(env["signedAt"]):
-            raise ValueError("bootstrap signer not delegated")
+            raise ValueError("Подписывающая сторона загрузчика не имеет делегированных полномочий")
         Ed25519PublicKey.from_public_bytes(bytes.fromhex(signer["publicKey"])).verify(
             bytes.fromhex(env["signature"]),
             (
@@ -129,7 +129,7 @@ def verify_config(path, key, policy_path=None):
         env.get("schemaVersion") == "2.0"
         and config["profilePublicKey"].lower() != key.lower()
     ):
-        raise ValueError("game trust root mismatches embedded root")
+        raise ValueError("Корень доверия игры не совпадает со встроенным")
     return config
 
 
@@ -142,10 +142,10 @@ def check_binary_arch(path, osname, arch):
                 head[:5] != b"\x7fELF\x02"
                 or struct.unpack_from("<H", head, 18)[0] != expect
             ):
-                raise ValueError(f"{path}: wrong Linux ELF architecture")
+                raise ValueError(f"{path}: неверная архитектура исполняемого файла Linux ELF")
         elif osname == "windows":
             if head[:2] != b"MZ":
-                raise ValueError(f"{path}: not a PE executable")
+                raise ValueError(f"{path}: файл не является исполняемым PE")
             peoff = struct.unpack_from("<I", head, 0x3C)[0]
             if peoff + 6 > len(head):
                 f.seek(peoff)
@@ -154,27 +154,27 @@ def check_binary_arch(path, osname, arch):
                 pe = head[peoff : peoff + 6]
             expect = 0x8664 if arch == "amd64" else 0xAA64
             if pe[:4] != b"PE\0\0" or struct.unpack_from("<H", pe, 4)[0] != expect:
-                raise ValueError(f"{path}: wrong Windows PE architecture")
+                raise ValueError(f"{path}: неверная архитектура исполняемого файла Windows PE")
         elif osname == "darwin":
             expect = 0x01000007 if arch == "amd64" else 0x0100000C
             if (
                 head[:4] != b"\xcf\xfa\xed\xfe"
                 or struct.unpack_from("<I", head, 4)[0] != expect
             ):
-                raise ValueError(f"{path}: wrong macOS Mach-O architecture")
+                raise ValueError(f"{path}: неверная архитектура исполняемого файла macOS Mach-O")
 
 
 def collect_bundle(args, stage):
     key = pathlib.Path(args.root_key_file).read_text().strip().lower()
     if not re.fullmatch("[0-9a-f]{64}", key):
-        raise ValueError("required provisioned 32-byte Ed25519 key")
+        raise ValueError("Необходим подготовленный 32-байтовый ключ Ed25519")
     cfg = verify_config(args.config, key, args.trust_policy)
     if args.platform not in TARGETS or args.arch not in ARCH:
         raise ValueError("Не поддерживается: цель")
     if not any(
         t["os"] == args.platform and t["arch"] == args.arch for t in cfg["targets"]
     ):
-        raise ValueError("platform absent from signed release configuration")
+        raise ValueError("Платформа отсутствует в подписанной конфигурации релиза")
     match = [
         t
         for t in cfg.get("installerTargets", [])
@@ -225,7 +225,7 @@ def collect_bundle(args, stage):
     # использует Prestarter. Проверка контейнера подписи на Python необходима, но не заменяет проверки
     # контракта Runtime.
     if not shutil.which("go"):
-        raise RuntimeError("Go toolchain required for trusted bootstrap verification")
+        raise RuntimeError("Для доверенной проверки загрузчика необходим инструментальный комплект Go")
     validator = ["go", "run", "./cmd/verify-branding", "--config", str(stage / "bootstrap.signed.json"), "--root-key-file", str(args.root_key_file.resolve())]
     if args.trust_policy:
         validator.extend(["--trust-policy", str((stage / "trust-policy.signed.json").resolve())])
@@ -415,7 +415,7 @@ def package_linux(args, stage, key, out, version):
     if not args.unsigned_test:
         gpg = os.environ.get("LAUNCHER_GPG_SIGNING_KEY", "")
         if not gpg or not shutil.which("gpg"):
-            raise RuntimeError("Linux release needs a GPG signing key")
+            raise RuntimeError("Для релиза Linux необходим ключ подписи GPG")
         checked(
             "gpg",
             "--batch",
@@ -543,7 +543,7 @@ def package_macos(args, stage, key, out, version):
             )
             outcome = json.loads(notarized.stdout)
             if outcome.get("status") != "Accepted" or not outcome.get("id"):
-                raise RuntimeError("Apple notary service did not accept final installer")
+                raise RuntimeError("Служба нотариального заверения Apple не приняла финальный установщик")
             checked("xcrun", "stapler", "staple", result)
             checked("xcrun", "stapler", "validate", result)
             checked("spctl", "--assess", "--type", "install", "--verbose=4", result)
@@ -611,5 +611,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print("installer build failed:", e, file=sys.stderr)
+        print("Ошибка сборки установщика:", e, file=sys.stderr)
         sys.exit(1)

@@ -67,7 +67,7 @@ func validateJWKS(keys []jwk, cfg RuntimeConfig) error {
 		}
 	}
 	if eligible == 0 {
-		return errors.New("JWKS contains no usable signing key for configured algorithms")
+		return errors.New("В JWKS нет подходящего ключа подписи для настроенных алгоритмов")
 	}
 	return nil
 }
@@ -79,32 +79,32 @@ func verifyIDToken(raw string, keys []jwk, cfg RuntimeConfig, expectedNonce stri
 func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discoveredIssuer string, issuerPolicy IssuerPolicy, expectedNonce string, requireNonce bool) (verifiedToken, error) {
 	parts := strings.Split(raw, ".")
 	if len(parts) != 3 {
-		return verifiedToken{}, errors.New("ID token is not a compact JWS")
+		return verifiedToken{}, errors.New("ID-токен не является компактным JWS")
 	}
 	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return verifiedToken{}, fmt.Errorf("decode ID token header: %w", err)
+		return verifiedToken{}, fmt.Errorf("Декодирование заголовка ID-токена: %w", err)
 	}
 	var header jwtHeader
 	if err := json.Unmarshal(headerBytes, &header); err != nil {
-		return verifiedToken{}, fmt.Errorf("decode ID token header JSON: %w", err)
+		return verifiedToken{}, fmt.Errorf("Декодирование JSON заголовка ID-токена: %w", err)
 	}
 	if header.Alg == "" || header.Alg == "none" || strings.HasPrefix(header.Alg, "HS") || !cfg.AlgAllowed(header.Alg) {
 		return verifiedToken{}, fmt.Errorf("«ID token algorithm» %q: не разрешено", header.Alg)
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return verifiedToken{}, fmt.Errorf("decode ID token claims: %w", err)
+		return verifiedToken{}, fmt.Errorf("Декодирование утверждений ID-токена: %w", err)
 	}
 	dec := json.NewDecoder(strings.NewReader(string(payload)))
 	dec.UseNumber()
 	claims := map[string]any{}
 	if err := dec.Decode(&claims); err != nil {
-		return verifiedToken{}, fmt.Errorf("decode ID token claims JSON: %w", err)
+		return verifiedToken{}, fmt.Errorf("Декодирование JSON утверждений ID-токена: %w", err)
 	}
 	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
-		return verifiedToken{}, fmt.Errorf("decode ID token signature: %w", err)
+		return verifiedToken{}, fmt.Errorf("Декодирование подписи ID-токена: %w", err)
 	}
 	input := []byte(parts[0] + "." + parts[1])
 	verified := false
@@ -136,12 +136,12 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 		return verifiedToken{}, err
 	}
 	if !audienceContains(claims["aud"], cfg.ClientID) {
-		return verifiedToken{}, fmt.Errorf("ID token audience does not contain clientId")
+		return verifiedToken{}, fmt.Errorf("Получатели ID-токена не содержат clientId")
 	}
 	if audiences := audienceCount(claims["aud"]); audiences > 1 {
 		azp, _ := claims["azp"].(string)
 		if azp != cfg.ClientID {
-			return verifiedToken{}, fmt.Errorf("ID token azp is required and must equal clientId for multiple audiences")
+			return verifiedToken{}, fmt.Errorf("При нескольких получателях ID-токена параметр azp обязателен и должен совпадать с clientId")
 		}
 	} else if azp, ok := claims["azp"].(string); ok && azp != "" && azp != cfg.ClientID {
 		return verifiedToken{}, fmt.Errorf("Несовпадение: «ID token azp»")
@@ -152,10 +152,10 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 		return verifiedToken{}, fmt.Errorf("Отсутствует: «ID token is expired or exp»")
 	}
 	if nbf, ok := numericDate(claims["nbf"]); ok && now.Add(cfg.ClockSkewValue).Before(nbf) {
-		return verifiedToken{}, fmt.Errorf("ID token is not valid yet")
+		return verifiedToken{}, fmt.Errorf("Срок действия ID-токена ещё не начался")
 	}
 	if iat, ok := numericDate(claims["iat"]); ok && iat.After(now.Add(cfg.ClockSkewValue)) {
-		return verifiedToken{}, fmt.Errorf("ID token iat is in the future")
+		return verifiedToken{}, fmt.Errorf("Время выдачи iat ID-токена находится в будущем")
 	}
 	sub, _ := claims["sub"].(string)
 	if strings.TrimSpace(sub) == "" || len(sub) > 512 {
@@ -211,7 +211,7 @@ func verifySignature(alg string, key jwk, input, sig []byte) (bool, error) {
 	case "EdDSA":
 		ed, ok := pub.(ed25519.PublicKey)
 		if !ok {
-			return false, errors.New("EdDSA key is not Ed25519")
+			return false, errors.New("Ключ EdDSA не соответствует Ed25519")
 		}
 		return ed25519.Verify(ed, input, sig), nil
 	default:
@@ -290,7 +290,7 @@ func publicKey(k jwk) (any, error) {
 		x := new(big.Int).SetBytes(xBytes)
 		y := new(big.Int).SetBytes(yBytes)
 		if !c.IsOnCurve(x, y) {
-			return nil, errors.New("EC point is not on curve")
+			return nil, errors.New("Точка эллиптической кривой не принадлежит кривой")
 		}
 		return &ecdsa.PublicKey{Curve: c, X: x, Y: y}, nil
 	case "OKP":

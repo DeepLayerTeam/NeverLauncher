@@ -85,11 +85,11 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 			return fn()
 		}
 		if !errors.Is(openErr, os.ErrExist) {
-			return fmt.Errorf("release trust-state lock: %w", openErr)
+			return fmt.Errorf("Блокировка состояния доверия релиза: %w", openErr)
 		}
 		existingRaw, readErr := os.ReadFile(lockPath)
 		if readErr != nil {
-			return fmt.Errorf("release trust-state lock unreadable: %w", readErr)
+			return fmt.Errorf("Не удалось прочитать блокировку состояния доверия релиза: %w", readErr)
 		}
 		var existing releaseTrustStateLock01510
 		if err := json.Unmarshal(existingRaw, &existing); err != nil || existing.PID <= 0 {
@@ -99,7 +99,7 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 			return fmt.Errorf("release trust state занят verifier process pid=%d", existing.PID)
 		}
 		if err := os.Remove(lockPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("remove stale release trust-state lock: %w", err)
+			return fmt.Errorf("Удаление устаревшей блокировки состояния доверия релиза: %w", err)
 		}
 	}
 	return errors.New("не удалось получить release trust-state lock")
@@ -113,34 +113,34 @@ func validateComponentUpdateState01510(state componentUpdateState0157) error {
 		return fmt.Errorf("Некорректное значение: «component state version»: %q", state.Version)
 	}
 	if strings.TrimSpace(state.Platform) == "" || strings.TrimSpace(state.Architecture) == "" {
-		return errors.New("component state target is incomplete")
+		return errors.New("Не полностью задана целевая платформа состояния компонентов")
 	}
 	expected := 3
 	if state.Platform == "windows" && componentCoordinationRequired02310(state.Version) {
 		expected = 4
 	}
 	if len(state.Components) != expected {
-		return fmt.Errorf("component state expected %d components, got %d", expected, len(state.Components))
+		return fmt.Errorf("В состоянии компонентов ожидалось %d компонентов, получено %d", expected, len(state.Components))
 	}
 	if componentSecurityRequired02311(state.Version) && state.SecurityGeneration == 0 {
-		return errors.New("installed 0.23.11+ component set has no securityGeneration")
+		return errors.New("В установленном наборе компонентов версии 0.23.11+ отсутствует securityGeneration")
 	}
 	if state.SecurityGeneration > 0 {
 		if !validSHA256Hex0157(state.ManifestDigest) {
-			return errors.New("installed component security manifest digest malformed")
+			return errors.New("Неверный формат контрольной суммы манифеста безопасности установленных компонентов")
 		}
 		if state.Platform == "macos" && (state.BundleName == "" || filepath.Base(state.BundleName) != state.BundleName || !strings.HasSuffix(strings.ToLower(state.BundleName), ".app")) {
-			return errors.New("installed macOS component security bundle identity missing/unsafe")
+			return errors.New("Идентификатор пакета безопасности компонентов macOS отсутствует либо небезопасен")
 		}
 	}
 
 	seen := map[string]bool{}
 	for _, item := range state.Components {
 		if item.Component != "desktop" && item.Component != "guard" && item.Component != "runtime" && !(expected == 4 && item.Component == "sensor") {
-			return fmt.Errorf("component state contains unknown component %q", item.Component)
+			return fmt.Errorf("Состояние компонентов содержит неизвестный компонент %q", item.Component)
 		}
 		if seen[item.Component] || !validSHA256Hex0157(item.SHA256) || item.Size <= 0 {
-			return fmt.Errorf("component state metadata invalid for %s", item.Component)
+			return fmt.Errorf("Неверные метаданные состояния компонента %s", item.Component)
 		}
 		if err := validateComponentRelativePath0157(item.TargetPath); err != nil {
 			return err
@@ -149,7 +149,7 @@ func validateComponentUpdateState01510(state componentUpdateState0157) error {
 	}
 	if componentSecurityRequired02311(state.Version) {
 		if len(state.SupportFiles) != 1 || state.SupportFiles[0].Component != "updater" || !validSHA256Hex0157(state.SupportFiles[0].SHA256) {
-			return errors.New("installed component security state lacks updater helper")
+			return errors.New("В состоянии безопасности установленных компонентов отсутствует вспомогательная программа обновления")
 		}
 		if err := validateComponentRelativePath0157(state.SupportFiles[0].TargetPath); err != nil {
 			return err
@@ -168,10 +168,10 @@ func readComponentUpdateStateOptional01510(path string) (componentUpdateState015
 	}
 	var state componentUpdateState0157
 	if err := json.Unmarshal(raw, &state); err != nil {
-		return state, false, fmt.Errorf("component update state %s: %w", path, err)
+		return state, false, fmt.Errorf("Состояние обновления компонента %s: %w", path, err)
 	}
 	if err := validateComponentUpdateState01510(state); err != nil {
-		return state, false, fmt.Errorf("component update state %s: %w", path, err)
+		return state, false, fmt.Errorf("Состояние обновления компонента %s: %w", path, err)
 	}
 	return state, true, nil
 }
@@ -206,7 +206,7 @@ func compareComponentStateVersion01510(a, b string) (int, error) {
 	av, okA := parseVersionTriple0158(a)
 	bv, okB := parseVersionTriple0158(b)
 	if !okA || !okB {
-		return 0, errors.New("component state contains invalid semantic version")
+		return 0, errors.New("В состоянии компонента указана неверная семантическая версия")
 	}
 	return compareVersionTriple0158(av, bv), nil
 }
@@ -254,17 +254,17 @@ func migrateComponentUpdateState01510(root string) (componentStateMigrationRepor
 			case cmp > 0:
 				selected = current
 			case cmp == 0 && !componentStateEquivalent01510(current, old):
-				return report, errors.New("canonical and legacy component states disagree for the same version")
+				return report, errors.New("Для одной версии основное и устаревшее состояния компонентов не совпадают")
 			case cmp == 0:
 				selected = current
 			}
 		}
 	}
 	if err := writeJSONFileAtomicMode(canonical, selected, 0o600); err != nil {
-		return report, fmt.Errorf("persist canonical component state: %w", err)
+		return report, fmt.Errorf("Сохранение основного состояния компонентов: %w", err)
 	}
 	if err := os.Remove(legacy); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return report, fmt.Errorf("remove legacy component state after canonical commit: %w", err)
+		return report, fmt.Errorf("Удаление устаревшего состояния компонентов после фиксации основного: %w", err)
 	}
 	syncDirBestEffort0156(filepath.Dir(canonical))
 	syncDirBestEffort0156(filepath.Dir(legacy))
@@ -412,7 +412,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		return nil, fmt.Errorf("Ошибка: «component state migration»: %v report=%+v", err, migration)
 	}
 	if _, err := os.Stat(legacyPath); !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.New("legacy component state survived migration")
+		return nil, errors.New("После миграции осталось устаревшее состояние компонентов")
 	}
 
 	live := filepath.Join(root, "live")
@@ -438,7 +438,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		return nil, err
 	}
 	if _, err := updater.apply(updaterRequest0156{Root: live, Namespace: "01510-rollback", Files: []updaterFileSpec0156{spec}, Verify: func() error { return errors.New("intentional rollback") }}); err == nil {
-		return nil, errors.New("stabilization rollback self-test unexpectedly committed")
+		return nil, errors.New("Проверка отката при стабилизации неожиданно зафиксировала транзакцию")
 	}
 	txRoot := filepath.Join(updater.controlDir, "transactions")
 	entries, err := os.ReadDir(txRoot)
@@ -451,7 +451,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		}
 		for _, payload := range []string{"stage", "backup"} {
 			if _, err := os.Stat(filepath.Join(txRoot, entry.Name(), payload)); !errors.Is(err, os.ErrNotExist) {
-				return nil, fmt.Errorf("terminal transaction retained %s payload", payload)
+				return nil, fmt.Errorf("После завершённой транзакции остались данные %s", payload)
 			}
 		}
 	}
@@ -471,10 +471,10 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		return nil, err
 	}
 	if migratedTrust.SchemaVersion != releaseTrustStateSchema01510 || migratedTrust.HighestReleaseManifestSHA256 != manifestHash || migratedTrust.StateRevision == 0 {
-		return nil, fmt.Errorf("trust state migration incomplete: %+v", migratedTrust)
+		return nil, fmt.Errorf("Миграция состояния доверия не завершена: %+v", migratedTrust)
 	}
 	if err := precheckTrustState0158(trustStatePath, oldTrustState.RootFingerprint, 10, "0.15.10", strings.Repeat("d", 64)); err == nil {
-		return nil, errors.New("same-version release manifest equivocation was not rejected")
+		return nil, errors.New("Противоречивые манифесты релиза одной версии не были отклонены")
 	}
 
 	lockPath := filepath.Join(root, "lock-test-state.json")
@@ -492,7 +492,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	if err := withReleaseTrustStateLock01510(lockPath, func() error { return nil }); err == nil {
 		close(releaseLock)
 		<-errCh
-		return nil, errors.New("concurrent trust-state verifier lock was not rejected")
+		return nil, errors.New("Конфликтующая блокировка параллельной проверки доверия не была отклонена")
 	}
 	close(releaseLock)
 	if err := <-errCh; err != nil {

@@ -140,7 +140,7 @@ def sync(version: str, *, check_only: bool) -> list[str]:
         if check_only:
             changed.append("cli/cmd/launcher/templates/production.zip or CLI catalog.zip")
         else:
-            raise VersionError("embedded resources generation failed: " + bundle.stdout)
+            raise VersionError("Не удалось создать встроенные ресурсы: " + bundle.stdout)
     return changed
 
 
@@ -151,12 +151,12 @@ def command_check() -> int:
     if f"Launcher {version}." not in schema:
         drift.append("schemas/openapi.yaml")
     if drift:
-        print(f"Version metadata drift for VERSION={version}:", file=sys.stderr)
+        print(f"Метаданные версии расходятся с VERSION={version}:", file=sys.stderr)
         for rel in drift:
             print(f" - {rel}", file=sys.stderr)
-        print("Run: python3 scripts/version/manage.py sync", file=sys.stderr)
+        print("Выполните: python3 scripts/version/manage.py sync", file=sys.stderr)
         return 1
-    print(f"Launcher version metadata OK: {version} (source: VERSION)")
+    print(f"Метаданные версии Launcher корректны: {version} (источник: VERSION)")
     return 0
 
 
@@ -176,7 +176,7 @@ def command_sync() -> int:
         for rel in changed:
             print(f" - {rel}")
     else:
-        print(f"Version metadata already synchronized: {version}; OpenAPI regenerated")
+        print(f"Метаданные версии уже синхронизированы: {version}; OpenAPI создан повторно")
     return 0
 
 
@@ -192,7 +192,7 @@ def command_set(value: str) -> int:
         check=True,
         stdout=subprocess.DEVNULL,
     )
-    print(f"Launcher version set to {value}; VERSION is the canonical source")
+    print(f"Версия Launcher установлена в {value}; VERSION является единственным основным источником")
     return 0
 
 
@@ -215,7 +215,7 @@ def main() -> int:
             return command_sync()
         return command_set(args.version)
     except (OSError, ValueError, json.JSONDecodeError, VersionError) as exc:
-        print(f"version-manager: {exc}", file=sys.stderr)
+        print(f"Менеджер версий: {exc}", file=sys.stderr)
         return 1
 
 

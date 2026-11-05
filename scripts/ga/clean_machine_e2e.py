@@ -42,7 +42,7 @@ def from_runtime(binary: Path, *args, timeout=900):
     data = checked([binary, *args], timeout=timeout)
     result = json.loads(data)
     if not isinstance(result, dict):
-        raise ValueError("Runtime returned non-object JSON")
+        raise ValueError("Runtime вернул JSON, не являющийся объектом")
     return result
 
 
@@ -126,7 +126,7 @@ def real_clean_install(
     runtime = resolve_installed_runtime(root)
     runtime_help = from_runtime(runtime, "--help")
     if runtime_help.get("version") != "0.24.0":
-        raise RuntimeError("installed runtime is not 0.24.0")
+        raise RuntimeError("Установлен Runtime не версии 0.24.0")
     verification = from_runtime(
         runtime,
         "verify",
@@ -136,11 +136,11 @@ def real_clean_install(
         public_key,
     )
     if verification.get("status") != "ready":
-        raise RuntimeError("signed Minecraft profile was not verified")
+        raise RuntimeError("Подписанный профиль Minecraft не прошёл проверку")
     data = json.loads(signed_manifest.read_text())
     signed_major = data.get("runtime", {}).get("java", {}).get("majorVersion")
     if signed_major != java_major:
-        raise RuntimeError("Java major differs from the signed profile")
+        raise RuntimeError("Основная версия Java отличается от указанной в подписанном профиле")
     java = from_runtime(runtime, "java", "ensure", "--major", str(java_major))
     java_path = Path(java.get("javaExecutable", ""))
     if (
@@ -148,7 +148,7 @@ def real_clean_install(
         or not java_path.is_file()
         or java_path.is_symlink()
     ):
-        raise RuntimeError("real Managed Java was not installed")
+        raise RuntimeError("Настоящая управляемая Java не была установлена")
     checked([java_path, "-version"], timeout=40)
     game_root = root / "profiles" / data["projectId"] / data["profileId"]
     result = from_runtime(
@@ -183,7 +183,7 @@ def real_clean_install(
     )
     log_path = Path(launched.get("log_path", ""))
     if not log_path.is_file() or not log_path.is_relative_to(game_root):
-        raise RuntimeError("Minecraft has no installed runtime log")
+        raise RuntimeError("Для Minecraft отсутствует журнал установленного Runtime")
     log = log_path.read_text(encoding="utf-8", errors="replace")
     # Процесс Java -version или фиктивный исполняемый файл не пройдёт эту проверку.
     if not any(
@@ -194,7 +194,7 @@ def real_clean_install(
             "no recognizable Minecraft initialization evidence in real process log"
         )
     if not launched.get("timed_out") and not launched.get("success"):
-        raise RuntimeError("Minecraft process crashed before successfully exiting")
+        raise RuntimeError("Процесс Minecraft аварийно завершился до штатного выхода")
     return {
         "schemaVersion": "launcher.ga.clean-machine.v1",
         "productVersion": "0.24.0",
@@ -250,7 +250,7 @@ def main():
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    print(f"real clean-machine GA test: {report['status']}")
+    print(f"Реальный тест GA на чистой машине: {report['status']}")
     return 0 if report["status"] == "passed" else 1
 
 

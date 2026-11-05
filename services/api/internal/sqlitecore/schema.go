@@ -19,8 +19,8 @@ import (
 
 var (
 	ErrNotFound  = errors.New("Не найдено: «sqlite core: record»")
-	ErrConflict  = errors.New("sqlite core: revision or unique constraint conflict")
-	ErrImmutable = errors.New("sqlite core: immutable published release or history")
+	ErrConflict  = errors.New("Ядро SQLite: конфликт ревизии или ограничения уникальности")
+	ErrImmutable = errors.New("Ядро SQLite: опубликованный релиз или история неизменяемы")
 )
 
 const SchemaVersion = 327
@@ -53,7 +53,7 @@ func Open(ctx context.Context, options sqlitedurable.Options) (*Repository, erro
 // существует.
 func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Repository, error) {
 	if st, err := os.Lstat(options.Path); err != nil {
-		return nil, fmt.Errorf("sqlite core existing database: %w", err)
+		return nil, fmt.Errorf("Существующая база ядра SQLite: %w", err)
 	} else if !st.Mode().IsRegular() {
 		return nil, errors.New("«sqlite core existing database»: требуется обычный файл")
 	}
@@ -85,7 +85,7 @@ func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) err
 	// Не создавайте резервные копии неподдерживаемых или будущих версий и не
 	// мигрируйте их.
 	if old != 322 && old != 323 && old != 324 && old != 325 && old != 326 {
-		return fmt.Errorf("SQLite schema %d unsupported; refusing migration", old)
+		return fmt.Errorf("Схема SQLite %d не поддерживается; миграция отклонена", old)
 	}
 	if err := r.preflightLegacy0472(ctx, old); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (r *Repository) migrate(ctx context.Context) error {
 			return err
 		}
 		if version != 0 && version != 322 && version != 323 && version != 324 && version != 325 && version != 326 && version != SchemaVersion {
-			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
+			return fmt.Errorf("Схема ядра SQLite %d несовместима с %d", version, SchemaVersion)
 		}
 		if version == 0 {
 			// user_version=0 может обозначать новый файл ИЛИ постороннюю/старую БД.
@@ -113,11 +113,11 @@ func (r *Repository) migrate(ctx context.Context) error {
 				return err
 			}
 			if existing != 0 {
-				return fmt.Errorf("sqlite core unversioned nonempty schema (%d objects); refusing destructive initialization", existing)
+				return fmt.Errorf("Непустая схема ядра SQLite без версии (%d объектов); удаляющая инициализация запрещена", existing)
 			}
 			for _, stmt := range ddl {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
-					return fmt.Errorf("sqlite core schema: %w", err)
+					return fmt.Errorf("Схема ядра SQLite: %w", err)
 				}
 			}
 			for _, role := range builtInRoles {
@@ -129,28 +129,28 @@ func (r *Repository) migrate(ctx context.Context) error {
 		if version == 0 || version == 322 {
 			for _, stmt := range authDDL {
 				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
-					return fmt.Errorf("sqlite auth migration 323: %w", err)
+					return fmt.Errorf("Миграция авторизации SQLite 323: %w", err)
 				}
 			}
 		}
 		if version != 324 && version != 325 && version != 326 && version != SchemaVersion {
 			for _, stmt := range joinDDL {
 				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
-					return fmt.Errorf("sqlite replay/join migration 324: %w", err)
+					return fmt.Errorf("Миграция повторного воспроизведения и входа SQLite 324: %w", err)
 				}
 			}
 		}
 		if version != 325 && version != 326 && version != SchemaVersion {
 			for _, stmt := range durableDDL {
 				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
-					return fmt.Errorf("sqlite durable migration 325: %w", err)
+					return fmt.Errorf("Миграция постоянного хранилища SQLite 325: %w", err)
 				}
 			}
 		}
 		if version != 326 && version != SchemaVersion {
 			for _, stmt := range fullStateDDL {
 				if err := applyCoreDDL0472(ctx, q, stmt); err != nil {
-					return fmt.Errorf("sqlite full durable migration 326: %w", err)
+					return fmt.Errorf("Миграция полного постоянного хранилища SQLite 326: %w", err)
 				}
 			}
 		}
@@ -162,11 +162,11 @@ func (r *Repository) migrate(ctx context.Context) error {
 			} {
 				exists, checkErr := hasCoreColumn0472(ctx, q, "profiles", col.name, col.typ)
 				if checkErr != nil {
-					return fmt.Errorf("sqlite profile migration 327: %w", checkErr)
+					return fmt.Errorf("Миграция профилей SQLite 327: %w", checkErr)
 				}
 				if !exists {
 					if _, err := q.ExecContext(ctx, col.sql); err != nil {
-						return fmt.Errorf("sqlite profile migration 327: %w", err)
+						return fmt.Errorf("Миграция профилей SQLite 327: %w", err)
 					}
 				}
 			}
@@ -192,14 +192,14 @@ func (r *Repository) Check(ctx context.Context) error {
 			return err
 		}
 		if v != SchemaVersion {
-			return fmt.Errorf("sqlite core: unexpected schema %d", v)
+			return fmt.Errorf("Ядро SQLite: неожиданная схема %d", v)
 		}
 		var integrity string
 		if err := q.QueryRowContext(ctx, "PRAGMA integrity_check").Scan(&integrity); err != nil {
 			return err
 		}
 		if integrity != "ok" {
-			return fmt.Errorf("sqlite core integrity: %s", integrity)
+			return fmt.Errorf("Целостность ядра SQLite: %s", integrity)
 		}
 		var fk string
 		rows, err := q.QueryContext(ctx, "PRAGMA foreign_key_check")
@@ -219,7 +219,7 @@ func (r *Repository) Check(ctx context.Context) error {
 			return err
 		}
 		if fk != "" {
-			return fmt.Errorf("sqlite foreign_key_check: %s", fk)
+			return fmt.Errorf("Проверка внешних ключей SQLite: %s", fk)
 		}
 		checks := []string{
 			`SELECT COUNT(*) FROM profiles p LEFT JOIN profile_revisions h ON h.project_id=p.project_id AND h.profile_id=p.id AND h.revision=p.revision AND h.digest=p.digest WHERE h.profile_id IS NULL`,
@@ -240,7 +240,7 @@ func (r *Repository) Check(ctx context.Context) error {
 				return err
 			}
 			if n != 0 {
-				return fmt.Errorf("sqlite core inconsistent records (%d): %s", n, stmt)
+				return fmt.Errorf("Ядро SQLite: несогласованные записи (%d): %s", n, stmt)
 			}
 		}
 		// Выявляйте подменённые неизменяемые данные профиля и head каналов даже при

@@ -101,7 +101,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             thread.setUncaughtExceptionHandler((t, error) -> {
                 RuntimeState state = runtime;
                 if (state != null) state.api.publishEvent("server.error", Map.of("component", "io", "message", safeError(error)));
-                getLogger().severe("Launcher bridge I/O worker failed: " + error.getMessage());
+                getLogger().severe("Ошибка рабочего потока ввода-вывода Launcher Bridge: " + error.getMessage());
             });
             return thread;
         });
@@ -139,7 +139,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             executor.shutdownNow();
             try {
                 if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
-                    getLogger().warning("Launcher bridge I/O worker did not terminate within shutdown window");
+                    getLogger().warning("Рабочий поток ввода-вывода Launcher Bridge не завершился за отведённое время");
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -336,7 +336,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 );
                 telemetryTask = runTaskTimer.invoke(scheduler, this, (Runnable) this::collectTelemetry, 1L, periodTicks);
             } catch (ReflectiveOperationException e) {
-                getLogger().warning("Launcher telemetry: Bukkit scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
+                getLogger().warning("Телеметрия Launcher: планировщик Bukkit недоступен; сбор телеметрии JVM продолжится без счётчиков платформы: " + e.getMessage());
             }
             return;
         }
@@ -357,7 +357,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             Consumer<Object> task = ignored -> collectTelemetry();
             foliaTelemetryTask = run.invoke(scheduler, this, task, 1L, periodTicks);
         } catch (ReflectiveOperationException e) {
-            getLogger().warning("Launcher telemetry: Folia global scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
+            getLogger().warning("Телеметрия Launcher: глобальный планировщик Folia недоступен; сбор телеметрии JVM продолжится без счётчиков платформы: " + e.getMessage());
         }
     }
 
@@ -534,7 +534,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 // Отложенная постановка в очередь не должна блокировать heartbeat и обработчик ввода-вывода событий.
                 executor.schedule(() -> {
                     try { scheduleBukkitTask(Bukkit::shutdown); }
-                    catch (RuntimeException e) { getLogger().severe("Minecraft shutdown scheduling failed: " + safeError(e)); }
+                    catch (RuntimeException e) { getLogger().severe("Не удалось запланировать остановку Minecraft: " + safeError(e)); }
                 }, 1500L, TimeUnit.MILLISECONDS);
             } catch (java.util.concurrent.RejectedExecutionException e) {
                 return BridgeControlResult.failed("shutdown_scheduler_rejected");
@@ -661,7 +661,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     catch (Throwable error) {
                         // Игрок мог уже выйти; не заменяйте подтверждённый результат PlayerQuitEvent исключением.
                         confirmation.complete(BridgeControlResult.indeterminate("player_kick_invocation_failed"));
-                        getLogger().warning("Launcher player kick invocation: " + safeError(error));
+                        getLogger().warning("Ошибка вызова отключения игрока в Launcher: " + safeError(error));
                     }
                 };
                 if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER)) {
@@ -673,7 +673,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 }
             } catch (Throwable error) {
                 confirmation.complete(BridgeControlResult.indeterminate("player_kick_scheduler_failed"));
-                getLogger().warning("Launcher player kick scheduling: " + safeError(error));
+                getLogger().warning("Ошибка планирования отключения игрока в Launcher: " + safeError(error));
             }
         });
         try {

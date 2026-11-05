@@ -96,11 +96,11 @@ func bomCheckSourceVersion03214(name, rel, ver string, raw []byte) error {
 	case strings.HasSuffix(rel, "Cargo.toml"):
 		match := bomCargoVersion03214.FindStringSubmatch(s)
 		if len(match) != 2 || match[1] != ver {
-			return fmt.Errorf("%s Cargo package version mismatch with %s", name, ver)
+			return fmt.Errorf("%s: версия пакета Cargo не совпадает с %s", name, ver)
 		}
 	case strings.HasSuffix(rel, "build.gradle.kts"):
 		if !strings.Contains(s, `version = rootProject.file("VERSION").readText().trim()`) {
-			return fmt.Errorf("%s plugin must derive version from VERSION", name)
+			return fmt.Errorf("%s: версия плагина должна определяться из VERSION", name)
 		}
 	case strings.HasSuffix(rel, ".json") && !strings.HasSuffix(rel, "targets.json") && !strings.HasSuffix(rel, "hybrid-targets.json") && rel != "schemas/openapi.yaml":
 		var obj struct {
@@ -113,10 +113,10 @@ func bomCheckSourceVersion03214(name, rel, ver string, raw []byte) error {
 			return fmt.Errorf("%s: %w", name, err)
 		}
 		if obj.Version != ver {
-			return fmt.Errorf("%s version=%q expected %q", name, obj.Version, ver)
+			return fmt.Errorf("%s: версия %q, ожидалась %q", name, obj.Version, ver)
 		}
 		if root, ok := obj.Packages[""]; ok && root.Version != ver {
-			return fmt.Errorf("%s lock root version=%q expected %q", name, root.Version, ver)
+			return fmt.Errorf("%s: версия корневого пакета в lock-файле %q, ожидалась %q", name, root.Version, ver)
 		}
 	case strings.HasSuffix(rel, "targets.json"):
 		var obj struct {
@@ -187,14 +187,14 @@ func bomArtifactFiles03214(dir string) ([]bomArtifact03214, error) {
 			continue
 		}
 		if e.Type()&os.ModeSymlink != 0 || !e.Type().IsRegular() {
-			return nil, fmt.Errorf("BOM: unexpected non-regular release file %q", name)
+			return nil, fmt.Errorf("BOM: обнаружен неожиданный файл релиза, не являющийся обычным файлом: %q", name)
 		}
 		h, n, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
 			return nil, err
 		}
 		if n <= 0 {
-			return nil, fmt.Errorf("BOM: empty artifact %q", name)
+			return nil, fmt.Errorf("BOM: пустой артефакт %q", name)
 		}
 		out = append(out, bomArtifact03214{File: name, SHA256: h, Size: n})
 	}
@@ -222,7 +222,7 @@ func writeReleaseBOM03214(out, sourceRoot, ver string) error {
 	}
 	sources, err := bomSourceComponents03214(sourceRoot, ver)
 	if err != nil {
-		return fmt.Errorf("BOM source: %w", err)
+		return fmt.Errorf("Источник BOM: %w", err)
 	}
 	artifacts, err := bomArtifactFiles03214(out)
 	if err != nil {
@@ -232,7 +232,7 @@ func writeReleaseBOM03214(out, sourceRoot, ver string) error {
 		return err
 	}
 	if len(artifacts) == 0 {
-		return errors.New("BOM: release has no artifacts")
+		return errors.New("BOM: в релизе отсутствуют артефакты")
 	}
 	return writeJSONFile(filepath.Join(out, releaseBOMFile03214), releaseBOM03214{Schema: 1, ProductVersion: ver, Components: sources, Artifacts: artifacts})
 }
@@ -242,18 +242,18 @@ func verifyReleaseBOM03214(dir, ver string) error {
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, releaseBOMFile03214))
 	if err != nil {
-		return fmt.Errorf("BOM is mandatory: %w", err)
+		return fmt.Errorf("Наличие BOM обязательно: %w", err)
 	}
 	var bom releaseBOM03214
 	if err := json.Unmarshal(raw, &bom); err != nil {
-		return fmt.Errorf("BOM invalid JSON: %w", err)
+		return fmt.Errorf("BOM содержит некорректный JSON: %w", err)
 	}
 	if bom.Schema != 1 || bom.ProductVersion != ver {
 		return fmt.Errorf("Несовпадение: «BOM schema/version»: %d %q expected %q", bom.Schema, bom.ProductVersion, ver)
 	}
 	expectedSources := bomSources03214()
 	if len(bom.Components) != len(expectedSources) {
-		return errors.New("BOM source component set incomplete or extended")
+		return errors.New("Набор исходных компонентов BOM неполон либо содержит лишние компоненты")
 	}
 	seen := make(map[string]bool)
 	for _, c := range bom.Components {
@@ -268,7 +268,7 @@ func verifyReleaseBOM03214(dir, ver string) error {
 		return err
 	}
 	if len(actual) != len(bom.Artifacts) {
-		return errors.New("BOM artifact count differs from actual release files")
+		return errors.New("Число артефактов BOM не совпадает с числом фактических файлов релиза")
 	}
 	for i, e := range actual {
 		expected := bom.Artifacts[i]
@@ -340,7 +340,7 @@ func verifyReleaseBOMBinding03214(dir, ver string) error {
 		if fields[1] == releaseBOMFile03214 {
 			bomCount++
 			if fields[0] != digest {
-				return errors.New("BOM checksum is not pinned")
+				return errors.New("Контрольная сумма BOM не закреплена")
 			}
 		}
 		if fields[1] == "RELEASE_MANIFEST.json" {
@@ -348,7 +348,7 @@ func verifyReleaseBOMBinding03214(dir, ver string) error {
 		}
 	}
 	if bomCount != 1 || manifestCount != 1 {
-		return errors.New("BOM and RELEASE_MANIFEST must each occur once in SHA256SUMS")
+		return errors.New("BOM и RELEASE_MANIFEST должны встречаться в SHA256SUMS ровно по одному разу")
 	}
 	return nil
 }

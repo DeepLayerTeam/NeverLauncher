@@ -612,7 +612,7 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 		projectID = strings.TrimSpace(projectID)
 		roleID = strings.TrimSpace(roleID)
 		if projectID == "*" {
-			return model.User{}, fmt.Errorf("wildcard project role is not supported; use a global role")
+			return model.User{}, fmt.Errorf("Роль проекта с подстановочным символом не поддерживается; используйте глобальную роль")
 		}
 		if projectID == "" || roleID == "" {
 			continue
@@ -819,7 +819,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 		}
 		if existing.ID == user.ID {
 			if !strings.EqualFold(existing.Email, user.Email) {
-				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: deterministic canonical user id already exists with another email", ErrConflict)
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: детерминированный ID основного пользователя уже связан с другим адресом почты", ErrConflict)
 			}
 			existingUserIndex = i
 		}

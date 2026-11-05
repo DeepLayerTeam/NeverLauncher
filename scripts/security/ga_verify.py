@@ -112,7 +112,7 @@ def verify_evidence(
     path: Path, key: Ed25519PublicKey, *, commit: str, source_sha: str, now: dt.datetime
 ) -> dict:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 2_000_000:
-        raise ValueError(f"evidence not ordinary/small: {path}")
+        raise ValueError(f"Файл доказательств слишком велик либо не является обычным файлом: {path}")
     sig_path = Path(str(path) + ".sig")
     if sig_path.is_symlink() or not sig_path.is_file() or sig_path.stat().st_size > 512:
         raise ValueError(f"Отсутствует отдельная подпись: {path}")
@@ -129,24 +129,24 @@ def verify_evidence(
     if tier not in TIERS:
         raise ValueError(f"Неожиданное значение: «tier»: {tier}")
     if doc.get("schema") != SCHEMA:
-        raise ValueError(f"{tier}: invalid evidence schema")
+        raise ValueError(f"{tier}: некорректная схема доказательств")
     if doc.get("status") != "PASS" or doc.get("sourceSha256") != source_sha:
-        raise ValueError(f"{tier}: status or source fingerprint mismatch")
+        raise ValueError(f"{tier}: не совпадает статус или отпечаток исходников")
     if doc.get("commit") != commit or doc.get("productVersion") != "0.32.0":
-        raise ValueError(f"{tier}: not bound to exact release commit/version")
+        raise ValueError(f"{tier}: доказательства не привязаны к точному коммиту и версии релиза")
     try:
         when = dt.datetime.fromisoformat(doc["generatedAt"].replace("Z", "+00:00"))
     except (KeyError, TypeError, ValueError) as e:
-        raise ValueError(f"{tier}: invalid timestamp") from e
+        raise ValueError(f"{tier}: некорректная временная метка") from e
     if when.tzinfo is None or not dt.timedelta(0) <= now - when <= dt.timedelta(days=7):
-        raise ValueError(f"{tier}: stale or future evidence")
+        raise ValueError(f"{tier}: доказательства устарели или датированы будущим временем")
     host = doc.get("host")
     if (
         not isinstance(host, dict)
         or not host.get("system")
         or not host.get("architecture")
     ):
-        raise ValueError(f"{tier}: missing host identity")
+        raise ValueError(f"{tier}: отсутствует идентификатор хоста")
     if (
         tier == "linux-live"
         and host["system"] != "Linux"
@@ -155,10 +155,10 @@ def verify_evidence(
         or tier == "macos-live"
         and host["system"] != "Darwin"
     ):
-        raise ValueError(f"{tier}: evidence from wrong OS")
+        raise ValueError(f"{tier}: доказательства получены не с той ОС")
     results = doc.get("results")
     if not isinstance(results, list) or not results:
-        raise ValueError(f"{tier}: no test evidence")
+        raise ValueError(f"{tier}: нет доказательств выполнения тестов")
     if tier in REQUIRED:
         seen = set()
         for result in results:
@@ -167,10 +167,10 @@ def verify_evidence(
                 or result.get("status") != "PASS"
                 or result.get("exitCode") != 0
             ):
-                raise ValueError(f"{tier}: failed or skipped executable package")
+                raise ValueError(f"{tier}: проверка исполняемого пакета завершилась ошибкой или пропущена")
             package = result.get("package")
             if package in seen or package not in REQUIRED[tier]:
-                raise ValueError(f"{tier}: duplicate/unknown test package {package}")
+                raise ValueError(f"{tier}: повторяющийся или неизвестный тестовый пакет {package}")
             seen.add(package)
             required = result.get("required")
             if (
@@ -178,7 +178,7 @@ def verify_evidence(
                 or set(required) != set(EXPECTED_TESTS[tier][package])
                 or any(v != "PASS" for v in required.values())
             ):
-                raise ValueError(f"{tier}: missing passing named tests")
+                raise ValueError(f"{tier}: отсутствуют успешно пройденные обязательные тесты")
         if seen != REQUIRED[tier]:
             raise ValueError(
                 f"{tier}: missing mandatory packages {REQUIRED[tier] - seen}"
@@ -187,20 +187,20 @@ def verify_evidence(
         checks = {}
         for result in results:
             if not isinstance(result, dict):
-                raise ValueError(f"{tier}: malformed live check")
+                raise ValueError(f"{tier}: некорректная проверка работающего экземпляра")
             name = result.get("name")
             if name in checks or name not in MANUAL[tier]:
-                raise ValueError(f"{tier}: duplicate/unknown live check {name}")
+                raise ValueError(f"{tier}: повторяющаяся или неизвестная проверка работающего экземпляра {name}")
             if (
                 result.get("status") != "PASS"
                 or result.get("simulated") is not False
                 or result.get("actualExecution") is not True
             ):
-                raise ValueError(f"{tier}: unverified or simulated check {name}")
+                raise ValueError(f"{tier}: проверка {name} не подтверждена или выполнялась в режиме имитации")
             if not isinstance(result.get("evidenceSha256"), str) or not HEX64.fullmatch(
                 result["evidenceSha256"]
             ):
-                raise ValueError(f"{tier}: missing external audit-log hash for {name}")
+                raise ValueError(f"{tier}: отсутствует внешний хеш журнала аудита для {name}")
             checks[name] = result
         if set(checks) != MANUAL[tier]:
             raise ValueError(

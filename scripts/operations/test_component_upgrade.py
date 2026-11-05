@@ -189,7 +189,7 @@ class HostBinaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);old,new,sha=self.fixture(root)
             c.host_binary('cli',new,old,sha)
-            with self.assertRaisesRegex(c.ComponentError,'SHA-256 mismatch'):
+            with self.assertRaisesRegex(c.ComponentError,'Контрольная сумма SHA-256 не совпадает'):
                 c.rollback_linux_host('cli',old,'0'*64)
             self.assertEqual(old.read_bytes(),new.read_bytes())
 
@@ -206,7 +206,7 @@ class HostBinaryTests(unittest.TestCase):
     def test_invalid_hash_refused_before_swap(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);old,new,sha=self.fixture(root)
-            with self.assertRaisesRegex(c.ComponentError,'SHA-256 mismatch'):
+            with self.assertRaisesRegex(c.ComponentError,'Контрольная сумма SHA-256 не совпадает'):
                 c.host_binary('cli',new,old,'0'*64)
             self.assertIn('0.45.7',old.read_text())
 
@@ -244,7 +244,7 @@ class ClientExtensionTests(unittest.TestCase):
                 self.assertIn('--delivery-manifest',args)
                 self.assertNotIn('--allow-unpinned-development',args)
                 self.assertEqual(result['nativeReport']['status'],'committed')
-            with self.assertRaisesRegex(c.ComponentError,'SHA-256 mismatch'):
+            with self.assertRaisesRegex(c.ComponentError,'Контрольная сумма SHA-256 не совпадает'):
                 c.client_package(cli,pkg,'0'*64,delivery,root)
 
     def test_extension_transaction_requires_committed_status(self):

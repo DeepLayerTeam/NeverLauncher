@@ -310,7 +310,7 @@ impl GuardSupervisor {
                 if let Ok(status) = send_command(handle, "status").await {
                     let mut status = parse_status(status)?;
                     validate_status_profile(&status, handle.protection_profile)?;
-                    if status.pid != handle.child.id().ok_or("Guard running PID unavailable")?
+                    if status.pid != handle.child.id().ok_or("Не удалось определить PID запущенного Guard")?
                         || status.parent_pid != std::process::id() {
                         return Err("Идентичность запущенного процесса Guard в Windows не совпадает с ожидаемой".into());
                     }
@@ -675,12 +675,12 @@ fn verify_package_artifact(manifest: &WindowsPackageManifest, path: &Path) -> Re
     let name = path
         .file_name()
         .and_then(|value| value.to_str())
-        .ok_or_else(|| "Windows package artifact filename is not UTF-8".to_string())?;
+        .ok_or_else(|| "Имя артефакта пакета Windows имеет кодировку не UTF-8".to_string())?;
     let artifact = manifest
         .artifacts
         .iter()
         .find(|artifact| artifact.name.eq_ignore_ascii_case(name))
-        .ok_or_else(|| format!("Windows package manifest does not contain artifact {name}"))?;
+        .ok_or_else(|| format!("Манифест пакета Windows не содержит артефакт {name}"))?;
     let metadata = std::fs::metadata(path)
         .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
     if metadata.len() != artifact.size {
@@ -1011,7 +1011,7 @@ fn validate_integrity_evidence(
     let guard_pid = handle
         .child
         .id()
-        .ok_or_else(|| "Guard child PID unavailable during evidence validation".to_string())?;
+        .ok_or_else(|| "Во время проверки доказательств не удалось определить PID дочернего процесса Guard".to_string())?;
     let launcher_pid = std::process::id();
     if evidence.guard.pid != guard_pid
         || evidence.launcher.pid != launcher_pid
@@ -1070,7 +1070,7 @@ fn validate_guard_process_policy(
     let guard_pid = handle
         .child
         .id()
-        .ok_or_else(|| "Guard child PID unavailable during policy validation".to_string())?;
+        .ok_or_else(|| "Во время проверки политики не удалось определить PID дочернего процесса Guard".to_string())?;
     if policy.pid != guard_pid {
         return Err("Несовпадение: «Guard Windows process policy PID binding»".to_string());
     }
@@ -1147,7 +1147,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
         }
     }
     let sid = String::from_utf16(unsafe { std::slice::from_raw_parts(sid_text, len) })
-        .map_err(|_| "Guard current user SID is not valid UTF-16".to_string());
+        .map_err(|_| "SID текущего пользователя Guard содержит некорректный UTF-16".to_string());
     unsafe {
         let _ = LocalFree(sid_text as *mut c_void);
     }
@@ -1226,7 +1226,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         .windows
         .as_ref()
         .map(|details| details.profile)
-        .ok_or_else(|| "Guard Windows Protection Core details are missing".to_string())?;
+        .ok_or_else(|| "Отсутствуют сведения об основном модуле защиты Guard в Windows".to_string())?;
     validate_windows_guard_policy_report(&process_policy, server_profile)?;
     let observed_parent_pid = observed_windows_parent_pid(guard_pid)?;
     if observed_parent_pid != parent_pid {
@@ -1499,7 +1499,7 @@ async fn serve_authenticated_session(
             "process-policy" => (
                 true,
                 serde_json::to_value(process_policy).map_err(|err| {
-                    format!("Guard process policy serialization failed: {err}")
+                    format!("Ошибка сериализации политики процесса Guard: {err}")
                 })?,
                 false,
             ),
@@ -1514,7 +1514,7 @@ async fn serve_authenticated_session(
                 (
                     true,
                     serde_json::to_value(evidence).map_err(|err| {
-                        format!("Guard integrity evidence serialization failed: {err}")
+                        format!("Ошибка сериализации доказательств целостности Guard: {err}")
                     })?,
                     false,
                 )
@@ -1553,7 +1553,7 @@ async fn serve_authenticated_session(
                 (
                     true,
                     serde_json::to_value(attestation).map_err(|err| {
-                        format!("Guard remote attestation serialization failed: {err}")
+                        format!("Ошибка сериализации удалённой аттестации Guard: {err}")
                     })?,
                     false,
                 )
@@ -1561,7 +1561,7 @@ async fn serve_authenticated_session(
             "shutdown" => (true, json!({"shutdown": true}), true),
             other => (
                 false,
-                json!({"error": format!("unsupported Guard command: {other}")}),
+                json!({"error": format!("Неподдерживаемая команда Guard: {other}")}),
                 false,
             ),
         };
@@ -1657,7 +1657,7 @@ where
     if bytes.is_empty() {
         return Err("Пустой кадр Guard IPC отклонён".to_string());
     }
-    serde_json::from_slice(&bytes).map_err(|err| format!("Guard IPC JSON rejected: {err}"))
+    serde_json::from_slice(&bytes).map_err(|err| format!("Отклонён JSON IPC Guard: {err}"))
 }
 
 #[cfg(windows)]
@@ -1676,7 +1676,7 @@ fn random_id() -> String {
 
 #[cfg(windows)]
 fn decode_hex_32(value: &str, field: &str) -> Result<[u8; 32], String> {
-    let raw = hex::decode(value).map_err(|_| format!("Guard IPC {field} is not valid hex"))?;
+    let raw = hex::decode(value).map_err(|_| format!("Поле IPC Guard {field} не является корректной шестнадцатеричной строкой"))?;
     if raw.len() != 32 {
         return Err(format!("Для «Guard IPC» {field} требуется: «32 bytes»"));
     }

@@ -1626,7 +1626,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		}
 		canonical, err := mavenCoordinatePath(lib.Name)
 		if err != nil {
-			return nil, fmt.Errorf("library %s: %w", lib.Name, err)
+			return nil, fmt.Errorf("Библиотека %s: %w", lib.Name, err)
 		}
 		rel := strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(lib.Downloads.Artifact.Path)), "libraries/")
 		if rel == "" {

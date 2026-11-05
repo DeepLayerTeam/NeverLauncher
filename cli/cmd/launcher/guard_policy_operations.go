@@ -52,7 +52,7 @@ func guardHistoryPersist05011(root string, raw []byte, v guardCompatVerified0502
 			return err
 		}
 		if !bytes.Equal(existing, raw) {
-			return errors.New("Guard history collision/modified archived envelope")
+			return errors.New("Конфликт истории Guard или изменение архивированного конверта")
 		}
 		return nil
 	}
@@ -81,7 +81,7 @@ func guardCompatArchiveIncoming05011(root, key string, raw []byte, v guardCompat
 	if err == nil {
 		current, err := guardCompatHistoricalVerify05011(root, key, old)
 		if err != nil {
-			return fmt.Errorf("current Guard policy corrupt: %w", err)
+			return fmt.Errorf("Текущая политика Guard повреждена: %w", err)
 		}
 		floor, err := guardCompatFloorRead0502(root)
 		if err != nil {
@@ -112,7 +112,7 @@ func guardHistoryRead05011(root, key string, active *guardCompatVerified0502) ([
 		return nil, err
 	}
 	if len(entries) > 2048 {
-		return nil, errors.New("Guard history excessive entries")
+		return nil, errors.New("История Guard содержит слишком много записей")
 	}
 	items := make([]guardHistoryItem05011, 0, len(entries))
 	var currentRoot string
@@ -121,7 +121,7 @@ func guardHistoryRead05011(root, key string, active *guardCompatVerified0502) ([
 	}
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), ".json") || !guardCompatRel0502(entry.Name()) || !entry.Type().IsRegular() {
-			return nil, errors.New("Guard history contains unexpected entry")
+			return nil, errors.New("История Guard содержит неожиданную запись")
 		}
 		raw, err := guardCompatRead0502(root, guardHistoryDir05011+"/"+entry.Name(), 256*1024)
 		if err != nil {
@@ -201,19 +201,19 @@ func guardCompatAuthorizeRollback05011(root, key, file string) error {
 		return err
 	}
 	if newer.Policy.Epoch <= old.Policy.Epoch {
-		return errors.New("rollback must have a NEW signed epoch")
+		return errors.New("Для отката требуется НОВАЯ подписанная эпоха")
 	}
 	if newer.Policy.ProjectID != old.Policy.ProjectID || newer.Policy.Minecraft != old.Policy.Minecraft || !strings.EqualFold(newer.Policy.Loader, old.Policy.Loader) {
 		return errors.New("откат: запрещено «change project/game/loader scope»")
 	}
 	for _, revoked := range old.Policy.RevokedDigests {
 		if !hasGuardString05011(newer.Policy.RevokedDigests, revoked) {
-			return errors.New("rollback attempted to undo a signed digest revocation")
+			return errors.New("При откате предпринята попытка отменить подписанный отзыв контрольной суммы")
 		}
 	}
 	for _, revoked := range old.Policy.RevokedTransforms {
 		if !hasGuardString05011(newer.Policy.RevokedTransforms, revoked) {
-			return errors.New("rollback attempted to undo a signed transformation revocation")
+			return errors.New("При откате предпринята попытка отменить подписанный отзыв преобразования")
 		}
 	}
 	return nil
@@ -229,7 +229,7 @@ func hasGuardString05011(items []string, entry string) bool {
 
 func guardCompatOperation05011(root, key string, args []string) (map[string]any, error) {
 	if len(args) == 0 {
-		return nil, errors.New("missing operation")
+		return nil, errors.New("Не указана операция")
 	}
 	result := map[string]any{"operation": args[0], "status": "blocked", "checkedAt": time.Now().UTC().Format(time.RFC3339)}
 	floor, err := guardCompatFloorRead0502(root)
@@ -250,7 +250,7 @@ func guardCompatOperation05011(root, key string, args []string) (map[string]any,
 	}
 	if active == nil {
 		result["reason"] = "policy_not_installed"
-		return result, errors.New("Guard policy not installed")
+		return result, errors.New("Политика Guard не установлена")
 	}
 	result["status"] = "pass"
 	result["epoch"] = active.Policy.Epoch

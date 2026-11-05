@@ -14,8 +14,8 @@ import (
 
 var (
 	ErrRoutingRequired = errors.New("Требуется: «explicit authentication provider»")
-	ErrRoutingDenied   = errors.New("authentication provider denied by routing policy")
-	ErrLinkingDisabled = errors.New("account linking disabled for provider")
+	ErrRoutingDenied   = errors.New("Провайдер авторизации запрещён политикой маршрутизации")
+	ErrLinkingDisabled = errors.New("Для провайдера отключена привязка учётных записей")
 )
 
 // RoutingRule определяет единственного допустимого парольного провайдера для точного
@@ -44,13 +44,13 @@ var validRouteDomain0293 = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(
 // лишние JSON-объекты. Пустая конфигурация сохраняет локальное поведение 0.29.2.
 func LoadRoutingConfig(jsonValue, filePath string) (RoutingConfig, error) {
 	if strings.TrimSpace(jsonValue) != "" && strings.TrimSpace(filePath) != "" {
-		return RoutingConfig{}, errors.New("configure only one of LAUNCHER_AUTH_ROUTING_JSON or LAUNCHER_AUTH_ROUTING_FILE")
+		return RoutingConfig{}, errors.New("Настройте только один из параметров: LAUNCHER_AUTH_ROUTING_JSON либо LAUNCHER_AUTH_ROUTING_FILE")
 	}
 	var raw []byte
 	if strings.TrimSpace(filePath) != "" {
 		file, err := os.Open(strings.TrimSpace(filePath))
 		if err != nil {
-			return RoutingConfig{}, fmt.Errorf("open auth routing config: %w", err)
+			return RoutingConfig{}, fmt.Errorf("Открытие конфигурации маршрутизации авторизации: %w", err)
 		}
 		defer file.Close()
 		raw, err = io.ReadAll(io.LimitReader(file, 65537))
@@ -64,20 +64,20 @@ func LoadRoutingConfig(jsonValue, filePath string) (RoutingConfig, error) {
 		return RoutingConfig{Version: 1, DefaultProvider: "local"}, nil
 	}
 	if len(raw) > 65536 {
-		return RoutingConfig{}, errors.New("auth routing config exceeds 64 KiB")
+		return RoutingConfig{}, errors.New("Конфигурация маршрутизации авторизации превышает 64 КиБ")
 	}
 	if err := rejectDuplicateRoutingKeys0293(json.NewDecoder(strings.NewReader(string(raw)))); err != nil {
-		return RoutingConfig{}, fmt.Errorf("ambiguous auth routing JSON: %w", err)
+		return RoutingConfig{}, fmt.Errorf("Неоднозначный JSON маршрутизации авторизации: %w", err)
 	}
 	var cfg RoutingConfig
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&cfg); err != nil {
-		return RoutingConfig{}, fmt.Errorf("decode auth routing: %w", err)
+		return RoutingConfig{}, fmt.Errorf("Декодирование маршрутизации авторизации: %w", err)
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return RoutingConfig{}, errors.New("auth routing config must contain exactly one JSON object")
+		return RoutingConfig{}, errors.New("Конфигурация маршрутизации авторизации должна содержать ровно один JSON-объект")
 	}
 	return cfg, nil
 }
@@ -150,7 +150,7 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 	rules := make([]RoutingRule, 0, len(cfg.Rules))
 	domains := make(map[string]struct{}, len(cfg.Rules))
 	if len(cfg.Rules) > 256 {
-		return errors.New("auth routing exceeds 256 rules")
+		return errors.New("Маршрутизация авторизации превышает лимит в 256 правил")
 	}
 	for _, rule := range cfg.Rules {
 		rule.EmailDomain = strings.ToLower(strings.TrimSpace(rule.EmailDomain))
@@ -176,14 +176,14 @@ func (c *Core) ConfigureRouting(cfg RoutingConfig) error {
 		return errors.New("«disableLinking»: запрещено «be combined with linkingAllowProviders»")
 	}
 	if len(cfg.LinkingAllowProviders) > 256 {
-		return errors.New("auth linking allowlist exceeds 256 entries")
+		return errors.New("Список разрешённых привязок учётных записей превышает 256 записей")
 	}
 	linking := make([]string, 0, len(cfg.LinkingAllowProviders))
 	seen := map[string]bool{}
 	for _, id := range cfg.LinkingAllowProviders {
 		id = strings.ToLower(strings.TrimSpace(id))
 		if _, exists := c.connectors[id]; !exists {
-			return fmt.Errorf("auth linking provider %q not registered", id)
+			return fmt.Errorf("Провайдер привязки учётных записей %q не зарегистрирован", id)
 		}
 		if seen[id] {
 			return fmt.Errorf("Обнаружен дубликат: «auth linking provider» %q", id)

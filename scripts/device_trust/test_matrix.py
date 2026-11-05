@@ -249,7 +249,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "DeepLayerTeam/Launcher",
             )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("SHA-256 mismatch", proc.stderr + proc.stdout)
+            self.assertIn("Контрольная сумма SHA-256 не совпадает", proc.stderr + proc.stdout)
 
     def test_aggregate_rejects_path_traversal_evidence_name(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

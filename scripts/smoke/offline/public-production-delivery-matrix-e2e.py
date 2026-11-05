@@ -40,7 +40,7 @@ require(
         "ManagedJRE",
         "downloadPublicAsset0159",
         "verifyReleaseBundleWithTrust",
-        "public delivery base URL must use HTTPS",
+        "Базовый URL публичной поставки должен использовать HTTPS",
         "redirect changed to untrusted host",
     ],
     "public production delivery core",

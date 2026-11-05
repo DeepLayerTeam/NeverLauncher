@@ -60,7 +60,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	}
 	pub, err := loadEd25519PublicKey(publicKeyFile)
 	if err != nil {
-		return fmt.Errorf("GA trust anchor: %w", err)
+		return fmt.Errorf("Корень доверия GA: %w", err)
 	}
 	reportRaw, err := singleNodeReadBounded0330(dir, singleNodeGAFiles0330[0])
 	if err != nil {
@@ -116,7 +116,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		report.Environment.Coordinator != "sqlite" || report.Environment.WAL != "wal" || report.Environment.Processes != 1 ||
 		!report.Environment.LocalFS || report.Environment.PostgresRequired || report.Environment.RedisRequired || !report.Environment.Durable ||
 		len(report.Checks) != len(expectedChecks) {
-		return errors.New("incomplete GA acceptance evidence or PostgreSQL/Redis fallback detected")
+		return errors.New("Доказательства приёмки GA неполны либо обнаружен переход на резервный PostgreSQL/Redis")
 	}
 	for _, c := range expectedChecks {
 		if report.Checks[c] != "pass" {
@@ -124,7 +124,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		}
 	}
 	if len(report.TestedArtifacts) != 3 {
-		return errors.New("GA report must pin all tested API, CLI and distribution package bytes")
+		return errors.New("Отчёт GA должен закреплять точное содержимое всех проверенных пакетов API, CLI и дистрибутива")
 	}
 	for _, name := range []string{"launcher-api-linux-x64", "launcher-cli-linux-x64", "launcher-linux-x64-0.33.0.tar.gz"} {
 		digest, ok := report.TestedArtifacts[name]
@@ -152,12 +152,12 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		"http-security-and-minecraft": 4, "measured-load-safety": 3,
 	}
 	if rc.Format != "launcher-03216-rc-test-evidence-v1" || rc.Version != ver || rc.Commit != commit || len(rc.Suites) != len(required) || !regexp.MustCompile(`go1\.(?:2[7-9]|[3-9]\d)\.`).MatchString(rc.Toolchain) {
-		return errors.New("RC exact-commit evidence incomplete")
+		return errors.New("Доказательства RC для точного коммита неполны")
 	}
 	for _, suite := range rc.Suites {
 		count, ok := required[suite.Name]
 		if !ok || suite.Count != count || len(suite.Passed) != count {
-			return errors.New("missing/duplicated RC test suite")
+			return errors.New("Набор тестов RC отсутствует либо дублируется")
 		}
 		delete(required, suite.Name)
 		seen := map[string]bool{}
@@ -169,7 +169,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		}
 	}
 	if len(required) != 0 {
-		return errors.New("required RC tests not completed")
+		return errors.New("Обязательные тесты RC не завершены")
 	}
 	var cert struct {
 		Schema         string `json:"schema"`
@@ -188,7 +188,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	if cert.Schema != "launcher-single-node-ga-verification-v1" || cert.Version != ver || cert.Commit != commit || cert.Status != "independently-attested" ||
 		cert.RCSHA != singleNodeSHA0330(rcRaw) || cert.AttestationSHA != singleNodeSHA0330(reportRaw) ||
 		cert.SignatureSHA != singleNodeSHA0330([]byte(strings.TrimSpace(string(sigRaw)))) || cert.Fingerprint != singleNodeSHA0330(pub) || cert.Checks != len(expectedChecks) {
-		return errors.New("GA certificate is not bound to signed evidence and exact RC receipt")
+		return errors.New("Сертификат GA не привязан к подписанным доказательствам и точной квитанции RC")
 	}
 	return nil
 }
@@ -228,7 +228,7 @@ func verifySingleNodeGABundle0330(dir, ver, commit, pub string) error {
 			}
 		}
 		if !present {
-			return fmt.Errorf("GA evidence %s is not mandatory in signed manifest", file)
+			return fmt.Errorf("Доказательство GA %s не помечено обязательным в подписанном манифесте", file)
 		}
 		raw, err := singleNodeReadBounded0330(dir, file)
 		if err != nil {
@@ -241,7 +241,7 @@ func verifySingleNodeGABundle0330(dir, ver, commit, pub string) error {
 			}
 		}
 		if !present {
-			return fmt.Errorf("GA evidence %s missing from signed artifact inventory", file)
+			return fmt.Errorf("Доказательство GA %s отсутствует в подписанном перечне артефактов", file)
 		}
 	}
 	return nil
@@ -261,18 +261,18 @@ func verifySingleNodeGATestedArtifacts0330(dir string) error {
 		return err
 	}
 	if len(report.TestedArtifacts) != 3 {
-		return errors.New("GA tested artifact inventory incomplete")
+		return errors.New("Перечень проверенных артефактов GA неполон")
 	}
 	for name, expected := range report.TestedArtifacts {
 		if name != "launcher-api-linux-x64" && name != "launcher-cli-linux-x64" && name != "launcher-linux-x64-0.33.0.tar.gz" {
-			return fmt.Errorf("unapproved tested artifact: %s", name)
+			return fmt.Errorf("Неподтверждённый проверенный артефакт: %s", name)
 		}
 		actual, _, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
 			return fmt.Errorf("Отсутствует: «GA tested artifact» %s: %w", name, err)
 		}
 		if actual != expected {
-			return fmt.Errorf("GA tested artifact %s differs from independently approved bytes", name)
+			return fmt.Errorf("Проверенный артефакт GA %s отличается от независимо одобренного содержимого", name)
 		}
 	}
 	return nil

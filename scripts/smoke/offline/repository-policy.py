@@ -3266,7 +3266,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verifyReleaseBundleWithTrust",
         "github.com",
         "release-assets.githubusercontent.com",
-        "public delivery base URL must use HTTPS",
+        "Базовый URL публичной поставки должен использовать HTTPS",
     ]:
         if required not in public_delivery_0159:
             fail(f"0.15.9 public delivery implementation incomplete: {required}")

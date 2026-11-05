@@ -56,19 +56,19 @@ func loadComponentWatermark02311(root string) (componentGenerationRecord02311, e
 		}
 		var item componentGenerationRecord02311
 		if json.Unmarshal(raw, &item) != nil || item.Schema != 1 || item.Generation == 0 || len(item.ManifestDigest) != 64 {
-			return current, errors.New("corrupt component security generation slot")
+			return current, errors.New("Повреждена запись поколения безопасности компонентов")
 		}
 		if _, err := hex.DecodeString(item.ManifestDigest); err != nil {
-			return current, errors.New("component generation digest corrupted")
+			return current, errors.New("Повреждена контрольная сумма поколения компонентов")
 		}
 		if item.Generation > current.Generation {
 			current = item
 		} else if item.Generation == current.Generation && current.ManifestDigest != item.ManifestDigest {
-			return current, errors.New("conflicting component security generation slots")
+			return current, errors.New("Обнаружен конфликт записей поколения безопасности компонентов")
 		}
 	}
 	if found && current.Generation == 0 {
-		return current, errors.New("component security watermark corrupted; refusing downgrade")
+		return current, errors.New("Повреждена отметка безопасности компонентов; понижение версии запрещено")
 	}
 	return current, nil
 }
@@ -86,7 +86,7 @@ func writeComponentWatermark02311(root string, item componentGenerationRecord023
 	}
 	if old.Generation == item.Generation {
 		if old.ManifestDigest != item.ManifestDigest {
-			return errors.New("component generation equivocation")
+			return errors.New("Обнаружены противоречивые данные о поколении компонентов")
 		}
 		return nil
 	}
@@ -104,10 +104,10 @@ func checkComponentGeneration02311(root string, m componentUpdateManifest0157) e
 		return err
 	}
 	if m.SecurityGeneration < floor.Generation {
-		return fmt.Errorf("component anti-rollback: signed generation %d below previously accepted %d", m.SecurityGeneration, floor.Generation)
+		return fmt.Errorf("Защита компонентов от отката: подписанное поколение %d ниже ранее принятого %d", m.SecurityGeneration, floor.Generation)
 	}
 	if m.SecurityGeneration == floor.Generation && floor.Generation > 0 && componentDigest02311(m) != floor.ManifestDigest {
-		return errors.New("component generation reused for a different signed set")
+		return errors.New("Поколение компонентов повторно использовано для другого подписанного набора")
 	}
 	// Проверенное установленное состояние может опережать контрольное минимальное значение, если
 	// питание пропало после атомарной фиксации, но до сохранения отдельного значения.
@@ -117,10 +117,10 @@ func checkComponentGeneration02311(root string, m componentUpdateManifest0157) e
 		return err
 	}
 	if available && st.SecurityGeneration > m.SecurityGeneration {
-		return fmt.Errorf("component anti-rollback: installed generation %d above candidate %d", st.SecurityGeneration, m.SecurityGeneration)
+		return fmt.Errorf("Защита компонентов от отката: установленное поколение %d выше предлагаемого %d", st.SecurityGeneration, m.SecurityGeneration)
 	}
 	if available && st.SecurityGeneration == m.SecurityGeneration && st.SecurityGeneration > 0 && st.ManifestDigest != componentDigest02311(m) {
-		return errors.New("candidate conflicts with installed component security generation")
+		return errors.New("Предлагаемый набор конфликтует с установленным поколением безопасности компонентов")
 	}
 	return nil
 }
@@ -152,21 +152,21 @@ func reconcileInstalledComponentGeneration02311(root string) error {
 	}
 	if !present {
 		if floor.Generation > 0 {
-			return errors.New("component security state missing after generation was accepted")
+			return errors.New("Состояние безопасности компонентов отсутствует после принятия поколения")
 		}
 		return nil
 	}
 	if st.SecurityGeneration < floor.Generation {
-		return errors.New("installed component set is below security watermark")
+		return errors.New("Поколение установленного набора компонентов ниже отметки безопасности")
 	}
 	if st.SecurityGeneration == floor.Generation && floor.Generation > 0 && st.ManifestDigest != floor.ManifestDigest {
-		return errors.New("installed component manifest differs from security watermark")
+		return errors.New("Манифест установленных компонентов не совпадает с отметкой безопасности")
 	}
 	if st.SecurityGeneration == 0 {
 		return nil
 	}
 	if !componentSecurityRequired02311(st.Version) || len(st.ManifestDigest) != 64 || strings.TrimSpace(st.ManifestDigest) == "" {
-		return errors.New("installed security generation state is malformed")
+		return errors.New("Неверный формат состояния поколения безопасности установленных компонентов")
 	}
 	if st.SecurityGeneration > floor.Generation {
 		// Никогда не повышайте нижнюю границу на основе одного непроверенного локального
@@ -174,12 +174,12 @@ func reconcileInstalledComponentGeneration02311(root string) error {
 		verifyRoot := root
 		if st.Platform == "macos" {
 			if filepath.Base(st.BundleName) != st.BundleName || !strings.HasSuffix(strings.ToLower(st.BundleName), ".app") {
-				return errors.New("macOS active bundle name missing/unsafe in component security state")
+				return errors.New("В состоянии безопасности компонентов отсутствует либо небезопасно имя активного пакета macOS")
 			}
 			verifyRoot = filepath.Join(root, st.BundleName)
 			info, err := os.Lstat(verifyRoot)
 			if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-				return errors.New("macOS active component bundle is not a trusted directory")
+				return errors.New("Активный пакет компонентов macOS не является доверенным каталогом")
 			}
 		}
 		for _, item := range append(append([]componentUpdateArtifact0157{}, st.Components...), st.SupportFiles...) {

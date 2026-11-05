@@ -128,7 +128,7 @@ func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 	path := filepath.Join(dir, "agent.lock")
 	own := remoteLease0284{PID: os.Getpid(), Identity: hostOwnIdentity0282(), NodeID: nodeID}
 	if own.Identity == "" {
-		return nil, errors.New("OS process identity required for RemoteControl lease")
+		return nil, errors.New("Для блокировки RemoteControl необходим идентификатор процесса ОС")
 	}
 	data, err := json.Marshal(own)
 	if err != nil {
@@ -173,10 +173,10 @@ func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 			return nil, err
 		}
 		if existing.Identity != "" && hostIdentityMatches0282(existing.PID, existing.Identity) {
-			return nil, fmt.Errorf("remote agent already holds server root pid=%d", existing.PID)
+			return nil, fmt.Errorf("Удалённый агент уже удерживает корневой каталог сервера (PID=%d)", existing.PID)
 		}
 		if existing.Identity == "" && updaterProcessAlive0156(existing.PID) {
-			return nil, errors.New("unverified remote agent lock belongs to a live PID")
+			return nil, errors.New("Непроверенная блокировка удалённого агента принадлежит действующему процессу")
 		}
 		// Устаревшую блокировку может снять только оператор с правом записи в закрытый
 		// каталог. Не выполняйте безусловный SIGKILL или захват ресурсов.
@@ -186,7 +186,7 @@ func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 		}
 		_ = os.Remove(stale)
 	}
-	return nil, errors.New("remote agent lock contention")
+	return nil, errors.New("Конфликт блокировки удалённого агента")
 }
 
 func remoteSecureDir0284(dir string) error {
@@ -243,7 +243,7 @@ func remoteInit0284(root string) (remoteIdentity0284, error) {
 	}
 	path := filepath.Join(dir, "identity.json")
 	if _, err := os.Lstat(path); err == nil {
-		return remoteIdentity0284{}, errors.New("remote identity already exists; use rotate-key to invalidate tokens")
+		return remoteIdentity0284{}, errors.New("Удалённая учётная запись уже существует; используйте rotate-key для отзыва токенов")
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return remoteIdentity0284{}, err
 	}
@@ -374,7 +374,7 @@ func remoteTokenDecode0284(id remoteIdentity0284, token string, now time.Time) (
 	}
 	ts := now.Unix()
 	if c.Audience != remoteAudience0284 || c.NodeID != id.NodeID || c.Subject == "" || c.ID == "" || c.Issued > ts+10 || c.Expires <= ts || c.Expires-c.Issued > int64(remoteMaxTTL0284.Seconds()) || c.Issued <= 0 || len(c.Scopes) == 0 || len(c.Sources) == 0 {
-		return c, errors.New("expired, mismatched or invalid token")
+		return c, errors.New("Токен просрочен, не соответствует запросу или недействителен")
 	}
 	for _, scope := range c.Scopes {
 		if !remoteScopes0284[scope] {
@@ -391,7 +391,7 @@ func remoteIssue0284(id remoteIdentity0284, subject string, scopes, sources []st
 		return "", errors.New("Некорректное значение: «token subject»")
 	}
 	if ttl < time.Second || ttl > remoteMaxTTL0284 || len(scopes) == 0 {
-		return "", errors.New("token must have scopes and TTL between 1 second and 15 minutes")
+		return "", errors.New("Токен должен содержать области доступа и срок действия от 1 секунды до 15 минут")
 	}
 	for _, s := range scopes {
 		if !remoteScopes0284[s] {
@@ -491,7 +491,7 @@ func remoteUnresolvedCommand04112(dir string) (bool, error) {
 		path := filepath.Join(dir, "commands", entry.Name())
 		receipt, err := remoteReadReceipt0284(path)
 		if err != nil {
-			return false, fmt.Errorf("read command journal: %w", err)
+			return false, fmt.Errorf("Чтение журнала команд: %w", err)
 		}
 		if receipt.KeyHash != strings.TrimSuffix(entry.Name(), ".json") || receipt.Digest == "" || receipt.Subject == "" ||
 			(receipt.Action != "start" && receipt.Action != "stop" && receipt.Action != "restart") ||
@@ -587,7 +587,7 @@ func remoteHostExecute0284(root, dir, action string) (json.RawMessage, error) {
 			return remoteHostStatus0284(root), nil
 		}
 		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("host %s returned but OS process postcondition remains unverified", action)
+			return nil, fmt.Errorf("Хост выполнил команду %s, но итоговое состояние процесса ОС не подтверждено", action)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -837,7 +837,7 @@ func remoteHandle0284(args []string) error {
 		// и никогда не должен оставаться в публично доступном каталоге игры.
 		days, err := strconv.Atoi(flagValue(args, "--days", "90"))
 		if err != nil {
-			return fmt.Errorf("--days: %w", err)
+			return fmt.Errorf("Параметр --days: %w", err)
 		}
 		bundle, err := remotetls.Generate(flagValue(args, "--output-dir", ""), multiFlagValues01910(args, "--host"), days)
 		if err != nil {
@@ -858,7 +858,7 @@ func remoteHandle0284(args []string) error {
 		}
 		key := flagValue(args, "--idempotency-key", "")
 		if !remoteIdempotency0284.MatchString(key) {
-			return errors.New("--idempotency-key must be 16-128 safe characters")
+			return errors.New("Параметр --idempotency-key должен содержать от 16 до 128 допустимых символов")
 		}
 		path := remoteReceiptFile0284(remoteDir0284(root), key)
 		receipt, err := remoteReadReceipt0284(path)
@@ -866,7 +866,7 @@ func remoteHandle0284(args []string) error {
 			return err
 		}
 		if receipt.KeyHash != strings.TrimSuffix(filepath.Base(path), ".json") {
-			return errors.New("corrupt command journal binding")
+			return errors.New("Повреждена привязка журнала команд")
 		}
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{
 			"receipt": receipt, "observedHostStatus": json.RawMessage(remoteHostStatus0284(root)),
@@ -904,7 +904,7 @@ func remoteHandle0284(args []string) error {
 		}
 		output := flagValue(args, "--token-file", "")
 		if output == "" {
-			return errors.New("--token-file required; tokens are never printed")
+			return errors.New("Необходим параметр --token-file; токены никогда не выводятся на экран")
 		}
 		ttl, err := positiveIntFlag01910(args, "--ttl-seconds", 300)
 		if err != nil {
@@ -969,7 +969,7 @@ func remoteHandle0284(args []string) error {
 			return err
 		}
 		if net.ParseIP(host) == nil {
-			return errors.New("--listen must use a numeric bind IP")
+			return errors.New("Параметр --listen должен содержать числовой IP-адрес для привязки")
 		}
 		sources := multiFlagValues01910(args, "--allow-source")
 		if len(sources) == 0 {
@@ -981,10 +981,10 @@ func remoteHandle0284(args []string) error {
 		}
 		certFile, keyFile := flagValue(args, "--tls-cert", ""), flagValue(args, "--tls-key", "")
 		if certFile == "" || keyFile == "" {
-			return errors.New("TLS certificate and private key are mandatory")
+			return errors.New("Обязательно указать сертификат TLS и закрытый ключ")
 		}
 		if err := remoteCheckFile0284(keyFile); err != nil {
-			return fmt.Errorf("TLS private key: %w", err)
+			return fmt.Errorf("Закрытый ключ TLS: %w", err)
 		}
 		release, err := remoteAcquireLease0284(remoteDir0284(root), id.NodeID)
 		if err != nil {
@@ -1036,7 +1036,7 @@ func remoteReadTokenFile0284(path string) (string, error) {
 func remoteCall0284(args []string) error {
 	url := strings.TrimRight(flagValue(args, "--url", ""), "/")
 	if !strings.HasPrefix(url, "https://") || strings.Contains(url, "@") || strings.ContainsAny(url, "?#") {
-		return errors.New("remote URL must be an https:// origin without credentials/query/fragment")
+		return errors.New("Удалённый URL должен иметь схему https:// и не содержать учётных данных, параметров запроса и фрагмента")
 	}
 	token, err := remoteReadTokenFile0284(flagValue(args, "--token-file", ""))
 	if err != nil {
@@ -1045,7 +1045,7 @@ func remoteCall0284(args []string) error {
 	certs := x509.NewCertPool()
 	ca := flagValue(args, "--ca-file", "")
 	if ca == "" {
-		return errors.New("--ca-file required; insecure TLS is unsupported")
+		return errors.New("Необходим параметр --ca-file; небезопасное соединение TLS не поддерживается")
 	}
 	pem, err := os.ReadFile(ca)
 	if err != nil {
@@ -1057,7 +1057,7 @@ func remoteCall0284(args []string) error {
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: certs}
 	if cert, key := flagValue(args, "--client-cert", ""), flagValue(args, "--client-key", ""); cert != "" || key != "" {
 		if cert == "" || key == "" {
-			return errors.New("client certificate and key must both be supplied")
+			return errors.New("Необходимо указать как клиентский сертификат, так и закрытый ключ")
 		}
 		pair, err := tls.LoadX509KeyPair(cert, key)
 		if err != nil {
@@ -1092,7 +1092,7 @@ func remoteCall0284(args []string) error {
 		encoded, _ := json.Marshal(remoteCommand0284{Action: action})
 		body = bytes.NewReader(encoded)
 		if !remoteIdempotency0284.MatchString(flagValue(args, "--idempotency-key", "")) {
-			return errors.New("mutations require --idempotency-key (16-128 safe characters)")
+			return errors.New("Для изменяющих операций нужен --idempotency-key (от 16 до 128 допустимых символов)")
 		}
 	} else {
 		return errors.New("Не поддерживается: «remote action (status, start, stop, restart, receipt)»")
@@ -1116,10 +1116,10 @@ func remoteCall0284(args []string) error {
 		return err
 	}
 	if response.StatusCode >= 300 {
-		return fmt.Errorf("remote returned HTTP %d: %s", response.StatusCode, strings.TrimSpace(string(content)))
+		return fmt.Errorf("Удалённый сервер вернул HTTP %d: %s", response.StatusCode, strings.TrimSpace(string(content)))
 	}
 	if !json.Valid(content) {
-		return errors.New("remote response is not JSON")
+		return errors.New("Ответ удалённого сервера не является JSON")
 	}
 	return writeOrPrintJSON(flagValue(args, "--output", ""), json.RawMessage(content))
 }
@@ -1146,7 +1146,7 @@ func remoteServeManaged0428(ctx context.Context, server *http.Server, listener n
 		// Если прослушиватель умер до запроса остановки, сообщите об ошибке, чтобы systemd
 		// перезапустил службу управления вместо отметки чистого завершения.
 		if ctx.Err() == nil {
-			return fmt.Errorf("RemoteControl HTTPS listener stopped unexpectedly: %w", err)
+			return fmt.Errorf("HTTPS-сервер RemoteControl неожиданно остановился: %w", err)
 		}
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
@@ -1160,7 +1160,7 @@ func remoteServeManaged0428(ctx context.Context, server *http.Server, listener n
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		_ = server.Close()
 		<-finished
-		return fmt.Errorf("remote HTTPS shutdown incomplete; inspect durable command receipts before retrying: %w", err)
+		return fmt.Errorf("Остановка удалённого HTTPS-сервера не завершена; перед повтором проверьте сохранённые квитанции команд: %w", err)
 	}
 	if err := <-finished; err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

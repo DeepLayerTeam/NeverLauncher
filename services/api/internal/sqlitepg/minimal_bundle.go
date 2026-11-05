@@ -115,7 +115,7 @@ func checkSQLite0377(ctx context.Context, p string) error {
 		return err
 	}
 	if result != "ok" {
-		return fmt.Errorf("SQLite integrity_check: %s", result)
+		return fmt.Errorf("Проверка integrity_check SQLite: %s", result)
 	}
 	rows, err := db.QueryContext(ctx, "PRAGMA foreign_key_check")
 	if err != nil {
