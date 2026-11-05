@@ -530,7 +530,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     }
     let optional = nt_offset
         .checked_add(24)
-        .ok_or_else(|| "Guard Hook Engine PE optional-header overflow".to_string())?;
+        .ok_or_else(|| "Guard Hook Engine: переполнение необязательного заголовка PE".to_string())?;
     let magic = read_u16(base, size, optional)?;
     let (data_directory, pointer_size, ordinal_mask) = match magic {
         IMAGE_NT_OPTIONAL_HDR64_MAGIC => (optional + 112, 8usize, 0x8000_0000_0000_0000u64),
@@ -585,7 +585,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
         loop {
             let lookup_offset = original_first_thunk
                 .checked_add(index.saturating_mul(pointer_size))
-                .ok_or_else(|| "Guard Hook Engine thunk overflow".to_string())?;
+                .ok_or_else(|| "Guard Hook Engine: переполнение переходной таблицы".to_string())?;
             let thunk = read_pointer_value(base, size, lookup_offset, pointer_size)?;
             if thunk == 0 {
                 break;
@@ -608,7 +608,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
                     }
                     let slot_rva = first_thunk
                         .checked_add(index.saturating_mul(pointer_size))
-                        .ok_or_else(|| "Guard Hook Engine IAT slot overflow".to_string())?;
+                        .ok_or_else(|| "Guard Hook Engine: переполнение слота IAT".to_string())?;
                     checked_range(size, slot_rva, pointer_size)?;
                     candidates.push(HookRecord {
                         module_base: module.base,
@@ -816,7 +816,7 @@ fn supported_import_dll(name: &str) -> bool {
 fn checked_range(size: usize, offset: usize, length: usize) -> Result<(), String> {
     let end = offset
         .checked_add(length)
-        .ok_or_else(|| "Guard Hook Engine PE range overflow".to_string())?;
+        .ok_or_else(|| "Guard Hook Engine: переполнение диапазона PE".to_string())?;
     if offset > size || end > size {
         Err("Область PE выходит за пределы отображённого образа".to_string())
     } else {

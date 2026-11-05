@@ -83,7 +83,7 @@ require(
         "No Minecraft/proxy configuration is modified",
         "handoffUrl()",
     ],
-    "zero-patch config bootstrap",
+    "Начальная настройка конфигурации без патчей",
 )
 require(
     client,

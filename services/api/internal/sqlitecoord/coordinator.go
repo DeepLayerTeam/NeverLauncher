@@ -109,7 +109,7 @@ func normalizeCoordinatorDDL0471(stmt string) string {
 func Open(ctx context.Context, path string) (_ *Coordinator, err error) {
 	db, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path, Readers: 2})
 	if err != nil {
-		return nil, fmt.Errorf("sqlite coordinator open: %w", err)
+		return nil, fmt.Errorf("Не удалось открыть координатор SQLite: %w", err)
 	}
 	defer func() {
 		if err != nil {

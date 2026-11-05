@@ -150,7 +150,7 @@ public final class HostSession implements AutoCloseable {
                 Object value=fault.get("code");
                 if(value instanceof String v&&v.matches("[A-Z][A-Z0-9_]{2,63}"))code=v;
             }catch(IllegalArgumentException ignored){/* исходный Go-хост версии 0.42.0 использует обычный текстовый http.Error */}
-            throw new HostError(response.statusCode(),code,"host request "+path+" завершился ошибкой HTTP "+response.statusCode()+" ("+code+")");
+            throw new HostError(response.statusCode(),code,"Запрос хоста "+path+" завершился ошибкой HTTP "+response.statusCode()+" ("+code+")");
         }
         if(responseBody.isEmpty())return Map.of();
         return Json.object(Json.parse(responseBody));

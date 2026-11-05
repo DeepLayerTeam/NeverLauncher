@@ -119,5 +119,5 @@ func fileCheckBlockers0385(checks []map[string]any) []publishBlocker0385 {
 // клиентов.
 func (s Server) writePublishRefusal0385(w http.ResponseWriter, r *http.Request, lookup packageLookup, message string) {
 	readiness := s.evaluatePublishReadiness0385(r.Context(), lookup)
-	writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": message, "blockers": readiness.Blockers, "action": "Resolve the listed blockers and validate again"}})
+	writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": message, "blockers": readiness.Blockers, "action": "Устраните перечисленные препятствия и повторите проверку"}})
 }

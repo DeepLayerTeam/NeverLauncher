@@ -23,7 +23,7 @@ type TextureRepository0251 interface {
 	ListTextureRevisions0251(context.Context, model.MinecraftProfile, string) ([]model.TextureRevision0251, error)
 }
 
-var ErrTextureRevisionConflict0251 = errors.New("texture revision conflict")
+var ErrTextureRevisionConflict0251 = errors.New("Конфликт ревизии текстуры")
 var ErrTextureCapeDenied0251 = errors.New("Выбор плаща запрещён политикой проекта")
 
 const textureAssignmentSelect0251 = `SELECT id,realm,profile_uuid,user_id,project_id,launcher_profile_id,kind,COALESCE(blob_digest,''),external_url,source,model,visibility,revision,active,updated_at FROM texture_assignments`

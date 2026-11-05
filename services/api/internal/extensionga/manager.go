@@ -65,11 +65,11 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 		return "contract.api", err.Error()
 	}
 	if version.Manifest.SchemaVersion != extensioncontract.ManifestSchemaVersion {
-		return "contract.manifest", fmt.Sprintf("manifest schema %q is not GA schema %s", version.Manifest.SchemaVersion, extensioncontract.ManifestSchemaVersion)
+		return "contract.manifest", fmt.Sprintf("Схема манифеста %q не соответствует схеме GA %s", version.Manifest.SchemaVersion, extensioncontract.ManifestSchemaVersion)
 	}
 	for _, permission := range version.Manifest.Permissions {
 		if !extensionsecurity.IsKnownPermission(permission) {
-			return "permissions.unknown", fmt.Sprintf("manifest requests unknown permission %q", permission)
+			return "permissions.unknown", fmt.Sprintf("В манифесте запрошено неизвестное разрешение %q", permission)
 		}
 	}
 	if err := m.Lifecycle.VerifyLockfile(ctx, install.ExtensionID, extensionlifecycle.Scope{Scope: install.Scope, ScopeID: install.ScopeID}); err != nil {
@@ -119,15 +119,15 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 			if dep.Optional {
 				continue
 			}
-			return "dependencies.missing", fmt.Sprintf("required dependency %s %s is not installed", dep.ID, dep.Version)
+			return "dependencies.missing", fmt.Sprintf("Обязательная зависимость %s %s не установлена", dep.ID, dep.Version)
 		}
 		if !extensionresolver.Matches(x.CurrentVersion, dep.Version) {
-			return "dependencies.version", fmt.Sprintf("dependency %s@%s does not satisfy %s", dep.ID, x.CurrentVersion, dep.Version)
+			return "dependencies.version", fmt.Sprintf("Зависимость %s@%s не удовлетворяет требованию %s", dep.ID, x.CurrentVersion, dep.Version)
 		}
 	}
 	for _, conflict := range version.Manifest.Conflicts {
 		if x, ok := lookup(conflict.ID); ok && extensionresolver.Matches(x.CurrentVersion, conflict.Version) {
-			return "dependencies.conflict", fmt.Sprintf("conflict %s %s matched installed %s", conflict.ID, conflict.Version, x.CurrentVersion)
+			return "dependencies.conflict", fmt.Sprintf("Конфликт %s %s с установленным компонентом %s", conflict.ID, conflict.Version, x.CurrentVersion)
 		}
 	}
 	return "", ""
@@ -171,7 +171,7 @@ func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 		}
 		issue := Issue{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Version: install.CurrentVersion, Code: code, Message: msg}
 		if mutate && (install.CurrentState == model.ExtensionInstallStateEnabled || install.Enabled) {
-			reason := fmt.Sprintf("Extensions GA reconciliation failed [%s]: %s", code, msg)
+			reason := fmt.Sprintf("Не удалось согласовать расширения GA [%s]: %s", code, msg)
 			if _, e := m.Repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Reason: reason, Source: "ga-reconcile"}); e != nil {
 				issue.Message += "; emergency-disable persistence failed: " + e.Error()
 			} else if _, e := m.Lifecycle.Disable(ctx, install.ExtensionID, extensionlifecycle.Scope{Scope: install.Scope, ScopeID: install.ScopeID}); e != nil {

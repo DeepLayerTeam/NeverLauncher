@@ -28,7 +28,7 @@ func ValidateClientID(clientID string) error {
 func ValidateLoopbackRedirect(redirect string) error {
 	u, err := url.Parse(redirect)
 	if err != nil || u.Scheme != "http" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" || u.Port() == "" || u.Path != "/minecraft-poc/callback" {
-		return errors.New("redirect must be http://localhost:<port>/minecraft-poc/callback (or 127.0.0.1)")
+		return errors.New("Адрес перенаправления должен иметь вид http://localhost:<port>/minecraft-poc/callback (или использовать 127.0.0.1)")
 	}
 	if u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil {
 		return errors.New("Хост перенаправления не является локальным адресом обратной петли")

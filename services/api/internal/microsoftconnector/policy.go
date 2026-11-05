@@ -53,7 +53,7 @@ func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, clai
 		}
 	case "consumers":
 		if tid != personalMicrosoftTenantID {
-			return fmt.Errorf("work/school tenant is not allowed by consumers authority")
+			return fmt.Errorf("Тенант рабочей или учебной организации не допускается центром учётных записей потребителей")
 		}
 	case "tenant":
 		if tid != p.tenant {

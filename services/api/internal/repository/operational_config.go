@@ -208,7 +208,7 @@ func (r *SQLRepository) SaveOperationalConfig(ctx context.Context, expected int6
 	v := OperationalConfigRevision{Revision: expected + 1, Settings: settings, Actor: actor, Reason: reason, RestoredFrom: restore}
 	err = tx.QueryRowContext(ctx, `INSERT INTO operational_config_revisions(revision,settings,actor,reason,restored_from) VALUES($1,$2,$3,$4,$5) RETURNING created_at`, v.Revision, raw, actor, reason, restore).Scan(&v.CreatedAt)
 	if err != nil {
-		return OperationalConfigRevision{}, fmt.Errorf("save config revision: %w", err)
+		return OperationalConfigRevision{}, fmt.Errorf("Не удалось сохранить ревизию конфигурации: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
 		return OperationalConfigRevision{}, err

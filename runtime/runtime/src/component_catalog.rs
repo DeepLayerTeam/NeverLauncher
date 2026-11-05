@@ -462,7 +462,7 @@ fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<Stri
     }else{(preset,None)};
     let chosen=if base.is_empty(){cat.default_preset.as_str()}else{base};
     let mut roots:HashSet<String>=if !chosen.is_empty(){
-        cat.presets.iter().find(|p|p.id==chosen).ok_or_else(||format!("unknown_preset: unknown signed component preset {chosen}"))?.components.iter().cloned().collect()
+        cat.presets.iter().find(|p|p.id==chosen).ok_or_else(||format!("unknown_preset: неизвестный подписанный пресет компонентов {chosen}"))?.components.iter().cloned().collect()
     }else{cat.components.iter().filter(|c|c.default).map(|c|c.id.clone()).collect()};
     let mut disabled=HashSet::new();
     if let Some(changes)=changes {

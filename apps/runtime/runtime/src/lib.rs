@@ -1166,7 +1166,7 @@ pub async fn launch_with_timeout_matching_authenticated(
         // политикой Guard, а не метаданными модов или изменяемыми флагами JVM.
         plan.jvm_args.push(trusted.agent_arg.clone());
         plan.main_class = trusted.main_class.clone();
-        writeln!(log_file, "Guard policy digest: {}", trusted.policy_digest).map_err(|e| e.to_string())?;
+        writeln!(log_file, "Хеш политики Guard: {}", trusted.policy_digest).map_err(|e| e.to_string())?;
     }
     guard_compatibility_0502::enforce_launch(root, &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
     let mut live_guard = continuous_game_protection_0506::LiveGameGuard0506::new(manifest, &plan, root)?;

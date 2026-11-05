@@ -46,7 +46,7 @@ public final class PortedSuite implements Extension {
             // Явное изменение конфигурации в области расширения; брокер Go проверяет разрешение.
             Map<String,Object> current = Json.object(ctx.runtime().storage().get("ported-settings", null).orElse(Map.of()));
             long count = current.get("updates") instanceof Number n ? n.longValue() : 0;
-            if (count < 0 || count > 1_000_000) throw new IllegalStateException("invalid persisted counter");
+            if (count < 0 || count > 1_000_000) throw new IllegalStateException("Недопустимое сохранённое значение счётчика");
             Map<String,Object> next = new LinkedHashMap<>(current);
             next.put("updates", count + 1);
             ctx.runtime().storage().put("ported-settings", next, null);

@@ -44,7 +44,7 @@ func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candida
     AND gc_claimed_at > now()-interval '45 minutes'
   FOR UPDATE`, candidate.Digest, candidate.Driver, candidate.ObjectKey, candidate.Token).Scan(&digest)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("stale texture GC lease: %s", candidate.Digest)
+		return fmt.Errorf("Устаревшая аренда очистки текстур: %s", candidate.Digest)
 	}
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (r *SQLRepository) DeleteTextureWithLease02512(ctx context.Context, candida
 		return err
 	}
 	if inUse {
-		return fmt.Errorf("texture acquired a reference during GC: %s", digest)
+		return fmt.Errorf("На текстуру появилась ссылка во время очистки мусора: %s", digest)
 	}
 	// Callback работает с неизменяемым содержимым и обязан отказать по умолчанию,
 	// если поменялся хеш, ETag или объект хранилища. При неудаче физического удаления

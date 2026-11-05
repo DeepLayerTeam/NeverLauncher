@@ -224,7 +224,7 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 				return gc.Result{}, e
 			}
 			if conflict {
-				return gc.Result{}, fmt.Errorf("user/email already reserved for %s: %w", a.Username, mw.ErrConflict)
+				return gc.Result{}, fmt.Errorf("Пользователь или адрес электронной почты уже зарезервирован для %s: %w", a.Username, mw.ErrConflict)
 			}
 			if !dryRun {
 				_, e = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at)

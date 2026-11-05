@@ -123,7 +123,7 @@ for path in (
     '"/api/v1/admin/extensions/{extensionId}/permissions"',
     '"/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"',
 ):
-    require(path in openapi, f"OpenAPI missing {path}")
+    require(path in openapi, f"В OpenAPI отсутствует {path}")
 
 for envfile in (
     "deploy/production/env.production.example",

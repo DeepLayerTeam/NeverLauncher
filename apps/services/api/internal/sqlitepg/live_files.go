@@ -57,7 +57,7 @@ func filePath0474(p, v, rel string) (string, error) {
 	}
 	for _, part := range strings.Split(rel, "/") {
 		if part == "." || part == ".." || part == "" {
-			return "", errors.New("path traversal")
+			return "", errors.New("Выход за пределы допустимого пути")
 		}
 	}
 	return filepath.Join(p, v, filepath.FromSlash(rel)), nil

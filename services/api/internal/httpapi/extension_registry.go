@@ -280,7 +280,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	}
 	publicKey, err := registryPublicKey0203(key)
 	if err != nil {
-		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "publisher signing key inactive/revoked: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Ключ подписи издателя неактивен или отозван: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
 		writeError(w, http.StatusForbidden, err.Error())
 		return
 	}

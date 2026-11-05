@@ -270,7 +270,7 @@ mod imp {
     }
 
     pub fn runtime_policy(child: &mut Child) -> Result<MacOSRuntimeProcessPolicyReport, String> {
-        let pid = child.id().ok_or_else(|| "macOS runtime PID unavailable".to_string())?;
+        let pid = child.id().ok_or_else(|| "PID Runtime в macOS недоступен".to_string())?;
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
         if pgid < 0 { return Err(os_err("Ошибка: «macOS getpgid»")); }
         let own_process_group = pgid as u32 == pid;

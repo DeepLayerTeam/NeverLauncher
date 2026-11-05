@@ -105,7 +105,7 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 		return err
 	}
 	if size != input.Size || driver != input.Driver || key != input.ObjectKey || (status != "verified" && status != "staging") {
-		return fmt.Errorf("staging digest conflict or GC in progress")
+		return fmt.Errorf("Конфликт хеша промежуточного хранения либо выполняется очистка мусора")
 	}
 	// Обновляйте отметку под той же блокировкой строки, что выборщик GC SKIP
 	// LOCKED. Ранее осиротевший, но проверенный хеш нельзя удалять, пока другой

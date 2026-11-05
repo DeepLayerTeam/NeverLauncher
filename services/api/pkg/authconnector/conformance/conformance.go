@@ -163,7 +163,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityUserLookup) {
 		if subject == "" {
-			r.add("resolve:identity", fmt.Errorf("missing subject"))
+			r.add("resolve:identity", fmt.Errorf("Не указан субъект"))
 		} else {
 			identity, err := connector.(authconnector.IdentityResolver).ResolveIdentity(ctx, authconnector.ResolveRequest{Subject: subject})
 			if err == nil {
@@ -177,7 +177,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityProfile) {
 		if subject == "" {
-			r.add("resolve:profile", fmt.Errorf("missing subject"))
+			r.add("resolve:profile", fmt.Errorf("Не указан субъект"))
 		} else {
 			profile, err := connector.(authconnector.ProfileResolver).ResolveProfile(ctx, authconnector.ResolveRequest{Subject: subject})
 			if err == nil {

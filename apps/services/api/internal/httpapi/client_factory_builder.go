@@ -312,7 +312,7 @@ func factoryRun02710(binary, root string, job factoryBuilderJob02710) {
 			job.State = "cancelled"
 		}
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			job.Error = "build timed out"
+			job.Error = "Превышено время ожидания сборки"
 		} else {
 			job.Error = err.Error()
 		}

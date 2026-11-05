@@ -10,5 +10,5 @@ public final class Deadline {
     public static Deadline after(Duration duration){return new Deadline(duration);}
     public Duration remaining(){long elapsed=System.nanoTime()-start;return Duration.ofNanos(Math.max(0,nanos-Math.max(elapsed,0)));}
     public boolean expired(){return remaining().isZero();}
-    public void check() throws TimeoutException{if(expired())throw new TimeoutException("extension operation deadline exceeded");}
+    public void check() throws TimeoutException{if(expired())throw new TimeoutException("Превышено время выполнения операции расширения");}
 }

@@ -34,7 +34,7 @@ type CapabilityError struct {
 }
 
 func (e *CapabilityError) Error() string {
-	return fmt.Sprintf("Launcher capability %s failed: HTTP %d: %s", e.Capability, e.StatusCode, strings.TrimSpace(e.Body))
+	return fmt.Sprintf("Ошибка возможности Launcher %s: HTTP %d: %s", e.Capability, e.StatusCode, strings.TrimSpace(e.Body))
 }
 
 func Environment() (HostEnvironment, error) {

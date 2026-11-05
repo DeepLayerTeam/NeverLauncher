@@ -25,7 +25,7 @@ func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executo
 			return e
 		}
 		if n != 0 {
-			return fmt.Errorf("sqlite full state invariant: %d records: %s", n, sqlText)
+			return fmt.Errorf("Нарушен инвариант полного состояния SQLite: записей %d: %s", n, sqlText)
 		}
 	}
 	rows, e := q.QueryContext(ctx, `SELECT digest,data FROM package_blobs`)

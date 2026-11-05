@@ -72,7 +72,7 @@ func (c *Client) call(ctx context.Context, path string, input, output any) error
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("Launcher Host %s: HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
+		return fmt.Errorf("Ошибка хоста Launcher %s: HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
 	}
 	if output != nil && len(bytes.TrimSpace(data)) > 0 {
 		return json.Unmarshal(data, output)

@@ -29,18 +29,18 @@ def text(path: str) -> str:
             return archive.read("sql/" + path.rsplit("/", 1)[-1]).decode("utf-8")
     p = ROOT / path
     if not p.is_file():
-        fail(f"required source missing: {path}")
+        fail(f"Отсутствует обязательный исходный файл: {path}")
     return p.read_text(encoding="utf-8")
 
 
 def validate_frozen_coverage_registry() -> dict:
     doc = json.loads(COVERAGE_0211.read_text(encoding="utf-8"))
     if doc.get("productVersion") != "0.21.1":
-        fail("historical frozen coverage registry version changed")
+        fail("Изменена версия исторического реестра зафиксированного покрытия")
     expected = [f"G{i:02d}" for i in range(1, 36)] + [f"M{i:02d}" for i in range(1, 20)]
     rows = doc.get("requirements") or []
     if [r.get("id") for r in rows] != expected:
-        fail("frozen G01-G35/M01-M19 registry changed shape/order")
+        fail("Изменена структура или последовательность зафиксированного реестра G01-G35/M01-M19")
     for row in rows:
         if not row.get("owner") or not row.get("upstreamRefs"):
             fail(f"{row.get('id')} lost owner/upstream source evidence")
@@ -69,7 +69,7 @@ def validate_validation_pipeline() -> None:
         "PUT /api/v1/projects/{projectId}/validation-policy",
     ]:
         if needle not in routes:
-            fail(f"canonical validation route missing: {needle}")
+            fail(f"Отсутствует канонический маршрут проверки: {needle}")
 
     for needle in [
         "func (s Server) packageSmoke",
@@ -83,7 +83,7 @@ def validate_validation_pipeline() -> None:
         'v.Result == "passed" && v.ManifestDigest == manifestDigest && v.ActualClient && v.ExitCode == 0',
     ]:
         if needle not in validation:
-            fail(f"validation evidence invariant missing: {needle}")
+            fail(f"Отсутствует инвариант свидетельства проверки: {needle}")
 
     # Статус PASS среды запуска выводится из подписанных свидетельств, настоящего клиента и успешного завершения процесса.
     if (
@@ -91,24 +91,24 @@ def validate_validation_pipeline() -> None:
         or "if e.ActualClient && e.ExitCode == 0 {" not in validation
         or 'resultState = "passed"' not in validation
     ):
-        fail("runtime result is not derived from successful actual-client evidence")
+        fail("Результат Runtime не основан на успешном свидетельстве работы реального клиента")
     if re.search(
         r"packageSmoke[\s\S]{0,1800}runtime[^\n]*passed",
         validation,
         flags=re.IGNORECASE,
     ):
-        fail("legacy smoke route appears able to claim runtime passed")
+        fail("Устаревшая экспресс-проверка может ошибочно пометить Runtime как проверенный")
 
     if "validatePublishEvidence0212(r, lookup)" not in product:
-        fail("canonical package publish bypasses validation policy")
+        fail("Каноническая публикация пакета обходит политику проверки")
     if admin.count("prepareAdminPublish0212(r,") < 2:
-        fail("Admin publish routes do not share canonical validation enforcement")
+        fail("Маршруты публикации Admin не применяют общую каноническую проверку")
     if "PublishVersionWithManifest" in install or "publishSigned(" in install:
-        fail("installer still publishes an unvalidated first release")
+        fail("Установщик по-прежнему публикует первый релиз без проверки")
     if "func (s Server) publishSigned(" in text(
         "services/api/internal/httpapi/version_manifest.go"
     ):
-        fail("legacy direct publishSigned bypass still exists")
+        fail("Устаревший обход прямого вызова publishSigned по-прежнему существует")
 
     for needle in [
         "IntegrityCheckResult",
@@ -117,7 +117,7 @@ def validate_validation_pipeline() -> None:
         "ProjectValidationPolicy",
     ]:
         if needle not in model:
-            fail(f"canonical model missing {needle}")
+            fail(f"В канонической модели отсутствует {needle}")
     for needle in [
         "SaveIntegrityCheck",
         "SaveRuntimeValidation",
@@ -125,9 +125,9 @@ def validate_validation_pipeline() -> None:
         "package_runtime_validations",
     ]:
         if needle not in repo:
-            fail(f"durable validation repository missing {needle}")
+            fail(f"В постоянном хранилище проверок отсутствует {needle}")
     if "LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON" not in config:
-        fail("runtime signer trust-set configuration missing")
+        fail("Отсутствует конфигурация доверенных подписантов Runtime")
     for needle in [
         "runtime-sign",
         "runtime-submit",
@@ -136,7 +136,7 @@ def validate_validation_pipeline() -> None:
         "legacy smoke-test performs integrity validation only",
     ]:
         if needle not in cli:
-            fail(f"CLI honest-validation workflow missing {needle}")
+            fail(f"В сценарии достоверной проверки CLI отсутствует {needle}")
 
 
 def validate_trust_boundaries() -> None:
@@ -153,14 +153,14 @@ def validate_trust_boundaries() -> None:
         "remote-hardware-provenance-not-verified",
     ]:
         if needle not in devices:
-            fail(f"device trust assessment boundary missing: {needle}")
+            fail(f"Отсутствует граница оценки доверия устройству: {needle}")
     if "remote_hardware_provenance" not in device_repo:
-        fail("remote hardware provenance is not persisted")
+        fail("Происхождение удалённого аппаратного обеспечения не сохраняется")
     if (
         "hardwareProvenance" not in attestation
         or "RemoteHardwareProvenance" not in attestation
     ):
-        fail("attestation response does not expose canonical provenance")
+        fail("Ответ аттестации не содержит канонические сведения о происхождении")
 
     for source, name in [(host, "extension host"), (host_api, "extension host API")]:
         for needle in ["trusted-process", "none"]:
@@ -169,7 +169,7 @@ def validate_trust_boundaries() -> None:
                     f"{name} does not state explicit trusted-process/no-sandbox boundary"
                 )
     if "OS sandbox" not in admin or "trusted-process" not in admin:
-        fail("Admin UI hides extension execution trust boundary")
+        fail("Интерфейс Admin скрывает границу доверия при выполнении расширений")
 
 
 def validate_migration_and_contract() -> None:
@@ -178,7 +178,7 @@ def validate_migration_and_contract() -> None:
     )
     cli_m = text("cli/internal/dbmigrate/sql/0051_honest_validation_trust_0212.sql")
     if api_m != cli_m:
-        fail("API and CLI 0051 migrations differ")
+        fail("Миграции 0051 для API и CLI различаются")
     for needle in [
         "package_integrity_checks",
         "package_runtime_validations",
@@ -189,7 +189,7 @@ def validate_migration_and_contract() -> None:
         "DEFAULT 'not-verified'",
     ]:
         if needle not in api_m:
-            fail(f"0051 migration missing {needle}")
+            fail(f"В миграции 0051 отсутствует {needle}")
     spec = json.loads(text("schemas/openapi.yaml"))
     for path in [
         "/api/v1/packages/{packageId}/integrity-check",
@@ -198,10 +198,10 @@ def validate_migration_and_contract() -> None:
         "/api/v1/projects/{projectId}/validation-policy",
     ]:
         if path not in spec.get("paths", {}):
-            fail(f"OpenAPI missing {path}")
+            fail(f"В OpenAPI отсутствует {path}")
     smoke = spec["paths"]["/api/v1/packages/{packageId}/smoke-test"]["post"]
     if "never launches Minecraft" not in smoke.get("description", ""):
-        fail("OpenAPI smoke compatibility route overstates runtime semantics")
+        fail("Маршрут экспресс-проверки совместимости OpenAPI преувеличивает подтверждённые свойства Runtime")
 
 
 def validate(online: bool) -> None:
@@ -209,9 +209,9 @@ def validate(online: bool) -> None:
     try:
         parts = tuple(int(x) for x in version.split(".")[:3])
     except ValueError:
-        fail("VERSION is not semantic version")
+        fail("VERSION не соответствует семантическому версионированию")
     if parts < (0, 21, 2):
-        fail("VERSION must be 0.21.2 or newer")
+        fail("VERSION должна быть не ниже 0.21.2")
     doc = validate_frozen_coverage_registry()
     validate_validation_pipeline()
     validate_trust_boundaries()
@@ -224,7 +224,7 @@ def validate(online: bool) -> None:
             "authorization_frozen_coverage_0211", module_path
         )
         if spec is None or spec.loader is None:
-            fail("cannot load 0.21.1 upstream verification gate")
+            fail("Не удалось загрузить проверку внешнего источника версии 0.21.1")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         module.validate_upstream(doc)

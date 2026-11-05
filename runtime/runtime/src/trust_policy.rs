@@ -43,8 +43,8 @@ fn parse_utc(timestamp: &str) -> Result<i64,String> {
 }
 fn now() -> Result<i64,String> {SystemTime::now().duration_since(UNIX_EPOCH).map(|n|n.as_secs() as i64).map_err(|e|e.to_string())}
 fn verify_signature(key_hex:&str,payload:&[u8],sig_hex:&str)->Result<(),String>{
-    let bytes: [u8;32]=hex::decode(key_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Ed25519 public key length".to_string())?;
-    let signature: [u8;64]=hex::decode(sig_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Ed25519 signature length".to_string())?;
+    let bytes: [u8;32]=hex::decode(key_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Неверная длина открытого ключа Ed25519".to_string())?;
+    let signature: [u8;64]=hex::decode(sig_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Неверная длина подписи Ed25519".to_string())?;
     let key=VerifyingKey::from_bytes(&bytes).map_err(|e|e.to_string())?;
     key.verify(payload,&Signature::from_bytes(&signature)).map_err(|_|"Некорректная подпись политики доверия корневым ключом".to_string())
 }
@@ -126,7 +126,7 @@ pub fn check(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),String>{
     }
     let (policy,digest)=read_policy(root_key)?;
     if policy.epoch!=manifest.trust_epoch {return Err("Новая установка игры должна использовать текущую эпоху доверия с корневой подписью".into())}
-    let signer=manifest.signature.as_ref().ok_or("game signature missing")?;
+    let signer=manifest.signature.as_ref().ok_or("Отсутствует подпись игры")?;
     if !policy.keys.iter().any(|k|k.role=="game" && k.status=="active" && k.public_key.eq_ignore_ascii_case(&signer.public_key)) {
        return Err("Нельзя устанавливать новый релиз с помощью выведенного из эксплуатации или отозванного ключа подписи игры".into());
     }

@@ -128,11 +128,11 @@ func (s Server) componentCatalogPreview0248(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if lookup.Release.Status != "draft" {
-		writeError(w, http.StatusConflict, "catalog can only be edited before signing")
+		writeError(w, http.StatusConflict, "Каталог можно редактировать только до подписания")
 		return
 	}
 	if lookup.Release.Manifest.ComponentCatalog == nil || lookup.Release.Manifest.ComponentCatalog.Revision != req.ExpectedRevision {
-		writeError(w, http.StatusConflict, "catalog changed: reload before editing")
+		writeError(w, http.StatusConflict, "Каталог изменился: обновите данные перед редактированием")
 		return
 	}
 	_, report := previewCatalog0248(lookup.Release, req)
@@ -162,7 +162,7 @@ func (s Server) componentCatalogSave0248(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if lookup.Release.Manifest.ComponentCatalog == nil || lookup.Release.Manifest.ComponentCatalog.Revision != req.ExpectedRevision {
-		writeError(w, http.StatusConflict, "catalog revision changed; reload before editing")
+		writeError(w, http.StatusConflict, "Ревизия каталога изменилась; обновите данные перед редактированием")
 		return
 	}
 	cat, report := previewCatalog0248(lookup.Release, req)

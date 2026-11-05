@@ -14,7 +14,7 @@ public final class LegacyGameHook implements MinecraftHook {
     }
     @Override public void beforeMinecraftMain(String main,String[] args,ClassLoader loader) {
         if(!Boolean.parseBoolean(System.getProperty("never.ported.agent.ready","false")))
-            throw new SecurityException("trusted agent has not initialized");
+            throw new SecurityException("Доверенный агент не инициализирован");
     }
     @Override public byte[] transformMinecraftClass(String name,ClassLoader loader,byte[] original) {
         if(!name.equals("net.minecraft.client.main.Main"))return null;
@@ -27,7 +27,7 @@ public final class LegacyGameHook implements MinecraftHook {
             boolean equal=true;for(int j=0;j<before.length;j++)if(result[i+j]!=before[j]){equal=false;break;}
             if(equal){System.arraycopy(after,0,result,i,after.length);found++;i+=before.length-1;}
         }
-        if(found!=1)throw new SecurityException("expected JVM hook target was not found exactly once");
+        if(found!=1)throw new SecurityException("Целевой перехват JVM не найден ровно один раз");
         return result;
     }
     @Override public void afterMinecraftMain(String main,Throwable failed) {

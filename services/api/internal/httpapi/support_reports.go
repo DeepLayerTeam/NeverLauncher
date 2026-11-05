@@ -168,7 +168,7 @@ func (s Server) playerSupportSubmit03510(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusServiceUnavailable, "Хранилище обращений поддержки недоступно")
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"id": id, "status": "received", "message": "Report submitted with explicit consent"})
+	writeJSON(w, http.StatusCreated, map[string]any{"id": id, "status": "received", "message": "Отчёт отправлен с явного согласия пользователя"})
 }
 func (s Server) operatorSupportList03510(w http.ResponseWriter, r *http.Request) {
 	entries, e := os.ReadDir(s.supportReportsDir03510())

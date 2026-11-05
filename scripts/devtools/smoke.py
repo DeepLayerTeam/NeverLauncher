@@ -45,7 +45,7 @@ def main(cli):
         src.write_text(
             """public class Fixture {
   public static void main(String[] args) {
-    if (System.getenv("LAUNCHER_TOKEN") != null) throw new IllegalStateException("secret leaked");
+    if (System.getenv("LAUNCHER_TOKEN") != null) throw new IllegalStateException("Обнаружена утечка секрета");
     System.out.println("fixture:" + args[0]);
   }
 }""",

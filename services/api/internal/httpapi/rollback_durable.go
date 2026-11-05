@@ -245,7 +245,7 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	}
 	if repository.IsStableChannel0341(p.Channel) {
 		s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "channel:rollback-publish-blocked", Target: release.ID, JobID: job.ID, ReasonCode: "stable_runtime_targets_incomplete_03411", CreatedAt: time.Now().UTC()})
-		return map[string]any{"status": "rollback-staged-runtime-validation-required", "projectId": p.ProjectID, "profileId": p.ProfileID, "channel": p.Channel, "targetVersion": p.ToVersion, "rollbackVersion": release.Version, "packageId": release.ID, "release": release, "integrity": check, "requiredValidationLevel": "trusted-runtime", "blockedReason": "new rollback package requires a fresh, complete attested runtime matrix before stable publication"}, nil
+		return map[string]any{"status": "rollback-staged-runtime-validation-required", "projectId": p.ProjectID, "profileId": p.ProfileID, "channel": p.Channel, "targetVersion": p.ToVersion, "rollbackVersion": release.Version, "packageId": release.ID, "release": release, "integrity": check, "requiredValidationLevel": "trusted-runtime", "blockedReason": "Для публикации нового пакета отката в стабильном канале требуется свежая и полная аттестованная матрица Runtime"}, nil
 	}
 	policy, err := s.Repo.GetProjectValidationPolicy(ctx, p.ProjectID)
 	if err == nil && policy.RequiredLevel == "runtime" {

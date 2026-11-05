@@ -171,7 +171,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if !plan.Ready {
-		writeJSON(w, 422, map[string]any{"data": plan, "error": map[string]any{"message": "resolve content blockers before import", "code": "content-blocked"}})
+		writeJSON(w, 422, map[string]any{"data": plan, "error": map[string]any{"message": "Устраните проблемы содержимого перед импортом", "code": "content-blocked"}})
 		return
 	}
 	// Конвейер релиза использует отдельную детерминированную блокировку рабочего

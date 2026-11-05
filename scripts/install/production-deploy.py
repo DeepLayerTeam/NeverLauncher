@@ -130,7 +130,7 @@ def read_env(path):
             fail("Некорректная строка файла переменных окружения")
         key, value = line.split("=", 1)
         if not ENV_KEY_RE.fullmatch(key) or key in values or "\x00" in value:
-            fail("invalid or duplicate env key")
+            fail("Недопустимый или повторяющийся ключ окружения")
         values[key] = value.strip().strip('"').strip("'")
     return values
 
@@ -286,7 +286,7 @@ def tls_paths(values):
             proc = subprocess.run(["openssl", *map(str, argv)], capture_output=True,
                                   check=False, timeout=15)
         except (OSError, subprocess.TimeoutExpired):
-            fail("openssl is required and must complete certificate validation")
+            fail("Требуется openssl с успешной проверкой сертификатов")
         if proc.returncode:
             fail("TLS-сертификат некорректен, недоверенный, просрочен, не совпадает с ключом или относится к другому хосту")
         return proc.stdout
@@ -334,7 +334,7 @@ def public_json(url, *, payload=None, headers=None, expected_status=None):
     except (urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
         fail(f"Публичный HTTPS недоступен или не является доверенным ({type(exc).__name__})")
     except (UnicodeError, json.JSONDecodeError):
-        fail("public API returned invalid JSON")
+        fail("Публичный API вернул недопустимый JSON")
 
 
 def verify_public_ready(values, expected_version=None):
@@ -546,7 +546,7 @@ def no_symlinks_or_mounts(path):
         for name in dirs + files:
             target = Path(current) / name
             if target.is_symlink() or target.is_mount():
-                fail("refusing to delete tree containing symlink or mount")
+                fail("Отказано в удалении дерева, содержащего символьную ссылку или точку монтирования")
 
 
 def managed_dir(path, marker, *, create=False):
@@ -655,7 +655,7 @@ def native_install(args):
     binary_info = safe_file(args.installer, executable=True)
     key_info = safe_file(args.trusted_key)
     if binary_info.st_uid != 0 or key_info.st_uid != 0:
-        fail("trusted installer and pinned public key must be root-owned")
+        fail("Доверенный установщик и закреплённый открытый ключ должны принадлежать root")
     safe_file(args.bundle)
     with exclusive_lock(Path("/run/launcher-deploy.lock")):
         # Не заменяйте неуправляемые unit-файлы systemd.

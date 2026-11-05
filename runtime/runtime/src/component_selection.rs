@@ -133,7 +133,7 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
     changes.sort();
     let choice=if changes.is_empty(){base.to_owned()}
        else{format!("@custom:v1:{}:{}",base,changes.join(","))};
-    if choice.len()>MAX_CHOICE_BYTES{blockers.push("migrated component choice exceeds 8192 bytes".into())}
+    if choice.len()>MAX_CHOICE_BYTES{blockers.push("Объём перенесённого выбора компонентов превышает 8192 байта".into())}
     if blockers.is_empty(){
         if let Err(e)=component_catalog_0241::preview_components_0244(target,Some(&choice)) {
             blockers.push(format!("Подписанный обработчик зависимостей целевого релиза отклонил перенесённый выбор: {e}"));

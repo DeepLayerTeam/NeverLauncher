@@ -56,27 +56,27 @@ def load_matrix(path: Path, expected_commit: str) -> dict[str, Any]:
     try:
         matrix = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
-        fail(f"invalid Guard CI matrix: {exc}")
+        fail(f"Недопустимая матрица Guard CI: {exc}")
     if (
         not isinstance(matrix, dict)
         or matrix.get("schemaVersion") != "1.0"
         or matrix.get("productVersion") != VERSION
     ):
-        fail(f"Guard CI matrix must use schemaVersion=1.0 and productVersion={VERSION}")
+        fail(f"Матрица Guard CI должна содержать schemaVersion=1.0 и productVersion={VERSION}")
     if matrix.get("status") != "passed" or matrix.get("errors") not in ([], None):
-        fail("Guard CI matrix is not fail-closed passed")
+        fail("Матрица Guard CI не подтверждает успешную проверку по принципу fail-closed")
     commit = str(matrix.get("commit", "")).strip()
     run_id = str(matrix.get("runId", "")).strip()
     repository = str(matrix.get("repository", "")).strip()
     if not commit or not run_id or not repository:
-        fail("Guard CI matrix is missing repository/commit/runId")
+        fail("В матрице Guard CI отсутствуют repository, commit или runId")
     if expected_commit and commit != expected_commit:
         fail(
             f"Guard CI matrix commit mismatch: expected {expected_commit}, got {commit}"
         )
     rows = matrix.get("targets")
     if not isinstance(rows, list) or len(rows) != len(EXPECTED_TARGETS):
-        fail("Guard CI matrix must contain exactly three certified platform targets")
+        fail("Матрица Guard CI должна содержать ровно три сертифицированные целевые платформы")
     return matrix
 
 
@@ -85,30 +85,30 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
     seen_targets: set[str] = set()
     for result in matrix["targets"]:
         if not isinstance(result, dict):
-            fail("Guard CI matrix target must be an object")
+            fail("Целевая платформа в матрице Guard CI должна быть объектом")
         target_id = str(result.get("targetId", "")).strip()
         if target_id not in EXPECTED_TARGETS or target_id in seen_targets:
-            fail(f"unexpected or duplicate Guard CI target: {target_id!r}")
+            fail(f"Неожиданная или повторяющаяся платформа Guard CI: {target_id!r}")
         seen_targets.add(target_id)
         if (
             result.get("schemaVersion") != "1.0"
             or result.get("productVersion") != VERSION
         ):
-            fail(f"Guard CI target version/schema mismatch: {target_id}")
+            fail(f"Несоответствие версии или схемы платформы Guard CI: {target_id}")
         if result.get("status") != "passed" or result.get("exitCode") != 0:
-            fail(f"Guard CI target is not passed: {target_id}")
+            fail(f"Проверка платформы Guard CI не пройдена: {target_id}")
         if str(result.get("commit", "")) != str(matrix.get("commit", "")) or str(
             result.get("runId", "")
         ) != str(matrix.get("runId", "")):
-            fail(f"Guard CI target commit/run mismatch: {target_id}")
+            fail(f"Несоответствие коммита или запуска платформы Guard CI: {target_id}")
         artifacts = result.get("artifacts")
         if not isinstance(artifacts, dict) or set(artifacts) != set(ROLES):
-            fail(f"invalid artifact set for {target_id}")
+            fail(f"Недопустимый набор артефактов для {target_id}")
         canonical = EXPECTED_TARGETS[target_id]
         for role in ROLES:
             item = artifacts[role]
             if not isinstance(item, dict):
-                fail(f"invalid {role} artifact for {target_id}")
+                fail(f"Недопустимый артефакт {role} для {target_id}")
             name = str(item.get("name", ""))
             digest = str(item.get("sha256", "")).lower()
             size = item.get("size")
@@ -121,9 +121,9 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
                 or not isinstance(size, int)
                 or size <= 0
             ):
-                fail(f"invalid certified artifact hash/size for {target_id}/{role}")
+                fail(f"Недопустимый хеш или размер сертифицированного артефакта {target_id}/{role}")
             if name in expected:
-                fail(f"duplicate certified artifact name: {name!r}")
+                fail(f"Повторяющееся имя сертифицированного артефакта: {name!r}")
             expected[name] = (digest, size, target_id, role)
     if seen_targets != set(EXPECTED_TARGETS):
         fail(
@@ -134,7 +134,7 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
 
 def copy_verified(src: Path, dst: Path, digest: str, size: int, context: str) -> None:
     if src.stat().st_size != size or sha256_file(src) != digest:
-        fail(f"certified artifact mismatch for {context}")
+        fail(f"Несоответствие сертифицированного артефакта для {context}")
     dst.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{dst.name}.", dir=str(dst.parent))
     os.close(fd)
@@ -142,7 +142,7 @@ def copy_verified(src: Path, dst: Path, digest: str, size: int, context: str) ->
     try:
         shutil.copyfile(src, tmp)
         if tmp.stat().st_size != size or sha256_file(tmp) != digest:
-            fail(f"staged artifact verification failed for {context}")
+            fail(f"Не удалось проверить подготовленный артефакт для {context}")
         os.replace(tmp, dst)
     finally:
         tmp.unlink(missing_ok=True)
@@ -170,7 +170,7 @@ def main() -> int:
         found[path.name] = path
     missing = sorted(set(expected) - set(found))
     if missing:
-        fail("missing certified platform artifacts: " + ", ".join(missing))
+        fail("Отсутствуют сертифицированные артефакты платформ: " + ", ".join(missing))
     args.out.mkdir(parents=True, exist_ok=True)
     for name in sorted(expected):
         digest, size, target_id, role = expected[name]

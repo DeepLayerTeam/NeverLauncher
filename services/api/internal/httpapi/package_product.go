@@ -434,7 +434,7 @@ func (s Server) validatePackageFiles(release model.ReleaseVersion, files []model
 		message := "storage object matches manifest metadata"
 		if copyErr != nil || size != file.Size || !strings.EqualFold(actual, file.SHA256) {
 			status = "failed"
-			message = fmt.Sprintf("size/hash mismatch: size=%d expectedSize=%d sha=%s expectedSHA=%s copyErr=%v", size, file.Size, actual, file.SHA256, copyErr)
+			message = fmt.Sprintf("Несовпадение размера или хеша: размер=%d, ожидаемый размер=%d, SHA=%s, ожидаемый SHA=%s, ошибка копирования=%v", size, file.Size, actual, file.SHA256, copyErr)
 		}
 		checks = append(checks, map[string]any{"id": file.Path, "status": status, "reasonCode": map[bool]string{true: "file-integrity-mismatch", false: ""}[status != "ok"], "message": message, "size": size, "sha256": actual})
 	}

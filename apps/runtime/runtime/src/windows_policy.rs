@@ -990,7 +990,7 @@ pub struct RuntimeProcessPolicyGuard;
 #[cfg(not(windows))]
 impl RuntimeProcessPolicyGuard {
     pub fn report(&self) -> &RuntimeProcessPolicyReport {
-        unreachable!("Windows runtime process policy is only available on Windows")
+        unreachable!("Политика процессов Windows Runtime доступна только в Windows")
     }
 }
 

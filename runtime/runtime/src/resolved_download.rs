@@ -32,7 +32,7 @@ pub fn resolve(manifest: &Manifest, preset: Option<&str>) -> Result<ResolvedDown
     let selected = component_catalog_0241::active_files(manifest, preset)?;
     let mut hasher = Sha256::new();
     hasher.update(b"launcher.resolved-download-plan.v1\0");
-    let signature = manifest.signature.as_ref().ok_or("resolved plan requires signed manifest")?;
+    let signature = manifest.signature.as_ref().ok_or("Для разрешённого плана требуется подписанный манифест")?;
     string_field(&mut hasher, &signature.public_key)?;
     string_field(&mut hasher, &signature.signature)?;
     // Явный и стандартный пресеты могут приводить к одним файлам, но разным действиям

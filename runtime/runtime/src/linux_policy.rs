@@ -144,7 +144,7 @@ mod imp {
     }
 
     pub fn runtime_policy(child: &mut Child) -> Result<LinuxRuntimeProcessPolicyReport, String> {
-        let pid = child.id().ok_or_else(|| "Linux runtime PID unavailable".to_string())?;
+        let pid = child.id().ok_or_else(|| "PID Runtime в Linux недоступен".to_string())?;
         let status = std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("Ошибка: «read /proc/{pid}/status»: {e}"))?;
         let no_new_privs = status.lines().find_map(|l| l.strip_prefix("NoNewPrivs:\t")).map(str::trim) == Some("1");
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };

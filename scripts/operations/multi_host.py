@@ -418,7 +418,7 @@ def cluster_verify(reports, edge_url):
                 issues.append(name + ": missing running " + service)
     ok, edge = edge_ready(edge_url)
     if not ok:
-        issues.append("external HTTPS load balancer did not return successful /ready on all probes")
+        issues.append("Внешний балансировщик HTTPS не вернул успешный ответ /ready на всех проверках")
     return {"schema": SCHEMA, "version": VERSION, "observedUtc": inventory.utc_now(),
             "nodes": reports, "publicEdge": edge, "issues": issues,
             "multiHostControlPlaneObserved": not issues,

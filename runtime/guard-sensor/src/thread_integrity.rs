@@ -174,7 +174,7 @@ pub fn reconcile_and_verify() -> Result<ThreadIntegritySnapshot, String> {
         .map_err(|_| "Повреждена блокировка состояния контроля потоков Guard".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "Guard Thread Integrity is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Thread Integrity не инициализирован".to_string())?;
     if !state.active || !state.healthy {
         return Err("Контроль потоков Guard не активен или работает некорректно".to_string());
     }

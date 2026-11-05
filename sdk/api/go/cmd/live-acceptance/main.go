@@ -17,7 +17,7 @@ import (
 
  neverapi "gitflic.ru/skif4er/launcher/sdk/api/go"
 )
-func required(key string) string { v:=os.Getenv(key); if v=="" { panic("missing live SDK configuration: "+key) }; return v }
+func required(key string) string { v:=os.Getenv(key); if v=="" { panic("Отсутствует конфигурация SDK для реального подключения: "+key) }; return v }
 func run() error {
  origin,token:=required("NL_GA_ORIGIN"),required("NL_GA_BEARER")
  jsonPath,textPath,binaryPath:=required("NL_GA_JSON_PATH"),required("NL_GA_TEXT_PATH"),required("NL_GA_BINARY_PATH")
@@ -38,7 +38,7 @@ func run() error {
  n,err=client.RequestStream(ctx,"GET",binaryPath,nil,nil,"",hash,1<<30,"")
  if err!=nil{return err};if n<8 || hex.EncodeToString(hash.Sum(nil))!=expected{return errors.New("Несовпадение хеша рабочего бинарного потока")}
  // Некорректные адреса должны отклоняться до передачи Bearer-токена.
- if _,err=client.RequestStream(ctx,"GET","https://untrusted.invalid",nil,nil,"",io.Discard,1024,"");err==nil{return errors.New("external origin not rejected")}
+ if _,err=client.RequestStream(ctx,"GET","https://untrusted.invalid",nil,nil,"",io.Discard,1024,"");err==nil{return errors.New("Внешний источник не был отклонён")}
  fmt.Printf("PASS sdk=go checks=3 binaryBytes=%d binarySha256=%s\n",n,expected)
  return nil
 }

@@ -33,7 +33,7 @@ func main() {
 		panic(err)
 	}
 	if p.SchemaVersion != "1.0" || !p.RequireContinuousGuard || len(p.AllowedPlans) == 0 {
-		panic("invalid policy parameters")
+		panic("Недопустимые параметры политики")
 	}
 	privBytes, err := os.ReadFile(keyPath)
 	if err != nil {
@@ -53,7 +53,7 @@ func main() {
 		panic("Автономный ключ должен быть 32-байтовым seed Ed25519 или 64-байтовым закрытым ключом")
 	}
 	if len(raw) > 192*1024 {
-		panic("policy too large")
+		panic("Политика превышает допустимый размер")
 	}
 	env := planpolicy02412.Envelope{SchemaVersion: "1.0", Payload: base64.StdEncoding.EncodeToString(raw), Signature: hex.EncodeToString(ed25519.Sign(key, append([]byte(planpolicy02412.Domain), raw...)))}
 	bytes, err := json.MarshalIndent(env, "", "  ")

@@ -716,7 +716,7 @@ def restore_pg_fresh(args):
             "pgBackRest did not write an actual PostgreSQL data directory")
     return {"status": "restored-not-started", "dataDirectory": str(target),
             "target": target_desc,
-            "warning": "PG WAL replay not yet verified; S3/world cohort not valid at arbitrary target"}
+            "warning": "Воспроизведение журнала PG WAL ещё не проверено; согласованность группы S3/миров не подтверждена для произвольного момента восстановления"}
 
 
 def main(argv=None):

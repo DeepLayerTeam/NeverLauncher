@@ -69,7 +69,7 @@ func rejectSymlinkComponents0377(p string) error {
 			return err
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("symlink path component: %s", current)
+			return fmt.Errorf("В пути обнаружен компонент-символьная ссылка: %s", current)
 		}
 	}
 	return nil
@@ -535,7 +535,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		return report, err
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return report, fmt.Errorf("transfer published but PostgreSQL read commit uncertain; verify destination: %w", err)
+		return report, fmt.Errorf("Передача опубликована, но подтверждение записи PostgreSQL не определено; проверьте целевое хранилище: %w", err)
 	}
 	return report, nil
 }

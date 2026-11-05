@@ -60,8 +60,8 @@ cat > "${REPORT}" <<JSON
     {"id": "env.file", "status": "$( [[ -f "${ENV_FILE}" ]] && echo ok || echo failed )", "message": "${ENV_FILE}"},
     {"id": "postgres.password", "status": "${POSTGRES_PASSWORD_SET}", "message": "Замените стандартный POSTGRES_PASSWORD перед промышленным запуском"},
     {"id": "token.secret", "status": "${TOKEN_SECRET_SET}", "message": "Замените стандартный LAUNCHER_AUTH_TOKEN_SECRET перед промышленным запуском"},
-    {"id": "guard.release.allowlist", "status": "${GUARD_ALLOWLIST_SET}", "message": "set LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON from merged Guard schema 2.0 production policy"},
-    {"id": "serverbridge.release.allowlist", "status": "${BRIDGE_ALLOWLIST_SET}", "message": "set LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON from final ServerBridge release JAR hashes"},
+    {"id": "guard.release.allowlist", "status": "${GUARD_ALLOWLIST_SET}", "message": "Укажите LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON на основе объединённой производственной политики Guard schema 2.0"},
+    {"id": "serverbridge.release.allowlist", "status": "${BRIDGE_ALLOWLIST_SET}", "message": "Укажите LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON на основе хешей итоговых релизных JAR ServerBridge"},
     {"id": "compose.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/docker-compose.yml" ]] && echo ok || echo failed )", "message": "deploy/production/docker-compose.yml"},
     {"id": "nginx.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/nginx.conf" ]] && echo ok || echo failed )", "message": "deploy/production/nginx.conf"}
   ],

@@ -263,7 +263,7 @@ func (f *FixtureServer) Handler() http.Handler {
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Host == "" {
-			http.Error(w, "bad host", 400)
+			http.Error(w, "Недопустимый хост", 400)
 			return
 		}
 		mux.ServeHTTP(w, r)

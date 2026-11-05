@@ -385,10 +385,10 @@ mod windows_impl {
     pub fn bind_guard_to_launcher_job(child: &mut Child) -> Result<GuardLifetimeJob, String> {
         let pid = child
             .id()
-            .ok_or_else(|| "Guard PID unavailable for suspended lifetime boundary".to_string())?;
+            .ok_or_else(|| "PID Guard недоступен для управления временем жизни приостановленного процесса".to_string())?;
         let process_handle = child
             .raw_handle()
-            .ok_or_else(|| "Guard process handle unavailable for lifetime job".to_string())?
+            .ok_or_else(|| "Дескриптор процесса Guard недоступен для задания управления временем жизни".to_string())?
             as HANDLE;
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
@@ -639,7 +639,7 @@ mod windows_impl {
         }
         let required = 8usize
             .checked_add(listed.saturating_mul(size_of::<usize>()))
-            .ok_or_else(|| "Guard Job Object process-list size overflow".to_string())?;
+            .ok_or_else(|| "Переполнение размера списка процессов Guard Job Object".to_string())?;
         if required > buffer.len() {
             return Err("Список процессов Job Object в Guard превышает размер буфера проверки".to_string());
         }
@@ -818,10 +818,10 @@ mod windows_impl {
     ) -> Result<RuntimeProcessPolicyGuard, String> {
         let pid = child
             .id()
-            .ok_or_else(|| "Windows runtime PID unavailable before policy enforcement".to_string())?;
+            .ok_or_else(|| "PID Windows Runtime недоступен до применения политики".to_string())?;
         let process_handle = child
             .raw_handle()
-            .ok_or_else(|| "Windows runtime process handle unavailable before policy enforcement".to_string())?
+            .ok_or_else(|| "Дескриптор процесса Windows Runtime недоступен до применения политики".to_string())?
             as HANDLE;
 
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
@@ -990,7 +990,7 @@ pub struct RuntimeProcessPolicyGuard;
 #[cfg(not(windows))]
 impl RuntimeProcessPolicyGuard {
     pub fn report(&self) -> &RuntimeProcessPolicyReport {
-        unreachable!("Windows runtime process policy is only available on Windows")
+        unreachable!("Политика процессов Windows Runtime доступна только в Windows")
     }
 }
 

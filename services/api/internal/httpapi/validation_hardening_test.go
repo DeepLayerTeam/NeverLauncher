@@ -35,7 +35,7 @@ func TestV12ForgedExpiredUnsignedManualCertification03412(t *testing.T) {
 		t.Fatal("expired evidence accepted")
 	}
 	if strings.Contains(redactValidationDetail03412("Authorization: Bearer AAAAA access_token=BBBBB"), "BBBBB") {
-		t.Fatal("secret leaked")
+		t.Fatal("Обнаружена утечка секрета")
 	}
 }
 func TestV12GateFailedAttemptHasImmutableDigest03412(t *testing.T) {

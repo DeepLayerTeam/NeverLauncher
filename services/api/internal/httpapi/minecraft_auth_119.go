@@ -417,7 +417,7 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 	}
 	mfa, err := s.evaluateLoginMFA117(result.User, result.AuthMethods, req.TOTP, req.RecoveryCode)
 	if err != nil || mfa.NeedPasskey {
-		writeYggdrasilError119(w, http.StatusForbidden, "MFA requires Launcher session exchange")
+		writeYggdrasilError119(w, http.StatusForbidden, "Для MFA необходим обмен сеансом Launcher")
 		return
 	}
 	_, _, neverSession, err := s.issueLoginSessionWithAuth(result.User, r, "minecraft-authlib", mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)

@@ -72,7 +72,7 @@ pub(super) fn plan_digest(
     credentials: Option<&MinecraftLaunchCredentials>,
 ) -> Result<String, String> {
     let signature = manifest.signature.as_ref()
-        .ok_or("v2 deterministic launch requires an owner-signed manifest")?;
+        .ok_or("Детерминированный запуск v2 требует манифест с подписью владельца")?;
     if signature.algorithm != "Ed25519" || signature.signature.len() != 128 {
         return Err("Для детерминированного запуска v2 требуется подпись владельца Ed25519".into());
     }

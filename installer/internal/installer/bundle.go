@@ -278,7 +278,7 @@ func (v *Verified) Install(target string) error {
 }
 func Pack(source, version, privateKey, destination string) error {
 	if !validVersion(version) {
-		return errors.New("invalid version")
+		return errors.New("Недопустимая версия")
 	}
 	seed, err := decodeKey(privateKey, ed25519.SeedSize)
 	if err == nil {

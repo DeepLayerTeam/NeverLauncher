@@ -180,7 +180,7 @@ EOF_PLIST
 import json, sys
 p=json.load(open(sys.argv[1], encoding='utf-8'))
 if p.get('status') != 'Accepted' or not p.get('id'):
-    raise SystemExit(f"notarytool did not accept package: {p}")
+    raise SystemExit(f"notarytool не принял пакет: {p}")
 PY
     xcrun stapler staple "${APP_ROOT}"
     xcrun stapler validate "${APP_ROOT}"

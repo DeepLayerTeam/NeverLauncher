@@ -100,7 +100,7 @@ fn pointer(root: &Path) -> Result<Pointer, String> {
     let a: Option<Pointer> = read_slot(root, "active", 0);
     let b: Option<Pointer> = read_slot(root, "active", 1);
     let valid = [a, b].into_iter().flatten().filter(|x| x.schema == SCHEMA).max_by_key(|x| x.generation);
-    valid.ok_or_else(|| "client release pointer is damaged".to_string()).or_else(|e| {
+    valid.ok_or_else(|| "Указатель релиза клиента повреждён".to_string()).or_else(|e| {
         if state_exists(root, "active") { Err(e) } else { Ok(Pointer { schema: SCHEMA, generation: 0, active: None }) }
     })
 }
@@ -245,7 +245,7 @@ fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Op
     // активного релиза; доверенные байты A остаются в прежней резервной копии.
     saved.next = completed.next.clone();
     saved.generation = saved.generation.max(completed.generation)
-        .checked_add(1).ok_or("release journal generation overflow")?;
+        .checked_add(1).ok_or("Переполнение поколения журнала релизов")?;
     verify_journal(root, &saved, key)?;
     Ok(Some(saved))
 }
@@ -498,8 +498,8 @@ pub async fn ready_for_launch(manifest: &Manifest, root: &Path, key: &str) -> Re
 fn reusable_file(root:&Path, previous:Option<&Release>, next:&Release, path:&str)->Result<bool,String>{
     let Some(old)=previous else {return Ok(false)};
     if !old.installed.iter().any(|p|p==path) {return Ok(false)}
-    let (old_sha,old_size)=expected(old,path).ok_or("previous signed ownership lacks file")?;
-    let (new_sha,new_size)=expected(next,path).ok_or("new signed ownership lacks file")?;
+    let (old_sha,old_size)=expected(old,path).ok_or("В предыдущем подписанном списке владения отсутствует файл")?;
+    let (new_sha,new_size)=expected(next,path).ok_or("В новом подписанном списке владения отсутствует файл")?;
     if old_size!=new_size || !old_sha.eq_ignore_ascii_case(new_sha) {return Ok(false)}
     let location=safe_join(root,path)?;
     file_ownership::ensure_no_symlinks(root,&location)?;
@@ -1652,7 +1652,7 @@ fn find_player_conflicts_0359(root:&Path,manifest:&Manifest,key:&str,preset:Opti
             Ok(meta)=>{
                 if !meta.is_file() || meta.file_type().is_symlink(){return Err(format!("Конфликт с пользовательским файлом: {}",f.path))}
                 if files.len()>=4096 {return Err("Слишком много конфликтующих пользовательских файлов".into());}
-                bytes=bytes.checked_add(meta.len()).ok_or("conflict archive size overflow")?;
+                bytes=bytes.checked_add(meta.len()).ok_or("Переполнение размера архива конфликтов")?;
                 if bytes>20*1024*1024*1024 {return Err("Архив конфликтующих файлов превышает 20 ГиБ; используйте ручной экспорт".into());}
                 files.push(PlayerConflict0359{path:f.path.clone(),size:meta.len(),sha256:hash(&live)?});
             },

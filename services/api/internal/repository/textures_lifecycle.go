@@ -167,7 +167,7 @@ func (r *SQLRepository) CheckTextureGCLease02511(ctx context.Context, b TextureG
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("stale texture GC lease for %s", b.Digest)
+		return fmt.Errorf("Устаревшая аренда очистки текстуры %s", b.Digest)
 	}
 	return nil
 }

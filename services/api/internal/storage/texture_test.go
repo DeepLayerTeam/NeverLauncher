@@ -43,6 +43,6 @@ func TestTextureImmutableConcurrent0252(t *testing.T) {
 		t.Fatal("accepted wrong digest")
 	}
 	if _, _, err := OpenTexture0252(s, "../../etc/passwd"); err == nil {
-		t.Fatal("path traversal")
+		t.Fatal("Выход за пределы допустимого пути")
 	}
 }

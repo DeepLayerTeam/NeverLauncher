@@ -128,7 +128,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
         return Err("Guard Trusted JVM: в активной записи некорректный идентификатор или разрешение".into());
     }
     let signed = guard_compatibility_0502::verified_for_game(root, project, minecraft, loader)?
-        .ok_or("Guard Trusted JVM installed without mandatory signed compatibility policy")?;
+        .ok_or("Guard Trusted JVM установлен без обязательной подписанной политики совместимости")?;
     let release = format!("{ROOT}/releases/{}", rec.package_sha256);
     check_package(root, &release, &rec.package_sha256)?;
     let agent_rel = format!("{release}/agent.jar");

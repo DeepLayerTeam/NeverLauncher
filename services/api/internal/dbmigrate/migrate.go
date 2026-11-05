@@ -232,7 +232,7 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 			if checksum == "" {
 				if _, err = tx.ExecContext(ctx, `UPDATE schema_migrations SET checksum=$2,description=CASE WHEN description='' THEN $3 ELSE description END WHERE version=$1 AND checksum=''`, m.Version, m.Checksum, m.Description); err != nil {
 					tx.Rollback()
-					return Status{}, fmt.Errorf("seal migration %s checksum: %w", m.Version, err)
+					return Status{}, fmt.Errorf("Не удалось закрепить контрольную сумму миграции %s: %w", m.Version, err)
 				}
 			}
 			if err = tx.Commit(); err != nil {

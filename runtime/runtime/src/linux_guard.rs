@@ -161,7 +161,7 @@ impl GuardSupervisor {
     /// перезапускайте его незаметно после допуска игры; разрыв IPC — нарушение.
     pub async fn ping_running(&self)->Result<(),String>{
         let mut state=self.inner.lock().await;
-        let handle=state.as_mut().ok_or("Linux Guard process was never authenticated")?;
+        let handle=state.as_mut().ok_or("Процесс Linux Guard не прошёл аутентификацию")?;
         if handle.child.try_wait().map_err(|e|e.to_string())?.is_some(){
             return Err("Процесс Linux Guard завершился во время игры".into());
         }
@@ -209,7 +209,7 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
     // релиза. Ключ из манифеста, окружения или соседнего файла находился
     // бы под контролем злоумышленника и никогда не принимается.
     let pinned=option_env!("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY")
-        .ok_or("Linux production Guard requires a build-time pinned Ed25519 public key")?;
+        .ok_or("Для производственного Linux Guard требуется открытый ключ Ed25519, закреплённый при сборке")?;
     let key_bytes=hex::decode(pinned.trim()).map_err(|_|"Некорректное значение: встроенный публичный ключ Guard для Linux")?;
     let raw_key:[u8;32]=key_bytes.try_into().map_err(|_|"Некорректное значение: «compiled Linux Guard public key length»")?;
     let key=VerifyingKey::from_bytes(&raw_key).map_err(|_|"Некорректное значение: встроенный публичный ключ Guard для Linux")?;
@@ -252,7 +252,7 @@ fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
     }
     // После запуска сравнивайте образ процесса с неизменным ожидаемым
     // дайджестом из исходного манифеста, а не с повторным чтением пути Guard.
-    verified_guard_hash.ok_or_else(||"Guard hash missing in verified manifest".into())
+    verified_guard_hash.ok_or_else(||"Хеш Guard отсутствует в проверенном манифесте".into())
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("Отсутствует: «desktop parent»")?.join("guard"))}
 
@@ -335,7 +335,7 @@ async fn build_integrity_evidence(
         .guard
         .linux
         .as_mut()
-        .ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
+        .ok_or_else(|| "В свидетельстве целостности Linux отсутствует состояние безопасности Guard".to_string())?;
     guard_security.no_new_privs = verified_guard.no_new_privs;
     guard_security.dumpable_disabled = verified_guard.dumpable_disabled;
     guard_security.parent_death_signal = verified_guard.parent_death_signal;
@@ -477,7 +477,7 @@ async fn serve_commands(
         if shutdown {
             return Ok(());
         }
-        sequence = sequence.checked_add(1).ok_or("sequence exhausted")?;
+        sequence = sequence.checked_add(1).ok_or("Исчерпана последовательность")?;
     }
 }
 

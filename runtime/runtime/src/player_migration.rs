@@ -99,7 +99,7 @@ fn digest_file(path: &Path, expected: &ManifestFile) -> Result<bool, String> {
     loop {
         let read = file.read(&mut buffer).map_err(|e| e.to_string())?;
         if read == 0 { break }
-        bytes = bytes.checked_add(read as u64).ok_or("source byte count overflow")?;
+        bytes = bytes.checked_add(read as u64).ok_or("Переполнение счётчика байтов источника")?;
         if bytes > expected.size { return Ok(false) }
         hash.update(&buffer[..read]);
     }
@@ -159,7 +159,7 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
     for file in manifest.files.iter().filter(|f| plan.selected_paths.contains(&f.path)) {
         if !manifest_file_applies(file) { continue }
         if file.size > MAX_FILE_BYTES { return Err(format!("Подписанный файл превышает лимит миграции игрока: {}", file.path)); }
-        total = total.checked_add(file.size).ok_or("signed total size overflow")?;
+        total = total.checked_add(file.size).ok_or("Переполнение общего подписанного размера")?;
         if total > MAX_SCAN_BYTES { return Err("Подписанный релиз превышает лимит сканирования миграции игрока".into()) }
         if let Some(source) = locate_verified(&root, &layouts, file)? {
             matched += file.size;
@@ -182,7 +182,7 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
                 examined += 1;
                 if examined > MAX_SCAN_FILES { return Err("Слишком много дополнительных источников миграции игрока".into()) }
                 if file.size > MAX_FILE_BYTES { continue }
-                optional_bytes = optional_bytes.checked_add(file.size).ok_or("optional source size overflow")?;
+                optional_bytes = optional_bytes.checked_add(file.size).ok_or("Переполнение размера необязательного источника")?;
                 if optional_bytes > MAX_SCAN_BYTES { return Err("Сканирование дополнительных источников миграции превышает лимит размера".into()) }
                 if locate_verified(&root, &layouts, file)?.is_some() { found.insert(path.clone()); }
             }

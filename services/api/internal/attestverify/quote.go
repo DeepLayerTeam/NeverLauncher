@@ -134,10 +134,10 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 		(b.Platform != "windows" && b.Platform != "linux") || p.Platform != b.Platform || p.ID == "" || !isSHA256(policyHash) ||
 		now.Before(b.IssuedAt.Add(-10*time.Second)) || !now.Before(b.ExpiresAt) || b.ExpiresAt.Sub(b.IssuedAt) > 2*time.Minute+time.Second ||
 		now.Before(p.NotBefore) || !now.Before(p.NotAfter) {
-		return fail("invalid/expired quote binding or PCR policy")
+		return fail("Недействительная или просроченная привязка TPM Quote либо политика PCR")
 	}
 	if len(p.PCRs) == 0 || len(p.PCRs) > 24 || len(e.PCRValues) != len(p.PCRs) {
-		return fail("PCR selection must exactly match policy")
+		return fail("Набор регистров PCR должен точно соответствовать политике")
 	}
 	indices := PCRIndices0315(p)
 	h := sha256.New()
@@ -145,7 +145,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 		k := strconv.Itoa(index)
 		got, ok := e.PCRValues[k]
 		if !ok || !isSHA256(got) || got != p.PCRs[k] {
-			return fail("PCR value not permitted by measured-boot policy")
+			return fail("Значение PCR запрещено политикой измеряемой загрузки")
 		}
 		raw, _ := hex.DecodeString(got)
 		h.Write(raw)
@@ -158,12 +158,12 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	cur := cursor{b: attest}
 	inner, err := cur.tpm2b(4096)
 	if err != nil || cur.end() != nil {
-		return fail("invalid TPM2B quote")
+		return fail("Недействительный TPM2B Quote")
 	}
 	q := cursor{b: inner}
 	magic, err := q.u32()
 	if err != nil {
-		return fail("truncated quote")
+		return fail("Неполные данные TPM Quote")
 	}
 	typ, err := q.u16()
 	if err != nil || magic != tpmMagic || typ != tpmQuote {
@@ -171,51 +171,51 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	}
 	_, err = q.tpm2b(128)
 	if err != nil {
-		return fail("bad quote signer")
+		return fail("Недействительная подпись TPM Quote")
 	}
 	qualifier, err := q.tpm2b(64)
 	if err != nil {
-		return fail("bad quote qualifier")
+		return fail("Недействительный квалификатор TPM Quote")
 	}
 	expected := ExpectedQuoteData0315(b, p.ID, policyHash)
 	if !bytes.Equal(qualifier, expected[:]) {
-		return fail("quote nonce/session/epoch/policy mismatch")
+		return fail("Несовпадение nonce, сеанса, эпохи или политики TPM Quote")
 	}
 	if err = verifyTPMClockInfo(&q); err != nil {
-		return fail("unsafe or truncated TPM Quote clock/firmware")
+		return fail("Небезопасные или неполные данные часов либо прошивки TPM Quote")
 	}
 	count, err := q.u32()
 	if err != nil || count != 1 {
-		return fail("quote must select exactly one PCR bank")
+		return fail("TPM Quote должен выбирать ровно один банк PCR")
 	}
 	alg, err := q.u16()
 	if err != nil || alg != tpmSHA256 {
-		return fail("quote must use SHA-256 PCR bank")
+		return fail("TPM Quote должен использовать банк PCR SHA-256")
 	}
 	sz, err := q.take(1)
 	if err != nil || len(sz) != 1 || sz[0] != 3 {
-		return fail("unsupported PCR select bitmap width")
+		return fail("Неподдерживаемая ширина битовой маски выбора PCR")
 	}
 	mask, err := q.take(3)
 	if err != nil {
-		return fail("missing PCR selection")
+		return fail("Не указан набор PCR")
 	}
 	var required [3]byte
 	for _, i := range indices {
 		if i < 0 || i >= 24 {
-			return fail("PCR index out of range")
+			return fail("Индекс PCR вне допустимого диапазона")
 		}
 		required[i/8] |= 1 << uint(i%8)
 	}
 	if !bytes.Equal(mask, required[:]) {
-		return fail("quoted PCR selection differs from policy")
+		return fail("Набор PCR в TPM Quote отличается от указанного в политике")
 	}
 	digest, err := q.tpm2b(64)
 	if err != nil || q.end() != nil {
-		return fail("invalid quote PCR digest")
+		return fail("Недействительный хеш PCR в TPM Quote")
 	}
 	if !bytes.Equal(digest, expectedDigest) {
-		return fail("quoted PCR digest does not match supplied selected PCR values")
+		return fail("Хеш PCR в TPM Quote не соответствует переданным значениям выбранных PCR")
 	}
 	sig, err := decode(e.TPMTSignature, 2048)
 	if err != nil {
@@ -227,7 +227,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	}
 	fp := Fingerprint(cert.Raw)
 	if cert.IsCA || cert.KeyUsage&x509.KeyUsageDigitalSignature == 0 || fp != pinned.AKFingerprint || !store.ActivePinned(pinned.RootID, pinned.RootFingerprint, fp, b.Platform, now) {
-		return fail("quote AK differs from active certified hardware identity")
+		return fail("Ключ AK в TPM Quote отличается от действующего сертифицированного аппаратного идентификатора")
 	}
 	if err = parseSignature(sig, cert.PublicKey, attest); err != nil {
 		return QuoteResult0315{}, err
@@ -245,7 +245,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 		}
 	}
 	if !rootMatched {
-		return fail("quote AK certificate chain no longer trusted")
+		return fail("Цепочка сертификатов AK для TPM Quote больше не является доверенной")
 	}
 	expiration := now.Add(5 * time.Minute) // краткосрочный объект; статус отзыва повторно проверяется при запросе состояния
 	if p.NotAfter.Before(expiration) {
@@ -258,7 +258,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 		expiration = cert.NotAfter
 	}
 	if !expiration.After(now) {
-		return fail("quote verification already expired")
+		return fail("Срок действия проверки TPM Quote уже истёк")
 	}
 	return QuoteResult0315{RootID: pinned.RootID, RootFingerprint: pinned.RootFingerprint, AKFingerprint: fp, PCRDigest: hex.EncodeToString(expectedDigest), PolicyID: p.ID, PolicyHash: policyHash, ExpiresAt: expiration}, nil
 }

@@ -184,7 +184,7 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 			continue
 		}
 		if int64(f.UncompressedSize64) > limit {
-			return nil, errors.New("source entry exceeds size limit")
+			return nil, errors.New("Элемент источника превышает ограничение размера")
 		}
 		r, e := f.Open()
 		if e != nil {
@@ -199,7 +199,7 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 			return nil, ce
 		}
 		if int64(len(b)) > limit {
-			return nil, errors.New("source entry exceeds limit")
+			return nil, errors.New("Элемент источника превышает допустимый предел")
 		}
 		return b, nil
 	}
@@ -229,7 +229,7 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string, exactLoaderVersion ...string) (Plan, error) {
 	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
 	if size != saved.SourceBytes || saved.ManifestSHA256 == "" {
-		return out, errors.New("unverified source snapshot")
+		return out, errors.New("Непроверенный снимок исходных данных")
 	}
 	if _, e := saved.Manifest(); e != nil {
 		return out, e

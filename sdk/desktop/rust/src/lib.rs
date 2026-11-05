@@ -20,8 +20,8 @@ pub struct RpcRequest {
 
 impl RpcRequest {
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self.protocol != DESKTOP_PROTOCOL_VERSION { return Err("unsupported desktop protocol"); }
-        if self.r#type != "rpc.request" || self.id.trim().is_empty() || self.method.trim().is_empty() { return Err("invalid desktop RPC request"); }
+        if self.protocol != DESKTOP_PROTOCOL_VERSION { return Err("Неподдерживаемый протокол Desktop"); }
+        if self.r#type != "rpc.request" || self.id.trim().is_empty() || self.method.trim().is_empty() { return Err("Недопустимый RPC-запрос Desktop"); }
         Ok(())
     }
 }

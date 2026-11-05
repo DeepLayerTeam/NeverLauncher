@@ -16,9 +16,9 @@ public final class GreetingExtension implements Extension {
         register(context, "formal", Terms::formal);
         String initial = context.runtime().config().get("spi.active", null)
                 .map(value -> {
-                    if (!(value instanceof String s)) throw new IllegalArgumentException("SPI config must be string");
+                    if (!(value instanceof String s)) throw new IllegalArgumentException("Конфигурация SPI должна быть строкой");
                     return s;
-                }).orElseThrow(() -> new IllegalStateException("persisted spi.active selection required"));
+                }).orElseThrow(() -> new IllegalStateException("Требуется сохранённое значение выбора spi.active"));
         context.providers().select(GREETINGS.id(), initial, Duration.ofSeconds(2));
         context.runtime().commands().register("greet", null, payload -> Json.object(payload), input -> {
             Object operation=input.getOrDefault("operation", "call");
@@ -42,7 +42,7 @@ public final class GreetingExtension implements Extension {
                         // Обнаружение сервисов в сторонних библиотеках использует TCCL.
                         if (!"example.terms.Terms".equals(Class.forName("example.terms.Terms", true,
                                 Thread.currentThread().getContextClassLoader()).getName()))
-                            throw new IllegalStateException("SPI dependency classloader mismatch");
+                            throw new IllegalStateException("Несоответствие загрузчика классов зависимости SPI");
                         live=true;
                     }
                     public void stop(ProviderContext p) { live=false; System.out.println("SPI_PROVIDER_STOP:" + id); }
@@ -56,6 +56,6 @@ public final class GreetingExtension implements Extension {
         stopped.set(true);
         System.out.println("SPI_EXTENSION_STOP");
         if(context.providers().selected(GREETINGS.id()).isEmpty())
-            throw new IllegalStateException("active SPI provider missing before graceful shutdown");
+            throw new IllegalStateException("Перед штатным завершением отсутствует активный провайдер SPI");
     }
 }

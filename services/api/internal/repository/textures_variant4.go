@@ -12,7 +12,7 @@ import (
 )
 
 var ErrTextureNotSelected0255 = errors.New("Текстура не выбрана")
-var ErrTextureInUse0255 = errors.New("texture is still selected")
+var ErrTextureInUse0255 = errors.New("Текстура всё ещё выбрана")
 
 // TextureSavedItem0255 — проверенный PNG конкретной учётной записи, а не
 // произвольный URL.

@@ -152,7 +152,7 @@ for path in (
     '"/api/v1/admin/extension-events/subscriptions"',
     '"/api/v1/admin/extension-events/dead-letters"',
 ):
-    require(path in openapi, f"OpenAPI missing {path}")
+    require(path in openapi, f"В OpenAPI отсутствует {path}")
 
 prod = read("cli/cmd/launcher/release_commands.go")
 for table in (

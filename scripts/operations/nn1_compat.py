@@ -188,7 +188,7 @@ def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
         fingerprints = tuple(contracts.get(k) for k in (
             "loadersSHA256", "runtimeRequirementsSHA256", "bridgeContractSHA256"))
         require(all(re.fullmatch(r"[0-9a-f]{64}", value or "") for value in fingerprints),
-                "invalid live API/Bridge contract fingerprint on " + label)
+                "Недопустимый отпечаток контракта действующих API/Bridge на " + label)
         require(observed_contracts is None or observed_contracts == fingerprints,
                 "running API/Bridge contracts differ between supported cohort versions")
         observed_contracts = fingerprints

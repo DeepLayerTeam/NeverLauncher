@@ -213,7 +213,7 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
     let end = identity
         .module_base
         .checked_add(identity.module_size as usize)
-        .ok_or_else(|| "Guard JVM-Aware Protection jvm.dll address range overflow".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection: переполнение диапазона адресов jvm.dll".to_string())?;
 
     let (sensor_base, sensor_end) = current_sensor_image_range()?;
     let system_dispatchers = resolve_system_dispatchers()?;
@@ -336,7 +336,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
         .map_err(|_| "Повреждена блокировка состояния защиты Guard для JVM".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "Guard JVM-Aware Protection is not initialized".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection не инициализирован".to_string())?;
     if !state.active || !state.healthy || !JVM_ACTIVE.load(Ordering::Acquire) {
         return Err("Защита Guard для JVM не активна или работает некорректно".to_string());
     }
@@ -398,10 +398,10 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     }
     let jvm_path = module_path(jvm_module)?;
     let jvm_dir = std::path::Path::new(&jvm_path).parent()
-        .ok_or_else(|| "Guard JVM-Aware Protection invalid jvm.dll directory".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection: недопустимый каталог jvm.dll".to_string())?;
     let jvm_dir_name = jvm_dir.file_name().and_then(|name| name.to_str()).unwrap_or("");
     let jvm_bin = jvm_dir.parent()
-        .ok_or_else(|| "Guard JVM-Aware Protection missing JVM bin directory".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection: отсутствует каталог bin JVM".to_string())?;
     if !(jvm_dir_name.eq_ignore_ascii_case("server") || jvm_dir_name.eq_ignore_ascii_case("client"))
         || !jvm_bin.file_name().and_then(|name| name.to_str()).unwrap_or("").eq_ignore_ascii_case("bin")
     {
@@ -515,7 +515,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         let _registration_guard = LWJGL_REGISTRATION_LOCK.lock()
             .map_err(|_| "Повреждена блокировка регистрации нативных модулей Guard".to_string())?;
         let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()
-            .ok_or_else(|| "Guard JVM-Aware missing pinned native launch root".to_string())?;
+            .ok_or_else(|| "Guard JVM-Aware: отсутствует закреплённый корневой каталог нативного запуска".to_string())?;
         let native_root = launch_root.join("natives").join("windows")
             .join(std::env::consts::ARCH);
         // Подготовленный классификатор Mojang LWJGL сохраняет структуру каталогов архива. Одобренный манифест Windows/x86_64 содержит natives/windows/x86_64/windows/x64/org/lwjgl/lwjgl.dll вместо старого плоского natives/windows/x86_64/lwjgl.dll. Разрешены только эти точные платформенные варианты, а не поиск по имени файла.
@@ -573,7 +573,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                     Err(err) => return Err(format!("Ошибка: «Guard JVM-Aware native path inspection»: {err}")),
                 }
                 component = component.parent()
-                    .ok_or_else(|| "Guard JVM-Aware invalid native directory ancestry".to_string())?;
+                    .ok_or_else(|| "Guard JVM-Aware: недопустимая иерархия нативных каталогов".to_string())?;
             }
             if !safe { continue; }
             let expected_path = std::fs::canonicalize(expected)
@@ -589,7 +589,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         let matched = matched.ok_or_else(|| {
             let location = canonical_path.strip_prefix(launch_root)
                 .map(|relative| relative.to_string_lossy().chars().take(180).collect::<String>())
-                .unwrap_or_else(|_| "outside pinned client root".to_string());
+                .unwrap_or_else(|_| "За пределами закреплённого корневого каталога клиента".to_string());
             format!("LWJGL загружен вне сертифицированного каталога нативных библиотек ({location})")
         })?;
         let metadata = std::fs::symlink_metadata(&loaded)
@@ -604,7 +604,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         }
         let base = info.base_of_dll as usize;
         let end = base.checked_add(info.size_of_image as usize)
-            .ok_or_else(|| "Guard JVM-Aware LWJGL module address overflow".to_string())?;
+            .ok_or_else(|| "Guard JVM-Aware: переполнение адреса модуля LWJGL".to_string())?;
         let bytes = std::fs::read(&canonical_path)
             .map_err(|err| format!("Guard для JVM: запрещено «hash LWJGL image:» {err}"))?;
         let mut file_sha256 = [0u8; 32];
@@ -620,7 +620,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                     return Err("Проверенный путь LWJGL содержит символическую ссылку или точку повторного разбора".to_string());
                 }
                 current = current.parent().ok_or_else(||
-                    "Guard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
+                    "Guard JVM-Aware: недопустимая иерархия сертифицированного LWJGL".to_string())?;
             }
             let canonical_certified = std::fs::canonicalize(certified)
                 .map_err(|err| format!("Guard для JVM: запрещено «canonicalize certified LWJGL:» {err}"))?;
@@ -841,7 +841,7 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
     let base = info.base_of_dll as usize;
     let end = base
         .checked_add(info.size_of_image as usize)
-        .ok_or_else(|| "Guard JVM-Aware Protection Sensor address range overflow".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection: переполнение диапазона адресов датчика".to_string())?;
     Ok((base, end))
 }
 
@@ -874,7 +874,7 @@ fn count_private_executable_regions() -> Result<u32, String> {
         }
         let next = base
             .checked_add(size)
-            .ok_or_else(|| "Guard JVM-Aware Protection address-space overflow".to_string())?;
+            .ok_or_else(|| "Guard JVM-Aware Protection: переполнение адресного пространства".to_string())?;
         if next <= cursor {
             return Err("VirtualQuery не перешёл к следующей области при проверке Guard для JVM".to_string());
         }

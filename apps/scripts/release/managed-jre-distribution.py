@@ -110,7 +110,7 @@ def resolve_asset(major: int, vendor_os: str, vendor_arch: str) -> dict:
                 }
         except (KeyError, TypeError, ValueError):
             continue
-    die(f"Adoptium did not return Temurin JRE {major} for {vendor_os}/{vendor_arch}")
+    die(f"Adoptium не предоставил Temurin JRE {major} для {vendor_os}/{vendor_arch}")
 
 
 def sha256_file(path: Path) -> tuple[str, int]:

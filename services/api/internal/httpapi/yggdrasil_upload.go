@@ -78,7 +78,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if r.ContentLength > maxMultipartTexture0252 {
-		writeYggdrasilError119(w, http.StatusRequestEntityTooLarge, "PNG too large")
+		writeYggdrasilError119(w, http.StatusRequestEntityTooLarge, "Файл PNG слишком велик")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartTexture0252)
@@ -136,12 +136,12 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 			}
 		default:
 			part.Close()
-			writeYggdrasilError119(w, http.StatusBadRequest, "Unknown multipart field")
+			writeYggdrasilError119(w, http.StatusBadRequest, "Неизвестное поле составного запроса")
 			return
 		}
 		part.Close()
 		if i == 3 {
-			writeYggdrasilError119(w, http.StatusBadRequest, "Too many multipart parts")
+			writeYggdrasilError119(w, http.StatusBadRequest, "Слишком много частей составного запроса")
 			return
 		}
 	}

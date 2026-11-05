@@ -83,7 +83,7 @@ func newProfile(name string) (uintptr, string, error) {
 		r, _, _ = deriveSID.Call(uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(&sid)))
 	}
 	if r != 0 || sid == 0 {
-		return 0, "", fmt.Errorf("CreateAppContainerProfile/Derive SID: HRESULT 0x%x", r)
+		return 0, "", fmt.Errorf("CreateAppContainerProfile/Derive SID: код HRESULT 0x%x", r)
 	}
 	var p *uint16
 	ok, _, err := convertSID.Call(sid, uintptr(unsafe.Pointer(&p)))

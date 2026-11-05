@@ -260,9 +260,9 @@ def main(argv=None):
     p.add_argument("--mode", choices=["prepare", "import"], default="prepare")
     p.add_argument("--password-format", default="", help="Явно указанный поддерживаемый формат проверки FileAuth")
     p.add_argument("--allow-manual-resets", action="store_true")
-    p.add_argument("--fresh-keys-confirmed", action="store_true", help="operator confirms independently provisioned Never signing/JWT keys")
-    p.add_argument("--roles-file", help="approved explicit UUID->project role grants (import only, recent passkey MFA required)")
-    p.add_argument("--texture-mapping-output", help="verified UUID map for gravit-textures-import-02510 (import only)")
+    p.add_argument("--fresh-keys-confirmed", action="store_true", help="Оператор подтверждает независимое создание ключей подписи Never и JWT")
+    p.add_argument("--roles-file", help="Одобренные явные назначения ролей UUID → проект (только импорт, требуется недавняя MFA через passkey)")
+    p.add_argument("--texture-mapping-output", help="Проверенная карта UUID для gravit-textures-import-02510 (только импорт)")
     p.add_argument("--receipt", required=True)
     args = p.parse_args(argv)
     if not RUN_ID.fullmatch(args.run_id):

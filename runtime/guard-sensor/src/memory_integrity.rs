@@ -242,7 +242,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
         .map_err(|_| "Повреждена блокировка состояния контроля памяти Guard".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "Guard Memory Integrity is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Memory Integrity не инициализирован".to_string())?;
     if !state.active || !state.healthy {
         return Err("Контроль целостности памяти Guard не активен или работает некорректно".to_string());
     }
@@ -336,7 +336,7 @@ pub fn drain_pending_transitions() -> Result<(), String> {
         .map_err(|_| "Повреждена блокировка состояния контроля памяти Guard".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "Guard Memory Integrity is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Memory Integrity не инициализирован".to_string())?;
     if !state.active || !state.healthy {
         return Err("Контроль целостности памяти Guard не активен или работает некорректно".to_string());
     }
@@ -420,7 +420,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
         }
         let next = base
             .checked_add(size)
-            .ok_or_else(|| "Guard Memory Integrity address-space overflow".to_string())?;
+            .ok_or_else(|| "Guard Memory Integrity: переполнение адресного пространства".to_string())?;
         if next <= cursor {
             return Err("VirtualQuery не перешёл к следующей области при проверке памяти Guard".to_string());
         }

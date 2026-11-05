@@ -1911,7 +1911,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			continue
 		}
 		if len(processor.Outputs) > 0 && !allReady || (len(processor.Outputs) > 0 && allReady && !entryMatches) {
-			if err := quarantineProcessorOutputs(pc, processor, fmt.Sprintf("processor[%d] journal recovery found incomplete or corrupt outputs", index)); err != nil {
+			if err := quarantineProcessorOutputs(pc, processor, fmt.Sprintf("При восстановлении журнала процессора [%d] обнаружены неполные или повреждённые результаты", index)); err != nil {
 				return stats, fmt.Errorf("Процессор [%d]: ошибка очистки при восстановлении: %w", index, err)
 			}
 		}

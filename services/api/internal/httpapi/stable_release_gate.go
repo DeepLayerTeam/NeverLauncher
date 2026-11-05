@@ -66,7 +66,7 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 		c.TargetBlockers[t.ID] = "Отсутствует соответствующая подписанная аттестация Runtime"
 	}
 	if !validationHex0345.MatchString(s.Config.ValidationTrustedRunnerImageSHA2560345) {
-		return block("trusted OCI runner image not pinned")
+		return block("Доверенный OCI-образ среды выполнения не закреплён по версии")
 	}
 	if _, e = validationKeyFingerprint0346(s.Config.ValidationAttestationPublicKey0345); e != nil {
 		return block("Отсутствует доверенный открытый ключ аттестации")

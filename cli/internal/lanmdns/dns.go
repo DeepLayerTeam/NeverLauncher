@@ -180,7 +180,7 @@ func decodeTXT(data []byte) (map[string]string, error) {
 		n := int(data[0])
 		data = data[1:]
 		if n > len(data) {
-			return nil, errors.New("short TXT")
+			return nil, errors.New("Слишком короткая запись TXT")
 		}
 		entry := string(data[:n])
 		data = data[n:]

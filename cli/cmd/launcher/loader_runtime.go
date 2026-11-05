@@ -560,7 +560,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 	for index, target := range selectedTargets {
 		normalized, err := normalizeVanillaTarget(target)
 		if err != nil {
-			return nil, fmt.Errorf("loader target[%d]: %w", index, err)
+			return nil, fmt.Errorf("Целевая конфигурация загрузчика [%d]: %w", index, err)
 		}
 		selectedTargets[index] = normalized
 	}

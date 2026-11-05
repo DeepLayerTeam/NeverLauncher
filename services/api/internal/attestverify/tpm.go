@@ -61,7 +61,7 @@ type cursor struct {
 
 func (c *cursor) take(n int) ([]byte, error) {
 	if n < 0 || n > len(c.b)-c.pos {
-		return nil, errors.New("truncated TPM structure")
+		return nil, errors.New("Неполная структура TPM")
 	}
 	v := c.b[c.pos : c.pos+n]
 	c.pos += n
@@ -93,7 +93,7 @@ func (c *cursor) tpm2b(max int) ([]byte, error) {
 }
 func (c *cursor) end() error {
 	if c.pos != len(c.b) {
-		return errors.New("trailing TPM bytes")
+		return errors.New("Лишние байты после структуры TPM")
 	}
 	return nil
 }
@@ -336,16 +336,16 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 func Verify(e Evidence, b Binding, store *Store, now time.Time) (Result, error) {
 	fail := func(msg string) (Result, error) { return Result{}, errors.New(msg) }
 	if store == nil {
-		return fail("TPM AK trust roots unavailable")
+		return fail("Недоступны корневые сертификаты доверия TPM AK")
 	}
 	if b.UserID == "" || b.DeviceID == "" || b.SessionID == "" || b.BindingEpoch < 1 || b.ChallengeID == "" || len(b.Challenge) < 32 || b.Platform != "windows" && b.Platform != "linux" {
-		return fail("incomplete TPM challenge binding")
+		return fail("Неполная привязка запроса проверки TPM")
 	}
 	if now.Before(b.IssuedAt.Add(-10*time.Second)) || !now.Before(b.ExpiresAt) || b.ExpiresAt.Sub(b.IssuedAt) > 2*time.Minute+time.Second {
-		return fail("expired/invalid attestation challenge")
+		return fail("Запрос аттестации недействителен или срок его действия истёк")
 	}
 	if len(b.DevicePublicKey) != 65 || b.DevicePublicKey[0] != 4 {
-		return fail("registered key must be P-256 SEC1")
+		return fail("Зарегистрированный ключ должен иметь формат P-256 SEC1")
 	}
 	tpmPub, err := decode(e.TPM2BPublic, 4098)
 	if err != nil {
@@ -356,7 +356,7 @@ func Verify(e Evidence, b Binding, store *Store, now time.Time) (Result, error) 
 		return Result{}, err
 	}
 	if !bytes.Equal(key, b.DevicePublicKey) {
-		return fail("certified public key does not match registered device")
+		return fail("Сертифицированный открытый ключ не соответствует зарегистрированному устройству")
 	}
 	attest, err := decode(e.TPM2BAttest, 4098)
 	if err != nil {
@@ -374,11 +374,11 @@ func Verify(e Evidence, b Binding, store *Store, now time.Time) (Result, error) 
 		return Result{}, err
 	}
 	if cert.IsCA || cert.KeyUsage&x509.KeyUsageDigitalSignature == 0 {
-		return fail("AK certificate must be a non-CA signing certificate")
+		return fail("Сертификат AK должен быть сертификатом подписи, а не удостоверяющего центра")
 	}
 	fp := Fingerprint(cert.Raw)
 	if store.revokedAK[fp] {
-		return fail("AK certificate revoked")
+		return fail("Сертификат AK отозван")
 	}
 	if err = parseSignature(signature, cert.PublicKey, attest); err != nil {
 		return Result{}, err
@@ -402,5 +402,5 @@ func Verify(e Evidence, b Binding, store *Store, now time.Time) (Result, error) 
 		}
 		return Result{RootID: root.ID, RootFingerprint: root.fingerprint, AKFingerprint: fp, ExpiresAt: expires}, nil
 	}
-	return fail("no trusted, active AK certificate chain")
+	return fail("Отсутствует доверенная действующая цепочка сертификатов AK")
 }

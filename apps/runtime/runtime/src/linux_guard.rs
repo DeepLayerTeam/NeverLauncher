@@ -477,7 +477,7 @@ async fn serve_commands(
         if shutdown {
             return Ok(());
         }
-        sequence = sequence.checked_add(1).ok_or("sequence exhausted")?;
+        sequence = sequence.checked_add(1).ok_or("Исчерпана последовательность")?;
     }
 }
 

@@ -40,7 +40,7 @@ func (r *Repository) preflightLegacy0472(ctx context.Context, version int) error
 				var kind string
 				err := q.QueryRowContext(ctx, `SELECT type FROM sqlite_master WHERE name=?`, name).Scan(&kind)
 				if err != nil || kind != "table" {
-					return fmt.Errorf("sqlite core legacy %d missing expected table %s: %v", version, name, err)
+					return fmt.Errorf("В прежней схеме SQLite %d отсутствует ожидаемая таблица %s: %v", version, name, err)
 				}
 			}
 		}
@@ -80,7 +80,7 @@ func (r *Repository) preflightLegacy0472(ctx context.Context, version int) error
 			}
 			for name, typ := range cols {
 				if found[name] != typ {
-					return fmt.Errorf("sqlite core %d incompatible %s.%s: got %q", version, table, name, found[name])
+					return fmt.Errorf("Схема SQLite %d несовместима с %s.%s: получено %q", version, table, name, found[name])
 				}
 			}
 		}
@@ -132,10 +132,10 @@ func coreRecordPreflight0472(ctx context.Context, q sqlitedurable.Executor) erro
 	for _, stmt := range checks {
 		var n int
 		if err := q.QueryRowContext(ctx, stmt).Scan(&n); err != nil {
-			return fmt.Errorf("sqlite core legacy records check: %w", err)
+			return fmt.Errorf("Проверка записей старой схемы SQLite: %w", err)
 		}
 		if n != 0 {
-			return fmt.Errorf("sqlite core legacy records inconsistent (%d): %s", n, stmt)
+			return fmt.Errorf("Несогласованные записи старой схемы SQLite (%d): %s", n, stmt)
 		}
 	}
 	return nil
@@ -173,7 +173,7 @@ func applyCoreDDL0472(ctx context.Context, q sqlitedurable.Executor, stmt string
 			return strings.ToLower(strings.Join(strings.Fields(strings.TrimSuffix(strings.TrimSpace(s), ";")), ""))
 		}
 		if normalize(existing) != normalize(stmt) {
-			return fmt.Errorf("sqlite core schema drift at %s", name)
+			return fmt.Errorf("Обнаружено расхождение схемы SQLite в %s", name)
 		}
 		return nil
 	}

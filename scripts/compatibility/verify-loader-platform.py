@@ -22,9 +22,9 @@ def load(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        fail(f"cannot read {path}: {exc}")
+        fail(f"Не удалось прочитать {path}: {exc}")
     if not isinstance(value, dict):
-        fail(f"{path} must contain an object")
+        fail(f"Файл {path} должен содержать объект")
     return value
 
 
@@ -44,11 +44,11 @@ def main() -> int:
     os_name = args.os_name.strip().lower()
     arch = args.arch.strip().lower()
     if loader not in ALLOWED_LOADERS:
-        fail(f"unsupported loader {loader!r}")
+        fail(f"Неподдерживаемый загрузчик {loader!r}")
     if os_name not in ALLOWED_OS:
         fail(f"unsupported OS {os_name!r}")
     if arch not in ALLOWED_ARCH:
-        fail(f"unsupported architecture {arch!r}")
+        fail(f"Неподдерживаемая архитектура {arch!r}")
 
     install = load(args.install)
     cert = load(args.certification)
@@ -56,20 +56,20 @@ def main() -> int:
         install.get("status") != "installed-and-verified"
         or install.get("loader") != loader
     ):
-        fail("loader install evidence is not installed-and-verified")
+        fail("Свидетельство установки загрузчика не подтверждает состояние «установлен и проверен»")
     if cert.get("status") != "passed":
-        fail("Runtime certification did not pass")
+        fail("Сертификация Runtime не пройдена")
 
     vanilla = install.get("vanilla")
     if (
         not isinstance(vanilla, dict)
         or vanilla.get("status") != "installed-and-verified"
     ):
-        fail("embedded Vanilla materialization evidence is missing")
+        fail("Отсутствует свидетельство подготовки встроенного Vanilla")
     internal_os = "osx" if os_name == "macos" else os_name
     targets = vanilla.get("targets")
     if not isinstance(targets, list):
-        fail("Vanilla target evidence is missing")
+        fail("Отсутствует свидетельство целевой конфигурации Vanilla")
     expected_target = {"os": internal_os, "arch": arch}
     normalized_targets = [
         {"os": str(row.get("os", "")), "arch": str(row.get("arch", ""))}
@@ -83,7 +83,7 @@ def main() -> int:
 
     files = vanilla.get("files")
     if not isinstance(files, list):
-        fail("Vanilla file evidence is missing")
+        fail("Отсутствует свидетельство файла Vanilla")
     prefix = f"natives/{internal_os}/{arch}/"
     native_rows: list[dict[str, Any]] = []
     for row in files:
@@ -96,12 +96,12 @@ def main() -> int:
             )
         sha = str(row.get("sha256", "")).lower()
         if not SHA256_RE.fullmatch(sha):
-            fail(f"native file {path!r} has invalid SHA-256")
+            fail(f"У нативного файла {path!r} недопустимый SHA-256")
         native_rows.append(
             {"path": path, "size": int(row.get("size") or 0), "sha256": sha}
         )
     if not native_rows:
-        fail(f"no materialized native files found below {prefix}")
+        fail(f"В каталоге {prefix} не найдены подготовленные нативные файлы")
 
     expected_suffix = f"/natives/{internal_os}/{arch}".lower()
     actual_natives = (
@@ -112,7 +112,7 @@ def main() -> int:
             f"Runtime selected nativesDirectory={actual_natives!r}, expected suffix {expected_suffix!r}"
         )
     if int(cert.get("classpathEntries") or 0) <= 0:
-        fail("Runtime classpath is empty")
+        fail("Путь классов Runtime пуст")
 
     native_rows.sort(key=lambda row: row["path"])
     identity = hashlib.sha256()

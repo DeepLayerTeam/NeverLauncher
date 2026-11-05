@@ -288,7 +288,7 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 		return report, err
 	}
 	if err = tx.Commit(); err != nil {
-		return report, fmt.Errorf("security reset commit uncertain; query receipt before any retry: %w", err)
+		return report, fmt.Errorf("Подтверждение сброса безопасности не определено; перед повтором запросите квитанцию: %w", err)
 	}
 	return report, nil
 }

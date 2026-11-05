@@ -85,7 +85,7 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 				healthy++
 			}
 		}
-		checks["federation"] = fmt.Sprintf("%d/%d providers healthy", healthy, len(health))
+		checks["federation"] = fmt.Sprintf("Работоспособных провайдеров: %d из %d", healthy, len(health))
 		if len(health) == 0 || healthy == 0 {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "Нет исправного провайдера аутентификации"})
 			return

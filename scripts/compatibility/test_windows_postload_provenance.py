@@ -295,7 +295,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn("check_verified_lwjgl_image(native)?;", source)
         self.assertIn("too many verified LWJGL modules", source)
         self.assertIn("rejected reparse/symlink native path", source)
-        self.assertIn("outside pinned client root", source)
+        self.assertIn("За пределами закреплённого корневого каталога клиента", source)
         self.assertIn("RUNTIME_NATIVE_LOAD_FAILED.store(true", source)
         launch = (ROOT / "runtime/runtime/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("compatibility::pin_windows_lwjgl_extract_path(", launch)

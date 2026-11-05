@@ -114,7 +114,7 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 				quarantineErr = errors.Join(quarantineErr, idErr)
 				continue
 			}
-			if _, qerr := s.Repo.SaveExtensionQuarantine(r.Context(), model.ExtensionQuarantineEntry{ID: id, PackageIdentity: item.Artifact.PackageIdentity, ArtifactSHA256: item.Artifact.SHA256, ExtensionID: item.ExtensionID, Version: item.Version, PublisherID: item.PublisherID, KeyFingerprint: fingerprint, Reason: "publisher signing key revoked", StorageProject: item.Artifact.StorageProject, StorageVersion: item.Artifact.StorageVersion, StoragePath: item.Artifact.StoragePath}); qerr != nil {
+			if _, qerr := s.Repo.SaveExtensionQuarantine(r.Context(), model.ExtensionQuarantineEntry{ID: id, PackageIdentity: item.Artifact.PackageIdentity, ArtifactSHA256: item.Artifact.SHA256, ExtensionID: item.ExtensionID, Version: item.Version, PublisherID: item.PublisherID, KeyFingerprint: fingerprint, Reason: "Ключ подписи издателя отозван", StorageProject: item.Artifact.StorageProject, StorageVersion: item.Artifact.StorageVersion, StoragePath: item.Artifact.StoragePath}); qerr != nil {
 				quarantineErr = errors.Join(quarantineErr, fmt.Errorf("quarantine %s@%s: %w", item.ExtensionID, item.Version, qerr))
 			}
 		}

@@ -284,10 +284,10 @@ def main() -> int:
         description="Собрать перенесённый вручную Java-модуль Gravit в исполняемое расширение"
     )
     parser.add_argument(
-        "--source", type=Path, required=True, help="directory with ported .java sources"
+        "--source", type=Path, required=True, help="Каталог с перенесёнными исходниками .java"
     )
     parser.add_argument(
-        "--module-class", required=True, help="concrete LauncherModule FQCN"
+        "--module-class", required=True, help="Полное имя класса конкретного LauncherModule"
     )
     parser.add_argument(
         "--manifest",

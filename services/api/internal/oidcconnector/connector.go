@@ -406,7 +406,7 @@ func (c *Connector) doJSON(req *http.Request, out any) error {
 		return authconnector.NewError(authconnector.ErrUnavailable, "OIDC upstream response exceeds configured limit")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return authconnector.NewError(authconnector.ErrUnavailable, fmt.Sprintf("OIDC upstream returned HTTP %d", resp.StatusCode))
+		return authconnector.NewError(authconnector.ErrUnavailable, fmt.Sprintf("Внешний провайдер OIDC вернул HTTP %d", resp.StatusCode))
 	}
 	ct := strings.ToLower(resp.Header.Get("Content-Type"))
 	if ct != "" && !strings.Contains(ct, "application/json") && !strings.Contains(ct, "+json") {

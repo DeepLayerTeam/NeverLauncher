@@ -51,7 +51,7 @@ $allowed = @($me, 'S-1-5-18')
 $ownerRule = $false
 foreach ($rule in $acl.Access) {
     $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
-    if ($allowed -notcontains $sid) { throw ('node identity ACL contains another principal: ' + $sid) }
+    if ($allowed -notcontains $sid) { throw ('ACL идентификатора узла содержит другого субъекта: ' + $sid) }
     if ($sid -eq $me -and $rule.AccessControlType -eq 'Allow') { $ownerRule = $true }
 }
 if (-not $ownerRule) { throw 'node identity ACL does not grant access to current user' }

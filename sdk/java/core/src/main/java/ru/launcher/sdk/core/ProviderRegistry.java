@@ -64,7 +64,7 @@ public final class ProviderRegistry implements AutoCloseable {
             SemVer api = SemVer.parse(manifest.api() + (manifest.api().chars().filter(c -> c == '.').count() == 1 ? ".0" : ""));
             if (!descriptor.service().version().matches(descriptor.supportedSpi()) ||
                     !api.matches(descriptor.supportedExtensionApi()))
-                throw new CompatibilityException("incompatible SPI/API: " + descriptor.id());
+                throw new CompatibilityException("Несовместимые версии SPI/API: " + descriptor.id());
             slot.candidates.put(descriptor.id(), descriptor);
         }
     }
@@ -126,7 +126,7 @@ public final class ProviderRegistry implements AutoCloseable {
             if (abandon) {
                 try { invokeLifecycle(next, false, context(serviceId, providerId, until), until); }
                 catch (Exception ignored) { /* контроллер процессов обеспечивает окончательное принудительное завершение */ }
-                throw new CancellationException("SPI registry closed during selection");
+                throw new CancellationException("Реестр SPI закрыт во время выбора");
             }
             return new Selection(serviceId, providerId, choice.version());
         } finally {
@@ -141,7 +141,7 @@ public final class ProviderRegistry implements AutoCloseable {
             requireOpen();
             if (switching) throw new IllegalStateException("Выполняется переключение службы SPI");
             ServiceSlot slot = services.get(service.id());
-            if (slot == null || !slot.contract.equals(service)) throw new CompatibilityException("SPI contract mismatch: " + service.id());
+            if (slot == null || !slot.contract.equals(service)) throw new CompatibilityException("Несоответствие контракта SPI: " + service.id());
             if (slot.active == null) throw new IllegalStateException("Провайдер SPI не выбран: " + service.id());
             selected = service.type().cast(slot.active.provider);
             inflight++;
@@ -166,7 +166,7 @@ public final class ProviderRegistry implements AutoCloseable {
         }
         if (joinExisting) {
             if (!terminated.await(remaining(until), TimeUnit.NANOSECONDS))
-                throw new TimeoutException("concurrent SPI shutdown deadline exceeded");
+                throw new TimeoutException("Превышено время ожидания одновременного завершения SPI");
             if (shutdownFailure != null) throw new IllegalStateException("Предыдущее завершение SPI завершилось ошибкой", shutdownFailure);
             return;
         }
@@ -217,7 +217,7 @@ public final class ProviderRegistry implements AutoCloseable {
     private JavaProvider construct(ProviderDescriptor<?> descriptor, long until) throws Exception {
         JavaProvider value = bounded(() -> descriptor.factory().get(), until, descriptor.service().type().getClassLoader());
         if (value == null || !descriptor.service().type().isInstance(value))
-            throw new CompatibilityException("factory returned incompatible SPI implementation: " + descriptor.id());
+            throw new CompatibilityException("Фабрика вернула несовместимую реализацию SPI: " + descriptor.id());
         return value;
     }
     private void invokeLifecycle(JavaProvider provider, boolean start, ProviderContext context, long until) throws Exception {
@@ -239,7 +239,7 @@ public final class ProviderRegistry implements AutoCloseable {
             }
         });
         try { return work.get(remaining(until), TimeUnit.NANOSECONDS); }
-        catch (TimeoutException e) { work.cancel(true); throw new TimeoutException("SPI callback deadline exceeded"); }
+        catch (TimeoutException e) { work.cancel(true); throw new TimeoutException("Превышено время выполнения обратного вызова SPI"); }
         catch (InterruptedException e) { work.cancel(true); Thread.currentThread().interrupt(); throw e; }
         catch (ExecutionException e) {
             Throwable cause = e.getCause();
@@ -253,7 +253,7 @@ public final class ProviderRegistry implements AutoCloseable {
     }
     private static long remaining(long until) throws TimeoutException {
         long left = until - System.nanoTime();
-        if (left <= 0) throw new TimeoutException("SPI operation deadline exceeded");
+        if (left <= 0) throw new TimeoutException("Превышено время выполнения операции SPI");
         return left;
     }
     private static long deadline(Duration timeout) { return System.nanoTime() + timeout.toNanos(); }

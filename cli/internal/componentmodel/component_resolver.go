@@ -65,7 +65,7 @@ type ResolutionError0243 struct {
 }
 
 func (e *ResolutionError0243) Error() string {
-	return fmt.Sprintf("component resolution [%s]: %s", e.Code, e.Detail)
+	return fmt.Sprintf("Разрешение компонента [%s]: %s", e.Code, e.Detail)
 }
 func resolutionError0243(code, component, related, explanation string) error {
 	return &ResolutionError0243{Code: code, Component: component, Related: related, Detail: explanation}

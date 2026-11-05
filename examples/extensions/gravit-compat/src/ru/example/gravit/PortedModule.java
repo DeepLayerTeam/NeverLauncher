@@ -12,14 +12,14 @@ public final class PortedModule extends LauncherModule implements AutoCloseable 
     private GravitInitContext context;
     public PortedModule(){super(new LauncherModuleInfoBuilder().setName("PortedAudit").setVersion(new Version(1,0,0,0,Version.Type.LTS)).createLauncherModuleInfo());}
     @Override public void init(LauncherInitContext initContext){
-        if(!(initContext instanceof GravitInitContext ctx))throw new IllegalStateException("Launcher context required");
+        if(!(initContext instanceof GravitInitContext ctx))throw new IllegalStateException("Требуется контекст Launcher");
         context=ctx;
         if("backend".equals(System.getenv("LAUNCHER_EXTENSION_TARGET")))registerEvent(this::onRelease,ReleasePublishedEvent.class);
         modulesManager.getCommandHandler().registerCommand("status",new Command(){
             @Override public String getArgsDescription(){return "";}
             @Override public String getUsageDescription(){return "Reports the latest release event";}
             @Override public void invoke(String... args)throws Exception {
-                if(args.length!=0)throw new IllegalArgumentException("status takes no arguments");
+                if(args.length!=0)throw new IllegalArgumentException("Команда status не принимает аргументов");
                 Object state=ctx.extension().runtime().storage().get("last-release",null).orElse(Map.of());
                 // Вызов Gravit void invoke() преобразуется в структурированный ответ Extensions CLI.
                 CommandHandler.respond(Map.of("latestRelease",state));

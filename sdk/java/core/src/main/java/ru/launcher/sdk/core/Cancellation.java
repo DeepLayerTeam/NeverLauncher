@@ -8,7 +8,7 @@ public final class Cancellation implements AutoCloseable {
     private boolean cancelled;
     private final List<Runnable> listeners=new ArrayList<>();
     public boolean isCancelled(){synchronized(this){return cancelled;}}
-    public void throwIfCancelled(){if(isCancelled())throw new CancellationException("extension operation cancelled");}
+    public void throwIfCancelled(){if(isCancelled())throw new CancellationException("Операция расширения отменена");}
     public AutoCloseable onCancel(Runnable callback){
         Objects.requireNonNull(callback);
         synchronized(this){if(!cancelled){listeners.add(callback);return ()->{synchronized(this){listeners.remove(callback);}};}}

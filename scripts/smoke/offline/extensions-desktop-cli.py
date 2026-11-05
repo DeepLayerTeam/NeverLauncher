@@ -118,5 +118,5 @@ for path in (
     '"/api/v1/admin/extension-cli/catalog"',
     '"/api/v1/admin/extension-cli/{extensionId}/invoke"',
 ):
-    require(path in openapi, f"OpenAPI missing {path}")
+    require(path in openapi, f"В OpenAPI отсутствует {path}")
 print("Extensions Desktop & CLI Extensions 0.20.9 production gate: OK")

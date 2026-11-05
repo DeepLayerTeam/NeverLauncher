@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	ErrDurableLeaseLost   = errors.New("sqlite durable: lease expired, revoked or superseded")
-	ErrDurableLeaseBusy   = errors.New("sqlite durable: lease held by another owner")
-	ErrDurableIdempotency = errors.New("sqlite durable: idempotency key reused with different operation")
-	ErrDurableState       = errors.New("sqlite durable: illegal state transition")
+	ErrDurableLeaseLost   = errors.New("SQLite: срок аренды истёк, аренда отозвана или заменена")
+	ErrDurableLeaseBusy   = errors.New("SQLite: аренда принадлежит другому владельцу")
+	ErrDurableIdempotency = errors.New("SQLite: ключ идемпотентности повторно использован для другой операции")
+	ErrDurableState       = errors.New("SQLite: недопустимый переход состояния")
 )
 
 func durableNS() int64 { return time.Now().UTC().UnixNano() }

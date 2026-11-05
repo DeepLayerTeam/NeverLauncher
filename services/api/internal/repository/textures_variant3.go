@@ -77,7 +77,7 @@ func (r *SQLRepository) FinishTextureGarbage0253(ctx context.Context, digest str
 		return err
 	}
 	if n != 1 {
-		return fmt.Errorf("texture GC lease no longer valid for %s", digest)
+		return fmt.Errorf("Аренда сборщика мусора текстур больше недействительна для %s", digest)
 	}
 	return nil
 }

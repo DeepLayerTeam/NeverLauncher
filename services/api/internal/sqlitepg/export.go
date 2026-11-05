@@ -61,7 +61,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	var rawReport, rawManifest []byte
 	err = tx.QueryRow(ctx, `SELECT id,report,backup_manifest FROM `+qualified("migration_receipt")).Scan(&receiptID, &rawReport, &rawManifest)
 	if err != nil {
-		return out, fmt.Errorf("verified import receipt absent: %w", err)
+		return out, fmt.Errorf("Отсутствует подтверждённая квитанция импорта: %w", err)
 	}
 	if err = json.Unmarshal(rawReport, &out); err != nil {
 		return out, err

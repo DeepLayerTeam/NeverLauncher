@@ -167,7 +167,7 @@ mod imp {
                     // проверенный корень явно, не через контролируемую JVM или модом
                     // переменную окружения.
                     let root = verified_root.or_else(|| command.as_std().get_current_dir())
-                        .ok_or("Guard compatibility Java agent requires an explicit game root")?;
+                        .ok_or("Java-агент совместимости Guard требует явного корневого каталога игры")?;
                     if crate::guard_compatibility_0502::authorize_agent(root, &argument)? {
                         continue;
                     }
@@ -297,7 +297,7 @@ mod imp {
             let runtime_policy = self
                 .runtime_policy
                 .take()
-                .ok_or_else(|| "Guard Thread & Process Integrity requires runtime Job Object policy binding".to_string())?;
+                .ok_or_else(|| "Guard Thread & Process Integrity требует привязки политики Runtime Job Object".to_string())?;
             let mut module_secret = [0u8; 32];
             std::mem::swap(&mut module_secret, &mut self.secret);
             let module_guard = arm_module_guard(

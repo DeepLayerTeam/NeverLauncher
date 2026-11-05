@@ -52,12 +52,12 @@ def fail(message: str) -> None:
 def check_exists(ref: str, field: str, req_id: str) -> None:
     path = ROOT / ref
     if not path.is_file():
-        fail(f"{req_id} {field} does not exist: {ref}")
+        fail(f"Для требования {req_id} отсутствует поле {field}: {ref}")
 
 
 def validate_registry(doc: dict) -> None:
     if doc.get("schemaVersion") != "1.0" or doc.get("productVersion") != "0.21.1":
-        fail("lock schema/product version mismatch")
+        fail("Несоответствие версии схемы фиксации и версии продукта")
     try:
         version = tuple(
             int(x)
@@ -67,9 +67,9 @@ def validate_registry(doc: dict) -> None:
             .split(".")[:3]
         )
     except ValueError:
-        fail("VERSION is not semantic version")
+        fail("VERSION не соответствует семантическому версионированию")
     if version < (0, 21, 1):
-        fail("VERSION must be 0.21.1 or newer")
+        fail("VERSION должна быть не ниже 0.21.1")
 
     expected = [f"G{i:02d}" for i in range(1, 36)] + [f"M{i:02d}" for i in range(1, 20)]
     rows = doc.get("requirements") or []
@@ -85,22 +85,22 @@ def validate_registry(doc: dict) -> None:
             not str(row.get("name", "")).strip()
             or not str(row.get("owner", "")).strip()
         ):
-            fail(f"{req_id} is missing name/owner")
+            fail(f"Для {req_id} отсутствует название или владелец")
         level = row.get("verificationLevel")
         if level not in ALLOWED_LEVELS:
-            fail(f"{req_id} has invalid verificationLevel {level!r}")
+            fail(f"У {req_id} недопустимое значение verificationLevel: {level!r}")
         status = row.get("status")
         if status not in ALLOWED_STATUSES:
-            fail(f"{req_id} has invalid status {status!r}")
+            fail(f"У {req_id} недопустимый статус: {status!r}")
         component = str(row.get("upstreamComponent", "")).strip()
         components = doc.get("upstream", {}).get("components", {})
         if component not in components:
-            fail(f"{req_id} references unknown upstreamComponent {component!r}")
+            fail(f"Требование {req_id} ссылается на неизвестный upstreamComponent: {component!r}")
         impl = row.get("implementationRefs") or []
         tests = row.get("testRefs") or []
         upstream = row.get("upstreamRefs") or []
         if not upstream:
-            fail(f"{req_id} must have upstream source evidence")
+            fail(f"Для {req_id} требуется свидетельство исходного компонента")
         if status in {"implemented", "partial"} and (not impl or not tests):
             fail(
                 f"{req_id} {status} coverage requires implementation and test evidence"
@@ -109,7 +109,7 @@ def validate_registry(doc: dict) -> None:
             status in {"partial", "gap", "not-applicable"}
             and not str(row.get("gapReason", "")).strip()
         ):
-            fail(f"{req_id} {status} coverage requires an explicit gapReason")
+            fail(f"Для {req_id} со статусом {status} требуется явно указанный gapReason")
         if status in {"gap", "not-applicable"} and level != "source-reviewed":
             fail(
                 f"{req_id} {status} coverage may only claim source-reviewed verification"
@@ -155,13 +155,13 @@ def validate_authorization_invariants() -> None:
     # запросов никогда не должна вызывать authClaims.HasPermission напрямую.
     matches = re.findall(r"\.HasPermission\(", all_http)
     if matches:
-        fail("HTTP handlers still authorize from JWT claims.HasPermission")
+        fail("HTTP-обработчики всё ещё используют для авторизации JWT claims.HasPermission")
     if (
         "authorizationService().Authorize" not in auth
         or "requireProjectPermission" not in auth
         or "requirePackagePermission" not in auth
     ):
-        fail("live AuthorizationService middleware is not wired")
+        fail("Промежуточный обработчик AuthorizationService не подключён")
 
     required_project_routes = [
         'PATCH /api/v1/admin/projects/{projectId}", s.requireProjectPermission("project:write"',
@@ -171,7 +171,7 @@ def validate_authorization_invariants() -> None:
     ]
     for needle in required_project_routes:
         if needle not in routes_projects:
-            fail(f"project router lost scoped authorization: {needle}")
+            fail(f"Маршрутизатор проекта утратил авторизацию с учётом области: {needle}")
 
     required_package_routes = [
         'GET /api/v1/packages/{packageId}", s.requirePackagePermission("project:read"',
@@ -182,7 +182,7 @@ def validate_authorization_invariants() -> None:
     ]
     for needle in required_package_routes:
         if needle not in routes_packages:
-            fail(f"package router lost scoped/payload authorization: {needle}")
+            fail(f"Маршрутизатор пакетов утратил авторизацию с учётом области или содержимого: {needle}")
 
     if (
         'requirePermission("project:read", s.authPasskey' in routes_auth
@@ -211,18 +211,18 @@ def validate_authorization_invariants() -> None:
         "nl_sync_user_project_roles_0211",
     ]:
         if needle not in migration or needle not in cli_migration:
-            fail(f"API/CLI migration missing authorization invariant {needle}")
+            fail(f"В миграции API/CLI отсутствует инвариант авторизации {needle}")
     if migration != cli_migration:
-        fail("API and CLI 0050 migrations differ")
+        fail("Миграции 0050 для API и CLI различаются")
 
     if 'map[string]string{"*": "owner"}' in installer:
-        fail("installer still creates wildcard project authority")
+        fail("Установщик по-прежнему создаёт полномочия проекта с подстановочным символом")
     if (
         "minecraftUUID119(userID" in minecraft
         or "newMinecraftProfileUUID119" not in minecraft
         or 'IdentityVersion: "independent-v1"' not in minecraft
     ):
-        fail("new GameProfile identities are not independent from internal user IDs")
+        fail("Новые идентификаторы GameProfile не отделены от внутренних идентификаторов пользователей")
 
 
 def validate_hashes(doc: dict) -> None:
@@ -232,7 +232,7 @@ def validate_hashes(doc: dict) -> None:
     for rel, expected in sorted(sealed.items()):
         path = ROOT / rel
         if not path.is_file():
-            fail(f"sealed file missing: {rel}")
+            fail(f"Отсутствует закреплённый файл: {rel}")
         actual = sha256_file(path)
         if actual != expected:
             fail(
@@ -253,32 +253,32 @@ def github_json(url: str) -> object:
         with urllib.request.urlopen(req, timeout=20) as response:
             return json.load(response)
     except Exception as exc:  # noqa: BLE001 - gate should report remote failure exactly
-        fail(f"upstream verification failed for {url}: {exc}")
+        fail(f"Не удалось проверить внешний источник {url}: {exc}")
 
 
 def validate_upstream(doc: dict) -> None:
     component_locks = doc.get("upstream", {}).get("components", {})
     if not component_locks:
-        fail("upstream component source locks are missing")
+        fail("Отсутствует фиксация версий исходных компонентов")
     trees: dict[str, set[str]] = {}
     for component, lock in component_locks.items():
         repo = str(lock.get("repository", "")).strip()
         commit = str(lock.get("commit", "")).strip()
         if not repo or not re.fullmatch(r"[0-9a-f]{40}", commit):
-            fail(f"invalid source lock for {component}")
+            fail(f"Недопустимая фиксация исходной версии {component}")
         commit_doc = github_json(
             f"https://api.github.com/repos/{repo}/commits/{commit}"
         )
         if commit_doc.get("sha") != commit:
-            fail(f"upstream component commit mismatch for {component}")
+            fail(f"Несоответствие коммита внешнего компонента {component}")
         tree_sha = ((commit_doc.get("commit") or {}).get("tree") or {}).get("sha")
         if not tree_sha:
-            fail(f"upstream component tree missing for {component}")
+            fail(f"Отсутствует дерево исходников внешнего компонента {component}")
         tree_doc = github_json(
             f"https://api.github.com/repos/{repo}/git/trees/{tree_sha}?recursive=1"
         )
         if tree_doc.get("truncated"):
-            fail(f"upstream component tree is truncated for {component}")
+            fail(f"Дерево исходников внешнего компонента {component} неполное")
         trees[component] = {
             str(item.get("path", "")) for item in (tree_doc.get("tree") or [])
         }
@@ -298,7 +298,7 @@ def validate_upstream(doc: dict) -> None:
     target = upstream.get("target") or {}
     delta = upstream.get("delta") or {}
     if repo != "GravitLauncher/Launcher":
-        fail("unexpected Gravit repository")
+        fail("Неожиданный репозиторий Gravit")
     for label, ref in (("base", base), ("target", target)):
         tag, expected_sha = ref.get("tag"), ref.get("commit")
         data = github_json(
@@ -306,7 +306,7 @@ def validate_upstream(doc: dict) -> None:
         )
         actual = ((data or {}).get("object") or {}).get("sha")
         if actual != expected_sha:
-            fail(f"Gravit {label} tag moved: {tag} lock={expected_sha} remote={actual}")
+            fail(f"Тег Gravit {label} изменился: {tag}, зафиксировано={expected_sha}, удалённо={actual}")
 
     compare = github_json(
         f"https://api.github.com/repos/{repo}/compare/{base['tag']}...{target['tag']}"
@@ -324,7 +324,7 @@ def validate_upstream(doc: dict) -> None:
     }
     for key, actual in checks.items():
         if actual != delta.get(key):
-            fail(f"Gravit delta drift for {key}: lock={delta.get(key)} remote={actual}")
+            fail(f"Расхождение изменений Gravit для {key}: зафиксировано={delta.get(key)}, удалённо={actual}")
 
     for anchor in upstream.get("anchors") or []:
         path = anchor["path"]
@@ -335,7 +335,7 @@ def validate_upstream(doc: dict) -> None:
         )
         data = github_json(url)
         if data.get("sha") != anchor.get("blobSha"):
-            fail(f"Gravit anchor drift: {path}")
+            fail(f"Изменение контрольного файла Gravit: {path}")
 
 
 def seal(doc: dict) -> None:
@@ -346,7 +346,7 @@ def seal(doc: dict) -> None:
     for rel in files:
         path = ROOT / rel
         if not path.is_file():
-            fail(f"cannot seal missing file {rel}")
+            fail(f"Невозможно закрепить отсутствующий файл {rel}")
         hashes[rel] = sha256_file(path)
     doc["sealedFiles"] = hashes
     LOCK.write_text(

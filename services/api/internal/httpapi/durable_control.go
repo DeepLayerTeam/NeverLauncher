@@ -254,7 +254,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 	lease, err := cp.AcquireDurableScopeLease(ctx, scopeKey, worker+":"+job.ID, 2*time.Minute)
 	if err != nil {
 		if errors.Is(err, repository.ErrLeaseBusy) {
-			_, _ = cp.FailDurableJob(ctx, job.ID, job.LeaseToken, "package mutation lease busy", 750*time.Millisecond)
+			_, _ = cp.FailDurableJob(ctx, job.ID, job.LeaseToken, "Занята аренда блокировки изменения пакета", 750*time.Millisecond)
 		}
 		return model.ReleaseVersion{}, err
 	}
@@ -267,7 +267,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 	}
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)
 	if err != nil || manifestDigest != payload.ExpectedManifestDigest {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "manifest changed after publish enqueue")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Манифест изменился после постановки публикации в очередь")
 		if err == nil {
 			err = repository.ErrConflict
 		}
@@ -275,7 +275,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 	}
 	artifactDigest, err := artifactDigest0212(lookup.Files)
 	if err != nil || artifactDigest != payload.ExpectedArtifactDigest {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "package files changed after publish enqueue")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Файлы пакета изменились после постановки публикации в очередь")
 		if err == nil {
 			err = repository.ErrConflict
 		}
@@ -286,7 +286,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, err
 	}
 	if head.Revision != *payload.ExpectedHeadRevision {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "channel head revision changed after publication was queued")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Ревизия указателя канала изменилась после постановки публикации в очередь")
 		return model.ReleaseVersion{}, repository.ErrConflict
 	}
 	if err := s.validatePublishEvidenceContext0213(ctx, lookup); err != nil {
@@ -344,7 +344,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		ActorID:                job.ActorID,
 	})
 	if errors.Is(err, repository.ErrConflict) {
-		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish CAS conflict: channel head or package changed")
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "Конфликт CAS публикации: указатель канала или пакет изменился")
 	}
 	return release, err
 }

@@ -141,7 +141,7 @@ func (s Server) migrationIdentityVerify0334(w http.ResponseWriter, r *http.Reque
 
 func spoolIdentity0334(w http.ResponseWriter, r *http.Request) (*os.File, int64, string, error) {
 	if r.ContentLength > inv.MaxSourceBytes {
-		return nil, 0, "", errors.New("too large")
+		return nil, 0, "", errors.New("Слишком большой размер")
 	}
 	f, n, sha, e := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, inv.MaxSourceBytes))
 	if e != nil {

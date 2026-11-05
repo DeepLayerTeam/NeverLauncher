@@ -157,7 +157,7 @@ func evaluateHandlerSafely(ctx context.Context, handler Handler, req Request) (d
 		if recover() != nil {
 			// Не логировать и не переизлучать содержимое panic: расширения могут паниковать с секретами.
 			decision = Decision{}
-			err = errors.New("protection handler panicked")
+			err = errors.New("Аварийное завершение обработчика защиты")
 		}
 	}()
 	return handler.Evaluate(ctx, req)

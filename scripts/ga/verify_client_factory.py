@@ -26,13 +26,13 @@ def fail(message):
 def unique(root, name):
     files = list(root.rglob(name))
     if len(files) != 1 or not files[0].is_file() or files[0].is_symlink():
-        fail(f"exactly one regular {name} is required, found {len(files)}")
+        fail(f"Требуется ровно один обычный файл {name}, найдено: {len(files)}")
     return files[0]
 
 
 def read(path, limit=32 << 20):
     if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
-        fail(f"invalid evidence file {path}")
+        fail(f"Недопустимый файл свидетельства {path}")
     return path.read_bytes()
 
 
@@ -57,14 +57,14 @@ def verify_signature(payload, public_key, hashed):
         base64.b64decode(public_key, validate=True)
     ).verify(raw, signed)
     if payload.get("publicKey") != public_key:
-        fail("certificate embeds an unapproved public key")
+        fail("Сертификат содержит неразрешённый открытый ключ")
 
 
 def verify(root, runtime_key, join_key, version, commit):
     if version != "0.28.0" or not SHA.fullmatch(commit):
         fail("invalid GA version or commit")
     if runtime_key == join_key:
-        fail("client launch and server join must use independent trust roots")
+        fail("Запуск клиента и подключение к серверу должны использовать независимые корни доверия")
     certificates = list(root.rglob("runtime-certificate.json"))
     if len(certificates) != 5:
         fail(
@@ -78,7 +78,7 @@ def verify(root, runtime_key, join_key, version, commit):
             cert.get("schema") != "launcher.factory.runtime-certificate.v1"
             or cert.get("status") != "certified"
         ):
-            fail(f"invalid runtime certificate {file}")
+            fail(f"Недопустимый сертификат Runtime {file}")
         loader = cert.get("loader")
         target = cert.get("target")
         if (
@@ -86,14 +86,14 @@ def verify(root, runtime_key, join_key, version, commit):
             or loader in families
             or target != {"os": "linux", "arch": "x86_64"}
         ):
-            fail("duplicate/missing loader or mismatching runner target")
+            fail("Загрузчик дублируется или отсутствует либо не соответствует целевой среде запуска")
         families.add(loader)
         if (
             not HEX64.fullmatch(cert.get("planSha256", ""))
             or not HEX64.fullmatch(cert.get("javaSha256", ""))
             or not HEX64.fullmatch(cert.get("runtimeSha256", ""))
         ):
-            fail("missing runtime/toolchain identity")
+            fail("Отсутствуют идентификаторы Runtime или набора инструментов")
         digest_set.add(cert["planSha256"])
         verify_signature(cert, runtime_key, True)
         for kind, rel, digest in [
@@ -107,10 +107,10 @@ def verify(root, runtime_key, join_key, version, commit):
                 or rel in {".", ".."}
                 or not HEX64.fullmatch(digest or "")
             ):
-                fail("invalid certificate evidence path")
+                fail("Недопустимый путь к свидетельству сертификата")
             contents = read(file.parent / rel)
             if sha(contents) != digest:
-                fail(f"{kind} digest mismatch for {loader}")
+                fail(f"Несоответствие хеша {kind} для {loader}")
             if kind == "probe":
                 probe = decode(contents)
                 if (
@@ -120,14 +120,14 @@ def verify(root, runtime_key, join_key, version, commit):
                     or probe.get("classpathEntries", 0) < 1
                     or not (probe.get("timedOut") or probe.get("success"))
                 ):
-                    fail(f"invalid launch probe for {loader}")
+                    fail(f"Недопустимая проверка запуска для {loader}")
             elif b"--- process output ---" not in contents or not re.search(
                 rb"(?i)(?:LWJGL|MinecraftForge|FabricLoader|QuiltLoader|Minecraft client initialized)",
                 contents.split(b"--- process output ---", 1)[1],
             ):
-                fail(f"missing game startup proof for {loader}")
+                fail(f"Отсутствует подтверждение запуска игры для {loader}")
     if families != FAMILIES or len(digest_set) != 5:
-        fail("runtime matrix must attest five distinct loader builds")
+        fail("Матрица Runtime должна подтверждать пять различных сборок загрузчиков")
     join_file = unique(root, "matching-server.json")
     join_raw = read(join_file, 2 << 20)
     join = decode(join_raw)
@@ -150,7 +150,7 @@ def verify(root, runtime_key, join_key, version, commit):
             == join.get("serverVersion")
         )
     ):
-        fail("exact-version real client/server join not proven")
+        fail("Не подтверждено подключение реального клиента к серверу на точной версии")
     att = decode(read(unique(root, "join-attestation.json"), 1 << 20))
     if (
         att.get("schema") != "launcher.factory.ga-join-attestation.v1"
@@ -158,12 +158,12 @@ def verify(root, runtime_key, join_key, version, commit):
         or att.get("commit") != commit
         or att.get("evidenceSha256") != sha(join_raw)
     ):
-        fail("join attestation not bound to required release and evidence")
+        fail("Аттестация подключения не привязана к требуемому релизу и свидетельствам")
     age = datetime.now(timezone.utc) - datetime.fromisoformat(
         att["createdAt"].replace("Z", "+00:00")
     )
     if age < -timedelta(minutes=5) or age > timedelta(days=30):
-        fail("join attestation age invalid")
+        fail("Недопустимая давность аттестации подключения")
     verify_signature(att, join_key, False)
     ga = decode(read(unique(root, "ga-report.json"), 1 << 20))
     if (
@@ -175,7 +175,7 @@ def verify(root, runtime_key, join_key, version, commit):
         or ga.get("certifiedFamilies") != 5
         or ga.get("joinEvidenceSha256") != sha(join_raw)
     ):
-        fail("GA report missing or inconsistent")
+        fail("Отчёт GA отсутствует или содержит несогласованные данные")
     return {
         "status": "passed",
         "version": version,

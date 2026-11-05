@@ -68,7 +68,7 @@ func VerifySourceFence0448(a Activate, r Route, now time.Time) error {
 		proof.SnapshotSHA256 != a.CurrentSourceSnapshotSHA256 || !digest.MatchString(proof.SnapshotFileSHA256) ||
 		proof.StoppedAt.After(proof.CheckedAt) || now.Sub(proof.CheckedAt) > 10*time.Minute || proof.CheckedAt.After(now.Add(time.Minute)) ||
 		proof.StoppedAt.After(now.Add(time.Minute)) || now.Sub(proof.StoppedAt) > 15*time.Minute {
-		return errors.New("source stop receipt absent, stale, or not bound to migration and snapshot")
+		return errors.New("Квитанция остановки источника отсутствует, устарела или не привязана к миграции и снимку")
 	}
 	payload, err := json.Marshal(proof)
 	if err != nil {

@@ -237,7 +237,7 @@ func rewrapTOTP0474(coreCipher []byte, keys MFASecrets0474) (string, error) {
 		return "", err
 	}
 	if len(coreCipher) < old.NonceSize()+old.Overhead() {
-		return "", errors.New("truncated SQLite TOTP secret")
+		return "", errors.New("Неполный секрет TOTP из SQLite")
 	}
 	seed, err := old.Open(nil, coreCipher[:old.NonceSize()], coreCipher[old.NonceSize():], []byte("Launcher/TOTP/0.32.3"))
 	if err != nil {

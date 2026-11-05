@@ -589,7 +589,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         let matched = matched.ok_or_else(|| {
             let location = canonical_path.strip_prefix(launch_root)
                 .map(|relative| relative.to_string_lossy().chars().take(180).collect::<String>())
-                .unwrap_or_else(|_| "outside pinned client root".to_string());
+                .unwrap_or_else(|_| "За пределами закреплённого корневого каталога клиента".to_string());
             format!("LWJGL загружен вне сертифицированного каталога нативных библиотек ({location})")
         })?;
         let metadata = std::fs::symlink_metadata(&loaded)
@@ -620,7 +620,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                     return Err("Проверенный путь LWJGL содержит символическую ссылку или точку повторного разбора".to_string());
                 }
                 current = current.parent().ok_or_else(||
-                    "Guard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
+                    "Guard JVM-Aware: недопустимая иерархия сертифицированного LWJGL".to_string())?;
             }
             let canonical_certified = std::fs::canonicalize(certified)
                 .map_err(|err| format!("Guard для JVM: запрещено «canonicalize certified LWJGL:» {err}"))?;

@@ -126,7 +126,7 @@ for path in (
     "/api/v1/admin/extension-hosts/{extensionId}/logs",
     "/api/v1/admin/extension-hosts/{extensionId}/restart",
 ):
-    require(path in openapi, f"OpenAPI missing {path}")
+    require(path in openapi, f"В OpenAPI отсутствует {path}")
 
 config = read("services/api/internal/config/config.go")
 for token in (

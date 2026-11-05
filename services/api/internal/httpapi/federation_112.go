@@ -54,7 +54,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}
 	if user.Status != "active" {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "local identity disabled")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "Локальная учётная запись отключена")
 	}
 	if localpassword.NeedsRehash(user.PasswordHash) {
 		// Пересчитывайте хеш только пароля, прошедшего явно настроенную проверку. Параллельный
@@ -65,14 +65,14 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		}
 		cas, ok := c.repo.(repository.PasswordCAS0295)
 		if !ok {
-			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local repository doesn't support atomic password upgrade")
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "Локальное хранилище не поддерживает атомарное обновление пароля")
 		}
 		changed, casErr := cas.ReplacePasswordIfMatch0295(ctx, user.ID, user.PasswordHash, replacement)
 		if casErr != nil {
 			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "Не удалось обновить локальный пароль")
 		}
 		if !changed {
-			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "local credential changed during authentication")
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Локальные учётные данные изменились во время аутентификации")
 		}
 	}
 	return authconnector.Authentication{Identity: authconnector.Identity{Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, Roles: []string{user.RoleID}, Claims: map[string]any{"roleId": user.RoleID}}, AuthMethods: []string{"password"}}, nil

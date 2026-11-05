@@ -156,7 +156,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		}
 		expected := head.Revision
 		b, _ := json.Marshal(model.DurablePublishPayload{PackageID: resourceID, ExpectedManifestDigest: digest, ExpectedArtifactDigest: files, ExpectedStatus: lookup.Release.Status, ExpectedHeadRevision: &expected})
-		return spec, b, map[string]any{"packageId": resourceID, "version": lookup.Release.Version, "channel": lookup.Release.Channel, "effect": "publish immutable package and advance channel"}, nil
+		return spec, b, map[string]any{"packageId": resourceID, "version": lookup.Release.Version, "channel": lookup.Release.Channel, "effect": "Опубликовать неизменяемый пакет и обновить указатель канала"}, nil
 	}
 	if req.Channel == "" || req.ToVersion == "" {
 		return spec, nil, nil, errors.New("Необходимо указать канал и toVersion")
@@ -204,7 +204,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 	expectedHead := head.Revision
 	payload := rollbackPayload0217{ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, ToVersion: req.ToVersion, TargetID: target.ID, TargetManifestDigest: md, TargetArtifactDigest: fd, ExpectedHeadRevision: &expectedHead}
 	raw, _ := json.Marshal(payload)
-	return spec, raw, map[string]any{"targetPackageId": target.ID, "targetVersion": target.Version, "projectId": req.ProjectID, "channel": req.Channel, "effect": "create one new signed immutable release from target, validate integrity, then publish subject to project policy"}, nil
+	return spec, raw, map[string]any{"targetPackageId": target.ID, "targetVersion": target.Version, "projectId": req.ProjectID, "channel": req.Channel, "effect": "Создать новый подписанный неизменяемый релиз из целевого состояния, проверить целостность и опубликовать согласно политике проекта"}, nil
 }
 func (s Server) operationValidate0217(w http.ResponseWriter, r *http.Request) {
 	req, err := readOperationRequest0217(r)
@@ -231,7 +231,7 @@ func writeOperationError0217(w http.ResponseWriter, err error) {
 	code, status, advice := "validation-failed", http.StatusBadRequest, "Исправьте некорректные поля и повторите проверку"
 	var refused publishBlocked0385
 	if errors.As(err, &refused) {
-		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": err.Error(), "action": "Review blockers, repair package and repeat preview", "blockers": refused.Blockers}})
+		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": err.Error(), "action": "Изучите препятствия, исправьте пакет и повторите предварительную проверку", "blockers": refused.Blockers}})
 		return
 	}
 	switch {

@@ -157,7 +157,7 @@ func officialFail0257(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, "Minecraft Services отклонила операцию")
 	case errors.As(err, &upstream) && upstream.Status == 429:
 		w.Header().Set("Retry-After", "30")
-		writeError(w, http.StatusTooManyRequests, "Minecraft Services rate limit")
+		writeError(w, http.StatusTooManyRequests, "Превышен лимит запросов к Minecraft Services")
 	default:
 		writeError(w, http.StatusBadGateway, "Официальный сервис Minecraft недоступен")
 	}

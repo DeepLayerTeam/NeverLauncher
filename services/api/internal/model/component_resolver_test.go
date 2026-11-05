@@ -78,7 +78,7 @@ func TestDependencyResolverRejectsImpossible0243(t *testing.T) {
 		{"self dependency", "invalid_reference", func(c *ComponentCatalog0241) {
 			c.Components[2].Dependencies = []ComponentRequirement0243{{ID: "shaders"}}
 		}},
-		{"invalid version", "invalid_version", func(c *ComponentCatalog0241) { c.Components[0].Version = "1.0" }},
+		{"Недопустимая версия", "invalid_version", func(c *ComponentCatalog0241) { c.Components[0].Version = "1.0" }},
 		{"invalid range", "invalid_range", func(c *ComponentCatalog0241) { c.Components[2].Dependencies[0].VersionRange = ">=bad" }},
 		{"mismatched dependency", "version_mismatch", func(c *ComponentCatalog0241) { c.Components[2].Dependencies[0].VersionRange = ">=0.6.0" }},
 		{"transitive conflict", "conflict", func(c *ComponentCatalog0241) { c.Components[2].Conflicts = []ComponentRequirement0243{{ID: "core"}} }},

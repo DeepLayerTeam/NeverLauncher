@@ -758,7 +758,7 @@ pub async fn revalidate_managed_java_before_spawn(java_executable: &str) -> Resu
             .map_err(|e| format!("Запись Managed Java повреждена перед запуском: {e}"))?;
         let verified = validate_installed_runtime(directory, record.major_version,
             &record.distribution, true).await?
-            .ok_or_else(|| "managed Java installation changed after launch planning".to_string())?;
+            .ok_or_else(|| "Установка управляемой Java изменилась после планирования запуска".to_string())?;
         if std::fs::canonicalize(&verified.java_executable).map_err(|e|e.to_string())?
             != std::fs::canonicalize(java).map_err(|e|e.to_string())? {
             return Err("Исполняемый файл Managed Java не соответствует проверенному реестру Runtime".into());

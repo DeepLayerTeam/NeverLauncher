@@ -57,7 +57,7 @@ func filePath0474(p, v, rel string) (string, error) {
 	}
 	for _, part := range strings.Split(rel, "/") {
 		if part == "." || part == ".." || part == "" {
-			return "", errors.New("path traversal")
+			return "", errors.New("Выход за пределы допустимого пути")
 		}
 	}
 	return filepath.Join(p, v, filepath.FromSlash(rel)), nil
@@ -159,7 +159,7 @@ func safeExistingLocal0474(local *storage.LocalStorage, obj fileObject0474) erro
 			return er
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("symlink in storage destination: %s", obj.path)
+			return fmt.Errorf("Символьная ссылка в целевом хранилище: %s", obj.path)
 		}
 		if i < len(candidates)-1 && !st.IsDir() {
 			return fmt.Errorf("Путь хранилища %s не является каталогом", obj.path)

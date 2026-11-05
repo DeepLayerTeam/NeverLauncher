@@ -38,7 +38,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
         try {
             invoke(()->extension.start(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime,providers)),timeout,State.STARTING);
             synchronized(transition){
-                if(state!=State.STARTING)throw new CancellationException("extension startup cancelled");
+                if(state!=State.STARTING)throw new CancellationException("Запуск расширения отменён");
                 state=State.RUNNING;
             }
         }catch(Exception e){
@@ -65,7 +65,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
         }
         if(previous==State.STOPPING){
             if(!stopFinished.await(timeout.toNanos(),TimeUnit.NANOSECONDS))
-                throw new TimeoutException("concurrent extension stop deadline exceeded");
+                throw new TimeoutException("Превышено время ожидания параллельной остановки расширения");
             if(state==State.FAILED)throw new IllegalStateException("Не удалось остановить расширение");
             return;
         }
@@ -99,12 +99,12 @@ public final class ExtensionLifecycle implements AutoCloseable {
         long nanos=timeout.toNanos();
         Future<?> task;
         synchronized(transition){
-            if(state!=expected)throw new CancellationException("extension lifecycle cancelled");
+            if(state!=expected)throw new CancellationException("Жизненный цикл расширения отменён");
             task=executor.submit(()->{try{action.run();}catch(Exception e){throw new CompletionException(e);}});
             active=task;
         }
         try{task.get(nanos,TimeUnit.NANOSECONDS);}
-        catch(TimeoutException e){task.cancel(true);throw new TimeoutException("extension lifecycle deadline exceeded");}
+        catch(TimeoutException e){task.cancel(true);throw new TimeoutException("Превышено время выполнения жизненного цикла расширения");}
         catch(InterruptedException e){task.cancel(true);Thread.currentThread().interrupt();throw e;}
         catch(ExecutionException e){
             Throwable root=e.getCause();

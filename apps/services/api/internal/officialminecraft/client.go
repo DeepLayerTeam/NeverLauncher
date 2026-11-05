@@ -84,7 +84,7 @@ type ServiceError struct {
 }
 
 func (e *ServiceError) Error() string {
-	return fmt.Sprintf("upstream Minecraft authentication service: status=%d code=%s", e.Status, e.Code)
+	return fmt.Sprintf("Внешний сервис аутентификации Minecraft: статус=%d, код=%s", e.Status, e.Code)
 }
 
 func (c *Client) request(ctx context.Context, method, addr, bearer, contentType string, body io.Reader, out any) error {

@@ -79,7 +79,7 @@ func (s Server) migrationRehearsalPost03310(w http.ResponseWriter, r *http.Reque
 	}
 	var extra any
 	if e = dec.Decode(&extra); e != io.EOF {
-		writeError(w, 400, "trailing rehearsal evidence")
+		writeError(w, 400, "Лишние данные после свидетельства репетиции")
 		return
 	}
 	saved, e := store.SaveMigrationRehearsal03310(r.Context(), run.ID, report)

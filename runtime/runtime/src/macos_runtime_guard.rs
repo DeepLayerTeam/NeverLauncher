@@ -129,10 +129,10 @@ impl MacOSRuntimeGuard0509 {
         // фактическая идентичность, SHA-256 бинарника и идентичность подписи.
         let signing_team = signature.team_identifier
             .filter(|s| !s.trim().is_empty() && s != "not set")
-            .ok_or("macOS Guard JVM must have a non-ad-hoc signing TeamIdentifier")?;
+            .ok_or("JVM macOS Guard должна иметь TeamIdentifier подписи, отличной от ad-hoc")?;
         let signing_identifier = signature.identifier
             .filter(|s| !s.trim().is_empty())
-            .ok_or("macOS Guard JVM signing identifier unavailable")?;
+            .ok_or("Недоступен идентификатор подписи JVM macOS Guard")?;
         let guard = Self { identity, executable: actual, device: meta.dev(), inode: meta.ino(),
             digest: sha256_file(&expected)?, signing_team, signing_identifier };
         guard.verify()?;

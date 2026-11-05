@@ -146,7 +146,7 @@ func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact027
 		if response.StatusCode != http.StatusOK {
 			response.Body.Close()
 			tmp.Close()
-			return 0, fmt.Errorf("artifact HTTP %d", response.StatusCode)
+			return 0, fmt.Errorf("HTTP-ошибка артефакта: %d", response.StatusCode)
 		}
 		if response.ContentLength > limit {
 			response.Body.Close()

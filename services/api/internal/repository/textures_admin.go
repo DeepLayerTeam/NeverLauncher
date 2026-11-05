@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var ErrTexturePolicyConflict0259 = errors.New("texture policy revision conflict")
+var ErrTexturePolicyConflict0259 = errors.New("Конфликт ревизии политики текстур")
 var ErrTexturePolicyInvalid0259 = errors.New("Некорректное значение: «texture policy»")
 
 type TexturePolicy0259 struct {

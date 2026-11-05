@@ -42,8 +42,8 @@ type TextureUploadRepository0252 interface {
 
 var ErrGravitAlreadyImported02510 = errors.New("Запись текстуры Gravit уже импортирована")
 
-var ErrTextureUploadDenied0252 = errors.New("texture upload forbidden by policy")
-var ErrTextureUploadLimit0252 = errors.New("texture size exceeds project policy")
+var ErrTextureUploadDenied0252 = errors.New("Загрузка текстуры запрещена политикой")
+var ErrTextureUploadLimit0252 = errors.New("Размер текстуры превышает ограничение политики проекта")
 
 func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.MinecraftProfile, input VerifiedTexture0252) (model.TextureAssignment0251, error) {
 	var zero model.TextureAssignment0251
