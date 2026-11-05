@@ -15,11 +15,11 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: Existing signed, staged and integrity-passed backend package ID
+        description: ID существующего подписанного подготовленного пакета Backend, прошедшего проверку целостности
         required: true
         type: string
       runtime_seconds:
-        description: Max time for real Minecraft GUI startup (15..3600 seconds)
+        description: Максимальное время запуска реального GUI Minecraft (15–3600 секунд)
         required: true
         type: number
         default: 180

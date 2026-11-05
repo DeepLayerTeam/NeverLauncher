@@ -6,52 +6,52 @@ on:
       ga_operator_approval_run_id:
         type: string
         required: false
-        description: 'Independently signed current-version six-target exact-byte GA approval (required for 0.36.1+)'
+        description: 'Независимо подписанное GA-утверждение точных байтов текущей версии для шести платформ (обязательно с 0.36.1)'
       ga036_operator_approval_run_id:
         type: string
         required: false
-        description: 'Historical 0.36.0-only independently signed exact-byte GA approval'
+        description: 'Историческое независимо подписанное GA-утверждение точных байтов только для версии 0.36.0'
       optional_components_ga_evidence_run_id:
         type: string
         required: false
-        description: 'Only for historical 0.25.0 GA: approved six signed Optional Components attestations'
+        description: 'Только для исторического GA 0.25.0: шесть одобренных подписанных аттестаций дополнительных компонентов'
       staged_package_id:
         type: string
         required: true
-        description: 'Exact signed staged backend package ID for real runtime materialization/launch (0.34.2)'
+        description: 'ID точного подписанного пакета Backend для реальной установки и запуска Runtime (0.34.2)'
       client_factory_ga_evidence_run_id:
         type: string
         required: true
-        description: 'Protected Client Factory 0.28.0 run (same commit, five actual JVM launches and matching-server join)'
+        description: 'Защищённый запуск Client Factory 0.28.0 (тот же коммит, пять реальных запусков JVM и подключение к соответствующему серверу)'
       single_node_ga_evidence_run_id:
         type: string
         required: true
-        description: 'Independently signed LIVE SQLite-only installed GA attestation, exact 0.33.0 commit'
+        description: 'Независимо подписанная реальная GA-аттестация установленного режима SQLite-only, точный коммит 0.33.0'
       guard_0510_evidence_run_id:
         type: string
         required: false
-        description: 'Required for 0.51.0: external independent approval with raw final signed Guard/real game/native evidence'
+        description: 'Для 0.51.0 требуется внешнее независимое утверждение с исходными подтверждениями подписанного Guard, реальной игры и нативного выполнения'
       guard_0510_native_ci_run:
         type: string
         required: false
-        description: 'Required for 0.51.0: exact six-native-Minecraft CI run ID represented by signed evidence'
+        description: 'Для 0.51.0 требуется ID точного CI-запуска Minecraft на шести нативных платформах, подтверждённый подписью'
       ga0480_evidence_run_id:
         type: string
         required: false
-        description: 'Protected independently signed live 0.48.0 staging migration, legacy, game and exact signed-package acceptance run ID (mandatory for 0.48.0 publication)'
+        description: 'ID защищённого, независимо подписанного реального приёмочного запуска миграции 0.48.0, старых данных, игры и точного подписанного пакета (обязателен для публикации 0.48.0)'
       ga0530_evidence_run_id:
         type: string
         required: false
-        description: 'Protected independent 0.53.0 E2E-01..18 GA verifier run ID (mandatory for 0.53.0 publication)'
+        description: 'ID защищённого независимого запуска GA-верификатора 0.53.0 E2E-01..18 (обязателен для публикации 0.53.0)'
       publish_release:
         type: boolean
         required: true
         default: false
-        description: 'Explicit opt-in to publish after all signed GA and production CI gates pass'
+        description: 'Явное разрешение на публикацию после прохождения всех подписанных GA-проверок и производственного CI'
       official_minecraft_ga_evidence_run_id:
         type: string
         required: true
-        description: 'Protected operator run with six independently signed live official Minecraft 0.27.0 attestations'
+        description: 'Защищённый запуск оператора с шестью независимо подписанными реальными подтверждениями официального Minecraft 0.27.0'
 
 permissions:
   contents: read
@@ -66,7 +66,7 @@ jobs:
     name: Require main branch exact source
     runs-on: ubuntu-24.04
     steps:
-      - name: Reject non-main production release dispatch
+      - name: Запретить публикацию промышленного релиза не из ветки main
         shell: bash
         run: |
           set -euo pipefail
@@ -108,7 +108,7 @@ jobs:
         with:
           name: launcher-minecraft-client-e2e-evidence
           path: real-minecraft-e2e
-      - name: Validate live join/replay/handoff and world restore results
+      - name: Проверить результаты реального входа, повтора, передачи и восстановления мира
         run: |
           python3 scripts/ga/verify_server_control_0290.py \
             --e2e-dir real-minecraft-e2e/runtime \
@@ -174,11 +174,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install real browser runtime
+      - name: Установить настоящий браузерный Runtime
         run: |
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
-      - name: Certify candidate with real builds, PostgreSQL and staging
+      - name: Сертифицировать кандидата с настоящими сборками, PostgreSQL и тестовым окружением
         run: bash scripts/release/certify-admin-ga-0220.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -218,16 +218,16 @@ jobs:
           cache-dependency-path: |
             services/api/go.sum
             cli/go.sum
-      - name: Check real PostgreSQL readiness
+      - name: Проверить готовность настоящего PostgreSQL
         run: |
           python3 - <<'PYREADY'
           import socket
           with socket.create_connection(('127.0.0.1', 5432), timeout=10):
               pass
           PYREADY
-      - name: Validate release evidence parser
+      - name: Проверить анализатор подтверждений релиза
         run: python3 scripts/release/test_certify_profiles_ga_0230.py
-      - name: Run Profile/Manifest and workspace GA certification
+      - name: Запустить GA-сертификацию профиля, манифеста и рабочего пространства
         run: python3 scripts/release/certify-profiles-ga-0230.py
       - uses: actions/upload-artifact@v4
         with:
@@ -241,7 +241,7 @@ jobs:
     needs: [base-ci, windows-production-signed, macos-production-notarized]
     runs-on: ubuntu-24.04
     steps:
-      - name: Require successful platform signing prerequisites
+      - name: Проверить успешность предварительных условий подписи платформ
         env:
           WINDOWS: ${{ needs.windows-production-signed.result }}
           MACOS: ${{ needs.macos-production-notarized.result }}
@@ -267,7 +267,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate isolated staging configuration and real Docker access
+      - name: Проверить изолированную тестовую конфигурацию и доступ к настоящему Docker
         env:
           RC_DR_SOURCE: ${{ vars.NL_RC_DR_SOURCE_PROJECT }}
           RC_DR_TARGET: ${{ vars.NL_RC_DR_TARGET_PROJECT }}
@@ -286,7 +286,7 @@ jobs:
           umask 077
           printf '%s' "$RC_DR_ENV_B64" | base64 -d > "$RUNNER_TEMP/rc-dr.env"
           test -s "$RUNNER_TEMP/rc-dr.env"
-      - name: Real consistent backup, immutable verification, fresh restore and chaos
+      - name: Реальное согласованное резервное копирование, проверка неизменяемости, чистое восстановление и хаос-тесты
         env:
           LAUNCHER_RC_DR_ISOLATED: YES
           RC_DR_SOURCE: ${{ vars.NL_RC_DR_SOURCE_PROJECT }}
@@ -309,7 +309,7 @@ jobs:
           path: ${{ runner.temp }}/rc-dr-03514.json
           if-no-files-found: error
           retention-days: 30
-      - name: Remove staging-only environment data
+      - name: Удалить данные окружения, используемые только для тестового стенда
         if: always()
         shell: bash
         run: rm -f "$RUNNER_TEMP/rc-dr.env"
@@ -334,19 +334,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Fetch independent signed acceptance evidence from protected run
+      - name: Получить независимо подписанные приёмочные подтверждения из защищённого запуска
         uses: actions/download-artifact@v4
         with:
           name: launcher-single-node-ga-0330-${{ github.sha }}
           run-id: ${{ inputs.single_node_ga_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: single-node-ga-evidence
-      - name: Fetch this workflow's independently executed RC result
+      - name: Получить независимо сформированный результат RC этого процесса CI
         uses: actions/download-artifact@v4
         with:
           name: launcher-03216-rc-${{ github.sha }}
           path: live-rc-03216
-      - name: Verify complete installed GA evidence and RC integrity
+      - name: Проверить все подтверждения установленного GA и целостность RC
         env:
           TRUSTED_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -370,7 +370,7 @@ jobs:
             --evidence-dir single-node-ga-evidence \
             --public-key "$RUNNER_TEMP/ga-trust.pub" \
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json"
-      - name: Stage independently checked GA certification
+      - name: Подготовить независимо проверенный сертификат GA
         run: cp "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json" single-node-ga-evidence/
       - uses: actions/upload-artifact@v4
         with:
@@ -410,12 +410,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Download all six real platform extension reports and certificate
+      - name: Скачать отчёты расширений и сертификат для всех шести реальных платформ
         uses: actions/download-artifact@v4
         with:
           name: extensions-04212-certificate
           path: extension-acceptance
-      - name: Verify extension E2E certificate from this run and attempt
+      - name: Проверить сертификат E2E расширений для текущего запуска и попытки
         run: |
           python3 e2e/extensions/aggregate_04212.py \
             --evidence-dir extension-acceptance \
@@ -424,12 +424,12 @@ jobs:
             --output "$RUNNER_TEMP/recomputed-extension-certificate.json"
           cmp extension-acceptance/extension-acceptance-certificate.json \
               "$RUNNER_TEMP/recomputed-extension-certificate.json"
-      - name: Fetch exact-commit runtime GA preflight
+      - name: Получить предварительную GA-проверку Runtime для точного коммита
         uses: actions/download-artifact@v4
         with:
           name: ga-runtime-preflight-0350-${{ github.sha }}
           path: runtime-ga-preflight
-      - name: Require backend live eligible snapshot for exact staged package
+      - name: Потребовать подтверждённый реальный снимок Backend для точного подготовленного пакета
         env:
           STAGED_PACKAGE: ${{ inputs.staged_package_id }}
         run: |

@@ -6,40 +6,40 @@ groups:
         for: 1m
         labels: {severity: critical}
         annotations:
-          summary: "NeverLauncher API scrape is unavailable"
+          summary: "Сбор метрик API NeverLauncher недоступен"
       - alert: NeverLauncherBackendNotReady
         expr: probe_success{job="neverlauncher-readiness"} == 0
         for: 1m
         labels: {severity: critical}
         annotations:
-          summary: "Backend readiness failed (database, Redis, S3 or auth provider)"
+          summary: "Проверка готовности Backend не пройдена (БД, Redis, S3 или провайдер авторизации)"
       - alert: NeverLauncherAllAPIsDown
         expr: sum(up{job="neverlauncher-api"}) == 0
         for: 1m
         labels: {severity: critical}
         annotations:
-          summary: "All configured NeverLauncher API replicas are unreachable"
+          summary: "Все настроенные реплики API NeverLauncher недоступны"
       - alert: NeverLauncherBackendErrors
         expr: launcher_http_requests_60s > 30 and (launcher_http_5xx_60s / clamp_min(launcher_http_requests_60s, 1)) > 0.05
         for: 3m
         labels: {severity: warning}
         annotations:
-          summary: "Backend 5xx exceeds 5 percent over 60 seconds"
+          summary: "Доля ошибок Backend 5xx превышает 5% за 60 секунд"
       - alert: NeverLauncherBackendLatency
         expr: launcher_http_requests_60s > 30 and launcher_http_latency_p95_seconds_60s > 2
         for: 5m
         labels: {severity: warning}
         annotations:
-          summary: "Observed backend p95 exceeds 2 seconds"
+          summary: "Наблюдаемая задержка Backend p95 превышает 2 секунды"
       - alert: NeverLauncherRateLimited
         expr: launcher_http_429_60s > 60
         for: 3m
         labels: {severity: warning}
         annotations:
-          summary: "Rate limiter is refusing frequent requests"
+          summary: "Ограничитель частоты отклоняет слишком частые запросы"
       - alert: NeverLauncherServerBridgeNodesStale
         expr: launcher_serverbridge_nodes_active > 0 and launcher_serverbridge_nodes_fresh < launcher_serverbridge_nodes_active
         for: 2m
         labels: {severity: warning}
         annotations:
-          summary: "Some ServerBridge nodes are stale"
+          summary: "Некоторые узлы ServerBridge давно не обновляли состояние"

@@ -11,21 +11,21 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: Immutable staged package ID
+        description: ID неизменяемого подготовленного пакета
         required: true
         type: string
       os:
-        description: OS of dedicated self-hosted worker
+        description: ОС выделенного собственного агента
         required: true
         type: choice
         options: [linux, windows, macos]
       arch:
-        description: Architecture of dedicated self-hosted worker
+        description: Архитектура выделенного собственного агента
         required: true
         type: choice
         options: [amd64, arm64]
       mode:
-        description: Headless = signed-byte installation only, GUI = complete real scenario
+        description: Headless — только установка подписанных байтов, GUI — полный реальный сценарий
         required: true
         type: choice
         options: [headless, gui]

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       matrix_url:
-        description: Optional explicit PUBLIC_PRODUCTION_DELIVERY_MATRIX.json URL
+        description: Необязательный явно заданный URL PUBLIC_PRODUCTION_DELIVERY_MATRIX.json
         required: false
         type: string
 

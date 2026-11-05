@@ -14,11 +14,11 @@ on:
   workflow_dispatch:
     inputs:
       baselines_url:
-        description: 'HTTPS URL of independently SHA-256-pinned manifest covering all supported prior real installed release archives'
+        description: 'HTTPS-адрес манифеста с независимо зафиксированным SHA-256 для всех поддерживаемых ранее установленных релизов'
         type: string
         required: true
       baselines_sha256:
-        description: 'Pinned SHA-256 digest of the exact manifest bytes'
+        description: 'Зафиксированный SHA-256 точных байтов манифеста'
         type: string
         required: true
 permissions:

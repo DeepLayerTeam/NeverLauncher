@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       actual_minecraft:
-        description: 'Run and capture real Mojang Minecraft JVM launches (downloads Mojang artifacts)'
+        description: 'Запустить настоящую JVM Minecraft и записать результаты (с загрузкой артефактов Mojang)'
         type: boolean
         required: true
         default: false

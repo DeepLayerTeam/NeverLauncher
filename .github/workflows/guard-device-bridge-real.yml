@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       physical_live_acceptance:
-        description: 'Run independent live private physical host acceptance (requires provisioned self-hosted runner)'
+        description: 'Запустить независимую приёмку на реальном физическом хосте (требуется подготовленный собственный агент)'
         type: boolean
         default: false
 permissions:

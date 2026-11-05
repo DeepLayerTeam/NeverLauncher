@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       actual_minecraft:
-        description: 'Perform actual upstream downloads and GUI JVM launches for every listed family'
+        description: 'Выполнить настоящие загрузки с исходных серверов и запуск GUI/JVM для каждого указанного семейства'
         type: boolean
         required: true
         default: true

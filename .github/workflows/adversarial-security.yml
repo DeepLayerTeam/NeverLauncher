@@ -14,11 +14,11 @@ on:
       live_linux:
         type: boolean
         default: false
-        description: 'Run Linux sandbox on pre-provisioned delegated cgroup v2 runner'
+        description: 'Запустить тест песочницы Linux на заранее подготовленном агенте с делегированным cgroup v2'
       live_windows:
         type: boolean
         default: false
-        description: 'Run AppContainer/Job test on provisioned Windows runner'
+        description: 'Запустить проверку AppContainer/Job на подготовленном агенте Windows'
 
 permissions:
   contents: read

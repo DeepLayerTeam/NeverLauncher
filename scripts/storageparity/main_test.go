@@ -54,7 +54,7 @@ func TestIgnoresGoCommentsAndNonPostgresSQL0371(t *testing.T) {
 		t.Fatal(err)
 	}
 	code := `package example
-// postgres:// is only a comment, not a production dependency.
+// postgres:// здесь только в комментарии, а не в качестве промышленной зависимости.
 func plain(){ _ = "SELECT id FROM projects WHERE id=?" }
 `
 	if err := os.WriteFile(filepath.Join(dir, "normal.go"), []byte(code), 0644); err != nil {

@@ -1,4 +1,4 @@
-name: Linux TPM2 Certify 0.31.4
+name: Linux TPM2 Certify 0.31.4 — подтверждение TPM
 on:
   push:
     paths:

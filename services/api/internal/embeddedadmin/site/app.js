@@ -25,7 +25,7 @@ async function api(path, method = "GET", body = null, bootstrapToken = "") {
   try {
     result = await response.json();
   } catch {
-    throw new Error(`HTTP ${response.status}: invalid JSON`);
+    throw new Error(`HTTP ${response.status}: некорректный JSON`);
   }
   if (!response.ok)
     throw new Error(result?.error?.message || `HTTP ${response.status}`);
@@ -35,7 +35,7 @@ async function readiness() {
   try {
     const data = await api("/api/v1/install/readiness");
     message(
-      `Readiness: ${data.status}; установка завершена: ${data.installationCompleted ? "да" : "нет"}`,
+      `Готовность: ${data.status}; установка завершена: ${data.installationCompleted ? "да" : "нет"}`,
     );
     show(
       "bootstrap",

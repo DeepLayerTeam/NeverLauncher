@@ -12,15 +12,15 @@ on:
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Immutable exact 40-digit candidate commit
+        description: Неизменяемый полный 40-символьный хеш коммита кандидата
         required: true
         type: string
       project:
-        description: Pinned release distribution project slug
+        description: Зафиксированный идентификатор проекта для распространения релиза
         required: true
         type: string
       source_index_sha256:
-        description: SHA-256 of independently approved six-platform distribution index
+        description: SHA-256 независимо утверждённого индекса дистрибутивов для шести платформ
         required: true
         type: string
 

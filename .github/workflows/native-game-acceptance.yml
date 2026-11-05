@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: Immutable staged and signed package to execute on all six GUI hosts
+        description: Неизменяемый подготовленный и подписанный пакет для запуска на шести GUI-хостах
         required: true
         type: string
   workflow_call:

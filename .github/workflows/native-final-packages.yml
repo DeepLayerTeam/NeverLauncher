@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       manifest_url:
-        description: 'HTTPS source index of the exact six publicly downloadable signed final installers'
+        description: 'HTTPS-индекс исходных данных шести публично доступных подписанных финальных установщиков'
         type: string
         required: true
       manifest_sha256:
-        description: 'Independently approved SHA-256 of source index (NOT copied from the index)'
+        description: 'Независимо утверждённый SHA-256 исходного индекса (НЕ скопированный из самого индекса)'
         type: string
         required: true
       manifest_size:
-        description: 'Exact source index byte size from protected release approval'
+        description: 'Точный размер индекса исходных артефактов в байтах из защищённого утверждения релиза'
         type: string
         required: true
       project:
-        description: 'Project ID pinned by signed bootstrap configuration'
+        description: 'ID проекта, закреплённый подписанной конфигурацией начальной установки'
         type: string
         required: true
 

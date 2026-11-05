@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Exact approved 40-character commit (protected environment)
+        description: Точный утверждённый 40-символьный коммит (защищённая среда)
         type: string
         required: true
 

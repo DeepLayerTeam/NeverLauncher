@@ -709,7 +709,7 @@ FENCE_SQL_0454 = """BEGIN;
 SET LOCAL lock_timeout = '10s';
 SET LOCAL statement_timeout = '120s';
 SELECT pg_advisory_xact_lock(4504, 1);
--- Dispatched side effects can never be replayed after a disaster.
+-- Отправленные побочные действия нельзя повторно воспроизводить после аварии.
 UPDATE server_bridge_control_commands_v3
  SET status='indeterminate', updated_at=now(), completed_at=now(), lease_until=NULL,
  error='disaster recovery: old lease untrusted; inspect external effect'
@@ -728,15 +728,15 @@ UPDATE server_bridge_player_sessions_v3
  invalidated_reason='disaster recovery: prior runtime not trusted', updated_at=now()
  WHERE status='active';
 UPDATE server_bridge_runtime_instances_v3 SET ended_at=now() WHERE ended_at IS NULL;
--- A restored credential cannot admit an old running JVM. Force explicit
--- rotation/re-enrollment; never automatically resume signed host commands.
+-- Восстановленные учётные данные не должны допускать ранее запущенную JVM. Требуйте явную
+-- ротацию и повторную регистрацию; никогда автоматически не возобновляйте подписанные команды хоста.
 UPDATE server_bridge_nodes_v2 SET
  status='credential-rotation-required', last_heartbeat_at=NULL,
  runtime_previous_id=runtime_id, runtime_id='', runtime_epoch=runtime_epoch+1,
  routing_accepting=false, routing_state='maintenance', routing_health='unknown'
  WHERE status='active';
--- Fence all other durable work. Never silently replay a side effect whose
--- acknowledgement might have been lost on the destroyed source cluster.
+-- Блокируйте прочие устойчивые операции. Не повторяйте незаметно побочное действие,
+-- подтверждение которого могло быть потеряно на разрушенном исходном кластере.
 UPDATE durable_jobs SET status='failed', lease_owner='', lease_token='', lease_fence=lease_fence+1,
  lease_expires_at=NULL, completed_at=now(), updated_at=now(),
  last_error='disaster recovery: in-flight effect requires reconciliation' WHERE status='running';

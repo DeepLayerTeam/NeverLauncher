@@ -18,15 +18,15 @@ on:
       live_linux:
         type: boolean
         default: false
-        description: 'Run real delegated-cgroup Linux boundary tests on dedicated host'
+        description: 'Запустить реальные проверки границ cgroup Linux на выделенном хосте'
       live_windows:
         type: boolean
         default: false
-        description: 'Run real Windows AppContainer and Job tests on dedicated host'
+        description: 'Запустить реальные проверки Windows AppContainer и Job на выделенном хосте'
       signed_evidence_run_id:
         type: string
         required: false
-        description: 'Previously approved run containing seven independently signed evidence tiers'
+        description: 'Ранее утверждённый запуск с семью уровнями независимо подписанных подтверждений'
 
 permissions:
   contents: read

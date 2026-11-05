@@ -19,12 +19,12 @@ on:
   workflow_dispatch:
     inputs:
       production_release:
-        description: 'Build and sign release artifacts from approved signed bootstrap run'
+        description: 'Собрать и подписать артефакты релиза на основе утверждённой подписанной начальной сборки'
         type: boolean
         required: true
         default: false
       source_run_id:
-        description: 'Run with signed launcher-bootstrap-{platform}-{arch} artifacts'
+        description: 'Запускать с подписанными артефактами launcher-bootstrap-{platform}-{arch}'
         required: false
         type: string
 permissions:

@@ -2,4 +2,4 @@ name: LauncherBungeeBridge
 main: ru.launcher.bridge.bungeecord.LauncherBungeeCordBridge
 version: "${version}"
 author: SkiF4er
-description: Launcher ServerBridge 3 integration for BungeeCord with Protocol v3 negotiation and Protocol v2 rolling-upgrade compatibility.
+description: 'Интеграция Launcher ServerBridge 3 для BungeeCord: согласование Protocol v3 и совместимость с Protocol v2 при поэтапном обновлении.'

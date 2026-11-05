@@ -14,15 +14,15 @@ on:
   workflow_dispatch:
     inputs:
       source_commit:
-        description: Immutable 40-character approved GA release commit
+        description: Неизменяемый 40-символьный коммит утверждённого GA-релиза
         required: true
         type: string
       project:
-        description: Exact distribution project slug
+        description: Точный идентификатор проекта дистрибутива
         required: true
         type: string
       source_index_sha256:
-        description: Out-of-band pinned SHA-256 of six-platform signed download index
+        description: Зафиксированный независимым каналом SHA-256 индекса подписанных загрузок для шести платформ
         required: true
         type: string
 

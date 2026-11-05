@@ -3,23 +3,23 @@ main: ru.launcher.bridge.paper.LauncherPaperBridge
 version: ${version}
 api-version: '1.21'
 author: SkiF4er
-description: Launcher ServerBridge/AuthBridge integration for Paper servers.
+description: Интеграция Launcher ServerBridge/AuthBridge для серверов Paper.
 
 commands:
   nlbridge:
-    description: Launcher bridge diagnostics and control command
+    description: Команда диагностики и управления мостом Launcher
     usage: /nlbridge <status|test|reload|diagnostics>
     permission: launcher.bridge.status
 permissions:
   launcher.bridge.admin:
-    description: Trigger Launcher bridge network diagnostics
+    description: Запустить сетевую диагностику моста Launcher
     default: op
   launcher.bridge.status:
-    description: Read Launcher bridge status
+    description: Получить состояние моста Launcher
     default: op
   launcher.bridge.reload:
-    description: Reload Launcher bridge configuration
+    description: Перезагрузить конфигурацию моста Launcher
     default: op
   launcher.bridge.diagnostics:
-    description: Read Launcher bridge diagnostics
+    description: Получить диагностику моста Launcher
     default: op

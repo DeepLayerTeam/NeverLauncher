@@ -16,7 +16,7 @@ on:
       live_arm64:
         type: boolean
         default: false
-        description: 'Require real kernel tests on a provisioned ARM64 sandbox runner'
+        description: 'Потребовать реальные тесты ядра на подготовленном агенте песочницы ARM64'
 
 permissions:
   contents: read

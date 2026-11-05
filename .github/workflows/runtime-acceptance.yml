@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: Exact immutable, signed, integrity-passed stable staged package
+        description: Точный неизменяемый подписанный подготовленный пакет stable, прошедший проверку целостности
         required: true
         type: string
 permissions:

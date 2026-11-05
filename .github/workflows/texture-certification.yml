@@ -21,11 +21,11 @@ on:
   workflow_dispatch:
     inputs:
       texture_origin:
-        description: 'Optional running Yggdrasil HTTPS origin for a live protocol probe'
+        description: 'Необязательный действующий HTTPS-сервер Yggdrasil для реальной проверки протокола'
         required: false
         type: string
       local_minecraft_uuid:
-        description: 'Local account with a published managed skin, only for live probe'
+        description: 'Локальная учётная запись с опубликованным управляемым скином, только для реальной проверки'
         required: false
         type: string
 permissions:

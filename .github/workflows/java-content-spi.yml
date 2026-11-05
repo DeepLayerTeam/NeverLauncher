@@ -1,4 +1,4 @@
-name: Java Content SPI 0.48.6
+name: Java Content SPI 0.48.6 — интерфейс поставщика содержимого
 on:
   push:
     paths:
