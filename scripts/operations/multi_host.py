@@ -44,9 +44,9 @@ def run(argv, *, cwd=None, timeout=30, codes=(0,)):
         p = subprocess.run(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                            timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise DeploymentError("command unavailable or timed out: " + argv[0]) from exc
+        raise DeploymentError("Команда недоступна или истекло время ожидания: " + argv[0]) from exc
     if p.returncode not in codes:
-        raise DeploymentError("command failed: " + argv[0] + " (exit " + str(p.returncode) + ")")
+        raise DeploymentError("Команда завершилась ошибкой: " + argv[0] + " (exit " + str(p.returncode) + ")")
     if len(p.stdout) > 4_000_000:
         raise DeploymentError("command produced unexpectedly large output")
     return p.stdout.decode("utf-8", errors="replace")

@@ -79,7 +79,7 @@ public final class NeverLauncherAPI {
         if(!token.isBlank())builder.header("Authorization","Bearer "+token);
         if(contentType!=null)builder.header("Content-Type",contentType);
         if(idempotencyKey!=null && !idempotencyKey.isEmpty()) {
-            if(idempotencyKey.contains("\r")||idempotencyKey.contains("\n"))throw new IllegalArgumentException("invalid idempotency key");
+            if(idempotencyKey.contains("\r")||idempotencyKey.contains("\n"))throw new IllegalArgumentException("Недопустимый ключ идемпотентности");
             builder.header("Idempotency-Key",idempotencyKey);
         }
         var response=http.send(builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofByteArray(body)).build(),HttpResponse.BodyHandlers.ofInputStream());
@@ -116,7 +116,7 @@ public final class NeverLauncherAPI {
         if (!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains("..") || path.startsWith("//"))
             throw new IllegalArgumentException("unsafe API route");
         if (idempotencyKey != null && (idempotencyKey.contains("\r") || idempotencyKey.contains("\n")))
-            throw new IllegalArgumentException("invalid idempotency key");
+            throw new IllegalArgumentException("Недопустимый ключ идемпотентности");
         var qs = query == null || query.isEmpty() ? "" : "?" + query.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))

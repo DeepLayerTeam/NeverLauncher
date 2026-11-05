@@ -282,7 +282,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 	}
 	sandbox := strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))
 	if sandbox != "process" && sandbox != "required" {
-		return forgeMaterializeOptions{}, errors.New("--processor-sandbox must be process or required")
+		return forgeMaterializeOptions{}, errors.New("Параметр --processor-sandbox должен иметь значение process или required")
 	}
 	return forgeMaterializeOptions{
 		Loader:             loader,
@@ -386,7 +386,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		installerURL = forgeInstallerURL(loader, vanilla.MinecraftVersion, artifactVersion)
 	}
 	if err := validateRemoteURL(installerURL); err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("installer URL: %w", err)
+		return forgeMaterializeResult{}, fmt.Errorf("Ошибка URL установщика: %w", err)
 	}
 	installerRel := filepath.ToSlash(filepath.Join(".launcher", "installers", loader, sanitizeVersionToken(artifactVersion), "installer.jar"))
 	installerPath, err := secureClientDestination(opts.ClientDir, installerRel)
@@ -405,7 +405,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 			return forgeMaterializeResult{}, err
 		}
 		if pinned != nil && !strings.EqualFold(pinned.PayloadSHA256, opts.InstallerSourceSHA256) {
-			return forgeMaterializeResult{}, errors.New("local installer differs from pinned installer")
+			return forgeMaterializeResult{}, errors.New("Локальный установщик отличается от закреплённого установщика")
 		}
 		sha1sum, _, _, err := hashFileSHA1SHA256(opts.InstallerSourceFile)
 		if err != nil {
@@ -453,14 +453,14 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 				upstreamRecoveryUsed = true
 			} else {
 				if opts.LoaderCacheOnly {
-					return forgeMaterializeResult{}, fmt.Errorf("%s cache-only installer recovery: %w", loader, restoreErr)
+					return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка восстановления установщика только из кеша: %w", loader, restoreErr)
 				}
 				downloaded, downloadErr := downloadPinnedSHA256Artifact(ctx, installerClient, opts.ClientDir, installerRel, installerURL, pinned.PayloadSHA256, loader+"-installer", maxCompatibilityArtifact)
 				if downloadErr != nil {
-					return forgeMaterializeResult{}, fmt.Errorf("%s pinned installer download: %w", loader, downloadErr)
+					return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка загрузки закреплённого установщика: %w", loader, downloadErr)
 				}
 				if _, cacheErr := storeLoaderPayloadCacheFile(opts.ClientDir, loader, vanilla.MinecraftVersion, installerURL, installerPath, pinned.PayloadSHA256); cacheErr != nil {
-					return forgeMaterializeResult{}, fmt.Errorf("%s pinned installer cache commit: %w", loader, cacheErr)
+					return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка сохранения закреплённого установщика в кеш: %w", loader, cacheErr)
 				}
 				installerFile = downloaded
 			}
@@ -474,7 +474,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 			shaBytes, shaErr := fetchLimitedBytes(ctx, opts.HTTPClient, installerURL+".sha1", 64<<10)
 			if shaErr != nil {
 				if opts.StrictUpstream {
-					return forgeMaterializeResult{}, fmt.Errorf("%s installer SHA-1: %w", loader, shaErr)
+					return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка проверки SHA-1 установщика: %w", loader, shaErr)
 				}
 			} else {
 				installerSHA1 = parseSHA1Sidecar(string(shaBytes))
@@ -488,10 +488,10 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		}
 		installerFile, err = downloadForgeInstallerRecoveringTransport(ctx, installerClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, opts.ClientDir)
 		if err != nil {
-			return forgeMaterializeResult{}, fmt.Errorf("%s installer download: %w", loader, err)
+			return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка загрузки установщика: %w", loader, err)
 		}
 		if _, err := storeLoaderPayloadCacheFile(opts.ClientDir, loader, vanilla.MinecraftVersion, installerURL, installerPath, installerFile.SHA256); err != nil {
-			return forgeMaterializeResult{}, fmt.Errorf("%s installer cache commit: %w", loader, err)
+			return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка сохранения установщика в кеш: %w", loader, err)
 		}
 	}
 	if err := assertPinnedPayloadSHA256(pinned, installerURL, installerFile.SHA256); err != nil {
@@ -556,10 +556,10 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	// Данные установщика — воспроизводимое временное состояние. Очищайте его при каждом запуске, чтобы
 	// устаревшие входы процессора или оставшиеся символические ссылки не переживали повторную материализацию.
 	if err := os.RemoveAll(installerDataDir); err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("installer data cleanup: %w", err)
+		return forgeMaterializeResult{}, fmt.Errorf("Не удалось очистить данные установщика: %w", err)
 	}
 	if err := os.MkdirAll(installerDataDir, 0o755); err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("installer data create: %w", err)
+		return forgeMaterializeResult{}, fmt.Errorf("Не удалось создать данные установщика: %w", err)
 	}
 	if err := extractInstallerData(installerPath, installerDataDir, &bundle.Profile); err != nil {
 		return forgeMaterializeResult{}, err
@@ -574,7 +574,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 
 	profileFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Profile.Libraries, loader, opts.Workers, opts.StrictUpstream, opts.Targets...)
 	if err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer libraries: %w", loader, err)
+		return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка библиотек установщика: %w", loader, err)
 	}
 	files = append(files, profileFiles...)
 
@@ -595,7 +595,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 
 	versionFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Version.Libraries, loader, opts.Workers, opts.StrictUpstream, opts.Targets...)
 	if err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("%s runtime libraries: %w", loader, err)
+		return forgeMaterializeResult{}, fmt.Errorf("%s: ошибка библиотек Runtime: %w", loader, err)
 	}
 	files = append(files, versionFiles...)
 
@@ -764,7 +764,7 @@ func installForgeLegacy(
 	}
 	universalRel, err := mavenCoordinatePath(universalCoord)
 	if err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy universal coordinate: %w", err)
+		return forgeMaterializeResult{}, fmt.Errorf("Ошибка координат универсального пакета старой версии Forge: %w", err)
 	}
 	universalDestRel := "libraries/" + universalRel
 	universalDest, err := secureClientDestination(opts.ClientDir, universalDestRel)
@@ -778,10 +778,10 @@ func installForgeLegacy(
 			return forgeMaterializeResult{}, errors.New("legacy Forge install.filePath пуст")
 		}
 		if _, err := safeArchiveRelative(entry); err != nil {
-			return forgeMaterializeResult{}, fmt.Errorf("legacy Forge universal entry: %w", err)
+			return forgeMaterializeResult{}, fmt.Errorf("Ошибка записи универсального пакета старой версии Forge: %w", err)
 		}
 		if err := extractInstallerEntry(installerPath, entry, universalDest); err != nil {
-			return forgeMaterializeResult{}, fmt.Errorf("extract Forge legacy universal JAR: %w", err)
+			return forgeMaterializeResult{}, fmt.Errorf("Ошибка извлечения универсального JAR старой версии Forge: %w", err)
 		}
 	} else if bundle.LegacyMode == "legacy-v2-empty-processors" {
 		embedded, err := extractEmbeddedMaven(installerPath, opts.ClientDir)
@@ -795,7 +795,7 @@ func installForgeLegacy(
 			// установки загрузите библиотеки профиля по авторитетным Maven URL.
 			profileFiles, materializeErr := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Profile.Libraries, "forge", opts.Workers, opts.StrictUpstream)
 			if materializeErr != nil {
-				return forgeMaterializeResult{}, fmt.Errorf("Forge legacy profile libraries: %w", materializeErr)
+				return forgeMaterializeResult{}, fmt.Errorf("Ошибка библиотек профиля старой версии Forge: %w", materializeErr)
 			}
 			files = append(files, profileFiles...)
 		}
@@ -820,7 +820,7 @@ func installForgeLegacy(
 
 	versionFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Version.Libraries, "forge", opts.Workers, opts.StrictUpstream)
 	if err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy runtime libraries: %w", err)
+		return forgeMaterializeResult{}, fmt.Errorf("Ошибка библиотек Runtime старой версии Forge: %w", err)
 	}
 	files = append(files, versionFiles...)
 
@@ -1043,7 +1043,7 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 			return nil
 		}
 		if strict {
-			return fmt.Errorf("Forge legacy universal SHA-1 sidecar: %w", err)
+			return fmt.Errorf("Ошибка отдельного файла SHA-1 универсального пакета старой версии Forge: %w", err)
 		}
 		return nil
 	}
@@ -1055,7 +1055,7 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 		return nil
 	}
 	if !strings.EqualFold(expected, actualSHA1) {
-		return fmt.Errorf("Forge legacy universal JAR SHA-1 mismatch: expected %s got %s", expected, actualSHA1)
+		return fmt.Errorf("SHA-1 универсального JAR старой версии Forge не совпадает: ожидается %s, получено %s", expected, actualSHA1)
 	}
 	return nil
 }
@@ -1247,7 +1247,7 @@ func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataUR
 			return nil, err
 		}
 	}
-	return nil, fmt.Errorf("metadata GET failed after %d attempts: %w", compatibilityHTTPAttempts, lastErr)
+	return nil, fmt.Errorf("Не удалось получить метаданные GET после %d попыток: %w", compatibilityHTTPAttempts, lastErr)
 }
 
 // Функция downloadForgeInstallerRecoveringTransport повторяет только прерванные передачи
@@ -1275,7 +1275,7 @@ func downloadForgeInstallerRecoveringTransport(ctx context.Context, client *http
 			return vanillaDownloadedFile{}, sleepErr
 		}
 	}
-	return vanillaDownloadedFile{}, errors.New("unreachable installer recovery state")
+	return vanillaDownloadedFile{}, errors.New("Недостижимое состояние восстановления установщика")
 }
 
 func forgeInstallerURL(loader, minecraftVersion, artifactVersion string) string {
@@ -1439,7 +1439,7 @@ func extractInstallerData(installerPath, targetDir string, profile *forgeInstall
 		}
 		rel, err := safeArchiveRelative(strings.TrimPrefix(value, "/"))
 		if err != nil {
-			return fmt.Errorf("installer data %s: %w", key, err)
+			return fmt.Errorf("Ошибка данных установщика %s: %w", key, err)
 		}
 		required[rel] = false
 	}
@@ -1461,7 +1461,7 @@ func extractInstallerData(installerPath, targetDir string, profile *forgeInstall
 		}
 		clean, err := safeArchiveRelative(name)
 		if err != nil {
-			return fmt.Errorf("installer data: %w", err)
+			return fmt.Errorf("Ошибка данных установщика: %w", err)
 		}
 		if entry.UncompressedSize64 > 512<<20 {
 			return fmt.Errorf("installer data %s превышает 512 MiB", name)
@@ -1504,7 +1504,7 @@ func extractEmbeddedMaven(installerPath, clientDir string) ([]vanillaDownloadedF
 		}
 		rel, err := safeArchiveRelative(strings.TrimPrefix(name, "maven/"))
 		if err != nil {
-			return nil, fmt.Errorf("embedded Maven path: %w", err)
+			return nil, fmt.Errorf("Ошибка пути встроенного Maven: %w", err)
 		}
 		if rel == "" || strings.HasSuffix(rel, ".sha1") || strings.HasSuffix(rel, ".md5") || strings.HasSuffix(rel, ".sha256") || strings.HasSuffix(rel, ".sha512") || strings.HasSuffix(rel, ".pom") {
 			continue
@@ -1533,7 +1533,7 @@ func safeArchiveRelative(value string) (string, error) {
 	value = strings.ReplaceAll(value, "\\", "/")
 	clean := path.Clean(value)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") || clean != value {
-		return "", fmt.Errorf("archive traversal path: %s", value)
+		return "", fmt.Errorf("Обнаружен путь с выходом за пределы архива: %s", value)
 	}
 	return clean, nil
 }
@@ -1576,7 +1576,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 	for i, target := range selectedTargets {
 		normalized, err := normalizeVanillaTarget(target)
 		if err != nil {
-			return nil, fmt.Errorf("Forge library target[%d]: %w", i, err)
+			return nil, fmt.Errorf("Ошибка целевой библиотеки Forge [%d]: %w", i, err)
 		}
 		selectedTargets[i] = normalized
 	}
@@ -1634,7 +1634,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		}
 		// Отклоняйте другой артефакт Maven, выдаваемый за требуемую зависимость.
 		if rel != canonical {
-			return nil, fmt.Errorf("library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
+			return nil, fmt.Errorf("Библиотека %s: значение artifact.path %q не совпадает с идентификатором Maven %q", lib.Name, rel, canonical)
 		}
 		if err := validateVanillaRelativePath(rel); err != nil {
 			return nil, fmt.Errorf("Путь к библиотеке %s: %w", lib.Name, err)
@@ -1642,7 +1642,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		dstRel := "libraries/" + rel
 		dst, err := secureClientDestination(clientDir, dstRel)
 		if err != nil {
-			return nil, fmt.Errorf("library %s destination: %w", lib.Name, err)
+			return nil, fmt.Errorf("Библиотека %s: ошибка целевого пути: %w", lib.Name, err)
 		}
 		artifact := lib.Downloads.Artifact
 		if info, err := os.Stat(dst); err == nil && !info.IsDir() {
@@ -1679,7 +1679,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			artifactURL = strings.TrimRight(base, "/") + "/" + rel
 		}
 		if err := validateRemoteURL(artifactURL); err != nil {
-			return nil, fmt.Errorf("library %s URL: %w", lib.Name, err)
+			return nil, fmt.Errorf("Библиотека %s: ошибка URL: %w", lib.Name, err)
 		}
 		expected := strings.ToLower(strings.TrimSpace(artifact.SHA1))
 		if expected == "" {
@@ -1689,7 +1689,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			} else if fallback := firstLegacySHA1(lib.Checksums); fallback != "" {
 				expected = fallback
 			} else if strict {
-				return nil, fmt.Errorf("library %s: SHA-1 sidecar: %w", lib.Name, err)
+				return nil, fmt.Errorf("Библиотека %s: ошибка отдельного файла SHA-1: %w", lib.Name, err)
 			}
 		}
 		if strict && !validSHA1Hex(expected) {
@@ -1883,7 +1883,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		identity := forgeProcessorIdentity(pc, index, processor)
 		inputSHA, err := fingerprintForgeProcessor0273(pc, processor)
 		if err != nil {
-			return stats, fmt.Errorf("processor[%d] input hash: %w", index, err)
+			return stats, fmt.Errorf("Процессор [%d]: ошибка хеша входных данных: %w", index, err)
 		}
 		key := processorJournalKey(index)
 		entry, hasEntry := journal.Entries[key]
@@ -1899,7 +1899,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		if allReady && entryMatches && len(processor.Outputs) > 0 {
 			recovered := entryMatches && (entry.State == "running" || entry.State == "failed")
 			if _, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "completed", "", recovered, ""); err != nil {
-				return stats, fmt.Errorf("processor[%d] journal completion: %w", index, err)
+				return stats, fmt.Errorf("Процессор [%d]: ошибка завершения журнала: %w", index, err)
 			}
 			if err := factoryRecorderFromContext0271(ctx).recordProcessor(pc, index, processor); err != nil {
 				return stats, err
@@ -1912,7 +1912,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		}
 		if len(processor.Outputs) > 0 && !allReady || (len(processor.Outputs) > 0 && allReady && !entryMatches) {
 			if err := quarantineProcessorOutputs(pc, processor, fmt.Sprintf("processor[%d] journal recovery found incomplete or corrupt outputs", index)); err != nil {
-				return stats, fmt.Errorf("processor[%d] recovery cleanup: %w", index, err)
+				return stats, fmt.Errorf("Процессор [%d]: ошибка очистки при восстановлении: %w", index, err)
 			}
 		}
 		procJar, err := resolveProcessorArtifactPath(pc.ClientDir, processor.Jar)
@@ -1921,7 +1921,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		}
 		mainClass, err := readJarMainClass(procJar)
 		if err != nil {
-			return stats, fmt.Errorf("processor[%d] main class: %w", index, err)
+			return stats, fmt.Errorf("Процессор [%d]: ошибка главного класса: %w", index, err)
 		}
 		classpath := []string{procJar}
 		for _, coordinate := range processor.Classpath {
@@ -1940,18 +1940,18 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			args = append(args, resolved)
 		}
 		if _, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "running", "", false, ""); err != nil {
-			return stats, fmt.Errorf("processor[%d] journal start: %w", index, err)
+			return stats, fmt.Errorf("Процессор [%d]: ошибка начала журнала: %w", index, err)
 		}
 		cmdArgs := append([]string{"-cp", strings.Join(classpath, string(os.PathListSeparator)), mainClass}, args...)
 		logPath, runErr := runIsolatedProcessor0273(ctx, pc, index, cmdArgs)
 		if runErr != nil {
 			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, runErr.Error())
-			return stats, fmt.Errorf("processor[%d] isolated worker: %w (log: %s)", index, runErr, logPath)
+			return stats, fmt.Errorf("Процессор [%d]: ошибка изолированного рабочего процесса: %w (журнал: %s)", index, runErr, logPath)
 		}
 		allReady, err = processorOutputsMatch(pc, processor)
 		if err != nil {
 			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, err.Error())
-			return stats, fmt.Errorf("processor[%d] output verification: %w", index, err)
+			return stats, fmt.Errorf("Процессор [%d]: ошибка проверки результата: %w", index, err)
 		}
 		if len(processor.Outputs) > 0 && !allReady {
 			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, "expected outputs were not produced")
@@ -1959,7 +1959,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		}
 		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "completed", logPath, interrupted, "")
 		if err != nil {
-			return stats, fmt.Errorf("processor[%d] journal commit: %w", index, err)
+			return stats, fmt.Errorf("Процессор [%d]: ошибка фиксации журнала: %w", index, err)
 		}
 		stats.JournalSHA256 = journalSHA
 		if err := factoryRecorderFromContext0271(ctx).recordProcessor(pc, index, processor); err != nil {
@@ -2006,7 +2006,7 @@ func validateProcessorOutput0273(root, output string) error {
 	}
 	rel, err := filepath.Rel(base, absolute)
 	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return fmt.Errorf("processor output outside client root: %s", output)
+		return fmt.Errorf("Результат процессора находится за пределами каталога клиента: %s", output)
 	}
 	_, err = secureClientDestination(base, filepath.ToSlash(rel))
 	return err

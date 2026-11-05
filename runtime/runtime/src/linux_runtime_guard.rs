@@ -38,7 +38,7 @@ pub struct LinuxRuntimeGuard0508 {
 fn sha256_file(path: &Path) -> Result<String, String> {
     let meta = fs::metadata(path).map_err(|e| format!("Guard для Linux: не удалось получить сведения о файле {}: {e}", path.display()))?;
     if !meta.is_file() || meta.len() > MAX_HASH_FILE {
-        return Err(format!("Linux Guard invalid executable file {}", path.display()));
+        return Err(format!("Guard Linux: недопустимый исполняемый файл {}", path.display()));
     }
     let mut hasher = Sha256::new();
     let mut f = File::open(path).map_err(|e| format!("Guard для Linux: не удалось открыть {}: {e}", path.display()))?;
@@ -67,7 +67,7 @@ fn start_ticks_from_stat(stat: &str) -> Result<u64, String> {
     let ticks = tail.split_whitespace().nth(19)
         .ok_or("Linux Guard missing process starttime")?
         .parse::<u64>().map_err(|_| "Linux Guard invalid process starttime")?;
-    if ticks == 0 { return Err("Linux Guard zero process starttime".into()); }
+    if ticks == 0 { return Err("Guard Linux: время запуска процесса равно нулю".into()); }
     Ok(ticks)
 }
 
@@ -92,12 +92,12 @@ fn collect_java_natives(home: &Path) -> Result<BTreeMap<PathBuf, String>, String
         for entry in fs::read_dir(&dir).map_err(|e| format!("Linux Guard JRE inventory {}: {e}", dir.display()))? {
             let entry = entry.map_err(|e| e.to_string())?;
             visited += 1;
-            if visited > MAX_FDS { return Err("Linux Guard JRE file walk limit".into()); }
+            if visited > MAX_FDS { return Err("Guard Linux: превышен лимит обхода файлов JRE".into()); }
             let ty = entry.file_type().map_err(|e| e.to_string())?;
             if ty.is_symlink() && native_name(&entry.path()) {
                 let destination = fs::canonicalize(entry.path()).map_err(|e|e.to_string())?;
                 if !destination.starts_with(home) || !destination.is_file() {
-                    return Err("Linux Guard JRE native alias outside trusted Java home".into());
+                    return Err("Guard Linux: нативный псевдоним JRE находится вне доверенного домашнего каталога Java".into());
                 }
                 result.insert(entry.path(), sha256_file(&destination)?);
             }

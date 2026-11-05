@@ -119,7 +119,7 @@ impl GuardSupervisor {
         let mut state=self.inner.lock().await;
         if let Some(handle)=state.as_mut(){
             if handle.child.try_wait().map_err(|e|format!("Ошибка проверки процесса Guard: {e}"))?.is_none(){
-                if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; if s.pid!=handle.child.id().ok_or("Guard child PID missing")?||s.parent_pid!=std::process::id(){return Err("Несовпадение: идентичность работающего процесса Guard".into())} s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
+                if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; if s.pid!=handle.child.id().ok_or("Отсутствует PID дочернего процесса Guard")?||s.parent_pid!=std::process::id(){return Err("Несовпадение: идентичность работающего процесса Guard".into())} s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
             }
         }
         if let Some(mut stale)=state.take(){ let _=stale.child.kill().await; }
@@ -197,7 +197,7 @@ fn validate_endpoint(path:&Path)->Result<(),String>{
 fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{
     let sm=std::fs::symlink_metadata(path).map_err(|e|format!("Не удалось получить сведения о файле {}: {e}",path.display()))?;
     if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} должен быть обычным файлом, а не символической ссылкой",path.display()))}
-    let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}
+    let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("Владельцем {} должен быть текущий UID или root",path.display()))}
     if sm.mode()&0o022!=0{return Err(format!("{} не должен разрешать запись группе или всем пользователям",path.display()))}
     if executable&&sm.mode()&0o111==0{return Err(format!("{} не является исполняемым файлом",path.display()))}
     Ok(())
@@ -237,7 +237,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.launcher"||(!legacy&&!canonical){return Err("Несовпадение: идентичность и защита манифеста пакета macOS".into())}
     if canonical {
         let helpers=app.join("Contents/Helpers").canonicalize().map_err(|e|format!("Ошибка: определение каталога Helpers приложения: {e}"))?;
-        if guard_dir!=helpers{return Err("Guard must run from the signed .app/Contents/Helpers directory".into())}
+        if guard_dir!=helpers{return Err("Guard должен запускаться из подписанного каталога .app/Contents/Helpers".into())}
     } else if desktop_dir!=guard_dir {
         return Err("Прежние компоненты Desktop и Guard должны находиться в одном каталоге MacOS пакета приложения".into())
     }
@@ -258,25 +258,25 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
                 let metadata=std::fs::metadata(path).map_err(|e|format!("Ошибка получения метаданных {}: {e}",path.display()))?;
                 if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("Ошибка: проверка артефактов пакета macOS: {component}"))}
             }
-            if signing_team.is_empty(){signing_team=artifact.team_id.clone()} else if !artifact.team_id.is_empty()&&!artifact.team_id.eq_ignore_ascii_case(&signing_team){return Err("macOS package signing team is inconsistent".into())}
+            if signing_team.is_empty(){signing_team=artifact.team_id.clone()} else if !artifact.team_id.is_empty()&&!artifact.team_id.eq_ignore_ascii_case(&signing_team){return Err("Данные команды разработчика в подписи пакета macOS противоречивы".into())}
         }
     } else if !external_hash_binding {
         for (path, expected_size, expected_sha256) in [(desktop.as_path(), manifest.desktop_size, manifest.desktop_sha256.as_str()), (guard, manifest.guard_size, manifest.guard_sha256.as_str())] {
             let metadata=std::fs::metadata(path).map_err(|e|format!("Ошибка получения метаданных {}: {e}",path.display()))?;
-            if metadata.len()!=expected_size{return Err(format!("macOS package size mismatch for {}",path.display()))}
+            if metadata.len()!=expected_size{return Err(format!("Размер пакета macOS не совпадает для {}",path.display()))}
             let actual=sha256_file(path)?;
-            if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("macOS package SHA-256 mismatch for {}",path.display()))}
+            if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("SHA-256 пакета macOS не совпадает для {}",path.display()))}
         }
     }
     if signing_team.is_empty(){return Err("Отсутствует: Team ID подписи пакета macOS".into())}
     for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.launcher"), (guard, "ru.skif4er.launcher.guard")] {
         let sig=verify_macos_code_signature(path)?;
         if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("macOS Hardened Runtime verification failed: {}",path.display()))}
-        if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("macOS signing team mismatch: {}",path.display()))}
-        if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("macOS code-signing identifier mismatch for {}: expected {expected_identifier}, got {:?}",path.display(),sig.identifier))}
+        if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("Команда разработчика в подписи macOS не совпадает: {}",path.display()))}
+        if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("Идентификатор подписи кода macOS для {} не совпадает: ожидался {expected_identifier}, получено {:?}",path.display(),sig.identifier))}
     }
     let app_verify=std::process::Command::new("/usr/bin/codesign").args(["--verify","--deep","--strict","--verbose=2"]).arg(&app).output().map_err(|e|format!("Ошибка: проверка подписи приложения через codesign: {e}"))?;
-    if !app_verify.status.success(){return Err(format!("macOS app bundle signature invalid: {}",String::from_utf8_lossy(&app_verify.stderr).trim()))}
+    if !app_verify.status.success(){return Err(format!("Недействительная подпись пакета приложения macOS: {}",String::from_utf8_lossy(&app_verify.stderr).trim()))}
     let gatekeeper=std::process::Command::new("/usr/sbin/spctl").args(["--assess","--type","execute","--verbose=2"]).arg(&app).output().map_err(|e|format!("Ошибка: проверка приложения через spctl: {e}"))?;
     if !gatekeeper.status.success(){return Err(format!("macOS Gatekeeper/notarization assessment failed: {}",String::from_utf8_lossy(&gatekeeper.stderr).trim()))}
     Ok(())
@@ -299,7 +299,7 @@ async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
 fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),String>{
     let cred=stream.peer_cred().map_err(|e|format!("Ошибка: запрос учётных данных второй стороны Unix-соединения macOS: {e}"))?;
     let pid=cred.pid().ok_or_else(||"macOS Unix peer PID unavailable".to_string())?;
-    if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("Guard peer credential mismatch pid={pid} uid={}",cred.uid()))}
+    if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("Учётные данные однорангового процесса Guard не совпадают: PID={pid}, UID={}",cred.uid()))}
     Ok(())
 }
 
@@ -315,7 +315,7 @@ async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guar
     let cp=proof(secret,b"client-proof",&handshake); write_frame(&mut s,&ClientAuthentication{kind:"client-auth".into(),client_proof:hex::encode(cp)}).await?;
     let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if !ready_matches_challenge(&ch,&ready){return Err("Несовпадение: идентичность процесса в сообщении готовности Guard".into())}
     let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"Некорректное подтверждение готовности")?){return Err("Некорректное значение: подтверждение готовности Guard".into())}
-    if ready.process_policy_version!=GUARD_MACOS_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=GUARD_MACOS_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Guard macOS policy/hardening not enforced".into())}
+    if ready.process_policy_version!=GUARD_MACOS_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=GUARD_MACOS_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Политика безопасности и усиления защиты Guard на macOS не применяется".into())}
     Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:"macos-universal".into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard macOS authenticated Unix IPC ready".into()}))
 }
 
@@ -327,13 +327,13 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Несовпадение: привязка ответа Guard".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"Некорректный MAC ответа")?){return Err("Некорректное значение: код аутентичности ответа Guard".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("Исчерпан диапазон номеров сообщений IPC")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Некорректное значение: JSON-ответ Guard: {e}"))
 }
 fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Некорректное значение: состояние Guard: {e}"))?;validate_release_identity(&s)?;Ok(s)}
-fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Несовпадение версий релиза Guard и Desktop: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Guard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Несовпадение протоколов Guard и Desktop: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Состояние Guard не прошло обязательную проверку доверия среды выполнения".into())}Ok(())}
-fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=GUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("Guard macOS process policy rejected".into())}Ok(())}
+fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Несовпадение версий релиза Guard и Desktop: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Платформа Guard не совпадает: ожидалась macos-universal, получено {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Несовпадение протоколов Guard и Desktop: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Состояние Guard не прошло обязательную проверку доверия среды выполнения".into())}Ok(())}
+fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=GUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("Политика процессов Guard для macOS отклонила запрос".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"Некорректное значение: хеш подтверждающих данных")?){return Err("Несовпадение: хеш подтверждающих данных".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"Некорректное значение: подтверждение проверочных данных")?){return Err("Несовпадение: подтверждение сессии проверочных данных".into())}Ok(())}
 fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Несовпадение: привязка аттестации Guard в macOS".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"Некорректное значение: хеш аттестации")?){return Err("Несовпадение: хеш аттестации".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"Некорректное значение: подтверждение аттестации")?){return Err("Несовпадение: подтверждение сессии аттестации".into())}Ok(())}
 
 pub async fn run_macos_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
-    validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("Guard macOS parent mismatch expected={parent_pid} observed={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
+    validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("Родительский процесс Guard на macOS не совпадает: ожидался={parent_pid}, обнаружен={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
     let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("Ошибка: чтение секрета начальной инициализации: {e}"))?; }
     if endpoint.exists(){return Err("Unix-сокет Guard уже существует".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("Не удалось привязать сокет {}: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
     let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("Ошибка: проверка прав доступа к Unix-сокету Guard".into())}
@@ -495,8 +495,8 @@ async fn serve_commands(
 }
 
 async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
-async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(one[0]);}if b.is_empty(){return Err("Пустое значение: кадр IPC".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
-fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} invalid hex"))?;if b.len()!=32{return Err(format!("{n}: некорректная длина"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
+async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("Другая сторона IPC закрыла соединение".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("Превышен допустимый размер кадра IPC".into())}b.push(one[0]);}if b.is_empty(){return Err("Пустое значение: кадр IPC".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
+fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("Некорректное шестнадцатеричное значение {n}"))?;if b.len()!=32{return Err(format!("{n}: некорректная длина"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
 #[derive(Clone, Copy)]
 struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,started:u64,client_nonce:&'a [u8;32],server_nonce:&'a [u8;32]}
 #[derive(Clone, Copy)]

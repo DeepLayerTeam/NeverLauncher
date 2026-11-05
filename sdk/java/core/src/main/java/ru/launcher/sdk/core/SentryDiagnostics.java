@@ -36,7 +36,7 @@ public final class SentryDiagnostics {
             URI uri = URI.create(dsn);
             String user = uri.getRawUserInfo();
             if (user == null || user.isBlank() || user.contains(":") || uri.getHost()==null || uri.getRawQuery()!=null || uri.getRawFragment()!=null)
-                throw new IllegalArgumentException("invalid Sentry DSN");
+                throw new IllegalArgumentException("Некорректное значение: Sentry DSN");
             if (!"https".equals(uri.getScheme()) && !("http".equals(uri.getScheme()) &&
                   ("localhost".equals(uri.getHost()) || "127.0.0.1".equals(uri.getHost()) || "::1".equals(uri.getHost()))))
                 throw new IllegalArgumentException("Sentry requires HTTPS");

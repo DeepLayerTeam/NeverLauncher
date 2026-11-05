@@ -264,7 +264,7 @@ func guardCompatExternalNativeHash05010(path string) (string, error) {
 			return "", err
 		}
 		if stat.Mode()&os.ModeSymlink != 0 {
-			return "", errors.New("external native module symlink rejected")
+			return "", errors.New("Символическая ссылка на внешний нативный модуль отклонена")
 		}
 	}
 	stat, err := os.Lstat(path)
@@ -452,7 +452,7 @@ func guardCompatRelative0502(root, full string) (string, error) {
 	}
 	rel = filepath.ToSlash(rel)
 	if !guardCompatRel0502(rel) {
-		return "", fmt.Errorf("Guard compatibility path outside client: %s", full)
+		return "", fmt.Errorf("Путь совместимости Guard находится за пределами каталога клиента: %s", full)
 	}
 	return rel, nil
 }

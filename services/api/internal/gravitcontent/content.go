@@ -217,7 +217,7 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 		return out, e
 	}
 	if actual.SourceBytes != saved.SourceBytes || actual.ManifestSHA256 != saved.ManifestSHA256 {
-		return out, errors.New("source differs from committed inventory")
+		return out, errors.New("Источник отличается от зафиксированной инвентаризации")
 	}
 	return PreparePinned(ctx, src, size, saved, profilePath, projectID, profileID, name, loader, exactLoaderVersion...)
 }

@@ -79,7 +79,7 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 	}
 	key, err := hex.DecodeString(strings.TrimSpace(componentSetTrustedKey02310))
 	if err != nil || len(key) != ed25519.PublicKeySize {
-		return errors.New("component-set trust root is not built into updater; production update refused")
+		return errors.New("Корневой доверенный ключ набора компонентов не встроен в средство обновления; обновление production-среды отклонено")
 	}
 	signaturePath := filepath.Join(filepath.Dir(manifestPath), componentSetSignatureFile02310)
 	info, err := os.Lstat(signaturePath)
@@ -132,7 +132,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 		required["sensor"] = map[string]uint32{"sensor-ipc": 3}
 	}
 	if len(manifest.ComponentSet.Protocols) != len(required) {
-		return errors.New("component-set does not cover all required roles")
+		return errors.New("Набор компонентов не охватывает все обязательные роли")
 	}
 	roles := map[string]bool{}
 	for _, item := range manifest.Components {
@@ -209,7 +209,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 				}
 			}
 			if !valid {
-				return fmt.Errorf("%s has unexpected protocol dependency %s", name, key)
+				return fmt.Errorf("У %s обнаружена неожиданная зависимость протокола %s", name, key)
 			}
 		}
 	}
@@ -261,7 +261,7 @@ func verifyRestartedComponentSet02310(root, desktopPath string) error {
 				path = filepath.Join(appRoot, filepath.FromSlash(item.TargetPath))
 			}
 			if err := verifyUpdaterFile0156(path, item.Size, item.SHA256); err != nil {
-				return fmt.Errorf("recovery active %s: %w", item.Component, err)
+				return fmt.Errorf("Ошибка восстановления активного компонента %s: %w", item.Component, err)
 			}
 		}
 		return nil

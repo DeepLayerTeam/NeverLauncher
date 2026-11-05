@@ -113,7 +113,7 @@ fn check_full_response(response: &reqwest::Response, size: u64) -> Result<(), St
         return Err("Ответ HTTP 200 неожиданно содержит Content-Range".into());
     }
     if content_length(response)?.is_some_and(|len| len != size) {
-        return Err("Content-Length differs from signed manifest".into());
+        return Err("Content-Length не совпадает с подписанным манифестом".into());
     }
     check_identity_encoding(response)
 }
@@ -295,7 +295,7 @@ async fn download_verified_segment(
                     .and_then(|length| {
                         if expected_etag.as_deref().is_some_and(|expected|
                             response_etag(&response).as_deref() != Some(expected)) {
-                            return Err("206 response lacks the original strong ETag".into());
+                            return Err("В ответе HTTP 206 отсутствует исходный строгий ETag".into());
                         }
                         Ok(length)
                     });
@@ -343,7 +343,7 @@ async fn download_verified_segment(
     }
     if append {
         if response.status() != StatusCode::PARTIAL_CONTENT {
-            return Err(format!("{}: expected HTTP 206", file.path));
+            return Err(format!("{}: ожидался ответ HTTP 206", file.path));
         }
     } else {
         check_full_response(&response, file.size).map_err(|e| format!("{}: {e}", file.path))?;
@@ -672,7 +672,7 @@ mod tests {
             expected_sha256: f.sha256.clone(), expected_size: f.size,
             etag: Some("\"cached\"".into()),
         }).await.unwrap();
-        download_verified(&client(), &root, &f, &target, |_| panic!("network body consumed"))
+        download_verified(&client(), &root, &f, &target, |_| panic!("Тело сетевого ответа уже прочитано"))
             .await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         assert!(!fs::try_exists(part).await.unwrap());

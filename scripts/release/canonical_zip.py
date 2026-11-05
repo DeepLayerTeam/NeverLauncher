@@ -24,7 +24,7 @@ def timestamp() -> tuple[int, int, int, int, int, int]:
         epoch = int(raw)
         dt = datetime.fromtimestamp(epoch, timezone.utc)
     except (ValueError, OverflowError, OSError) as exc:
-        raise ValueError('invalid SOURCE_DATE_EPOCH') from exc
+        raise ValueError('Некорректное значение: SOURCE_DATE_EPOCH') from exc
     if not 1980 <= dt.year <= 2107:
         raise ValueError('SOURCE_DATE_EPOCH outside ZIP supported dates')
     return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second // 2 * 2)

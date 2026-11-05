@@ -437,7 +437,7 @@ func componentDifference0249(before, after []cm.CatalogComponent0241) (added, re
 
 func executeComponents0249(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: components validate|resolve|export|diff --manifest FILE [--public-key FILE] [--output FILE]")
+		return errors.New("Использование: components validate|resolve|export|diff --manifest FILE [--public-key FILE] [--output FILE]")
 	}
 	cmd := args[0]
 	if cmd != "validate" && cmd != "resolve" && cmd != "export" && cmd != "diff" {

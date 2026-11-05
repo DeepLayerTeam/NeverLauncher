@@ -66,7 +66,7 @@ func loadRuntimePrivateKey0212(path string) (ed25519.PrivateKey, error) {
 	if len(decoded) == ed25519.PrivateKeySize {
 		return ed25519.PrivateKey(decoded), nil
 	}
-	return nil, errors.New("runtime signing key must contain Ed25519 seed/private key as hex/base64")
+	return nil, errors.New("Ключ подписи Runtime должен содержать seed или закрытый ключ Ed25519 в формате hex/base64")
 }
 
 func handlePipeline(args []string) error {
@@ -194,7 +194,7 @@ func handlePipeline(args []string) error {
 			return fmt.Errorf("JSON-доказательства Runtime: %w", err)
 		}
 		if evidence.SchemaVersion != "launcher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
-			return errors.New("runtime evidence missing canonical schema/package/manifest/target")
+			return errors.New("В подтверждении Runtime отсутствует каноническая схема, пакет, манифест или целевая платформа")
 		}
 		privateKey, err := loadRuntimePrivateKey0212(keyPath)
 		if err != nil {
@@ -706,7 +706,7 @@ func clientPackagePublish(packagePath, channel, registryDir, uploadReportPath st
 		channel = manifest.Channel
 	}
 	if channel != manifest.Channel {
-		return nil, fmt.Errorf("channel mismatch: package=%s requested=%s", manifest.Channel, channel)
+		return nil, fmt.Errorf("Канал не совпадает: пакет=%s, запрошено=%s", manifest.Channel, channel)
 	}
 	publication := map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "packageId": manifest.PackageID, "projectId": manifest.ProjectID, "profileId": manifest.ProfileID, "channel": channel, "version": manifest.Version, "publishedAt": time.Now().UTC().Format(time.RFC3339), "manifest": packagePath, "status": "published", "auditEvent": map[string]any{"type": "client-package.published", "actor": "nl", "packageId": manifest.PackageID}}
 	if uploadReportPath != "" {
@@ -929,7 +929,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 			return err
 		}
 		if !verify.Valid {
-			return fmt.Errorf("client post-verify failed: missing=%v corrupted=%v", verify.Missing, verify.Corrupted)
+			return fmt.Errorf("Повторная проверка клиента завершилась ошибкой: отсутствуют=%v, повреждены=%v", verify.Missing, verify.Corrupted)
 		}
 		return nil
 	}

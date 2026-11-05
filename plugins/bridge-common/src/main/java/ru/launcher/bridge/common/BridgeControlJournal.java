@@ -43,7 +43,7 @@ final class BridgeControlJournal implements AutoCloseable {
         Files.createDirectories(parent);
         Path lockPath = this.path.resolveSibling(this.path.getFileName() + ".lock");
         if (Files.isSymbolicLink(lockPath) || Files.isSymbolicLink(this.path))
-            throw new IOException("symbolic control journal/lock is forbidden");
+            throw new IOException("Символические ссылки на управляющий журнал или файл блокировки запрещены");
         FileChannel opened = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         FileLock acquired = null;
         try {
@@ -214,7 +214,7 @@ final class BridgeControlJournal implements AutoCloseable {
                 sha.update(p.getProperty(key).getBytes(StandardCharsets.UTF_8)); sha.update((byte) 10);
             }
             return HexFormat.of().formatHex(sha.digest());
-        } catch (java.security.NoSuchAlgorithmException e) { throw new IOException("SHA-256 unavailable", e); }
+        } catch (java.security.NoSuchAlgorithmException e) { throw new IOException("Недоступно: SHA-256", e); }
     }
     private void persist() throws IOException {
         ensureOpen();

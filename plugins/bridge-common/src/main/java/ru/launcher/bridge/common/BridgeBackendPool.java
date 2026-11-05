@@ -22,7 +22,7 @@ final class BridgeBackendPool {
     }
 
     List<Endpoint> candidates(String relative) {
-        if (relative == null || relative.isBlank() || relative.charAt(0) != '/') throw new IllegalArgumentException("backend relative path must start with /");
+        if (relative == null || relative.isBlank() || relative.charAt(0) != '/') throw new IllegalArgumentException("Относительный путь Backend должен начинаться с /");
         int start = Math.floorMod(active.get(), bases.size());
         long now = System.currentTimeMillis();
         List<Endpoint> healthy = new ArrayList<>(bases.size());

@@ -239,7 +239,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise ReleaseBlocked(f"{script}: evidence verification timed out") from exc
+            raise ReleaseBlocked(f"{script}: истекло время проверки подтверждений") from exc
         require(
             proc.returncode == 0,
             f"{script}: rejected real E2E evidence: {proc.stderr[-1000:]}",

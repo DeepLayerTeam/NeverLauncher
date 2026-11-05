@@ -183,7 +183,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		}
 		_ = os.Remove(tmp)
 		if err != nil {
-			return record, nil, fmt.Errorf("trusted JAR %s: %w", rel, err)
+			return record, nil, fmt.Errorf("Ошибка доверенного JAR %s: %w", rel, err)
 		}
 		totalBytes += int64(len(b))
 		if totalBytes > 128<<20 {
@@ -210,7 +210,7 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 		}
 	}
 	if len(allowed) == 0 || len(record.AgentSHA256) == 0 {
-		return record, nil, errors.New("signed package missing trusted/agent.jar")
+		return record, nil, errors.New("В подписанном пакете отсутствует trusted/agent.jar")
 	}
 	sort.Slice(plugins, func(i, j int) bool { return plugins[i].Name < plugins[j].Name })
 	record.Schema = trustedSchema0306
@@ -299,7 +299,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 		return nil, "", err
 	}
 	if err = d.Decode(new(any)); err != io.EOF {
-		return nil, "", errors.New("extra trusted record data")
+		return nil, "", errors.New("Обнаружены лишние данные в доверенной записи")
 	}
 	if rec.Schema != trustedSchema0306 || rec.ApprovedAccess != "full-minecraft-jvm" || !isSHA256Hex0271(rec.PackageSHA256) {
 		return nil, "", errors.New("Некорректное значение: доверенная запись")
@@ -320,7 +320,7 @@ func trustedLoad0306(root, key string) (*trustedRecord0306, string, error) {
 		return nil, "", err
 	}
 	if !bytes.Equal(mustJSON0306(rec), mustJSON0306(expected)) {
-		return nil, "", errors.New("trusted record differs from signed package")
+		return nil, "", errors.New("Доверенная запись не совпадает с подписанным пакетом")
 	}
 	for name, b := range blobs {
 		p, err := trustedPath0306(root, release+"/"+name)

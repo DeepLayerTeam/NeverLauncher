@@ -92,7 +92,7 @@ func handleMigrationReport03313(args []string) error {
 		return fmt.Errorf("Некорректное значение: «report JSON HTTP» %d", res.StatusCode)
 	}
 	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return fmt.Errorf("report HTTP %d: %v", res.StatusCode, result["error"])
+		return fmt.Errorf("Ошибка HTTP %d при получении отчёта: %v", res.StatusCode, result["error"])
 	}
 	return writePrivateIdentityReport0334(flagValue(args, "--output", ""), result)
 }

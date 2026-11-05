@@ -50,7 +50,7 @@ func terminateWorkerTree0273(p *os.Process) {
 func strictSandboxJavaCommand0273(ctx context.Context, req processorWorkerRequest0273, javaArgs []string) (*exec.Cmd, error) {
 	bwrap, err := exec.LookPath("bwrap")
 	if err != nil {
-		return nil, fmt.Errorf("bubblewrap executable missing (required for strict processor sandbox): %w", err)
+		return nil, fmt.Errorf("Не найден исполняемый файл bubblewrap (необходим для строгой изоляции процессора): %w", err)
 	}
 	mounts := []string{"--die-with-parent", "--unshare-net", "--unshare-pid", "--new-session", "--tmpfs", "/", "--proc", "/proc", "--dev", "/dev", "--dir", "/tmp"}
 	for _, host := range []string{"/usr", "/bin", "/lib", "/lib64", "/sbin", "/etc/ssl", "/etc/alternatives", "/etc/ld.so.cache"} {

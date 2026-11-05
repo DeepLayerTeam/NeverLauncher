@@ -339,7 +339,7 @@ func safeDeliveryArtifactPath(dir, name string) (string, error) {
 	}
 	clean := filepath.Clean(name)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("delivery artifact escapes bundle: %s", name)
+		return "", fmt.Errorf("Артефакт поставки находится за пределами пакета: %s", name)
 	}
 	return filepath.Join(dir, clean), nil
 }
@@ -409,7 +409,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 	}
 	for key := range actualTargets {
 		if _, ok := publishedTargets[key]; !ok {
-			return fmt.Errorf("publishedTargets is missing %s", key)
+			return fmt.Errorf("В publishedTargets отсутствует %s", key)
 		}
 	}
 	return nil

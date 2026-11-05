@@ -30,13 +30,13 @@ def execute(cmd, timeout=90, env=None):
 
 def verify(path: Path, signer: str):
     if not path.is_file() or path.is_symlink():
-        raise ValueError("installer missing or symlinked")
+        raise ValueError("Установщик отсутствует или является символической ссылкой")
     system = platform.system()
     if system == "Windows":
         # PowerShell проверяет цепочку доверия Authenticode и сертификат подписанта. Подписи могут иметь
         # временную метку; ОС остаётся источником истины для цепочки сертификатов.
         if not re.fullmatch("[0-9A-Fa-f]{40}", signer):
-            raise ValueError("expected 40-hex Authenticode certificate thumbprint")
+            raise ValueError("Ожидается отпечаток сертификата Authenticode из 40 шестнадцатеричных символов")
         script = (
             "$s=Get-AuthenticodeSignature -LiteralPath $env:NL_GA_INSTALLER; "
             'if ($s.Status -ne "Valid" -or $null -eq $s.SignerCertificate '
@@ -50,7 +50,7 @@ def verify(path: Path, signer: str):
         )
     elif system == "Darwin":
         if not re.fullmatch("[A-Z0-9]{10}", signer):
-            raise ValueError("expected Apple Developer Team ID")
+            raise ValueError("Не указан идентификатор команды Apple Developer Team ID")
         checked = execute(["pkgutil", "--check-signature", str(path.resolve())])
         if f"({signer})" not in checked or "Developer ID Installer:" not in checked:
             raise ValueError(
@@ -68,7 +68,7 @@ def verify(path: Path, signer: str):
         )
     elif system == "Linux":
         if not re.fullmatch("[0-9A-Fa-f]{40}", signer):
-            raise ValueError("expected GPG fingerprint")
+            raise ValueError("Не указан отпечаток ключа GPG")
         # Закреплённый открытый ключ импортируется защищённым CI в выделенное хранилище; общего
         # системного хранилища, принимающего любого подписанта, недостаточно.
         keyring = os.environ.get("LAUNCHER_GA_GPG_KEYRING")

@@ -52,7 +52,7 @@ public final class ContentServices {
                     throw new IllegalArgumentException("invalid https content location");
                 if (path.length() > 2048) throw new IllegalArgumentException("content URL too long");
             }
-            if (sha256 == null || !sha256.matches("[0-9a-fA-F]{64}")) throw new IllegalArgumentException("missing SHA-256");
+            if (sha256 == null || !sha256.matches("[0-9a-fA-F]{64}")) throw new IllegalArgumentException("Отсутствует: SHA-256");
             sha256 = sha256.toLowerCase(Locale.ROOT);
             if (size < 0 || size > MAX_ASSET) throw new IllegalArgumentException("content exceeds broker limits");
         }

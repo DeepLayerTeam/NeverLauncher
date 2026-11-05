@@ -119,7 +119,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		}
 	}
 	if len(seen) != len(expected)+1 {
-		return errors.New("export missing source files")
+		return errors.New("При экспорте не найдены исходные файлы")
 	}
 	return nil
 }

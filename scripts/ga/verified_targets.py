@@ -378,7 +378,7 @@ def verify(
                 or name.endswith("-riscv64")
                 or name.endswith("-riscv64.exe")
             ):
-                raise Blocked("unapproved additional target artifact: " + name)
+                raise Blocked("Обнаружен неутверждённый дополнительный артефакт целевой платформы: " + name)
     records = []
     for target in sorted(TARGETS):
         item = next(row for row in targets if row["target"] == target)

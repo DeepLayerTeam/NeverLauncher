@@ -338,7 +338,7 @@ def replay_postgres(args):
                 break
             time.sleep(2)
         else:
-            raise RecoveryError("PostgreSQL did not reach a paused WAL recovery target")
+            raise RecoveryError("PostgreSQL не достиг заданной точки восстановления WAL в режиме паузы")
         actual = fields[2]
         require(re.fullmatch(r"[0-9A-F]+/[0-9A-F]+", actual) and
                 lsn_value(actual) >= lsn_value(state["cohortLsn"]),
@@ -352,7 +352,7 @@ def replay_postgres(args):
                 break
             time.sleep(2)
         else:
-            raise RecoveryError("recovered PostgreSQL never became primary")
+            raise RecoveryError("Восстановленный PostgreSQL не перешёл в режим основного узла")
         # Только после этого объявляйте готовность PostgreSQL/Patroni к запуску под
         # управлением оператора.
         state["phase"] = "postgres-promoted-isolated"

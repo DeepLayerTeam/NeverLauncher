@@ -169,7 +169,7 @@ def visit_archive(path: Path, platform: str, architecture: str) -> dict:
                 raise ValueError('archive member larger than declared size')
             digest.update(piece)
         if size_read != size:
-            raise ValueError('truncated archive member')
+            raise ValueError('Неполный элемент архива')
         if name in expected:
             inspect_exe(bytes(head), platform, architecture)
             if platform == 'linux' and not (mode & 0o111):

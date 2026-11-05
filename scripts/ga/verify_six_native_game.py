@@ -43,7 +43,7 @@ def _read(path: Path) -> dict:
         obj = {}
         for key, value in pairs:
             if key in obj:
-                raise ValueError('duplicate evidence field: ' + key)
+                raise ValueError('Повторяющееся поле подтверждения: ' + key)
             obj[key] = value
         return obj
     doc = json.loads(path.read_bytes(), object_pairs_hook=unique)

@@ -23,7 +23,7 @@ func devtoolsPrint03010(v any) error {
 }
 func handleDevTools03010(args []string) error {
 	if len(args) < 2 {
-		return errors.New("usage: nl devtools jar analyze|strip-debug, component test, auth serve")
+		return errors.New("Использование: nl devtools jar analyze|strip-debug, component test, auth serve")
 	}
 	switch args[0] {
 	case "jar":
@@ -35,7 +35,7 @@ func handleDevTools03010(args []string) error {
 				return e
 			}
 			if *input == "" || f.NArg() != 0 {
-				return errors.New("usage: devtools jar analyze --input path.jar")
+				return errors.New("Использование: devtools jar analyze --input path.jar")
 			}
 			r, e := devtools.AnalyzeJar(*input)
 			if e != nil {
@@ -50,7 +50,7 @@ func handleDevTools03010(args []string) error {
 				return e
 			}
 			if *input == "" || *output == "" || f.NArg() != 0 {
-				return errors.New("usage: devtools jar strip-debug --input in.jar --output out.jar")
+				return errors.New("Использование: devtools jar strip-debug --input in.jar --output out.jar")
 			}
 			r, e := devtools.StripDebugJar(*input, *output)
 			if e != nil {
@@ -82,7 +82,7 @@ func handleDevTools03010(args []string) error {
 			return e
 		}
 		if f.NArg() != 0 || *jar == "" {
-			return errors.New("usage: devtools component test --jar example.jar [--isolation sandbox|process] [--ack-unconfined] [-- args...]")
+			return errors.New("Использование: devtools component test --jar example.jar [--isolation sandbox|process] [--ack-unconfined] [-- параметры...]")
 		}
 		if *isolation == "process" && !*ack {
 			return errors.New("Требуется: «process mode is NOT an OS sandbox: --ack-unconfined»")
@@ -108,7 +108,7 @@ func handleDevTools03010(args []string) error {
 			return errors.New("Неожиданные аргументы команды")
 		}
 		if !*ack || os.Getenv("LAUNCHER_DEVTOOLS_TEST_MODE") != "1" {
-			return errors.New("test identity policy denied: set LAUNCHER_DEVTOOLS_TEST_MODE=1 and --ack-test-only")
+			return errors.New("Политика тестовой идентификации отклонила запрос: установите LAUNCHER_DEVTOOLS_TEST_MODE=1 и --ack-test-only")
 		}
 		if *duration < time.Second || *duration > 30*time.Minute {
 			return errors.New("fixture duration: требуется «1s..30m»")
@@ -143,7 +143,7 @@ func handleDevTools03010(args []string) error {
 		}()
 		e = server.Serve(ln)
 		if e != nil && !errors.Is(e, http.ErrServerClosed) {
-			return fmt.Errorf("test identity server: %w", e)
+			return fmt.Errorf("Ошибка сервера тестовой идентификации: %w", e)
 		}
 		return nil
 	}

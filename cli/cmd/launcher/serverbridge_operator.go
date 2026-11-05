@@ -51,16 +51,16 @@ func bridgeEndpointSecure02812(raw string) error {
 	if host == "localhost" || (ip != nil && ip.IsLoopback()) {
 		return nil
 	}
-	return errors.New("Backend credentials require HTTPS outside local loopback")
+	return errors.New("При обращении к Backend вне локального интерфейса для учётных данных требуется HTTPS")
 }
 
 func bridgeInsideRoot02812(root, path string) error {
 	if !filepath.IsAbs(path) {
-		return fmt.Errorf("not an absolute managed path: %s", path)
+		return fmt.Errorf("Управляемый путь не абсолютный: %s", path)
 	}
 	rel, err := filepath.Rel(root, path)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return fmt.Errorf("managed path outside server root: %s", path)
+		return fmt.Errorf("Управляемый путь выходит за корневой каталог сервера: %s", path)
 	}
 	// Не переходите по символьной ссылке в дерево другого арендатора.
 	current := root
@@ -77,7 +77,7 @@ func bridgeInsideRoot02812(root, path string) error {
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("managed path traverses symlink: %s", current)
+			return fmt.Errorf("Управляемый путь проходит через символическую ссылку: %s", current)
 		}
 	}
 	return nil
@@ -124,10 +124,10 @@ func verifyBridgeLocal02812(root string) (bridgeVerification02812, bridgeProvisi
 	}
 	var req bridgeEnrollmentRequest0199
 	if json.Unmarshal(reqRaw, &req) != nil || req.ID == "" || req.Kind != state.Platform || req.KeyAlgorithm != "ed25519" || req.KeyFingerprint != identity.Fingerprint || req.PublicKey != identity.PublicKey || !strings.EqualFold(req.ArtifactSHA256, hash) {
-		return result, state, req, errors.New("enrollment request differs from installed artifact or local node identity")
+		return result, state, req, errors.New("Запрос регистрации отличается от установленного артефакта или локального идентификатора узла")
 	}
 	if values["server.id"] != req.ID || values["profile.projectId"] != req.ProjectID || values["profile.profileId"] != req.ProfileID || strings.TrimRight(values["backend.url"], "/") != strings.TrimRight(req.BackendURL, "/") {
-		return result, state, req, errors.New("runtime config and enrollment request disagree")
+		return result, state, req, errors.New("Конфигурация Runtime не совпадает с запросом регистрации")
 	}
 	result.ServerID, result.KeyFingerprint, result.LocalVerified = req.ID, req.KeyFingerprint, true
 	result.Status = "installed-unverified-runtime"
@@ -137,14 +137,14 @@ func verifyBridgeLocal02812(root string) (bridgeVerification02812, bridgeProvisi
 func verifyBridgeRuntime02812(local bridgeVerification02812, req bridgeEnrollmentRequest0199, payload map[string]any, now time.Time) (bridgeVerification02812, error) {
 	node := findBackendBridgeNode0199(payload, req.ID)
 	if node == nil {
-		return local, errors.New("Backend has no enrolled node")
+		return local, errors.New("В Backend отсутствует зарегистрированный узел")
 	}
 	field := func(key string) string { s, _ := node[key].(string); return strings.TrimSpace(s) }
 	if field("kind") != req.Kind || field("projectId") != req.ProjectID || field("keyFingerprint") != req.KeyFingerprint {
 		return local, errors.New("Несовпадение: «Backend node identity/platform/project»")
 	}
 	if field("pluginVersion") != local.Version || !strings.EqualFold(field("pluginSha256"), local.ArtifactSHA256) {
-		return local, errors.New("runtime plugin version/digest differs from installed artifact")
+		return local, errors.New("Версия или хеш плагина Runtime отличается от установленного артефакта")
 	}
 	when, err := time.Parse(time.RFC3339Nano, field("lastHeartbeatAt"))
 	if err != nil || when.After(now.Add(30*time.Second)) || now.Sub(when) > 90*time.Second {
@@ -152,13 +152,13 @@ func verifyBridgeRuntime02812(local bridgeVerification02812, req bridgeEnrollmen
 	}
 	version, _ := node["protocolVersion"].(float64)
 	if version < 3 || field("runtimeId") == "" {
-		return local, errors.New("signed v3 runtime identity not observed")
+		return local, errors.New("Подписанный идентификатор Runtime v3 не обнаружен")
 	}
 	if field("status") == "disabled" || field("status") == "revoked" {
-		return local, errors.New("Backend node disabled or revoked")
+		return local, errors.New("Узел Backend отключён или отозван")
 	}
 	if s := field("integrityStatus"); s != "" && s != "verified" && s != "valid" {
-		return local, fmt.Errorf("Backend integrity status: %s", s)
+		return local, fmt.Errorf("Статус целостности Backend: %s", s)
 	}
 	local.RuntimeVerified, local.Status = true, "healthy"
 	local.ObservedAt, local.RuntimeID = when.UTC().Format(time.RFC3339Nano), field("runtimeId")
@@ -183,7 +183,7 @@ func verifyServerBridge02812(args []string) error {
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("runtime verify needs --token or LAUNCHER_TOKEN (or use --offline)")
+		return errors.New("Для проверки Runtime требуется --token или LAUNCHER_TOKEN (либо используйте --offline)")
 	}
 	payload, err := httpJSONWithAuth("GET", backend+"/api/v1/server-bridge/servers", nil, token)
 	if err != nil {
@@ -191,7 +191,7 @@ func verifyServerBridge02812(args []string) error {
 	}
 	result, err = verifyBridgeRuntime02812(result, req, payload, time.Now().UTC())
 	if err != nil {
-		return fmt.Errorf("ServerBridge runtime not certified healthy: %w", err)
+		return fmt.Errorf("Работоспособность Runtime ServerBridge не подтверждена: %w", err)
 	}
 	return writeOrPrintJSON(flagValue(args, "--output", ""), result)
 }
@@ -205,7 +205,7 @@ func bridgeOperatorLock02812(root string) (func(), error) {
 	}
 	f, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if errors.Is(err, os.ErrExist) {
-		return nil, fmt.Errorf("provisioning operation already in progress or needs reconciliation: %s", lockPath)
+		return nil, fmt.Errorf("Операция подготовки уже выполняется или требует согласования состояния: %s", lockPath)
 	}
 	if err != nil {
 		return nil, err
@@ -243,7 +243,7 @@ func bridgeWaitHostExit02812(root string) error {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return errors.New("old Host Supervisor did not release its session lock")
+	return errors.New("Предыдущий Host Supervisor не освободил блокировку сессии")
 }
 
 func bridgeRollout02812(args []string) error {
@@ -252,11 +252,11 @@ func bridgeRollout02812(args []string) error {
 		return err
 	}
 	if flagBool(args, "--dry-run", false) {
-		return errors.New("rollout has side effects; use install/upgrade --dry-run for preflight")
+		return errors.New("Развёртывание изменяет систему; для предварительной проверки используйте install/upgrade --dry-run")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("rollout needs an authenticated --token or LAUNCHER_TOKEN")
+		return errors.New("Для развёртывания требуется авторизованный --token или LAUNCHER_TOKEN")
 	}
 	existingPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	old, oldErr := readBridgeProvisionState0199(existingPath)
@@ -273,16 +273,16 @@ func bridgeRollout02812(args []string) error {
 		if hostIdentityMatches0282(runtimeState.ProcessPID, runtimeState.ProcessIdentity) {
 			lock, err := readServerBridgeHostLock01910(host["lock"])
 			if err != nil || lock.SessionID != runtimeState.SessionID || !hostIdentityMatches0282(lock.PID, lock.Identity) {
-				return errors.New("orphaned or unverified game process: refusing rollout")
+				return errors.New("Обнаружен осиротевший или непроверенный игровой процесс; развёртывание отклонено")
 			}
 			wasRunning = true
 		} else if runtimeState.ProcessPID > 0 && (runtimeState.ProcessIdentity == "" && updaterProcessAlive0156(runtimeState.ProcessPID)) {
-			return errors.New("unverified legacy game process: refusing rollout")
+			return errors.New("Обнаружен непроверенный игровой процесс старой версии; развёртывание отклонено")
 		}
 	}
 	if managed {
 		if _, _, _, err := verifyBridgeLocal02812(root); err != nil {
-			return fmt.Errorf("existing managed installation failed preflight: %w", err)
+			return fmt.Errorf("Существующая управляемая установка не прошла предварительную проверку: %w", err)
 		}
 	}
 	// Перед изменением работающего сервера проверьте все метаданные выпуска и аргументы.
@@ -308,7 +308,7 @@ func bridgeRollout02812(args []string) error {
 	if raw := flagValue(args, "--health-timeout-seconds", ""); raw != "" {
 		var seconds int
 		if _, err := fmt.Sscanf(raw, "%d", &seconds); err != nil || seconds < 5 || seconds > 600 || fmt.Sprint(seconds) != raw {
-			return errors.New("--health-timeout-seconds must be 5..600")
+			return errors.New("Значение --health-timeout-seconds должно находиться в диапазоне 5–600")
 		}
 		timeout = time.Duration(seconds) * time.Second
 	}
@@ -340,17 +340,17 @@ func bridgeRollout02812(args []string) error {
 		}
 		state, e := readBridgeProvisionState0199(existingPath)
 		if e != nil {
-			return fmt.Errorf("rollout error: %v; rollback BLOCKED: %w", problem, e)
+			return fmt.Errorf("Ошибка развёртывания: %v; откат ЗАБЛОКИРОВАН: %w", problem, e)
 		}
 		if e := rollbackServerBridge0199([]string{"--server-root", root, "--transaction", state.TransactionID}); e != nil {
-			return fmt.Errorf("rollout error: %v; rollback failed: %w", problem, e)
+			return fmt.Errorf("Ошибка развёртывания: %v; откат завершился ошибкой: %w", problem, e)
 		}
 		if wasRunning {
 			if e := startServerBridgeHost01910([]string{"--server-root", root}); e != nil {
-				return fmt.Errorf("rollout error: %v; old files restored but previous server failed restart: %w", problem, e)
+				return fmt.Errorf("Ошибка развёртывания: %v; старые файлы восстановлены, но прежний сервер не перезапустился: %w", problem, e)
 			}
 		}
-		return fmt.Errorf("rollout failed; previous local artifact/config restored (Backend enrollment may need reconciliation): %w", problem)
+		return fmt.Errorf("Развёртывание не удалось; прежние локальные артефакт и конфигурация восстановлены (возможно, потребуется согласовать регистрацию Backend): %w", problem)
 	}
 	op := "install"
 	if managed {
@@ -381,7 +381,7 @@ func bridgeRollout02812(args []string) error {
 				if err == nil {
 					observed, _ := time.Parse(time.RFC3339Nano, verified.ObservedAt)
 					if observed.Before(activationStart) {
-						err = errors.New("heartbeat predates this rollout activation")
+						err = errors.New("Последнее подтверждение активности получено до запуска этого развёртывания")
 					}
 				}
 			}
@@ -389,7 +389,7 @@ func bridgeRollout02812(args []string) error {
 		if err == nil {
 			state, stateErr := readServerBridgeHostRuntime01910(host["runtime"])
 			if stateErr != nil || state.Status != "running" || !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) || !hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity) {
-				err = errors.New("Host Supervisor and JVM not confirmed alive")
+				err = errors.New("Работа Host Supervisor и JVM не подтверждена")
 			}
 		}
 		if err == nil {
@@ -398,7 +398,7 @@ func bridgeRollout02812(args []string) error {
 		failure = err
 		time.Sleep(2 * time.Second)
 	}
-	return rollback(fmt.Errorf("runtime health did not converge: %w", failure))
+	return rollback(fmt.Errorf("Runtime не достиг требуемого состояния работоспособности: %w", failure))
 }
 
 func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199) error {
@@ -426,7 +426,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 		state.IdentityPath:   true,
 	}
 	if !strings.HasPrefix(state.IdentityPath, filepath.Dir(detection.ConfigPath)+string(os.PathSeparator)) {
-		return errors.New("node identity not stored under managed config directory")
+		return errors.New("Идентификатор узла хранится вне управляемого каталога конфигурации")
 	}
 	if detection.Sidecar {
 		allowed[filepath.Join(detection.InstallDir, "run-server-bridge.sh")] = true
@@ -437,7 +437,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 		if !allowed[change.Path] {
 			name := filepath.Base(change.Path)
 			if filepath.Dir(change.Path) != detection.InstallDir || !strings.HasPrefix(strings.ToLower(name), "launcher-") || !strings.Contains(strings.ToLower(name), "-bridge-") || !strings.HasSuffix(strings.ToLower(name), ".jar") {
-				return fmt.Errorf("transaction target not owned by ServerBridge: %s", change.Path)
+				return fmt.Errorf("Цель транзакции не принадлежит ServerBridge: %s", change.Path)
 			}
 		}
 		if err := bridgeInsideRoot02812(root, change.Path); err != nil {
@@ -449,7 +449,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 		seen[change.Path] = true
 		if change.Existed {
 			if change.BackupPath == "" || filepath.Dir(change.BackupPath) != allowedBackup {
-				return errors.New("transaction backup outside managed backup directory")
+				return errors.New("Резервная копия транзакции находится вне управляемого каталога резервных копий")
 			}
 			if err := bridgeInsideRoot02812(root, change.BackupPath); err != nil {
 				return err
@@ -461,7 +461,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 				return errors.New("Несовпадение: «transaction backup name»")
 			}
 		} else if change.BackupPath != "" {
-			return errors.New("nonexistent target has unexpected backup")
+			return errors.New("Для несуществующей цели обнаружена неожиданная резервная копия")
 		}
 	}
 	return nil

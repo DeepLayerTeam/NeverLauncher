@@ -326,7 +326,7 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
   if let Ok(value)=std::env::var(name) {
    let lower=value.to_ascii_lowercase();
    if ["-javaagent:","-agentpath:","-agentlib:","-xrunjdwp:"].iter().any(|tok|lower.contains(tok)) {
-    return Err(format!("Guard compatibility rejected JVM environment instrumentation from {name}"))
+    return Err(format!("Guard отклонил инструментирование JVM из переменной окружения {name}"))
    }
   }
  }
@@ -342,7 +342,7 @@ pub fn enforce_launch(root:&Path,project:&str,minecraft:&str,loader:&str,jvm_arg
  }
  for m in &p.external_native_modules {
   if p.revoked_digests.contains(&m.sha256) || verified_external_native_hash(Path::new(&m.path))?!=m.sha256 {
-   return Err("Guard external overlay missing, revoked or modified".into())
+   return Err("Внешний оверлей Guard отсутствует, отозван или изменён".into())
   }
  }
  for tr in &p.transformations {if p.revoked_transformations.contains(&tr.id) || p.revoked_digests.contains(&tr.owner_sha256){return Err("Guard: доверие к преобразованию отозвано".into())}}

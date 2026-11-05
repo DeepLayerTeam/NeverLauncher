@@ -127,7 +127,7 @@ public final class LauncherApiClient {
                 this.controlChannelId = "";
             }
         } catch (GeneralSecurityException | IOException e) {
-            throw new IllegalStateException("cannot create ServerBridge runtime identity/event journal", e);
+            throw new IllegalStateException("Не удалось создать идентификатор Runtime ServerBridge или журнал событий", e);
         }
     }
 

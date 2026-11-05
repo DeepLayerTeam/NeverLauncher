@@ -221,7 +221,7 @@ func findSignTool0152() (string, error) {
 			return candidate, nil
 		}
 	}
-	return "", errors.New("signtool.exe was not found in PATH or Windows SDK")
+	return "", errors.New("signtool.exe не найден в PATH или Windows SDK")
 }
 
 func verifyWindowsAuthenticodeNative0152(path, signerThumbprint, timestampThumbprint string) error {

@@ -21,7 +21,7 @@ func main() {
 	flag.StringVar(&out, "out", "", "выходной JSON с подписанной оболочкой")
 	flag.Parse()
 	if payloadPath == "" || keyPath == "" || out == "" {
-		fmt.Fprintln(os.Stderr, "usage: planpolicy-02412 -policy policy.json -key private.hex -out signed.json")
+		fmt.Fprintln(os.Stderr, "Использование: planpolicy-02412 -policy policy.json -key private.hex -out signed.json")
 		os.Exit(2)
 	}
 	raw, err := os.ReadFile(payloadPath)
@@ -50,7 +50,7 @@ func main() {
 	case ed25519.PrivateKeySize:
 		key = ed25519.PrivateKey(seed)
 	default:
-		panic("offline key must be 32-byte Ed25519 seed or 64-byte private key")
+		panic("Автономный ключ должен быть 32-байтовым seed Ed25519 или 64-байтовым закрытым ключом")
 	}
 	if len(raw) > 192*1024 {
 		panic("policy too large")

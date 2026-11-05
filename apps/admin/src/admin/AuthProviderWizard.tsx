@@ -187,8 +187,8 @@ export function AuthProviderWizard02910({
     await load();
     setNotice(
       target === 0
-        ? `${h.id} disabled.`
-        : `${h.id}: active revision #${target}.`,
+        ? `${h.id}: отключён.`
+        : `${h.id}: активная редакция №${target}.`,
     );
   }
 

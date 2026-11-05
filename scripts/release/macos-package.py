@@ -90,7 +90,7 @@ def inspect_macho(
             has_signature = True
         offset += cmdsize
     if require_signature and not has_signature:
-        raise RuntimeError(f"{path}: LC_CODE_SIGNATURE is required")
+        raise RuntimeError(f"Необходимо указать: {path}: LC_CODE_SIGNATURE")
     return meta
 
 

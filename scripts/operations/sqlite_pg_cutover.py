@@ -36,7 +36,7 @@ def record(stage: str, status: str, **fields):
 
 def refuse_symlink(path: Path):
     if path.is_symlink():
-        raise CutoverError(f"symlink not allowed: {path}")
+        raise CutoverError(f"Символическая ссылка запрещена: {path}")
 
 
 def private_file(path: Path):
@@ -91,7 +91,7 @@ def enough_space(path: Path, required_bytes: int, reason: str):
     available = stats.f_bavail * stats.f_frsize
     reserve = max(64 * 1024 * 1024, (required_bytes + 4) // 5)
     if available < required_bytes + reserve:
-        raise CutoverError(f"insufficient disk space for {reason}: need {required_bytes + reserve} bytes, have {available}")
+        raise CutoverError(f"Недостаточно места на диске для {reason}: требуется {required_bytes + reserve} байт, доступно {available}")
 
 
 def sqlite_size_on_disk(path: Path) -> int:
@@ -116,7 +116,7 @@ def storage_fingerprint(root: Path) -> tuple[str, int, int]:
     """
     refuse_symlink(root)
     if not root.is_dir():
-        raise CutoverError("source local storage root must exist")
+        raise CutoverError("Корневой каталог локального хранилища источника должен существовать")
     digest = hashlib.sha256()
     count = total = 0
     for folder, dirs, files in os.walk(root, followlinks=False):
@@ -124,7 +124,7 @@ def storage_fingerprint(root: Path) -> tuple[str, int, int]:
             part = Path(folder) / name
             mode = part.lstat().st_mode
             if not stat.S_ISDIR(mode):
-                raise CutoverError("non-directory or symlink inside source storage")
+                raise CutoverError("В хранилище источника обнаружен недопустимый файл или символическая ссылка вместо каталога")
         dirs.sort()
         for name in sorted(files):
             part = Path(folder) / name
@@ -136,14 +136,14 @@ def storage_fingerprint(root: Path) -> tuple[str, int, int]:
             with os.fdopen(fd, "rb") as stream:
                 opened = os.fstat(stream.fileno())
                 if (before.st_ino, before.st_dev) != (opened.st_ino, opened.st_dev):
-                    raise CutoverError("source storage path replaced before reading")
+                    raise CutoverError("Путь хранилища источника изменился перед чтением")
                 content_sha = hashlib.sha256()
                 for buf in iter(lambda: stream.read(1024 * 1024), b""):
                     content_sha.update(buf)
                 after_open = os.fstat(stream.fileno())
             after = part.lstat()
             if (before.st_ino, before.st_dev, before.st_size, before.st_mtime_ns) != (after.st_ino, after.st_dev, after.st_size, after.st_mtime_ns) or (opened.st_size, opened.st_mtime_ns) != (after_open.st_size, after_open.st_mtime_ns):
-                raise CutoverError("source file changed during fingerprint")
+                raise CutoverError("Исходный файл изменился во время вычисления отпечатка")
             digest.update(len(relative).to_bytes(8, "big"))
             digest.update(relative)
             digest.update(before.st_size.to_bytes(8, "big"))
@@ -162,9 +162,9 @@ def check_stage_chain(state: dict):
     if not isinstance(receipts, dict):
         raise CutoverError("corrupt migration receipts")
     if any(stage not in completed for stage in receipts):
-        raise CutoverError("receipt for uncommitted migration stage")
+        raise CutoverError("Обнаружено подтверждение незафиксированного этапа миграции")
     if state.get("importOutcomeUnknown") and "import" in completed:
-        raise CutoverError("contradictory import completion receipt")
+        raise CutoverError("Обнаружено противоречивое подтверждение завершения импорта")
     if state.get("writeBoundaryCrossed") and "verify" not in completed:
         raise CutoverError("Небезопасное значение: «write-boundary journal without verification; automatic rollback forbidden»")
     if "cutover" in completed and not state.get("writeBoundaryCrossed"):
@@ -188,7 +188,7 @@ def run_cmd(args, *, env=None):
         # stderr может содержать аргументы команд, пути и секреты. Нельзя выводить его без фильтрации.
         raise CutoverError(f"{Path(args[0]).name} {args[1] if len(args)>1 else ''} failed (exit {p.returncode}); see private operator service logs")
     if len(p.stdout) > MAX_OUTPUT:
-        raise CutoverError("unreasonable CLI response size")
+        raise CutoverError("Неожиданно большой ответ CLI")
     try:
         return json.loads(p.stdout)
     except (ValueError, UnicodeError) as exc:
@@ -261,7 +261,7 @@ def validate_sqlite_backup(path: Path):
             raise CutoverError("Ошибка: «SQLite backup integrity_check»")
         fk = db.execute("PRAGMA foreign_key_check").fetchone()
         if fk:
-            raise CutoverError("SQLite backup foreign-key violation")
+            raise CutoverError("В резервной копии SQLite нарушена целостность внешних ключей")
 
 
 def verify_http_snapshot(path: Path):
@@ -298,7 +298,7 @@ def sqlite_backup(source_name: str, dest: Path):
     source = Path(source_name)
     private_file(source)
     if dest.exists():
-        raise CutoverError("refusing to overwrite independent SQLite backup")
+        raise CutoverError("Отказ от перезаписи независимой резервной копии SQLite")
     uri = source.resolve().as_uri() + "?mode=ro"
     # Онлайн-API резервного копирования SQLite создаёт единый транзакционно согласованный снимок БД, включая
     # зафиксированные страницы WAL. Не копируйте только файл .db.
@@ -370,7 +370,7 @@ class Operator:
         if name in self.state["completed"]:
             return
         if name != STAGES[len(self.state["completed"])]:
-            raise CutoverError("migration stages must run in order")
+            raise CutoverError("Этапы миграции должны выполняться по порядку")
         self.log(name, "started")
         try:
             result = fn() or {}
@@ -404,7 +404,7 @@ class Operator:
         for unit in self.a.units:
             code, state = self.service("is-active", unit)
             if code == 0 or state not in (b"inactive", b"failed"):
-                raise CutoverError(f"writer unit not reliably stopped: {unit}")
+                raise CutoverError(f"Не удалось подтвердить остановку службы записи: {unit}")
 
     def preflight(self):
         if not self.a.units or len(set(self.a.units)) != len(self.a.units):
@@ -414,9 +414,9 @@ class Operator:
         private_file(Path(self.a.source_env))
         cfg = parse_env(Path(self.a.source_env))
         if cfg.get("LAUNCHER_REPOSITORY_DRIVER", "").lower() != "sqlite":
-            raise CutoverError("source backend must use SQLite; never alter an existing PostgreSQL deployment")
+            raise CutoverError("Исходный Backend должен использовать SQLite; изменение существующего развёртывания PostgreSQL запрещено")
         if cfg.get("LAUNCHER_DATABASE_DSN", "") != self.a.http_db:
-            raise CutoverError("--http-db must exactly match current SQLite Backend DSN")
+            raise CutoverError("Параметр --http-db должен точно совпадать с текущим DSN SQLite для Backend")
         for source in (self.a.core_db, self.a.http_db):
             private_file(Path(source))
         # Независимая предварительная проверка и замороженные копии Core, одной HTTP-БД и при необходимости
@@ -446,14 +446,14 @@ class Operator:
         if self.original_env.exists():
             private_file(self.original_env)
             if sha256_file(self.original_env) != sha256_file(Path(self.a.source_env)):
-                raise CutoverError("previous original environment backup differs")
+                raise CutoverError("Ранее созданная резервная копия исходного окружения отличается")
         else:
             write_secure(self.original_env, Path(self.a.source_env).read_bytes())
         self.state["sourceEnvSHA256"] = sha256_file(Path(self.a.source_env))
         self.save()
         result = run_cmd([self.a.launcher_sqlite, "pre-upgrade", "--db", self.a.core_db, "--backup", str(self.early_backup)], env=self.env)
         if not result.get("verifiedRestore"):
-            raise CutoverError("preflight backup restore was not independently verified")
+            raise CutoverError("Независимая проверка восстановления резервной копии перед запуском не выполнена")
         return {"backupSha256": result["manifest"]["sha256"]}
 
     def freeze(self):
@@ -469,9 +469,9 @@ class Operator:
         if self.backup.exists() or self.http_backup.exists() or self.coordinator_backup.exists():
             # Прерванное физическое резервное копирование нельзя считать завершённым и использовать повторно.
             # Сохраните доказательства и разрешите проблему вручную вместо перезаписи.
-            raise CutoverError("incomplete frozen backup files exist; inspect before retry")
+            raise CutoverError("Обнаружены незавершённые файлы замороженной резервной копии; проверьте их перед повтором")
         if sha256_file(Path(self.a.source_env)) != self.state.get("sourceEnvSHA256"):
-            raise CutoverError("service configuration changed since preflight")
+            raise CutoverError("Конфигурация службы изменилась после предварительной проверки")
         # HTTP и Coordinator не удаляются незаметно. Сохраните и проверьте полное состояние SQLite, даже если для
         # него нет переноса в действующую PostgreSQL.
         sqlite_backup(self.a.http_db, self.http_backup)
@@ -480,7 +480,7 @@ class Operator:
             sqlite_backup(self.a.coordinator_db, self.coordinator_backup)
         result = run_cmd([self.a.launcher_sqlite, "pre-upgrade", "--db", self.a.core_db, "--backup", str(self.backup)], env=self.env)
         if not result.get("verifiedRestore"):
-            raise CutoverError("frozen backup failed independent restore")
+            raise CutoverError("Замороженная резервная копия не прошла независимую проверку восстановления")
         self.state["sourceSHA256"] = result["manifest"]["sha256"]
         self.save()
         return {"backupSha256": self.state["sourceSHA256"], "httpBackupSHA256": sha256_file(self.http_backup), "coordinatorBackupSHA256": sha256_file(self.coordinator_backup) if self.a.coordinator_db else None}
@@ -488,7 +488,7 @@ class Operator:
     def importing(self):
         self.inactive()
         if sha256_file(Path(self.a.source_env)) != self.state.get("sourceEnvSHA256"):
-            raise CutoverError("source configuration changed while frozen")
+            raise CutoverError("Конфигурация источника изменилась во время заморозки")
         # ВАЖНО: если процесс завершился после COMMIT, но до записи этапа в журнал, результат фиксации неизвестен.
         # Нельзя слепо повторять операцию.
         self.state["importOutcomeUnknown"] = True
@@ -527,21 +527,21 @@ class Operator:
             raise CutoverError("Некорректное значение: «file-copy receipt»")
         after, after_count, after_size = storage_fingerprint(src)
         if (after, after_count, after_size) != (before, count, size):
-            raise CutoverError("source blobs changed during PostgreSQL copy")
+            raise CutoverError("Файлы источника изменились во время копирования в PostgreSQL")
         if int(report.get("checked", -1)) < 0 or not report.get("catalogSha256"):
-            raise CutoverError("file-copy result missing verified catalog digest")
+            raise CutoverError("В результате копирования файлов отсутствует подтверждённый хеш каталога")
         return {"verified": True, "objects": report["checked"], "sourceStorageSHA256": after, "sourceStorageObjects": count, "catalogSha256": report["catalogSha256"]}
 
     def verify(self):
         self.inactive()
         if self.state.get("importOutcomeUnknown"):
-            raise CutoverError("ambiguous import commit: inspect PostgreSQL and reconcile before any retry")
+            raise CutoverError("Неоднозначный результат фиксации импорта: проверьте PostgreSQL и согласуйте состояние перед повтором")
         manifest = run_cmd([self.a.launcher_sqlite, "backup-verify", "--backup", str(self.backup)], env=self.env)
         if manifest.get("manifest", {}).get("sha256") != self.state.get("sourceSHA256"):
             raise CutoverError("Обнаружено изменение: «frozen SQLite backup»")
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-cutover-check", "--source-sha256", self.state["sourceSHA256"], "--project", self.a.project, "--owner-email", self.a.owner_email], env=self.env)
         if not all(report.get(k) for k in ("liveVerified", "filesVerified", "repositoryVerified")):
-            raise CutoverError("PostgreSQL Repository verification incomplete")
+            raise CutoverError("Проверка репозитория PostgreSQL не завершена")
         return {"verified": True, "readyForBackendCutover": report.get("readyForBackendCutover", False), "ownerId": report["ownerId"]}
 
     def cutover(self):
@@ -559,7 +559,7 @@ class Operator:
         for unit in self.a.units:
             code, _ = self.service("start", unit)
             if code:
-                raise CutoverError("PostgreSQL writer failed to start: check write outcome before rollback")
+                raise CutoverError("Не удалось запустить службу записи PostgreSQL; проверьте результат записи перед откатом")
         return {"backendStarted": True}
 
     def health_check(self):
@@ -575,7 +575,7 @@ Backend до объявления завершения миграции опер
 
         require_credentials = getattr(self.a, "owner_credentials", "")
         if not require_credentials:
-            raise CutoverError("private old owner credentials file required for real Backend verification")
+            raise CutoverError("Для реальной проверки Backend необходим закрытый файл учётных данных прежнего владельца")
         secret_file = Path(require_credentials)
         private_file(secret_file)
         try:
@@ -592,7 +592,7 @@ Backend до объявления завершения миграции опер
         cfg = parse_env(Path(self.a.source_env))
         if (cfg.get("LAUNCHER_REPOSITORY_DRIVER") != "postgres" or
                 cfg.get("LAUNCHER_DATABASE_DSN") != self.env[self.a.dsn_env]):
-            raise CutoverError("running service environment is not the verified PostgreSQL target")
+            raise CutoverError("Окружение запущенной службы не соответствует проверенной целевой конфигурации PostgreSQL")
         parts = urlsplit(self.a.health_url)
         if (parts.scheme not in ("https", "http") or
                 (parts.scheme == "http" and parts.hostname not in ("127.0.0.1", "::1", "localhost")) or
@@ -615,10 +615,10 @@ Backend до объявления завершения миграции опер
             try:
                 with client.open(query, timeout=10) as response:
                     if response.status != 200:
-                        raise CutoverError("post-cutover Backend HTTP operation was not successful")
+                        raise CutoverError("HTTP-операция Backend после переключения завершилась ошибкой")
                     data = response.read(4 * 1024 * 1024 + 1)
                     if len(data) > 4 * 1024 * 1024:
-                        raise CutoverError("post-cutover API payload exceeded verification limit")
+                        raise CutoverError("Объём данных API после переключения превысил лимит проверки")
                     return json.loads(data)
             except (OSError, ValueError) as exc:
                 raise CutoverError("Ошибка: «live PostgreSQL Backend login or project operation»") from exc

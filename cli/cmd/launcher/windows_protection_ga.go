@@ -80,7 +80,7 @@ func expectedWindowsProtectionGACapabilities0190() []string {
 
 func readWindowsProtectionRCCertificate0190(dir, ver string) (windowsProtectionReleaseCertificate01812, string, error) {
 	if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
-		return windowsProtectionReleaseCertificate01812{}, "", fmt.Errorf("Windows Protection RC prerequisite: %w", err)
+		return windowsProtectionReleaseCertificate01812{}, "", fmt.Errorf("Не выполнено предварительное условие Windows Protection RC: %w", err)
 	}
 	path := filepath.Join(dir, windowsProtectionReleaseFile01812)
 	raw, err := os.ReadFile(path)
@@ -100,7 +100,7 @@ func verifyWindowsUserModeOnlyPackages0190(dir, ver string) error {
 		packageName, manifestName := expectedWindowsPackage0152(ver, arch)
 		manifestRaw, err := os.ReadFile(filepath.Join(dir, manifestName))
 		if err != nil {
-			return fmt.Errorf("Windows Protection GA read %s: %w", manifestName, err)
+			return fmt.Errorf("Ошибка чтения Windows Protection GA %s: %w", manifestName, err)
 		}
 		var manifest struct {
 			Artifacts []struct {
@@ -109,29 +109,29 @@ func verifyWindowsUserModeOnlyPackages0190(dir, ver string) error {
 			} `json:"artifacts"`
 		}
 		if err := json.Unmarshal(manifestRaw, &manifest); err != nil {
-			return fmt.Errorf("Windows Protection GA invalid %s: %w", manifestName, err)
+			return fmt.Errorf("Недопустимый Windows Protection GA %s: %w", manifestName, err)
 		}
 		for _, artifact := range manifest.Artifacts {
 			lower := strings.ToLower(strings.TrimSpace(artifact.Name))
 			if strings.HasSuffix(lower, ".sys") || strings.Contains(strings.ToLower(artifact.Component), "driver") {
-				return fmt.Errorf("Windows Protection GA rejects kernel-driver artifact in %s: %s", manifestName, artifact.Name)
+				return fmt.Errorf("Windows Protection GA отклоняет артефакт драйвера ядра в %s: %s", manifestName, artifact.Name)
 			}
 		}
 
 		packagePath := filepath.Join(dir, packageName)
 		archive, err := zip.OpenReader(packagePath)
 		if err != nil {
-			return fmt.Errorf("Windows Protection GA open %s: %w", packageName, err)
+			return fmt.Errorf("Ошибка открытия Windows Protection GA %s: %w", packageName, err)
 		}
 		for _, entry := range archive.File {
 			clean := strings.ToLower(filepath.ToSlash(filepath.Clean(entry.Name)))
 			if strings.HasSuffix(clean, ".sys") {
 				_ = archive.Close()
-				return fmt.Errorf("Windows Protection GA rejects kernel-driver payload in %s: %s", packageName, entry.Name)
+				return fmt.Errorf("Windows Protection GA отклоняет данные драйвера ядра в %s: %s", packageName, entry.Name)
 			}
 		}
 		if err := archive.Close(); err != nil {
-			return fmt.Errorf("Windows Protection GA close %s: %w", packageName, err)
+			return fmt.Errorf("Ошибка закрытия Windows Protection GA %s: %w", packageName, err)
 		}
 	}
 	return nil
@@ -164,12 +164,12 @@ func buildWindowsProtectionGADocument0190(dir, ver string) (windowsProtectionGAC
 		return windowsProtectionGACertificate0190{}, err
 	}
 	if len(rc.JavaMajors) != 5 {
-		return windowsProtectionGACertificate0190{}, errors.New("Windows Protection GA Java cohort incomplete")
+		return windowsProtectionGACertificate0190{}, errors.New("Группа Java для Windows Protection GA неполна")
 	}
 	expectedJava := []int{8, 16, 17, 21, 25}
 	for i, major := range expectedJava {
 		if rc.JavaMajors[i] != major {
-			return windowsProtectionGACertificate0190{}, fmt.Errorf("Windows Protection GA Java cohort mismatch at index %d", i)
+			return windowsProtectionGACertificate0190{}, fmt.Errorf("Группа Java для Windows Protection GA не совпадает по индексу %d", i)
 		}
 	}
 	artifacts := append([]windowsProtectionArtifact01812(nil), rc.Artifacts...)
@@ -277,7 +277,7 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	}
 	for key := range expected.Invariants {
 		if !cert.Invariants[key] {
-			return fmt.Errorf("Windows Protection GA invariant %s is not satisfied", key)
+			return fmt.Errorf("Инвариант Windows Protection GA %s не соблюдён", key)
 		}
 	}
 	if !strings.EqualFold(cert.BoundarySHA256, expected.BoundarySHA256) || cert.CertificateID != "sha256:"+strings.ToLower(expected.BoundarySHA256) {

@@ -97,7 +97,7 @@ func validPermissionName0244(s string) bool {
 
 func validDistinct0244(values []string, limit int, valid func(string) bool) error {
 	if len(values) > limit {
-		return errors.New("condition array exceeds limit")
+		return errors.New("Массив условий превышает допустимый размер")
 	}
 	seen := make(map[string]bool, len(values))
 	for _, v := range values {

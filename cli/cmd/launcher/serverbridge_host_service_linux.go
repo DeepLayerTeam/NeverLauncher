@@ -229,7 +229,7 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 
 func hostServiceHandle02811(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: nl server-bridge host service install|uninstall|start|stop|restart|status [--scope user|system] [--name host-<id>] [--server-root path]")
+		return errors.New("Использование: nl server-bridge host service install|uninstall|start|stop|restart|status [--scope user|system] [--name host-<id>] [--server-root path]")
 	}
 	action := args[0]
 	switch action {

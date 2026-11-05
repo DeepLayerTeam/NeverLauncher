@@ -41,7 +41,7 @@ func migrationModuleAnalyze0338(endpoint, token, source, out string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("expected regular source ZIP 1..512 MiB")
+		return errors.New("Ожидается обычный ZIP-файл источника размером от 1 до 512 МиБ")
 	}
 	req, err := http.NewRequest("POST", endpoint, f)
 	if err != nil {
@@ -61,7 +61,7 @@ func migrationModuleAnalyze0338(endpoint, token, source, out string) error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("module inspection HTTP %d: %s", resp.StatusCode, raw)
+		return fmt.Errorf("Ошибка HTTP %d при проверке модуля: %s", resp.StatusCode, raw)
 	}
 	var parsed any
 	if err = json.Unmarshal(raw, &parsed); err != nil {
@@ -78,7 +78,7 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 		return err
 	}
 	if !fresh {
-		return errors.New("--fresh-keys-confirmed required: newly generated independent Never Ed25519 keypair")
+		return errors.New("Требуется --fresh-keys-confirmed: новая независимая пара ключей Ed25519 Never")
 	}
 	if run == "" || wrapper == "" || id == "" || kind == "" || profile == "" || key == "" {
 		return errors.New("Требуется: --run --wrapper --server-id --kind --profile-id --public-key")
@@ -107,7 +107,7 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("ServerBridge enrollment HTTP %d: %s", resp.StatusCode, answer)
+		return fmt.Errorf("Ошибка HTTP %d при регистрации ServerBridge: %s", resp.StatusCode, answer)
 	}
 	var parsed any
 	if err = json.Unmarshal(answer, &parsed); err != nil {

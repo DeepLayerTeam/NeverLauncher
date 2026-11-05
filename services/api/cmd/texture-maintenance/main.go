@@ -37,7 +37,7 @@ func run() error {
 	report := flag.String("report", "", "Новый файл отчёта JSON для проверки (не должен существовать)")
 	flag.Parse()
 	if *command != "backup" && *command != "restore" && *command != "gc" && *command != "verify" {
-		return errors.New("--command must be backup, restore, gc or verify")
+		return errors.New("Параметр --command должен иметь значение backup, restore, gc или verify")
 	}
 	if (*command == "backup" || *command == "restore") && *backup == "" {
 		return errors.New("Требуется: --backup каталог")

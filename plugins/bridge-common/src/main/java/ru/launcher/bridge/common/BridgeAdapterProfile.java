@@ -22,7 +22,7 @@ public record BridgeAdapterProfile(
             throw new IllegalArgumentException("adapter platform/family/role are required");
         }
         if (!role.equals("backend") && !role.equals("proxy")) {
-            throw new IllegalArgumentException("adapter role must be backend or proxy");
+            throw new IllegalArgumentException("Роль адаптера должна иметь значение backend или proxy");
         }
     }
 

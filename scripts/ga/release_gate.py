@@ -83,7 +83,7 @@ def load_attested_file(
         for chunk in iter(lambda: input_file.read(1024 * 1024), b""):
             total += len(chunk)
             if total > 4 * 1024**3:
-                raise ValueError(f"artifact exceeds maximum 4 GiB: {name}")
+                raise ValueError(f"Артефакт превышает предельный размер 4 ГиБ: {name}")
             hasher.update(chunk)
             # Хешируйте бинарные установщики потоково. JSON-доказательства должны оставаться
             # небольшими; не держите многогигабайтные входы в памяти.
@@ -105,14 +105,14 @@ def check_report(
         or report.get("productVersion") != version
         or report.get("status") != "passed"
     ):
-        raise ValueError(f"{subject}: real execution report incomplete/mismatched")
+        raise ValueError(f"{subject}: отчёт реального выполнения неполный или содержит несовпадения")
     if report.get("simulated") or report.get("mocked"):
-        raise ValueError(f"{subject}: simulated or mocked execution cannot certify GA")
+        raise ValueError(f"{subject}: симуляция или имитация выполнения не подтверждает готовность GA")
     if subject == "osSignature":
         if report.get("signatureVerified") is not True or not report.get(
             "trustedSigner"
         ):
-            raise ValueError("native OS signature/pinned publisher was not verified")
+            raise ValueError("Не проверены подпись операционной системы и закреплённый издатель")
     elif subject == "cleanMachine":
         if (
             report.get("schemaVersion") != "launcher.ga.clean-machine.v1"
@@ -127,12 +127,12 @@ def check_report(
             or not report.get("suites")
             or report.get("unmetGates")
         ):
-            raise ValueError("full certification suites missing or incomplete")
+            raise ValueError("Полные наборы сертификационных тестов отсутствуют или не завершены")
         if any(s.get("status") != "passed" for s in report["suites"]):
-            raise ValueError("failed or skipped certification suite")
+            raise ValueError("Набор сертификационных тестов завершился ошибкой или был пропущен")
     elif subject in ("nativeRun", "minecraftRun", "guardRun", "bridgeRun"):
         if report.get("target") != target or report.get("actualExecution") is not True:
-            raise ValueError(f"{subject}: missing actual execution or platform binding")
+            raise ValueError(f"{subject}: отсутствует реальное выполнение или привязка к платформе")
         if subject == "nativeRun":
             if (
                 report.get("signedManifestVersion") != "3.0"
@@ -151,13 +151,13 @@ def check_report(
                 "forge",
                 "neoforge",
             ):
-                raise ValueError("Minecraft JVM launch was not verified")
+                raise ValueError("Запуск Minecraft JVM не подтверждён")
         elif subject == "guardRun":
             if (
                 report.get("kind") != "guard-live-attestation"
                 or report.get("actualIntegration") is not True
             ):
-                raise ValueError("Guard live integration was not verified")
+                raise ValueError("Интеграция Guard в реальном окружении не подтверждена")
         else:
             if (
                 report.get("kind") != "serverbridge-real-join-replay"
@@ -203,7 +203,7 @@ def check_report(
                 or not SHA256.fullmatch(reference.get("sha256", ""))
                 or reference.get("target") != target
             ):
-                raise ValueError(f"optional components {section} not bound to target")
+                raise ValueError(f"Дополнительные компоненты {section} не привязаны к целевой платформе")
     elif subject == "benchmark":
         if (
             not isinstance(report.get("runs"), list)
@@ -219,14 +219,14 @@ def check_report(
             "baseline",
             "candidate",
         }:
-            raise ValueError("not a baseline vs candidate benchmark")
+            raise ValueError("Нет сравнения производительности базовой и кандидатной версий")
 
 
 def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str):
     data = folder / "attestation.json"
     sig = folder / "attestation.sig"
     if data.is_symlink() or sig.is_symlink():
-        raise ValueError("symlinked attestation not accepted")
+        raise ValueError("Подтверждение через символическую ссылку не принимается")
     raw = data.read_bytes()
     if len(raw) > 1024 * 1024:
         raise ValueError("Превышен допустимый размер: «signed GA attestation»")
@@ -246,7 +246,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
     if doc.get("commit") != commit or doc.get("productVersion") != version:
         raise ValueError("Несовпадение: «attestation commit/version»")
     if doc.get("gitTreeClean") is not True:
-        raise ValueError("release must originate from clean source tree")
+        raise ValueError("Релиз должен собираться из чистого дерева исходников")
     checks = doc.get("checks")
     expected = COMMON_CHECKS | (
         {"windows-executable-lock"} if pair[0] == "windows" else set()
@@ -301,7 +301,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
         # Отчёт компонента должен относиться к ЭТОМУ точному установщику, а не к
         # прежней проверенной сборке той же версии или коммита.
         if components.get("installerSha256") != installer_sha:
-            raise ValueError("components certification belongs to another installer")
+            raise ValueError("Сертификация компонентов относится к другому установщику")
         if components["nativeEvidenceSha256"] != objects["nativeRun"]["sha256"]:
             raise ValueError("«native run digest» не совпадает с «authenticated evidence»")
         for section, object_name in (
@@ -323,7 +323,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
             proofs[name].get("platform")
             != {"windows": "Windows", "linux": "Linux", "darwin": "Darwin"}[pair[0]]
         ):
-            raise ValueError(f"{name}: platform mismatch")
+            raise ValueError(f"{name}: платформа не совпадает")
     return pair, {
         "attestationSha256": hashlib.sha256(raw).hexdigest(),
         "installerSha256": objects["installer"]["sha256"],
@@ -335,7 +335,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
 
 def verify_all(root: Path, public_key_hex: str, commit: str, version="0.24.0") -> dict:
     if not GITSHA.fullmatch(commit):
-        raise ValueError("exact 40-byte git commit is mandatory")
+        raise ValueError("Необходимо указать точный 40-байтовый идентификатор коммита Git")
     if not re.fullmatch(r"[a-fA-F0-9]{64}", public_key_hex):
         raise ValueError("trusted attestation key: требуется «32 raw bytes in hex»")
     key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex))

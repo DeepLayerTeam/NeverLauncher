@@ -827,7 +827,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 func remoteHandle0284(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: nl server-bridge host remote init|tls-init|issue|revoke|rotate-key|inspect|serve|call")
+		return errors.New("Использование: nl server-bridge host remote init|tls-init|issue|revoke|rotate-key|inspect|serve|call")
 	}
 	if args[0] == "call" {
 		return remoteCall0284(args) // У удалённого клиента нет локального корневого каталога сервера.

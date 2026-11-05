@@ -2177,14 +2177,14 @@ function App() {
         throw new Error("Неожиданный результат проверки сервера");
       }
       setTpmStatus0313(
-        `tpm-ak-certified · CA=${result.rootId} · expires=${result.expiresAt} · Guard/PCR not verified`,
+        `Сертификат TPM AK подтверждён · CA=${result.rootId} · срок действия до ${result.expiresAt} · Guard/PCR не проверены`,
       );
       log(
-        `TPM Certify verified by backend: device=${deviceKey.deviceId}; CA=${result.rootId}; Guard/PCR not verified`,
+        `Backend подтвердил TPM Certify: устройство=${deviceKey.deviceId}; CA=${result.rootId}; Guard/PCR не проверены`,
       );
       await loadManagedDevices();
     } catch (error) {
-      setTpmStatus0313(`not-verified: ${String(error)}`);
+      setTpmStatus0313(`Проверка не пройдена: ${String(error)}`);
       throw error;
     } finally {
       setTpmBusy0313(false);
@@ -2288,13 +2288,13 @@ function App() {
       )
         throw new Error("Неожиданный результат проверки измеряемой загрузки");
       setMeasuredBootStatus0315(
-        `PCR policy verified: ${result.policyId}; expires ${result.expiresAt}; Guard runtime not verified`,
+        `Политика PCR подтверждена: ${result.policyId}; срок действия до ${result.expiresAt}; Runtime Guard не проверен`,
       );
       log(
-        `Measured boot PCR Quote verified on server: device=${deviceKey.deviceId}, policy=${result.policyId}, digest=${result.pcrDigest}. Guard/runtime not verified.`,
+        `Сервер подтвердил PCR Quote измеряемой загрузки: устройство=${deviceKey.deviceId}, политика=${result.policyId}, хеш=${result.pcrDigest}. Guard/Runtime не проверены.`,
       );
     } catch (error) {
-      setMeasuredBootStatus0315(`not-verified: ${String(error)}`);
+      setMeasuredBootStatus0315(`Проверка не пройдена: ${String(error)}`);
       throw error;
     } finally {
       setMeasuredBootBusy0315(false);
@@ -4353,7 +4353,7 @@ function App() {
       setLaunchResult(result);
       setStage("running");
       log(
-        `${result.message}: PID ${result.pid ?? "unknown"}, process ${result.id}.`,
+        `${result.message}: PID ${result.pid ?? "неизвестен"}, процесс ${result.id}.`,
       );
     } catch (error) {
       setStage("failed");

@@ -42,10 +42,10 @@ def safe_member(path: Path) -> bytes:
     if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
         raise ValueError("Небезопасное значение: «symlink in GA evidence:»" + str(path))
     if not path.is_file() or not 0 < path.stat().st_size <= MAX_MEMBER:
-        raise ValueError("missing, empty or oversized GA execution evidence: " + str(path))
+        raise ValueError("Подтверждение выполнения GA отсутствует, пустое или слишком большое: " + str(path))
     data = path.read_bytes()
     if not 0 < len(data) <= MAX_MEMBER:
-        raise ValueError("GA execution evidence changed during read: " + str(path))
+        raise ValueError("Подтверждение выполнения GA изменилось во время чтения: " + str(path))
     return data
 
 
@@ -63,7 +63,7 @@ def package(bundle: Path, evidence: Path, key: Path, version: str, commit: str, 
                 raw = safe_member(evidence / name)
                 total += len(raw)
                 if total > MAX_TOTAL:
-                    raise ValueError("GA execution evidence exceeds total size limit")
+                    raise ValueError("Общий размер подтверждений выполнения GA превышает лимит")
                 info = ZipInfo(name, (1980, 1, 1, 0, 0, 0))
                 info.compress_type = ZIP_DEFLATED
                 info.external_attr = 0o100600 << 16
@@ -89,7 +89,7 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
     with ZipFile(archive_path, "r") as archive:
         entries = archive.infolist()
         if len(entries) != len(expected) or {entry.filename for entry in entries} != expected:
-            raise ValueError("missing, duplicated or additional GA execution archive entries")
+            raise ValueError("В архиве выполнения GA отсутствуют обязательные элементы либо найдены повторяющиеся или лишние")
         total = 0
         for entry in entries:
             mode = (entry.external_attr >> 16) & 0o170000
@@ -98,7 +98,7 @@ def extract_verified(archive_path: Path, destination: Path, version: str) -> Non
                 raise ValueError("Небезопасное значение: «GA execution archive entry:»" + entry.filename)
             total += entry.file_size
             if total > MAX_TOTAL:
-                raise ValueError("decompressed GA execution evidence exceeds size limit")
+                raise ValueError("Размер распакованных подтверждений выполнения GA превышает лимит")
             # Имена берутся из evidence_files(), а не из произвольных путей.
             target = destination / entry.filename
             target.parent.mkdir(parents=True, exist_ok=True)

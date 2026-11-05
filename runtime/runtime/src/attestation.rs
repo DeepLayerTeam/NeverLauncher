@@ -121,7 +121,7 @@ pub(crate) fn validate_attestation_shape(attestation: &GuardRemoteAttestation) -
         return Err("Несовпадение: схема и версия удалённой аттестации Guard".to_string());
     }
     if attestation.challenge_id.is_empty() || attestation.challenge_id.len() > 160 {
-        return Err("Guard remote attestation challengeId malformed".to_string());
+        return Err("Некорректный challengeId удалённой аттестации Guard".to_string());
     }
     for (label, value) in [
         ("challengeSha256", attestation.challenge_sha256.as_str()),
@@ -131,11 +131,11 @@ pub(crate) fn validate_attestation_shape(attestation: &GuardRemoteAttestation) -
         if !value.is_empty()
             && (value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()))
         {
-            return Err(format!("Guard remote attestation {label} malformed"));
+            return Err(format!("Некорректное поле {label} удалённой аттестации Guard"));
         }
     }
     if !attestation.process_policy.enforced {
-        return Err("Guard remote attestation process policy is not enforced".to_string());
+        return Err("При удалённой аттестации Guard не применяется политика процессов".to_string());
     }
     if attestation.collected_at_unix != attestation.evidence.collected_at_unix {
         return Err("Несовпадение: время сбора удалённой аттестации Guard".to_string());

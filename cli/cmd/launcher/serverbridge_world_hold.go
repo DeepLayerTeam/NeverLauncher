@@ -22,7 +22,7 @@ const worldCohortHoldFile0518 = "cohort-hold-0518"
 
 func worldBackupPersistCohortHold0518(root, holdID, backupID string) error {
 	if !worldCohortID0518.MatchString(holdID) || !worldBackupID02810.MatchString(backupID) {
-		return errors.New("cohort hold needs valid operation and backup IDs")
+		return errors.New("Для блокировки группы требуются действительные идентификаторы операции и резервной копии")
 	}
 	gate := worldBackupHostGatePath04110(root)
 	var owner worldHostGate04110
@@ -101,7 +101,7 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	n, err := io.ReadFull(fd, buf)
 	fd.Close()
 	if err != nil || n != len(buf) {
-		return errors.New("corrupt cohort hold token")
+		return errors.New("Токен блокировки группы повреждён")
 	}
 	text := string(buf)
 	if !strings.HasPrefix(text, holdID+"\n") || !worldBackupID02810.MatchString(strings.TrimSpace(text[33:])) {

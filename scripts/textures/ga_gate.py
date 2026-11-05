@@ -108,7 +108,7 @@ def read_file(
     ):
         raise GateError("Небезопасное значение: «evidence filename»")
     if base.is_symlink():
-        raise GateError("symlinked evidence directory")
+        raise GateError("Каталог подтверждений является символической ссылкой")
     path = base / name
     if path.is_symlink() or not path.is_file():
         raise GateError(f"Отсутствует: «or unsafe evidence file»: {path}")

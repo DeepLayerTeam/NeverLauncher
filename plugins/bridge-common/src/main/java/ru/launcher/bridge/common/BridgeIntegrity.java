@@ -41,7 +41,7 @@ public final class BridgeIntegrity {
         try {
             digest = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException("SHA-256 is unavailable", impossible);
+            throw new IllegalStateException("Недоступно: SHA-256", impossible);
         }
         try (InputStream in = Files.newInputStream(path)) {
             byte[] buffer = new byte[128 * 1024];

@@ -56,7 +56,7 @@ public final class BridgeEventJournal {
     public synchronized long ackSequence() { return ackSequence; }
 
     public synchronized BridgeEventRecord append(String type, Map<String, String> payload) throws IOException, GeneralSecurityException {
-        if (pending.size() >= MAX_PENDING) throw new IOException("ServerBridge event journal pending limit reached");
+        if (pending.size() >= MAX_PENDING) throw new IOException("Достигнут лимит ожидающих событий журнала ServerBridge");
         long sequence = nextSequence++;
         BridgeEventRecord event = BridgeEventRecord.signed(sequence, serverId, runtimeId, type, System.currentTimeMillis(), payload, identity);
         appendLine(encodeEvent(event));
@@ -77,7 +77,7 @@ public final class BridgeEventJournal {
     public synchronized void acknowledge(long ack) throws IOException {
         if (ack <= ackSequence) return;
         long highest = pending.isEmpty() ? ackSequence : pending.lastKey();
-        if (ack > highest) throw new IOException("backend ACK exceeds highest queued event sequence");
+        if (ack > highest) throw new IOException("Подтверждённый Backend номер события превышает максимальный номер в очереди");
         appendLine("A\t" + ack);
         pending.headMap(ack, true).clear();
         ackSequence = ack;
@@ -264,7 +264,7 @@ public final class BridgeEventJournal {
         try {
             for (PosixFilePermission permission : Files.getPosixFilePermissions(path)) {
                 if (permission != PosixFilePermission.OWNER_READ && permission != PosixFilePermission.OWNER_WRITE) {
-                    throw new IOException("event journal permissions must be 0600: " + path);
+                    throw new IOException("Права доступа к журналу событий должны быть 0600: " + path);
                 }
             }
         } catch (UnsupportedOperationException ignored) {}

@@ -130,7 +130,7 @@ func (c *sharedArtifacts0277) restore(ctx context.Context, dst, sha string, expe
 		return false, "", 0, closeOut
 	}
 	if copied != size || !strings.EqualFold(hex.EncodeToString(h1.Sum(nil)), sha) || hex.EncodeToString(h256.Sum(nil)) != digest {
-		return false, "", 0, errors.New("shared cache changed during restoration")
+		return false, "", 0, errors.New("Общий кеш изменился во время восстановления")
 	}
 	if err := replaceFileAtomicPortable(temp.Name(), dst); err != nil {
 		return false, "", 0, err
@@ -153,7 +153,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 	}
 	if info, e := os.Lstat(dst); e == nil {
 		if !info.Mode().IsRegular() {
-			return errors.New("nonregular shared cache entry")
+			return errors.New("В общем кеше найден элемент, не являющийся обычным файлом")
 		}
 		ok, got, size := existingFileMatchesSHA1(dst, sha, expectedSize)
 		if !ok || got != digest || size != expectedSize {
@@ -187,7 +187,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 		return closeErr
 	}
 	if copied != expectedSize || !strings.EqualFold(hex.EncodeToString(h1.Sum(nil)), sha) || hex.EncodeToString(h256.Sum(nil)) != digest {
-		return errors.New("shared cache input failed integrity validation")
+		return errors.New("Входные данные общего кеша не прошли проверку целостности")
 	}
 	err = os.Link(temp.Name(), dst)
 	if err == nil {
@@ -202,7 +202,7 @@ func (c *sharedArtifacts0277) store(ctx context.Context, source, sha, digest str
 		return e
 	}
 	if !info.Mode().IsRegular() {
-		return errors.New("concurrent cache entry is nonregular")
+		return errors.New("Параллельно созданный элемент кеша не является обычным файлом")
 	}
 	ok, other, size := existingFileMatchesSHA1(dst, sha, expectedSize)
 	if !ok || other != digest || size != expectedSize {
@@ -270,7 +270,7 @@ func validateVanillaLibraryConflicts0277(libraries []MojangLibrary, targets []va
 			} // первоначальная проверка позднее отклонит некорректные координаты
 			key := parts[0] + ":" + parts[1]
 			if previous, ok := selected[key]; ok && previous != parts[2] {
-				return fmt.Errorf("incompatible Minecraft libraries %s:%s and %s for target %s/%s", key, previous, parts[2], target.OS, target.Arch)
+				return fmt.Errorf("Несовместимые библиотеки Minecraft %s:%s и %s для платформы %s/%s", key, previous, parts[2], target.OS, target.Arch)
 			}
 			selected[key] = parts[2]
 		}

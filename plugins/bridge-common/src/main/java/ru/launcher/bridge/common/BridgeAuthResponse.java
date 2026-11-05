@@ -168,7 +168,7 @@ public final class BridgeAuthResponse0287 {
         private int index;
         private Json(String input) { this.input = input; }
         static Map<String, Object> parse(String input) {
-            if (input == null || input.length() > 262_144) throw new IllegalArgumentException("oversize response");
+            if (input == null || input.length() > 262_144) throw new IllegalArgumentException("Размер ответа превышает лимит");
             Json p = new Json(input);
             Map<String, Object> result = object(p.value(0));
             p.space();
@@ -179,7 +179,7 @@ public final class BridgeAuthResponse0287 {
             while (index < input.length() && " \t\r\n".indexOf(input.charAt(index)) >= 0) index++;
         }
         private char next() {
-            if (index >= input.length()) throw new IllegalArgumentException("truncated JSON");
+            if (index >= input.length()) throw new IllegalArgumentException("Неполный JSON");
             return input.charAt(index++);
         }
         private void expect(char expected) {
@@ -188,7 +188,7 @@ public final class BridgeAuthResponse0287 {
         private Object value(int depth) {
             if (depth > 24) throw new IllegalArgumentException("Превышена допустимая вложенность JSON");
             space();
-            if (index >= input.length()) throw new IllegalArgumentException("empty JSON");
+            if (index >= input.length()) throw new IllegalArgumentException("Пустой JSON");
             return switch (input.charAt(index)) {
                 case '{' -> objectValue(depth + 1);
                 case '[' -> arrayValue(depth + 1);

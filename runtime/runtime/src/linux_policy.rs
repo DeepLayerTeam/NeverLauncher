@@ -111,7 +111,7 @@ mod imp {
     fn configure_child() -> io::Result<()> {
         unsafe {
             if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL, 0, 0, 0) != 0 { return Err(io::Error::last_os_error()); }
-            if libc::getppid() == 1 { return Err(io::Error::other("launcher parent already exited")); }
+            if libc::getppid() == 1 { return Err(io::Error::other("Родительский процесс лаунчера уже завершился")); }
             if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 { return Err(io::Error::last_os_error()); }
             let lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
             if libc::setrlimit(libc::RLIMIT_CORE, &lim) != 0 { return Err(io::Error::last_os_error()); }
@@ -163,14 +163,14 @@ mod imp {
 pub use imp::{ensure_linux_production_hardening, guard_policy_report, prepare_guard_command, prepare_runtime_command, runtime_policy, terminate_runtime_process_group};
 
 #[cfg(not(target_os = "linux"))]
-pub fn ensure_linux_production_hardening() -> Result<LinuxProductionHardeningReport, String> { Err("Linux hardening is only available on Linux".into()) }
+pub fn ensure_linux_production_hardening() -> Result<LinuxProductionHardeningReport, String> { Err("Усиленная защита Linux доступна только в Linux".into()) }
 #[cfg(not(target_os = "linux"))]
-pub fn guard_policy_report() -> Result<LinuxGuardPolicyDetails, String> { Err("Linux policy is only available on Linux".into()) }
+pub fn guard_policy_report() -> Result<LinuxGuardPolicyDetails, String> { Err("Политика Linux доступна только в Linux".into()) }
 #[cfg(not(target_os = "linux"))]
 pub fn prepare_guard_command(_command: &mut tokio::process::Command) {}
 #[cfg(not(target_os = "linux"))]
 pub fn prepare_runtime_command(_command: &mut tokio::process::Command) {}
 #[cfg(not(target_os = "linux"))]
-pub fn runtime_policy(_child: &mut tokio::process::Child) -> Result<LinuxRuntimeProcessPolicyReport, String> { Err("Linux runtime policy is only available on Linux".into()) }
+pub fn runtime_policy(_child: &mut tokio::process::Child) -> Result<LinuxRuntimeProcessPolicyReport, String> { Err("Политика Runtime Linux доступна только в Linux".into()) }
 #[cfg(not(target_os = "linux"))]
-pub fn terminate_runtime_process_group(_pid: u32) -> Result<(), String> { Err("Linux runtime process groups are only available on Linux".into()) }
+pub fn terminate_runtime_process_group(_pid: u32) -> Result<(), String> { Err("Группы процессов Runtime Linux доступны только в Linux".into()) }

@@ -238,11 +238,11 @@ func extensionRegistryPublishCLI0203(backend, token, packagePath string, args []
 	payload := map[string]any{}
 	if len(strings.TrimSpace(string(data))) > 0 {
 		if err := json.Unmarshal(data, &payload); err != nil {
-			return fmt.Errorf("registry publish returned invalid JSON: %w", err)
+			return fmt.Errorf("Реестр при публикации вернул некорректный JSON: %w", err)
 		}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("registry publish returned %s: %s", resp.Status, strings.TrimSpace(string(data)))
+		return fmt.Errorf("Реестр при публикации вернул %s: %s", resp.Status, strings.TrimSpace(string(data)))
 	}
 	return writeOrPrintJSON(out, payload)
 }

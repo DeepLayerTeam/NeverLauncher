@@ -273,7 +273,7 @@ func hostResolveDirectory0282(root, directory string) (string, error) {
 	}
 	rel, err := filepath.Rel(rootResolved, realPath)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", errors.New("working directory escapes server root")
+		return "", errors.New("Рабочий каталог находится за пределами корневого каталога сервера")
 	}
 	return filepath.Clean(path), nil
 }

@@ -99,7 +99,7 @@ func handleExtensionSecurity0207(command string, args []string) error {
 			return err
 		}
 		if len(value) > 1<<20 {
-			return errors.New("secret value exceeds 1 MiB")
+			return errors.New("Размер секрета превышает 1 МиБ")
 		}
 		body := map[string]any{"scope": scope, "scopeId": scopeID, "valueBase64": base64.StdEncoding.EncodeToString(value)}
 		for i := range value {

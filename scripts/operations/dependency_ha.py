@@ -406,7 +406,7 @@ def perform_verification(sock, edge_url, nodes, *, redundant, cfg=None, creds=No
 
 def systemd_ssh(host, service, verb):
     if not multi.HOST_REGEX.fullmatch(host) or host.startswith('-'):
-        raise HAError('invalid SSH target')
+        raise HAError('Недопустимый узел назначения SSH')
     if service not in ('patroni', 'redis-server', 'minio', 'haproxy') or verb not in ('stop', 'start'):
         raise HAError('invalid disruption unit')
     # Никаких подстановок; закрепляйте ключи SSH хостов и запрещайте запросы
@@ -647,7 +647,7 @@ def local_owns_vip(vip, interface):
 
 def remote_owns_vip(target, vip, interface):
     if not multi.HOST_REGEX.fullmatch(target) or target.startswith('-'):
-        raise HAError('invalid SSH target')
+        raise HAError('Недопустимый узел назначения SSH')
     output = multi.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
                         '-o', 'ConnectTimeout=8', target,
                         shlex.join(['ip', '-j', '-4', 'addr', 'show', 'dev', interface])], timeout=15)

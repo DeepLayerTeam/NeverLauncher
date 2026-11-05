@@ -259,10 +259,10 @@ func scanManagedJREZip0155(path, platform, arch string) (string, error) {
 		}
 		if strings.HasSuffix(strings.ToLower(clean), "/bin/java.exe") {
 			if javaEntry != "" {
-				return "", errors.New("JRE archive contains multiple bin/java.exe entries")
+				return "", errors.New("Архив JRE содержит несколько записей bin/java.exe")
 			}
 			if zf.UncompressedSize64 == 0 || zf.UncompressedSize64 > uint64(maxManagedJREEntry0155) {
-				return "", errors.New("JRE java.exe has invalid size")
+				return "", errors.New("Размер java.exe в JRE недопустим")
 			}
 			rc, err := zf.Open()
 			if err != nil {
@@ -280,7 +280,7 @@ func scanManagedJREZip0155(path, platform, arch string) (string, error) {
 		}
 	}
 	if javaEntry == "" {
-		return "", errors.New("JRE archive does not contain bin/java.exe")
+		return "", errors.New("Архив JRE не содержит bin/java.exe")
 	}
 	return javaEntry, nil
 }
@@ -309,7 +309,7 @@ func scanManagedJRETarGz0155(path, platform, arch string) (string, error) {
 		}
 		entries++
 		if entries > 100000 {
-			return "", errors.New("JRE tar contains too many entries")
+			return "", errors.New("Архив tar с JRE содержит слишком много элементов")
 		}
 		clean, err := normalizeArchiveEntry0155(hdr.Name)
 		if err != nil {
@@ -338,10 +338,10 @@ func scanManagedJRETarGz0155(path, platform, arch string) (string, error) {
 		}
 		if strings.HasSuffix(strings.ToLower(clean), "/bin/java") {
 			if javaEntry != "" {
-				return "", errors.New("JRE archive contains multiple bin/java entries")
+				return "", errors.New("Архив JRE содержит несколько записей bin/java")
 			}
 			if hdr.Size <= 0 || hdr.Size > maxManagedJREEntry0155 {
-				return "", errors.New("JRE bin/java has invalid size")
+				return "", errors.New("Размер bin/java в JRE недопустим")
 			}
 			data, err := io.ReadAll(io.LimitReader(tr, maxManagedJREEntry0155+1))
 			if err != nil || int64(len(data)) != hdr.Size {
@@ -354,7 +354,7 @@ func scanManagedJRETarGz0155(path, platform, arch string) (string, error) {
 		}
 	}
 	if javaEntry == "" {
-		return "", errors.New("JRE archive does not contain bin/java")
+		return "", errors.New("Архив JRE не содержит bin/java")
 	}
 	return javaEntry, nil
 }
@@ -372,7 +372,7 @@ func verifyManagedJREArchive0155(dir string, target ManagedJRETarget0155) error 
 		return fmt.Errorf("Несовпадение: «Managed JRE %s/%s archive checksum/size»", target.Platform, target.Architecture)
 	}
 	if !validDeliverySHA256(target.SourceSHA256) || !strings.EqualFold(target.SourceSHA256, target.SHA256) {
-		return fmt.Errorf("Managed JRE %s/%s is not the exact vendor archive", target.Platform, target.Architecture)
+		return fmt.Errorf("Управляемая JRE %s/%s не совпадает с оригинальным архивом поставщика", target.Platform, target.Architecture)
 	}
 	if !validHTTPSURL0155(target.SourceURL) {
 		return fmt.Errorf("Требуемый формат для Managed JRE %s/%s sourceUrl: HTTPS", target.Platform, target.Architecture)
@@ -380,20 +380,20 @@ func verifyManagedJREArchive0155(dir string, target ManagedJRETarget0155) error 
 	var javaEntry string
 	if target.Platform == "windows" {
 		if target.Format != "zip" || !strings.HasSuffix(strings.ToLower(target.Archive), ".zip") {
-			return errors.New("Windows Managed JRE must use zip")
+			return errors.New("Управляемая JRE для Windows должна поставляться в ZIP")
 		}
 		javaEntry, err = scanManagedJREZip0155(path, target.Platform, target.Architecture)
 	} else {
 		if target.Format != "tar.gz" || !strings.HasSuffix(strings.ToLower(target.Archive), ".tar.gz") {
-			return fmt.Errorf("%s Managed JRE must use tar.gz", target.Platform)
+			return fmt.Errorf("Управляемая JRE для %s должна поставляться в tar.gz", target.Platform)
 		}
 		javaEntry, err = scanManagedJRETarGz0155(path, target.Platform, target.Architecture)
 	}
 	if err != nil {
-		return fmt.Errorf("Managed JRE %s/%s archive validation: %w", target.Platform, target.Architecture, err)
+		return fmt.Errorf("Ошибка проверки архива управляемой JRE %s/%s: %w", target.Platform, target.Architecture, err)
 	}
 	if target.JavaEntry != javaEntry {
-		return fmt.Errorf("Managed JRE %s/%s javaEntry mismatch: manifest=%s archive=%s", target.Platform, target.Architecture, target.JavaEntry, javaEntry)
+		return fmt.Errorf("У управляемой JRE %s/%s не совпадает javaEntry: манифест=%s, архив=%s", target.Platform, target.Architecture, target.JavaEntry, javaEntry)
 	}
 	return nil
 }
@@ -411,7 +411,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 	}
 	expected := expectedManagedJRETargets0155(ver)
 	if len(manifest.Targets) != len(expected) {
-		return fmt.Errorf("Managed JRE manifest must contain %d targets", len(expected))
+		return fmt.Errorf("Манифест управляемой JRE должен содержать %d целевых платформ", len(expected))
 	}
 	targetByKey := map[string]ManagedJRETarget0155{}
 	for _, target := range manifest.Targets {
@@ -430,7 +430,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 		expectedVendorOS := map[string]string{"windows": "windows", "linux": "linux", "macos": "mac"}[target.Platform]
 		expectedVendorArch := map[string]string{"x64": "x64", "arm64": "aarch64"}[target.Architecture]
 		if target.Distribution != "temurin" || target.MajorVersion != managedJREMajor0155 || strings.TrimSpace(target.ReleaseName) == "" || strings.TrimSpace(target.Semver) == "" || target.VendorOS != expectedVendorOS || target.VendorArch != expectedVendorArch {
-			return fmt.Errorf("Managed JRE %s metadata incomplete/mismatched", key)
+			return fmt.Errorf("Метаданные управляемой JRE %s неполны или не совпадают", key)
 		}
 		if err := verifyManagedJREArchive0155(dir, target); err != nil {
 			return err
@@ -453,11 +453,11 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 		key := item.Platform + "/" + item.Architecture
 		target, ok := targetByKey[key]
 		if !ok || seenEvidence[key] {
-			return fmt.Errorf("Managed JRE evidence unexpected/duplicate target %s", key)
+			return fmt.Errorf("В подтверждениях управляемой JRE обнаружена неожиданная или повторяющаяся платформа %s", key)
 		}
 		seenEvidence[key] = true
 		if item.Archive != target.Archive || item.Size != target.Size || !strings.EqualFold(item.SHA256, target.SHA256) || item.SourceURL != target.SourceURL || !strings.EqualFold(item.SourceSHA256, target.SourceSHA256) {
-			return fmt.Errorf("Managed JRE evidence mismatch for %s", key)
+			return fmt.Errorf("Подтверждения управляемой JRE не совпадают для %s", key)
 		}
 	}
 
@@ -481,10 +481,10 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 			}
 			artifact, ok := deliveryByName[name]
 			if !ok || artifact.Size != size || !strings.EqualFold(artifact.SHA256, sum) {
-				return fmt.Errorf("Managed JRE artifact %s is not bound to DELIVERY_MANIFEST.json", name)
+				return fmt.Errorf("Артефакт управляемой JRE %s не связан с DELIVERY_MANIFEST.json", name)
 			}
 			if strings.HasPrefix(name, "launcher-jre-") && artifact.Component != "managed-jre" {
-				return fmt.Errorf("Managed JRE artifact %s has delivery component %s", name, artifact.Component)
+				return fmt.Errorf("Артефакт управляемой JRE %s относится к компоненту поставки %s", name, artifact.Component)
 			}
 		}
 	}

@@ -53,7 +53,7 @@ type worldBackupLock02810 struct {
 
 func worldBackupHandle02810(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: nl server-bridge host world-backup create|verify|restore|release|list [--server-root PATH] [--backup-root PATH]")
+		return errors.New("Использование: nl server-bridge host world-backup create|verify|restore|release|list [--server-root PATH] [--backup-root PATH]")
 	}
 	action := args[0]
 	args = args[1:]

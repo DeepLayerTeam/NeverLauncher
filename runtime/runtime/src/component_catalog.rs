@@ -176,7 +176,7 @@ fn valid_permission_0244(s:&str)->bool {
 }
 
 fn distinct_conditions_0244(values:&[String],limit:usize,valid:impl Fn(&str)->bool)->Result<(),String>{
-    if values.len()>limit {return Err("condition array exceeds limit".into())}
+    if values.len()>limit {return Err("Массив условий превышает допустимый размер".into())}
     let mut seen=HashSet::new();
     for v in values{if !valid(v)||!seen.insert(v){return Err(format!("invalid/duplicate condition value {v:?}"))}}
     Ok(())

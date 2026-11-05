@@ -62,12 +62,12 @@ fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String>
         if n == 0 { break }
         hasher.update(&buf[..n]);
     }
-    if hex::encode(hasher.finalize()) != digest { return Err("Guard Trusted JVM signed package SHA-256 differs from active identity".into()) }
+    if hex::encode(hasher.finalize()) != digest { return Err("SHA-256 подписанного пакета доверенной JVM Guard отличается от активного идентификатора".into()) }
     Ok(())
 }
 fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String, String)], loader: &str, libraries: &[(PathBuf, String)], class_bytes: &[(String,String)]) -> Result<String, String> {
     if !main.contains('.') || !main.split('.').all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')) {
-        return Err("Guard Trusted JVM invalid Minecraft main class".into());
+        return Err("Guard Trusted JVM: некорректный главный класс Minecraft".into());
     }
     if plugins.len() > 32 || transforms.len() > 4096 { return Err("Guard Trusted JVM plugin/transform limit exceeded".into()) }
     let mut text = format!("main={}\nguard.policy.active=true\ntransform.count={}\n", STANDARD.encode(main), transforms.len());
@@ -76,7 +76,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
         text.push_str(&format!("transform.{i}.owner={owner}\ntransform.{i}.class={}\n", STANDARD.encode(class)));
     }
     if !["vanilla","fabric","quilt","forge","neoforge","neo-forge","neo_forge"].contains(&loader.to_ascii_lowercase().as_str()) {
-        return Err("Guard Trusted JVM invalid loader identifier".into());
+        return Err("Guard Trusted JVM: некорректный идентификатор загрузчика".into());
     }
     if libraries.len()>128 {return Err("Guard Trusted JVM loader library limit exceeded".into())}
     text.push_str(&format!("loader.id={}\nloader.count={}\n", loader.to_ascii_lowercase().replace('-', "").replace('_', ""), libraries.len()));
@@ -87,7 +87,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     if class_bytes.len()>4096 {return Err("Guard too many loader class digests".into())}
     text.push_str(&format!("loader.class.count={}\n", class_bytes.len()));
     for (i,(name,digest)) in class_bytes.iter().enumerate() {
-        if !is_digest(digest) || name.len()>256 || !name.contains('.') {return Err("Guard invalid class SHA-256 binding".into())}
+        if !is_digest(digest) || name.len()>256 || !name.contains('.') {return Err("Guard: некорректная привязка SHA-256 класса".into())}
         text.push_str(&format!("loader.class.{i}.name={}\nloader.class.{i}.sha256={digest}\n",STANDARD.encode(name)));
     }
     text.push_str(&format!("count={}\n", plugins.len()));
@@ -120,12 +120,12 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
         Err(e) => return Err(format!("Guard Trusted JVM active record: {e}")),
     };
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 8192 {
-        return Err("Guard Trusted JVM active record not a bounded regular file".into());
+        return Err("Guard Trusted JVM: активная запись не является обычным файлом допустимого размера".into());
     }
     let rec: Active = serde_json::from_slice(&fs::read(&active).map_err(|e| e.to_string())?).map_err(|e| format!("Некорректное значение: «Guard Trusted JVM active record»: {e}"))?;
     if rec.schema_version != "launcher.trusted-jvm.v1" || rec.approved_access != "full-minecraft-jvm" ||
         !is_digest(&rec.package_sha256) || !is_digest(&rec.agent_sha256) || rec.plugins.len() > 16 {
-        return Err("Guard Trusted JVM active record has invalid identity/permission".into());
+        return Err("Guard Trusted JVM: в активной записи некорректный идентификатор или разрешение".into());
     }
     let signed = guard_compatibility_0502::verified_for_game(root, project, minecraft, loader)?
         .ok_or("Guard Trusted JVM installed without mandatory signed compatibility policy")?;
@@ -137,7 +137,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
     let mut approved_plugins = HashSet::new();
     for plugin in rec.plugins {
         if !plugin_name(&plugin.name) || !is_digest(&plugin.sha256) || !approved_plugins.insert(plugin.sha256.clone()) {
-            return Err("Guard Trusted JVM duplicate or invalid plugin".into());
+            return Err("Guard Trusted JVM: повторяющийся или недопустимый плагин".into());
         }
         let rel = format!("{release}/plugins/{}", plugin.name);
         signed.authorize(root, "java-plugin", &rel, &plugin.sha256)?;

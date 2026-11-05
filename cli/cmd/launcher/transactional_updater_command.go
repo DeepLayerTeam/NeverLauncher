@@ -20,10 +20,10 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 		return nil, err
 	}
 	if err := validateManifestFilePolicy0224(oldManifest); err != nil {
-		return nil, fmt.Errorf("from manifest: %w", err)
+		return nil, fmt.Errorf("Ошибка исходного манифеста: %w", err)
 	}
 	if err := validateManifestFilePolicy0224(newManifest); err != nil {
-		return nil, fmt.Errorf("to manifest: %w", err)
+		return nil, fmt.Errorf("Ошибка целевого манифеста: %w", err)
 	}
 	if strings.TrimSpace(sourceRoot) == "" || strings.TrimSpace(targetRoot) == "" {
 		return nil, errors.New("update apply требует --source-root и --root")

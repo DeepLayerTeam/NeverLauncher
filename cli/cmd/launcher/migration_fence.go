@@ -173,7 +173,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, errors.New("Требуется: ожидаемый SHA-256 снимка пробной миграции")
 	}
 	if time.Since(state.StoppedAt) > 15*time.Minute || time.Until(state.StoppedAt) > time.Minute {
-		return sourceFenceEvidence0448{}, errors.New("source stop evidence expired or future-dated")
+		return sourceFenceEvidence0448{}, errors.New("Подтверждение остановки источника просрочено либо датировано будущим")
 	}
 	active, masked, err := checkSourceFenced0448(ctx, state.Unit, run)
 	if err != nil {

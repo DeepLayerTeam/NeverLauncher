@@ -118,7 +118,7 @@ fn last_known_good(root: &Path) -> Result<Option<Journal>, String> {
     let valid = [a, b].into_iter().flatten().filter(|j| j.schema == SCHEMA && j.state == "complete")
         .max_by_key(|j| j.generation);
     if valid.is_none() && state_exists(root, "last-known-good") {
-        return Err("last-known-good metadata is damaged".into());
+        return Err("Метаданные последней работоспособной версии повреждены".into());
     }
     Ok(valid)
 }
@@ -151,7 +151,7 @@ fn validate_release(release: &Release, key: &str) -> Result<(), String> {
     if release.manifest.schema_version == "3.0" {
         for file in &plan.files {
             if !seen.contains(&file.path) {
-                return Err(format!("selected signed component file not installed: {}",file.path));
+                return Err(format!("Выбранный подписанный файл компонента не установлен: {}",file.path));
             }
         }
     }
@@ -295,7 +295,7 @@ fn restore(root: &Path, j: &Journal) -> Result<(), String> {
             let saved = safe_join(&back, &e.path)?;
             file_ownership::ensure_no_symlinks(root, &saved)?;
             if hash(&saved)?.to_ascii_lowercase() != digest.to_ascii_lowercase() {
-                return Err(format!("last-known-good backup is damaged: {}", e.path));
+                return Err(format!("Резервная копия последней работоспособной версии повреждена: {}", e.path));
             }
         }
     }
@@ -433,7 +433,7 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
             validate_release(&active, &key)?;
             let new_sig = signed.signature.as_ref().map(|s| (&s.signature, &s.public_key));
             let current_sig = active.manifest.signature.as_ref().map(|s| (&s.signature, &s.public_key));
-            if new_sig != current_sig { return Err("launch blocked: requested manifest is not the active client release".into()); }
+            if new_sig != current_sig { return Err("Запуск заблокирован: запрошенный манифест не относится к активному релизу клиента".into()); }
         }
         Ok(std::sync::Arc::new(file))
     }).await.map_err(|e| e.to_string())?
@@ -454,7 +454,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
     }
     if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("«active client release» не совпадает с «signed manifest»".into())}
     let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
-    if wanted!=actual {return Err("selected component preset is not installed: install selected preset first".into())}
+    if wanted!=actual {return Err("Выбранный набор компонентов не установлен; сначала установите этот набор".into())}
     // Два набора могут содержать одинаковые файлы, но разные подписанные действия
     // запуска. Не принимайте смену пресета только в интерфейсе за установленный набор.
     if manifest.component_catalog.as_ref().is_some_and(|c|c.schema_version=="5.0") {
@@ -514,7 +514,7 @@ fn verify_prepared(root:&Path,stage:&Path, next:&Release, previous:Option<&Relea
         let (sha,size)=expected(next,p).ok_or("missing signed planned file")?;
         let staged=safe_join(stage,p)?;
         file_ownership::ensure_no_symlinks(root,&staged)?;
-        if !matches_digest(&staged,sha,size){return Err(format!("staged client file failed SHA-256: {p}"))}
+        if !matches_digest(&staged,sha,size){return Err(format!("Подготовленный файл клиента не прошёл проверку SHA-256: {p}"))}
     }
     Ok(())
 }
@@ -554,7 +554,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
             return Err("«signed gameReleaseGeneration»: запрещено «replace the active release with older/different content»".into());
         }
         if !verify_installed(root, old)? && old.manifest.signature.as_ref().map(|s| &s.signature) != next.manifest.signature.as_ref().map(|s| &s.signature) {
-            return Err("active release is damaged; recover last-known-good before upgrading to a different release".into());
+            return Err("Активный релиз повреждён; восстановите последнюю работоспособную версию перед обновлением на другой релиз".into());
         }
         if old.manifest.project_id != next.manifest.project_id || old.manifest.profile_id != next.manifest.profile_id {
             return Err("active release belongs to another project/profile".into());
@@ -603,7 +603,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 if hash(&destination)? != old_hash { return Err(format!("Ошибка: «backup verification»: {p}")); }
                 Some(old_hash)
             },
-            Ok(_) => return Err(format!("managed target is not a regular file: {p}")),
+            Ok(_) => return Err(format!("Управляемый целевой объект не является обычным файлом: {p}")),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => return Err(e.to_string()),
         };
@@ -617,7 +617,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         let repairing_same_selection = old.manifest.signature.as_ref().map(|s| &s.signature)
             == next.manifest.signature.as_ref().map(|s| &s.signature) && old.preset == next.preset;
         if !repairing_same_selection && !verify_installed(root, old)? {
-            return Err("previous active release changed during backup; refusing to retire modified managed files".into());
+            return Err("Предыдущий активный релиз изменился во время резервного копирования; удаление изменённых управляемых файлов отклонено".into());
         }
     }
     let prior_generation = journal(root)?.map_or(0, |j| j.generation);
@@ -641,7 +641,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 if let Some(parent) = target.parent() { sync_dir(parent)?; }
             }
         }
-        if !verify_installed(root, &next)? { return Err("installed client set failed post-switch verification".into()); }
+        if !verify_installed(root, &next)? { return Err("Набор установленного клиента не прошёл проверку после переключения".into()); }
         let generation = pointer(root)?.generation + 1;
         write_slot(root, "active", generation, &Pointer { schema: SCHEMA, generation, active: Some(next.clone()) })?;
         // Сохраняйте предыдущий ИСПРАВНЫЙ релиз до публикации завершения.
@@ -658,7 +658,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         // При ошибке восстановления (диск заполнен, файл заблокирован) сохраняйте журнал и старые
         // резервные копии без изменений. Следующий запуск повторит восстановление до выполнения игры.
         match recover_locked(root, key) {
-            Ok(()) => Err(format!("client release switch failed and previous installation recovered: {err}")),
+            Ok(()) => Err(format!("Переключение релиза клиента не удалось; предыдущая установка восстановлена: {err}")),
             Err(recovery) => Err(format!("Ошибка: «client switch»: {err}; recovery pending: {recovery}")),
         }
     } else { Ok(()) }
@@ -684,7 +684,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         let same_selection = old.manifest.signature.as_ref().map(|s| &s.signature)
             == manifest.signature.as_ref().map(|s| &s.signature) && old.preset == preset;
         if !same_selection && !verify_installed(&root,old)? {
-            return Err("previous active release was modified: repair it before switching signed components".into());
+            return Err("Предыдущий активный релиз изменён; восстановите его перед переключением подписанных компонентов".into());
         }
     }
     // До сетевых запросов откажите, если новый выбранный подписанный путь займёт
@@ -778,7 +778,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
             .is_some_and(|x|file_ownership::effective_ownership(x)=="optional" && !file_ownership::must_verify(manifest,&f.path))
             && !path.exists();
         if optional_absent {continue}
-        if !matches_digest_async(&path, &f.sha256, f.size).await { return Err(format!("staged client file failed SHA-256: {}",f.path)); }
+        if !matches_digest_async(&path, &f.sha256, f.size).await { return Err(format!("Подготовленный файл клиента не прошёл проверку SHA-256: {}",f.path)); }
         installed.push(f.path.clone());
     }
     if *control.borrow() != Directive::Running { return Ok(result); }
@@ -835,19 +835,19 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
         let input=safe_join(&source,&f.path)?;
         file_ownership::ensure_no_symlinks(&source,&input)?;
         if !matches_digest(&input,&f.sha256,f.size) {
-            return Err(format!("offline staged source digest mismatch: {}",f.path));
+            return Err(format!("Хеш подготовленного автономного источника не совпадает: {}",f.path));
         }
         let live=safe_join(&root,&f.path)?;
         file_ownership::ensure_no_symlinks(&root,&live)?;
         if fs::symlink_metadata(&live).is_ok() {
-            return Err(format!("untracked runtime file conflicts with selected signed path: {}",f.path));
+            return Err(format!("Неучтённый файл Runtime конфликтует с выбранным подписанным путём: {}",f.path));
         }
         let output=safe_join(&stage,&f.path)?;
         if let Some(parent)=output.parent() {safe_dir(&root,parent)?;}
         file_ownership::ensure_no_symlinks(&root,&output)?;
         fs::copy(&input,&output).map_err(|e|format!("offline stage {}: {e}",f.path))?;
         if !matches_digest(&output,&f.sha256,f.size) {
-            return Err(format!("offline staging changed signed bytes: {}",f.path));
+            return Err(format!("При автономной подготовке изменились подписанные байты: {}",f.path));
         }
     }
     let count=plan.files.len();
@@ -883,14 +883,14 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
                 file_ownership::ensure_no_symlinks(&root,&backup)?;
                 let (sha,size)=expected(old,p).ok_or("previous signed file missing")?;
                 if !matches_digest(&backup,sha,size) {
-                    return Err(format!("rollback refused: previous signed file was already damaged: {p}"));
+                    return Err(format!("Откат отклонён: предыдущий подписанный файл уже повреждён: {p}"));
                 }
             }
         }
         let active = pointer(&root)?.active.ok_or("no active release")?;
         if active.manifest.game_release_generation > 0 { return Err("game rollback: требуется «a NEW signed gameReleaseGeneration; publish the old content as a new release»".into()); }
-        if active.id != j.next.id { return Err("last-known-good is not the previous active release".into()); }
-        if !verify_installed(&root, &active)? { return Err("current release was modified; refusing to overwrite local changes".into()); }
+        if active.id != j.next.id { return Err("Последняя работоспособная версия не соответствует предыдущему активному релизу".into()); }
+        if !verify_installed(&root, &active)? { return Err("Текущий релиз изменён; перезапись локальных изменений отклонена".into()); }
         // Публикуйте намерение переключения до первого восстановления, чтобы отключение
         // питания во время явного отката также можно было исправить.
         j.state = "reverting".into();
@@ -1737,6 +1737,6 @@ pub fn verified_active_selection_02410(root:&Path,key:&str)->Result<Option<(Mani
     recover_locked(&root,key)?;
     let Some(active)=pointer(&root)?.active else{return Ok(None)};
     validate_release(&active,key)?;
-    if !verify_installed(&root,&active)? {return Err("active release has damaged files; repair before exporting/migrating".into())}
+    if !verify_installed(&root,&active)? {return Err("В активном релизе есть повреждённые файлы; восстановите их перед экспортом или миграцией".into())}
     Ok(Some((active.manifest,active.preset)))
 }

@@ -652,7 +652,7 @@ mod windows_impl {
             let pid = u32::try_from(raw)
                 .map_err(|_| format!("Guard Job Object PID does not fit u32: {raw}"))?;
             if pid == 0 || !result.insert(pid) {
-                return Err(format!("Guard Job Object process list contains invalid/duplicate PID {pid}"));
+                return Err(format!("Список процессов объекта заданий Guard содержит некорректный или повторяющийся PID {pid}"));
             }
         }
         Ok(result)

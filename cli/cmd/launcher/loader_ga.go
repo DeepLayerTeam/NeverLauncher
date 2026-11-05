@@ -69,7 +69,7 @@ func loaderGASupport0180(loader, minecraft string) (loaderGASupportEntry0180, bo
 func enforceLoaderGASupport0180(loader, minecraft string, detectedJavaMajor int) (loaderGASupportEntry0180, error) {
 	entry, ok := loaderGASupport0180(loader, minecraft)
 	if !ok {
-		return loaderGASupportEntry0180{}, fmt.Errorf("Loader Compatibility GA 0.18.0: %s Minecraft %s is outside the certified GA support surface", strings.ToLower(strings.TrimSpace(loader)), strings.TrimSpace(minecraft))
+		return loaderGASupportEntry0180{}, fmt.Errorf("Совместимость загрузчиков GA 0.18.0: сочетание %s и Minecraft %s не входит в сертифицированный набор GA", strings.ToLower(strings.TrimSpace(loader)), strings.TrimSpace(minecraft))
 	}
 	if detectedJavaMajor > 0 && detectedJavaMajor != entry.JavaMajor {
 		return loaderGASupportEntry0180{}, fmt.Errorf("Loader Compatibility GA 0.18.0: %s Minecraft %s requires Java %d, materialized Vanilla profile: требуется Java %d", entry.Loader, entry.MinecraftVersion, entry.JavaMajor, detectedJavaMajor)

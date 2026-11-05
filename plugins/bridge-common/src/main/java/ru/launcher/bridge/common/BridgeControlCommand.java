@@ -75,7 +75,7 @@ public record BridgeControlCommand(
     public static Map<String, String> decodePayload(String encoded) {
         if (encoded == null || encoded.isBlank()) return Map.of();
         byte[] raw = Base64.getUrlDecoder().decode(encoded);
-        if (raw.length > 4096) throw new IllegalArgumentException("control payload exceeds 4 KiB");
+        if (raw.length > 4096) throw new IllegalArgumentException("Размер управляющих данных превышает 4 КиБ");
         return parseFlatJsonObject(new String(raw, StandardCharsets.UTF_8));
     }
 
@@ -92,20 +92,20 @@ public record BridgeControlCommand(
     private static Map<String, String> parseFlatJsonObject(String json) {
         String text = json == null ? "" : json.trim();
         if (text.equals("{}")) return Map.of();
-        if (text.length() < 2 || text.charAt(0) != '{' || text.charAt(text.length()-1) != '}') throw new IllegalArgumentException("invalid control payload JSON");
+        if (text.length() < 2 || text.charAt(0) != '{' || text.charAt(text.length()-1) != '}') throw new IllegalArgumentException("Некорректный JSON данных управления");
         Map<String,String> out = new LinkedHashMap<>();
         int[] p = {1};
         while (true) {
             skipWs(text,p);
             if (p[0] >= text.length()-1) break;
             String key = readString(text,p); skipWs(text,p);
-            if (p[0] >= text.length() || text.charAt(p[0]++) != ':') throw new IllegalArgumentException("invalid control payload JSON");
+            if (p[0] >= text.length() || text.charAt(p[0]++) != ':') throw new IllegalArgumentException("Некорректный JSON данных управления");
             skipWs(text,p); String value = readString(text,p);
             if (key.isEmpty() || key.length() > 64 || value.length() > 1024 || out.size() >= 16) throw new IllegalArgumentException("invalid control payload bounds");
             out.put(key,value); skipWs(text,p);
             if (p[0] < text.length()-1 && text.charAt(p[0]) == ',') { p[0]++; continue; }
             if (p[0] == text.length()-1) break;
-            throw new IllegalArgumentException("invalid control payload JSON");
+            throw new IllegalArgumentException("Некорректный JSON данных управления");
         }
         return Map.copyOf(out);
     }
@@ -133,7 +133,7 @@ public record BridgeControlCommand(
                 }
             } else { out.append(c); }
         }
-        throw new IllegalArgumentException("unterminated string");
+        throw new IllegalArgumentException("Незавершённая строка");
     }
     private static void skipWs(String text,int[] p){ while(p[0]<text.length() && Character.isWhitespace(text.charAt(p[0])))p[0]++; }
     private static String b64(String value){ return Base64.getUrlEncoder().withoutPadding().encodeToString((value==null?"":value.trim()).getBytes(StandardCharsets.UTF_8)); }

@@ -145,7 +145,7 @@ def host_lock(directory):
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise RollingError("rolling operation already running on this host") from exc
+            raise RollingError("На данном узле уже выполняется последовательная операция") from exc
         yield
     finally:
         os.close(fd)
@@ -252,8 +252,8 @@ def apply_host(directory, project):
             except Exception as recovery:
                 state["phase"] = "manual-recovery-required"
                 journal(directory, state)
-                raise RollingError("node update failed and previous process could not be verified; investigate stopped node") from recovery
-            raise RollingError("node update failed; previous API/worker image restored and verified") from error
+                raise RollingError("Не удалось обновить узел и подтвердить прежний процесс; проверьте остановленный узел") from recovery
+            raise RollingError("Обновление узла не удалось; прежний образ API/worker восстановлен и проверен") from error
 
 
 def rollback_host_locked(directory, project, *, expected=None):
@@ -313,7 +313,7 @@ def remote(target, script, directory, project, operation, *, timeout=540):
     try:
         result = json.loads(raw)
     except (ValueError, UnicodeDecodeError) as exc:
-        raise RollingError("remote agent produced invalid JSON") from exc
+        raise RollingError("Удалённый агент сформировал некорректный JSON") from exc
     require(result.get("schema") == SCHEMA and result.get("project") == project and
             result.get("ready") is True, "remote update operation did not report successful readiness")
     return result
@@ -479,7 +479,7 @@ def rollout(args):
                 except Exception as error:
                     # Локальный агент пытается выполнить откат при сбое. Прерванная SSH-сессия
                     # может оставить журнал, требующий явного восстановления.
-                    raise RollingError("node deployment did not complete; inspect its local journal") from error
+                    raise RollingError("Развёртывание узла не завершено; проверьте локальный журнал") from error
             try:
                 require(result["nodeId"] == planned["nodeId"] and
                         result["targetImage"] == planned["targetImage"] and
@@ -500,8 +500,8 @@ def rollout(args):
                                                        args.directory, args.project, args.edge_url, catalog)
                     require(versions[label] == SOURCE, "rollback actual version mismatch")
                 except Exception as recovery:
-                    raise RollingError("post-cutover verification failed AND rollback not confirmed") from recovery
-                raise RollingError("post-cutover verification failed; affected node restored") from error
+                    raise RollingError("Проверка после переключения не пройдена, успешность отката не подтверждена") from recovery
+                raise RollingError("Проверка после переключения не пройдена; затронутый узел восстановлен") from error
             event["steps"].append({"nodeId": result["nodeId"], "from": SOURCE,
                                    "to": TARGET, "edgeSamples": monitor.samples,
                                    "edgeFailures": monitor.failures, "verified": True})

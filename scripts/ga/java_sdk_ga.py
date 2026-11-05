@@ -59,7 +59,7 @@ def from_directory(base: Path, suffix: str) -> list[tuple[str, bytes]]:
     result = []
     for f in sorted(base.rglob("*")):
         if f.is_symlink():
-            raise RuntimeError(f"symlink in publication input: {f}")
+            raise RuntimeError(f"В исходных данных публикации обнаружена символическая ссылка: {f}")
         if f.is_file() and f.name.endswith(suffix):
             result.append((f.relative_to(base).as_posix(), f.read_bytes()))
     if not result:

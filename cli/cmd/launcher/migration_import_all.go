@@ -119,7 +119,7 @@ func migrationRequest0493(client *http.Client, method, address, token, source st
 		return 0, nil, err
 	}
 	if len(raw) > 16<<20 {
-		return 0, nil, errors.New("Backend reply exceeded 16 MiB")
+		return 0, nil, errors.New("Размер ответа Backend превысил 16 МиБ")
 	}
 	return res.StatusCode, raw, nil
 }
@@ -147,16 +147,16 @@ func migrationJSON0493(client *http.Client, method, endpoint, token, source stri
 }
 func migrationVerifyLivePlan0493(plan migrationLivePlan0493, batch gravBatch0492, row gravProfile0492, first bool) error {
 	if plan.RunID != batch.RunID || plan.ProjectID != batch.ProjectID || plan.SourceSHA256 != batch.SourceSHA256 || plan.InventorySHA256 != batch.InventorySHA256 || plan.Destination != row.Destination || plan.Status != "manual" || len(plan.Blockers) != 0 || len(plan.PlanSHA256) != 64 || !plan.Content.Ready || plan.Content.SourceSHA256 != batch.SourceSHA256 || plan.Content.InventorySHA256 != batch.InventorySHA256 || plan.Content.ProfilePath != row.Destination.ProfilePath || plan.Content.FilesSHA256 != row.FilesSHA256 || len(plan.Content.Files) != row.FileCount {
-		return fmt.Errorf("live plan differs from approved batch for %s", row.Destination.ProfilePath)
+		return fmt.Errorf("Текущий план для %s отличается от утверждённого пакетного плана", row.Destination.ProfilePath)
 	}
 	if first && (plan.TargetSHA256 != batch.TargetSHA256 || plan.PlanSHA256 != row.PlanSHA256) {
-		return errors.New("target changed since approved multi-profile dry-run")
+		return errors.New("Целевая система изменилась после утверждённого пробного импорта нескольких профилей")
 	}
 	return nil
 }
 func migrationVerifyStage0493(stage migrationLiveContent0493, batch gravBatch0492, row gravProfile0492) error {
 	if !stage.Complete || (stage.State != "staged" && stage.State != "built") || stage.WorkspaceID == "" || stage.StagedFiles != row.FileCount || stage.TotalFiles != row.FileCount || stage.Plan.ProfilePath != row.Destination.ProfilePath || stage.Plan.Profile.Profile.ID != row.Destination.ProfileID || stage.Plan.SourceSHA256 != batch.SourceSHA256 || stage.Plan.InventorySHA256 != batch.InventorySHA256 || stage.Plan.FilesSHA256 != row.FilesSHA256 {
-		return fmt.Errorf("imported workspace is incomplete or mismatched: %s", row.Destination.ProfilePath)
+		return fmt.Errorf("Импортированная рабочая область неполна или не совпадает: %s", row.Destination.ProfilePath)
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func migrationImportAll0493(args []string) error {
 		return err
 	}
 	if batch.RunID != run || batch.Status != "manual" || len(batch.Blockers) != 0 || len(batch.Profiles) == 0 {
-		return errors.New("batch dry-run is not an unblocked plan for this run")
+		return errors.New("Пробный запуск пакета не сформировал разрешённый план для этой операции")
 	}
 	mf, err := os.Open(mapping)
 	if err != nil {
@@ -209,7 +209,7 @@ func migrationImportAll0493(args []string) error {
 	}
 	var extra any
 	if d.Decode(&extra) != io.EOF {
-		return errors.New("mapping has trailing content")
+		return errors.New("В файле сопоставлений обнаружены лишние данные в конце")
 	}
 	if len(mapped) != batch.ProfileCount {
 		return errors.New("Обнаружено изменение: «mapping profile count»")
@@ -218,7 +218,7 @@ func migrationImportAll0493(args []string) error {
 	sort.Slice(expected, func(i, j int) bool { return expected[i].ProfilePath < expected[j].ProfilePath })
 	for i, row := range batch.Profiles {
 		if !reflect.DeepEqual(expected[i], row.Destination) || row.Status != "manual" || len(row.Blockers) != 0 || row.FileCount <= 0 || len(row.FilesSHA256) != 64 {
-			return fmt.Errorf("blocked or altered mapping at profile %d", i)
+			return fmt.Errorf("Сопоставление профиля %d заблокировано или изменено", i)
 		}
 	}
 	sf, err := os.Open(source)
@@ -238,7 +238,7 @@ func migrationImportAll0493(args []string) error {
 		return err
 	}
 	if hex.EncodeToString(h.Sum(nil)) != batch.SourceSHA256 {
-		return errors.New("Gravit source changed since multi-profile dry-run")
+		return errors.New("Источник Gravit изменился после пробного импорта нескольких профилей")
 	}
 	client := &http.Client{Timeout: 45 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	base := backend + "/api/v1/admin/migration-runs/" + url.PathEscape(run)
@@ -254,7 +254,7 @@ func migrationImportAll0493(args []string) error {
 		}
 		if exists && stage.Complete {
 			if !resume {
-				return fmt.Errorf("profile %s already imported; use --resume=true to verify and continue", row.Destination.ProfilePath)
+				return fmt.Errorf("Профиль %s уже импортирован; используйте --resume=true для проверки и продолжения", row.Destination.ProfilePath)
 			}
 			if err = migrationVerifyStage0493(stage, batch, row); err != nil {
 				return err
@@ -286,7 +286,7 @@ func migrationImportAll0493(args []string) error {
 		var importedStage migrationLiveContent0493
 		_, err = migrationJSON0493(client, "POST", base+"/content/import", token, source, fields, &importedStage, false)
 		if err != nil {
-			return fmt.Errorf("import %s: %w (use --resume=true with the same report after fixing the failure)", row.Destination.ProfilePath, err)
+			return fmt.Errorf("Ошибка импорта %s: %w (после устранения ошибки используйте --resume=true с тем же отчётом)", row.Destination.ProfilePath, err)
 		}
 		if err = migrationVerifyStage0493(importedStage, batch, row); err != nil {
 			return err
@@ -299,7 +299,7 @@ func migrationImportAll0493(args []string) error {
 			return err
 		}
 		if stage.WorkspaceID != importedStage.WorkspaceID {
-			return errors.New("workspace changed after content import")
+			return errors.New("Рабочая область изменилась после импорта содержимого")
 		}
 		imported = append(imported, migrationImported0493{row.Destination.ProfilePath, row.Destination.ProfileID, row.FilesSHA256, stage.WorkspaceID, stage.TotalFiles})
 		progressed = true

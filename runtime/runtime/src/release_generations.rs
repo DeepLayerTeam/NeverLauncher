@@ -29,14 +29,14 @@ fn read(root: &Path) -> Result<Option<Watermark>, String> {
         match fs::symlink_metadata(&path) {
             Ok(meta) => {
                 exists = true;
-                if !meta.is_file() || meta.len() > 4096 {return Err("game generation slot is unsafe".into());}
+                if !meta.is_file() || meta.len() > 4096 {return Err("Слот поколения игры небезопасен".into());}
                 let raw=fs::read(&path).map_err(|e|e.to_string())?;
                 let candidate=serde_json::from_slice::<Watermark>(&raw)
                     .map_err(|_|"game generation slot is corrupted".to_string())?;
                 if !valid(&candidate) {return Err("Некорректное значение: слот поколения игры".into());}
                 if let Some(ref previous)=best {
                     if previous.generation==candidate.generation && previous.manifest_digest!=candidate.manifest_digest {
-                        return Err("conflicting game generation records".into());
+                        return Err("Обнаружены противоречивые записи поколений игры".into());
                     }
                 }
                 if best.as_ref().is_none_or(|b|candidate.generation>b.generation) {best=Some(candidate);}
@@ -46,7 +46,7 @@ fn read(root: &Path) -> Result<Option<Watermark>, String> {
             Err(e) => return Err(e.to_string()),
         }
     }
-    if exists && best.is_none() { return Err("game anti-rollback records are damaged".into()); }
+    if exists && best.is_none() { return Err("Записи защиты игры от отката повреждены".into()); }
     Ok(best)
 }
 
@@ -54,10 +54,10 @@ pub fn check(root: &Path, manifest: &Manifest) -> Result<(),String> {
     let floor = read(root)?;
     if let Some(ref record) = floor {
         if manifest.game_release_generation < record.generation {
-            return Err(format!("game anti-rollback: signed generation {} is below installed generation {}",manifest.game_release_generation,record.generation));
+            return Err(format!("Защита игры от отката: подписанное поколение {} меньше установленного поколения {}",manifest.game_release_generation,record.generation));
         }
         if manifest.game_release_generation == record.generation && digest(manifest)? != record.manifest_digest {
-            return Err("game anti-rollback: same generation signed for different content".into());
+            return Err("Защита игры от отката: одно поколение подписано для разного содержимого".into());
         }
     }
     Ok(())

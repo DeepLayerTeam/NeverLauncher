@@ -70,7 +70,7 @@ func validatedHash0474(src map[string]any, name string) (string, error) {
 		return "", fmt.Errorf("Некорректное значение: %s длина", name)
 	}
 	if _, e = hex.DecodeString(s); e != nil {
-		return "", fmt.Errorf("invalid %s hex", name)
+		return "", fmt.Errorf("Некорректное значение: %s hex", name)
 	}
 	if strings.ToLower(s) != s {
 		return "", fmt.Errorf("invalid %s casing", name)

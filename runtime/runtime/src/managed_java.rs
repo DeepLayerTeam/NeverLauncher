@@ -984,7 +984,7 @@ async fn sha256_file(path: &Path) -> Result<(String, u64), String> {
         .await
         .map_err(|err| format!("runtime file metadata {}: {err}", path.display()))?;
     if !metadata.is_file() {
-        return Err(format!("runtime file is not regular: {}", path.display()));
+        return Err(format!("Файл Runtime не является обычным файлом: {}", path.display()));
     }
     let mut file = fs::File::open(path)
         .await
@@ -1014,7 +1014,7 @@ async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String
         .await
         .map_err(|err| format!("tar недоступен для Managed Java: {err}"))?;
     if !list.status.success() {
-        return Err(format!("tar -tzf failed: {}", String::from_utf8_lossy(&list.stderr)));
+        return Err(format!("Не удалось проверить содержимое архива командой tar -tzf: {}", String::from_utf8_lossy(&list.stderr)));
     }
     for line in String::from_utf8_lossy(&list.stdout).lines() {
         validate_archive_entry(line)?;
@@ -1028,7 +1028,7 @@ async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String
         .await
         .map_err(|err| format!("tar extraction: {err}"))?;
     if !output.status.success() {
-        return Err(format!("tar extraction failed: {}", String::from_utf8_lossy(&output.stderr)));
+        return Err(format!("Не удалось извлечь архив tar: {}", String::from_utf8_lossy(&output.stderr)));
     }
     Ok(())
 }
@@ -1071,7 +1071,7 @@ try {
         .map_err(|err| format!("PowerShell extraction: {err}"))?;
     let _ = fs::remove_file(&script).await;
     if !output.status.success() {
-        return Err(format!("PowerShell extraction failed: {}", String::from_utf8_lossy(&output.stderr)));
+        return Err(format!("Не удалось извлечь архив через PowerShell: {}", String::from_utf8_lossy(&output.stderr)));
     }
     Ok(())
 }
@@ -1382,7 +1382,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
         _ => return Err(format!("Не поддерживается: «native Java OS» {os}")),
     };
     if valid { Ok(()) } else {
-        Err(format!("Managed Java executable machine mismatch: expected {os}/{expected_arch}"))
+        Err(format!("Архитектура исполняемого файла управляемой Java не совпадает: ожидалась {os}/{expected_arch}"))
     }
 }
 
@@ -1410,7 +1410,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     if !output.status.success() { return Err("Ошибка: «Managed Java JVM self-test»".into()); }
     let details = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
     let detected = crate::parse_java_major_version(&details);
-    if detected != Some(major) { return Err(format!("Managed Java major mismatch: expected {major}, got {detected:?}")); }
+    if detected != Some(major) { return Err(format!("Основная версия управляемой Java не совпадает: ожидалась {major}, получено {detected:?}")); }
     let reported_arch = java_property(&details, "os.arch").ok_or("Managed Java missing os.arch")?;
     if normalize_adoptium_arch(reported_arch) != normalize_adoptium_arch(arch) {
         return Err(format!("Несовпадение: «Managed Java architecture»: {reported_arch}, expected {arch}"));
@@ -1450,14 +1450,14 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
         .await.map_err(|_| "Managed Java bytecode execution exceeded 20 seconds".to_string())?
         .map_err(|e| format!("Ошибка: «Managed Java bytecode execution»: {e}"))?;
     if !output.status.success() {
-        return Err(format!("Managed Java failed to run Java 8-compatible bytecode: {}",
+        return Err(format!("Управляемая Java не смогла выполнить байткод, совместимый с Java 8: {}",
             String::from_utf8_lossy(&output.stderr)));
     }
     let output_text = String::from_utf8(output.stdout)
         .map_err(|_| "Managed Java probe emitted non-UTF8 output".to_string())?;
     let parts = output_text.splitn(4, '|').collect::<Vec<_>>();
     if parts.len() != 4 || parts[0] != "LAUNCHER_JVM_PROBE" || parts[1] != nonce {
-        return Err("Managed Java did not execute the expected bytecode probe".into());
+        return Err("Управляемая Java не выполнила ожидаемую проверку байткода".into());
     }
     let probed_major = if parts[2] == "1.8" { 8 } else {
         parts[2].parse::<u32>().map_err(|_| "Managed Java probe returned invalid specification version".to_string())?
@@ -1473,7 +1473,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     let actual_home = std::fs::canonicalize(parts[3])
         .map_err(|e| format!("Managed Java java.home: {e}"))?;
     if !actual_home.starts_with(&packaged_home) {
-        return Err(format!("Managed Java runs outside its installed image: {}", actual_home.display()));
+        return Err(format!("Управляемая Java запущена за пределами установленного образа: {}", actual_home.display()));
     }
     Ok(())
 }

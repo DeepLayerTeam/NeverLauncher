@@ -35,7 +35,7 @@ func main() {
 
 func run(args []string, output io.Writer, input io.Reader) error {
 	if len(args) == 0 {
-		return errors.New("usage: local-auth (import|list|export|create|password|disable|enable) [flags]")
+		return errors.New("Использование: local-auth (import|list|export|create|password|disable|enable) [параметры]")
 	}
 	switch args[0] {
 	case "import":
@@ -79,7 +79,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 			return fmt.Errorf("check schema: %w", err)
 		}
 		if !status.Compatible || len(status.Pending) != 0 {
-			return errors.New("database schema has missing migrations; import refused")
+			return errors.New("В схеме базы данных отсутствуют миграции; импорт отклонён")
 		}
 		importer, ok := repo.(repository.FileAuthImporter0295)
 		if !ok {

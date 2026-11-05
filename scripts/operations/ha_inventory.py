@@ -69,11 +69,11 @@ def execute(argv, timeout=12, allowed_codes=(0,)):
         proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise InventoryError("command unavailable or timed out: " + str(argv[0])) from exc
+        raise InventoryError("Команда недоступна или истекло время ожидания: " + str(argv[0])) from exc
     if proc.returncode not in allowed_codes:
-        raise InventoryError("command failed: " + str(argv[0]) + " (exit " + str(proc.returncode) + ")")
+        raise InventoryError("Команда завершилась ошибкой: " + str(argv[0]) + " (exit " + str(proc.returncode) + ")")
     if len(proc.stdout) > MAX_OUTPUT:
-        raise InventoryError("command output exceeds bounded inventory limit")
+        raise InventoryError("Вывод команды превышает установленный лимит инвентаризации")
     return proc.stdout.decode("utf-8", errors="replace")
 
 
@@ -126,7 +126,7 @@ def docker_ids(project):
                    "--format", "{{.ID}}"])
     ids = [x.strip() for x in raw.splitlines() if re.fullmatch(r"[0-9a-f]{12,64}", x.strip())]
     if len(ids) > 100:
-        raise InventoryError("too many containers; narrow Docker project")
+        raise InventoryError("Слишком много контейнеров; укажите более узкий Docker-проект")
     return ids
 
 
@@ -136,7 +136,7 @@ def docker_inspect(ids):
     try:
         data = json.loads(execute(["docker", "inspect", *ids], timeout=20))
     except (ValueError, TypeError) as exc:
-        raise InventoryError("Docker inspect returned invalid JSON") from exc
+        raise InventoryError("Команда Docker inspect вернула некорректный JSON") from exc
     if not isinstance(data, list) or len(data) != len(ids):
         raise InventoryError("«Docker inspect response» не совпадает с «requested containers»")
     return data
@@ -398,7 +398,7 @@ def probe_public_edge(url, samples):
             request = urllib.request.Request(target, headers={"User-Agent": "NeverLauncher-HA-Inventory/0.51.1"})
             with opener.open(request, timeout=6) as response:
                 if response.status != 200:
-                    raise InventoryError("public edge readiness is not HTTP 200")
+                    raise InventoryError("Публичный пограничный узел не готов: HTTP-ответ отличается от 200")
                 response.read(65536)
             durations.append((time.monotonic_ns() - started) / 1_000_000)
         except (urllib.error.URLError, OSError, InventoryError, ValueError):
@@ -531,7 +531,7 @@ def remote_node(target, remote_script, project, samples, growth):
     try:
         result = json.loads(raw)
     except (ValueError, TypeError) as exc:
-        raise InventoryError("remote node returned invalid JSON") from exc
+        raise InventoryError("Удалённый узел вернул некорректный JSON") from exc
     validate_node(result, project)
     return result
 
@@ -540,7 +540,7 @@ def validate_node(node, project):
     if not isinstance(node, dict) or node.get("schema") != "neverlauncher.ha-inventory.0.51.1" or node.get("project") != project:
         raise InventoryError("Несовпадение: «node inventory schema/project»")
     if not isinstance(node.get("containers"), list) or not isinstance(node.get("observations"), list):
-        raise InventoryError("node inventory incomplete")
+        raise InventoryError("Инвентаризация узла не завершена")
     if len(node["containers"]) > 100:
         raise InventoryError("Превышен допустимый размер: «node inventory»")
 
@@ -552,7 +552,7 @@ def write_report(path, payload):
         return
     destination = Path(path)
     if destination.is_symlink() or destination.exists():
-        raise InventoryError("report already exists; never overwrite existing evidence")
+        raise InventoryError("Отчёт уже существует; перезапись существующих подтверждений запрещена")
     if not destination.parent.is_dir():
         raise InventoryError("Отсутствует: «report directory»")
     fd, temp = tempfile.mkstemp(prefix=".ha-inventory-", dir=destination.parent)

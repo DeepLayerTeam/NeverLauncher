@@ -84,7 +84,7 @@ def read_archive(path: Path) -> dict[str, bytes]:
                 if mode not in (0,stat.S_IFREG,stat.S_IFDIR):raise ValueError('archive link/special file not supported')
                 if item.is_dir():continue
                 if item.file_size > MAX_MEMBER:raise ValueError('oversize archive entry')
-                if item.filename in result:raise ValueError('duplicate archive member')
+                if item.filename in result:raise ValueError('Повторяющийся элемент архива')
                 with z.open(item) as f:
                     value=f.read(MAX_MEMBER+1)
                 if len(value)>MAX_MEMBER:raise ValueError('expanded ZIP entry exceeds size limit')
@@ -97,7 +97,7 @@ def read_archive(path: Path) -> dict[str, bytes]:
                 if item.isdir():continue
                 if not item.isfile():raise ValueError('archive link/special file not supported')
                 if item.size>MAX_MEMBER:raise ValueError('oversize TAR entry')
-                if item.name in result:raise ValueError('duplicate archive member')
+                if item.name in result:raise ValueError('Повторяющийся элемент архива')
                 stream=t.extractfile(item)
                 if stream is None: raise ValueError('unreadable TAR entry')
                 with stream as f:value=f.read(MAX_MEMBER+1)
