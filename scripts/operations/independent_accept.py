@@ -107,7 +107,7 @@ def invoke(argv: list[str], *, timeout: int = 2400, json_result: bool = False):
     ensure(p.returncode == 0, 'Операция завершилась ошибкой: ' + Path(argv[1]).name)
     if not json_result:
         return None
-    ensure(len(p.stdout) <= MAX_OUTPUT, 'operation returned excessive output')
+    ensure(len(p.stdout) <= MAX_OUTPUT, 'Операция вернула слишком большой объём данных')
     try:
         data = json.loads(p.stdout)
     except (UnicodeError, ValueError) as exc:
@@ -123,9 +123,9 @@ def probe(mode, project, env, url, version):
                 '--env-file', str(env), '--url', url, '--version', version, '--report', str(path)]
         result = invoke(argv, timeout=120, json_result=True)
         ensure(result.get('status') == 'passed' and result.get('mode') == mode
-               and result.get('scope') == 'read-only-live-readiness', 'actual backend readiness not verified')
+               and result.get('scope') == 'read-only-live-readiness', 'Фактическая готовность Backend не подтверждена')
         ensure(path.is_file() and path.stat().st_mode & 0o077 == 0, 'Отсутствует закрытая квитанция о реальном выполнении')
-        ensure(result == json.loads(path.read_text()), 'live receipt differs from command result')
+        ensure(result == json.loads(path.read_text()), 'Подтверждение работающей системы отличается от результата команды')
         return {'sha256': sha(path), 'checks': sorted(result['checks']),
                 'version': result['public']['version']}
 
@@ -145,7 +145,7 @@ def read_receipt(path, stage):
     except (UnicodeError, ValueError) as exc:
         raise Rejected('Недопустимая исходная квитанция') from exc
     ensure(isinstance(doc, dict) and doc.get('schema') == 1 and doc.get('status') == 'passed'
-           and doc.get('stage') == stage, 'wrong or unverified receipt stage')
+           and doc.get('stage') == stage, 'Неверный или непроверенный этап подтверждения')
     return doc
 
 
@@ -185,7 +185,7 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
     ensure(re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}', project_id) is not None,
            'Недопустимый ID проекта для проверки восстановленных данных')
     private_file(password_file)
-    ensure(password_file.stat().st_size <= 4096, 'administrator password file too large')
+    ensure(password_file.stat().st_size <= 4096, 'Файл пароля администратора слишком большой')
     password = password_file.read_text(encoding='utf-8').rstrip('\r\n')
     ensure(len(password) >= 12 and not any(c in password for c in '\x00\r\n'),
            'Недопустимый файл пароля администратора')
@@ -215,7 +215,7 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
                 raw = response.read(1024 * 1024 + 1)
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
             raise Rejected('Вход или авторизация администратора через доверенный HTTPS завершились ошибкой') from exc
-        ensure(len(raw) <= 1024 * 1024, 'administrator response too large')
+        ensure(len(raw) <= 1024 * 1024, 'Ответ администратора слишком большой')
         try: result = json.loads(raw)
         except (UnicodeError, ValueError) as exc: raise Rejected('Недопустимый ответ администратора') from exc
         ensure(isinstance(result, dict), 'Ответ администратора не является объектом')
@@ -224,9 +224,9 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
     token = session.get('token')
     ensure(isinstance(token, str) and 24 <= len(token) <= 8192
            and isinstance(session.get('user'), dict) and session['user'].get('email') == email,
-           'previous administrator account did not authenticate')
+           'Не удалось войти с прежней учётной записью администратора')
     me = request('/api/v1/admin/me', token=token)
-    ensure(me.get('email') == email, 'restored session does not belong to original administrator')
+    ensure(me.get('email') == email, 'Восстановленная сессия не принадлежит исходному администратору')
     overview = request('/api/v1/admin/overview', token=token)
     ensure(overview.get('version') == expected_version and
            isinstance(overview.get('projects'), list) and
@@ -237,7 +237,7 @@ def verify_old_owner(url: str, email: str, password_file: Path, project_id: str,
 
 
 def accept_install(args):
-    ensure(args.project == 'launcher', 'production installer has fixed launcher Compose project')
+    ensure(args.project == 'launcher', 'Рабочий установщик использует фиксированный Compose-проект launcher')
     checked_env(args.env_file, args.version, 'standard', args.url)
     private_file(args.password_file)
     ensure(args.version == VERSION, 'Версия установки должна совпадать с проверенным исходным релизом')
@@ -272,7 +272,7 @@ def accept_upgrade(args):
                      '--production-source', '--maintenance-approved'], timeout=3600, json_result=True)
     ensure(output.get('status') == 'upgraded' and output.get('from') == args.from_version
            and output.get('to') == args.to_version and output.get('backendVerified') is True,
-           'component updater has not proved successful cutover')
+           'Средство обновления компонентов не подтвердило успешное переключение')
     ensure((args.snapshot / 'manifest.json').is_file(), 'Отсутствует фактически проверенный манифест резервной копии')
     verify = invoke([sys.executable, str(DR), 'verify', '--snapshot', str(args.snapshot)],
                     timeout=300, json_result=True)
@@ -284,7 +284,7 @@ def accept_upgrade(args):
     return {'identity': identity, 'mode': 'standard', 'from': args.from_version, 'to': args.to_version,
             'backupManifestSha256': sha(args.snapshot / 'manifest.json'),
             'backupVerified': True, 'ready': check,
-            'limits': ['component-only upgrade: PostgreSQL schema migration is a separate approved operation']}
+            'limits': ['Обновление только компонентов: миграция схемы PostgreSQL выполняется отдельной утверждённой операцией']}
 
 
 def accept_restore(args):
@@ -295,23 +295,23 @@ def accept_restore(args):
            'Восстановление должно выполняться на другом Linux-узле, отличном от узла исходного обновления')
     ensure(source.get('secondOperator') == args.primary_operator or
            source.get('firstOperator') == args.primary_operator,
-           'first operator identity does not match supplied source receipt')
+           'Идентификатор первого оператора не соответствует предоставленному исходному подтверждению')
     snapshot_manifest = args.snapshot / 'manifest.json'
     ensure(snapshot_manifest.is_file() and sha(snapshot_manifest) == source.get('backupManifestSha256'),
-           'snapshot does not match source upgrade backup')
+           'Снимок не соответствует исходной резервной копии обновления')
     checked_env(args.env_file, source['from'], 'standard', args.url)
     restored = invoke([sys.executable, str(DR), 'restore-fresh', '--project', args.project,
                        '--confirm', args.confirm, '--env-file', str(args.env_file),
                        '--snapshot', str(args.snapshot), '--ready-url', args.url + '/ready' if not args.url.endswith('/ready') else args.url,
                        '--production-target', '--maintenance-approved'], timeout=3600, json_result=True)
     ensure(restored.get('applicationVerified') is True,
-           'fresh host restore did not verify backend')
+           'При восстановлении на новом узле Backend не прошёл проверку')
     try:
         check = probe('standard', args.project, args.env_file, args.url, source['from'])
         identity = verify_old_owner(args.url, args.admin_email, args.admin_password_file,
                                     args.project_id, source['from'], args.totp_file)
         ensure(args.project_id == source['identity']['oldProjectId'],
-               'restored project does not match upgrade source')
+               'Восстановленный проект не соответствует источнику обновления')
     except Exception:
         # Даже корректно восстановленный PostgreSQL при неудачном повторном чтении
         # владельца и проекта НЕЛЬЗЯ открывать как принятую замену. Остановите
@@ -333,7 +333,7 @@ def accept_restore(args):
 def accept_failover(args):
     ensure(args.project == args.confirm, 'Необходимо подтвердить точный идентификатор изолированного тестового проекта')
     ensure(re.fullmatch(r'nl-dr-[a-z0-9][a-z0-9-]{0,35}', args.project) is not None,
-           'destructive failover only allowed in isolated nl-dr-* projects')
+           'Разрушающее переключение допускается только в изолированных проектах nl-dr-*')
     checked_env(args.env_file, args.version, 'network-ha', args.url)
     ensure(args.version == VERSION, 'Тест переключения при отказе должен использовать соответствующий исходный релиз')
     # Скрипт хаос-тестов требует локальный вход/S3, проверяет настоящую
@@ -347,14 +347,14 @@ def accept_failover(args):
                       '--ready-url', args.url, '--s3-endpoint', args.s3_endpoint,
                       '--s3-bucket', args.s3_bucket, '--report', str(path),
                       '--timeout', str(args.timeout)], timeout=1800, json_result=True)
-        ensure(ran.get('status') == 'passed' and path.is_file(), 'chaos runner did not complete')
+        ensure(ran.get('status') == 'passed' and path.is_file(), 'Сценарий испытания отказов не завершился')
         detail = json.loads(path.read_text())
         faults = {event['fault'] for event in detail.get('events', [])}
         ensure(detail.get('status') == 'passed' and len(faults) == 5
                and {'postgres-stopped', 'redis-stopped', 's3-stopped', 'api-stopped',
                     'worker-a-network-partition'} == faults
                and detail.get('observedRpoSeconds') == 0,
-               'actual dependency failover/canary checks were incomplete')
+               'Фактические проверки переключения зависимостей и контрольных запросов не завершены')
         return {'mode': 'isolated-network-ha', 'chaosSha256': sha(path),
                 'faults': sorted(faults), 'rtoSecondsMaxMeasured': detail['rtoSecondsMax'],
                 'rpoSecondsObservedCanaries': detail['observedRpoSeconds'],
@@ -368,17 +368,17 @@ def accept_verify(args):
     inst, upgrade, restore, fail = (records[name] for name in records)
     # Свежая установка и обновление предыдущей версии могут выполняться на отдельных
     # исходных хостах.
-    ensure(restore['machineFingerprint'] != upgrade['machineFingerprint'], 'restore reused original host')
+    ensure(restore['machineFingerprint'] != upgrade['machineFingerprint'], 'При восстановлении повторно использован исходный узел')
     ensure(restore['sourceHostFingerprint'] == upgrade['machineFingerprint'], 'Несовпадение источника восстановления')
-    ensure(restore['sourceReceiptSha256'] == sha(args.upgrade_receipt), 'restore does not bind exact upgrade receipt')
-    ensure(restore['backupManifestSha256'] == upgrade['backupManifestSha256'], 'restore and upgrade backups differ')
+    ensure(restore['sourceReceiptSha256'] == sha(args.upgrade_receipt), 'Восстановление не привязано к точному подтверждению обновления')
+    ensure(restore['backupManifestSha256'] == upgrade['backupManifestSha256'], 'Резервные копии восстановления и обновления различаются')
     ensure(inst['secondOperator'] == upgrade['secondOperator'] == restore['secondOperator'] == fail['secondOperator'],
-           'second operator identity differs between stages')
+           'Идентификатор второго оператора различается между этапами')
     ensure(all(records[name]['release'] == VERSION for name in records), 'Несовпадение релиза в квитанции')
     ensure(inst['installedVersion'] == VERSION and upgrade['to'] == VERSION, 'install/upgrade target release differs')
-    ensure(restore['recoveredVersion'] == upgrade['from'], 'restore did not use source-version checkpoint')
+    ensure(restore['recoveredVersion'] == upgrade['from'], 'При восстановлении не использована контрольная точка исходной версии')
     ensure(all(records[name]['firstOperator'] == inst['firstOperator'] for name in records),
-           'first-operator identity differs between stages')
+           'Идентификатор первого оператора различается между этапами')
     ensure(fail['faults'] == sorted(['postgres-stopped', 'redis-stopped', 's3-stopped', 'api-stopped',
                                     'worker-a-network-partition']), 'Несовпадение неисправностей в тесте переключения')
     return {'stages': {key: sha(path) for key, path in (

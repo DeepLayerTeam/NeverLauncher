@@ -402,12 +402,12 @@ def gate(args):
             'releaseManifestSha256': expected['releaseManifestSha256'],
             'receiptSha256': receipts,
             'missingIndependentEvidence': [
-                'physical power failure and physical network partition with independent telemetry',
-                'actual PostgreSQL/Redis/S3 quorum leader failover and consistency readback',
+                'Физическое отключение питания и разрыв сети с независимой телеметрией',
+                'Фактическое переключение лидера кворума PostgreSQL/Redis/S3 и проверка согласованности данных',
                 'downstream notification receipt',
-                'recovered Minecraft world state and successful independent game join',
-                'native six-platform final-package signing and game E2E',
-                'independent reviewer signature over complete final evidence tree']}
+                'Восстановленное состояние мира Minecraft и успешное независимое подключение к игре',
+                'Подписание итоговых нативных пакетов для шести платформ и сквозные игровые проверки',
+                'Подпись независимого проверяющего для полного набора итоговых подтверждений']}
 
 
 def main(argv=None):

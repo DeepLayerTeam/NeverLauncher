@@ -88,14 +88,14 @@ def validate_manifest(manifest: dict, run_id: str):
     names = []
     amount = 0
     for item in files:
-        co.require(isinstance(item, dict) and set(item) == {"path", "size", "sha256"}, "invalid backup entry")
+        co.require(isinstance(item, dict) and set(item) == {"path", "size", "sha256"}, "Некорректная запись резервной копии")
         name = item["path"]
         co.require(isinstance(name, str) and name != "" and len(name) < 1024 and
                    not name.startswith("/") and "\\" not in name and
-                   all(part not in ("", ".", "..") for part in name.split("/")), "unsafe backup path")
+                   all(part not in ("", ".", "..") for part in name.split("/")), "Небезопасный путь резервной копии")
         co.require(isinstance(item["size"], int) and not isinstance(item["size"], bool)
                    and 0 <= item["size"] <= MAX_TOTAL_BYTES and
-                   isinstance(item["sha256"], str) and bool(co.HEX.fullmatch(item["sha256"])), "invalid backup digest")
+                   isinstance(item["sha256"], str) and bool(co.HEX.fullmatch(item["sha256"])), "Некорректная контрольная сумма резервной копии")
         amount += item["size"]
         co.require(amount <= MAX_TOTAL_BYTES, "Превышен предельный размер резервной копии")
         names.append(name)
@@ -232,12 +232,12 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
     co.require(state.get("format") == FORMAT and state.get("runId") == run_id
                and state.get("target") == str(target) and state.get("retained") == str(old)
                and state.get("manifestSha256") == co.digest(json.dumps(manifest,sort_keys=True).encode()),
-               "file restore journal mismatch")
+               "Журнал восстановления файлов не соответствует ожидаемому")
     safe_path(target)
     safe_path(old)
     stage = Path(state.get("stage", ""))
     co.require(stage.is_absolute() and stage.parent == target.parent and
-               stage.name.startswith(".never-restoring-"), "unsafe staged restore path")
+               stage.name.startswith(".never-restoring-"), "Небезопасный путь к подготовленным файлам восстановления")
     phase = state.get("phase")
     # A .next file left by a killed process is not authoritative; the old
     # atomically replaced journal is the last durable state. Reject links.
@@ -245,7 +245,7 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
     if nextfile.exists() or nextfile.is_symlink():
         st = nextfile.lstat()
         co.require(stat.S_ISREG(st.st_mode) and st.st_uid == os.geteuid() and st.st_mode & 0o077 == 0,
-                   "unsafe leftover journal file")
+                   "Небезопасный оставшийся файл журнала")
         nextfile.unlink()
     if target.is_dir() and old.is_dir():
         co.require(entries(target) == files, "Установленные файлы не соответствуют резервной копии; требуется ручное восстановление")
@@ -291,10 +291,10 @@ def main(argv=None):
             write_manifest(source, mf, args.run)
         else:
             co.require(args.target and args.cutover_config and args.rollback_config and args.journal_dir,
-                       "restore requires target and both cutover/rollback configs and journal")
+                       "Для восстановления требуются целевая система, конфигурации переключения и отката, а также журнал")
             directory = Path(args.journal_dir)
             co.require(directory.is_dir() and not directory.is_symlink() and directory.stat().st_mode & 0o077 == 0,
-                       "private journal directory required")
+                       "Требуется закрытый каталог журнала")
             fd = os.open(directory / ".cutover.lock", os.O_CREAT | os.O_RDWR | getattr(os,"O_NOFOLLOW",0), 0o600)
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)

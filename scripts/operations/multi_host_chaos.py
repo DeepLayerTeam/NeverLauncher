@@ -457,7 +457,7 @@ def manual_recover(args, nodes):
     state_path = Path(args.state).absolute()
     state = read_state(state_path)
     require(state.get('project') == args.project and state.get('nodes') == nodes and
-            state.get('failedNode') in nodes, 'recovery target differs from recorded operation')
+            state.get('failedNode') in nodes, 'Цель восстановления отличается от записанной операции')
     victim = state['failedNode']
     if state['fault'] == 'host-stop':
         multi.remote_stop_start(nodes[victim], args.multi_host_script, args.directory, args.project, 'start')

@@ -46,7 +46,7 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
     versions = {}
     for item in files:
         require(re.fullmatch(r"[a-zA-Z0-9_]+\.sql", item.name) and item.is_file() and not item.is_symlink(),
-                "unsafe migration catalog item")
+                "Небезопасный элемент каталога миграций")
         content = item.read_bytes()
         checksum = hashlib.sha256(content).hexdigest()
         name = item.stem
@@ -67,7 +67,7 @@ def dsn_environment(path):
     parsed = urlsplit(content.strip())
     require(parsed.scheme in ("postgres", "postgresql") and parsed.hostname and parsed.path not in ("", "/")
             and parsed.username and parsed.password is not None and not parsed.fragment,
-            "PostgreSQL URL requires host, database and credentials")
+            "В URL PostgreSQL должны быть указаны узел, база данных и учётные данные")
     query = parse_qs(parsed.query, strict_parsing=True, keep_blank_values=True)
     require(set(query) <= {"sslmode", "sslrootcert", "sslcert", "sslkey", "connect_timeout"}
             and all(len(v) == 1 for v in query.values()) and query.get("sslmode") == ["verify-full"],
@@ -164,7 +164,7 @@ def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
                 "API и обработчик должны использовать один и тот же закреплённый образ на каждом узле")
         shared = report.get("sharedEndpoints")
         require(isinstance(shared, dict) and shared and (baseline is None or shared == baseline),
-                "mixed versions are pointing to different dependency endpoints")
+                "Смешанные версии указывают на разные конечные точки зависимостей")
         baseline = shared
         running = {c.get("service"): c for c in live.get("containers", [])}
         actual_versions = []
@@ -190,7 +190,7 @@ def validate_live_nodes(reports, *, require_mixed=False, pair=PAIR):
         require(all(re.fullmatch(r"[0-9a-f]{64}", value or "") for value in fingerprints),
                 "Недопустимый отпечаток контракта действующих API/Bridge на " + label)
         require(observed_contracts is None or observed_contracts == fingerprints,
-                "running API/Bridge contracts differ between supported cohort versions")
+                "Контракты работающих API и Bridge различаются между поддерживаемыми версиями")
         observed_contracts = fingerprints
     require(not require_mixed or set(versions.values()) == pair, "Для запуска со смешанными версиями требуются обе версии: N и N-1")
     return versions

@@ -45,7 +45,7 @@ func migrationRead0331[T any](w http.ResponseWriter, r *http.Request) (T, bool) 
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
 		// Единственный допустимый результат второго декодирования — io.EOF.
-		writeError(w, 400, "trailing migration request JSON")
+		writeError(w, 400, "Лишние данные после JSON-запроса на миграцию")
 		return v, false
 	}
 	return v, true

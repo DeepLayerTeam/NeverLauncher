@@ -538,7 +538,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
             name in signed_files
             and entry["sha256"] == signed_files[name]["sha256"]
             and entry["size"] == signed_files[name]["size"],
-            "staged file diverges from signed manifest",
+            "Подготовленный файл не соответствует подписанному манифесту",
         )
         folders = (
             (work / "payload", work / "client")

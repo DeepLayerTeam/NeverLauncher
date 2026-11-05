@@ -712,11 +712,11 @@ SELECT pg_advisory_xact_lock(4504, 1);
 -- Отправленные побочные действия нельзя повторно воспроизводить после аварии.
 UPDATE server_bridge_control_commands_v3
  SET status='indeterminate', updated_at=now(), completed_at=now(), lease_until=NULL,
- error='disaster recovery: old lease untrusted; inspect external effect'
+ error='Аварийное восстановление: прежняя аренда недоверенная; проверьте внешние последствия'
  WHERE status='leased';
 UPDATE server_bridge_control_commands_v3
  SET status='expired', updated_at=now(), completed_at=now(), lease_until=NULL,
- error='disaster recovery: pending command discarded' WHERE status='pending';
+ error='Аварийное восстановление: ожидающая команда отброшена' WHERE status='pending';
 UPDATE server_bridge_join_tickets_v2
  SET status='invalidated', invalidated_at=now() WHERE status='active';
 UPDATE server_bridge_handoffs_v2
@@ -725,7 +725,7 @@ UPDATE server_bridge_player_transfers_v3
  SET status='invalidated' WHERE status='issued';
 UPDATE server_bridge_player_sessions_v3
  SET status='invalidated', recheck_required=false, invalidated_at=now(),
- invalidated_reason='disaster recovery: prior runtime not trusted', updated_at=now()
+ invalidated_reason='Аварийное восстановление: предыдущая среда выполнения недоверенная', updated_at=now()
  WHERE status='active';
 UPDATE server_bridge_runtime_instances_v3 SET ended_at=now() WHERE ended_at IS NULL;
 -- Восстановленные учётные данные не должны допускать ранее запущенную JVM. Требуйте явную
@@ -739,21 +739,21 @@ UPDATE server_bridge_nodes_v2 SET
 -- подтверждение которого могло быть потеряно на разрушенном исходном кластере.
 UPDATE durable_jobs SET status='failed', lease_owner='', lease_token='', lease_fence=lease_fence+1,
  lease_expires_at=NULL, completed_at=now(), updated_at=now(),
- last_error='disaster recovery: in-flight effect requires reconciliation' WHERE status='running';
+ last_error='Аварийное восстановление: выполняемая операция требует согласования состояния' WHERE status='running';
 UPDATE event_outbox SET status='dead', lease_owner='', lease_token='', lease_fence=lease_fence+1,
  lease_expires_at=NULL, updated_at=now(),
- last_error='disaster recovery: in-flight delivery requires reconciliation' WHERE status='running';
+ last_error='Аварийное восстановление: выполняемая доставка требует согласования состояния' WHERE status='running';
 UPDATE durable_scope_leases SET fencing_token=fencing_token+1,
  owner='disaster-recovery-fenced', lease_token='disaster-recovery-fenced',
  expires_at='-infinity', updated_at=now();
 UPDATE extension_event_deliveries SET status='dead', lease_until=NULL, lease_token='',
- last_error='disaster recovery: in-flight extension effect', updated_at=now()
+ last_error='Аварийное восстановление: выполняемая операция расширения', updated_at=now()
  WHERE status='processing';
 DELETE FROM extension_update_leases;
 UPDATE extension_update_transactions SET status='failed', lease_owner='', finished_at=now(),
- failure='disaster recovery: reconcile partial extension update' WHERE status='running';
+ failure='Аварийное восстановление: согласуйте состояние частично обновлённого расширения' WHERE status='running';
 UPDATE migration_runs_0331 SET status='paused', fence=fence+1, lease_owner=NULL, lease_until=NULL,
- last_error='disaster recovery: migration must be reconciled', updated_at=now()
+ last_error='Аварийное восстановление: необходимо согласовать состояние миграции', updated_at=now()
  WHERE status='running' OR lease_owner IS NOT NULL;
 COMMIT;
 SELECT (SELECT count(*) FROM server_bridge_control_commands_v3 WHERE status IN ('leased','pending')) || '|' ||
@@ -883,7 +883,7 @@ def snapshot(
             if "network-ha" in COMPOSE_PROFILES
             else "not-used",
             "files": files,
-            "credentialPolicy": "signing keys, passwords, TLS and KMS material must be restored separately",
+            "credentialPolicy": "Ключи подписи, пароли, материалы TLS и KMS необходимо восстановить отдельно",
             "consistentWrites": "Compose writers stopped; PostgreSQL WAL unchanged and no extra client sessions across snapshot",
             "postgresWalLsn": pg_lsn_before,
             "serviceStateAtBackup": {key: states.get(key, "absent") for key in (
@@ -1240,7 +1240,7 @@ def chaos(
         "project": project,
         "mode": "network-ha" if network_ha else "standard",
         "events": outcomes,
-        "haDisclaimer": "single-node recovery and readiness; does not establish backend HA",
+        "haDisclaimer": "Восстановление и готовность одного узла; высокая доступность Backend не подтверждается",
     }
 
 

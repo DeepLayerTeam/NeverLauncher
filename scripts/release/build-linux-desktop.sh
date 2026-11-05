@@ -7,7 +7,7 @@ PACKAGE_DIR="${OUT_DIR}/linux-desktop-package"
 ARCH="$(uname -m)"
 [[ "${ARCH}" == "x86_64" ]] || { echo "Для рабочего пакета Linux сейчас требуется x86_64, получено ${ARCH}" >&2; exit 2; }
 [[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
-  echo "Linux Guard production build requires the compile-time Ed25519 public key" >&2; exit 2;
+  echo "Для рабочей сборки Linux Guard требуется публичный ключ Ed25519 на этапе компиляции" >&2; exit 2;
 }
 command -v cargo >/dev/null || { echo "cargo is required" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }

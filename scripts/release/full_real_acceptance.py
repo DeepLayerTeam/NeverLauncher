@@ -155,7 +155,7 @@ def strict_plan(doc, commit, pin):
                      name+': неверная реальная служба')
         need(required[name].issubset(used), 'Пропущены обязательные реальные входные данные: '+name)
         if name=='auth':
-            need(tail[tail.index('--source-commit')+1]==commit, 'official auth evidence from other commit')
+            need(tail[tail.index('--source-commit')+1]==commit, 'Подтверждение официальной авторизации относится к другому коммиту')
         if name=='minimal':
             need('--expected-version' not in tail or
                  tail[tail.index('--expected-version')+1]==VERSION,
@@ -344,7 +344,7 @@ def approval(p):
          'Четырём проверяющим сторонам запрещено повторно использовать ключи')
     qa=verify_signed(p.qa_report,p.qa_sig,p.qa_key,p.qa_pin,DOMAIN)
     current=live_review(p,rerun=True)
-    need(qa==current,'independent replay differs from QA observation')
+    need(qa==current,'Независимое повторение отличается от результатов наблюдения QA')
     return {'schema':FINAL_SCHEMA,'version':VERSION,'commit':p.commit,'project':p.project,
             'sourceTree':current['sourceTree'],'sourceIndexSha256':p.index_sha,
             'finalPackages':current['finalPackages'],
@@ -376,7 +376,7 @@ def main(argv=None):
             public=inventory.public_key(a.qa_key,a.qa_pin)
             need(secret.public_key().public_bytes(serialization.Encoding.Raw,
                     serialization.PublicFormat.Raw)==public.public_bytes(serialization.Encoding.Raw,
-                    serialization.PublicFormat.Raw),'QA signer differs from pinned independent QA key')
+                    serialization.PublicFormat.Raw),'Подписант QA не соответствует закреплённому независимому ключу QA')
             sign(a.qa_report,a.qa_sig,report,secret,DOMAIN)
             print('Независимо проверены 18 групп реальных E2E-тестов; итоговое подтверждение GA ещё заблокировано')
         elif a.action=='approve':
@@ -386,7 +386,7 @@ def main(argv=None):
             public=inventory.public_key(a.verifier_key,a.verifier_pin)
             need(secret.public_key().public_bytes(serialization.Encoding.Raw,
                     serialization.PublicFormat.Raw)==public.public_bytes(serialization.Encoding.Raw,
-                    serialization.PublicFormat.Raw),'verifier signer differs from approved verifier key')
+                    serialization.PublicFormat.Raw),'Подписант проверяющего не соответствует утверждённому ключу проверки')
             sign(a.ga_report,a.ga_sig,report,secret,FINAL_DOMAIN)
             print('Независимая полная приёмка в реальной среде пройдена: подписано подтверждение GA с точным совпадением байтов')
         else:

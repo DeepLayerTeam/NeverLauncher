@@ -12,13 +12,13 @@ RELEASE_VERSION="$(< VERSION)"
 python3 scripts/release/release_policy.py ga-mode --version "$RELEASE_VERSION" >/dev/null || exit 2
 
 : "${LAUNCHER_GA_SOURCE_SHA:?set the exact candidate commit SHA}"
-[[ "$LAUNCHER_GA_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo 'invalid release commit SHA' >&2; exit 2; }
-command -v git >/dev/null || { echo 'git is required for source attestation' >&2; exit 2; }
+[[ "$LAUNCHER_GA_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo 'Некорректный SHA коммита релиза' >&2; exit 2; }
+command -v git >/dev/null || { echo 'Для подтверждения происхождения исходников требуется git' >&2; exit 2; }
 COMMIT="$(git rev-parse --verify HEAD)"
 export LAUNCHER_SOURCE_COMMIT="$LAUNCHER_GA_SOURCE_SHA"
 export E2E_EXPECTED_COMMIT="$LAUNCHER_GA_SOURCE_SHA"
-[[ "$COMMIT" == "$LAUNCHER_GA_SOURCE_SHA" ]] || { echo 'candidate SHA does not match checkout HEAD' >&2; exit 2; }
-[[ -z "$(git status --porcelain --untracked-files=no)" ]] || { echo 'candidate checkout is modified' >&2; exit 2; }
+[[ "$COMMIT" == "$LAUNCHER_GA_SOURCE_SHA" ]] || { echo 'SHA кандидата не совпадает с HEAD рабочей копии' >&2; exit 2; }
+[[ -z "$(git status --porcelain --untracked-files=no)" ]] || { echo 'Рабочая копия кандидата содержит изменения' >&2; exit 2; }
 
 for var in E2E_ADMIN_URL E2E_API_URL E2E_ADMIN_TOKEN E2E_OPERATOR_TOKEN E2E_PROJECT_ID E2E_FOREIGN_PROJECT_ID E2E_SERVERBRIDGE_NODE_ID E2E_DESTRUCTIVE_STAGING_ACK; do
   [[ -n "${!var:-}" ]] || { echo "missing live staging variable $var" >&2; exit 2; }

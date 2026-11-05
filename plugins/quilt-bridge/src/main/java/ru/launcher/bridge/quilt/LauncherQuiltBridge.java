@@ -134,7 +134,7 @@ public final class LauncherQuiltBridge implements ModInitializer {
                 validationExecutor
             );
         } catch (RejectedExecutionException e) {
-            LOGGER.warn("Launcher Quilt Bridge join validation queue saturated; failing closed username={}", login.username);
+            LOGGER.warn("Очередь проверки подключений Launcher Quilt Bridge переполнена; вход отклонён для username={}", login.username);
             handler.disconnect(Text.literal(new JoinValidationResult(false, "bridge_overloaded", "{}").userMessage()));
             return;
         }

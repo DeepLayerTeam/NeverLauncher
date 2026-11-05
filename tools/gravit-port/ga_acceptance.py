@@ -121,13 +121,13 @@ def check_migration(cfg: dict, cohort: dict) -> tuple[dict, str, str]:
     require(cohort.get("format") == rehearsal.FORMAT and
             cohort.get("status") == "isolated-stage-pass-not-production-GA" and
             cohort.get("productionGA") is False and isinstance(cases, list) and len(cases) == 3,
-            "three actual pre/post update project witnesses required")
+            "Требуются три фактических подтверждения состояния проекта до и после обновления")
     root = Path(cfg["rehearsalRoot"])
     require(root.is_absolute() and root.is_dir() and not root.is_symlink(), "Требуется каталог реального пробного запуска")
     refs = cfg.get("references")
     require(type(refs) is dict and set(refs) == set(CLASSES), "Требуются входные данные трёх эталонных сценариев миграции")
     require(set(x.get("referenceClass") for x in cases if type(x) is dict) == set(CLASSES),
-            "duplicate or missing rehearsal classes")
+            "Обнаружены повторяющиеся или отсутствующие классы репетиции")
     plans = {}
     commit = None
     target = None
@@ -163,7 +163,7 @@ def check_migration(cfg: dict, cohort: dict) -> tuple[dict, str, str]:
             w = doc(witness)
             data = w.get("data", w)
             require(type(data) is dict and data.get("runId") == item["runId"],
-                    "witness run differs from certified project")
+                    "Проверочный запуск не соответствует сертифицированному проекту")
             live = data.get("liveSession")
             require(type(live) is dict and live.get("clientSha256") == item[expected]
                     and isinstance(live.get("joinedAt"), str) and bool(live["joinedAt"])
@@ -173,7 +173,7 @@ def check_migration(cfg: dict, cohort: dict) -> tuple[dict, str, str]:
                     and [p.get("name") for p in probes if type(p) is dict] == list(rehearsal.PROBES)
                     and all(p.get("passed") is True and type(p.get("evidenceSha256")) is str
                             and HEX.fullmatch(p["evidenceSha256"]) for p in probes),
-                    "game checks absent or not passed")
+                    "Игровые проверки отсутствуют либо не пройдены")
             if step == "pre-update-live":
                 old_player = live["playerUuid"]
                 require(data.get("ready") is True and data.get("blockers") == [],
@@ -184,7 +184,7 @@ def check_migration(cfg: dict, cohort: dict) -> tuple[dict, str, str]:
         update = doc(root / cls / "signed-update.json")
         require(update.get("status") == "committed" and
                 update.get("packageSha256") == item.get("updatePackageSha256"),
-                "signed client update was not committed")
+                "Обновление подписанного клиента не было зафиксировано")
         plans[cls] = ref
     require(isinstance(commit, str) and len(commit) in (40, 64)
             and isinstance(target, str) and HEX.fullmatch(target), "Некорректный идентификатор релиза")
@@ -218,11 +218,11 @@ def check_modules(cfg: dict, refs: dict, output: Path) -> list[dict]:
     for module in MODULE_IDS:
         probe = modules[module]
         require(type(probe) is dict and set(probe) == {"referenceClass", "executable", "executableSha256", "args", "timeoutSeconds"},
-                "module requires a bounded pinned executable and exact test")
+                "Для модуля требуются закреплённый исполняемый файл с ограничениями и точная проверка")
         cls = probe["referenceClass"]
         require(cls in CLASSES and type(probe["args"]) is list and
                 all(type(x) is str and len(x) <= 1024 for x in probe["args"]),
-                "invalid module reference or command")
+                "Некорректная ссылка на модуль или команда")
         seconds = probe["timeoutSeconds"]
         require(type(seconds) is int and 1 <= seconds <= 900, "Время ожидания проверки модуля выходит за допустимые пределы")
         exe = pinned(probe["executable"], probe["executableSha256"], executable=True)

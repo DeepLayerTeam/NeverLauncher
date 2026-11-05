@@ -81,7 +81,7 @@ def generate(
         or url.port == 0
     ):
         reject(
-            "public URL must be a clean HTTPS origin, without path, credentials or query"
+            "Публичный URL должен быть HTTPS-адресом без пути, учётных данных и параметров запроса"
         )
     if not listen.startswith("127.0.0.1:"):
         reject("HTTP-сервер минимального API должен слушать 127.0.0.1 за HTTPS-прокси")

@@ -259,7 +259,7 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	// Не объявляйте локально успешную сертификацию до его ответа.
 	report.Ready = false
 	report.CutoverAllowed = false
-	report.Blockers = []string{"pending server-side authoritative verification"}
+	report.Blockers = []string{"Ожидается авторитетная проверка на стороне сервера"}
 	return report, nil
 }
 func handleMigrationRehearsal03310(args []string) error {

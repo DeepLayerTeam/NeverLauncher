@@ -482,7 +482,7 @@ def compose_run(args):
             and not args.backup_confirmed
         ):
             fail(
-                "upgrade requires --backup-confirmed after verified database and blob backups"
+                "Для обновления нужен --backup-confirmed после проверки резервных копий базы данных и файлов"
             )
         if args.action == "up" and not state and len(values.get("LAUNCHER_BOOTSTRAP_TOKEN", "")) < 32:
             fail("Для новой промышленной установки требуется надёжный одноразовый LAUNCHER_BOOTSTRAP_TOKEN")

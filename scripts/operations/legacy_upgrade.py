@@ -52,7 +52,7 @@ def checked_dir(path: Path, *, create=False):
     if create and not path.exists():
         path.mkdir(mode=0o700, parents=False)
     st = path.lstat()
-    require(stat.S_ISDIR(st.st_mode) and not path.is_symlink(), f'unsafe directory: {path}')
+    require(stat.S_ISDIR(st.st_mode) and not path.is_symlink(), f'Небезопасный каталог: {path}')
     return path
 
 
@@ -265,7 +265,7 @@ def run_updater(command: list[str], *, timeout=1800, json_response=False):
 
 def verify_preservation(root: Path, original: dict, paths: list[str]):
     actual = enumerate_data(root, paths)
-    require(actual == original, 'upgrade altered protected user data; restore from private backup before continuing')
+    require(actual == original, 'Обновление изменило защищённые данные пользователя; перед продолжением восстановите их из закрытой резервной копии')
 
 
 def client_update(root: Path, args, source):
@@ -435,7 +435,7 @@ def determine_source(mode, root, args):
     else:
         raise LegacyUpgradeError('Неподдерживаемый режим обновления')
     if args.from_version:
-        require(args.from_version == detected, 'declared source release differs from installed release')
+        require(args.from_version == detected, 'Заявленный исходный релиз отличается от установленного')
     return detected
 
 
@@ -446,7 +446,7 @@ def backend_upgrade(args):
     source_settings, detected = native.read_version(source_env)
     version_ok(detected)
     if args.from_version:
-        require(args.from_version == detected, 'source environment differs from expected version')
+        require(args.from_version == detected, 'Исходное окружение не соответствует ожидаемой версии')
     native.assert_same_config(source_env, target_env, source_version=detected, target_version=TARGET)
     snapshot = Path(args.backup).absolute()
     require(not snapshot.exists(), 'Требуется новый закрытый путь контрольной точки нативного аварийного восстановления')

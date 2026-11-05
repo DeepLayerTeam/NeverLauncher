@@ -36,7 +36,7 @@ fi
 # никогда не должен позволять выпускать бинарники, которые позже объявят
 # готовыми к промышленному использованию.
 [[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
-  echo "Linux production Guard requires LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY before Cargo compilation" >&2; exit 2;
+  echo "Для рабочей сборки Linux Guard перед компиляцией Cargo требуется LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY" >&2; exit 2;
 }
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Необходимо указать: $1" >&2; exit 1; }; }
 for tool in go cargo npm python3; do require "${tool}"; done

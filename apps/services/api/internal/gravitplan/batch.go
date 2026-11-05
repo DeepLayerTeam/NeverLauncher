@@ -125,10 +125,10 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 			// Помечайте каждый затронутый профиль, не только последний.
 			for priorDir, prior := range dirs {
 				if folded == priorDir || strings.HasPrefix(folded, priorDir+"/") || strings.HasPrefix(priorDir, folded+"/") {
-					row.Blockers = append(row.Blockers, "client directory overlaps with "+prior)
+					row.Blockers = append(row.Blockers, "Каталог клиента пересекается с "+prior)
 					for i := range out.Profiles {
 						if out.Profiles[i].Destination.ProfilePath == prior {
-							out.Profiles[i].Blockers = append(out.Profiles[i].Blockers, "client directory overlaps with "+d.ProfilePath)
+							out.Profiles[i].Blockers = append(out.Profiles[i].Blockers, "Каталог клиента пересекается с "+d.ProfilePath)
 							out.Profiles[i].Status = "blocked"
 						}
 					}
@@ -174,7 +174,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 				}
 				for node := range edges {
 					if visit(node) {
-						row.Blockers = append(row.Blockers, "cyclic optional component dependencies")
+						row.Blockers = append(row.Blockers, "Циклические зависимости необязательных компонентов")
 						break
 					}
 				}

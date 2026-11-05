@@ -141,7 +141,7 @@ def host_lock(directory):
     try:
         st = os.fstat(fd)
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and not (st.st_mode & 0o077),
-                "unsafe rolling host lock")
+                "Небезопасная блокировка узла при поэтапном обновлении")
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -178,12 +178,12 @@ def validate_stage(directory, project):
     require(before["nodeId"] == after["nodeId"] and
             before["machineIdentity"] == after["machineIdentity"] and
             before["sharedEndpoints"] == after["sharedEndpoints"],
-            "staged deployment changes node identity or shared dependencies")
+            "Подготовленное развёртывание меняет идентификатор узла или общие зависимости")
     refs_a, refs_b = before["imageDigestRefs"], after["imageDigestRefs"]
     require(refs_a["api"] != refs_b["api"] and refs_a["api"] == refs_a["worker"] and
             refs_b["api"] == refs_b["worker"] and
             all(refs_a[x] == refs_b[x] for x in ("admin", "ingress", "volume-init")),
-            "only the API/worker image digest may change")
+            "Допускается изменение только контрольной суммы образа API/обработчика")
     a, b = rendered(directory, project, current_file), rendered(directory, project, target_file)
     # Предотвращайте ротацию секретов, обновление других служб и изменение томов,
     # окружения, входного шлюза, проверок здоровья или точек подключения
@@ -194,7 +194,7 @@ def validate_stage(directory, project):
             changed.append(svc)
         b["services"][svc]["image"] = a["services"][svc]["image"]
     require(changed == ["api", "worker"] and a == b,
-            "staged Compose config differs beyond the pinned API/worker image")
+            "Подготовленная конфигурация Compose отличается не только закреплённым образом API/обработчика")
     return {"nodeId": before["nodeId"], "sourceImage": refs_a["api"],
             "targetImage": refs_b["api"], "sourceHash": sha(current),
             "targetHash": sha(target)}
@@ -215,7 +215,7 @@ def compose(directory, project, *args, timeout=240, env_file=None):
 def apply_host(directory, project):
     with host_lock(directory):
         require(read_journal(directory) is None,
-                "rolling journal exists; inspect/rollback before another apply")
+                "Журнал поэтапного обновления уже существует; проверьте его или выполните откат перед следующей операцией")
         plan = validate_stage(directory, project)
         live_local(directory, project, SOURCE)
         previous = secure(directory / ".env")
@@ -236,7 +236,7 @@ def apply_host(directory, project):
             state["phase"] = "switching"
             journal(directory, state)
             require(sha(secure(directory / ".env")) == plan["sourceHash"],
-                    "source deployment changed during rollout")
+                    "Исходное развёртывание изменилось во время обновления")
             atomic_write(directory / ".env", target)
             compose(directory, project, "up", "-d", "--no-build", "--no-deps",
                     "--force-recreate", "--wait", "--wait-timeout", "180", "api", "worker", timeout=240)
@@ -263,12 +263,12 @@ def rollback_host_locked(directory, project, *, expected=None):
             "Нет подходящего журнала поэтапного обновления для восстановления")
     if expected is not None:
         require(state["sourceHash"] == expected["sourceHash"] and
-                state["targetHash"] == expected["targetHash"], "recovery journal changed")
+                state["targetHash"] == expected["targetHash"], "Журнал восстановления изменился")
     previous = secure(directory / BACKUP)
     require(sha(previous) == state["sourceHash"], "Предыдущая резервная копия окружения изменилась")
     current = secure(directory / ".env")
     require(sha(current) in (state["sourceHash"], state["targetHash"]),
-            "current deployment differs from the pinned rollback images")
+            "Текущее развёртывание отличается от закреплённых образов отката")
     state["phase"] = "rolling-back"
     journal(directory, state)
     compose(directory, project, "stop", "-t", "45", "worker", "api", timeout=120)
@@ -315,7 +315,7 @@ def remote(target, script, directory, project, operation, *, timeout=540):
     except (ValueError, UnicodeDecodeError) as exc:
         raise RollingError("Удалённый агент сформировал некорректный JSON") from exc
     require(result.get("schema") == SCHEMA and result.get("project") == project and
-            result.get("ready") is True, "remote update operation did not report successful readiness")
+            result.get("ready") is True, "Удалённое обновление не подтвердило успешную готовность")
     return result
 
 
@@ -345,7 +345,7 @@ class PGAdvisoryLock:
                 stderr=subprocess.DEVNULL, text=True, bufsize=1)
             require(self._query("SELECT CASE WHEN pg_try_advisory_lock(1717, 51517) "
                                 "THEN 'LOCKED' ELSE 'BUSY' END;") == "LOCKED",
-                    "another rolling update holds the PostgreSQL cluster lock")
+                    "Другое поэтапное обновление удерживает блокировку кластера PostgreSQL")
             self.ping()
             return self
         except BaseException:
@@ -418,7 +418,7 @@ def assert_image_cohorts(reports, versions):
     for version in PAIR:
         images = {reports[node]["imageDigestRefs"]["api"] for node in versions
                   if versions[node] == version}
-        require(len(images) <= 1, "different backend digests claimed to be the same version")
+        require(len(images) <= 1, "Разные контрольные суммы Backend заявлены как одна и та же версия")
 
 
 def verify_cluster(nodes, script, directory, project, edge_url, catalog):
@@ -471,7 +471,7 @@ def rollout(args):
             require(planned == initial_plans[label] and
                     planned["nodeId"] == reports[label]["nodeId"] and
                     planned["sourceImage"] == reports[label]["imageDigestRefs"]["api"] and
-                    planned["to"] == TARGET, "node stage changed since cluster-wide preflight")
+                    planned["to"] == TARGET, "Состояние узла изменилось после общей предварительной проверки кластера")
             with EdgeMonitor(args.edge_url) as monitor:
                 try:
                     result = remote(target, args.rolling_script, args.directory, args.project,

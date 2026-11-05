@@ -449,7 +449,7 @@ def assess_cluster(nodes, edge=None):
     if len(pg) == 1:
         record("postgresql", "RISK", "На проверенных узлах найден только один контейнер PostgreSQL; внешнее переключение при отказе не подтверждено")
     elif not pg:
-        record("postgresql", "UNVERIFIED", "external PostgreSQL/managed cluster topology not observable from inspected Docker projects")
+        record("postgresql", "UNVERIFIED", "Топология внешнего PostgreSQL или управляемого кластера не определяется по проверенным проектам Docker")
     else:
         all_pg = all(i.get("postgresState", {}).get("observed") for _, i in pg)
         sync_pg = any(i.get("postgresState", {}).get("synchronousPeers", 0) >= 1 for _, i in pg)
@@ -469,7 +469,7 @@ def assess_cluster(nodes, edge=None):
         record("s3_objects", "UNVERIFIED", "actual cross-client S3 write/read/hash/delete works; provider durability and failover not exercised")
         record("durable_lease", "UNVERIFIED", "Транзакционная изоляция PostgreSQL и аренда Redis работают; безопасность при разделении сети не подтверждена")
     else:
-        record("s3_objects", "UNVERIFIED", "missing successful live S3 write/read/hash/delete evidence")
+        record("s3_objects", "UNVERIFIED", "Отсутствует подтверждение успешных операций записи, чтения, хеширования и удаления в работающем S3")
         record("durable_lease", "UNVERIFIED", "Отсутствует реальное свидетельство изоляции или аренды PostgreSQL и Redis")
     if edge:
         record("public_tls_edge", "OBSERVED" if edge.get("success") == edge.get("sampled") else "RISK",

@@ -70,11 +70,11 @@ def accept_alert(payload, expected):
         try:
             start = datetime.fromisoformat(entry['startsAt'].replace('Z', '+00:00'))
             require(start.tzinfo is not None and start <= datetime.now(timezone.utc),
-                    'invalid alert firing start')
+                    'Некорректное время начала срабатывания оповещения')
         except (KeyError, AttributeError, TypeError, ValueError) as exc:
             raise Error('Некорректная временная метка события Alertmanager') from exc
         matching.append((fingerprint, start))
-    require(len(matching) == 1, 'one unambiguous expected alert required')
+    require(len(matching) == 1, 'Требуется одно однозначно заданное ожидаемое оповещение')
     fingerprint, start = matching[0]
     return {'schema': SCHEMA, 'alertname': expected, 'fingerprint': fingerprint,
             'startedAt': start.astimezone(timezone.utc).isoformat(),
@@ -84,13 +84,13 @@ def validate_dir(folder):
     folder = Path(folder)
     require(folder.is_absolute() and folder.is_dir() and not folder.is_symlink() and
             folder.stat().st_uid == os.geteuid() and stat.S_IMODE(folder.stat().st_mode) & 0o077 == 0,
-            'receiver directory must be private 0700')
+            'Каталог получателя должен иметь закрытые права 0700')
     return folder
 
 def store(folder, result):
     folder = validate_dir(folder)
     path = folder / 'latest.json'
-    require(not path.is_symlink(), 'receiver journal symlink')
+    require(not path.is_symlink(), 'Журнал получателя является символьной ссылкой')
     content = (json.dumps(result, sort_keys=True) + '\n').encode()
     fd, temp = tempfile.mkstemp(prefix='.alert-05210-', dir=folder)
     try:
@@ -112,16 +112,16 @@ def store(folder, result):
 def latest(folder):
     validate_dir(folder)
     path = folder / 'latest.json'
-    require(not path.is_symlink() and path.is_file(), 'no independently delivered alert')
+    require(not path.is_symlink() and path.is_file(), 'Нет оповещения, доставленного по независимому каналу')
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
     try:
         st = os.fstat(fd)
         require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
                 stat.S_IMODE(st.st_mode) & 0o077 == 0 and 0 < st.st_size <= 8192,
-                'unsafe receipt file')
+                'Небезопасный файл подтверждения')
         data = json.loads(os.read(fd, 8193), object_pairs_hook=unique)
         require(isinstance(data, dict) and data.get('schema') == SCHEMA and
-                data.get('status') == 'delivered', 'invalid persisted alert receipt')
+                data.get('status') == 'delivered', 'Некорректное сохранённое подтверждение оповещения')
         return data
     finally:
         os.close(fd)
@@ -179,10 +179,10 @@ def main():
     args = p.parse_args()
     try:
         require(1024 <= args.port <= 65535 and ALERT.fullmatch(args.expected_alert),
-                'invalid port or expected alert')
+                'Некорректный порт или ожидаемое оповещение')
         folder = validate_dir(args.directory)
         webhook, reader = read_secret(args.webhook_token_file), read_secret(args.reader_token_file)
-        require(webhook != reader, 'webhook and readback must use distinct bearer credentials')
+        require(webhook != reader, 'Для webhook и чтения результатов должны использоваться разные токены Bearer')
         server = ThreadingHTTPServer(('127.0.0.1', args.port),
                  make_handler(folder, args.expected_alert, webhook, reader))
         server.serve_forever(poll_interval=.25)

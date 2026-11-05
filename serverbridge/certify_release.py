@@ -186,7 +186,7 @@ def main() -> int:
     manifest_path = artifacts / "PLUGIN_MANIFEST.json"
     allowlist_path = artifacts / "BRIDGE_RELEASE_ALLOWLIST.json"
     if not manifest_path.is_file() or not allowlist_path.is_file():
-        die("PLUGIN_MANIFEST.json and BRIDGE_RELEASE_ALLOWLIST.json are required")
+        die("Требуются PLUGIN_MANIFEST.json и BRIDGE_RELEASE_ALLOWLIST.json")
 
     targets = load_json(TARGETS)
     target_rows = targets.get("targets")
@@ -203,14 +203,14 @@ def main() -> int:
         hybrid.get("productVersion") != VERSION
         or hybrid.get("policy") != "separate-certification-required"
     ):
-        die("hybrid certification matrix version/policy drift")
+        die("Версия или политика матрицы сертификации гибридных платформ не совпадает")
     if not isinstance(hybrid_rows, list) or any(
         r.get("status") != "not-certified" for r in hybrid_rows
     ):
-        die("universal release must not implicitly certify hybrid cores")
+        die("Универсальный релиз не должен автоматически подтверждать сертификацию гибридных ядер")
     hybrid_ids = {r.get("id") for r in hybrid_rows}
     if hybrid_ids & set(EXPECTED):
-        die("hybrid target leaked into universal artifact cohort")
+        die("В набор универсальных артефактов попала цель для гибридной платформы")
 
     manifest = load_json(manifest_path)
     if manifest.get("toolVersion") != VERSION or manifest.get("schemaVersion") != "1.2":
@@ -242,7 +242,7 @@ def main() -> int:
         or set(releases) != {VERSION}
         or not isinstance(releases[VERSION], dict)
     ):
-        die(f"allowlist releases must contain only the exact release cohort {VERSION}")
+        die(f"Список разрешённых релизов должен содержать только точный набор релиза {VERSION}")
     policy = releases[VERSION]
 
     evidence = []
@@ -301,7 +301,7 @@ def main() -> int:
                 if target == "folia":
                     text = zf.read("plugin.yml").decode("utf-8", "replace")
                     if "folia-supported: true" not in text:
-                        die("folia: descriptor does not declare folia-supported: true")
+                        die("folia: дескриптор не объявляет folia-supported: true")
                 elif target == "fabric":
                     data = json.loads(zf.read("fabric.mod.json").decode("utf-8"))
                     custom = data.get("custom")
@@ -314,7 +314,7 @@ def main() -> int:
                         or launcher.get("clientModRequired") is not False
                     ):
                         die(
-                            "fabric: artifact must be server-only and clientModRequired=false"
+                            "fabric: артефакт должен быть только серверным, с clientModRequired=false"
                         )
                 elif target == "quilt":
                     data = json.loads(zf.read("fabric.mod.json").decode("utf-8"))
@@ -325,7 +325,7 @@ def main() -> int:
                         or custom.get("clientModRequired") is not False
                     ):
                         die(
-                            "quilt: artifact must be Quilt-only, server-only and clientModRequired=false"
+                            "quilt: артефакт должен предназначаться только для Quilt и сервера, с clientModRequired=false"
                         )
                 elif target == "vanilla":
                     manifest = zf.read("META-INF/MANIFEST.MF").decode(
@@ -335,7 +335,7 @@ def main() -> int:
                         "Main-Class: ru.launcher.bridge.vanilla.LauncherVanillaBridge"
                         not in manifest
                     ):
-                        die("vanilla: executable sidecar Main-Class missing")
+                        die("vanilla: у исполняемого вспомогательного модуля отсутствует Main-Class")
         except zipfile.BadZipFile:
             die(f"{target}: invalid JAR/ZIP")
         coverage = next(r.get("coverage") for r in target_rows if r.get("id") == target)
@@ -375,7 +375,7 @@ def main() -> int:
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        die(f"adapter policy execution unavailable: {exc}")
+        die(f"Выполнение политики адаптера недоступно: {exc}")
     if (
         result.returncode != 0
         or "CAPABILITY_POLICY_OK total=14 runtime_certified=false" not in result.stdout

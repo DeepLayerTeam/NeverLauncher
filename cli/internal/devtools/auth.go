@@ -236,7 +236,7 @@ func (f *FixtureServer) Handler() http.Handler {
 		}
 		c, e := f.Verify(req.Token)
 		if e != nil {
-			writeFixtureJSON(w, 404, map[string]string{"error": "unknown test token"})
+			writeFixtureJSON(w, 404, map[string]string{"error": "Неизвестный тестовый токен"})
 			return
 		}
 		f.mu.Lock()

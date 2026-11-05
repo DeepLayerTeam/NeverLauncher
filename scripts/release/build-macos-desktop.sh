@@ -8,7 +8,7 @@ if [[ "${2:-}" == "--allow-ad-hoc" || "${1:-}" == "--allow-ad-hoc" ]]; then
   MODE="adhoc"
   [[ "${1:-}" == "--allow-ad-hoc" ]] && OUT_DIR="${ROOT_DIR}/dist/release-${VERSION}"
 fi
-[[ "$(uname -s)" == "Darwin" ]] || { echo "macOS production package must be built on macOS" >&2; exit 2; }
+[[ "$(uname -s)" == "Darwin" ]] || { echo "Рабочий пакет macOS необходимо собирать на macOS" >&2; exit 2; }
 for tool in cargo rustup lipo codesign ditto shasum python3; do command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }; done
 
 SIGN_IDENTITY="${LAUNCHER_MACOS_SIGNING_IDENTITY:-}"
@@ -18,7 +18,7 @@ if [[ "${MODE}" == "production" ]]; then
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
     echo "production macOS release requires Developer ID Application identity, Team ID and notarytool keychain profile via LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID and LAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
   }
-  [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "production signing identity must be a Developer ID Application certificate" >&2; exit 2; }
+  [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "Для подписи рабочей сборки требуется сертификат Developer ID Application" >&2; exit 2; }
 else
   SIGN_IDENTITY="-"
   TEAM_ID="ADHOC-CI"
@@ -107,7 +107,7 @@ fi
 TMP_ZIP="${OUT_DIR}/.launcher-macos-notary-${VERSION}.zip"
 ditto -c -k --sequesterRsrc --keepParent "${APP}" "${TMP_ZIP}"
 if [[ "${MODE}" == "production" ]]; then
-  command -v xcrun >/dev/null || { echo "xcrun is required for notarization" >&2; exit 1; }
+  command -v xcrun >/dev/null || { echo "Для нотариального заверения требуется xcrun" >&2; exit 1; }
   xcrun notarytool submit "${TMP_ZIP}" --keychain-profile "${NOTARY_PROFILE}" --wait
   xcrun stapler staple "${APP}"
   xcrun stapler validate "${APP}"

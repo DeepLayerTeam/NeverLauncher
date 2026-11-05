@@ -106,11 +106,11 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
   command -v git >/dev/null 2>&1 || { echo "GA requires git" >&2; exit 2; }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
-    echo "official GA source commit mismatch" >&2; exit 2;
+    echo "Коммит исходников официального выпуска GA не совпадает" >&2; exit 2;
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
   [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
-    echo "official GA signing requires a clean, committed source tree" >&2; exit 2;
+    echo "Подписание официального выпуска GA требует чистого дерева исходников с зафиксированными изменениями" >&2; exit 2;
   }
   OFFICIAL_GA_RECEIPT="$(mktemp)"
   trap '[[ -z "${COMPONENTS_GA_RECEIPT}" ]] || rm -f "${COMPONENTS_GA_RECEIPT}"; [[ -z "${OFFICIAL_GA_RECEIPT}" ]] || rm -f "${OFFICIAL_GA_RECEIPT}"' EXIT
@@ -215,15 +215,15 @@ if [[ "${VERSION}" =~ ^([0-9]+)\.([0-9]+)\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
 fi
 if [[ "${GA_RUNTIME_GATE_REQUIRED}" == "1" ]]; then
   [[ -n "${NL_GA_BACKEND_URL:-}" && -n "${NL_GA_PACKAGE_ID:-}" && -n "${NL_GA_OPERATOR_TOKEN:-}" ]] || {
-    echo "protected runtime release BLOCKED: protected Backend URL, staged package and read token required" >&2; exit 2;
+    echo "Выпуск защищённой среды выполнения ЗАБЛОКИРОВАН: требуются защищённый URL Backend, подготовленный пакет и токен чтения" >&2; exit 2;
   }
-  command -v git >/dev/null 2>&1 || { echo "protected runtime release requires git" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "Для выпуска защищённой среды выполнения требуется git" >&2; exit 2; }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
-    echo "protected runtime release source SHA does not match checkout" >&2; exit 2;
+    echo "SHA исходников выпуска защищённой среды выполнения не совпадает с рабочей копией" >&2; exit 2;
   }
   [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
-    echo "protected runtime release signing requires clean committed source" >&2; exit 2;
+    echo "Подписание выпуска защищённой среды выполнения требует чистых зафиксированных исходников" >&2; exit 2;
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
   GA_RUNTIME_PREFLIGHT_FILE="$(mktemp)"
@@ -232,7 +232,7 @@ if [[ "${GA_RUNTIME_GATE_REQUIRED}" == "1" ]]; then
     --backend "${NL_GA_BACKEND_URL}" --package-id "${NL_GA_PACKAGE_ID}" \
     --source-sha "${SOURCE_COMMIT}" --version "${VERSION}" \
     --output "${GA_RUNTIME_PREFLIGHT_FILE}" || {
-      echo "protected runtime release BLOCKED: trusted Backend runtime evidence incomplete" >&2; exit 2;
+      echo "Выпуск защищённой среды выполнения ЗАБЛОКИРОВАН: подтверждение доверенной среды Backend неполное" >&2; exit 2;
     }
 fi
 
@@ -539,7 +539,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     windows_delivery_source="${WINDOWS_SIGNED_ARTIFACTS_DIR:-${GUARD_PLATFORM_ARTIFACTS_DIR}/windows}"
     windows_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
-      "${windows_delivery_source}" "${VERSION}" "launcher-cli-windows-x64.exe" "Windows x64/ARM64 delivery")"
+      "${windows_delivery_source}" "${VERSION}" "launcher-cli-windows-x64.exe" "Поставка для Windows x64/ARM64")"
     log "Импорт Windows x64/ARM64 delivery artifacts из ${windows_delivery_source}"
     for artifact in \
       "launcher-cli-windows-x64.exe" \
@@ -568,7 +568,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   fi
   if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     linux_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
-      "${LINUX_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-linux-x64" "Linux x64/ARM64 delivery")"
+      "${LINUX_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-linux-x64" "Поставка для Linux x64/ARM64")"
     log "Импорт native Linux x64/ARM64 production artifacts из ${linux_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
@@ -592,7 +592,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   fi
   if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     macos_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
-      "${MACOS_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-macos-x64" "macOS x64/ARM64 delivery")"
+      "${MACOS_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-macos-x64" "Поставка для macOS x64/ARM64")"
     log "Импорт macOS x64/ARM64 delivery artifacts из ${macos_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
@@ -836,9 +836,9 @@ if [[ "${WINDOWS_PROTECTION_GA_REQUIRED}" == "1" ]]; then
 fi
 
 if [[ "${VERSION}" == "0.27.0" ]]; then
-  [[ -s "${OFFICIAL_GA_RECEIPT}" ]] || { echo "missing signed official Minecraft GA receipt" >&2; exit 2; }
+  [[ -s "${OFFICIAL_GA_RECEIPT}" ]] || { echo "Отсутствует подписанное подтверждение официальной приёмки Minecraft GA" >&2; exit 2; }
   cp "${OFFICIAL_GA_RECEIPT}" "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
-  log "Binding independent six-platform LIVE official Minecraft certification into signed manifest"
+  log "Привязка независимой сертификации работающего Minecraft для шести платформ к подписанному манифесту"
   python3 "${ROOT_DIR}/scripts/ga/verify_official_artifacts_0270.py" \
     --bundle "${OUT_DIR}" --receipt "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
 fi
@@ -982,16 +982,16 @@ if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
 fi
 
 if [[ "${VERSION}" == "0.25.0" ]]; then
-  [[ -s "${COMPONENTS_GA_RECEIPT}" ]] || { echo "missing authenticated component GA receipt" >&2; exit 2; }
+  [[ -s "${COMPONENTS_GA_RECEIPT}" ]] || { echo "Отсутствует подтверждение приёмки компонента GA с аутентификацией" >&2; exit 2; }
   cp "${COMPONENTS_GA_RECEIPT}" "${OUT_DIR}/OPTIONAL_COMPONENTS_GA_CERTIFICATION.json"
-  log "Authenticated all six real-platform signed Optional Components GA attestations"
+  log "Подтверждены подписанные свидетельства приёмки необязательных компонентов GA на шести реальных платформах"
 fi
 
 # Начиная с 0.45.11 проверяйте реальные байты подписанного установщика по контрольным суммам SPDX,
 # субъектам SLSA, BOM выпуска и независимо проверенной GA-квитанции ДО создания внешне доверенной релизной
 # подписи.
 if [[ "$(printf '%s\n' '0.45.11' "${VERSION}" | sort -V | head -n1)" == '0.45.11' ]]; then
-  log "Fail-closed signed distribution: six exact packages + SPDX/SLSA/GA"
+  log "Защищённая поставка с отказом при ошибке: шесть точных подписанных пакетов и SPDX/SLSA/GA"
   "${RELEASE_CLI}" release distribution-verify "${OUT_DIR}"
 fi
 
@@ -1033,7 +1033,7 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   }
 fi
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then
-  log "Publish-check Minecraft Compatibility + Device Trust Release + cross-platform Guard CI certification"
+  log "Проверка публикации: совместимость Minecraft, выпуск доверенных устройств и межплатформенная сертификация Guard CI"
   "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
   if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
     log "Публикационный dry-run: физическое копирование релиза, повторная проверка подписи и publish-check"

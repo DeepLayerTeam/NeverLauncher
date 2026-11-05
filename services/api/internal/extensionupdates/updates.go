@@ -645,7 +645,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 	tx.FinishedAt = &now
 	if len(rbErrs) > 0 {
 		tx.Status = "rollback_failed"
-		tx.Failure = "automatic recovery failed: " + strings.Join(rbErrs, "; ")
+		tx.Failure = "Автоматическое восстановление завершилось ошибкой: " + strings.Join(rbErrs, "; ")
 		_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
 		return errors.New(tx.Failure)
 	}
@@ -718,7 +718,7 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 				} else if e != nil {
 					rbErrs = append(rbErrs, "restart "+item.ExtensionID+": "+e.Error())
 				} else if e := m.waitHealthy(context.Background(), old, m.normalized().HealthTimeout); e != nil {
-					rbErrs = append(rbErrs, "restored JVM unhealthy "+item.ExtensionID+": "+e.Error())
+					rbErrs = append(rbErrs, "Восстановленная JVM работает некорректно "+item.ExtensionID+": "+e.Error())
 				}
 			}
 		}

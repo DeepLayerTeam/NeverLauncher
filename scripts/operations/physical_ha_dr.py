@@ -340,7 +340,7 @@ def live_fault(args):
     else:
         require(args.timeout + 45 <= args.ttl <= 600 and args.router not in nodes.values(),
                 'Срок действия правил маршрутизатора должен превышать окно наблюдения, но оставаться ограниченным')
-        require(not firewall(args, 'check'), 'victim still partitioned from earlier drill')
+        require(not firewall(args, 'check'), 'Проверяемый узел всё ещё изолирован после предыдущего испытания')
         require(bmc_status(args).get('PowerState') == 'On', 'Для сетевого разделения целевой узел должен быть включён')
     require(ssh(nodes[args.victim], ['hostname'], allow_fail=True) is not None,
             'Перед физическим сбоем отключаемый узел недоступен по SSH')
@@ -521,7 +521,7 @@ def game_restore(args):
                 cmd = 'execute if block ' + args.marker_xyz + ' ' + args.marker_block + ' run say ' + marker
                 response = vanilla.rcon('127.0.0.1', config['rconPort'], password, cmd)
                 require(re.fullmatch(r'\[Server\]\s+' + re.escape(marker), response.strip()),
-                        'restored world block state differs from snapshot')
+                        'Восстановленное состояние блоков мира отличается от снимка')
                 verified = True
                 result['playerOnline'] = args.expected_player
                 result['markerVerified'] = True

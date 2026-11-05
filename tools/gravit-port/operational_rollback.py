@@ -38,10 +38,10 @@ def sha_file(path: Path, *, limit=8 << 20):
 def validate(cfg: dict, cutover: dict):
     require(cfg.get("format") == FORMAT, "Неизвестный формат конфигурации отката")
     require(cfg.get("runId") == cutover["runId"] and cfg.get("profileId") == cutover["profileId"]
-            and cfg.get("channel") == cutover["channel"], "rollback scope differs from cutover")
+            and cfg.get("channel") == cutover["channel"], "Область отката отличается от области переключения")
     require(cfg.get("cutoverConfigSha256") == cutover["_hash"], "Хеш конфигурации переключения не совпадает")
     require(isinstance(cfg.get("units"), dict) and set(cfg["units"]) == {"source", "target"},
-            "both source and target service units must be checked")
+            "Необходимо проверить системные службы исходной и целевой систем")
     units = cfg["units"]
     for side in ("source", "target"):
         values = units[side]

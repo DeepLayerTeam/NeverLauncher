@@ -122,11 +122,11 @@ func BuildVerifyScript() (string, error) {
 	b.WriteString("INSERT INTO nl_expected_migrations(version,checksum) VALUES " + expectedValuesSQL(ms) + ";\n")
 	b.WriteString(`DO $$ DECLARE broken BIGINT; BEGIN
 SELECT count(*) INTO broken FROM schema_migrations s LEFT JOIN nl_expected_migrations e ON e.version=s.version WHERE s.version IS NOT NULL AND e.version IS NULL;
-IF broken<>0 THEN RAISE EXCEPTION 'database contains % migration(s) unknown to this binary', broken; END IF;
+IF broken<>0 THEN RAISE EXCEPTION 'База данных содержит % миграций, неизвестных этой версии программы', broken; END IF;
 SELECT count(*) INTO broken FROM nl_expected_migrations e LEFT JOIN schema_migrations s ON s.version=e.version WHERE s.version IS NULL;
-IF broken<>0 THEN RAISE EXCEPTION 'database has % pending migration(s)', broken; END IF;
+IF broken<>0 THEN RAISE EXCEPTION 'В базе данных ожидают выполнения % миграций', broken; END IF;
 SELECT count(*) INTO broken FROM schema_migrations s JOIN nl_expected_migrations e ON e.version=s.version WHERE coalesce(s.checksum,'')='';
-IF broken<>0 THEN RAISE EXCEPTION 'database has % migration(s) without sealed checksum', broken; END IF;
+IF broken<>0 THEN RAISE EXCEPTION 'В базе данных имеется % миграций без закреплённой контрольной суммы', broken; END IF;
 SELECT count(*) INTO broken FROM schema_migrations s JOIN nl_expected_migrations e ON e.version=s.version WHERE s.checksum<>e.checksum;
 IF broken<>0 THEN RAISE EXCEPTION 'В базе данных обнаружено % несовпадений контрольных сумм миграций', broken; END IF;
 END $$;

@@ -84,7 +84,7 @@ func (c *Connector) Refresh(ctx context.Context, refreshToken string) (authconne
 func (c *Connector) ProviderLogoutURL(postLogoutRedirectURI string) (string, error) {
 	postLogoutRedirectURI = strings.TrimSpace(postLogoutRedirectURI)
 	if !c.cfg.PostLogoutRedirectAllowed(postLogoutRedirectURI) {
-		return "", authconnector.NewError(authconnector.ErrMisconfigured, "Microsoft post-logout redirect URI is not registered")
+		return "", authconnector.NewError(authconnector.ErrMisconfigured, "URI перенаправления после выхода из Microsoft не зарегистрирован")
 	}
 	return c.oidc.EndSessionURL(postLogoutRedirectURI)
 }

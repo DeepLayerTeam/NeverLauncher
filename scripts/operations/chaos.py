@@ -217,16 +217,16 @@ def dependency_fault(project: str, env_file: Path, service: str, url: str, endpo
         if service == "s3":
             # Одной проверки health недостаточно для доказательства отказа S3.
             fault_detected = poll(lambda: s3_verify(endpoint, bucket, key, digest) == digest,
-                                  False, limit, "S3 object read failure")
+                                  False, limit, "Ошибка чтения объекта S3")
         else:
             fault_detected = poll(lambda: public_ready(url), False, limit, "readiness fail-closed")
     finally:
         dr.compose(project, env_file, "up", "-d", service, timeout=90)
-    recovered_s = poll(lambda: public_ready(url), True, limit, "public readiness recovery")
+    recovered_s = poll(lambda: public_ready(url), True, limit, "Восстановление готовности публичного сервиса")
     poll(lambda: pg_verify(project, env_file, token, pg_digest) is None,
-         True, limit, "PostgreSQL canary after recovery")
+         True, limit, "Проверочный запрос PostgreSQL после восстановления")
     poll(lambda: s3_verify(endpoint, bucket, key, digest) == digest,
-         True, limit, "S3 canary after recovery")
+         True, limit, "Проверочный запрос S3 после восстановления")
     total = monotonic() - start
     return {"fault": service + "-stopped", "startedUtc": event_started, "restoredUtc": stamp(), "failureObservedSeconds": fault_detected,
             "readinessRecoverySeconds": recovered_s, "endToEndRecoverySeconds": round(total, 3),
@@ -240,7 +240,7 @@ def api_failover(project: str, env_file: Path, url: str, limit: float) -> dict:
     try:
         dr.compose(project, env_file, "stop", "-t", "3", "api", timeout=45)
         poll(lambda: direct_ready(project, env_file, "api-b"), True, limit, "surviving API")
-        poll(lambda: public_ready(url), True, limit, "Nginx API failover")
+        poll(lambda: public_ready(url), True, limit, "Переключение API через Nginx")
         failover = monotonic() - started
     finally:
         dr.compose(project, env_file, "up", "-d", "api", timeout=90)
@@ -259,14 +259,14 @@ def network_fault(project: str, env_file: Path, url: str, limit: float) -> dict:
         dr.run(["docker", "network", "disconnect", "--force", network, ident], timeout=30)
         disconnected = True
         failure_time = poll(lambda: direct_ready(project, env_file, "worker-a"), False,
-                            limit, "isolated worker readiness")
+                            limit, "Готовность изолированного обработчика")
         poll(lambda: direct_ready(project, env_file, "worker-b"), True,
-             limit, "surviving worker readiness")
-        poll(lambda: public_ready(url), True, limit, "remaining API availability")
+             limit, "Готовность оставшегося обработчика")
+        poll(lambda: public_ready(url), True, limit, "Доступность оставшегося API")
     finally:
         if disconnected:
             dr.run(["docker", "network", "connect", network, ident], timeout=30)
-    poll(lambda: direct_ready(project, env_file, "worker-a"), True, limit, "reconnected worker readiness")
+    poll(lambda: direct_ready(project, env_file, "worker-a"), True, limit, "Готовность повторно подключённого обработчика")
     return {"fault": "worker-a-network-partition", "startedUtc": event_started, "restoredUtc": stamp(), "failureObservedSeconds": failure_time,
             "rtoSeconds": round(monotonic() - started, 3), "survivingWorkerReady": True}
 
@@ -305,8 +305,8 @@ def run_experiment(project: str, env_file: Path, ready_url: str, s3_url: str, bu
                   "scope": "acknowledged synthetic PostgreSQL row + S3 object; not a production RPO/SLA",
                   "observedRpoSeconds": 0, "rtoSecondsMax": max(e["rtoSeconds"] for e in outcomes),
                   "durationSeconds": round(monotonic() - start, 3), "events": outcomes,
-                  "limits": ["single Docker-host lab; no host-loss test", "no real Minecraft sessions or job fencing proof",
-                             "canary-only RPO; unacknowledged changes not measured"]}
+                  "limits": ["Лабораторное окружение на одном узле Docker; потеря узла не проверялась", "Нет подтверждения для реальных сеансов Minecraft или блокировки заданий",
+                             "RPO оценён только по проверочным запросам; неподтверждённые изменения не измерялись"]}
         # Атомарная публикация. Не сообщайте об успехе, если запись или любая
         # операция внедрения отказа завершилась ошибкой.
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=report.parent,

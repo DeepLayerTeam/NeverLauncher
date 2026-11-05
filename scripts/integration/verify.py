@@ -25,7 +25,7 @@ def require(ok, why):
 def read(path):
     require(path.is_file() and not path.is_symlink() and 0 < path.stat().st_size <= 2*1024*1024, f'missing/unsafe receipt: {path}')
     obj = json.loads(path.read_text('utf-8'))
-    require(isinstance(obj, dict), f'receipt is not an object: {path}')
+    require(isinstance(obj, dict), f'Подтверждение не является объектом: {path}')
     return obj
 
 def files(root, entries):
@@ -34,7 +34,7 @@ def files(root, entries):
         require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9._/-]{1,160}', name), 'Небезопасное имя файла свидетельства')
         require(all(p not in ('', '.', '..') for p in name.split('/')), 'В имени свидетельства обнаружен выход за пределы каталога')
         f = root / name
-        require(f.resolve().is_relative_to(root.resolve()) and f.is_file() and not f.is_symlink() and f.stat().st_size > 0, f'missing actual evidence: {name}')
+        require(f.resolve().is_relative_to(root.resolve()) and f.is_file() and not f.is_symlink() and f.stat().st_size > 0, f'Отсутствуют фактические подтверждающие данные: {name}')
 
 def minecraft(root, version=EXPECTED_VERSION, *, matching=False, mc=None):
     value = read(root / 'result.json')

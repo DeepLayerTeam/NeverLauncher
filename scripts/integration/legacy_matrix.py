@@ -96,7 +96,7 @@ def fetch(row, dest):
             require(length <= MAX_BYTES, 'Размер загружаемой эталонной сборки превышает ограничение')
             out.write(block)
         out.flush(); os.fsync(out.fileno())
-    require(digest(dest) == row['sha256'], f"baseline checksum mismatch for {row['version']}")
+    require(digest(dest) == row['sha256'], f"Контрольная сумма исходного состояния не совпадает для {row['version']}")
 
 def inventory(tree, data_dirs):
     return upgrade.enumerate_data(tree, data_dirs)
@@ -115,7 +115,7 @@ def run_one(row, current, workdir):
     require(binary.parent == install, 'В этой матрице поддерживается обновление CLI хоста только из корневого каталога')
     protected = list(dict.fromkeys([x for x in upgrade.DEFAULT_DATA if (install / x).exists()] + row.get('protectedPaths', [])))
     for extra in row.get('protectedPaths', []):
-        require((install / extra).exists(), f'missing required protected installed path: {extra}')
+        require((install / extra).exists(), f'Отсутствует обязательный защищённый путь установки: {extra}')
     require('profiles' in protected and 'settings' in protected, 'Эталонная сборка должна содержать данные проекта, профиля и настроек')
     before = inventory(install, protected)
     require(any(k.startswith('profiles/') for k in before) and any(k.startswith('settings/') for k in before), 'Эталонная сборка содержит пустые демонстрационные каталоги')

@@ -77,7 +77,7 @@ def schema_check_sqlite(root: Path, *, target_version: int | None = None):
                 version = connection.execute('PRAGMA user_version').fetchone()[0]
                 require(version > 0, 'Отсутствует основная схема SQLite')
                 if target_version is not None:
-                    require(version == target_version, f'SQLite schema {version} != expected {target_version}')
+                    require(version == target_version, f'Версия схемы SQLite {version} не соответствует ожидаемой {target_version}')
             else:
                 require(connection.execute("SELECT value FROM coord_meta WHERE key='version'").fetchone() == (1,), 'Схема координатора SQLite несовместима')
         finally:
@@ -248,7 +248,7 @@ def validate_source_target(source: Path, target: Path, network_ha: bool):
             'Требуются исходный образ и целевой образ версии 0.45.7')
     require(before['LAUNCHER_IMAGE_TAG'] != TARGET, 'Исходная версия должна быть более ранним выпуском')
     require(after.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false',
-            'target env must persist LAUNCHER_DATABASE_AUTO_MIGRATE=false for all API replicas')
+            'В целевом окружении для всех реплик API должно сохраняться LAUNCHER_DATABASE_AUTO_MIGRATE=false')
     # Рассматривайте неизменяемые секреты и топологию хранилища как единую область
     # согласованности.
     for name in ('POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB',

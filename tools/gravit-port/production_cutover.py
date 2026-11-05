@@ -116,7 +116,7 @@ def validate(config: dict, journal_dir: Path):
     require(safe_url(p.get("url", "")) and p.get("method") == "POST" and
             isinstance(p.get("requestBodyFile"), str) and Path(p["requestBodyFile"]).is_absolute() and
             isinstance(p.get("expectedPlayerUuid"), str) and bool(re.fullmatch(r"[a-f0-9-]{36}", p["expectedPlayerUuid"])) and
-            p.get("uuidJSONField") in ("uuid", "playerUuid", "id") and safe_url(p.get("frontendUrl", "")), "invalid authenticated canary configuration")
+            p.get("uuidJSONField") in ("uuid", "playerUuid", "id") and safe_url(p.get("frontendUrl", "")), "Некорректная конфигурация проверочного запроса с авторизацией")
     require(isinstance(p.get("requestSha256"), str) and HEX.fullmatch(p["requestSha256"]), "Требуется хеш запроса контрольной проверки авторизации")
     require(digest(strict_file(Path(p["requestBodyFile"]), 8192)) == p["requestSha256"], "Запрос контрольной проверки авторизации изменился")
     require(os.environ.get("LAUNCHER_TOKEN", "").strip() != "", "Переменная окружения LAUNCHER_TOKEN должна быть задана")
@@ -175,7 +175,7 @@ class Proxy:
 
     def state(self, backend: str, server: str, state: str):
         require(state in ("ready", "drain", "maint"), "Некорректное состояние сервера")
-        self.command(f"set server {backend}/{server} state {state}")
+        self.command(f"Установить состояние сервера {backend}/{server}: {state}")
         stats = self.stats()
         row = stats.get((backend, server))
         require(row is not None, "Сервер HAProxy исчез")
@@ -300,7 +300,7 @@ def assert_route(route: dict, cfg: dict, active: bool):
             and route.get("releaseId") == cfg["releaseId"] and
             route.get("targetDigest") == cfg["targetDigest"] and
             route.get("baselineRevision") == cfg["baselineRevision"] and
-            route.get("state") == ("active" if active else "staged"), "cutover route differs from approved target")
+            route.get("state") == ("active" if active else "staged"), "Маршрут переключения отличается от утверждённой цели")
     want_rev = cfg["expectedRevision"] + (1 if active else 0)
     require(route.get("revision") == want_rev, "Редакция маршрута переключения изменилась")
     if active:
@@ -320,7 +320,7 @@ def receipt_check(cfg: dict) -> None:
     stopped = datetime.fromisoformat(receipt["stoppedAt"].replace("Z", "+00:00"))
     now = datetime.now(timezone.utc)
     require(0 <= (now - checked).total_seconds() < 600 and
-            0 <= (now - stopped).total_seconds() < 900, "source fence receipt expired")
+            0 <= (now - stopped).total_seconds() < 900, "Срок действия подтверждения блокировки исходной системы истёк")
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -331,7 +331,7 @@ class NoRedirect(HTTPRedirectHandler):
 def auth_canary(cfg: dict, *, public: bool = False):
     canary = cfg["authCanary"]
     body = strict_file(Path(canary["requestBodyFile"]), 8192)
-    require(digest(body) == canary["requestSha256"], "auth canary payload changed since preflight")
+    require(digest(body) == canary["requestSha256"], "Данные проверочного запроса авторизации изменились после предварительной проверки")
     req = Request(canary["frontendUrl"] if public else canary["url"], body, method="POST",
                   headers={"Content-Type": "application/json", "Cache-Control": "no-store"})
     # TLS validation uses OS trust; no insecure override and no cross-host redirects.

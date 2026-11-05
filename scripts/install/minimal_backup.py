@@ -171,7 +171,7 @@ def offline_locks(root):
                 ) from exc
             require(
                 os.path.samestat(os.stat(lock, follow_symlinks=False), fd_stat),
-                "lock path changed",
+                "Путь блокировки изменился",
             )
         yield
 
@@ -287,7 +287,7 @@ def validate_relative(raw):
         and raw not in ("", ".")
         and "\\" not in raw
         and "\x00" not in raw,
-        "invalid relative path in bundle",
+        "Некорректный относительный путь в пакете",
     )
     path = PurePosixPath(raw)
     require(
@@ -320,7 +320,7 @@ def verify(bundle):
     declared_files = manifest["files"]
     require(
         declared_dirs == sorted(set(declared_dirs)) and "." in declared_dirs,
-        "invalid directory index",
+        "Некорректный индекс каталога",
     )
     for d in declared_dirs:
         if d != ".":
@@ -347,7 +347,7 @@ def verify(bundle):
             and 0 <= record["mode"] <= 0o700
             and isinstance(record["sha256"], str)
             and len(record["sha256"]) == 64,
-            "invalid file metadata",
+            "Некорректные метаданные файла",
         )
         path = payload / rel
         st = check_path(path)
@@ -413,11 +413,11 @@ def backup(root, destination=None):
         dest = safe_absolute(destination)
         require(
             not dest.exists() and not dest.is_symlink(),
-            "backup destination already exists",
+            "Место назначения резервной копии уже существует",
         )
         require(
             dest.parent == root / "backups" or not dest.is_relative_to(root),
-            "backup destination inside live root must be a direct child of backups/",
+            "Место назначения резервной копии внутри действующей установки должно непосредственно находиться в backups/",
         )
         private_directory(dest.parent)
         stage = Path(tempfile.mkdtemp(prefix=".minimal-incomplete-", dir=dest.parent))
@@ -476,7 +476,7 @@ def restore(bundle, target_root):
     )
     private_directory(root.parent)
     require(
-        not source.is_relative_to(root), "bundle must not be inside restore destination"
+        not source.is_relative_to(root), "Архив не должен находиться внутри каталога восстановления"
     )
     stage = Path(tempfile.mkdtemp(prefix=".launcher-restore-", dir=root.parent))
     os.chmod(stage, 0o700)
@@ -519,7 +519,7 @@ def restore(bundle, target_root):
         require(
             values.get("LAUNCHER_REPOSITORY_DRIVER") == "sqlite"
             and values.get("LAUNCHER_DEPLOYMENT_MODE") == "single-node",
-            "not minimal configuration",
+            "Конфигурация не является минимальной",
         )
         replacement = envfile.with_name(".backend.env.new")
         dump_env = "".join(f"{k}={v}\n" for k, v in sorted(values.items()))
@@ -541,7 +541,7 @@ def restore(bundle, target_root):
         # Атомарная публикация: частично восстановленная установка не видна.
         require(
             not root.exists() and not root.is_symlink(),
-            "restore destination appeared during copy",
+            "Каталог восстановления появился во время копирования",
         )
         publish_new_directory(stage, root)
         fsync_dir(root.parent)

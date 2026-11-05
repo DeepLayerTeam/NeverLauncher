@@ -139,7 +139,7 @@ def _decrypt_to(archive_path, target, secret):
     core.require(st.st_size > HEADER_SIZE + TAG_SIZE, "Переносимый архив неполный")
     with source.open("rb") as stream:
         header = stream.read(HEADER_SIZE)
-        core.require(header.startswith(MAGIC), "unsupported portable format")
+        core.require(header.startswith(MAGIC), "Неподдерживаемый формат переносимого архива")
         salt = header[len(MAGIC):len(MAGIC) + SALT_SIZE]
         nonce = header[-NONCE_SIZE:]
         stream.seek(st.st_size - TAG_SIZE)
@@ -179,7 +179,7 @@ def _extract_authenticated(tar_path, destination):
             core.require(
                 member.name in ("snapshot", "snapshot/manifest.json", "snapshot/payload")
                 or (len(parts) >= 3 and parts[1] == "payload"),
-                "unexpected archive member",
+                "Неожиданный элемент архива",
             )
             target = destination / member.name
             if member.isdir():
@@ -187,7 +187,7 @@ def _extract_authenticated(tar_path, destination):
                 os.chmod(target, 0o700)
             else:
                 core.require(member.size >= 0 and member.size <= tar_path.stat().st_size,
-                             "invalid archive member size")
+                             "Некорректный размер элемента архива")
                 target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
                 try:
@@ -234,14 +234,14 @@ def backup_portable(root, output, secret_file):
     root = core.safe_absolute(root)
     core.read_install(root)
     core.require(not core.safe_absolute(secret_file).is_relative_to(root),
-                 "recovery passphrase must be kept outside backed-up installation")
+                 "Парольную фразу восстановления необходимо хранить вне резервируемой установки")
     passphrase(secret_file)  # предварительная проверка до создания любого незашифрованного снимка
     output = core.safe_absolute(output)
     core.private_directory(output.parent)
     core.require(not output.exists() and not output.is_symlink(),
                  "Выходной переносимый архив уже существует")
     core.require(not output.is_relative_to(root) or output.parent == root / "backups",
-                 "portable output inside live root must be in backups/")
+                 "Переносимый архив внутри действующей установки должен находиться в backups/")
     # Снимок остаётся закрытым; отключение питания может оставить временную копию в
     # backups/. Она не считается полной до независимой проверки пакета.
     destination = root / "backups" / (".minimal-portable-source-" + secrets.token_hex(12))

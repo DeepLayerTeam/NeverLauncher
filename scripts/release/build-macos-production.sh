@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ "$(uname -s)" == "Darwin" ]] || { echo "macOS x64+ARM64 production packages must be built on macOS" >&2; exit 2; }
+[[ "$(uname -s)" == "Darwin" ]] || { echo "Рабочие пакеты macOS x64 и ARM64 необходимо собирать на macOS" >&2; exit 2; }
 for tool in go cargo rustup npm codesign lipo ditto shasum python3; do
   command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }
 done
@@ -28,14 +28,14 @@ SIGNING_MODE="developer-id-notarized"
 UPDATE_TRUST_MODE="developer-id-notarized"
 TIMESTAMP_ARG="--timestamp"
 if [[ "${MODE}" == "production" ]]; then
-  command -v xcrun >/dev/null || { echo "xcrun is required for production notarization" >&2; exit 1; }
-  [[ -x /usr/sbin/spctl ]] || { echo "spctl is required for production Gatekeeper validation" >&2; exit 1; }
+  command -v xcrun >/dev/null || { echo "Для нотариального заверения рабочей сборки требуется xcrun" >&2; exit 1; }
+  [[ -x /usr/sbin/spctl ]] || { echo "Для проверки Gatekeeper в рабочей сборке требуется spctl" >&2; exit 1; }
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
-    echo "production macOS delivery requires LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID and LAUNCHER_MACOS_NOTARY_PROFILE" >&2
+    echo "Для поставки рабочей версии macOS требуются LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID и LAUNCHER_MACOS_NOTARY_PROFILE" >&2
     exit 2
   }
-  [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "signing identity must be Developer ID Application" >&2; exit 2; }
-  [[ "${TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]] || { echo "LAUNCHER_MACOS_TEAM_ID must be a 10-character Apple Team ID" >&2; exit 2; }
+  [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "Для подписи требуется сертификат Developer ID Application" >&2; exit 2; }
+  [[ "${TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]] || { echo "LAUNCHER_MACOS_TEAM_ID должен содержать 10-символьный идентификатор Apple Team ID" >&2; exit 2; }
 else
   SIGN_IDENTITY="-"
   TEAM_ID="ADHOC-CI"
@@ -241,8 +241,8 @@ for arch in x64 arm64; do
     "${OUT_DIR}/runtime-macos-${arch}" \
     "${OUT_DIR}/launcher-desktop-${VERSION}-macos-${arch}.zip"
 done
-[[ -s "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" ]] || { echo "missing final macOS notarization evidence" >&2; exit 1; }
-[[ -s "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" ]] || { echo "missing final macOS Guard allowlist evidence" >&2; exit 1; }
+[[ -s "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" ]] || { echo "Отсутствует итоговое подтверждение нотариального заверения macOS" >&2; exit 1; }
+[[ -s "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" ]] || { echo "Отсутствует итоговое подтверждение списка разрешённых компонентов Guard для macOS" >&2; exit 1; }
 printf 'Итоговая опись поставки macOS (%s):\n' "${OUT_DIR}"
 find "${OUT_DIR}" -maxdepth 1 -type f -print | sort
 

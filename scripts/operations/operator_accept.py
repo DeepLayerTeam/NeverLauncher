@@ -51,8 +51,8 @@ def run(args, *, timeout=30):
                               timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise AcceptanceError('Обязательная команда недоступна или превысила время ожидания: ' + args[0]) from exc
-    require(proc.returncode == 0, 'required command failed: ' + args[0])
-    require(len(proc.stdout) <= 512 * 1024, 'command output exceeds safety limit')
+    require(proc.returncode == 0, 'Обязательная команда завершилась ошибкой: ' + args[0])
+    require(len(proc.stdout) <= 512 * 1024, 'Вывод команды превышает допустимый безопасный размер')
     return proc.stdout
 
 
@@ -65,7 +65,7 @@ def inspect_url(value):
     require(parsed.scheme == 'https' and parsed.hostname and not parsed.username and
             not parsed.password and parsed.path in ('', '/ready') and not parsed.query and
             not parsed.fragment and port in (None, 443),
-            'public readiness URL must use standard HTTPS with no credentials or query')
+            'Публичный URL проверки готовности должен использовать HTTPS без учётных данных и параметров запроса')
     return value.rstrip('/') if parsed.path == '/ready' else value.rstrip('/') + '/ready'
 
 
@@ -74,22 +74,22 @@ def ready(url, expected_version, repository, storage, *, opener=None):
     request = urllib.request.Request(inspect_url(url), headers={'Accept': 'application/json'})
     try:
         with opener(request, timeout=15) as response:
-            require(response.status == 200, 'HTTPS readiness did not return HTTP 200')
+            require(response.status == 200, 'Проверка готовности по HTTPS не вернула HTTP 200')
             require(response.headers.get('Content-Type', '').split(';')[0].strip() == 'application/json',
-                    'HTTPS readiness is not JSON')
+                    'Ответ проверки готовности по HTTPS не является JSON')
             raw = response.read(MAX_HTTP + 1)
     except (OSError, ValueError) as exc:
         raise AcceptanceError('Публичная проверка готовности HTTPS не пройдена') from exc
-    require(len(raw) <= MAX_HTTP, 'readiness payload too large')
+    require(len(raw) <= MAX_HTTP, 'Ответ проверки готовности слишком большой')
     try:
         payload = json.loads(raw)
     except (UnicodeError, ValueError) as exc:
         raise AcceptanceError('Некорректный JSON состояния готовности') from exc
-    require(isinstance(payload, dict), 'invalid readiness body')
-    require(payload.get('status') == 'ready', 'backend is not ready')
-    require(payload.get('version') == expected_version, 'running backend version mismatch')
-    require(payload.get('repository') == repository, 'unexpected live repository')
-    require(payload.get('storage') == storage, 'unexpected live storage driver')
+    require(isinstance(payload, dict), 'Некорректное тело ответа проверки готовности')
+    require(payload.get('status') == 'ready', 'Backend не готов к работе')
+    require(payload.get('version') == expected_version, 'Версия работающего Backend не совпадает с ожидаемой')
+    require(payload.get('repository') == repository, 'Обнаружено неожиданное активное хранилище репозитория')
+    require(payload.get('storage') == storage, 'Обнаружен неожиданный активный драйвер хранилища')
     return {'status': 'ready', 'version': expected_version,
             'repository': repository, 'storage': storage}
 
@@ -113,13 +113,13 @@ def parse_ps(raw):
         raise AcceptanceError('Некорректный ответ Docker Compose ps') from exc
     if isinstance(entries, dict):
         entries = [entries]
-    require(isinstance(entries, list), 'invalid Compose service inventory')
+    require(isinstance(entries, list), 'Некорректный список служб Compose')
     services = {}
     for entry in entries:
         require(isinstance(entry, dict) and isinstance(entry.get('Service'), str),
-                'invalid Compose service')
+                'Некорректная служба Compose')
         name = entry['Service']
-        require(name not in services, 'multiple containers in service ' + name)
+        require(name not in services, 'Несколько контейнеров в службе ' + name)
         state = str(entry.get('State', '')).lower()
         health = str(entry.get('Health', '')).lower()
         services[name] = {'state': state, 'health': health}
@@ -135,42 +135,42 @@ def checked_origin(value):
     require(url.scheme == 'https' and url.hostname and not url.username and
             not url.password and url.path in ('', '/') and not url.query and
             not url.fragment and port in (None, 443),
-            'deployment origin must be trusted standard HTTPS')
+            'Адрес развёртывания должен использовать доверенный стандартный HTTPS')
     return value.rstrip('/')
 
 
 def operator_env(path, *, expected_mode, expected_version, public_url, minimal=False):
     require(path.is_file() and not path.is_symlink() and path.stat().st_mode & 0o077 == 0,
-            'private deployment env file missing or unsafe')
-    require(path.stat().st_size < 256 * 1024, 'deployment env too large')
+            'Закрытый файл окружения развёртывания отсутствует или небезопасен')
+    require(path.stat().st_size < 256 * 1024, 'Файл окружения развёртывания слишком большой')
     values = {}
     for line in path.read_text(encoding='utf-8').splitlines():
         line = line.strip()
         if not line or line.startswith('#'):
             continue
-        require('=' in line, 'malformed deployment env')
+        require('=' in line, 'Некорректный формат окружения развёртывания')
         key, val = line.split('=', 1)
         key = key.strip()
         require(re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', key) is not None and key not in values,
-                'invalid or duplicate deployment env entry')
+                'Некорректная или повторяющаяся запись окружения развёртывания')
         values[key] = val.strip().strip('\"').strip("'")
     origin = checked_origin(public_url.removesuffix('/ready'))
     require(values.get('LAUNCHER_PUBLIC_URL', '').rstrip('/') == origin,
-            'live HTTPS origin does not match selected deployment env')
+            'Активный HTTPS-адрес не соответствует выбранному окружению развёртывания')
     mode = values.get('LAUNCHER_DEPLOYMENT_MODE', '')
     require(mode == ('single-node' if minimal else expected_mode),
-            'deployment mode mismatch')
+            'Режим развёртывания не совпадает с ожидаемым')
     if not minimal:
         require(values.get('LAUNCHER_IMAGE_TAG') == expected_version,
-                'deployment image version differs from expected version')
+                'Версия образа развёртывания отличается от ожидаемой')
     return values
 
 
 def probe_compose(project, env, mode):
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,60}', project) is not None,
-            'invalid project name')
+            'Некорректное имя проекта')
     require(env.is_file() and not env.is_symlink() and env.stat().st_mode & 0o077 == 0,
-            'Compose env file must exist, be private (0600) and not be symlink')
+            'Файл окружения Compose должен существовать, быть закрытым (0600) и не быть символьной ссылкой')
     states = parse_ps(run(compose_command(project, env, mode, 'ps', '--all', '--format', 'json')))
     checked = {}
     for name in CHECKS[mode]:
@@ -192,15 +192,15 @@ def probe_compose(project, env, mode):
             require(internal.get('status') == 'ready' and internal.get('repository') == 'postgres',
                     name + ' is not ready against PostgreSQL')
             require(internal.get('storage') == 's3', name + ' does not use shared S3')
-            checked[name] = 'ready (internal dependencies checked)'
+            checked[name] = 'Готово (внутренние зависимости проверены)'
     return checked
 
 
 def probe_minimal(root):
-    require(root.is_dir() and not root.is_symlink(), 'Minimal installation root missing/unsafe')
+    require(root.is_dir() and not root.is_symlink(), 'Корневой каталог минимальной установки отсутствует или небезопасен')
     env = root / 'config/backend.env'
     require(env.is_file() and not env.is_symlink() and env.stat().st_mode & 0o077 == 0,
-            'Minimal private configuration unavailable')
+            'Закрытая конфигурация минимальной установки недоступна')
     checked = {}
     for name in ('http.sqlite', 'coordinator.sqlite'):
         database = root / 'db' / name
@@ -231,7 +231,7 @@ def verify_docs():
         path = DOCS / name
         require(path.is_file(), 'missing documentation: ' + name)
         content = path.read_text(encoding='utf-8')
-        require(len(content) > 180, 'empty operator document: ' + name)
+        require(len(content) > 180, 'Пустой документ оператора: ' + name)
         count += 1
         # Относительные Markdown-ссылки в руководствах оператора должны разрешаться.
         # Абсолютные URL оставляются ссылками; на этом шаге ничего не скачивается и
@@ -249,14 +249,14 @@ def verify_docs():
                   'scripts/operations/component_upgrade_0458.py',
                   'scripts/operations/chaos_0456.py', 'scripts/operations/restore_accept_0456.py',
                   'scripts/operations/observability_0459.py'):
-        require((ROOT / entry).is_file(), 'operator executable missing: ' + entry)
+        require((ROOT / entry).is_file(), 'Исполняемый файл оператора отсутствует: ' + entry)
         count += 1
     return {'checkedFiles': len(DOC_FILES), 'checkedLinksAndEntrypoints': count - len(DOC_FILES)}
 
 
 def atomic_report(output, report):
-    require(not output.exists() and not output.is_symlink(), 'refuse to overwrite existing acceptance report')
-    require(output.parent.is_dir() and not output.parent.is_symlink(), 'output parent missing or unsafe')
+    require(not output.exists() and not output.is_symlink(), 'Отказано в перезаписи существующего отчёта приёмки')
+    require(output.parent.is_dir() and not output.parent.is_symlink(), 'Родительский каталог вывода отсутствует или небезопасен')
     fd, tmp = tempfile.mkstemp(prefix='.operator-04513-', dir=str(output.parent))
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as stream:
@@ -300,7 +300,7 @@ def main(argv=None):
                     'Недопустимая версия')
             if args.mode == 'minimal':
                 require(args.minimal_root is not None and not args.project and not args.env_file,
-                        'minimal needs --minimal-root only')
+                        'Для минимального режима требуется только --minimal-root')
                 values = operator_env(args.minimal_root / 'config/backend.env', expected_mode='single-node',
                                       expected_version=args.version, public_url=args.url, minimal=True)
                 for key, relative in (
@@ -309,12 +309,12 @@ def main(argv=None):
                     ('LAUNCHER_STORAGE_LOCAL_PATH', 'storage'),
                 ):
                     require(values.get(key) == str(args.minimal_root.resolve() / relative),
-                            'minimal configured storage does not belong to selected installation')
+                            'Настроенное хранилище минимального режима не относится к выбранной установке')
                 services = probe_minimal(args.minimal_root)
                 repo, storage = 'sqlite', 'local'
             else:
                 require(args.project and args.env_file and not args.minimal_root,
-                        'Compose needs --project and --env-file only')
+                        'Для Compose требуются только --project и --env-file')
                 operator_env(args.env_file, expected_mode=args.mode, expected_version=args.version,
                              public_url=args.url)
                 services = probe_compose(args.project, args.env_file, args.mode)
@@ -323,7 +323,7 @@ def main(argv=None):
             result = {'status': 'passed', 'scope': 'read-only-live-readiness',
                       'mode': args.mode, 'timestampUtc': dt.datetime.now(dt.timezone.utc).isoformat(),
                       'public': public, 'checks': services,
-                      'limits': 'No failover, backup restore, login, Minecraft join or multi-host survival tested'}
+                      'limits': 'Переключение при сбое, восстановление из резервной копии, вход, подключение Minecraft и устойчивость нескольких узлов не проверялись'}
             atomic_report(args.report, result)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
@@ -333,7 +333,7 @@ def main(argv=None):
         if isinstance(exc, AcceptanceError):
             reason = str(exc)
         else:
-            reason = 'operating system or database check failed'
+            reason = 'Проверка операционной системы или базы данных завершилась ошибкой'
         print(json.dumps({'status': 'failed', 'reason': reason}, ensure_ascii=False), file=sys.stderr)
         return 1
 

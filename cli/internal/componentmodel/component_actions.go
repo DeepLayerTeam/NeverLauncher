@@ -160,7 +160,7 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 				}
 				for _, arg := range a.Args {
 					if !safeOptionalArgument0245(a.Type, arg) {
-						return fmt.Errorf("component %s: unsafe %s argument %q", c.ID, a.Type, arg)
+						return fmt.Errorf("Компонент %s: небезопасный аргумент %s: %q", c.ID, a.Type, arg)
 					}
 					key := a.Type + ":" + arg
 					if seen[key] {

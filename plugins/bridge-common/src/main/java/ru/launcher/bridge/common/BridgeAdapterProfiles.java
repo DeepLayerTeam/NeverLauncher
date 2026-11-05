@@ -115,7 +115,7 @@ public final class BridgeAdapterProfiles {
             if (brand.contains(marker)) {
                 throw new IllegalStateException(
                     "hybrid core '" + marker + "' is outside the Universal Server Adapter cohort; " +
-                    "use a separately certified hybrid adapter/matrix instead of " + normalize(platformId)
+                    "Используйте отдельно сертифицированный гибридный адаптер или матрицу вместо " + normalize(platformId)
                 );
             }
         }

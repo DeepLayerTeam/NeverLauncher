@@ -112,7 +112,7 @@ def checked_file(name: object, digest: object, limit: int = 1024 * 1024 * 1024) 
 
 
 def real_dir(name: object) -> Path:
-    require(isinstance(name, str) and name.startswith("/"), "absolute directory required")
+    require(isinstance(name, str) and name.startswith("/"), "Требуется абсолютный путь к каталогу")
     path = Path(name)
     require(path.is_dir() and not path.is_symlink() and path.resolve() == path,
             "Каталог отсутствует или является символической ссылкой: " + name)
@@ -225,7 +225,7 @@ def verify_rehearsal(path: Path, p: dict, *, authoritative: bool) -> dict:
     require(isinstance(r, dict) and r.get("runId") == p["runId"]
             and r.get("sourceInventorySha256") == p["inventorySha256"]
             and r.get("cutoverAllowed") is False,
-            "rehearsal report not bound to this run or attempts cutover")
+            "Отчёт репетиции не привязан к этому запуску либо пытается выполнить переключение")
     live = r.get("liveSession")
     require(isinstance(live, dict) and bool(HEX.fullmatch(str(live.get("clientSha256", ""))))
             and bool(live.get("joinedAt")) and live.get("playerUuid"),
@@ -282,7 +282,7 @@ def execute_project(launcher: str, backend: str, p: dict, root: Path, launcher_s
     update = json_file(update_path, 16 << 20)
     require(update.get("status") == "committed" and
             update.get("toVersion") == p["expectedUpdatedVersion"] and
-            update.get("packageSha256") == p["updateSha256"], "signed component update was not committed")
+            update.get("packageSha256") == p["updateSha256"], "Обновление подписанного компонента не было зафиксировано")
     new_hash = sha(within(Path(p["installRoot"]), p["installedComponent"]))
     require(old_hash != new_hash, "Ожидаемый установленный компонент Runtime не изменился")
     post_path = execute("post-update-live", base + ["rehearse-local", *common_stage], 1200)

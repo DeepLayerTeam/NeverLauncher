@@ -519,7 +519,7 @@ public final class LauncherApiClient {
             if (result == null) result = BridgeControlResult.indeterminate("Платформенный исполнитель не вернул результат после допуска команды");
             controlJournal.complete(command, result);
         } else if ("executing".equals(state.phase())) {
-            result = BridgeControlResult.indeterminate("previous bridge process/reload stopped after execution began; command was not re-executed");
+            result = BridgeControlResult.indeterminate("Предыдущий процесс или перезагрузка Bridge остановились после начала выполнения; команда не выполнялась повторно");
             controlJournal.complete(command, result);
         } else {
             result = state.result();

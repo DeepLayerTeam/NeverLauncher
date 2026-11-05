@@ -134,7 +134,7 @@ public final class LauncherFabricBridge implements ModInitializer {
                 validationExecutor
             );
         } catch (RejectedExecutionException e) {
-            LOGGER.warn("Launcher Fabric Bridge join validation queue saturated; failing closed username={}", login.username);
+            LOGGER.warn("Очередь проверки подключений Launcher Fabric Bridge переполнена; вход отклонён для username={}", login.username);
             handler.disconnect(Text.literal(new JoinValidationResult(false, "bridge_overloaded", "{}").userMessage()));
             return;
         }

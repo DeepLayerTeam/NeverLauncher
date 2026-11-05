@@ -91,9 +91,9 @@ require(
     build,
     [
         "resolve-artifact-payload.sh",
-        '"launcher-cli-windows-x64.exe" "Windows x64/ARM64 delivery"',
-        '"launcher-cli-linux-x64" "Linux x64/ARM64 delivery"',
-        '"launcher-cli-macos-x64" "macOS x64/ARM64 delivery"',
+        '"launcher-cli-windows-x64.exe" "Поставка для Windows x64/ARM64"',
+        '"launcher-cli-linux-x64" "Поставка для Linux x64/ARM64"',
+        '"launcher-cli-macos-x64" "Поставка для macOS x64/ARM64"',
     ],
     "production artifact layout staging",
 )

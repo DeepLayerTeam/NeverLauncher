@@ -78,7 +78,7 @@ def verified_source(backup: Path, stanza: str, trust_file: Path):
 def fresh_bucket(bucket, endpoint, source_bucket):
     require(bucket != source_bucket, "Восстановление в исходный бакет S3 запрещено")
     require(cb.s3_version_inventory(bucket, endpoint) == [],
-            "destination S3 bucket contains objects, versions or delete markers")
+            "Целевой бакет S3 содержит объекты, их версии или маркеры удаления")
 
 def target_spec(args, manifest):
     original_nodes = {r["label"] for r in manifest["nodes"]}

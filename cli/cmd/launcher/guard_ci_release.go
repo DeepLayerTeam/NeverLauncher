@@ -364,7 +364,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		MatrixSHA256: hex.EncodeToString(matrixHash[:]), TargetsSHA256: hex.EncodeToString(targetsHash[:]),
 		RequiredTargetIDs: requiredIDs, PassedTargetIDs: passedIDs, CertifiedArtifacts: certifiedArtifacts,
 		Policy:             "all-required-cross-platform-guard-targets-pass-exact-commit-and-release-artifact-hashes",
-		VendorSigningClaim: "not-certified-by-ci; production platform signing remains enforced by platform release builders",
+		VendorSigningClaim: "Не сертифицировано в CI; подписание рабочей сборки для платформы по-прежнему обеспечивается средствами выпуска",
 	}, nil
 }
 

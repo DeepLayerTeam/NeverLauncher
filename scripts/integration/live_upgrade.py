@@ -69,7 +69,7 @@ def endpoint(base: str, path: str, *, method='GET', payload=None, token=None):
     req = Request(base.rstrip('/') + path, data=raw, headers=headers, method=method)
     try:
         with _HTTP_OPENER.open(req, timeout=15) as response:
-            require(response.status == 200, f'endpoint returned {response.status}: {path}')
+            require(response.status == 200, f'Конечная точка вернула {response.status}: {path}')
             length = response.headers.get('Content-Length')
             if length is not None:
                 require(int(length) <= MAX_RESPONSE, 'HTTP-ответ превышает ограничение приёмки')
@@ -90,7 +90,7 @@ def owner_login(base, credentials: Path):
     response = endpoint(base, '/api/v1/admin/login', method='POST', payload=body)
     require(isinstance(response, dict) and isinstance(response.get('token'), str) and len(response['token']) > 20, 'Владелец исходной версии не прошёл аутентификацию с реальной сессией')
     user = response.get('user') or {}
-    require(isinstance(user, dict) and user.get('email', '').casefold() == auth['email'].casefold() and bool(user.get('id')), 'authenticated account differs from owner')
+    require(isinstance(user, dict) and user.get('email', '').casefold() == auth['email'].casefold() and bool(user.get('id')), 'Авторизованная учётная запись не соответствует владельцу')
     return response['token'], {'id': user['id'], 'email': user['email'].casefold()}
 
 
@@ -104,7 +104,7 @@ def snapshot_api(base, token, project, profile, channel):
     for path in paths:
         rows[path] = endpoint(base, path, token=token)
     # Проверяйте фактическое наличие ожидаемых проекта, профиля и канала.
-    require(project in json.dumps(rows[p], sort_keys=True), 'project not returned from live Backend')
+    require(project in json.dumps(rows[p], sort_keys=True), 'Работающий Backend не вернул проект')
     require(profile in json.dumps(rows[p+'/profiles'], sort_keys=True), 'Ожидаемый профиль отсутствует')
     require(channel in json.dumps(rows[p+'/channels'], sort_keys=True), 'Ожидаемый канал отсутствует')
     return rows
@@ -117,7 +117,7 @@ def fingerprint_sqlite(source: Path, work: Path, kind: str):
     validate_sqlite_backup(target)
     with closing(sqlite3.connect(f'file:{target}?mode=ro', uri=True)) as db:
         tables = [x[0] for x in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
-        require(bool(tables), f'empty {kind} SQLite source')
+        require(bool(tables), f'Исходная база SQLite ({kind}) пуста')
         count = 0
         logical = hashlib.sha256()
         for line in db.iterdump():
@@ -136,10 +136,10 @@ def running_version(base):
 
 
 def capture(a):
-    require(not a.output.exists(), 'refusing to replace baseline from original installation')
+    require(not a.output.exists(), 'Отказано в замене исходного состояния первоначальной установки')
     require(a.output.parent.is_dir() and not a.output.parent.is_symlink() and a.output.parent.stat().st_mode & 0o077 == 0, 'Требуется закрытый выходной каталог с правами 0700')
     current = running_version(a.base_url)
-    require(re.fullmatch(r'0\.(?:45\.14|46\.[0-3]|47\.[0-8])', current) and current == a.old_version, 'old Backend version differs from claimed installed baseline')
+    require(re.fullmatch(r'0\.(?:45\.14|46\.[0-3]|47\.[0-8])', current) and current == a.old_version, 'Старая версия Backend не соответствует заявленной исходной установленной версии')
     token, owner = owner_login(a.base_url, a.owner_credentials)
     rows = snapshot_api(a.base_url, token, a.project, a.profile, a.channel)
     sources = {}
@@ -189,7 +189,7 @@ def postgres_live_probe(path: Path, project: str, owner: str):
 def verify(a):
     baseline = json_file(a.baseline)
     require(baseline.get('schema') == SCHEMA and baseline.get('version') == VERSION, 'Некорректная версия исходной сборки')
-    require(re.fullmatch(r'0\.(?:45\.14|46\.[0-3]|47\.[0-8])', baseline.get('originalVersion','')), 'baseline was not captured from a supported older Backend')
+    require(re.fullmatch(r'0\.(?:45\.14|46\.[0-3]|47\.[0-8])', baseline.get('originalVersion','')), 'Исходное состояние не было получено из поддерживаемой предыдущей версии Backend')
     require(running_version(a.base_url) == VERSION, 'Фактически обновлённый Backend не работает на версии 0.48.0')
     for key in ('project','profile','channel'):
         require(baseline.get(key) == getattr(a, key), 'Не совпадает идентификатор проекта исходной сборки')
@@ -212,13 +212,13 @@ def verify(a):
         require(path is not None, 'Отсутствует исходная база SQLite')
         old = a.baseline.parent / (kind + '-captured.sqlite')
         private_file(old)
-        require(hashlib.sha256(old.read_bytes()).hexdigest() == baseline['sqlite'][kind]['sha256'], f'captured {kind} SQLite baseline changed')
+        require(hashlib.sha256(old.read_bytes()).hexdigest() == baseline['sqlite'][kind]['sha256'], f'Зафиксированное исходное состояние SQLite ({kind}) изменилось')
         validate_sqlite_backup(path)
         with closing(sqlite3.connect(f'file:{path}?mode=ro', uri=True)) as db:
             logical = hashlib.sha256()
             for line in db.iterdump():
                 logical.update(line.encode('utf-8')); logical.update(b'\n')
-        require(logical.hexdigest() == baseline['sqlite'][kind]['logicalSha256'], f'original {kind} SQLite data changed unexpectedly')
+        require(logical.hexdigest() == baseline['sqlite'][kind]['logicalSha256'], f'Исходные данные SQLite ({kind}) неожиданно изменились')
     require(not a.output.exists(), 'Отказ от перезаписи квитанции реальной приёмки')
     output = {'schema':'neverlauncher.live-upgrade-acceptance-0480-v1', 'version':VERSION,
               'sourceBaselineSHA256': hashlib.sha256(a.baseline.read_bytes()).hexdigest(),

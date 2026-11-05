@@ -530,7 +530,7 @@ def orchestrate(args):
         require(all(r.get("sharedEndpoints") == frozen_reports[0]["sharedEndpoints"] for r in frozen_reports),
                 "Узлы группы имеют несогласованные общие зависимости")
         require(frozen_reports[0]["sharedEndpoints"].get("bucket") == args.s3_bucket,
-                "requested S3 bucket differs from the active deployment")
+                "Запрошенный бакет S3 отличается от бакета активного развёртывания")
         frozen_at = datetime.now(timezone.utc)
         # ОСТАНОВИТЕ запись игровых миров ДО контрольной точки PostgreSQL. Мир, изменённый после точки БД, не
         # образует согласованную группу данных.

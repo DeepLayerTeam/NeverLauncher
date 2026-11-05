@@ -521,7 +521,7 @@ class Operator:
             raise CutoverError("«private migration journal»: запрещено «be inside storage»")
         refuse_symlink(dst)
         before, count, size = storage_fingerprint(src)
-        enough_space(dst, size, "verified local blob copy")
+        enough_space(dst, size, "Проверенная локальная копия двоичных данных")
         report = run_cmd([self.a.launcher_sqlite, "sqlite-to-postgres-files", "--source-root", self.a.storage_source, "--target-root", self.a.storage_target, "--ack-offline"], env=self.env)
         if not report.get("verified") or report.get("sourceSha256") != self.state["sourceSHA256"]:
             raise CutoverError("Некорректное значение: «file-copy receipt»")

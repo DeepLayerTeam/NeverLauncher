@@ -271,7 +271,7 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 		}
 		for _, c := range cat.Components {
 			if c.Version != "" || len(c.Dependencies) > 0 || len(c.Conflicts) > 0 || c.ExclusiveGroup != "" || c.Description != "" || c.CategoryID != "" || c.GroupID != "" || c.Required || c.Default || c.Visible != nil || c.Limited || len(c.Metadata) > 0 {
-				return fmt.Errorf("v1 component %q has v2 fields", c.ID)
+				return fmt.Errorf("Компонент версии v1 %q содержит поля версии v2", c.ID)
 			}
 		}
 		return nil

@@ -216,12 +216,12 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	var verified factoryPlanView02710
 	resultBytes, readErr := os.ReadFile(filepath.Join(dir, "delivery-verify.json"))
 	if readErr != nil {
-		writeError(w, 409, "factory verify output unreadable")
+		writeError(w, 409, "Результат проверки фабрики невозможно прочитать")
 		return
 	}
 	err = json.Unmarshal(resultBytes, &verified)
 	if err != nil || verified.ReproducibilitySHA256 != p.ReproducibilitySHA256 {
-		writeError(w, 409, "verified factory digest changed")
+		writeError(w, 409, "Подтверждённая контрольная сумма фабрики изменилась")
 		return
 	}
 	maxFile := s.maxUploadBytes()
@@ -232,7 +232,7 @@ func (s Server) factoryDeliver0401(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, file := range ws.Files {
 		if err = r.Context().Err(); err != nil {
-			writeError(w, 408, "factory transfer cancelled")
+			writeError(w, 408, "Передача фабрики отменена")
 			return
 		}
 		data, readErr := factoryReadSource0401(client, struct {
