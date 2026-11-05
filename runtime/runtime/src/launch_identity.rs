@@ -23,7 +23,7 @@ fn valid_token(token: &str) -> bool {
 pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<GameIdentity,String> {
     let Some(c) = credentials else { return Ok(GameIdentity::Offline) };
     if !valid_name(&c.username) || !valid_uuid(&c.uuid) || !valid_token(&c.access_token) {
-        return Err("Некорректное значение: «Minecraft player identity or session token»".into());
+        return Err("Некорректный идентификатор игрока Minecraft или токен сессии".into());
     }
     match c.user_type.as_str() {
         "msa" if c.auth_server_base_url.is_empty() => Ok(GameIdentity::Official),
@@ -32,7 +32,7 @@ pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<Game
             let loopback = url.host_str().is_some_and(|v| matches!(v,"localhost"|"127.0.0.1"|"[::1]"));
             if (url.scheme() != "https" && !(url.scheme()=="http" && loopback)) ||
                 url.username() != "" || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
-                return Err("Yggdrasil authentication: требуется «HTTPS or loopback HTTP»".into());
+                return Err("Для аутентификации Yggdrasil требуется HTTPS или HTTP через loopback".into());
             }
             Ok(GameIdentity::Yggdrasil)
         }

@@ -50,7 +50,7 @@ func New(baseURL, token string) (*Client, error) {
 }
 func Path(template string, params map[string]string) (string, error) {
 	if !strings.HasPrefix(template, "/") || strings.Contains(template, "?") || strings.Contains(template, "#") {
-		return "", errors.New("invalid route template")
+		return "", errors.New("Некорректный шаблон маршрута")
 	}
 	used := map[string]bool{}
 	var resolveErr error
@@ -69,11 +69,11 @@ func Path(template string, params map[string]string) (string, error) {
 	}
 	for k := range params {
 		if !used[k] {
-			return "", fmt.Errorf("unexpected path parameter %s", k)
+			return "", fmt.Errorf("Неожиданный параметр пути %s", k)
 		}
 	}
 	if strings.Contains(resolved, "{") || strings.Contains(resolved, "}") {
-		return "", errors.New("unresolved route parameter")
+		return "", errors.New("Не подставлено значение параметра маршрута")
 	}
 	return resolved, nil
 }

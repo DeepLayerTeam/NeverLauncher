@@ -47,7 +47,7 @@ public final class ClientTest {
    long n=c.requestStream("GET","/api/v1/stream",Map.of(),null,null,streamed,20L<<20,"");
    if(n != 12L<<20 || streamed.size()!=n || streamed.toByteArray()[0]!=(byte)0xAC)throw new AssertionError("12 MiB streamed bytes mismatch");
    try {c.requestStream("GET","/api/v1/stream",Map.of(),null,null,new ByteArrayOutputStream(),1<<20,"");
-    throw new AssertionError("stream limit bypass");} catch(IOException expected) {if(!expected.getMessage().contains("size limit"))throw expected;}
+    throw new AssertionError("stream limit bypass");} catch(IOException expected) {if(!expected.getMessage().contains("лимит размера"))throw expected;}
    try {c.requestStream("GET","/api/v1/redirect",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");
     throw new AssertionError("redirect followed");}catch(NeverLauncherAPI.ApiException expected){if(expected.status!=307)throw expected;}
    try {c.requestStream("GET","/api/v1/stream-error",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");

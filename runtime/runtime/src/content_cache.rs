@@ -44,7 +44,7 @@ async fn directory(path: &Path) -> Result<(), String> {
     // конечный каталог объекта. При публикации объекта переход по симлинку запрещён.
     fs::create_dir_all(path).await.map_err(|e| format!("create content cache {}: {e}", path.display()))?;
     if fs::symlink_metadata(path).await.map_err(|e| e.to_string())?.file_type().is_symlink() {
-        return Err(format!("cache directory is a symlink: {}", path.display()));
+        return Err(format!("Каталог кэша является символической ссылкой: {}", path.display()));
     }
     Ok(())
 }
@@ -53,7 +53,7 @@ async fn existing_verified(path: &Path, file: &ManifestFile) -> Result<bool, Str
     let metadata = match fs::symlink_metadata(path).await {
         Ok(meta) => meta,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
-        Err(e) => return Err(format!("cache object metadata: {e}")),
+        Err(e) => return Err(format!("Ошибка метаданных объекта кэша: {e}")),
     };
     if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() != file.size {
         return Ok(false);
@@ -82,7 +82,7 @@ impl CacheStore {
     pub(crate) fn at(root: PathBuf) -> Self { Self { root } }
 
     pub(crate) async fn lock(&self, file: &ManifestFile) -> Result<CacheLease, String> {
-        if !valid_digest(&file.sha256) { return Err(format!("{}: malformed SHA-256", file.path)); }
+        if !valid_digest(&file.sha256) { return Err(format!("{}: некорректный SHA-256", file.path)); }
         let digest = file.sha256.to_ascii_lowercase();
         let local = lock_for(&format!("{}:{digest}", self.root.display()));
         let guard = local.lock_owned().await;
@@ -97,7 +97,7 @@ impl CacheStore {
         directory(&objdir).await?;
         let lockpath = lockdir.join(format!("{digest}.lock"));
         if fs::symlink_metadata(&lockpath).await.is_ok_and(|m| m.file_type().is_symlink()) {
-            return Err("content cache lock path is a symlink".into());
+            return Err("Путь к файлу блокировки кэша содержимого является символической ссылкой".into());
         }
         // Блокирующая блокировка захватывается вне асинхронного исполнителя. Блокировки файлов
         // действуют в масштабе ОС и автоматически снимаются при завершении процесса.
@@ -138,7 +138,7 @@ impl CacheLease {
             output.sync_all().await.map_err(|e| e.to_string())?;
             drop(output);
             if !existing_verified(&staging, file).await? {
-                return Err("cache copy integrity changed during installation".into());
+                return Err("Целостность копии в кэше изменилась во время установки".into());
             }
             file_ownership::ensure_no_symlinks(root, target)?;
             replace_verified_managed_file_0224(&staging, target).await?;
@@ -159,7 +159,7 @@ impl CacheLease {
             tokio::io::copy(&mut source, &mut destination).await.map_err(|e| e.to_string())?;
             destination.sync_all().await.map_err(|e| e.to_string())?;
             drop(destination);
-            if !existing_verified(&staging, file).await? { return Err("refusing to cache invalid content".into()); }
+            if !existing_verified(&staging, file).await? { return Err("Невозможно поместить некорректные данные в кэш".into()); }
             // Windows не может переименовать файл поверх существующего. Блокировка объекта
             // сериализует читателей и писателей, поэтому удаление здесь безопасно.
             if fs::symlink_metadata(&self.path).await.is_ok() {

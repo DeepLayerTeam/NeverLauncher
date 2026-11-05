@@ -29,7 +29,7 @@ def main():
     if not stat.S_ISREG(key_stat.st_mode) or (
         os.name == "posix" and key_stat.st_mode & 0o077
     ):
-        raise SystemExit("Для закрытый ключ требуется: «an ordinary owner-only file (0600)»")
+        raise SystemExit("Закрытый ключ должен храниться в обычном файле, доступном только владельцу (0600)")
     password = os.environ.get("LAUNCHER_GA_SIGNING_KEY_PASSPHRASE")
     if password is None:
         password = getpass.getpass(

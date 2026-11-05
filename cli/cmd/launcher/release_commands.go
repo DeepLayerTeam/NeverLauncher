@@ -95,12 +95,12 @@ func handleRelease(args []string) error {
 					return err
 				}
 				if err := verifyRehearsal0365(args[1], manifestVersion, manifest.SourceCommit); err != nil {
-					return fmt.Errorf("release rehearsal gate: %w", err)
+					return fmt.Errorf("Ошибка контрольной проверки репетиции релиза: %w", err)
 				}
 			}
 			if compatibilityCertificationRequired(manifestVersion) {
 				if err := verifyCompatibilityCertificationInBundle(args[1], manifestVersion); err != nil {
-					return fmt.Errorf("Minecraft compatibility certification: %w", err)
+					return fmt.Errorf("Ошибка сертификации совместимости Minecraft: %w", err)
 				}
 			}
 			if deviceTrustCertificationRequired(manifestVersion) {
@@ -115,12 +115,12 @@ func handleRelease(args []string) error {
 			}
 			if serverBridge2CertificationRequired0150(manifestVersion) {
 				if err := verifyServerBridge2CertificationInBundle0150(args[1], manifestVersion); err != nil {
-					return fmt.Errorf("ServerBridge certification: %w", err)
+					return fmt.Errorf("Ошибка сертификации ServerBridge: %w", err)
 				}
 			}
 			if windowsSigningRequired0152(manifestVersion) {
 				if err := verifyWindowsSigningEvidence0152(args[1], manifestVersion, true); err != nil {
-					return fmt.Errorf("Windows x64/ARM64 Authenticode signing: %w", err)
+					return fmt.Errorf("Ошибка подписи Authenticode Windows x64/ARM64: %w", err)
 				}
 			}
 			if windowsProtectionReleaseRequired01812(manifestVersion) {
@@ -130,12 +130,12 @@ func handleRelease(args []string) error {
 			}
 			if linuxProductionRequired0153(manifestVersion) {
 				if err := verifyLinuxProductionEvidence0153(args[1], manifestVersion, true); err != nil {
-					return fmt.Errorf("Linux x64/ARM64 production packages: %w", err)
+					return fmt.Errorf("Ошибка промышленных пакетов Linux x64/ARM64: %w", err)
 				}
 			}
 			if macOSProductionRequired0154(manifestVersion) {
 				if err := verifyMacOSNotarizationEvidence0154(args[1], manifestVersion, true); err != nil {
-					return fmt.Errorf("macOS x64/ARM64 Developer ID notarization: %w", err)
+					return fmt.Errorf("Ошибка нотариального заверения Developer ID macOS x64/ARM64: %w", err)
 				}
 			}
 			if managedJREDistributionRequired0155(manifestVersion) {
@@ -146,38 +146,38 @@ func handleRelease(args []string) error {
 			if updaterVersionAtLeast0156(manifestVersion) {
 				report, err := runUpdaterSelfTest0156()
 				if err != nil {
-					return fmt.Errorf("Unified Transactional Updater Core self-test: %w", err)
+					return fmt.Errorf("Ошибка самопроверки ядра транзакционного обновления: %w", err)
 				}
 				if fmt.Sprint(report["status"]) != "ok" {
-					return fmt.Errorf("Unified Transactional Updater Core self-test status=%v", report["status"])
+					return fmt.Errorf("Состояние самопроверки ядра транзакционного обновления=%v", report["status"])
 				}
 			}
 			if componentTransactionalUpdateRequired0157(manifestVersion) {
 				report, err := runComponentUpdaterSelfTest0157()
 				if err != nil {
-					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test: %w", err)
+					return fmt.Errorf("Ошибка самопроверки транзакционного обновления Desktop/Guard/Runtime: %w", err)
 				}
 				if fmt.Sprint(report["status"]) != "ok" || fmt.Sprint(report["macosTreeRollback"]) != "ok" {
-					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test incomplete: %v", report)
+					return fmt.Errorf("Самопроверка транзакционного обновления Desktop/Guard/Runtime не завершена: %v", report)
 				}
 			}
 			if migrationStabilizationRequired01510(manifestVersion) {
 				report, err := runMigrationStabilizationSelfTest01510()
 				if err != nil {
-					return fmt.Errorf("0.15.10 migration + stabilization self-test: %w", err)
+					return fmt.Errorf("Ошибка самопроверки миграции и стабилизации 0.15.10: %w", err)
 				}
 				if fmt.Sprint(report["status"]) != "ok" {
-					return fmt.Errorf("0.15.10 migration + stabilization self-test status=%v", report["status"])
+					return fmt.Errorf("Состояние самопроверки миграции и стабилизации 0.15.10=%v", report["status"])
 				}
 			}
 			if productionReleaseCandidateRequired01511(manifestVersion) {
 				if err := verifyProductionReleaseCandidate01511(args[1], manifestVersion, true); err != nil {
-					return fmt.Errorf("0.15.11 production release candidate certification: %w", err)
+					return fmt.Errorf("Ошибка сертификации промышленного релиз-кандидата 0.15.11: %w", err)
 				}
 			}
 			if productionDeliveryReleaseRequired0160(manifestVersion) {
 				if err := verifyProductionDeliveryRelease0160(args[1], manifestVersion, true); err != nil {
-					return fmt.Errorf("0.16.0 Production Delivery Release certification: %w", err)
+					return fmt.Errorf("Ошибка сертификации промышленной поставки релиза 0.16.0: %w", err)
 				}
 			}
 			fmt.Println("Release publish-check пройден: Release Verification v2 + exact-commit certification + signed/notarized six-target delivery + Managed JRE + transactional updater + public matrix/E2E + Production Delivery Release + Windows Protection GA certification")
@@ -272,7 +272,7 @@ func handleRelease(args []string) error {
 		if err := verifyOperationsGA0460(args[1], ver, nil); err != nil {
 			return err
 		}
-		fmt.Println("Six final signed-platform installer hashes match SPDX, SLSA, independent GA receipt and release BOM. OS signature trust is checked by native GA checks.")
+		fmt.Println("Контрольные суммы шести финальных подписанных установщиков совпадают с SPDX, SLSA, независимой квитанцией GA и составом релиза. Доверие к подписям ОС проверяется штатными проверками GA.")
 		return nil
 	case "sign":
 		if len(args) < 2 {
@@ -560,7 +560,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		return err
 	}
 	if err := verifySingleNodeGA0330(out, ver, expectedCommit, ""); err != nil {
-		return fmt.Errorf("single-node GA build gate: %w", err)
+		return fmt.Errorf("Ошибка контрольной проверки сборки GA на одном узле: %w", err)
 	}
 	if productionReleaseCandidateRequired01511(ver) {
 		if _, err := normalizeSourceCommit01511(expectedCommit); err != nil {
@@ -585,7 +585,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			compatibilityTargetsPath = filepath.Join(sourceRoot, compatibilityTargetsPath)
 		}
 		if err := embedCompatibilityCertification(out, compatibilityMatrixPath, compatibilityTargetsPath, ver, expectedCommit); err != nil {
-			return fmt.Errorf("compatibility certification: %w", err)
+			return fmt.Errorf("Ошибка сертификации совместимости: %w", err)
 		}
 	}
 	if strings.TrimSpace(deviceTrustMatrixPath) != "" {
@@ -606,17 +606,17 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	}
 	sbom, err := dependencySBOM(sourceRoot, ver)
 	if err != nil {
-		return fmt.Errorf("dependency SBOM: %w", err)
+		return fmt.Errorf("Ошибка списка зависимостей SBOM: %w", err)
 	}
 	if err := bindDistributionSBOM04511(sbom, out, ver); err != nil {
-		return fmt.Errorf("exact signed installer SPDX: %w", err)
+		return fmt.Errorf("Ошибка SPDX подписанного установщика: %w", err)
 	}
 	if err := writeJSONFile(filepath.Join(out, "SBOM.spdx.json"), sbom); err != nil {
 		return err
 	}
 	provenance, err := slsaProvenance(sourceRoot, out, ver, expectedCommit)
 	if err != nil {
-		return fmt.Errorf("SLSA provenance: %w", err)
+		return fmt.Errorf("Ошибка сведений о происхождении SLSA: %w", err)
 	}
 	if err := writeJSONFile(filepath.Join(out, "PROVENANCE.json"), provenance); err != nil {
 		return err
@@ -634,7 +634,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Манифест доставки: %w", err)
 		}
 		if err := verifyDeliveryManifest0151(out, ver); err != nil {
-			return fmt.Errorf("delivery manifest self-check: %w", err)
+			return fmt.Errorf("Ошибка самопроверки манифеста поставки: %w", err)
 		}
 	}
 	if publicProductionDeliveryRequired0159(ver) {
@@ -642,7 +642,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Публичная матрица промышленной доставки: %w", err)
 		}
 		if err := verifyPublicProductionDeliveryMatrix0159(out, ver); err != nil {
-			return fmt.Errorf("Public Production Delivery Matrix self-check: %w", err)
+			return fmt.Errorf("Ошибка самопроверки публичной матрицы промышленной поставки: %w", err)
 		}
 	}
 	if windowsSigningRequired0152(ver) {
@@ -655,7 +655,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Сертификация RC защиты Windows: %w", err)
 		}
 		if err := verifyWindowsProtectionRelease01812(out, ver); err != nil {
-			return fmt.Errorf("Windows Protection RC self-check: %w", err)
+			return fmt.Errorf("Ошибка самопроверки релиз-кандидата защиты Windows: %w", err)
 		}
 	}
 	if windowsProtectionGARequired0190(ver) {
@@ -663,7 +663,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Сертификация GA защиты Windows: %w", err)
 		}
 		if err := verifyWindowsProtectionGA0190(out, ver); err != nil {
-			return fmt.Errorf("Windows Protection GA self-check: %w", err)
+			return fmt.Errorf("Ошибка самопроверки промышленной защиты Windows: %w", err)
 		}
 	}
 	if linuxProductionRequired0153(ver) {
@@ -686,7 +686,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Сертификация кандидата промышленного релиза: %w", err)
 		}
 		if err := verifyProductionReleaseCandidate01511(out, ver, true); err != nil {
-			return fmt.Errorf("Production release candidate self-check: %w", err)
+			return fmt.Errorf("Ошибка самопроверки промышленного релиз-кандидата: %w", err)
 		}
 	}
 	if productionDeliveryReleaseRequired0160(ver) {
@@ -694,20 +694,20 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Сертификация релиза промышленной доставки: %w", err)
 		}
 		if err := verifyProductionDeliveryRelease0160(out, ver, true); err != nil {
-			return fmt.Errorf("Production Delivery Release self-check: %w", err)
+			return fmt.Errorf("Ошибка самопроверки промышленной поставки релиза: %w", err)
 		}
 	}
 
 	if err := verifyOfficialGAReceipt0270(out, ver, expectedCommit); err != nil {
-		return fmt.Errorf("official Minecraft 0.27 GA gate: %w", err)
+		return fmt.Errorf("Ошибка проверки официальной интеграции Minecraft 0.27 GA: %w", err)
 	}
 	if singleNodeGARequired0330(ver) {
 		if err := verifySingleNodeGATestedArtifacts0330(out); err != nil {
-			return fmt.Errorf("0.33.0 tested release binary binding: %w", err)
+			return fmt.Errorf("Ошибка привязки проверенного исполняемого файла релиза 0.33.0: %w", err)
 		}
 	}
 	if err := writeReleaseBOM03214(out, sourceRoot, ver); err != nil {
-		return fmt.Errorf("Release BOM: %w", err)
+		return fmt.Errorf("Ошибка состава релиза BOM: %w", err)
 	}
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
@@ -806,7 +806,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 				return fmt.Errorf("Отсутствует: «Loader Compatibility RC 0.17.11 certificate»: %w", err)
 			}
 			if err := verifyLoaderCompatibilityReleaseCertificate01711(out, ver); err != nil {
-				return fmt.Errorf("Loader Compatibility RC 0.17.11 self-check: %w", err)
+				return fmt.Errorf("Ошибка самопроверки совместимости загрузчиков RC 0.17.11: %w", err)
 			}
 			var err error
 			loaderCompatibilityReleaseCertificateSHA256, _, err = hashFile(certificatePath)
@@ -909,7 +909,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		return err
 	}
 	if err := verifyOperationsGA0460(out, ver, nil); err != nil {
-		return fmt.Errorf("operations GA build gate: %w", err)
+		return fmt.Errorf("Ошибка контрольной проверки промышленной сборки операций: %w", err)
 	}
 
 	checksums, err := releaseChecksums(out)
@@ -1041,7 +1041,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		return errors.New("RELEASE_MANIFEST.json не содержит version")
 	}
 	if err := verifySingleNodeGABundle0330(dir, manifest.Version, manifest.SourceCommit, ""); err != nil {
-		return fmt.Errorf("0.33.0 single-node GA: %w", err)
+		return fmt.Errorf("Ошибка GA на одном узле для 0.33.0: %w", err)
 	}
 	if manifest.Version == "0.27.0" {
 		if err := verifyOfficialGAReceipt0270(dir, manifest.Version, manifest.SourceCommit); err != nil {
@@ -1055,7 +1055,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			}
 		}
 		if !found {
-			return errors.New("official Minecraft GA certificate is not required by signed release manifest")
+			return errors.New("Подписанный манифест релиза не требует сертификат официальной интеграции Minecraft GA")
 		}
 	}
 	if deliveryManifestRequired0151(manifest.Version) {
@@ -1070,7 +1070,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	if windowsProtectionReleaseRequired01812(manifest.Version) {
 		if !manifest.WindowsProtectionReleaseCertified {
-			return errors.New("RELEASE_MANIFEST is not Windows Protection RC certified")
+			return errors.New("RELEASE_MANIFEST не сертифицирован для релиз-кандидата защиты Windows")
 		}
 		certHash, _, err := hashFile(filepath.Join(dir, windowsProtectionReleaseFile01812))
 		if err != nil {
@@ -1092,7 +1092,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	if windowsProtectionGARequired0190(manifest.Version) {
 		if !manifest.WindowsProtectionGACertified {
-			return errors.New("RELEASE_MANIFEST is not Windows Protection GA certified")
+			return errors.New("RELEASE_MANIFEST не сертифицирован для промышленной защиты Windows")
 		}
 		gaHash, _, err := hashFile(filepath.Join(dir, windowsProtectionGAFile0190))
 		if err != nil {
@@ -1128,14 +1128,14 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if productionReleaseCandidateRequired01511(manifest.Version) {
 		manifestCommit, err := normalizeSourceCommit01511(manifest.SourceCommit)
 		if err != nil {
-			return fmt.Errorf("RELEASE_MANIFEST sourceCommit: %w", err)
+			return fmt.Errorf("Ошибка sourceCommit в RELEASE_MANIFEST: %w", err)
 		}
 		candidateCommit, err := verifyProductionReleaseCandidateDocument01511(dir, manifest.Version)
 		if err != nil {
-			return fmt.Errorf("Production release candidate document: %w", err)
+			return fmt.Errorf("Ошибка документа промышленного релиз-кандидата: %w", err)
 		}
 		if !strings.EqualFold(manifestCommit, candidateCommit) {
-			return fmt.Errorf("RELEASE_MANIFEST sourceCommit mismatch: manifest=%s candidate=%s", manifestCommit, candidateCommit)
+			return fmt.Errorf("Не совпадает sourceCommit в RELEASE_MANIFEST: манифест=%s, кандидат=%s", manifestCommit, candidateCommit)
 		}
 		if err := verifyProductionReleaseCandidate01511(dir, manifest.Version, true); err != nil {
 			return fmt.Errorf("Сертификация кандидата промышленного релиза: %w", err)
@@ -1143,7 +1143,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	if productionDeliveryReleaseRequired0160(manifest.Version) {
 		if manifest.Channel != productionDeliveryReleaseChannel0160 || manifest.ReleaseStatus != productionDeliveryReleaseStatus0160 {
-			return errors.New("RELEASE_MANIFEST is not marked as stable Production Delivery Release")
+			return errors.New("RELEASE_MANIFEST не помечен как стабильная промышленная поставка релиза")
 		}
 		actualCertHash, _, err := hashFile(filepath.Join(dir, productionDeliveryReleaseFile0160))
 		if err != nil {
@@ -1154,7 +1154,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		}
 		productionCommit, err := verifyProductionDeliveryReleaseDocument0160(dir, manifest.Version)
 		if err != nil {
-			return fmt.Errorf("Production Delivery Release document: %w", err)
+			return fmt.Errorf("Ошибка документа промышленной поставки релиза: %w", err)
 		}
 		if !strings.EqualFold(manifest.SourceCommit, productionCommit) {
 			return errors.New("«RELEASE_MANIFEST sourceCommit» не совпадает с «Production Delivery Release certificate»")
@@ -1165,7 +1165,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	if compatibilityLoaderGA0180Required(manifest.Version) {
 		if !manifest.LoaderCompatibilityReleaseCertified || !manifest.LoaderCompatibilityGA {
-			return errors.New("RELEASE_MANIFEST is not Loader Compatibility GA certified")
+			return errors.New("RELEASE_MANIFEST не сертифицирован по совместимости загрузчиков GA")
 		}
 		certificatePath := filepath.Join(dir, loaderCompatibilityReleaseCertificateFile01711)
 		actualCertHash, _, err := hashFile(certificatePath)
@@ -1179,7 +1179,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return errors.New("Несовпадение: «RELEASE_MANIFEST Loader Compatibility GA runtime support hash»")
 		}
 		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, manifest.Version); err != nil {
-			return fmt.Errorf("Loader Compatibility GA 0.18.0: %w", err)
+			return fmt.Errorf("Ошибка совместимости загрузчиков GA 0.18.0: %w", err)
 		}
 	}
 	for _, name := range manifest.RequiredFiles {
@@ -1210,7 +1210,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return fmt.Errorf("required artifact %s отсутствует или unreadable: %w", artifact.Name, err)
 		}
 		if artifact.Size > 0 && artifact.Size != size {
-			return fmt.Errorf("required artifact %s size mismatch: manifest=%d actual=%d", artifact.Name, artifact.Size, size)
+			return fmt.Errorf("Не совпадает размер обязательного артефакта %s: манифест=%d, фактически=%d", artifact.Name, artifact.Size, size)
 		}
 		if artifact.SHA256 == "" || !strings.EqualFold(artifact.SHA256, actual) {
 			return fmt.Errorf("Несовпадение: «required artifact %s sha256»", artifact.Name)
@@ -1251,20 +1251,20 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		return errors.New("SHA256SUMS не содержит проверяемых файлов")
 	}
 	if err := verifyReleaseBOM03214(dir, manifest.Version); err != nil {
-		return fmt.Errorf("release BOM verification: %w", err)
+		return fmt.Errorf("Ошибка проверки состава релиза BOM: %w", err)
 	}
 	if err := verifyReleaseBOMBinding03214(dir, manifest.Version); err != nil {
-		return fmt.Errorf("release BOM signature boundary: %w", err)
+		return fmt.Errorf("Ошибка границы подписи состава релиза BOM: %w", err)
 	}
 	if err := verifyDistributionSupplyChain04511(dir, manifest.Version); err != nil {
-		return fmt.Errorf("signed distribution supply chain: %w", err)
+		return fmt.Errorf("Ошибка цепочки поставки подписанного дистрибутива: %w", err)
 	}
 	releasePub, err := loadEd25519PublicKey(publicKeyPath)
 	if operationsGARequired0460(manifest.Version) && err != nil {
 		return fmt.Errorf("Не удалось проверить «independent operations key against release key:» %w", err)
 	}
 	if err := verifyOperationsGA0460(dir, manifest.Version, releasePub); err != nil {
-		return fmt.Errorf("independent operations GA: %w", err)
+		return fmt.Errorf("Ошибка независимой промышленной проверки операций: %w", err)
 	}
 	if releaseVerificationV2Required0158(manifest.Version) {
 		ctx, err := verifyReleaseSignatureV20158(dir, publicKeyPath, trustStatePath, trustPolicyPath)

@@ -48,7 +48,7 @@ pub fn resolve(manifest: &Manifest, preset: Option<&str>) -> Result<ResolvedDown
         if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) {
             continue;
         }
-        if !paths.insert(f.path.clone()) { return Err(format!("Обнаружен дубликат: «resolved file: {}»", f.path)); }
+        if !paths.insert(f.path.clone()) { return Err(format!("Повторяющийся файл в разрешённом плане: {}", f.path)); }
         string_field(&mut hasher, &f.path)?;
         string_field(&mut hasher, &f.sha256.to_ascii_lowercase())?;
         hasher.update(f.size.to_be_bytes());

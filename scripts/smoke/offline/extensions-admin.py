@@ -26,7 +26,7 @@ for token in (
     require(token in model, f"model missing {token}")
 repo = read("services/api/internal/repository/extensions_0201.go")
 for token in (
-    "admin contributions require ui:contribute permission",
+    "Для дополнений Admin требуется разрешение ui:contribute",
     "standalone .html entrypoint",
     "normalizeAdminContributions0208",
 ):

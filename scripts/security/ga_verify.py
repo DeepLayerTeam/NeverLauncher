@@ -115,15 +115,15 @@ def verify_evidence(
         raise ValueError(f"evidence not ordinary/small: {path}")
     sig_path = Path(str(path) + ".sig")
     if sig_path.is_symlink() or not sig_path.is_file() or sig_path.stat().st_size > 512:
-        raise ValueError(f"Отсутствует: «detached signature»: {path}")
+        raise ValueError(f"Отсутствует отдельная подпись: {path}")
     raw = path.read_bytes()
     try:
         signature = bytes.fromhex(sig_path.read_text("ascii").strip())
         if len(signature) != 64:
-            raise ValueError("Некорректное значение: «signature size»")
+            raise ValueError("Некорректный размер подписи")
         key.verify(signature, DOMAIN + raw)
     except (InvalidSignature, ValueError) as e:
-        raise ValueError(f"Некорректное значение: «evidence signature»: {path}") from e
+        raise ValueError(f"Некорректная подпись доказательных данных: {path}") from e
     doc = unique_json(raw)
     tier = doc.get("tier")
     if tier not in TIERS:
@@ -234,7 +234,7 @@ def verify_all(
     ]
     tiers = [r["tier"] for r in results]
     if set(tiers) != TIERS or len(set(tiers)) != len(tiers):
-        raise ValueError("Отсутствует: «or duplicated mandatory tiers»")
+        raise ValueError("Обязательные уровни отсутствуют или повторяются")
     return {
         "schema": "launcher.ga.device-guard-isolation.v1",
         "version": "0.32.0",

@@ -38,7 +38,7 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "" {
-		writeError(w, 404, "invalid route")
+		writeError(w, 404, "Некорректный маршрут API")
 		return
 	}
 	// Предпросмотр доступен только для чтения и включает хеш источника и решения по

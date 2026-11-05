@@ -59,7 +59,7 @@ public final class LegacyLibraries implements ContentProvider {
             ContentServices.Asset sourceAsset=asset(id,path);
             byte[] data=runtime.content().readChecked(sourceAsset);
             if(entries.putIfAbsent(path,data)!=null)throw new SecurityException("library collision: "+path);
-            if(++count>24)throw new IllegalArgumentException("too many libraries");
+            if(++count>24)throw new IllegalArgumentException("Слишком много библиотек");
         }
         ByteArrayOutputStream bout=new ByteArrayOutputStream();
         try(ZipOutputStream zout=new ZipOutputStream(bout)) {

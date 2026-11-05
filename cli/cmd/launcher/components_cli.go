@@ -120,7 +120,7 @@ func strictJSON0249(data []byte, v any) error {
 		return e
 	}
 	if _, e := decoder.Token(); e != io.EOF {
-		return errors.New("trailing JSON")
+		return errors.New("Лишние данные после JSON")
 	}
 	return nil
 }

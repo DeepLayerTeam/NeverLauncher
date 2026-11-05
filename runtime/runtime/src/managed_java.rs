@@ -1083,11 +1083,11 @@ fn validate_archive_entry(entry: &str) -> Result<(), String> {
     }
     let path = Path::new(normalized.trim_end_matches('/'));
     if path.is_absolute() {
-        return Err(format!("runtime archive absolute path: {entry}"));
+        return Err(format!("Абсолютный путь в архиве Runtime: {entry}"));
     }
     for component in path.components() {
         if !matches!(component, Component::Normal(_)) {
-            return Err(format!("runtime archive traversal path: {entry}"));
+            return Err(format!("Путь в архиве Runtime выходит за пределы каталога: {entry}"));
         }
     }
     Ok(())
@@ -1148,7 +1148,7 @@ async fn restore_cached_managed_java(
     let mut entries = match fs::read_dir(&base).await {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(format!("Managed Java recovery scan: {e}")),
+        Err(e) => return Err(format!("Ошибка сканирования восстановления управляемой Java: {e}")),
     };
     let extension = if os == "windows" { ".zip" } else { ".tar.gz" };
     let mut candidates = Vec::new();
@@ -1273,7 +1273,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
                 if meta.file_type().is_symlink() {
                     let resolved = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
                     if !resolved.starts_with(std::fs::canonicalize(&root).map_err(|e| e.to_string())?) {
-                        return Err(format!("Java runtime symlink escapes installation: {relative}"));
+                        return Err(format!("Символическая ссылка Java Runtime выходит за пределы установки: {relative}"));
                     }
                     // Символическую ссылку на каталог нельзя открывать как файл.
                     let link = std::fs::read_link(&path).map_err(|e| e.to_string())?;
@@ -1394,7 +1394,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     }
     #[cfg(unix)] {
         use std::os::unix::fs::PermissionsExt;
-        if meta.permissions().mode() & 0o111 == 0 { return Err("Managed Java executable lacks execute permission".into()); }
+        if meta.permissions().mode() & 0o111 == 0 { return Err("У исполняемого файла управляемой Java отсутствует разрешение на выполнение".into()); }
     }
     verify_native_java_executable(java, os, arch)?;
     let mut command = Command::new(java);
@@ -1413,7 +1413,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     if detected != Some(major) { return Err(format!("Основная версия управляемой Java не совпадает: ожидалась {major}, получено {detected:?}")); }
     let reported_arch = java_property(&details, "os.arch").ok_or("Managed Java missing os.arch")?;
     if normalize_adoptium_arch(reported_arch) != normalize_adoptium_arch(arch) {
-        return Err(format!("Несовпадение: «Managed Java architecture»: {reported_arch}, expected {arch}"));
+        return Err(format!("Не совпадает архитектура управляемой Java: получена {reported_arch}, ожидалась {arch}"));
     }
     let reported_os = java_property(&details, "os.name").ok_or("Managed Java missing os.name")?.to_ascii_lowercase();
     let expected_os = normalize_adoptium_os(os);
@@ -1423,7 +1423,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
         "osx" => reported_os.contains("mac"),
         _ => false,
     };
-    if !os_ok { return Err(format!("Несовпадение: «Managed Java OS»: {reported_os}, expected {os}")); }
+    if !os_ok { return Err(format!("Не совпадает ОС управляемой Java: получена {reported_os}, ожидалась {os}")); }
     // Одного `java -version` недостаточно, чтобы доказать способность скачанного пакета выполнять классы Java: оболочечная заглушка может имитировать этот вывод. Запустите байткод Java 8 в установленной JVM и докажите, что java.home находится внутри распакованного пакета, а не у системной JDK.
     verify_java_bytecode_execution(java, major).await?;
     Ok(())
@@ -1680,7 +1680,7 @@ async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
         match file.try_lock_exclusive() {
             Ok(()) => return Ok(InstallLock { _file: file }),
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => sleep(Duration::from_millis(500)).await,
-            Err(e) => return Err(format!("Managed Java lock acquire: {e}")),
+            Err(e) => return Err(format!("Не удалось получить блокировку управляемой Java: {e}")),
         }
     }
     Err("Managed Java installation occupied by another process".into())

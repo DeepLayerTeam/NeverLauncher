@@ -111,7 +111,7 @@ class ReproTests(unittest.TestCase):
 
     def test_signing_identity_and_signature_replacement_blocked(self):
         a,b=self.reports()
-        with self.assertRaisesRegex(ValueError,'invalid independent evidence signature'):
+        with self.assertRaisesRegex(ValueError,'Некорректная независимая подпись доказательных данных'):
             repro.signed_json(self.dir/'0.json',self.dir/'0.sig',self.keys[1][2])
         b['builder']=a['builder']
         with self.assertRaisesRegex(ValueError,'independent builders'):
@@ -145,7 +145,7 @@ class ReproTests(unittest.TestCase):
             (native_dir/(target+'.sig')).write_bytes(self.keys[2][0].sign(path.read_bytes()))
             row['nativeReceiptSha256']=repro.sha256_file(path)
         with patch.object(repro,'verify_bundle',return_value=signed):
-            with self.assertRaisesRegex(ValueError,'no verified final release-signature binding'):
+            with self.assertRaisesRegex(ValueError,'Не подтверждена привязка финальной подписи релиза'):
                 repro.link(comparison,approval,self.dir,a_key=self.keys[0][2],b_key=self.keys[1][2],approval_key=self.keys[2][2],native_reports_dir=native_dir)
             (self.dir/'RELEASE_MANIFEST.json').write_bytes(b'actual manifest')
             approval['releaseManifestSha256']=repro.sha256_file(self.dir/'RELEASE_MANIFEST.json')

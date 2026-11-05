@@ -59,9 +59,9 @@ def aggregate(paths: list[Path], *, expected_commit: str) -> dict:
         report, digest = read_report(path)
         target = report.get("target")
         if target not in REQUIRED_TARGETS or target in result["platforms"]:
-            raise ValueError(f"Обнаружен дубликат: «or unsupported target»: {target}")
+            raise ValueError(f"Повторяющаяся или неподдерживаемая целевая платформа: {target}")
         if report.get("schemaVersion") != "1.0" or report.get("version") != "0.24.13":
-            raise ValueError(f"Неожиданное значение: «certification schema/version for» {target}")
+            raise ValueError(f"Неожиданная схема или версия сертификации для {target}")
         if (
             report.get("commit") != expected_commit
             or report.get("gitTreeClean") is not True

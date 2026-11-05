@@ -50,7 +50,7 @@ fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String>
     for part in format!("{release}/signed.nlext").split('/') {
         current.push(part);
         let md = fs::symlink_metadata(&current).map_err(|e| format!("Отсутствует: «Guard Trusted JVM package»: {e}"))?;
-        if md.file_type().is_symlink() { return Err("Guard Trusted JVM package path symlink".into()) }
+        if md.file_type().is_symlink() { return Err("Символическая ссылка в пути к пакету доверенной JVM для Guard".into()) }
     }
     let md = fs::metadata(&current).map_err(|e| e.to_string())?;
     if !md.is_file() || md.len() == 0 || md.len() > 256 * 1024 * 1024 { return Err("Некорректное значение: «Guard Trusted JVM signed package size/type»".into()) }
@@ -69,7 +69,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     if !main.contains('.') || !main.split('.').all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')) {
         return Err("Guard Trusted JVM: некорректный главный класс Minecraft".into());
     }
-    if plugins.len() > 32 || transforms.len() > 4096 { return Err("Guard Trusted JVM plugin/transform limit exceeded".into()) }
+    if plugins.len() > 32 || transforms.len() > 4096 { return Err("Превышен лимит плагинов или преобразований доверенной JVM для Guard".into()) }
     let mut text = format!("main={}\nguard.policy.active=true\ntransform.count={}\n", STANDARD.encode(main), transforms.len());
     for (i, (class, owner)) in transforms.iter().enumerate() {
         if !is_digest(owner) { return Err("Некорректное значение: «Guard Trusted JVM transform owner digest»".into()) }
@@ -78,13 +78,13 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     if !["vanilla","fabric","quilt","forge","neoforge","neo-forge","neo_forge"].contains(&loader.to_ascii_lowercase().as_str()) {
         return Err("Guard Trusted JVM: некорректный идентификатор загрузчика".into());
     }
-    if libraries.len()>128 {return Err("Guard Trusted JVM loader library limit exceeded".into())}
+    if libraries.len()>128 {return Err("Превышен лимит библиотек загрузчика доверенной JVM для Guard".into())}
     text.push_str(&format!("loader.id={}\nloader.count={}\n", loader.to_ascii_lowercase().replace('-', "").replace('_', ""), libraries.len()));
     for (i, (path,digest)) in libraries.iter().enumerate() {
         if !is_digest(digest) {return Err("Некорректное значение: хеш библиотеки загрузчика Guard".into())}
         text.push_str(&format!("loader.{i}.path={}\nloader.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));
     }
-    if class_bytes.len()>4096 {return Err("Guard too many loader class digests".into())}
+    if class_bytes.len()>4096 {return Err("Слишком много контрольных сумм классов загрузчика Guard".into())}
     text.push_str(&format!("loader.class.count={}\n", class_bytes.len()));
     for (i,(name,digest)) in class_bytes.iter().enumerate() {
         if !is_digest(digest) || name.len()>256 || !name.contains('.') {return Err("Guard: некорректная привязка SHA-256 класса".into())}
@@ -117,7 +117,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
     let meta = match fs::symlink_metadata(&active) {
         Ok(m) => m,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(format!("Guard Trusted JVM active record: {e}")),
+        Err(e) => return Err(format!("Ошибка записи активной доверенной JVM для Guard: {e}")),
     };
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 8192 {
         return Err("Guard Trusted JVM: активная запись не является обычным файлом допустимого размера".into());
@@ -163,7 +163,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
     let mut file = options.open(&name).map_err(|e| format!("Guard Trusted JVM launch config create: {e}"))?;
     if let Err(e) = file.write_all(config.as_bytes()).and_then(|_| file.sync_all()) {
         let _ = fs::remove_file(&name);
-        return Err(format!("Guard Trusted JVM launch config write: {e}"));
+        return Err(format!("Не удалось записать конфигурацию запуска доверенной JVM для Guard: {e}"));
     }
     drop(file);
     let agent = root.join(&agent_rel).canonicalize().map_err(|e| { let _ = fs::remove_file(&name); e.to_string() })?;

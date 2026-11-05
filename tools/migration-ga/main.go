@@ -262,13 +262,13 @@ func shaFile(path string, limit int64) (string, error) {
 		return "", e
 	}
 	if n != st.Size() {
-		return "", errors.New("evidence changed while reading")
+		return "", errors.New("Доказательные данные изменились во время чтения")
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 func reportVerified(r Report) error {
 	if r.Format != "launcher.gravit-migration-report.v1" || r.Status != "review_required" || len(r.Blockers) != 0 || !digest(r.SourceSHA256) || !digest(r.InventorySHA256) || !digest(r.ReportSHA256) || len(r.Identities) == 0 {
-		return errors.New("migration report is blocked or incomplete")
+		return errors.New("Отчёт о миграции заблокирован или не завершён")
 	}
 	d := r.ReportSHA256
 	r.ReportSHA256 = ""
@@ -323,7 +323,7 @@ func getJSON(ctx context.Context, client *http.Client, endpoint, token string, o
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("migration backend returned HTTP %d", res.StatusCode)
+		return fmt.Errorf("Backend миграции вернул HTTP %d", res.StatusCode)
 	}
 	b, e := io.ReadAll(io.LimitReader(res.Body, maxDocument+1))
 	if e != nil {
@@ -368,7 +368,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 	}
 	defer outer.Close()
 	if len(outer.File) > 30000 {
-		return "", "", errors.New("too many source ZIP entries")
+		return "", "", errors.New("Слишком много файлов в исходном ZIP")
 	}
 	found := ""
 	jarHash := ""
@@ -377,7 +377,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			continue
 		}
 		if found != "" {
-			return "", "", errors.New("multiple LaunchServer jars")
+			return "", "", errors.New("Обнаружено несколько JAR-файлов LaunchServer")
 		}
 		if f.UncompressedSize64 == 0 || f.UncompressedSize64 > 32<<20 || f.CompressedSize64 == 0 {
 			return "", "", errors.New("Небезопасное значение: размер JAR LaunchServer")
@@ -389,14 +389,14 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 		data, e := io.ReadAll(io.LimitReader(reader, (32<<20)+1))
 		reader.Close()
 		if e != nil || uint64(len(data)) != f.UncompressedSize64 {
-			return "", "", errors.New("unreadable LaunchServer jar")
+			return "", "", errors.New("Не удалось прочитать JAR-файл LaunchServer")
 		}
 		nested, e := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 		if e != nil {
 			return "", "", e
 		}
 		if len(nested.File) > 20000 {
-			return "", "", errors.New("excessive jar entries")
+			return "", "", errors.New("Слишком много элементов в JAR-архиве")
 		}
 		var manifest string
 		for _, item := range nested.File {
@@ -404,7 +404,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 				continue
 			}
 			if manifest != "" || item.UncompressedSize64 > 64<<10 {
-				return "", "", errors.New("duplicate/oversized jar manifest")
+				return "", "", errors.New("Повторяющийся или слишком большой манифест JAR")
 			}
 			read, e := item.Open()
 			if e != nil {
@@ -439,7 +439,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 			}
 		}
 		if !strings.Contains(product, "gravit") && !strings.Contains(product, "launchserver") {
-			return "", "", errors.New("JAR is not verifiably Gravit LaunchServer")
+			return "", "", errors.New("Невозможно подтвердить, что JAR принадлежит Gravit LaunchServer")
 		}
 		jarHash = hash(data)
 		ver = strings.TrimPrefix(ver, "v")
@@ -449,7 +449,7 @@ func sourceJarEvidence(archivePath string) (string, string, error) {
 		found = ver
 	}
 	if found == "" {
-		return "", "", errors.New("LaunchServer JAR absent")
+		return "", "", errors.New("JAR-файл LaunchServer отсутствует")
 	}
 	return found, jarHash, nil
 }
@@ -475,15 +475,15 @@ func validatePlan(p Plan) error {
 		return errors.New("Для пути к исходному архиву и ключу подписи требуется: «absolute»")
 	}
 	if githubSHA := os.Getenv("GITHUB_SHA"); githubSHA != "" && githubSHA != p.CommitSHA {
-		return errors.New("plan commit differs from checked-out CI commit")
+		return errors.New("Коммит плана отличается от коммита, извлечённого в CI")
 	}
 	if len(p.Checks) != len(requiredForClass(p.ReferenceClass)) {
-		return fmt.Errorf("exactly %d independently executed GA checks are required for %s", len(requiredForClass(p.ReferenceClass)), p.ReferenceClass)
+		return fmt.Errorf("Требуется ровно %d независимо выполненных проверок GA для %s", len(requiredForClass(p.ReferenceClass)), p.ReferenceClass)
 	}
 	seen := map[string]bool{}
 	for _, c := range p.Checks {
 		if seen[c.Name] || len(c.Command) == 0 || !filepath.IsAbs(c.Command[0]) || !digest(c.ExecutableSHA256) || c.TimeoutSeconds < 1 || c.TimeoutSeconds > 900 {
-			return errors.New("duplicate/invalid check command")
+			return errors.New("Повторяющаяся или некорректная команда проверки")
 		}
 		seen[c.Name] = true
 	}
@@ -512,7 +512,7 @@ func (b *boundedOutput) Write(p []byte) (int, error) {
 func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, evidenceDir string) (SealedProbe, error) {
 	result := SealedProbe{Name: c.Name, ExecutableSHA256: c.ExecutableSHA256}
 	if err := verifyExecutable(c); err != nil {
-		return result, fmt.Errorf("%s check executable: %w", c.Name, err)
+		return result, fmt.Errorf("Не удалось проверить исполняемый файл %s: %w", c.Name, err)
 	}
 	cctx, cancel := context.WithTimeout(ctx, time.Duration(c.TimeoutSeconds)*time.Second)
 	defer cancel()
@@ -547,17 +547,17 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 	}
 	var probe Probe
 	if e = decodeStrict(out, &probe); e != nil {
-		return result, fmt.Errorf("%s: malformed check output: %w", c.Name, e)
+		return result, fmt.Errorf("%s: некорректный вывод проверки: %w", c.Name, e)
 	}
 	if !probe.Passed || probe.Name != c.Name || probe.RunID != p.RunID || probe.ReportSHA256 != r.ReportSHA256 || probe.SourceSHA256 != r.SourceSHA256 || probe.SourceVersion != p.SourceVersion || probe.TargetReleaseSHA256 != p.TargetReleaseSHA256 || !digest(probe.EvidenceSHA256) {
-		return result, fmt.Errorf("%s: missing, false or unbound check evidence", c.Name)
+		return result, fmt.Errorf("%s: данные проверки отсутствуют, отрицательны или не имеют привязки", c.Name)
 	}
 	if !filepath.IsAbs(probe.EvidenceFile) {
 		return result, fmt.Errorf("%s: evidence path: требуется «absolute»", c.Name)
 	}
 	info, e := os.Stat(probe.EvidenceFile)
 	if e != nil || info.ModTime().Before(started.Add(-2*time.Second)) || info.ModTime().After(time.Now().Add(time.Minute)) {
-		return result, fmt.Errorf("%s: evidence not freshly generated by this check", c.Name)
+		return result, fmt.Errorf("%s: данные проверки не были созданы заново этой проверкой", c.Name)
 	}
 	actual, e := shaFile(probe.EvidenceFile, 128<<20)
 	if e != nil || actual != probe.EvidenceSHA256 {
@@ -570,25 +570,25 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 		}
 		for i, id := range uuids {
 			if id != native.SourceUUIDs[i] {
-				return result, errors.New("native snapshot UUIDs disagree with migrated identities")
+				return result, errors.New("UUID в нативном снимке не совпадают с перенесёнными идентификаторами")
 			}
 		}
 		auditRaw, readErr := os.ReadFile(probe.EvidenceFile)
 		if readErr != nil || len(auditRaw) > maxDocument || validateStateAuditEvidence(auditRaw, probe) != nil {
-			return result, errors.New("native state audit evidence missing, inconsistent or unreadable")
+			return result, errors.New("Данные проверки нативного состояния отсутствуют, противоречивы или недоступны для чтения")
 		}
 		if len(probe.SourceUUIDs) != len(uuids) || len(probe.TargetUUIDs) != len(uuids) {
-			return result, errors.New("UUID check lacks complete player population")
+			return result, errors.New("Проверка UUID не охватывает всех игроков")
 		}
 		sort.Strings(probe.SourceUUIDs)
 		sort.Strings(probe.TargetUUIDs)
 		for i, id := range uuids {
 			if id != probe.SourceUUIDs[i] || id != probe.TargetUUIDs[i] {
-				return result, errors.New("UUID mapping disagrees with MIG13")
+				return result, errors.New("Сопоставление UUID не совпадает с MIG13")
 			}
 		}
 		if !digest(probe.SourceWorldSHA256) || probe.SourceWorldSHA256 != probe.TargetWorldSHA256 || !digest(probe.SourcePluginSHA256) || probe.SourcePluginSHA256 != probe.TargetPluginSHA256 {
-			return result, errors.New("world or plugin data does not match")
+			return result, errors.New("Данные мира или плагинов не совпадают")
 		}
 	}
 	raw, e := json.Marshal(probe)
@@ -596,7 +596,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 		return result, e
 	}
 	if e = preserveEvidence(evidenceDir, c.Name, probe.EvidenceFile, actual, raw); e != nil {
-		return result, fmt.Errorf("%s: preserving independent evidence: %w", c.Name, e)
+		return result, fmt.Errorf("%s: ошибка сохранения независимых доказательных данных: %w", c.Name, e)
 	}
 	result.SHA256 = hash(raw)
 	result.EvidenceSHA256 = actual
@@ -616,7 +616,7 @@ func signingKey(filename string) (ed25519.PrivateKey, error) {
 	}
 	block, _ := pem.Decode(b)
 	if block == nil || block.Type != "PRIVATE KEY" {
-		return nil, errors.New("expected PEM PKCS#8 Ed25519 key")
+		return nil, errors.New("Ожидался ключ Ed25519 в формате PEM PKCS#8")
 	}
 	key, e := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if e != nil {
@@ -644,7 +644,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	}
 	key, e := base64.StdEncoding.DecodeString(b.PublicKey)
 	if e != nil || !bytes.Equal(key, public) {
-		return errors.New("certificate signer differs from trusted key")
+		return errors.New("Ключ подписанта сертификата отличается от доверенного ключа")
 	}
 	signature, e := base64.StdEncoding.DecodeString(b.Signature)
 	if e != nil {
@@ -660,7 +660,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	seen := map[string]bool{}
 	for _, c := range b.Checks {
 		if seen[c.Name] || !digest(c.SHA256) || !digest(c.EvidenceSHA256) || !digest(c.ExecutableSHA256) {
-			return errors.New("invalid/duplicate GA check")
+			return errors.New("Некорректная или повторяющаяся проверка GA")
 		}
 		seen[c.Name] = true
 	}
@@ -671,7 +671,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	}
 	t, e := time.Parse(time.RFC3339Nano, b.CompletedAt)
 	if e != nil || t.After(time.Now().Add(time.Minute)) || time.Since(t) > 72*time.Hour {
-		return errors.New("GA certificate is stale or future-dated")
+		return errors.New("Сертификат GA устарел или датирован будущим временем")
 	}
 	return nil
 }
@@ -734,7 +734,7 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		return e
 	}
 	if actualVersion != p.SourceVersion || jarDigest != p.TrustedGravitJarSHA256 {
-		return errors.New("source JAR disagrees with independently pinned Gravit binary/version")
+		return errors.New("Исходный JAR не совпадает с независимо закреплённым бинарным файлом или версией Gravit")
 	}
 	client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	endpoint := strings.TrimRight(p.Backend, "/") + "/api/v1/admin/migration-runs/" + url.PathEscape(p.RunID) + "/report"
@@ -852,7 +852,7 @@ func main() {
 }
 func runMain(args []string) error {
 	if len(args) == 0 {
-		return errors.New("use certify, verify, verify-cohort, or integration-audit --backend URL --project ID --run ID --extension ID --output FILE")
+		return errors.New("Используйте certify, verify, verify-cohort или integration-audit --backend URL --project ID --run ID --extension ID --output FILE")
 	}
 	cmd := args[0]
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)

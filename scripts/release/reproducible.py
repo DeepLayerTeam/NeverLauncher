@@ -78,16 +78,16 @@ def load_json(path: Path) -> dict:
         raise ValueError(f'untrusted or missing JSON: {path}')
     obj = json.loads(path.read_bytes())
     if not isinstance(obj, dict):
-        raise ValueError('JSON root must be object')
+        raise ValueError('Корневой элемент JSON должен быть объектом')
     return obj
 
 
 def contract() -> dict:
     data = load_json(CONTRACT_PATH)
     if data.get('schema') != 'neverlauncher.primary-payload.v1' or data.get('version') != RELEASE_VERSION:
-        raise ValueError('wrong primary payload contract')
+        raise ValueError('Некорректный контракт основного набора файлов')
     if data.get('targets', {}).keys() != TARGETS:
-        raise ValueError('six-target payload contract incomplete')
+        raise ValueError('Неполный контракт набора файлов для шести платформ')
     for target, filename in data['targets'].items():
         if not isinstance(filename, str) or filename != Path(filename).name or '/' in filename or '\\' in filename:
             raise ValueError(f'unsafe target filename: {target}')
@@ -96,7 +96,7 @@ def contract() -> dict:
 
 def require_path(root: Path, name: str) -> Path:
     if root.is_symlink() or not root.is_dir():
-        raise ValueError('unsafe or absent artifact directory')
+        raise ValueError('Каталог артефактов отсутствует или небезопасен')
     path = root / name
     if path.is_symlink() or not path.is_file() or path.stat().st_size < 128:
         raise ValueError(f'missing or non-production artifact: {name}')
@@ -106,36 +106,36 @@ def require_path(root: Path, name: str) -> Path:
 def inspect_exe(head: bytes, platform: str, architecture: str) -> None:
     """Проверять заголовки недоверенных неподписанных исполняемых файлов без системных инструментов сборки ОС."""
     if len(head) < 256:
-        raise ValueError('truncated executable')
+        raise ValueError('Исполняемый файл обрезан')
     if platform == 'linux':
         if head[:4] != b'\x7fELF' or head[4:6] != b'\x02\x01' or struct.unpack_from('<H', head, 18)[0] != ARCH[architecture]['elf']:
-            raise ValueError('unsigned ELF64 architecture mismatch')
+            raise ValueError('Не совпадает архитектура неподписанного ELF64')
     elif platform == 'windows':
         if head[:2] != b'MZ':
-            raise ValueError('unsigned PE missing DOS header')
+            raise ValueError('В неподписанном PE отсутствует заголовок DOS')
         offset = struct.unpack_from('<I', head, 0x3c)[0]
         if offset > len(head) - 160 or head[offset:offset+4] != b'PE\0\0':
             raise ValueError('invalid PE header')
         if struct.unpack_from('<H', head, offset+4)[0] != ARCH[architecture]['pe'] or struct.unpack_from('<H',head,offset+24)[0] != 0x20b:
-            raise ValueError('unsigned PE64 architecture mismatch')
+            raise ValueError('Не совпадает архитектура неподписанного PE64')
         cert_off, cert_size = struct.unpack_from('<II',head,offset+24+112+4*8)
         if cert_off or cert_size:
-            raise ValueError('unsigned PE unexpectedly has certificate directory')
+            raise ValueError('В неподписанном PE неожиданно присутствует каталог сертификатов')
     else:
         if head[:4] != b'\xcf\xfa\xed\xfe' or struct.unpack_from('<I',head,4)[0] != ARCH[architecture]['macho']:
-            raise ValueError('unsigned Mach-O architecture mismatch')
+            raise ValueError('Не совпадает архитектура неподписанного Mach-O')
         ncmds, cmd_size = struct.unpack_from('<II',head,16)
         if not (0 < ncmds < 2048 and 0 < cmd_size <= len(head)-32):
-            raise ValueError('invalid Mach-O load commands')
+            raise ValueError('Некорректные команды загрузки Mach-O')
         off = 32
         for _ in range(ncmds):
             if off+8 > 32+cmd_size:
-                raise ValueError('truncated Mach-O load command')
+                raise ValueError('Обрезана команда загрузки Mach-O')
             cmd, length = struct.unpack_from('<II',head,off)
             if length < 8 or off+length > 32+cmd_size:
-                raise ValueError('invalid Mach-O load command')
+                raise ValueError('Некорректная команда загрузки Mach-O')
             if cmd == 0x1d:
-                raise ValueError('unsigned Mach-O contains code signature')
+                raise ValueError('Неподписанный Mach-O содержит цифровую подпись кода')
             off += length
 
 
@@ -150,10 +150,10 @@ def visit_archive(path: Path, platform: str, architecture: str) -> dict:
         nonlocal total
         secure_name(name)
         if name in names:
-            raise ValueError('duplicate archive member: ' + name)
+            raise ValueError('Повторяющийся элемент архива: ' + name)
         names.add(name)
         if len(names) > MAX_MEMBERS or size < 0 or size > MAX_FILE_BYTES or total + size > MAX_TOTAL_BYTES:
-            raise ValueError('archive decompression limit exceeded')
+            raise ValueError('Превышен лимит распаковки архива')
         total += size
         digest = hashlib.sha256()
         size_read = 0
@@ -166,14 +166,14 @@ def visit_archive(path: Path, platform: str, architecture: str) -> dict:
                 head.extend(piece[:65536-len(head)])
             size_read += len(piece)
             if size_read > size:
-                raise ValueError('archive member larger than declared size')
+                raise ValueError('Размер элемента архива больше заявленного')
             digest.update(piece)
         if size_read != size:
             raise ValueError('Неполный элемент архива')
         if name in expected:
             inspect_exe(bytes(head), platform, architecture)
             if platform == 'linux' and not (mode & 0o111):
-                raise ValueError('ELF executable bit missing: ' + name)
+                raise ValueError('У ELF отсутствует разрешение на выполнение: ' + name)
         entries[name] = {'sha256':digest.hexdigest(),'size':size_read,'mode':mode & 0o777}
 
     if path.name.endswith('.zip'):
@@ -182,7 +182,7 @@ def visit_archive(path: Path, platform: str, architecture: str) -> dict:
                 secure_name(item.filename)
                 kind = (item.external_attr >> 16) & 0o170000
                 if kind not in (0, stat.S_IFDIR, stat.S_IFREG):
-                    raise ValueError('archive link/device forbidden: '+item.filename)
+                    raise ValueError('В архиве запрещены ссылки и специальные устройства: '+item.filename)
                 if item.is_dir():
                     continue
                 with archive.open(item) as handle:
@@ -194,16 +194,16 @@ def visit_archive(path: Path, platform: str, architecture: str) -> dict:
                 if item.isdir():
                     continue
                 if not item.isfile():
-                    raise ValueError('archive link/device forbidden: '+item.name)
+                    raise ValueError('В архиве запрещены ссылки и специальные устройства: '+item.name)
                 stream = archive.extractfile(item)
                 if stream is None:
-                    raise ValueError('missing archive stream')
+                    raise ValueError('Отсутствует поток данных архива')
                 with stream:
                     visit(item.name, item.size, item.mode, stream)
     else:
-        raise ValueError('unknown unsigned archive format')
+        raise ValueError('Неизвестный формат неподписанного архива')
     if not expected.issubset(entries):
-        raise ValueError('missing unsigned executables: ' + ', '.join(sorted(expected - entries)))
+        raise ValueError('Отсутствуют неподписанные исполняемые файлы: ' + ', '.join(sorted(expected - entries)))
     return dict(sorted(entries.items()))
 
 
@@ -219,14 +219,14 @@ def inspect_builder(bundle: Path) -> dict:
 
 def capture(bundle: Path, *, builder: str, runner: str, commit: str) -> dict:
     if not HEX.fullmatch(commit):
-        raise ValueError('invalid full source commit')
+        raise ValueError('Некорректный полный идентификатор исходного коммита')
     if not builder.strip() or not runner.strip() or len(builder)>128 or len(runner)>128:
-        raise ValueError('missing or unsafe builder identity')
+        raise ValueError('Идентификатор сборщика отсутствует или небезопасен')
     if not BASELINE_PATH.is_file():
-        raise ValueError('missing pinned input baseline')
+        raise ValueError('Отсутствует закреплённый базовый набор входных данных')
     baseline = load_json(BASELINE_PATH)
     if baseline.get('release') != RELEASE_VERSION:
-        raise ValueError('unexpected baseline version')
+        raise ValueError('Неожиданная версия базового набора')
     from inputs_guard_0461 import record, verify
     verify(baseline, record())
     return {'schema':'neverlauncher.unsigned-build.v1','version':RELEASE_VERSION,
@@ -239,14 +239,14 @@ def capture(bundle: Path, *, builder: str, runner: str, commit: str) -> dict:
 def private_key(path: Path) -> Ed25519PrivateKey:
     result = load_pem_private_key(path.read_bytes(), password=None)
     if not isinstance(result, Ed25519PrivateKey):
-        raise ValueError('attestation key must be Ed25519')
+        raise ValueError('Ключ аттестации должен использовать Ed25519')
     return result
 
 
 def public_key(path: Path) -> Ed25519PublicKey:
     result = load_pem_public_key(path.read_bytes())
     if not isinstance(result, Ed25519PublicKey):
-        raise ValueError('attestation trust anchor must be Ed25519')
+        raise ValueError('Корневой ключ доверия аттестации должен использовать Ed25519')
     return result
 
 
@@ -255,33 +255,33 @@ def signed_json(path: Path, signature: Path, trusted_key: Path) -> dict:
     obj=load_json(path)
     # Требуйте каноническую сериализацию во избежание различий между JSON-парсерами.
     if raw != canonical(obj):
-        raise ValueError('noncanonical signed JSON: '+str(path))
+        raise ValueError('Подписанный JSON не соответствует каноническому формату: '+str(path))
     if signature.is_symlink() or not signature.is_file() or signature.stat().st_size != 64:
-        raise ValueError('missing/invalid Ed25519 evidence signature')
+        raise ValueError('Отсутствует или некорректна подпись доказательных данных Ed25519')
     try:
         public_key(trusted_key).verify(signature.read_bytes(), raw)
     except InvalidSignature as exc:
-        raise ValueError('invalid independent evidence signature') from exc
+        raise ValueError('Некорректная независимая подпись доказательных данных') from exc
     return obj
 
 
 def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
     if a.get('schema')!='neverlauncher.unsigned-build.v1' or b.get('schema')!='neverlauncher.unsigned-build.v1':
-        raise ValueError('unsupported unsigned build evidence')
+        raise ValueError('Неподдерживаемые доказательные данные неподписанной сборки')
     for k in ('version','commit','inputBaselineSha256','contractSha256'):
         if a.get(k) != b.get(k):
             raise ValueError(f'independent inputs differ: {k}')
     if a['version'] != RELEASE_VERSION or not HEX.fullmatch(a['commit']):
-        raise ValueError('invalid release source identity')
+        raise ValueError('Некорректный идентификатор источника релиза')
     if a['inputBaselineSha256'] != sha256_file(BASELINE_PATH) or a['contractSha256'] != sha256_file(CONTRACT_PATH):
-        raise ValueError('input baseline or declared payload changed')
+        raise ValueError('Базовые входные данные или заявленный набор файлов изменились')
     if (not a.get('builder') or not b.get('builder') or a['builder']==b['builder']
             or not a.get('runner') or not b.get('runner') or a['runner']==b['runner']):
-        raise ValueError('independent builders and runners required')
+        raise ValueError('Требуются независимые сборщики и исполнители проверок')
     if a.get('targets')!=inspect_builder(a_dir) or b.get('targets')!=inspect_builder(b_dir):
-        raise ValueError('signed builder report disagrees with actual files')
+        raise ValueError('Подписанный отчёт сборщика не соответствует фактическим файлам')
     if a['targets'] != b['targets'] or set(a['targets'])!=TARGETS:
-        raise ValueError('unsigned builds are not bit-for-bit identical for all six targets')
+        raise ValueError('Неподписанные сборки не совпадают побайтово для всех шести платформ')
     return {'schema':'neverlauncher.reproducibility-compared.v1', 'version':RELEASE_VERSION,
             'commit':a['commit'],'inputBaselineSha256':a['inputBaselineSha256'],
             'contractSha256':a['contractSha256'], 'builders':[{'builder':a['builder'],'runner':a['runner']},
@@ -293,38 +293,38 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
 
 def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, b_key: Path, approval_key: Path, native_reports_dir: Path) -> dict:
     if comparison.get('schema')!='neverlauncher.reproducibility-compared.v1' or comparison.get('version')!=RELEASE_VERSION or set(comparison.get('targets',{}))!=TARGETS:
-        raise ValueError('missing complete independent comparison')
+        raise ValueError('Отсутствует полное независимое сравнение')
     if approval.get('schema')!='neverlauncher.native-signing-approval.v1' or approval.get('version')!=RELEASE_VERSION:
-        raise ValueError('invalid OS-native signing approval')
+        raise ValueError('Некорректное разрешение на штатное подписание для ОС')
     if approval.get('commit') != comparison['commit'] or approval.get('comparisonSha256') != hashlib.sha256(canonical(comparison)).hexdigest():
-        raise ValueError('signing approval does not refer to compared unsigned bytes')
+        raise ValueError('Разрешение на подпись не относится к сравненному неподписанному содержимому')
     if not approval.get('operator') or approval.get('operator') in (x['builder'] for x in comparison['builders']):
-        raise ValueError('independent signing operator required')
+        raise ValueError('Требуется независимый оператор подписания')
     identities={key.read_bytes() for key in (a_key,b_key,approval_key)}
     if len(identities)!=3:
-        raise ValueError('the two independent builders and native operator must have distinct trust keys')
+        raise ValueError('У двух независимых сборщиков и оператора подписания должны быть разные доверенные ключи')
     expected=approval.get('targets')
     if not isinstance(expected,dict) or set(expected)!=TARGETS:
-        raise ValueError('native approval must cover all six actual signed targets')
+        raise ValueError('Разрешение штатного подписания должно охватывать все шесть фактически подписанных платформ')
     # Существующий промышленный верификатор проверяет настоящие заголовки
     # исполняемых файлов, встроенные манифесты пакетов и точные SHA-256 выпущенных
     # подписанных пакетов.
     signed=verify_bundle(signed_bundle, release_manifest=True)
     if approval.get('releaseSignatureVerified') is not True or approval.get('releaseManifestSha256')!=sha256_file(signed_bundle/'RELEASE_MANIFEST.json'):
-        raise ValueError('no verified final release-signature binding')
+        raise ValueError('Не подтверждена привязка финальной подписи релиза')
     for target in sorted(TARGETS):
         row=expected[target]
         kind=target.split('-')[0]
         if not isinstance(row,dict) or row.get('unsignedSha256')!=comparison['targets'][target]['sha256']:
-            raise ValueError('unlinked unsigned payload: '+target)
+            raise ValueError('Непривязанный набор неподписанных файлов: '+target)
         if row.get('signedSha256')!=signed['targets'][target]['sha256']:
-            raise ValueError('unlinked final signed package: '+target)
+            raise ValueError('Непривязанный финальный подписанный пакет: '+target)
         if kind=='windows' and row.get('nativeCheck')!='authenticode-chain-and-timestamp-verified':
-            raise ValueError('missing Windows OS-native signature validation: '+target)
+            raise ValueError('Отсутствует штатная проверка подписи Windows: '+target)
         if kind=='darwin' and row.get('nativeCheck')!='codesign-gatekeeper-and-notarization-verified':
-            raise ValueError('missing macOS OS-native signature validation: '+target)
+            raise ValueError('Отсутствует штатная проверка подписи macOS: '+target)
         if kind=='linux' and row.get('nativeCheck')!='release-ed25519-and-digest-verified':
-            raise ValueError('missing Linux release signature validation: '+target)
+            raise ValueError('Отсутствует проверка подписи релиза Linux: '+target)
         # Нативная квитанция создаётся реальным выполнением проверок ОС для точного
         # окончательного пакета, а не утверждением строки в JSON одобрения.
         native_path=native_reports_dir/(target+'.json')
@@ -337,9 +337,9 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
                 or native.get('signedSha256')!=row['signedSha256']
                 or native.get('releaseManifestSha256')!=approval.get('releaseManifestSha256')
                 or native.get('status')!='native-verified-transform-audit-separate'):
-            raise ValueError('OS-native validator receipt does not cover signed target: '+target)
+            raise ValueError('Квитанция штатной проверки ОС не охватывает подписанную платформу: '+target)
         if row.get('boundPayload') is not True:
-            raise ValueError('operator did not approve unsigned-to-final transformation: '+target)
+            raise ValueError('Оператор не одобрил преобразование неподписанной сборки в финальный пакет: '+target)
     return {'schema':'neverlauncher.reproducibility-linked.v1','version':RELEASE_VERSION,
             'commit':comparison['commit'],'comparisonSha256':approval['comparisonSha256'],
             'nativeApprovalSha256':hashlib.sha256(canonical(approval)).hexdigest(),
@@ -372,14 +372,14 @@ def main() -> int:
             report=load_json(args.report)
             raw=args.report.read_bytes()
             if raw!=canonical(report):
-                raise ValueError('refusing to sign noncanonical report')
+                raise ValueError('Подписание неканонического отчёта запрещено')
             if args.report.resolve()==args.out.resolve():
-                raise ValueError('signature cannot overwrite report')
+                raise ValueError('Файл подписи не должен перезаписывать отчёт')
             args.out.write_bytes(private_key(args.private_key).sign(raw))
         elif args.cmd=='compare':
             a_key=Path(args.a_key);b_key=Path(args.b_key)
             if a_key.read_bytes()==b_key.read_bytes():
-                raise ValueError('both builders use same evidence signing key')
+                raise ValueError('Оба сборщика используют один и тот же ключ подписи доказательных данных')
             a=signed_json(Path(args.a_report),Path(args.a_sig),a_key)
             b=signed_json(Path(args.b_report),Path(args.b_sig),b_key)
             result=compare(a,b,Path(args.a_dir),Path(args.b_dir))

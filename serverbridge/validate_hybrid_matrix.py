@@ -6,7 +6,7 @@ d=json.loads((ROOT/'serverbridge/hybrid-targets.json').read_text())
 expected={'mohist','arclight','magma','catserver','banner','cardboard'}
 rows=d.get('targets') or []
 ids={r.get('id') for r in rows}
-if d.get('productVersion')!=(ROOT/'VERSION').read_text().strip(): raise SystemExit('hybrid matrix version drift')
+if d.get('productVersion')!=(ROOT/'VERSION').read_text().strip(): raise SystemExit('Версия матрицы гибридных серверов не совпадает')
 if ids!=expected: raise SystemExit(f'hybrid matrix target drift: {ids}')
-if any(r.get('status')!='not-certified' for r in rows): raise SystemExit('0.19.8 universal release must not certify hybrid cores')
+if any(r.get('status')!='not-certified' for r in rows): raise SystemExit('Универсальный релиз 0.19.8 не должен сертифицировать гибридные серверные ядра')
 print('hybrid certification matrix: fail-closed OK')

@@ -288,7 +288,7 @@ mod imp {
                 }
                 let normalized=normalize_path(&canonical_path);
                 if self.signed_game_natives.insert(normalized,sha).is_some() {
-                    return Err("Guard Windows duplicate signed native".into());
+                    return Err("Повторяющийся подписанный нативный модуль Guard в Windows".into());
                 }
             }
             Ok(())
@@ -326,7 +326,7 @@ mod imp {
                     // Образы Java Runtime относятся к независимо проверенной Managed Java, а точная DLL аутентифицированного
                     // Sensor закреплена. Для любого другого нативного образа в корне игры требуется подписанный хеш.
                     if !from_managed_jre && !from_guard_sensor && self.signed_game_natives.get(&normalized)!=Some(&sha256) {
-                        return Err(format!("Guard Windows loaded native DLL is not signed for this build: {}",canonical.display()));
+                        return Err(format!("Загруженная нативная DLL Guard в Windows не подписана для этой сборки: {}",canonical.display()));
                     }
                 }
             }
@@ -408,7 +408,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut ready_packet))
             .await
             .map_err(|_| "Guard Hook Engine ready proof timed out".to_string())?
-            .map_err(|err| format!("Ошибка: «Guard Hook Engine ready proof read»: {err}"))?;
+            .map_err(|err| format!("Не удалось прочитать подтверждение готовности механизма перехватов Guard: {err}"))?;
         let ready_event = parse_event_packet(&ready_packet, &secret, pid, 1)?;
         if ready_event.reason != MODULE_EVENT_REASON_HOOK_READY {
             return Err(format!(
@@ -418,7 +418,7 @@ mod imp {
         }
         let hook_digest = hook_digest_from_event(&ready_event)?;
         if ready_event.flags == 0 || ready_event.size_of_image == 0 {
-            return Err("Guard Hook Engine armed with zero hooked modules/slots".to_string());
+            return Err("Модуль перехвата Guard активирован, но не обнаружены перехваченные модули или слоты".to_string());
         }
         let mut ready_chain = [0u8; 32];
         if let Ok(bytes) = hex::decode(&initial_chain) {
@@ -449,7 +449,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut memory_ready_packet))
             .await
             .map_err(|_| "Guard Memory Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("Ошибка: «Guard Memory Integrity ready proof read»: {err}"))?;
+            .map_err(|err| format!("Не удалось прочитать подтверждение готовности контроля целостности памяти Guard: {err}"))?;
         let memory_ready_event = parse_event_packet(&memory_ready_packet, &secret, pid, 2)?;
         if memory_ready_event.reason != MODULE_EVENT_REASON_MEMORY_READY {
             return Err(format!(
@@ -459,7 +459,7 @@ mod imp {
         }
         let memory_ready = memory_report_from_event(&memory_ready_event)?;
         if memory_ready.executable_region_count == 0 || memory_ready.image_code_region_count == 0 {
-            return Err("Guard Memory Integrity armed with zero executable/image code coverage".to_string());
+            return Err("Контроль целостности памяти Guard активирован без покрытия исполняемого кода".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &memory_ready_packet);
         ready_chain = advance_event_chain(
@@ -482,7 +482,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut thread_ready_packet))
             .await
             .map_err(|_| "Guard Thread & Process Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("Ошибка: «Guard Thread & Process Integrity ready proof read»: {err}"))?;
+            .map_err(|err| format!("Не удалось прочитать подтверждение готовности потоков и процессов Guard: {err}"))?;
         let thread_ready_event = parse_event_packet(&thread_ready_packet, &secret, pid, 3)?;
         if thread_ready_event.reason != MODULE_EVENT_REASON_THREAD_PROCESS_READY {
             return Err(format!(
@@ -493,7 +493,7 @@ mod imp {
         let process_tree = runtime_policy.verify_process_tree(pid)?;
         let mut thread_ready = thread_process_report_from_event(&thread_ready_event)?;
         if thread_ready.current_thread_count == 0 || thread_ready.baseline_thread_count == 0 {
-            return Err("Guard Thread & Process Integrity armed with zero thread coverage".to_string());
+            return Err("Контроль потоков и процессов Guard активирован без отслеживания потоков".to_string());
         }
         thread_ready.active = true;
         thread_ready.healthy = true;
@@ -525,7 +525,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut debug_ready_packet))
             .await
             .map_err(|_| "Guard Debug & Instrumentation Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("Ошибка: «Guard Debug & Instrumentation Guard ready proof read»: {err}"))?;
+            .map_err(|err| format!("Не удалось прочитать подтверждение готовности защиты от отладки и инструментирования Guard: {err}"))?;
         let debug_ready_event = parse_event_packet(&debug_ready_packet, &secret, pid, 4)?;
         if debug_ready_event.reason != MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY {
             return Err(format!(
@@ -540,7 +540,7 @@ mod imp {
             || debug_ready.debug_object_present
             || !debug_ready.debug_flags_no_debug_inherit
         {
-            return Err("Guard Debug & Instrumentation Guard armed with active debugger state".to_string());
+            return Err("Защита от отладки и инструментирования Guard активирована при обнаруженном отладчике".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &debug_ready_packet);
         ready_chain = advance_event_chain(
@@ -565,7 +565,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut jvm_ready_packet))
             .await
             .map_err(|_| "Guard JVM-Aware Protection ready proof timed out".to_string())?
-            .map_err(|err| format!("Ошибка: «Guard JVM-Aware Protection ready proof read»: {err}"))?;
+            .map_err(|err| format!("Не удалось прочитать подтверждение готовности защиты Guard с учётом JVM: {err}"))?;
         let jvm_ready_event = parse_event_packet(&jvm_ready_packet, &secret, pid, 5)?;
         if jvm_ready_event.reason != MODULE_EVENT_REASON_JVM_AWARE_READY {
             return Err(format!(
@@ -602,7 +602,7 @@ mod imp {
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut continuous_ready_packet))
             .await
             .map_err(|_| "Guard Continuous Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("Ошибка: «Guard Continuous Guard ready proof read»: {err}"))?;
+            .map_err(|err| format!("Не удалось прочитать подтверждение готовности непрерывной защиты Guard: {err}"))?;
         let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
         if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
             return Err(format!(
@@ -614,7 +614,7 @@ mod imp {
             || continuous_ready_event.base_address != 0
             || continuous_ready_event.size_of_image != 0
         {
-            return Err("Несовпадение: «Guard Continuous Guard ready metadata»".to_string());
+            return Err("Не совпадают метаданные готовности непрерывной защиты Guard".to_string());
         }
         let continuous_pre_digest = continuous_digest_from_event(&continuous_ready_event)?;
         if continuous_pre_digest != hex::encode(continuous_chain) {
@@ -1105,7 +1105,7 @@ mod imp {
     fn hook_digest_from_event(event: &ParsedEvent) -> Result<String, String> {
         let digest = event.path.to_string_lossy().to_string();
         if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err("Guard Hook Engine invalid hook-set digest".to_string());
+            return Err("Некорректная контрольная сумма набора перехватов Guard".to_string());
         }
         Ok(digest.to_ascii_lowercase())
     }
@@ -1137,7 +1137,7 @@ mod imp {
             .parse::<u64>()
             .map_err(|_| "Guard Memory Integrity invalid transition count".to_string())?;
         if fields.next().is_some() {
-            return Err("Guard Memory Integrity malformed evidence payload".to_string());
+            return Err("Некорректные данные проверки целостности памяти Guard".to_string());
         }
         Ok(crate::WindowsMemoryIntegrityReport {
             version: crate::GUARD_MEMORY_INTEGRITY_VERSION,
@@ -1190,7 +1190,7 @@ mod imp {
             .parse::<u64>()
             .map_err(|_| "Guard Thread & Process Integrity invalid check count".to_string())?;
         if fields.next().is_some() {
-            return Err("Guard Thread & Process Integrity malformed evidence payload".to_string());
+            return Err("Некорректные данные проверки целостности потоков и процессов Guard".to_string());
         }
         if suspicious_thread_count != 0 {
             return Err(format!(
@@ -1227,7 +1227,7 @@ mod imp {
     ) -> Result<crate::WindowsDebugInstrumentationReport, String> {
         let state_sha256 = event.path.to_string_lossy().to_string();
         if state_sha256.len() != 64 || !state_sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err("Guard Debug & Instrumentation Guard invalid state digest".to_string());
+            return Err("Некорректная контрольная сумма состояния защиты от отладки и инструментирования Guard".to_string());
         }
         let debugger_present = event.flags & 0x01 != 0;
         let remote_debugger_present = event.flags & 0x02 != 0;
@@ -1301,7 +1301,7 @@ mod imp {
             .parse::<u64>()
             .map_err(|_| "Guard JVM-Aware Protection invalid unknown transition count".to_string())?;
         if fields.next().is_some() {
-            return Err("Guard JVM-Aware Protection malformed evidence payload".to_string());
+            return Err("Некорректные данные защиты Guard с учётом JVM".to_string());
         }
         let java_major = event.flags;
         let certified_major = crate::GUARD_CERTIFIED_JAVA_MAJORS.contains(&java_major);
@@ -1311,7 +1311,7 @@ mod imp {
             ));
         }
         if event.size_of_image == 0 {
-            return Err("Guard JVM-Aware Protection reported zero jvm.dll image size".to_string());
+            return Err("Защита Guard с учётом JVM сообщила нулевой размер образа jvm.dll".to_string());
         }
         if foreign_executable_transition_count != 0 || unknown_executable_transition_count != 0 {
             return Err(format!(
@@ -1357,7 +1357,7 @@ mod imp {
 
     fn validate_memory_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(format!("Guard Memory Integrity invalid {label} digest"));
+            return Err(format!("Некорректная контрольная сумма {label} в контроле целостности памяти Guard"));
         }
         Ok(value.to_ascii_lowercase())
     }
@@ -1392,7 +1392,7 @@ mod imp {
         }
 
         if packet[46] != 0 || packet[47] != 0 {
-            return Err("Module Guard event reserved bytes are non-zero".to_string());
+            return Err("Зарезервированные байты события Module Guard должны быть нулевыми".to_string());
         }
         let reason = u32::from_le_bytes(packet[24..28].try_into().expect("fixed packet"));
         let flags = u32::from_le_bytes(packet[28..32].try_into().expect("fixed packet"));
@@ -1400,7 +1400,7 @@ mod imp {
         let size_of_image = u32::from_le_bytes(packet[40..44].try_into().expect("fixed packet"));
         let path_len = u16::from_le_bytes(packet[44..46].try_into().expect("fixed packet")) as usize;
         if path_len > MODULE_PATH_WCHARS {
-            return Err("Module Guard event path length exceeds protocol maximum".to_string());
+            return Err("Длина пути события Module Guard превышает ограничение протокола".to_string());
         }
         let mut wide = Vec::with_capacity(path_len);
         for index in 0..path_len {
@@ -1517,7 +1517,7 @@ mod imp {
                 }
                 let error = std::io::Error::last_os_error();
                 if error.raw_os_error() != Some(24) || attempt + 1 == MAX_BAD_LENGTH_ATTEMPTS {
-                    return Err(format!("Module Guard snapshot failed for PID {pid}: {error}"));
+                    return Err(format!("Не удалось создать снимок Module Guard для PID {pid}: {error}"));
                 }
                 std::thread::sleep(Duration::from_millis(15));
             }
@@ -1590,7 +1590,7 @@ mod imp {
     fn continuous_digest_from_event(event: &ParsedEvent) -> Result<String, String> {
         let digest = event.path.to_string_lossy().to_string();
         if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err("Continuous Guard received invalid event-chain digest".to_string());
+            return Err("Continuous Guard получил некорректную контрольную сумму цепочки событий".to_string());
         }
         Ok(digest.to_ascii_lowercase())
     }

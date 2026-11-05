@@ -95,7 +95,7 @@ mod imp {
             .args(["--verify", "--strict", "--verbose=2"])
             .arg(path)
             .output()
-            .map_err(|err| format!("Не удалось выполнить «codesign verify for {}:» {err}", path.display()))?;
+            .map_err(|err| format!("Не удалось проверить подпись codesign для {}: {err}", path.display()))?;
         if !verify.status.success() {
             return Err(format!(
                 "macOS code signature verification failed for {}: {}",
@@ -180,7 +180,7 @@ mod imp {
             let executable = std::env::current_exe().map_err(|err| format!("Ошибка: «resolve current executable»: {err}"))?;
             let signature = verify_macos_code_signature(&executable)?;
             if !signature.valid || !signature.hardened_runtime || !signature.library_validation {
-                return Err("macOS production hardening: требуется «a valid Hardened Runtime signature with library validation»".to_string());
+                return Err("Для промышленной защиты macOS требуется действующая подпись Hardened Runtime с проверкой библиотек".to_string());
             }
             Ok(MacOSProductionHardeningReport {
                 hardening_version: GUARD_MACOS_HARDENING_VERSION,
@@ -217,7 +217,7 @@ mod imp {
         }
         let current_parent = unsafe { libc::getppid() };
         if current_parent != parent_pid as libc::pid_t {
-            return Err(format!("macOS parent PID mismatch: expected {parent_pid}, observed {current_parent}"));
+            return Err(format!("Не совпадает PID родительского процесса macOS: ожидался {parent_pid}, обнаружен {current_parent}"));
         }
         let kq = unsafe { libc::kqueue() };
         if kq < 0 { return Err(os_err("Ошибка: «macOS kqueue»")); }

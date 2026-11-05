@@ -221,7 +221,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 			if cb.Err != nil {
 				fmt.Fprint(w, "Sign-in declined. Return to the terminal.\n")
 			} else {
-				fmt.Fprint(w, "Authorization received. Return to the terminal.\n")
+				fmt.Fprint(w, "Авторизация получена. Вернитесь в терминал.\n")
 			}
 		default:
 			http.Error(w, "Already handled", http.StatusConflict)
@@ -332,7 +332,7 @@ func verify(ctx context.Context, c providerClient, opt options, output io.Writer
 	}
 	r.pass("microsoft_oauth")
 	if oauth.RefreshToken == "" {
-		r.fail("microsoft_refresh", errors.New("offline_access not granted"))
+		r.fail("microsoft_refresh", errors.New("Разрешение offline_access не предоставлено"))
 		return r
 	}
 	refreshed, err := c.Refresh(ctx, opt.ClientID, oauth.RefreshToken)

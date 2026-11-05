@@ -100,7 +100,7 @@ func newTransactionalUpdater0156(root string) (*transactionalUpdater0156, error)
 	}
 	realRoot, err := filepath.EvalSymlinks(abs)
 	if err != nil {
-		return nil, fmt.Errorf("resolve updater root: %w", err)
+		return nil, fmt.Errorf("Не удалось определить корневой каталог обновления: %w", err)
 	}
 	abs, err = filepath.Abs(realRoot)
 	if err != nil {
@@ -128,7 +128,7 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 			return nil, err
 		}
 		if filepath.Clean(reqRoot) != u.root {
-			return nil, fmt.Errorf("updater request root mismatch: request=%s engine=%s", filepath.Clean(reqRoot), u.root)
+			return nil, fmt.Errorf("Не совпадает корневой каталог запроса обновления: запрос=%s, механизм=%s", filepath.Clean(reqRoot), u.root)
 		}
 	}
 	if err := u.acquireLock(false); err != nil {
@@ -138,10 +138,10 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 
 	recovered, err := u.recoverIncompleteLocked()
 	if err != nil {
-		return nil, fmt.Errorf("automatic updater recovery: %w", err)
+		return nil, fmt.Errorf("Ошибка автоматического восстановления обновления: %w", err)
 	}
 	if _, err := u.stabilizeTerminalPayloads01510(); err != nil {
-		return nil, fmt.Errorf("automatic updater terminal cleanup: %w", err)
+		return nil, fmt.Errorf("Ошибка финальной очистки обновления: %w", err)
 	}
 	if req.ExpectedStateSHA256 != "" {
 		actual, err := clientStateSHA2560228(u.root)
@@ -149,7 +149,7 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 			return nil, err
 		}
 		if actual != req.ExpectedStateSHA256 {
-			return nil, errors.New("client update conflict: installed version changed before transaction lock")
+			return nil, errors.New("Конфликт обновления клиента: установленная версия изменилась до получения блокировки транзакции")
 		}
 	}
 	journal, err := u.prepareLocked(req)
@@ -164,7 +164,7 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 		if rollbackErr != nil {
 			return nil, fmt.Errorf("Ошибка: транзакция %s: %v; rollback failed: %w", journal.ID, err, rollbackErr)
 		}
-		return nil, fmt.Errorf("transaction %s rolled back: %w", journal.ID, err)
+		return nil, fmt.Errorf("Транзакция %s отменена с откатом: %w", journal.ID, err)
 	}
 	return map[string]any{
 		"schemaVersion": updaterCoreSchema0156,
@@ -210,7 +210,7 @@ func (u *transactionalUpdater0156) acquireLock(force bool) error {
 			return nil
 		}
 		if !errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("updater lock: %w", err)
+			return fmt.Errorf("Ошибка блокировки обновления: %w", err)
 		}
 		lockRaw, readErr := os.ReadFile(u.lockPath)
 		if readErr != nil {
@@ -307,7 +307,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 			}
 		}
 		if err := verifyUpdaterFile0156(stagePath, spec.Size, spec.SHA256); err != nil {
-			return nil, fmt.Errorf("stage verify %s: %w", spec.Path, err)
+			return nil, fmt.Errorf("Ошибка проверки подготовленного файла %s: %w", spec.Path, err)
 		}
 	}
 
@@ -336,7 +336,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 			// или повреждённые байты копии.
 			originalSHA, originalSize, err := hashFile(dst)
 			if err != nil || originalSize != info.Size() {
-				return nil, fmt.Errorf("hash original %s: %v", rel, err)
+				return nil, fmt.Errorf("Ошибка вычисления контрольной суммы исходного файла %s: %v", rel, err)
 			}
 			touched.OriginalSize = originalSize
 			touched.OriginalSHA256 = originalSHA
@@ -344,10 +344,10 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 				return nil, fmt.Errorf("backup %s: %w", rel, err)
 			}
 			if err := verifyUpdaterFile0156(backup, originalSize, originalSHA); err != nil {
-				return nil, fmt.Errorf("backup integrity %s: %w", rel, err)
+				return nil, fmt.Errorf("Ошибка проверки целостности резервной копии %s: %w", rel, err)
 			}
 		} else if !errors.Is(statErr, os.ErrNotExist) {
-			return nil, fmt.Errorf("inspect target %s: %w", rel, statErr)
+			return nil, fmt.Errorf("Не удалось проверить целевой файл %s: %w", rel, statErr)
 		}
 		journal.Touched = append(journal.Touched, touched)
 	}
@@ -380,7 +380,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 		}
 		stage := filepath.Join(stageDir, filepath.FromSlash(file.Path))
 		if err := verifyUpdaterFile0156(stage, file.Size, file.SHA256); err != nil {
-			return fmt.Errorf("pre-switch verify %s: %w", file.Path, err)
+			return fmt.Errorf("Ошибка проверки перед переключением %s: %w", file.Path, err)
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
@@ -392,15 +392,15 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 		}
 		if err := copyUpdaterSource0156(stage, tmp, mode); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("prepare live replacement %s: %w", file.Path, err)
+			return fmt.Errorf("Не удалось подготовить замену рабочего файла %s: %w", file.Path, err)
 		}
 		if err := verifyUpdaterFile0156(tmp, file.Size, file.SHA256); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("replacement verify %s: %w", file.Path, err)
+			return fmt.Errorf("Ошибка проверки заменённого файла %s: %w", file.Path, err)
 		}
 		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("atomic switch %s: %w", file.Path, err)
+			return fmt.Errorf("Ошибка атомарного переключения %s: %w", file.Path, err)
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 		journal.Applied = append(journal.Applied, file.Path)
@@ -413,7 +413,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 		file := journal.Files[i]
 		if journal.Namespace == "client-package" && file.Path == ".launcher/client-state.json" {
 			if activation != nil {
-				return errors.New("multiple client-state activation files")
+				return errors.New("Обнаружено несколько файлов активации состояния клиента")
 			}
 			activation = &journal.Files[i]
 			continue
@@ -439,7 +439,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return fmt.Errorf("updater remove target должен быть regular file: %s", rel)
 		}
 		if err := os.Remove(dst); err != nil {
-			return fmt.Errorf("remove obsolete %s: %w", rel, err)
+			return fmt.Errorf("Не удалось удалить устаревший файл %s: %w", rel, err)
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 		journal.Applied = append(journal.Applied, rel)
@@ -454,7 +454,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	}
 	if verify != nil {
 		if err := verify(); err != nil {
-			return fmt.Errorf("post-apply verification: %w", err)
+			return fmt.Errorf("Ошибка проверки после применения обновления: %w", err)
 		}
 	}
 	if activation != nil {
@@ -472,7 +472,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return err
 		}
 		if err := verifyUpdaterFile0156(dst, file.Size, file.SHA256); err != nil {
-			return fmt.Errorf("final verify %s: %w", file.Path, err)
+			return fmt.Errorf("Ошибка итоговой проверки %s: %w", file.Path, err)
 		}
 	}
 	for _, rel := range journal.Remove {
@@ -481,7 +481,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return err
 		}
 		if _, err := os.Lstat(dst); err == nil {
-			return fmt.Errorf("final verify obsolete path still exists: %s", rel)
+			return fmt.Errorf("Итоговая проверка: устаревший путь всё ещё существует: %s", rel)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
@@ -516,7 +516,7 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		if !touched.HadOriginal {
 			if info, statErr := os.Lstat(dst); statErr == nil {
 				if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-					return fmt.Errorf("rollback refuses non-regular target: %s", touched.Path)
+					return fmt.Errorf("Откат запрещён: целевой объект не является обычным файлом: %s", touched.Path)
 				}
 				if err := os.Remove(dst); err != nil {
 					return err
@@ -539,10 +539,10 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		// новые транзакции сверяют точные исходные байты до изменения рабочей цели.
 		if touched.OriginalSHA256 != "" {
 			if err := verifyUpdaterFile0156(backup, touched.OriginalSize, touched.OriginalSHA256); err != nil {
-				return fmt.Errorf("rollback backup integrity %s: %w", touched.Path, err)
+				return fmt.Errorf("Ошибка целостности резервной копии для отката %s: %w", touched.Path, err)
 			}
 		} else if info, err := os.Lstat(backup); err != nil || !info.Mode().IsRegular() {
-			return fmt.Errorf("rollback source missing or not regular: %s", touched.Path)
+			return fmt.Errorf("Источник отката отсутствует или не является обычным файлом: %s", touched.Path)
 		}
 		tmp := dst + ".nl0156-rollback-" + journal.ID
 		// Если обновлятор был остановлен во время ВОССТАНОВЛЕНИЯ прежнего поколения, его исключительный временный
@@ -553,11 +553,11 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		}
 		if err := copyUpdaterSource0156(backup, tmp, mode); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("rollback copy %s: %w", touched.Path, err)
+			return fmt.Errorf("Ошибка копирования при откате %s: %w", touched.Path, err)
 		}
 		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("rollback switch %s: %w", touched.Path, err)
+			return fmt.Errorf("Ошибка переключения при откате %s: %w", touched.Path, err)
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 	}
@@ -569,7 +569,7 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		return err
 	}
 	if err := removeUpdaterTerminalPayload01510(u.transactionDir(journal.ID)); err != nil {
-		return fmt.Errorf("cleanup rolled-back transaction payload: %w", err)
+		return fmt.Errorf("Не удалось очистить данные отменённой транзакции: %w", err)
 	}
 	return nil
 }
@@ -659,8 +659,8 @@ func (u *transactionalUpdater0156) recoverIncompleteLocked() ([]string, error) {
 				return recovered, err
 			}
 		default:
-			if err := u.rollbackLocked(journal, errors.New("crash recovery")); err != nil {
-				return recovered, fmt.Errorf("recover transaction %s: %w", id, err)
+			if err := u.rollbackLocked(journal, errors.New("Восстановление после аварийного завершения")); err != nil {
+				return recovered, fmt.Errorf("Не удалось восстановить транзакцию %s: %w", id, err)
 			}
 		}
 		recovered = append(recovered, id)
@@ -821,7 +821,7 @@ func (u *transactionalUpdater0156) safeLivePath(rel string) (string, error) {
 	clean := filepath.Clean(dst)
 	relToRoot, err := filepath.Rel(u.root, clean)
 	if err != nil || relToRoot == ".." || strings.HasPrefix(relToRoot, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("updater path escapes root: %s", rel)
+		return "", fmt.Errorf("Путь обновления выходит за пределы корневого каталога: %s", rel)
 	}
 	parent := filepath.Dir(clean)
 	for p := parent; p != u.root; p = filepath.Dir(p) {
@@ -833,14 +833,14 @@ func (u *transactionalUpdater0156) safeLivePath(rel string) (string, error) {
 			return "", err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return "", fmt.Errorf("updater refuses symlink parent: %s", rel)
+			return "", fmt.Errorf("Обновление запрещено: родительский каталог является символической ссылкой: %s", rel)
 		}
 		if !info.IsDir() {
-			return "", fmt.Errorf("updater parent is not directory: %s", rel)
+			return "", fmt.Errorf("Родительский элемент обновляемого файла не является каталогом: %s", rel)
 		}
 	}
 	if info, err := os.Lstat(clean); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return "", fmt.Errorf("updater refuses symlink target: %s", rel)
+		return "", fmt.Errorf("Обновление запрещено: целевой файл является символической ссылкой: %s", rel)
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}

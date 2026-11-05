@@ -287,7 +287,7 @@ fn normalize_relative(root:&Path,path:&Path)->Result<String,String>{
  let canonical_path=fs::canonicalize(&absolute).map_err(|e|e.to_string())?;
  let relative_path=canonical_path.strip_prefix(&canonical_root).map_err(|_|"Guard: агент расположен за пределами каталога клиента")?;
  let parts=relative_path.components().map(|c|match c{Component::Normal(s)=>s.to_string_lossy().to_string(),_=>String::new()}).collect::<Vec<_>>();
- let result=parts.join("/");if !relative(&result){return Err("Guard compatibility invalid agent path".into())}Ok(result)
+ let result=parts.join("/");if !relative(&result){return Err("Guard: некорректный путь к агенту совместимости".into())}Ok(result)
 }
 fn require_candidates(root:&Path,dir:&Path,kind:&str,extensions:&[&str],approved:&HashMap<String,String>)->Result<(),String>{
  if !dir.exists(){return Ok(())}

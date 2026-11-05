@@ -97,7 +97,7 @@ func worldBackupHandle02810(args []string) error {
 	case "create":
 		policy := strings.TrimSpace(flagValue(args, "--consistency", "stopped"))
 		if policy != "stopped" && policy != "stop" {
-			return errors.New("--consistency must be stopped or stop")
+			return errors.New("Параметр --consistency должен иметь значение stopped или stop")
 		}
 		worlds := multiFlagValues01910(args, "--world")
 		// Проверяйте выбор до остановки действующего сервера.
@@ -136,7 +136,7 @@ func worldBackupHandle02810(args []string) error {
 	case "verify", "restore":
 		id := flagValue(args, "--id", "")
 		if !worldBackupID02810.MatchString(id) {
-			return errors.New("--id must be a 32-character hexadecimal backup ID")
+			return errors.New("Параметр --id должен содержать 32-символьный шестнадцатеричный идентификатор резервной копии")
 		}
 		m, err = worldBackupVerify02810(filepath.Join(dir, id))
 		if err != nil {
@@ -284,7 +284,7 @@ func worldBackupLockAcquire02810(dir string) (func(), error) {
 			return nil, err
 		}
 		if existing.Identity == "" || hostIdentityMatches0282(existing.PID, existing.Identity) {
-			return nil, errors.New("world backup operation already in progress or unverifiable lock owner")
+			return nil, errors.New("Резервное копирование мира уже выполняется или владелец блокировки не подтверждён")
 		}
 		stale := path + ".stale-" + nonce
 		if err := os.Rename(path, stale); err != nil {
@@ -292,7 +292,7 @@ func worldBackupLockAcquire02810(dir string) (func(), error) {
 		}
 		_ = os.Remove(stale)
 	}
-	return nil, errors.New("world backup lock contention")
+	return nil, errors.New("Конфликт блокировки резервного копирования мира")
 }
 func worldBackupReadJSON02810(path string, v any) error {
 	check, err := os.Lstat(path)
@@ -309,7 +309,7 @@ func worldBackupReadJSON02810(path string, v any) error {
 	defer f.Close()
 	fi, err := f.Stat()
 	if err == nil && !os.SameFile(check, fi) {
-		return errors.New("backup metadata changed during open")
+		return errors.New("Метаданные резервной копии изменились во время открытия")
 	}
 	if err != nil {
 		return err
@@ -336,7 +336,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 		lock, lockErr := readServerBridgeHostLock01910(paths["lock"])
 		if lockErr == nil {
 			if lock.Identity == "" || hostIdentityMatches0282(lock.PID, lock.Identity) || updaterProcessAlive0156(lock.PID) {
-				return errors.New("Host supervisor lock exists without runtime; backup unsafe")
+				return errors.New("Блокировка супервизора Host существует без Runtime: резервное копирование небезопасно")
 			}
 		} else if !errors.Is(lockErr, os.ErrNotExist) {
 			return fmt.Errorf("Не удалось проверить «Host supervisor lock:» %w", lockErr)
@@ -348,10 +348,10 @@ func worldBackupQuiesce02810(root, policy string) error {
 	}
 	if state.ProcessPID > 0 {
 		if !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
-			return errors.New("unverified/stale Minecraft PID; reconcile before world backup")
+			return errors.New("PID Minecraft не подтверждён или устарел; проверьте состояние перед копированием мира")
 		}
 		if policy != "stop" {
-			return errors.New("Minecraft is running: use --consistency stop for supervised graceful stop")
+			return errors.New("Minecraft работает: укажите --consistency stop для контролируемой корректной остановки")
 		}
 		stopResult := filepath.Join(paths["dir"], "world-backup-stop-result.json")
 		defer os.Remove(stopResult)
@@ -374,7 +374,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 		time.Sleep(40 * time.Millisecond)
 	}
 	if current.ProcessPID > 0 || hostIdentityMatches0282(current.ProcessPID, current.ProcessIdentity) {
-		return errors.New("Minecraft process not confirmed stopped")
+		return errors.New("Остановка процесса Minecraft не подтверждена")
 	}
 	if current.Status == "starting" || current.Status == "running" || current.Status == "restarting" {
 		return fmt.Errorf("Небезопасное значение: «host runtime state» %s", current.Status)
@@ -383,22 +383,22 @@ func worldBackupQuiesce02810(root, policy string) error {
 		return errors.New("«supervisor is still running;»: запрещено «guarantee no restart during backup»")
 	}
 	if current.Status == "crashed" || current.Status == "failed" || current.Status == "restarting" {
-		return errors.New("crashed/failed world is not a confirmed consistent backup source")
+		return errors.New("Мир после сбоя не подтверждён как согласованный источник резервной копии")
 	}
 	if current.StopMethod == "kill" || current.StopMethod == "terminate" {
-		return errors.New("last Minecraft shutdown was forced; world flush is unverified")
+		return errors.New("Последнее завершение Minecraft было принудительным; сохранение мира на диск не подтверждено")
 	}
 	if current.Status == "stopped" && (current.StopMethod != "console-stop" || current.ExitCode == nil || *current.ExitCode != 0) {
-		return errors.New("last Minecraft stop was not confirmed graceful")
+		return errors.New("Последняя остановка Minecraft не подтверждена как корректная")
 	}
 	if current.Status == "exited" && (current.ExitCode == nil || *current.ExitCode != 0) {
-		return errors.New("last Minecraft exit was not clean")
+		return errors.New("Последний выход Minecraft был аварийным")
 	}
 	if policy == "stop" && state.ProcessPID > 0 && (current.StopMethod != "console-stop" || current.ExitCode == nil || *current.ExitCode != 0) {
-		return errors.New("Minecraft graceful shutdown was not confirmed; refusing world backup")
+		return errors.New("Корректная остановка Minecraft не подтверждена; резервное копирование мира запрещено")
 	}
 	if lock, err := readServerBridgeHostLock01910(paths["lock"]); err == nil && (hostIdentityMatches0282(lock.PID, lock.Identity) || (lock.Identity == "" && updaterProcessAlive0156(lock.PID))) {
-		return errors.New("live Host supervisor lock prevents consistent backup")
+		return errors.New("Блокировка работающего супервизора Host препятствует согласованному резервному копированию")
 	}
 	return nil
 }
@@ -464,7 +464,7 @@ func worldBackupSources02810(root string, worlds []string) ([]string, error) {
 	seen := map[string]bool{}
 	for _, s := range sources {
 		if seen[s] {
-			return nil, fmt.Errorf("world %q overlaps configuration", s)
+			return nil, fmt.Errorf("Мир %q пересекается с каталогом конфигурации", s)
 		}
 		seen[s] = true
 	}
@@ -527,7 +527,7 @@ func worldBackupCopy02810(src, dst string, expectedSize int64, mode fs.FileMode)
 	defer in.Close()
 	openInfo, err := in.Stat()
 	if err != nil || !os.SameFile(info, openInfo) {
-		return "", errors.New("source file changed during open")
+		return "", errors.New("Исходный файл изменился при открытии")
 	}
 	out, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode.Perm())
 	if err != nil {
@@ -536,7 +536,7 @@ func worldBackupCopy02810(src, dst string, expectedSize int64, mode fs.FileMode)
 	hasher := sha256.New()
 	n, copyErr := io.Copy(io.MultiWriter(out, hasher), in)
 	if copyErr == nil && n != expectedSize {
-		copyErr = errors.New("source size changed during copy")
+		copyErr = errors.New("Размер исходного файла изменился при копировании")
 	}
 	if copyErr == nil {
 		copyErr = out.Sync()
@@ -547,7 +547,7 @@ func worldBackupCopy02810(src, dst string, expectedSize int64, mode fs.FileMode)
 	}
 	after, statErr := in.Stat()
 	if copyErr == nil && (statErr != nil || after.Size() != info.Size() || !after.ModTime().Equal(info.ModTime())) {
-		copyErr = errors.New("source modified during backup")
+		copyErr = errors.New("Исходный файл изменился во время резервного копирования")
 	}
 	if copyErr != nil {
 		_ = os.Remove(dst)
@@ -654,7 +654,7 @@ func worldBackupCreate02810(root, dir string, requested []string, policy string)
 		return empty, err
 	}
 	if err = worldBackupSyncDir02810(dir); err != nil {
-		return m, fmt.Errorf("backup published but directory sync failed; inspect ID %s: %w", id, err)
+		return m, fmt.Errorf("Резервная копия опубликована, но синхронизация каталога не удалась; проверьте ID %s: %w", id, err)
 	}
 	return m, nil
 }
@@ -689,7 +689,7 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 				return err
 			}
 			if total > int64(^uint64(0)>>1)-e.Size {
-				return errors.New("backup size overflow")
+				return errors.New("Переполнение размера резервной копии")
 			}
 			total += e.Size
 		}
@@ -697,7 +697,7 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 		for strings.Contains(parent, "/") {
 			parent = parent[:strings.LastIndex(parent, "/")]
 			if found[parent] == "file" {
-				return errors.New("manifest path descends into file")
+				return errors.New("Путь манифеста проходит через обычный файл")
 			}
 		}
 		found[e.Path] = e.Type
@@ -714,7 +714,7 @@ func worldBackupManifestValid02810(m worldBackupManifest02810) error {
 		if strings.Contains(path, "/") {
 			parent := path[:strings.LastIndex(path, "/")]
 			if found[parent] != "dir" {
-				return errors.New("manifest missing parent directory")
+				return errors.New("В манифесте отсутствует родительский каталог")
 			}
 		}
 	}
@@ -727,14 +727,14 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 		return m, err
 	}
 	if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
-		return m, errors.New("backup entry is not a real directory")
+		return m, errors.New("Элемент резервной копии не является настоящим каталогом")
 	}
 	payloadInfo, err := os.Lstat(filepath.Join(dir, "payload"))
 	if err != nil {
 		return m, err
 	}
 	if !payloadInfo.IsDir() || payloadInfo.Mode()&os.ModeSymlink != 0 {
-		return m, errors.New("backup payload is not a real directory")
+		return m, errors.New("Каталог данных резервной копии не является настоящим каталогом")
 	}
 	if err := worldBackupReadJSON02810(filepath.Join(dir, "manifest.json"), &m); err != nil {
 		return m, err
@@ -787,7 +787,7 @@ func worldBackupVerify02810(dir string) (worldBackupManifest02810, error) {
 				return err
 			}
 			if n != e.Size || hex.EncodeToString(h.Sum(nil)) != e.SHA256 {
-				return fmt.Errorf("checksum mismatch %s", rel)
+				return fmt.Errorf("Несовпадение контрольной суммы %s", rel)
 			}
 		}
 		count++
@@ -824,7 +824,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 	}
 	parent := filepath.Dir(abs)
 	if fi, err := os.Lstat(parent); err != nil || !fi.IsDir() {
-		return errors.New("restore destination parent must already exist and be a real directory")
+		return errors.New("Родительский каталог назначения восстановления должен существовать и быть настоящим каталогом")
 	}
 	stage := filepath.Join(parent, "."+filepath.Base(abs)+".restore-"+m.ID)
 	if err = os.Mkdir(stage, 0700); err != nil {
@@ -845,7 +845,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 			return copyErr
 		}
 		if digest != e.SHA256 {
-			return fmt.Errorf("restore checksum mismatch %s", e.Path)
+			return fmt.Errorf("Контрольная сумма восстановленного файла не совпадает: %s", e.Path)
 		}
 		if err = os.Chmod(to, os.FileMode(e.Mode)&0777); err != nil {
 			return err
@@ -876,7 +876,7 @@ func worldBackupRestore02810(root, store string, m worldBackupManifest02810, sou
 			return readErr
 		}
 		if hex.EncodeToString(h.Sum(nil)) != e.SHA256 {
-			return errors.New("restored payload failed verification")
+			return errors.New("Восстановленные данные не прошли проверку")
 		}
 	}
 	if err = worldBackupSyncDir02810(stage); err != nil {

@@ -178,14 +178,14 @@ fn valid_permission_0244(s:&str)->bool {
 fn distinct_conditions_0244(values:&[String],limit:usize,valid:impl Fn(&str)->bool)->Result<(),String>{
     if values.len()>limit {return Err("Массив условий превышает допустимый размер".into())}
     let mut seen=HashSet::new();
-    for v in values{if !valid(v)||!seen.insert(v){return Err(format!("invalid/duplicate condition value {v:?}"))}}
+    for v in values{if !valid(v)||!seen.insert(v){return Err(format!("Некорректное или повторяющееся значение условия {v:?}"))}}
     Ok(())
 }
 fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
     for c in &cat.components {
         let Some(v)=&c.conditions else {continue};
-        if cat.schema_version!="4.0" && cat.schema_version!="5.0" {return Err(format!("component {} has unsigned v4 conditions",c.id))}
-        if v.schema_version!="1.0"{return Err(format!("component {} unsupported condition schema {}",c.id,v.schema_version))}
+        if cat.schema_version!="4.0" && cat.schema_version!="5.0" {return Err(format!("Компонент {} содержит неподписанные условия v4",c.id))}
+        if v.schema_version!="1.0"{return Err(format!("Компонент {} использует неподдерживаемую схему условий {}",c.id,v.schema_version))}
         distinct_conditions_0244(&v.os,8,|s|matches!(s,"windows"|"linux"|"macos"))?;
         distinct_conditions_0244(&v.arch,8,|s|matches!(s,"x86_64"|"aarch64"))?;
         if v.java_major_min>99||v.java_major_max>99||(v.java_major_max!=0&&v.java_major_min>v.java_major_max){return Err(format!("Некорректное значение: «Java condition on {}»",c.id))}
@@ -292,14 +292,14 @@ fn resolve_conditional_0244(cat:&ComponentCatalog,preset:&str,env:&ComponentEnvi
     let explicit=!base.is_empty()||!cat.default_preset.is_empty();
     for c in &mut modified.components {
         if let Some(reason)=condition_unavailable_0244(c,env)? {
-            if c.required{return Err(format!("condition_unsatisfied: required component {}: {reason}",c.id))}
+            if c.required{return Err(format!("Условие не выполнено: обязательный компонент {}: {reason}",c.id))}
             if !explicit{c.default=false;}
         }
     }
     let selected=resolve_graph_v3(&modified,preset)?;
     for c in &cat.components{
         if selected.contains(&c.id){if let Some(why)=condition_unavailable_0244(c,env)? {
-            return Err(format!("condition_unsatisfied: selected/dependent component {}: {why}",c.id))
+            return Err(format!("Условие не выполнено: выбранный или зависимый компонент {}: {why}",c.id))
         }}
     }
     Ok(selected)
@@ -313,33 +313,33 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
     validate_conditions_0244(cat)?;
     if cat.schema_version=="1.0"{
         if !cat.categories.is_empty()||!cat.groups.is_empty()||!cat.presets.is_empty()||!cat.default_preset.is_empty() {return Err("«v1 catalog»: запрещено «contain topology»".into())}
-        for c in &cat.components{if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty()||!c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("v1 component has topology: {}",c.id))}}
+        for c in &cat.components{if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty()||!c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("Компонент v1 содержит топологию: {}",c.id))}}
         return Ok(())
     }
     if cat.schema_version=="2.0" {
         for c in &cat.components {
-            if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty(){return Err(format!("v2 component {} contains unsigned v3 constraints",c.id))}
+            if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty(){return Err(format!("Компонент v2 {} содержит неподписанные ограничения v3",c.id))}
         }
     }
-    if cat.categories.len()>256||cat.groups.len()>1024||cat.presets.len()>128{return Err("topology size exceeded".into())}
+    if cat.categories.len()>256||cat.groups.len()>1024||cat.presets.len()>128{return Err("Превышен допустимый размер топологии".into())}
     let mut categories=HashMap::new();
-    for c in &cat.categories{if !valid_id(&c.id)||!label(&c.name,&c.description)||categories.insert(c.id.as_str(),c).is_some(){return Err(format!("invalid/duplicate category {}",c.id))}}
+    for c in &cat.categories{if !valid_id(&c.id)||!label(&c.name,&c.description)||categories.insert(c.id.as_str(),c).is_some(){return Err(format!("Некорректная или повторяющаяся категория {}",c.id))}}
     let mut groups=HashMap::new();
-    for g in &cat.groups{if !valid_id(&g.id)||!label(&g.name,&g.description)||groups.insert(g.id.as_str(),g).is_some(){return Err(format!("invalid/duplicate group {}",g.id))}}
-    for id in categories.keys(){let mut seen=HashSet::new();let mut cur=*id;while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("category cycle/depth {id}"))}cur=categories.get(cur).ok_or(format!("Отсутствует: «category» {cur}"))?.parent_id.as_str()}}
-    for id in groups.keys(){let mut seen=HashSet::new();let mut cur=*id;let mut category="";while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("group cycle/depth {id}"))}let g=groups.get(cur).ok_or(format!("Отсутствует: «group» {cur}"))?;if !g.category_id.is_empty(){if !categories.contains_key(g.category_id.as_str())||(!category.is_empty()&&category!=g.category_id){return Err(format!("group category mismatch {id}"))}category=&g.category_id}cur=g.parent_id.as_str()}}
+    for g in &cat.groups{if !valid_id(&g.id)||!label(&g.name,&g.description)||groups.insert(g.id.as_str(),g).is_some(){return Err(format!("Некорректная или повторяющаяся группа {}",g.id))}}
+    for id in categories.keys(){let mut seen=HashSet::new();let mut cur=*id;while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("Цикл или превышение глубины категорий: {id}"))}cur=categories.get(cur).ok_or(format!("Отсутствует: «category» {cur}"))?.parent_id.as_str()}}
+    for id in groups.keys(){let mut seen=HashSet::new();let mut cur=*id;let mut category="";while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("Цикл или превышение глубины групп: {id}"))}let g=groups.get(cur).ok_or(format!("Отсутствует: «group» {cur}"))?;if !g.category_id.is_empty(){if !categories.contains_key(g.category_id.as_str())||(!category.is_empty()&&category!=g.category_id){return Err(format!("Категория группы не совпадает: {id}"))}category=&g.category_id}cur=g.parent_id.as_str()}}
     let mut ids=HashSet::new();
     for c in &cat.components{
-        if c.visible.is_none()||!label(&c.name,&c.description)||c.metadata.len()>32{return Err(format!("bad metadata/visibility {}",c.id))}
+        if c.visible.is_none()||!label(&c.name,&c.description)||c.metadata.len()>32{return Err(format!("Некорректные метаданные или настройки видимости: {}",c.id))}
         if !c.category_id.is_empty()&&!categories.contains_key(c.category_id.as_str()){return Err(format!("Неизвестное значение: «category {}»",c.category_id))}
-        if !c.group_id.is_empty(){let g=groups.get(c.group_id.as_str()).ok_or(format!("unknown group {}",c.group_id))?;if !g.category_id.is_empty()&&!c.category_id.is_empty()&&g.category_id!=c.category_id{return Err(format!("component group category mismatch {}",c.id))}}
+        if !c.group_id.is_empty(){let g=groups.get(c.group_id.as_str()).ok_or(format!("Неизвестная группа {}",c.group_id))?;if !g.category_id.is_empty()&&!c.category_id.is_empty()&&g.category_id!=c.category_id{return Err(format!("Несовпадение категории группы компонента {}",c.id))}}
         for (k,v) in &c.metadata{if !valid_id(k)||k.len()>64||v.len()>1024||v.chars().any(|ch|matches!(ch,'\0'|'\r')){return Err(format!("Некорректное значение: «component metadata {}»",c.id))}}
         ids.insert(c.id.as_str());
     }
     let mut preset_ids=HashSet::new();
     for p in &cat.presets{
-        if !valid_id(&p.id)||!label(&p.name,&p.description)||!preset_ids.insert(p.id.as_str())||p.components.len()>4096{return Err(format!("bad preset {}",p.id))}
-        let mut included=HashSet::new();for id in &p.components{if !ids.contains(id.as_str())||!included.insert(id){return Err(format!("preset {} unknown/duplicate component {}",p.id,id))}}
+        if !valid_id(&p.id)||!label(&p.name,&p.description)||!preset_ids.insert(p.id.as_str())||p.components.len()>4096{return Err(format!("Некорректный пресет {}",p.id))}
+        let mut included=HashSet::new();for id in &p.components{if !ids.contains(id.as_str())||!included.insert(id){return Err(format!("Пресет {} содержит неизвестный или повторяющийся компонент {}",p.id,id))}}
     }
     if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("Неизвестное значение: «defaultPreset»".into())}
     validate_conditions_0244(cat)?;
@@ -388,7 +388,7 @@ fn matches_range_0243(actual:&str,expression:&str)->Result<bool,String>{
     let a=parse_semver_0243(actual)?;
     let trimmed=expression.trim();
     if trimmed.is_empty()||trimmed=="*" {return Ok(true)}
-    if expression.len()>256{return Err("version range exceeds 256 bytes".into())}
+    if expression.len()>256{return Err("Диапазон версий превышает 256 байт".into())}
     let mut any_matched=false;
     for branch in expression.split("||"){
         let parts:Vec<&str>=branch.split_whitespace().collect();
@@ -421,13 +421,13 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     let items:HashMap<&str,&CatalogComponent>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
     for c in &cat.components {
         parse_semver_0243(&c.version).map_err(|e|format!("invalid_version component {}: {e}",c.id))?;
-        if !c.exclusive_group.is_empty()&&!valid_id(&c.exclusive_group){return Err(format!("invalid_group component {}: {}",c.id,c.exclusive_group))}
-        if c.dependencies.len()>64||c.conflicts.len()>64{return Err(format!("limit component {}: too many constraints",c.id))}
+        if !c.exclusive_group.is_empty()&&!valid_id(&c.exclusive_group){return Err(format!("Некорректная группа компонента {}: {}",c.id,c.exclusive_group))}
+        if c.dependencies.len()>64||c.conflicts.len()>64{return Err(format!("Превышен лимит ограничений компонента {}",c.id))}
         for (kind,refs) in [("dependency",&c.dependencies),("conflict",&c.conflicts)] {
             let mut seen=HashSet::new();
             for r in refs {
                 let other=items.get(r.id.as_str()).ok_or_else(||format!("invalid_reference {} {}: unknown {}",c.id,kind,r.id))?;
-                if r.id==c.id||!seen.insert(r.id.as_str()){return Err(format!("invalid_reference {} {}: duplicate/self {}",c.id,kind,r.id))}
+                if r.id==c.id||!seen.insert(r.id.as_str()){return Err(format!("Некорректная ссылка {} {}: повторяющаяся или ссылающаяся на себя {}",c.id,kind,r.id))}
                 matches_range_0243(&other.version,&r.version_range).map_err(|e|format!("invalid_range {} {} {}: {e}",c.id,kind,r.id))?;
             }
         }
@@ -456,7 +456,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
 const CUSTOM_SELECTION_PREFIX_0247:&str="@custom:v1:";
 fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<String>,HashSet<String>),String>{
     let (base,changes)=if let Some(encoded)=preset.strip_prefix(CUSTOM_SELECTION_PREFIX_0247){
-        if preset.len()>8192 {return Err("component selection exceeds 8192 bytes".into())}
+        if preset.len()>8192 {return Err("Выбор компонентов превышает 8192 байта".into())}
         let (base,encoded_changes)=encoded.split_once(':').ok_or("invalid custom component selection format")?;
         (base,Some(encoded_changes))
     }else{(preset,None)};
@@ -468,10 +468,10 @@ fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<Stri
     if let Some(changes)=changes {
         let mut seen=HashSet::new();
         if !changes.is_empty() {
-            if changes.split(',').count()>cat.components.len(){return Err("too many component choices".into())}
+            if changes.split(',').count()>cat.components.len(){return Err("Слишком много выбранных вариантов компонентов".into())}
             for change in changes.split(','){
                 let (enable,id)=match change.as_bytes().first(){Some(b'+')=>(true,&change[1..]),Some(b'-')=>(false,&change[1..]),_=>return Err("Некорректное значение: «choice operator»".into())};
-                if !valid_id(id)||!seen.insert(id){return Err(format!("invalid/duplicate component choice: {id}"))}
+                if !valid_id(id)||!seen.insert(id){return Err(format!("Некорректный или повторяющийся вариант компонента: {id}"))}
                 let c=cat.components.iter().find(|c|c.id==id).ok_or_else(||format!("unsigned component choice: {id}"))?;
                 if !enable&&c.required{return Err(format!("«required component»: запрещено «be disabled:» {id}"))}
                 if enable&&(c.visible==Some(false)||c.limited){return Err(format!("компонент: запрещено «be manually enabled:» {id}"))}
@@ -493,7 +493,7 @@ fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,S
             let other=components.get(dep.id.as_str()).ok_or_else(||format!("missing_dependency: {} -> {}",id,dep.id))?;
             if !matches_range_0243(&other.version,&dep.version_range)?{
                 let mut path=chain.to_vec();path.push(id.to_string());
-                return Err(format!("version_mismatch: {id} requires {} {:?}, available {} (via {})",dep.id,dep.version_range,other.version,path.join(" -> ")))
+                return Err(format!("Несовпадение версий: для {id} требуется {} {:?}, доступно {} (через {})",dep.id,dep.version_range,other.version,path.join(" -> ")))
             }
             if disabled.contains(&dep.id){return Err(format!("Для «required_dependency:» {id} требуется «{}, which was explicitly disabled»",dep.id))}
             selected.insert(dep.id.clone());
@@ -508,14 +508,14 @@ fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,S
         if !selected.contains(&c.id){continue}
         if !c.exclusive_group.is_empty() {
             if let Some(other)=groups.insert(c.exclusive_group.as_str(),c.id.as_str()){
-                return Err(format!("exclusive_group: {other} and {} are mutually exclusive (group {})",c.id,c.exclusive_group))
+                return Err(format!("Взаимоисключающая группа: {other} и {} нельзя выбирать одновременно (группа {})",c.id,c.exclusive_group))
             }
         }
         for conflict in &c.conflicts {
             if selected.contains(&conflict.id) {
                 let other=components[conflict.id.as_str()];
                 if matches_range_0243(&other.version,&conflict.version_range)?{
-                    return Err(format!("«conflict: {} and {}»: запрещено «be selected together; {} conflicts with {} version {} (range {:?})»",c.id,other.id,c.id,other.id,other.version,conflict.version_range))
+                    return Err(format!("Конфликт выбора: {} и {} нельзя выбирать одновременно; {} конфликтует с {} версии {} (диапазон {:?})",c.id,other.id,c.id,other.id,other.version,conflict.version_range))
                 }
             }
         }
@@ -551,7 +551,7 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
         "3.0"=>resolve_graph_v3(cat,wanted)?,
         "2.0"=>selection_roots_0247(cat,wanted)?.0,
         "1.0"=>{
-            if !wanted.is_empty(){return Err("v1 catalog does not support custom selections".into())}
+            if !wanted.is_empty(){return Err("Каталог v1 не поддерживает пользовательский выбор".into())}
             cat.components.iter().map(|c|c.id.clone()).collect()
         },
         _=>return Err("Не поддерживается: «catalog schema»".into()),
@@ -587,11 +587,11 @@ pub fn validate(m:&Manifest)->Result<(),String>{
     crate::component_actions_0245::validate_actions(cat)?;
     let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();
     for c in &cat.components{
-        if !valid_id(&c.id)||!ids.insert(c.id.as_str())||c.name.trim().is_empty()||c.name.len()>256||c.name.chars().any(|c|matches!(c,'\0'|'\r'|'\n'))||c.files.is_empty()||c.files.len()>8192{return Err(format!("invalid/duplicate component {}",c.id))}
+        if !valid_id(&c.id)||!ids.insert(c.id.as_str())||c.name.trim().is_empty()||c.name.len()>256||c.name.chars().any(|c|matches!(c,'\0'|'\r'|'\n'))||c.files.is_empty()||c.files.len()>8192{return Err(format!("Некорректный или повторяющийся компонент {}",c.id))}
         for path in &c.files{let key=path.to_ascii_lowercase();let f=files.get(&key).ok_or_else(||format!("undeclared component file: {path}"))?;
-            if f.path!=*path||f.required||file_ownership::effective_ownership(f)!="optional"||!owners.insert(key){return Err(format!("invalid/duplicate component file: {path}"))}}
+            if f.path!=*path||f.required||file_ownership::effective_ownership(f)!="optional"||!owners.insert(key){return Err(format!("Некорректный или повторяющийся файл компонента: {path}"))}}
     }
-    for f in &m.files{if file_ownership::effective_ownership(f)=="optional"&&!owners.contains(&f.path.to_ascii_lowercase()){return Err(format!("unowned v3 optional file: {}",f.path))}}
+    for f in &m.files{if file_ownership::effective_ownership(f)=="optional"&&!owners.contains(&f.path.to_ascii_lowercase()){return Err(format!("Дополнительный файл v3 не принадлежит ни одному компоненту: {}",f.path))}}
     Ok(())
 }
 /// Подписанный пресет определяет эффективные пути файлов; все файлы вне компонентов
@@ -610,7 +610,7 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
         return Ok(active)
     }
     if cat.schema_version=="1.0"{
-        if preset.is_some_and(|p|!p.is_empty()){return Err("v1 catalog does not support component choices".into())}
+        if preset.is_some_and(|p|!p.is_empty()){return Err("Каталог v1 не поддерживает варианты компонентов".into())}
         selected.extend(cat.components.iter().map(|c|c.id.as_str()));
     }
     else {

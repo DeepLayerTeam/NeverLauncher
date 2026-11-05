@@ -187,7 +187,7 @@ impl ProcessSupervisor {
         crate::apply_launch_command_0223(&mut command, &plan);
         #[cfg(windows)]
         let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
-            .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: ошибка подготовки датчика Guard: {err}"))?;
         command
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
@@ -203,14 +203,14 @@ impl ProcessSupervisor {
             .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
         #[cfg(windows)]
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
-            .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: не удалось применить политику Runtime и процессов Windows: {err}"))?;
         #[cfg(windows)]
         sensor_bootstrap.bind_runtime_policy(&runtime_policy);
         #[cfg(windows)]
         let windows_sensor_session = Some(
             crate::windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
                 .await
-                .map_err(|err| format!("launch заблокирован: Guard Sensor/Module Guard authentication failed: {err}"))?,
+                .map_err(|err| format!("Запуск заблокирован: ошибка аутентификации датчика Guard или Module Guard: {err}"))?,
         );
         #[cfg(windows)]
         let windows_sensor = windows_sensor_session.as_ref().map(|session| session.report());

@@ -46,7 +46,7 @@ fn verify_signature(key_hex:&str,payload:&[u8],sig_hex:&str)->Result<(),String>{
     let bytes: [u8;32]=hex::decode(key_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Ed25519 public key length".to_string())?;
     let signature: [u8;64]=hex::decode(sig_hex).map_err(|e|e.to_string())?.try_into().map_err(|_|"Ed25519 signature length".to_string())?;
     let key=VerifyingKey::from_bytes(&bytes).map_err(|e|e.to_string())?;
-    key.verify(payload,&Signature::from_bytes(&signature)).map_err(|_|"Некорректное значение: «root-signed trust policy signature»".to_string())
+    key.verify(payload,&Signature::from_bytes(&signature)).map_err(|_|"Некорректная подпись политики доверия корневым ключом".to_string())
 }
 fn read_policy(root_key:&str)->Result<(Policy,String),String>{
     // Выбор пути не выбирает корень доверия: он выбирает только байты, проверенные
@@ -54,7 +54,7 @@ fn read_policy(root_key:&str)->Result<(Policy,String),String>{
     let path=std::env::var("LAUNCHER_GAME_TRUST_POLICY_FILE").map_err(|_|"Требуется: «delegated game trust policy path»".to_string())?;
     let path=Path::new(&path);
     let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
-    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("Небезопасное значение: «game trust policy file»".into())}
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("Небезопасный файл политики доверия игры".into())}
     let raw=fs::read(path).map_err(|e|e.to_string())?;
     let env:Envelope=serde_json::from_slice(&raw).map_err(|e|e.to_string())?;
     if env.schema_version!="1.0" {return Err("Неизвестное значение: конверт политики доверия".into())}
@@ -65,12 +65,12 @@ fn read_policy(root_key:&str)->Result<(Policy,String),String>{
     let p:Policy=serde_json::from_slice(&payload).map_err(|e|e.to_string())?;
     if p.schema_version!="1.0" || p.domain!=DOMAIN || p.epoch==0 || p.keys.is_empty() || p.keys.len()>128 {return Err("Некорректное значение: «trust policy domain/version/keys»".into())}
     let issued=parse_utc(&p.issued_at)?;let expires=parse_utc(&p.expires_at)?;let current=now()?;
-    if issued>current+300 || expires<=current || expires<=issued || expires-issued>90*86400 {return Err("trust policy frozen/expired or invalid validity".into())}
+    if issued>current+300 || expires<=current || expires<=issued || expires-issued>90*86400 {return Err("Политика доверия заморожена, просрочена или имеет недопустимый срок действия".into())}
     let mut seen=std::collections::HashSet::new();
     for k in &p.keys {
         if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("Некорректное значение: «trust role/key status»".into())}
-        if hex::decode(&k.public_key).map_err(|e|e.to_string())?.len()!=32 || !seen.insert(k.public_key.to_ascii_lowercase()) {return Err("trust key duplicated/invalid".into())}
-        let start=parse_utc(&k.not_before)?;if start>expires{return Err("trust key starts after policy expiry".into())}
+        if hex::decode(&k.public_key).map_err(|e|e.to_string())?.len()!=32 || !seen.insert(k.public_key.to_ascii_lowercase()) {return Err("Повторяющийся или некорректный ключ доверия".into())}
+        let start=parse_utc(&k.not_before)?;if start>expires{return Err("Ключ доверия начинает действовать после истечения срока политики".into())}
         if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректное значение: ограниченный период пересечения действия ключей".into())}}
     }
     Ok((p,hex::encode(Sha256::digest(&payload))))
@@ -79,18 +79,18 @@ fn read_policy(root_key:&str)->Result<(Policy,String),String>{
 pub fn verify_manifest(manifest:&Manifest,root_key:&str,signer_hex:&str,signed_at:&str)->Result<(),String>{
     if manifest.trust_epoch==0 {
         if std::env::var_os("LAUNCHER_GAME_TRUST_POLICY_FILE").is_some() {
-            return Err("legacy manifest refused after root-signed game policy provisioning".into());
+            return Err("Старый манифест отклонён после настройки политики игры с корневой подписью".into());
         }
         return Ok(())
     }
     let (p,_)=read_policy(root_key)?;
-    if manifest.trust_epoch>p.epoch {return Err("game manifest future trustEpoch not root-authorized".into())}
+    if manifest.trust_epoch>p.epoch {return Err("Будущая эпоха доверия манифеста игры не разрешена корневым ключом".into())}
     let signed=parse_utc(signed_at)?;let current=now()?;
-    if signed>current+300 {return Err("game signature timestamp in future".into())}
+    if signed>current+300 {return Err("Дата подписи игры находится в будущем".into())}
     for k in &p.keys {
         if k.role!="game" || !k.public_key.eq_ignore_ascii_case(signer_hex) {continue}
-        if k.status=="revoked" {return Err("game signing key revoked".into())}
-        if signed<parse_utc(&k.not_before)? {return Err("game signature precedes delegation".into())}
+        if k.status=="revoked" {return Err("Ключ подписи игры отозван".into())}
+        if signed<parse_utc(&k.not_before)? {return Err("Подпись игры создана до делегирования полномочий".into())}
         if k.status=="verify-only" {
             let end=parse_utc(&k.verify_until)?;
             if signed>=end || current>=end {return Err("Истёк срок действия: «game signer overlap has»".into())}
@@ -106,10 +106,10 @@ fn floor(root:&Path)->Result<Option<Watermark>,String>{
     for i in 0..2 {
         let f=slot(root,i);file_ownership::ensure_no_symlinks(root,&f)?;
         match fs::symlink_metadata(&f) {
-            Ok(m)=>{if !m.is_file() || m.len()>4096 {return Err("corrupt game trust watermark".into())}
+            Ok(m)=>{if !m.is_file() || m.len()>4096 {return Err("Повреждена метка эпохи доверия игры".into())}
                 let current:Watermark=serde_json::from_slice(&fs::read(&f).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
                 if current.epoch==0 || current.digest.len()!=64 || current.root_sha256.len()!=64 {return Err("Некорректное значение: «game trust watermark»".into())}
-                if let Some(ref prev)=best {if current.epoch==prev.epoch && current.digest!=prev.digest {return Err("game trust policy equivocation".into())}}
+                if let Some(ref prev)=best {if current.epoch==prev.epoch && current.digest!=prev.digest {return Err("Обнаружено противоречие в политике доверия игры".into())}}
                 if best.as_ref().is_none_or(|v|current.epoch>v.epoch){best=Some(current)}
             },
             Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
@@ -121,28 +121,28 @@ fn floor(root:&Path)->Result<Option<Watermark>,String>{
 pub fn check(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),String>{
     let accepted=floor(root)?;
     if manifest.trust_epoch==0 {
-        if accepted.is_some(){return Err("legacy game signature blocked after delegated trust activation".into())}
+        if accepted.is_some(){return Err("Старая подпись игры заблокирована после включения делегированного доверия".into())}
         return Ok(())
     }
     let (policy,digest)=read_policy(root_key)?;
-    if policy.epoch!=manifest.trust_epoch {return Err("new game installation must use current root-signed trust epoch".into())}
+    if policy.epoch!=manifest.trust_epoch {return Err("Новая установка игры должна использовать текущую эпоху доверия с корневой подписью".into())}
     let signer=manifest.signature.as_ref().ok_or("game signature missing")?;
     if !policy.keys.iter().any(|k|k.role=="game" && k.status=="active" && k.public_key.eq_ignore_ascii_case(&signer.public_key)) {
-       return Err("«retired or revoked game signer»: запрещено «install new release»".into());
+       return Err("Нельзя устанавливать новый релиз с помощью выведенного из эксплуатации или отозванного ключа подписи игры".into());
     }
     if let Some(stored)=accepted {
-        if stored.epoch>policy.epoch || (stored.epoch==policy.epoch && stored.digest!=digest) || stored.root_sha256!=hex::encode(Sha256::digest(hex::decode(root_key).map_err(|e|e.to_string())?)) {return Err("game trust rollback/equivocation/root change".into())}
+        if stored.epoch>policy.epoch || (stored.epoch==policy.epoch && stored.digest!=digest) || stored.root_sha256!=hex::encode(Sha256::digest(hex::decode(root_key).map_err(|e|e.to_string())?)) {return Err("Обнаружен откат, конфликт политики доверия или изменение корневого ключа игры".into())}
     }
     Ok(())
 }
 pub fn check_launch(root:&Path,manifest:&Manifest,root_key:&str)->Result<(),String>{
     let accepted=floor(root)?;
     if manifest.trust_epoch==0 {
-        if accepted.is_some(){return Err("legacy game release not allowed after delegated trust".into())}
+        if accepted.is_some(){return Err("Старый релиз игры запрещён после включения делегированного доверия".into())}
         return Ok(())
     }
     let (p,_)=read_policy(root_key)?;
-    if manifest.trust_epoch>p.epoch {return Err("game release references future trust policy".into())}
+    if manifest.trust_epoch>p.epoch {return Err("Релиз игры ссылается на будущую политику доверия".into())}
     if let Some(stored)=accepted {
        let pubkey=hex::decode(root_key).map_err(|e|e.to_string())?;
        if stored.root_sha256!=hex::encode(Sha256::digest(pubkey)) {return Err("Обнаружено изменение: корневой ключ доверия игры".into())}

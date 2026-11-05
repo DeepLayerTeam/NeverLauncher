@@ -41,9 +41,9 @@ fn checked_id(value:&str)->bool{
     valid_id(value) && !value.contains("..") && value.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'.'|b'_'|b'-'))
 }
 fn sorted_ids(values:Vec<String>)->Result<Vec<String>,String>{
-    if values.len()>4096 {return Err("too many component IDs in selection".into())}
+    if values.len()>4096 {return Err("Слишком много идентификаторов компонентов в выборе".into())}
     let mut unique=BTreeSet::new();
-    for id in values {if !checked_id(&id)||!unique.insert(id.clone()){return Err(format!("Некорректное значение: «or duplicate component ID»: {id}"))}}
+    for id in values {if !checked_id(&id)||!unique.insert(id.clone()){return Err(format!("Некорректный или повторяющийся идентификатор компонента: {id}"))}}
     Ok(unique.into_iter().collect())
 }
 
@@ -58,12 +58,12 @@ pub fn export_from_installed_02410(manifest:&Manifest,preset:Option<&str>)->Resu
         source_preset:preset.unwrap_or_default().to_owned(),selected_ids,
     };
     let exported=serde_json::to_string_pretty(&portable).map_err(|e|e.to_string())?;
-    if exported.len()>MAX_SELECTION_BYTES {return Err("exported selection exceeds 1 MiB".into())}
+    if exported.len()>MAX_SELECTION_BYTES {return Err("Экспортируемый выбор компонентов превышает 1 МиБ".into())}
     Ok(exported)
 }
 
 pub fn parse_import_02410(data:&str)->Result<PortableSelection02410,String>{
-    if data.len()>MAX_SELECTION_BYTES || data.is_empty(){return Err("Пустое значение: «selection JSON exceeds size limit or»".into())}
+    if data.len()>MAX_SELECTION_BYTES || data.is_empty(){return Err("JSON выбора компонентов пуст или превышает лимит размера".into())}
     let mut portable:PortableSelection02410=serde_json::from_str(data).map_err(|e|format!("Некорректное значение: «selection JSON»: {e}"))?;
     if portable.schema_version!="1.0" {return Err("Не поддерживается: «selection format»".into())}
     for s in [&portable.project_id,&portable.profile_id,&portable.channel] {
@@ -83,12 +83,12 @@ pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<Se
     let canonical=sorted_ids(source.selected_ids.clone())?;
     if (source.project_id.as_str(),source.profile_id.as_str(),source.channel.as_str()) !=
        (target.project_id.as_str(),target.profile_id.as_str(),target.channel.as_str()){
-        return Err("selection belongs to a different project/profile/channel".into())
+        return Err("Выбор компонентов относится к другому проекту, профилю или каналу".into())
     }
     // На границе Tauri ОБЯЗАТЕЛЬНО проверять подпись Ed25519 по закреплённому ключу.
     component_catalog_0241::validate(target)?;
     let cat: &ComponentCatalog=target.component_catalog.as_ref().ok_or("target release has no signed catalog")?;
-    if cat.schema_version=="1.0" {return Err("target catalog v1 does not support selection migration".into())}
+    if cat.schema_version=="1.0" {return Err("Целевой каталог v1 не поддерживает миграцию выбора компонентов".into())}
     let existing:HashMap<&str,_>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
     let selected:BTreeSet<&str>=canonical.iter().map(String::as_str).collect();
     let preserved_ids:Vec<_>=canonical.iter().filter(|id|existing.contains_key(id.as_str())).cloned().collect();

@@ -7,7 +7,7 @@ pub fn reject_offline_server_autojoin_0358(plan: &LaunchPlan) -> Result<(), Stri
     for arg in &plan.game_args {
         let flag = arg.split('=').next().unwrap_or(arg).to_ascii_lowercase();
         if ["--server", "--quickplaymultiplayer", "--quickplayrealms"].contains(&flag.as_str()) {
-            return Err("offline launch denied: game arguments request a network server auto-join".into());
+            return Err("Автономный запуск запрещён: аргументы игры требуют автоматического подключения к сетевому серверу".into());
         }
     }
     Ok(())

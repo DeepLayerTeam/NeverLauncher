@@ -68,7 +68,7 @@ fn sync_dir(path: &Path) -> Result<(), String> {
 fn write_slot<T: Serialize>(root: &Path, kind: &str, generation: u64, value: &T) -> Result<(), String> {
     let dest = state_path(root, kind, (generation % 2) as usize);
     let data = serde_json::to_vec(value).map_err(|e| e.to_string())?;
-    if data.len() as u64 > MAX_STATE { return Err("release state exceeds maximum size".into()); }
+    if data.len() as u64 > MAX_STATE { return Err("Состояние релиза превышает допустимый размер".into()); }
     let temp = dest.with_extension(format!("{:016x}.tmp", rand::random::<u64>()));
     file_ownership::ensure_no_symlinks(root, &dest)?;
     let mut created = false;
@@ -109,7 +109,7 @@ fn journal(root: &Path) -> Result<Option<Journal>, String> {
     let b: Option<Journal> = read_slot(root, "switch", 1);
     let valid = [a, b].into_iter().flatten().filter(|j| j.schema == SCHEMA && matches!(j.state.as_str(), "switching" | "complete" | "reverting"))
         .max_by_key(|j| j.generation);
-    if valid.is_none() && state_exists(root, "switch") { return Err("client release switch journal is damaged".into()); }
+    if valid.is_none() && state_exists(root, "switch") { return Err("Повреждён журнал переключения релизов клиента".into()); }
     Ok(valid)
 }
 fn last_known_good(root: &Path) -> Result<Option<Journal>, String> {
@@ -198,7 +198,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
     if j.entries.len() != all.len() { return Err("Несовпадение: «release journal path count»".into()); }
     for (entry, signed_path) in j.entries.iter().zip(all) {
         if entry.path != signed_path || entry.new_sha256.is_some() != new.contains(signed_path) {
-            return Err("release journal contains unsigned paths".into());
+            return Err("Журнал релиза содержит неподписанные пути".into());
         }
         if let Some(ref digest) = entry.old_sha256 {
             if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("Некорректное значение: «backup digest»".into()); }
@@ -313,7 +313,7 @@ fn restore(root: &Path, j: &Journal) -> Result<(), String> {
                 match fs::remove_file(&target) {
                     Ok(()) => { if let Some(parent) = target.parent() { sync_dir(parent)?; } },
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-                    Err(e) => return Err(format!("remove newly installed file {}: {e}", e.path)),
+                    Err(e) => return Err(format!("Не удалось удалить недавно установленный файл {}: {e}", e.path)),
                 }
             }
         }
@@ -421,11 +421,11 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
                 recovered?;
             },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => (),
-            Err(e) => return Err(format!("release launch lock: {e}")),
+            Err(e) => return Err(format!("Ошибка блокировки запуска релиза: {e}")),
         }
         file.lock_shared().map_err(|e| format!("shared release launch lock: {e}"))?;
         if journal(&root)?.is_some_and(|j| j.state != "complete") {
-            return Err("incomplete release transaction: recovery required before launch".into());
+            return Err("Транзакция релиза не завершена: перед запуском требуется восстановление".into());
         }
         release_generations::check(&root,&signed)?;
         crate::trust_policy::check_launch(&root,&signed,&key)?;
@@ -449,7 +449,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
     validate_release(&active,key)?;
     if let Some(ref installed_digest)=active.plan_sha256 {
         if wanted_plan.sha256!=*installed_digest {
-            return Err("selected resolved plan differs from installed plan; install selected preset first".into());
+            return Err("Выбранный план отличается от установленного: сначала установите выбранный пресет".into());
         }
     }
     if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("«active client release» не совпадает с «signed manifest»".into())}
@@ -461,7 +461,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
         let requested=preset.filter(|s|!s.is_empty()).unwrap_or_default();
         let installed=active.preset.as_deref().filter(|s|!s.is_empty()).unwrap_or_default();
         if requested!=installed {
-            return Err("selected preset actions differ from installed release: install selected preset first".into())
+            return Err("Действия выбранного пресета отличаются от установленного релиза: сначала установите пресет".into())
         }
     }
     Ok(())
@@ -551,13 +551,13 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
            (next.manifest.game_release_generation < old.manifest.game_release_generation ||
             (next.manifest.game_release_generation == old.manifest.game_release_generation &&
              next.manifest.signature.as_ref().map(|s| &s.signature) != old.manifest.signature.as_ref().map(|s| &s.signature))) {
-            return Err("«signed gameReleaseGeneration»: запрещено «replace the active release with older/different content»".into());
+            return Err("Подписанный gameReleaseGeneration не позволяет заменить активный релиз более старым или иным содержимым".into());
         }
         if !verify_installed(root, old)? && old.manifest.signature.as_ref().map(|s| &s.signature) != next.manifest.signature.as_ref().map(|s| &s.signature) {
             return Err("Активный релиз повреждён; восстановите последнюю работоспособную версию перед обновлением на другой релиз".into());
         }
         if old.manifest.project_id != next.manifest.project_id || old.manifest.profile_id != next.manifest.profile_id {
-            return Err("active release belongs to another project/profile".into());
+            return Err("Активный релиз относится к другому проекту или профилю".into());
         }
     }
     let previous = current.active;
@@ -580,7 +580,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 rollback_bytes = platform_fs::checked_add(rollback_bytes, meta.len())?;
             },
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-            Err(e) => return Err(format!("preflight managed file {p}: {e}")),
+            Err(e) => return Err(format!("Ошибка предварительной проверки управляемого файла {p}: {e}")),
         }
     }
     platform_fs::require_free_space(root, rollback_bytes.saturating_mul(2))?;
@@ -592,7 +592,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         // не должен незаметно заменяться новым релизом.
         let was_managed = previous.as_ref().is_some_and(|old| old.installed.contains(&p));
         if !was_managed && live.exists() {
-            return Err(format!("untracked user file conflicts with new managed path: {p}"));
+            return Err(format!("Незарегистрированный пользовательский файл конфликтует с новым управляемым путём: {p}"));
         }
         let digest = match fs::symlink_metadata(&live) {
             Ok(meta) if meta.is_file() && !meta.file_type().is_symlink() => {
@@ -694,9 +694,9 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         let target=safe_join(&root,&f.path)?;
         file_ownership::ensure_no_symlinks(&root,&target)?;
         match fs::symlink_metadata(&target) {
-            Ok(_) => return Err(format!("untracked user file conflicts with new managed path: {}",f.path)),
+            Ok(_) => return Err(format!("Незарегистрированный пользовательский файл конфликтует с новым управляемым путём: {}",f.path)),
             Err(e) if e.kind()==std::io::ErrorKind::NotFound => (),
-            Err(e) => return Err(format!("inspect resolved path {}: {e}",f.path)),
+            Err(e) => return Err(format!("Не удалось проверить разрешённый путь {}: {e}",f.path)),
         }
     }
     let desired=Release{manifest:manifest.clone(),installed:plan.files.iter().map(|f|f.path.clone()).collect(),
@@ -813,12 +813,12 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     verify_manifest_signature(manifest,key)?;
     file_ownership::validate_download_targets(manifest)?;
     let plan=resolved_download_0246::resolve(manifest,preset.as_deref())?;
-    if plan.files.is_empty() {return Err("staged selection has no installable files".into())}
+    if plan.files.is_empty() {return Err("Подготовленный набор не содержит файлов для установки".into())}
     let source=source.canonicalize().map_err(|e|format!("Недоступно: «verified source»: {e}"))?;
     fs::create_dir_all(root).map_err(|e|format!("create runtime root: {e}"))?;
     let root=root.canonicalize().map_err(|e|format!("Недоступно: «runtime root»: {e}"))?;
     if root.starts_with(&source) || source.starts_with(&root) {
-        return Err("source and transactional runtime root: требуется «disjoint»".into());
+        return Err("Источник и корневой каталог транзакционного Runtime не должны пересекаться".into());
     }
     recover(&root,key).await?;
     release_generations::check(&root,manifest)?;
@@ -888,7 +888,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
             }
         }
         let active = pointer(&root)?.active.ok_or("no active release")?;
-        if active.manifest.game_release_generation > 0 { return Err("game rollback: требуется «a NEW signed gameReleaseGeneration; publish the old content as a new release»".into()); }
+        if active.manifest.game_release_generation > 0 { return Err("Для отката игры требуется новый подписанный gameReleaseGeneration; опубликуйте прежнее содержимое как новый релиз".into()); }
         if active.id != j.next.id { return Err("Последняя работоспособная версия не соответствует предыдущему активному релизу".into()); }
         if !verify_installed(&root, &active)? { return Err("Текущий релиз изменён; перезапись локальных изменений отклонена".into()); }
         // Публикуйте намерение переключения до первого восстановления, чтобы отключение
@@ -1597,7 +1597,7 @@ mod tests {
 pub fn installed_component_state_0247(manifest:&Manifest,root:&Path,key:&str)->Result<(Option<String>,Vec<String>),String>{
     verify_manifest_signature(manifest,key)?;
     if journal(root)?.is_some_and(|j|j.state!="complete"){
-        return Err("incomplete release transaction; recover before changing components".into());
+        return Err("Транзакция релиза не завершена: восстановите её перед изменением компонентов".into());
     }
     let Some(active)=pointer(root)?.active else {return Ok((None,Vec::new()))};
     validate_release(&active,key)?;
@@ -1615,7 +1615,7 @@ pub fn installed_component_state_0247(manifest:&Manifest,root:&Path,key:&str)->R
 pub fn check_unowned_path_0247(root:&Path,relative:&str)->Result<(),String>{
     let destination=safe_join(root,relative)?;
     file_ownership::ensure_no_symlinks(root,&destination)?;
-    if destination.exists(){return Err(format!("user-owned file collision: {relative}"))}
+    if destination.exists(){return Err(format!("Конфликт с пользовательским файлом: {relative}"))}
     Ok(())
 }
 
@@ -1650,14 +1650,14 @@ fn find_player_conflicts_0359(root:&Path,manifest:&Manifest,key:&str,preset:Opti
         file_ownership::ensure_no_symlinks(root,&live)?;
         match fs::symlink_metadata(&live){
             Ok(meta)=>{
-                if !meta.is_file() || meta.file_type().is_symlink(){return Err(format!("Небезопасное значение: «user file collision: {}»",f.path))}
-                if files.len()>=4096 {return Err("too many conflicting user files".into());}
+                if !meta.is_file() || meta.file_type().is_symlink(){return Err(format!("Конфликт с пользовательским файлом: {}",f.path))}
+                if files.len()>=4096 {return Err("Слишком много конфликтующих пользовательских файлов".into());}
                 bytes=bytes.checked_add(meta.len()).ok_or("conflict archive size overflow")?;
-                if bytes>20*1024*1024*1024 {return Err("conflict archive exceeds 20 GiB; use manual export".into());}
+                if bytes>20*1024*1024*1024 {return Err("Архив конфликтующих файлов превышает 20 ГиБ; используйте ручной экспорт".into());}
                 files.push(PlayerConflict0359{path:f.path.clone(),size:meta.len(),sha256:hash(&live)?});
             },
             Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
-            Err(e)=>return Err(format!("inspect user file {}: {e}",f.path)),
+            Err(e)=>return Err(format!("Не удалось проверить пользовательский файл {}: {e}",f.path)),
         }
     }
     Ok(files)
@@ -1679,7 +1679,7 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
     recover_locked(&root,key)?;
     let files=find_player_conflicts_0359(&root,manifest,key,preset)?;
     if files.len()!=expected.len()||files.iter().zip(expected).any(|(a,b)|a.path!=b.path||a.sha256!=b.sha256||a.size!=b.size){
-        return Err("user files changed since preview; refresh the conflict list before preserving".into());
+        return Err("После предварительного просмотра пользовательские файлы изменились; обновите список конфликтов перед сохранением".into());
     }
     if files.is_empty(){return Ok(PlayerConflictResult0359{files,archive_directory:None})}
     let archive=base(&root).join("player-conflicts").join(format!("{:032x}",rand::random::<u128>()));
@@ -1703,13 +1703,13 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
         file_ownership::ensure_no_symlinks(&root,&source)?;
         file_ownership::ensure_no_symlinks(&root,&dest)?;
         if !matches_digest(&source,&conflict.sha256,conflict.size){
-            return Err(format!("user file changed while preserving conflicts: {}; previous files remain in {}",conflict.path,archive.display()));
+            return Err(format!("Пользовательский файл изменился при сохранении конфликтов: {}; ранее сохранённые файлы находятся в {}",conflict.path,archive.display()));
         }
         safe_dir(&root,dest.parent().ok_or("invalid conflict archive path")?)?;
-        if fs::symlink_metadata(&dest).is_ok(){return Err("player archive destination already exists".into())}
+        if fs::symlink_metadata(&dest).is_ok(){return Err("Каталог назначения архива игрока уже существует".into())}
         fs::rename(&source,&dest).map_err(|e|format!("preserve user file {}: {e}; previously moved files in {}",conflict.path,archive.display()))?;
         if !matches_digest(&dest,&conflict.sha256,conflict.size){
-            return Err(format!("archived player file changed during preservation: {}; archive retained in {}",conflict.path,archive.display()));
+            return Err(format!("Архивируемый файл игрока изменился во время сохранения: {}; архив оставлен в {}",conflict.path,archive.display()));
         }
         if let Some(parent)=source.parent(){sync_dir(parent)?;}
         if let Some(parent)=dest.parent(){sync_dir(parent)?;}

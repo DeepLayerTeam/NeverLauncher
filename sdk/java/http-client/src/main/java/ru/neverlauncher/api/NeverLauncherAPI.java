@@ -40,39 +40,39 @@ public final class NeverLauncherAPI {
         if(h==null || u.getUserInfo()!=null || u.getQuery()!=null || u.getFragment()!=null ||
            !(u.getPath().equals("") || u.getPath().equals("/")) ||
            !(u.getScheme().equals("https") || u.getScheme().equals("http") && loop))
-            throw new IllegalArgumentException("API requires HTTPS (HTTP only permitted on loopback)");
+            throw new IllegalArgumentException("Для API требуется HTTPS (HTTP разрешён только через loopback)");
         this.base=URI.create(u.getScheme()+"://"+u.getRawAuthority());
         this.token=bearerToken==null?"":bearerToken;
         this.http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
     }
     public static String resolvePath(String template, Map<String,String> params) {
-        if(!template.startsWith("/") || template.contains("?") || template.contains("#"))throw new IllegalArgumentException("invalid path template");
+        if(!template.startsWith("/") || template.contains("?") || template.contains("#"))throw new IllegalArgumentException("Некорректный шаблон пути");
         var m=PARAM.matcher(template);var result=new StringBuffer();var used=new java.util.HashSet<String>();
         while(m.find()) {
             String key=m.group(1),v=params.get(key);used.add(key);
-            if(v==null || v.isEmpty() || v.equals(".") || v.equals("..") || v.contains("/") || v.contains("\\"))throw new IllegalArgumentException("invalid path parameter: "+key);
+            if(v==null || v.isEmpty() || v.equals(".") || v.equals("..") || v.contains("/") || v.contains("\\"))throw new IllegalArgumentException("Некорректный параметр пути: "+key);
             m.appendReplacement(result,Matcher.quoteReplacement(URLEncoder.encode(v,StandardCharsets.UTF_8).replace("+","%20")));
         }
         m.appendTail(result);
-        if(!used.containsAll(params.keySet()) || result.indexOf("{")>=0 || result.indexOf("}")>=0)throw new IllegalArgumentException("unknown path parameter");
+        if(!used.containsAll(params.keySet()) || result.indexOf("{")>=0 || result.indexOf("}")>=0)throw new IllegalArgumentException("Неизвестный параметр пути");
         return result.toString();
     }
     public Object call(String operationId,Map<String,String> pathParameters,Map<String,String> query,Object jsonBody,String idempotencyKey) throws IOException,InterruptedException {
         var op=Operations.ALL.get(operationId);
-        if(op==null)throw new IllegalArgumentException("unknown OpenAPI operation: "+operationId);
+        if(op==null)throw new IllegalArgumentException("Неизвестная операция OpenAPI: "+operationId);
         byte[] body=jsonBody==null?null:Json.encode(jsonBody).getBytes(StandardCharsets.UTF_8);
         return request(op.method(),resolvePath(op.path(),pathParameters),query,body,body==null?null:"application/json",idempotencyKey);
     }
     public Object request(String method,String path,Map<String,String> query,byte[] body,String contentType,String idempotencyKey) throws IOException,InterruptedException {
         byte[] raw = requestBytes(method,path,query,body,contentType,idempotencyKey);
         if(raw.length == 0)return null;
-        if(raw.length>1_048_576)throw new IOException("JSON API response exceeds Java Core parser limit (1 MiB); use requestBytes");
+        if(raw.length>1_048_576)throw new IOException("JSON-ответ API превышает лимит парсера Java Core (1 МиБ); используйте requestBytes");
         try {return Json.parse(new String(raw,StandardCharsets.UTF_8));}
-        catch(RuntimeException ex){throw new IOException("invalid JSON API response",ex);}
+        catch(RuntimeException ex){throw new IOException("Некорректный ответ API в формате JSON",ex);}
     }
     /** Двоичный/multipart-транспорт с ограниченным ответом, полезный для скачивания и загрузки файлов. */
     public byte[] requestBytes(String method,String path,Map<String,String> query,byte[] body,String contentType,String idempotencyKey) throws IOException,InterruptedException {
-        if(!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains(".."))throw new IllegalArgumentException("unsafe API route");
+        if(!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains(".."))throw new IllegalArgumentException("Небезопасный маршрут API");
         var uri=base.resolve(path+(query==null||query.isEmpty()?"":"?"+query.entrySet().stream().sorted(Map.Entry.comparingByKey())
             .map(e->URLEncoder.encode(e.getKey(),StandardCharsets.UTF_8)+"="+URLEncoder.encode(e.getValue(),StandardCharsets.UTF_8)).reduce((a,b)->a+"&"+b).orElse("")));
         var builder=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(15)).header("Accept","application/json");
@@ -85,7 +85,7 @@ public final class NeverLauncherAPI {
         var response=http.send(builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofByteArray(body)).build(),HttpResponse.BodyHandlers.ofInputStream());
         byte[] bytes;
         try(var input=response.body()) { bytes=input.readNBytes(MAX_RESPONSE+1); }
-        if(bytes.length>MAX_RESPONSE)throw new IOException("API response exceeds 8 MiB");
+        if(bytes.length>MAX_RESPONSE)throw new IOException("Ответ API превышает 8 МиБ");
         if(response.statusCode()<200 || response.statusCode()>299){
             Object data=null;
             try { if(bytes.length>0 && bytes.length<=1_048_576)data=Json.parse(new String(bytes,StandardCharsets.UTF_8)); }
@@ -112,9 +112,9 @@ public final class NeverLauncherAPI {
             throws IOException, InterruptedException {
         Objects.requireNonNull(destination, "response destination");
         if (limit == 0) limit = MAX_STREAM;
-        if (limit < 1 || limit > MAX_STREAM) throw new IllegalArgumentException("invalid stream limit");
+        if (limit < 1 || limit > MAX_STREAM) throw new IllegalArgumentException("Некорректное ограничение потока");
         if (!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains("..") || path.startsWith("//"))
-            throw new IllegalArgumentException("unsafe API route");
+            throw new IllegalArgumentException("Небезопасный маршрут API");
         if (idempotencyKey != null && (idempotencyKey.contains("\r") || idempotencyKey.contains("\n")))
             throw new IllegalArgumentException("Недопустимый ключ идемпотентности");
         var qs = query == null || query.isEmpty() ? "" : "?" + query.entrySet().stream()
@@ -132,7 +132,7 @@ public final class NeverLauncherAPI {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 // Ограничивайте разбор ошибок отдельно от предела успешного потока.
                 byte[] raw = stream.readNBytes(MAX_RESPONSE + 1);
-                if (raw.length > MAX_RESPONSE) throw new IOException("API error response exceeds 8 MiB");
+                if (raw.length > MAX_RESPONSE) throw new IOException("Ответ с ошибкой API превышает 8 МиБ");
                 Object data = null;
                 try { if (raw.length > 0 && raw.length <= 1_048_576) data = Json.parse(new String(raw, StandardCharsets.UTF_8)); }
                 catch (RuntimeException ignored) { }
@@ -143,12 +143,12 @@ public final class NeverLauncherAPI {
             }
             var declared = response.headers().firstValueAsLong("Content-Length");
             if (declared.isPresent() && declared.getAsLong() > limit)
-                throw new IOException("API stream exceeds configured size limit");
+                throw new IOException("Поток ответа API превышает установленный лимит размера");
             byte[] buffer = new byte[64 * 1024];
             long written = 0;
             int n;
             while ((n = stream.read(buffer)) != -1) {
-                if (n > limit - written) throw new IOException("API stream exceeds configured size limit");
+                if (n > limit - written) throw new IOException("Поток ответа API превышает установленный лимит размера");
                 destination.write(buffer, 0, n);
                 written += n;
             }
@@ -162,7 +162,7 @@ public final class NeverLauncherAPI {
                            OutputStream destination, long limit, String idempotencyKey)
             throws IOException, InterruptedException {
         var operation = Operations.ALL.get(operationId);
-        if (operation == null) throw new IllegalArgumentException("unknown OpenAPI operation: " + operationId);
+        if (operation == null) throw new IllegalArgumentException("Неизвестная операция OpenAPI: " + operationId);
         return requestStream(operation.method(), resolvePath(operation.path(), pathParameters), query,
                              requestBody, contentType, destination, limit, idempotencyKey);
     }
@@ -175,13 +175,13 @@ public final class NeverLauncherAPI {
     /** Совместимость N-1: в 0.45.11 отсутствовал заголовок контракта; определяющая версия находится в /ready. */
     public void checkCompatibility() throws IOException,InterruptedException {
         var response=http.send(HttpRequest.newBuilder(base.resolve("/ready")).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
-        if(response.statusCode()!=200)throw new IOException("backend not ready: "+response.statusCode());
+        if(response.statusCode()!=200)throw new IOException("Backend не готов: "+response.statusCode());
         var contract=response.headers().firstValue("X-Launcher-API-Contract");
         if(contract.isPresent()) {
-            if(!contract.get().equals(CONTRACT_VERSION))throw new IOException("incompatible OpenAPI contract: "+contract.get());
+            if(!contract.get().equals(CONTRACT_VERSION))throw new IOException("Несовместимый контракт OpenAPI: "+contract.get());
             return;
         }
         var data=Json.object(Json.parse(response.body()));var version=data.get("version");
-        if(!"0.45.11".equals(version) && !"0.45.12".equals(version))throw new IOException("unsupported legacy backend version");
+        if(!"0.45.11".equals(version) && !"0.45.12".equals(version))throw new IOException("Неподдерживаемая старая версия Backend");
     }
 }

@@ -88,7 +88,7 @@ async fn write(root: &Path, job: &SavedJob) -> Result<(), String> {
     fs::create_dir_all(&dir).await.map_err(|e| format!("create journal directory: {e}"))?;
     crate::file_ownership::ensure_no_symlinks(root, &dir)?;
     let bytes = serde_json::to_vec(job).map_err(|e| format!("serialize job: {e}"))?;
-    if bytes.len() as u64 > MAX_JOURNAL_BYTES { return Err("download journal exceeds size limit".into()); }
+    if bytes.len() as u64 > MAX_JOURNAL_BYTES { return Err("Журнал загрузок превышает допустимый размер".into()); }
     let target = journal_path(root, (job.generation % 2) as usize);
     let tmp = dir.join(format!("download-job-{:016x}.tmp", rand::random::<u64>()));
     let outcome = async {
@@ -114,7 +114,7 @@ async fn erase(root: &Path) {
 
 fn register(root: &Path) -> Result<(ActiveGuard, watch::Receiver<Directive>), String> {
     let mut guard = active().lock().map_err(|_| "Блокировка реестра активных загрузок повреждена")?;
-    if guard.contains_key(root) { return Err("a download or repair operation is already active for this install directory".into()); }
+    if guard.contains_key(root) { return Err("В этом каталоге установки уже выполняется загрузка или восстановление".into()); }
     let (sender, receiver) = watch::channel(Directive::Running);
     guard.insert(root.to_path_buf(), sender);
     Ok((ActiveGuard(root.to_path_buf()), receiver))
@@ -179,7 +179,7 @@ pub async fn pending_manifest_for_permissions_0392(root:&Path,expected_pinned_ke
     let Some(job)=read(&resolved).await else{return Ok(None)};
     if expected_pinned_key.trim().is_empty()||
        !job.pinned_public_key.eq_ignore_ascii_case(expected_pinned_key.trim()) {
-        return Err("saved download public key differs from Desktop pinned trust key".into());
+        return Err("Сохранённый публичный ключ загрузок отличается от доверенного ключа, закреплённого в Desktop".into());
     }
     verify_manifest_signature(&job.manifest,expected_pinned_key)?;
     Ok(Some(job.manifest))
@@ -191,7 +191,7 @@ pub async fn pending(root: &Path, expected_pinned_key: &str) -> Result<Option<Pe
     let Some(job) = read(&root).await else { return Ok(None); };
     // Журнал доступен пользователю для записи: он НЕ ДОЛЖЕН сам задавать корень доверия.
     if expected_pinned_key.trim().is_empty() || !job.pinned_public_key.eq_ignore_ascii_case(expected_pinned_key.trim()) {
-        return Err("saved download public key differs from Desktop pinned trust key".into());
+        return Err("Сохранённый публичный ключ загрузок отличается от доверенного ключа, закреплённого в Desktop".into());
     }
     verify_manifest_signature(&job.manifest, expected_pinned_key)?;
     let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
@@ -206,7 +206,7 @@ pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<Progres
     let (_guard, rx) = register(&root)?;
     let mut job = read(&root).await.ok_or("no durable download job to resume")?;
     if expected_pinned_key.trim().is_empty() || !job.pinned_public_key.eq_ignore_ascii_case(expected_pinned_key.trim()) {
-        return Err("saved download public key differs from Desktop pinned trust key".into());
+        return Err("Сохранённый публичный ключ загрузок отличается от доверенного ключа, закреплённого в Desktop".into());
     }
     verify_manifest_signature(&job.manifest, expected_pinned_key)?;
     file_ownership::validate_download_targets(&job.manifest)?;

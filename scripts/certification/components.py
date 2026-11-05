@@ -241,7 +241,7 @@ def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> 
                     success=False,
                 )
                 if len(server.metrics()["requests"]) != request_count:
-                    raise AssertionError("Некорректное значение: «signature triggered network traffic»")
+                    raise AssertionError("Подписание вызвало неожиданный сетевой обмен")
                 # Существующий посторонний файл должен пережить переключение пресетов.
                 install("minimal")
                 assert_bytes(installation, doc, core)

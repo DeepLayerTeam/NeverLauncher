@@ -63,7 +63,7 @@ async fn command_verify(args: &[String]) -> Result<serde_json::Value, String> {
         if selection.is_some() {check_files_with_preset(&manifest, Path::new(&root), selection.as_deref()).await?}
         else {check_files(&manifest, Path::new(&root)).await?}
     } else {
-        if selection.is_some() {return Err("--preset requires --root for file verification".into());}
+        if selection.is_some() {return Err("Для проверки файлов с --preset укажите --root".into());}
         Vec::new()
     };
     let ready = files.is_empty() || files.iter().all(|file| file.status == "ok");
@@ -106,7 +106,7 @@ async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String
     // каталогом. Выбранный опциональный мод становится обязательным для установки.
     let ready = downloaded.failed == 0 && files.iter().all(|file| file.status == "ok");
     if !ready {
-        return Err(format!("sync-local: download failed={}, invalid={}", downloaded.failed,
+        return Err(format!("Локальная синхронизация: ошибок загрузки={}, некорректных файлов={}", downloaded.failed,
             files.iter().filter(|f| f.status != "ok").count()));
     }
     Ok(json!({"status":"ready", "download":downloaded, "manifest":{
@@ -306,10 +306,10 @@ async fn command_guard_inventory_0501(args: &[String]) -> Result<serde_json::Val
     while index < args.len() {
         let arg = &args[index];
         if !FLAGS.contains(&arg.as_str()) || !used.insert(arg.as_str()) {
-            return Err(format!("guard-inventory unknown or repeated flag: {arg}"));
+            return Err(format!("Проверка Guard: неизвестный или повторяющийся параметр {arg}"));
         }
         let value = args.get(index+1).ok_or_else(|| format!("{arg} requires a value"))?;
-        if value.is_empty() || value.starts_with("--") { return Err(format!("{arg} requires a nonempty value")); }
+        if value.is_empty() || value.starts_with("--") { return Err(format!("Для параметра {arg} требуется непустое значение")); }
         index += 2;
     }
     let report = runtime::guard_inventory_0501::collect_guard_inventory_0501(

@@ -93,7 +93,7 @@ public final class LauncherForgeBridge {
             runtime.start();
             runtime.startControlChannel(command -> executeControl(event.getServer(), command));
         } catch (Exception e) {
-            throw new IllegalStateException("Launcher Forge ServerBridge failed to start", e);
+            throw new IllegalStateException("Не удалось запустить Launcher Forge ServerBridge", e);
         }
     }
 
@@ -232,7 +232,7 @@ public final class LauncherForgeBridge {
 
         @Override
         public void start(Consumer<Packet<?>> send) {
-            throw new IllegalStateException("Forge must start Launcher join validation with ConfigurationTaskContext");
+            throw new IllegalStateException("Forge должен запускать проверку подключения Launcher через ConfigurationTaskContext");
         }
 
         @Override

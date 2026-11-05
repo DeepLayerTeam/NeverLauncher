@@ -16,7 +16,7 @@ fn main() {
     let result = (|| -> Result<String, String> {
         let bytes = fs::read(&args[1]).map_err(|e| e.to_string())?;
         let mut manifest: Manifest = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if manifest.project_id != "certification" { return Err("only certification fixtures accepted".into()); }
+        if manifest.project_id != "certification" { return Err("Допускаются только тестовые данные сертификации".into()); }
         let key = sign_manifest(&mut manifest, &seed, "2026-10-20T00:00:00Z")?;
         let data = serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?;
         fs::write(&args[2], data).map_err(|e| e.to_string())?;

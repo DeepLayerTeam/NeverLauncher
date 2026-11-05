@@ -218,9 +218,9 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 
 fn bundle_root(desktop:&Path)->Result<PathBuf,String>{
     let macos=desktop.parent().ok_or("Каталог Desktop для macOS отсутствует")?;
-    if macos.file_name().and_then(|v|v.to_str())!=Some("MacOS"){return Err("Desktop must run from a signed .app/Contents/MacOS bundle".into())}
+    if macos.file_name().and_then(|v|v.to_str())!=Some("MacOS"){return Err("Desktop должен запускаться из подписанного пакета .app/Contents/MacOS".into())}
     let contents=macos.parent().ok_or("В приложении отсутствует каталог Contents")?;
-    if contents.file_name().and_then(|v|v.to_str())!=Some("Contents"){return Err("Desktop must run from a signed .app Contents directory".into())}
+    if contents.file_name().and_then(|v|v.to_str())!=Some("Contents"){return Err("Desktop должен запускаться из подписанного каталога Contents пакета .app".into())}
     contents.parent().map(Path::to_path_buf).ok_or_else(||"Корневой каталог пакета приложения отсутствует".to_string())
 }
 fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
@@ -271,14 +271,14 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     if signing_team.is_empty(){return Err("Отсутствует: Team ID подписи пакета macOS".into())}
     for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.launcher"), (guard, "ru.skif4er.launcher.guard")] {
         let sig=verify_macos_code_signature(path)?;
-        if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("macOS Hardened Runtime verification failed: {}",path.display()))}
+        if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("Не пройдена проверка Hardened Runtime в macOS: {}",path.display()))}
         if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("Команда разработчика в подписи macOS не совпадает: {}",path.display()))}
         if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("Идентификатор подписи кода macOS для {} не совпадает: ожидался {expected_identifier}, получено {:?}",path.display(),sig.identifier))}
     }
     let app_verify=std::process::Command::new("/usr/bin/codesign").args(["--verify","--deep","--strict","--verbose=2"]).arg(&app).output().map_err(|e|format!("Ошибка: проверка подписи приложения через codesign: {e}"))?;
     if !app_verify.status.success(){return Err(format!("Недействительная подпись пакета приложения macOS: {}",String::from_utf8_lossy(&app_verify.stderr).trim()))}
     let gatekeeper=std::process::Command::new("/usr/sbin/spctl").args(["--assess","--type","execute","--verbose=2"]).arg(&app).output().map_err(|e|format!("Ошибка: проверка приложения через spctl: {e}"))?;
-    if !gatekeeper.status.success(){return Err(format!("macOS Gatekeeper/notarization assessment failed: {}",String::from_utf8_lossy(&gatekeeper.stderr).trim()))}
+    if !gatekeeper.status.success(){return Err(format!("Не пройдена проверка Gatekeeper или нотариального заверения macOS: {}",String::from_utf8_lossy(&gatekeeper.stderr).trim()))}
     Ok(())
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{
@@ -328,7 +328,7 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
 }
 fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Некорректное значение: состояние Guard: {e}"))?;validate_release_identity(&s)?;Ok(s)}
 fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Несовпадение версий релиза Guard и Desktop: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Платформа Guard не совпадает: ожидалась macos-universal, получено {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Несовпадение протоколов Guard и Desktop: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Состояние Guard не прошло обязательную проверку доверия среды выполнения".into())}Ok(())}
-fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=GUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("Политика процессов Guard для macOS отклонила запрос".into())}Ok(())}
+fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("Отсутствуют сведения о политике процессов macOS")?;if p.schema!=GUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("Политика процессов Guard для macOS отклонила запрос".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"Некорректное значение: хеш подтверждающих данных")?){return Err("Несовпадение: хеш подтверждающих данных".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"Некорректное значение: подтверждение проверочных данных")?){return Err("Несовпадение: подтверждение сессии проверочных данных".into())}Ok(())}
 fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Несовпадение: привязка аттестации Guard в macOS".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"Некорректное значение: хеш аттестации")?){return Err("Несовпадение: хеш аттестации".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"Некорректное значение: подтверждение аттестации")?){return Err("Несовпадение: подтверждение сессии аттестации".into())}Ok(())}
 
@@ -438,7 +438,7 @@ async fn serve_commands(
                     lifetime_job_enforced: true,
                     package_manifest_verified: false,
                     started_at_unix: started,
-                    message: "Guard macOS production boundary ready".into(),
+                    message: "Защищённая граница Guard для macOS готова к работе".into(),
                 })
                 .map_err(|err| format!("Ошибка: сериализация состояния Guard: {err}"))?,
                 false,

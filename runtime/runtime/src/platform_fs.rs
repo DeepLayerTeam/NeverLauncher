@@ -11,7 +11,7 @@ const SAFETY_RESERVE: u64 = 16 * 1024 * 1024;
 fn check_capacity(available: u64, required: u64) -> Result<(), String> {
     let need = required.checked_add(SAFETY_RESERVE).ok_or("disk reservation overflow")?;
     if available < need {
-        return Err(format!("insufficient free disk space for recoverable client update: need {need} bytes, available {available} bytes"));
+        return Err(format!("Недостаточно свободного места для восстанавливаемого обновления клиента: требуется {need} байт, доступно {available} байт"));
     }
     Ok(())
 }
@@ -31,7 +31,7 @@ pub(crate) fn checked_add(total: u64, additional: u64) -> Result<u64, String> {
 /// не повышайте права и не снимайте атрибут только для чтения автоматически.
 pub(crate) fn check_target(root: &Path, target: &Path) -> Result<(), String> {
     file_ownership::ensure_no_symlinks(root, target)?;
-    if !target.starts_with(root) { return Err("target outside client root".into()); }
+    if !target.starts_with(root) { return Err("Целевой путь находится вне корневого каталога клиента".into()); }
     let mut parent = target.parent();
     while let Some(dir) = parent {
         if !dir.starts_with(root) { break; }
@@ -40,11 +40,11 @@ pub(crate) fn check_target(root: &Path, target: &Path) -> Result<(), String> {
             // (Проводник выставляет его и обычным каталогам).
             // Нарушения ACL выявляются фактическими файловыми операциями ОС.
             Ok(meta) if cfg!(unix) && meta.permissions().readonly() => {
-                return Err(format!("managed parent directory is read-only: {}", dir.display()));
+                return Err(format!("Родительский каталог управляемого файла доступен только для чтения: {}", dir.display()));
             },
             Ok(_) => (),
             Err(e) if e.kind() == io::ErrorKind::NotFound => (),
-            Err(e) => return Err(format!("inspect managed parent directory {}: {e}", dir.display())),
+            Err(e) => return Err(format!("Не удалось проверить родительский каталог управляемого файла {}: {e}", dir.display())),
         }
         if dir == root { break; }
         parent = dir.parent();
@@ -78,14 +78,14 @@ pub(crate) fn preflight_targets(root: &Path, targets: &[PathBuf]) -> Result<(), 
                         let name = entry.map_err(|e| e.to_string())?.file_name();
                         let lowered = name.to_string_lossy().to_lowercase();
                         if entries.insert(lowered, name.clone()).is_some() {
-                            return Err(format!("on-disk case collision in {}", cursor.display()));
+                            return Err(format!("Конфликт регистра имён файлов в каталоге {}", cursor.display()));
                         }
                     }
                     cache.insert(cursor.clone(), entries);
                 }
                 if let Some(real) = cache[&cursor].get(&wanted.to_string_lossy().to_lowercase()) {
                     if real.as_os_str() != wanted {
-                        return Err(format!("case-aliased on-disk path: {}", target.display()));
+                        return Err(format!("Путь на диске совпадает с другим путём без учёта регистра: {}", target.display()));
                     }
                 }
             }
@@ -113,10 +113,10 @@ fn sync_parent(dest: &Path) -> Result<(), String> {
 pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Result<(), String> {
     file_ownership::ensure_no_symlinks(root, source)?;
     check_target(root, destination)?;
-    if !source.starts_with(root) { return Err("staged file outside client root".into()); }
+    if !source.starts_with(root) { return Err("Подготовленный файл находится вне корневого каталога клиента".into()); }
     let meta = fs::symlink_metadata(source).map_err(|e| format!("inspect staged file: {e}"))?;
     if !meta.is_file() || meta.file_type().is_symlink() {
-        return Err(format!("staged object is not a regular file: {}", source.display()));
+        return Err(format!("Подготовленный объект не является обычным файлом: {}", source.display()));
     }
     #[cfg(windows)] {
         use std::os::windows::ffi::OsStrExt;
@@ -131,7 +131,7 @@ pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Re
                 std::ptr::null(), 0, std::ptr::null(), std::ptr::null()) };
             if ok == 0 {
                 let err = io::Error::last_os_error();
-                return Err(format!("Windows atomic ReplaceFile failed (file may be locked, sharing violation or ACL denied) {}: {err}", destination.display()));
+                return Err(format!("Не удалось атомарно заменить файл через Windows ReplaceFile (файл может быть заблокирован, нарушены правила совместного доступа или отказано ACL) {}: {err}", destination.display()));
             }
         } else {
             fs::rename(source, destination).map_err(|e| format!("install new managed file {}: {e}", destination.display()))?;

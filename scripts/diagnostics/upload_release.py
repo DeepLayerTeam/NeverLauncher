@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("JVM mapping file does not look like a ProGuard mapping")
     root = Path(__file__).resolve().parents[2]
     if args.version != (root / "VERSION").read_text().strip():
-        parser.error("Несовпадение: «version differs from VERSION; refusing artifact»")
+        parser.error("Версия отличается от VERSION; артефакт отклонён")
     try:
         checked = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=root, text=True, stderr=subprocess.DEVNULL
@@ -114,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, subprocess.CalledProcessError):
         checked = ""
     if checked and not checked.startswith(args.commit):
-        parser.error("«commit» не совпадает с «the checkout used to build artifacts»")
+        parser.error("Коммит не совпадает с исходным деревом, использованным для сборки артефактов")
     js_maps = []
     if args.js_dist:
         dist = args.js_dist.resolve(strict=True)
@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
                 or not data.get("sources")
                 or not data.get("mappings")
             ):
-                parser.error(f"Некорректное значение: «or empty source map» {sm}")
+                parser.error(f"Некорректная или пустая карта исходников {sm}")
     for name, path in (
         ("native debug symbols", args.native_symbols),
         ("JVM obfuscation mapping", args.jvm_mapping),

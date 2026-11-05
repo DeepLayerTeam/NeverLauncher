@@ -88,8 +88,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     public synchronized void start() throws Exception {
-        if (stopping.get()) throw new IllegalStateException("runtime is stopping");
-        if (state != null) throw new IllegalStateException("runtime already started");
+        if (stopping.get()) throw new IllegalStateException("Runtime завершает работу");
+        if (state != null) throw new IllegalStateException("Runtime уже запущен");
         state = loadState();
         scheduleHeartbeat(0);
         RuntimeState current = state;
@@ -337,7 +337,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         BridgeConfig config = BridgeConfig.load(configPath, platformId + "-main");
         String pluginSha256 = BridgeIntegrity.artifactSha256(artifactAnchor);
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) {
-            throw new IllegalStateException("cannot measure running plugin JAR SHA-256");
+            throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR плагина");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "runtime descriptor");
@@ -370,7 +370,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     private void ensureRunning() {
-        if (state == null || stopping.get()) throw new IllegalStateException("runtime is not active");
+        if (state == null || stopping.get()) throw new IllegalStateException("Runtime не активен");
     }
 
     private Thread daemonThread(Runnable task, String role) {

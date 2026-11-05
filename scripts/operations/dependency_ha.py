@@ -47,9 +47,9 @@ class HAError(Exception):
 
 def secure_file(path: Path, secret=True):
     if not path.is_file() or path.is_symlink():
-        raise HAError('required regular file absent or symlink: ' + path.name)
+        raise HAError('Обязательный обычный файл отсутствует или является символической ссылкой: ' + path.name)
     if secret and stat.S_IMODE(path.stat().st_mode) & 0o077:
-        raise HAError('private file permissions too wide: ' + path.name)
+        raise HAError('Слишком широкие права доступа к закрытому файлу: ' + path.name)
 
 
 def load_env(path):
@@ -61,7 +61,7 @@ def load_env(path):
             continue
         key, sep, value = line.partition('=')
         if not sep or not re.fullmatch(r'[A-Z][A-Z0-9_]*', key) or key in config or '\x00' in value:
-            raise HAError('invalid or duplicate environment setting')
+            raise HAError('Некорректная или повторяющаяся переменная окружения')
         # Никогда не исполняйте .env как программу оболочки.
         config[key] = value
     return config
@@ -71,7 +71,7 @@ def ipv4(value, label):
     try:
         address = ipaddress.ip_address(value)
         if address.version != 4 or address.is_loopback or address.is_multicast or address.is_unspecified:
-            raise ValueError('not a routable IPv4 address')
+            raise ValueError('Недопустимый для маршрутизации IPv4-адрес')
         return str(address)
     except ValueError as exc:
         raise HAError('invalid IP: ' + label) from exc
@@ -84,12 +84,12 @@ def port(value, label):
             raise ValueError()
         return n
     except (ValueError, TypeError) as exc:
-        raise HAError('invalid port: ' + label) from exc
+        raise HAError('Некорректный порт: ' + label) from exc
 
 
 def hostname(value, label):
     if not DNS.fullmatch(value) or value.startswith('-') or '..' in value:
-        raise HAError('invalid hostname: ' + label)
+        raise HAError('Некорректное имя хоста: ' + label)
     return value.lower()
 
 
@@ -100,49 +100,49 @@ def backends(env, key, count):
     for entry in env.get(key, '').split(','):
         match = re.fullmatch(r'([a-zA-Z][a-zA-Z0-9-]{0,30})@([^:,]+):([0-9]{1,5})', entry.strip())
         if not match:
-            raise HAError('invalid backend list: ' + key)
+            raise HAError('Некорректный список серверов Backend: ' + key)
         name, address, p = match.groups()
         result.append((name, ipv4(address, key), port(p, key)))
     if len(result) < count or len({x[0] for x in result}) != len(result) or len({x[1] for x in result}) != len(result):
-        raise HAError('backend list must use distinct names and hosts: ' + key)
+        raise HAError('Серверы Backend должны иметь разные имена и адреса: ' + key)
     return result
 
 
 def validate(env):
     iface = env.get('HA_INTERFACE', '')
     if not IFACE.fullmatch(iface):
-        raise HAError('invalid VRRP network interface')
+        raise HAError('Некорректный сетевой интерфейс VRRP')
     public = ipv4(env.get('HA_PUBLIC_VIP', ''), 'HA_PUBLIC_VIP')
     dependency = ipv4(env.get('HA_DEPENDENCY_VIP', ''), 'HA_DEPENDENCY_VIP')
     local = ipv4(env.get('HA_LB_LOCAL_IP', ''), 'HA_LB_LOCAL_IP')
     peer = ipv4(env.get('HA_LB_PEER_IP', ''), 'HA_LB_PEER_IP')
     if len({public, dependency, local, peer}) != 4:
-        raise HAError('VRRP VIPs and two LB addresses must be distinct')
+        raise HAError('Виртуальные IP VRRP и два адреса балансировщиков должны различаться')
     prefix = int(env.get('HA_VIP_PREFIX', '24'))
     if not 16 <= prefix <= 30:
-        raise HAError('VIP prefix must be between /16 and /30')
+        raise HAError('Префикс виртуального IP должен находиться в диапазоне от /16 до /30')
     subnet = ipaddress.ip_network(public + '/' + str(prefix), strict=False)
     if any(ipaddress.ip_address(x) not in subnet for x in (public, dependency, local, peer)):
-        raise HAError('VRRP requires peer/LB/VIP addresses on same L2 subnet')
+        raise HAError('Для VRRP адреса соседа, балансировщика и виртуальный IP должны находиться в одной подсети L2')
     priority = int(env.get('HA_PRIORITY', '0'))
     router = int(env.get('HA_VRRP_ID', '0'))
     if not 1 <= priority <= 254 or not 1 <= router <= 255:
-        raise HAError('VRRP priority/router ID out of range')
+        raise HAError('Приоритет VRRP или ID маршрутизатора вне допустимого диапазона')
     public_name = hostname(env.get('HA_PUBLIC_NAME', ''), 'HA_PUBLIC_NAME')
     redis_name = hostname(env.get('HA_REDIS_NAME', ''), 'HA_REDIS_NAME')
     s3_name = hostname(env.get('HA_S3_NAME', ''), 'HA_S3_NAME')
     if len({public_name, redis_name, s3_name}) != 3:
-        raise HAError('TLS hostnames must be distinct')
+        raise HAError('Имена хостов TLS должны различаться')
     ca_path = Path(env.get('HA_CA_BUNDLE', '/etc/ssl/certs/ca-certificates.crt'))
     if not ca_path.is_absolute():
-        raise HAError('CA bundle path must be absolute')
+        raise HAError('Путь к набору сертификатов CA должен быть абсолютным')
     # Запрещены символы со специальным значением для парсера конфигурации
     # HAProxy.
     if not re.fullmatch(r'/[A-Za-z0-9_./-]+', str(ca_path)):
-        raise HAError('invalid CA bundle pathname')
+        raise HAError('Некорректный путь к набору сертификатов CA')
     health_path = env.get('HA_S3_HEALTH_PATH', '/minio/health/cluster')
     if not re.fullmatch(r'/[A-Za-z0-9/_-]{1,120}', health_path):
-        raise HAError('S3 gateway health path must be absolute and have no query')
+        raise HAError('Путь проверки состояния шлюза S3 должен быть абсолютным и не содержать параметров запроса')
     pg = backends(env, 'HA_POSTGRES', 2)
     redis = backends(env, 'HA_REDIS', 2)
     s3 = backends(env, 'HA_S3', 2)
@@ -151,16 +151,16 @@ def validate(env):
     redis_port = port(env.get('HA_REDIS_LISTEN_PORT', '6380'), 'HA_REDIS_LISTEN_PORT')
     user = env.get('HA_REDIS_HEALTH_USER', '')
     if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', user):
-        raise HAError('Redis health user is required')
+        raise HAError('Необходимо указать пользователя для проверки состояния Redis')
     secret_path = Path(env.get('HA_REDIS_HEALTH_PASSWORD_FILE', ''))
     if not secret_path.is_absolute():
-        raise HAError('Redis health password must be read from absolute private file')
+        raise HAError('Пароль для проверки Redis должен считываться из закрытого файла по абсолютному пути')
     secure_file(secret_path)
     password = secret_path.read_bytes().rstrip(b'\r\n')
     if not (16 <= len(password) <= 256) or b'\r' in password or b'\n' in password or b'\0' in password:
-        raise HAError('invalid Redis health credential')
+        raise HAError('Некорректные учётные данные проверки Redis')
     if env.get('HA_S3_SHARED_BACKEND_CONFIRMED') != 'yes':
-        raise HAError('S3 gateways must serve one replicated/quorum-backed object namespace')
+        raise HAError('Шлюзы S3 должны обслуживать одно реплицируемое или защищённое кворумом пространство объектов')
     return dict(interface=iface, public=public, dep=dependency, local=local, peer=peer,
                 prefix=prefix, priority=priority, router=router, public_name=public_name,
                 redis_name=redis_name, s3_name=s3_name, ca=str(ca_path), health_path=health_path,
@@ -302,12 +302,12 @@ def new_file(path, content, mode):
 
 def render(cfg, directory):
     if not directory.is_dir() or directory.is_symlink():
-        raise HAError('output directory must already exist and cannot be a symlink')
+        raise HAError('Каталог вывода должен существовать и не быть символической ссылкой')
     outputs = {'haproxy.launcher-0513.cfg': generate_haproxy(cfg),
                'keepalived.launcher-0513.conf': generate_keepalived(cfg),
                '99-launcher-ha-nonlocal-bind.conf': 'net.ipv4.ip_nonlocal_bind = 1\n'}
     if any((directory / name).exists() or (directory / name).is_symlink() for name in outputs):
-        raise HAError('output already exists; choose an empty output directory for each release')
+        raise HAError('Вывод уже существует; для каждого релиза выбирайте пустой каталог')
     written = []
     try:
         for name, content in outputs.items():
@@ -341,7 +341,7 @@ def stats(socket_path):
                 break
             data.extend(block)
     if len(data) >= 262144:
-        raise HAError('HAProxy response exceeded limit')
+        raise HAError('Ответ HAProxy превышает лимит')
     decoded = data.decode('utf-8', 'replace').lstrip('# ').strip()
     rows = list(csv.DictReader(io.StringIO(decoded)))
     results = {}
@@ -391,7 +391,7 @@ def perform_verification(sock, edge_url, nodes, *, redundant, cfg=None, creds=No
         active = set(observed['backends']['s3_gateways']['active'])
         selected = [g for g in cfg['s3'] if g[0] in active]
         if not selected:
-            raise HAError('no S3 gateways healthy for signed object round-trip')
+            raise HAError('Нет исправных шлюзов S3 для проверки записи и чтения подписанного объекта')
         proof = s3_object_probe(cfg, creds, selected)
         observed['s3CrossGatewayProbe'] = proof
         if redundant and not proof['crossGatewayReadBack']:
@@ -408,7 +408,7 @@ def systemd_ssh(host, service, verb):
     if not multi.HOST_REGEX.fullmatch(host) or host.startswith('-'):
         raise HAError('Недопустимый узел назначения SSH')
     if service not in ('patroni', 'redis-server', 'minio', 'haproxy') or verb not in ('stop', 'start'):
-        raise HAError('invalid disruption unit')
+        raise HAError('Некорректная единица отказоустойчивого теста')
     # Никаких подстановок; закрепляйте ключи SSH хостов и запрещайте запросы
     # паролей.
     multi.run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
@@ -422,18 +422,18 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
     initial = stats(sock)
     initial_health = health(initial, redundant=True)
     if not initial_health['healthy']:
-        raise HAError('redundant healthy baseline is required before disruption')
+        raise HAError('Перед моделированием отказа необходим исправный резервируемый контур')
     baseline = perform_verification(sock, edge_url, nodes, redundant=True, cfg=cfg, creds=creds)
     if not baseline['healthy']:
-        raise HAError('application and data baseline must be healthy before disruption')
+        raise HAError('Перед моделированием отказа приложение и хранилища данных должны быть исправны')
     if initial[category].get(server) != 'UP':
-        raise HAError('requested backend server is not currently UP; no meaningful failover test')
+        raise HAError('Выбранный сервер Backend сейчас не находится в состоянии UP; тест переключения будет недостоверным')
     # Отключение реплики ещё не означает переключения первичного узла. Сначала
     # требуйте, чтобы именно проверяемая авторитетная служба владела ролью
     # активного лидера.
     before_active = health(initial, redundant=True)['backends'][category]['active']
     if service in ('patroni', 'redis-server') and before_active != [server]:
-        raise HAError('database/Redis failover must disrupt the actual active primary')
+        raise HAError('Для проверки переключения БД или Redis необходимо вывести из строя действующий основной узел')
     # Не допускайте незаметного нарушения работы постороннего SSH-хоста. Имя
     # SSH-хоста должно разрешаться в настроенный адрес backend, нельзя доверять
     # одному утверждению пользователя.
@@ -441,7 +441,7 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
                      'redis' if service == 'redis-server' else 's3'] if cfg else []
     address = next((ip for name, ip, _ in configured if name == server), None)
     if address is None:
-        raise HAError('backend identity absent from actual HA configuration')
+        raise HAError('Идентификатор Backend отсутствует в действующей конфигурации высокой доступности')
     # Для управляющего SSH часто используется отдельный внеполосный адрес. Проверяйте
     # НА УДАЛЁННОЙ ОС, что ей действительно принадлежит настроенный IP плоскости
     # данных. Равенство DNS некорректно для внеполосного управления и может
@@ -455,9 +455,9 @@ def drill(sock, edge_url, nodes, service, server, target, deadline, cfg=None, cr
                     for item in dev.get('addr_info', [])
                     if item.get('family') == 'inet'}
     except (ValueError, TypeError, AttributeError, OSError, multi.DeploymentError) as exc:
-        raise HAError('cannot independently inspect backend interface identities') from exc
+        raise HAError('Не удалось независимо проверить сетевые интерфейсы Backend') from exc
     if address not in observed:
-        raise HAError('SSH target is not the configured backend physical host')
+        raise HAError('Цель SSH не является настроенным физическим хостом Backend')
     # Нужно проверенное оператором соответствие имени backend и SSH-хоста. Никогда
     # не выбирайте случайную удалённую машину только по строке отчёта.
     stopped, checks, restored, outcome = False, [], False, False
@@ -516,17 +516,17 @@ def storage_credentials(env):
     bucket = env.get('HA_S3_BUCKET', '')
     region = env.get('HA_S3_REGION', '')
     if not re.fullmatch(r'[a-z0-9][a-z0-9.-]{2,62}', bucket) or not re.fullmatch(r'[a-z0-9-]{2,40}', region):
-        raise HAError('S3 bucket and region for active read/write probe required')
+        raise HAError('Для проверки записи и чтения S3 необходимо указать бакет и регион')
     def read_secret(key):
         path = Path(env.get(key, ''))
         if not path.is_absolute():
-            raise HAError('S3 probe credential must be a private absolute file')
+            raise HAError('Учётные данные проверки S3 должны храниться в закрытом файле по абсолютному пути')
         secure_file(path)
         return path.read_text('utf-8').strip()
     access = read_secret('HA_S3_ACCESS_KEY_FILE')
     secret = read_secret('HA_S3_SECRET_KEY_FILE')
     if not 8 <= len(access) <= 256 or not 16 <= len(secret) <= 256 or not access.isascii() or not secret.isascii():
-        raise HAError('invalid S3 probe credential')
+        raise HAError('Некорректные учётные данные проверки S3')
     token = ''
     if env.get('HA_S3_SESSION_TOKEN_FILE'):
         token = read_secret('HA_S3_SESSION_TOKEN_FILE')
@@ -591,7 +591,7 @@ def s3_request(cfg, creds, gateway, method, key, payload=b''):
         response = conn.getresponse()
         body = response.read(65537)
         if len(body) > 65536:
-            raise HAError('S3 probe response too large')
+            raise HAError('Ответ проверки S3 слишком велик')
         return response.status, body
     finally:
         conn.close()
@@ -613,11 +613,11 @@ def s3_object_probe(cfg, creds, gateways):
         for source in gateways:
             status, _ = s3_request(cfg, creds, source, 'PUT', key, payload)
             if status not in (200, 201, 204):
-                raise HAError('signed S3 probe PUT rejected')
+                raise HAError('Подписанный запрос PUT проверки S3 отклонён')
             for destination in gateways:
                 status, observed = s3_request(cfg, creds, destination, 'GET', key)
                 if status != 200 or observed != payload:
-                    raise HAError('S3 cross-gateway read mismatched after acknowledged write')
+                    raise HAError('Чтение S3 через другой шлюз не совпало с подтверждённой записью')
             out.append(source[0])
         return {'passed': True, 'gateways': out, 'crossGatewayReadBack': len(gateways) > 1}
     finally:
@@ -633,7 +633,7 @@ def s3_object_probe(cfg, creds, gateways):
             except (OSError, ssl.SSLError, HAError):
                 errors.append(gateway[0])
         if errors:
-            raise HAError('S3 probe cleanup failed; operator must locate probe objects')
+            raise HAError('Не удалось очистить тестовые объекты S3; оператор должен найти их вручную')
 
 
 def local_owns_vip(vip, interface):
@@ -642,7 +642,7 @@ def local_owns_vip(vip, interface):
         data = json.loads(raw)
         return any(info.get('local') == vip for dev in data for info in dev.get('addr_info', []))
     except (ValueError, AttributeError, TypeError) as exc:
-        raise HAError('cannot inspect actual local VIP ownership') from exc
+        raise HAError('Не удалось проверить фактического владельца локального виртуального IP') from exc
 
 
 def remote_owns_vip(target, vip, interface):
@@ -655,16 +655,16 @@ def remote_owns_vip(target, vip, interface):
         data = json.loads(output)
         return any(info.get('local') == vip for dev in data for info in dev.get('addr_info', []))
     except (ValueError, TypeError, AttributeError) as exc:
-        raise HAError('cannot inspect remote VIP ownership') from exc
+        raise HAError('Не удалось проверить владельца удалённого виртуального IP') from exc
 
 
 def edge_drill(sock, edge_url, nodes, cfg, target, deadline):
     """Выполнять на резервном балансировщике: остановить HAProxy активного узла и наблюдать реальный перенос VIP."""
     initial = health(stats(sock), redundant=True)
     if not initial['healthy']:
-        raise HAError('healthy redundant backend baseline required')
+        raise HAError('Требуется исправный резервируемый контур Backend')
     if local_owns_vip(cfg['public'], cfg['interface']) or not remote_owns_vip(target, cfg['public'], cfg['interface']):
-        raise HAError('edge drill must start on standby while target owns public VIP')
+        raise HAError('Проверку пограничного узла нужно начинать на резервном узле, пока целевой узел владеет публичным VIP')
     stopped, restored, moved, checks = False, False, False, []
     try:
         systemd_ssh(target, 'haproxy', 'stop')
@@ -726,17 +726,17 @@ def main(argv=None):
     try:
         if args.mode == 'render':
             if not args.output_dir:
-                raise HAError('--output-dir is required')
+                raise HAError('Необходимо указать --output-dir')
             cfg = validate(load_env(Path(args.env_file)))
             report = render(cfg, Path(args.output_dir))
         elif args.mode == 'check':
             report = check_config(Path(args.haproxy_config))
         else:
             if not args.edge_url:
-                raise HAError('--edge-url is required')
+                raise HAError('Необходимо указать --edge-url')
             multi.validate_edge_url(args.edge_url)
             if args.deadline < 10 or args.deadline > 600:
-                raise HAError('deadline must be between 10 and 600 seconds')
+                raise HAError('Время ожидания должно составлять от 10 до 600 секунд')
             nodes = multi.parse_nodes(args.node) if args.node else {}
             config = validate(load_env(Path(args.env_file)))
             creds = storage_credentials(load_env(Path(args.env_file)))
@@ -745,26 +745,26 @@ def main(argv=None):
                                               redundant=True, cfg=config, creds=creds)
             elif args.mode == 'edge-drill':
                 if not args.allow_disruption or not args.target:
-                    raise HAError('edge-drill requires --allow-disruption and --target')
+                    raise HAError('Для edge-drill требуются --allow-disruption и --target')
                 before = perform_verification(Path(args.socket), args.edge_url, nodes,
                                               redundant=True, cfg=config, creds=creds)
                 if not before['healthy']:
-                    raise HAError('edge drill baseline is not healthy')
+                    raise HAError('Исходное состояние для проверки пограничного узла неисправно')
                 report = edge_drill(Path(args.socket), args.edge_url, nodes, config,
                                     args.target, args.deadline)
             else:
                 if not (args.allow_disruption and args.service and args.backend_server and args.target):
-                    raise HAError('drill requires --allow-disruption --service --backend-server --target')
+                    raise HAError('Для проверки требуются --allow-disruption --service --backend-server --target')
                 if args.service == 'haproxy':
-                    raise HAError('HAProxy host loss uses edge-drill, not backend drill')
+                    raise HAError('Отказ хоста HAProxy проверяется через edge-drill, а не через backend drill')
                 if not NAME.fullmatch(args.backend_server):
-                    raise HAError('invalid backend server name')
+                    raise HAError('Некорректное имя сервера Backend')
                 report = drill(Path(args.socket), args.edge_url, nodes, args.service,
                                args.backend_server, args.target, args.deadline, config, creds)
         if args.output:
             inventory.write_report(args.output, report)
         elif args.mode != 'render':
-            raise HAError('--output required for private result report')
+            raise HAError('Для закрытого отчёта о результатах требуется --output')
         return 0 if report.get('healthy', report.get('testPassed', report.get('configured', report.get('haproxySyntaxValid', False)))) else 3
     except (HAError, multi.DeploymentError, inventory.InventoryError, OSError, ValueError) as exc:
         # Намеренно не выводите необработанную конфигурацию и закрытые учётные

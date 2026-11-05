@@ -43,14 +43,14 @@ fn digest_file(root: &Path, candidate: &Path) -> Result<String, String> {
     let rel = candidate.strip_prefix(root).map_err(|_| "live Guard file escaped installation root")?;
     let mut path = root.to_path_buf();
     for component in rel.components() {
-        let Component::Normal(name) = component else {return Err("live Guard unsafe runtime file path".into())};
+        let Component::Normal(name) = component else {return Err("Небезопасный путь к файлу Runtime при активном Guard".into())};
         path.push(name);
         if fs::symlink_metadata(&path).map_err(|e| format!("live Guard file missing {}: {e}", path.display()))?.file_type().is_symlink() {
-            return Err(format!("live Guard symlink in executable path: {}", path.display()));
+            return Err(format!("Символическая ссылка в пути к исполняемому файлу при активном Guard: {}", path.display()));
         }
     }
     let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
-    if !meta.is_file() || meta.len() > MAX_FILE_BYTES {return Err("live Guard invalid executable file".into())}
+    if !meta.is_file() || meta.len() > MAX_FILE_BYTES {return Err("Некорректный исполняемый файл при активном Guard".into())}
     let mut f = File::open(&path).map_err(|e| e.to_string())?;
     let mut sha = Sha256::new();
     let mut buf = [0u8; 65536];
@@ -72,13 +72,13 @@ impl LiveGameGuard0506 {
             if !crate::manifest_file_applies(f) || !selected.contains(&f.path) || !is_executable(&f.path) {continue}
             let absolute = root.join(&f.path);
             let actual = digest_file(&root, &absolute)?;
-            if !actual.eq_ignore_ascii_case(&f.sha256) {return Err(format!("live Guard initial digest mismatch: {}", f.path))}
-            if pinned.insert(absolute, f.sha256.to_ascii_lowercase()).is_some() {return Err("live Guard duplicate signed file".into())}
+            if !actual.eq_ignore_ascii_case(&f.sha256) {return Err(format!("Не совпадает исходная контрольная сумма при активном Guard: {}", f.path))}
+            if pinned.insert(absolute, f.sha256.to_ascii_lowercase()).is_some() {return Err("Повторяющийся подписанный файл при активном Guard".into())}
         }
         if let Some(ref policy) = signed {
             for (path, digest, _) in policy.runtime_artifacts(&root)? {
                 match pinned.insert(path.clone(), digest.clone()) {
-                    Some(old) if old != digest => return Err(format!("live Guard conflicting artifact: {}",path.display())),
+                    Some(old) if old != digest => return Err(format!("Конфликт артефактов при активном Guard: {}",path.display())),
                     _ => (),
                 }
             }
@@ -88,11 +88,11 @@ impl LiveGameGuard0506 {
         for entry in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
             let canonical = fs::canonicalize(entry).map_err(|e| format!("Отсутствует: «live Guard classpath»: {e}"))?;
             if !pinned.contains_key(&canonical) {
-                return Err(format!("live Guard unsigned classpath: {}",canonical.display()));
+                return Err(format!("Неподписанный путь к классам Java при активном Guard: {}",canonical.display()));
             }
         }
         if pinned.is_empty() {return Err("Пустое значение: «live Guard executable inventory»".into())}
-        if pinned.len() > LIMIT {return Err("live Guard inventory capacity exceeded".into())}
+        if pinned.len() > LIMIT {return Err("Превышен лимит проверки файлов при активном Guard".into())}
         #[cfg(target_os = "linux")]
         let linux_external = match signed.as_ref() {
             Some(policy) => policy.external_native_modules(&root)?,
@@ -130,14 +130,14 @@ impl LiveGameGuard0506 {
 
     #[cfg(target_os = "linux")]
     pub fn bind_linux_process(&mut self, pid: u32, java: &Path) -> Result<(), String> {
-        if self.linux_process.is_some() { return Err("Linux Guard JVM already bound".into()); }
+        if self.linux_process.is_some() { return Err("JVM уже привязана к Linux Guard".into()); }
         self.linux_process = Some(crate::linux_runtime_guard_0508::LinuxRuntimeGuard0508::attach(pid, java, self)?);
         Ok(())
     }
 
     #[cfg(target_os = "linux")]
     pub fn bind_linux_guard_daemon(&mut self, daemon: crate::linux_guard::GuardSupervisor) -> Result<(),String> {
-        if self.linux_daemon.is_some(){return Err("Linux Guard daemon already bound".into());}
+        if self.linux_daemon.is_some(){return Err("Демон уже привязан к Linux Guard".into());}
         self.linux_daemon = Some(daemon);
         Ok(())
     }
@@ -149,14 +149,14 @@ impl LiveGameGuard0506 {
 
     #[cfg(target_os = "macos")]
     pub fn bind_macos_process(&mut self, pid: u32, java: &Path) -> Result<(), String> {
-        if self.macos_process.is_some() { return Err("macOS Guard JVM already bound".into()); }
+        if self.macos_process.is_some() { return Err("JVM уже привязана к macOS Guard".into()); }
         self.macos_process = Some(crate::macos_runtime_guard_0509::MacOSRuntimeGuard0509::attach(pid, java)?);
         Ok(())
     }
 
     #[cfg(target_os = "macos")]
     pub fn bind_macos_guard_daemon(&mut self, daemon: crate::macos_guard::GuardSupervisor) -> Result<(), String> {
-        if self.macos_daemon.is_some() { return Err("macOS Guard daemon already bound".into()); }
+        if self.macos_daemon.is_some() { return Err("Демон уже привязан к macOS Guard".into()); }
         self.macos_daemon = Some(daemon);
         Ok(())
     }
@@ -172,19 +172,19 @@ impl LiveGameGuard0506 {
         let current = crate::guard_compatibility_0502::verified_for_game(&self.root,
             &self.project, &self.minecraft, &self.loader)?;
         if current.as_ref().map(|p|p.digest()) != self.policy_digest.as_deref() {
-            return Err("live Guard policy replaced or revoked during game".into());
+            return Err("Политика активного Guard заменена или отозвана во время игры".into());
         }
         crate::guard_compatibility_0502::enforce_launch(&self.root, &self.project,
             &self.minecraft, &self.loader, &self.jvm_args)?;
         #[cfg(target_os = "linux")]
         for (path,expected) in &self.linux_external {
             if &crate::guard_compatibility_0502::verified_external_native_hash(path)?!=expected {
-                return Err(format!("live Guard external overlay changed: {}",path.display()));
+                return Err(format!("Внешний оверлей изменился во время игры при активном Guard: {}",path.display()));
             }
         }
         for (path, expected) in &self.pinned {
             if &digest_file(&self.root, path)? != expected {
-                return Err(format!("live Guard executable changed during game: {}", path.display()));
+                return Err(format!("Исполняемый файл изменился во время игры при активном Guard: {}", path.display()));
             }
         }
         #[cfg(target_os = "linux")]

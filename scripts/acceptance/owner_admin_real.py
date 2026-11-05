@@ -104,7 +104,7 @@ class HTTPS:
                 idempotency=None, expected=(200,), timeout=30):
         require(route.startswith('/api/v1/') or route in ('/health', '/ready'), 'non-API route')
         require(not route.startswith('//') and '\\' not in route and '#' not in route,
-                'unsafe API route')
+                'Небезопасный маршрут API')
         body = json.dumps(data, separators=(',', ':')).encode('utf-8') if data is not None else None
         headers = {'Accept': 'application/json'}
         if body is not None:

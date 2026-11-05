@@ -111,7 +111,7 @@ def read_file(
         raise GateError("Каталог подтверждений является символической ссылкой")
     path = base / name
     if path.is_symlink() or not path.is_file():
-        raise GateError(f"Отсутствует: «or unsafe evidence file»: {path}")
+        raise GateError(f"Файл доказательных данных отсутствует или небезопасен: {path}")
     if path.stat().st_size > limit:
         raise GateError(f"Слишком большой файл подтверждающих данных: {path}")
     hasher = hashlib.sha256()
@@ -228,7 +228,7 @@ def verify_target(
 
 def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
     if not COMMIT.fullmatch(commit):
-        raise GateError("expected Git commit: требуется «40 lowercase hex digits»")
+        raise GateError("Коммит Git должен содержать 40 шестнадцатеричных символов в нижнем регистре")
     if not re.fullmatch("[a-f0-9]{64}", trusted_public_key):
         raise GateError("trusted independent Ed25519 public key: требуется «32-byte hex»")
     if evidence.is_symlink() or not evidence.is_dir():

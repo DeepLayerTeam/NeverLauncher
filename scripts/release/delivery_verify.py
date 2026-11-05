@@ -36,7 +36,7 @@ def digest(data: bytes) -> str:
 
 def exe_arch(data: bytes, platform: str, arch: str) -> None:
     if len(data) < 64:
-        raise ValueError('truncated executable')
+        raise ValueError('Исполняемый файл обрезан')
     if platform == 'linux':
         if data[:4] != b'\x7fELF' or data[4] != 2 or data[5] != 1 or struct.unpack_from('<H',data,18)[0] != ARCH[arch]['elf']:
             raise ValueError('invalid ELF64 target architecture')
@@ -61,7 +61,7 @@ def exe_arch(data: bytes, platform: str, arch: str) -> None:
             raise ValueError('malformed Mach-O load commands')
         offset=32; code_signed=False
         for _ in range(ncmds):
-            if offset+8 > 32+sz:raise ValueError('truncated Mach-O load command')
+            if offset+8 > 32+sz:raise ValueError('Обрезана команда загрузки Mach-O')
             cmd,length=struct.unpack_from('<II',data,offset)
             if length < 8 or offset+length > 32+sz:raise ValueError('malformed Mach-O load command size')
             if cmd == 0x1d:

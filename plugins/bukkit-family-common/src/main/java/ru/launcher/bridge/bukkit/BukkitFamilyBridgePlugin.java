@@ -79,7 +79,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         stopping.set(false);
         BukkitFamilyPlatform actual = BukkitFamilyPlatform.detect();
         if (actual != expectedPlatform) {
-            getLogger().severe("Launcher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + ". Install launcher-" + actual.id() + "-bridge instead.");
+            getLogger().severe("Launcher " + expectedPlatform.displayName() + " Bridge не может работать на обнаруженной платформе " + actual.displayName() + ". Install launcher-" + actual.id() + "-bridge instead.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -288,7 +288,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         BridgeConfig config = BridgeConfig.load(configPath, expectedPlatform.id() + "-main");
         String pluginSha256 = BridgeIntegrity.artifactSha256(getClass());
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) {
-            throw new IllegalStateException("cannot measure running plugin JAR SHA-256");
+            throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR плагина");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = runtimeDescriptor();
@@ -741,7 +741,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             Object accepted = execute.invoke(scheduler, this, task, retired, 0L);
             return !(accepted instanceof Boolean flag) || flag;
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Folia entity scheduler unavailable", e);
+            throw new IllegalStateException("Планировщик сущностей Folia недоступен", e);
         }
     }
 
@@ -768,7 +768,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 execute.invoke(scheduler, this, task);
                 return;
             } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("Folia global scheduler unavailable", e);
+                throw new IllegalStateException("Глобальный планировщик Folia недоступен", e);
             }
         }
         try {
@@ -776,7 +776,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             Method runTask = scheduler.getClass().getMethod("runTask", org.bukkit.plugin.Plugin.class, Runnable.class);
             runTask.invoke(scheduler, this, task);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Bukkit scheduler unavailable", e);
+            throw new IllegalStateException("Планировщик Bukkit недоступен", e);
         }
     }
 

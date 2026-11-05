@@ -64,13 +64,13 @@ fn validate_name_collisions(paths: impl Iterator<Item = String>) -> Result<(), S
             let key = normalized.join("/");
             let real = original.join("/");
             if i + 1 < parts.len() {
-                if files.contains(&key) { return Err(format!("file/directory collision: {p}")); }
+                if files.contains(&key) { return Err(format!("Конфликт имён файла и каталога: {p}")); }
                 if let Some(existing) = directories.insert(key, real.clone()) {
-                    if existing != real { return Err(format!("case-colliding directory: {p}")); }
+                    if existing != real { return Err(format!("Конфликт регистра в имени каталога: {p}")); }
                 }
             } else {
                 if !files.insert(key.clone()) || directories.contains_key(&key) {
-                    return Err(format!("Обнаружен дубликат: «or file/directory collision»: {p}"));
+                    return Err(format!("Обнаружен повторяющийся путь или конфликт файла и каталога: {p}"));
                 }
             }
         }
@@ -98,24 +98,24 @@ pub fn validate_policy(m: &Manifest) -> Result<(), String> {
     validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
     let mut seen = HashSet::new();
     for f in &m.files {
-        if !valid_path(&f.path, false) || !seen.insert(f.path.to_ascii_lowercase()) { return Err(format!("duplicate/unsafe file path: {}", f.path)) }
+        if !valid_path(&f.path, false) || !seen.insert(f.path.to_ascii_lowercase()) { return Err(format!("Повторяющийся или небезопасный путь к файлу: {}", f.path)) }
         let ownership = effective_ownership(f);
         if !valid_ownership(ownership) { return Err(format!("Неизвестное значение: принадлежность файла: {ownership}")) }
         if matches!(ownership, "user-owned" | "generated") && f.required { return Err(format!("Пользовательский или созданный файл не может быть обязательным: {}", f.path)) }
-        if !f.ownership.is_empty() && ((ownership == "required" && !f.required) || (ownership == "optional" && f.required)) { return Err(format!("conflicting required/ownership: {}",f.path)) }
-        if protected(&f.path) && !matches!(ownership, "user-owned" | "generated") { return Err(format!("user data is protected: {}", f.path)) }
+        if !f.ownership.is_empty() && ((ownership == "required" && !f.required) || (ownership == "optional" && f.required)) { return Err(format!("Конфликт обязательного файла и правил владения: {}",f.path)) }
+        if protected(&f.path) && !matches!(ownership, "user-owned" | "generated") { return Err(format!("Данные пользователя защищены: {}", f.path)) }
     }
     for (i, r) in m.file_rules.iter().enumerate() {
-        if !valid_path(&r.pattern, true) || !valid_ownership(&r.ownership) { return Err(format!("Некорректное значение: «file rule» {i}")) }
+        if !valid_path(&r.pattern, true) || !valid_ownership(&r.ownership) { return Err(format!("Некорректное правило обработки файлов: {i}")) }
         if !matches!(r.action.as_str(), "include" | "exclude" | "verify") { return Err(format!("Неизвестное значение: «file rule action: {}»", r.action)) }
         if (r.action == "include" && !matches!(r.ownership.as_str(), "managed" | "required")) ||
            (r.action == "verify" && matches!(r.ownership.as_str(), "user-owned" | "generated")) ||
            (r.action == "exclude" && !matches!(r.ownership.as_str(), "user-owned" | "generated")) { return Err(format!("Некорректное значение: «rule ownership: {}»",r.pattern)) }
-        if r.action == "include" && protected(r.pattern.strip_suffix("/**").unwrap_or(&r.pattern)) { return Err(format!("protected include rule: {}",r.pattern)) }
-        if m.file_rules[..i].iter().any(|prev| overlap(&prev.pattern, &r.pattern)) { return Err(format!("overlapping rules: {}",r.pattern)) }
+        if r.action == "include" && protected(r.pattern.strip_suffix("/**").unwrap_or(&r.pattern)) { return Err(format!("Правило включения затрагивает защищённые данные: {}",r.pattern)) }
+        if m.file_rules[..i].iter().any(|prev| overlap(&prev.pattern, &r.pattern)) { return Err(format!("Пересекающиеся правила: {}",r.pattern)) }
         for f in &m.files { if matches(&r.pattern,&f.path) {
             if (r.action == "exclude" && !matches!(effective_ownership(f), "user-owned" | "generated")) ||
-               (r.action == "include" && matches!(effective_ownership(f), "user-owned" | "generated")) { return Err(format!("file rule conflicts with file: {}",f.path)) }
+               (r.action == "include" && matches!(effective_ownership(f), "user-owned" | "generated")) { return Err(format!("Правило для файлов конфликтует с файлом: {}",f.path)) }
         } }
     }
     Ok(())
@@ -155,20 +155,20 @@ fn is_link_or_reparse(meta: &std::fs::Metadata) -> bool {
 // и конечных путей. Это также отклоняет ссылку, созданную злоумышленником
 // в точке назначения атомарного переименования.
 pub fn ensure_no_symlinks(root: &Path, target: &Path) -> Result<(), String> {
-    if !target.starts_with(root) { return Err("file outside of installation root".to_string()) }
+    if !target.starts_with(root) { return Err("Файл находится вне корневого каталога установки".to_string()) }
     match std::fs::symlink_metadata(root) {
-        Ok(meta) if is_link_or_reparse(&meta) => return Err("symlink/reparse installation root".into()),
+        Ok(meta) if is_link_or_reparse(&meta) => return Err("Корневой каталог установки является символической ссылкой или точкой повторного анализа".into()),
         Ok(_) => (),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-        Err(e) => return Err(format!("cannot inspect installation root: {e}")),
+        Err(e) => return Err(format!("Не удалось проверить корневой каталог установки: {e}")),
     }
     let relative = target.strip_prefix(root).map_err(|e| e.to_string())?;
     let mut cur = root.to_path_buf();
     for component in relative.components() {
         cur.push(component.as_os_str());
         match std::fs::symlink_metadata(&cur) {
-            Ok(meta) if is_link_or_reparse(&meta) => return Err(format!("symlink/reparse point in managed path: {}",cur.display())),
-            Ok(meta) if cur != target && !meta.is_dir() => return Err(format!("non-directory managed path parent: {}",cur.display())),
+            Ok(meta) if is_link_or_reparse(&meta) => return Err(format!("В управляемом пути обнаружена символическая ссылка или точка повторного анализа: {}",cur.display())),
+            Ok(meta) if cur != target && !meta.is_dir() => return Err(format!("Родительский элемент управляемого пути не является каталогом: {}",cur.display())),
             Ok(_) => (),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
             Err(e) => return Err(format!("{}: {e}",cur.display())),
@@ -255,7 +255,7 @@ mod tests {
 pub fn validate_download_targets(m: &Manifest) -> Result<(), String> {
     validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
     for f in &m.files {
-        if !valid_path(&f.path, false) { return Err(format!("Небезопасное значение: «managed file path: {}»", f.path)); }
+        if !valid_path(&f.path, false) { return Err(format!("Небезопасный путь к управляемому файлу: {}", f.path)); }
         if !matches!(effective_ownership(f), "required" | "managed" | "optional") { continue }
         let decoded = hex::decode(&f.sha256).map_err(|_| format!("Некорректное значение: «SHA-256: {}»",f.path))?;
         if decoded.len() != 32 {return Err(format!("Некорректное значение: «SHA-256 length: {}»",f.path))}

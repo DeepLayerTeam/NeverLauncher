@@ -475,11 +475,11 @@ func embedCompatibilityCertification(out, matrixPath, targetsPath, ver, expected
 	}
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {
-		return fmt.Errorf("read compatibility matrix: %w", err)
+		return fmt.Errorf("Ошибка чтения матрицы совместимости: %w", err)
 	}
 	targetsRaw, err := os.ReadFile(targetsPath)
 	if err != nil {
-		return fmt.Errorf("read compatibility targets: %w", err)
+		return fmt.Errorf("Ошибка чтения целевых платформ совместимости: %w", err)
 	}
 	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, ver, expectedCommit)
 	if err != nil {
@@ -496,7 +496,7 @@ func embedCompatibilityCertification(out, matrixPath, targetsPath, ver, expected
 	}
 	if compatibilityReleaseCertificate01711Required(ver) {
 		if err := writeLoaderCompatibilityReleaseCertificate01711(out, matrixRaw, targetsRaw, certification); err != nil {
-			return fmt.Errorf("Loader Compatibility RC 0.17.11: %w", err)
+			return fmt.Errorf("Ошибка совместимости загрузчиков RC 0.17.11: %w", err)
 		}
 	}
 	return nil
@@ -517,7 +517,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	ver = strings.TrimSpace(ver)
 	targetsProductVersion := strings.TrimSpace(targets.ProductVersion)
 	if ver == "" || (targetsProductVersion != "" && targetsProductVersion != ver) || matrix.ProductVersion != ver {
-		return releaseCompatibilityCertification{}, fmt.Errorf("compatibility productVersion mismatch: release=%s targets=%s matrix=%s", ver, targets.ProductVersion, matrix.ProductVersion)
+		return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение версии продукта в проверке совместимости: релиз=%s, цели=%s, матрица=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {
 		return releaseCompatibilityCertification{}, errors.New("compatibility matrix не имеет fail-closed status=passed")
@@ -526,7 +526,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		return releaseCompatibilityCertification{}, errors.New("compatibility matrix не содержит repository/commit/runId")
 	}
 	if strings.TrimSpace(expectedCommit) != "" && matrix.Commit != strings.TrimSpace(expectedCommit) {
-		return releaseCompatibilityCertification{}, fmt.Errorf("compatibility matrix commit mismatch: expected=%s actual=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
+		return releaseCompatibilityCertification{}, fmt.Errorf("Не совпадает коммит матрицы совместимости: ожидался=%s, получен=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
 	}
 
 	enhanced := compatibilityVanillaBaselineIIRequired(ver)
@@ -589,26 +589,26 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if enhanced {
 		for loader := range allowedLoaders {
 			if !requiredLoaderTargets[loader] {
-				return releaseCompatibilityCertification{}, fmt.Errorf("compatibility 0.16.2+ missing required loader family %s", loader)
+				return releaseCompatibilityCertification{}, fmt.Errorf("В совместимости 0.16.2+ отсутствует обязательное семейство загрузчиков %s", loader)
 			}
 		}
 		for minecraft, expected := range vanillaCompatibilityBaselineII {
 			target, ok := baselineTargets[minecraft]
 			if !ok {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Vanilla Compatibility Baseline II missing required Minecraft %s", minecraft)
+				return releaseCompatibilityCertification{}, fmt.Errorf("В базовой совместимости Vanilla II отсутствует обязательная версия Minecraft %s", minecraft)
 			}
 			if target.JavaMajor != expected.JavaMajor || target.Scope != expected.Scope {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Vanilla %s baseline mismatch: expected Java %d scope=%s, got Java %d scope=%s", minecraft, expected.JavaMajor, expected.Scope, target.JavaMajor, target.Scope)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение базовых параметров Vanilla %s: ожидалась Java %d, область=%s; получена Java %d, область=%s", minecraft, expected.JavaMajor, expected.Scope, target.JavaMajor, target.Scope)
 			}
 		}
 		if compatibilityLegacyVanillaJava8Required(ver) {
 			for _, minecraft := range legacyVanillaJava8Compatibility0163 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla 0.16.3 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Legacy Vanilla 0.16.3 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != 8 || target.Scope != "client" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla %s mismatch: expected Java 8 scope=client, got Java %d scope=%s", minecraft, target.JavaMajor, target.Scope)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Legacy Vanilla %s: ожидалась Java 8, область=client; получена Java %d, область=%s", minecraft, target.JavaMajor, target.Scope)
 				}
 			}
 		}
@@ -616,10 +616,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for _, minecraft := range legacyVanillaPre17Compatibility0164 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla 0.16.4 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Legacy Vanilla 0.16.4 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != 8 || target.Scope != "client" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla %s pre-1.7 mismatch: expected Java 8 scope=client, got Java %d scope=%s", minecraft, target.JavaMajor, target.Scope)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Legacy Vanilla %s до 1.7: ожидалась Java 8, область=client; получена Java %d, область=%s", minecraft, target.JavaMajor, target.Scope)
 				}
 			}
 		}
@@ -627,10 +627,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range java16_17VanillaCompatibility0166 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 16/17 Vanilla 0.16.6 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Vanilla 0.16.6 для Java 16/17 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != javaMajor || target.Scope != "client" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 16/17 Vanilla %s mismatch: expected Java %d scope=client, got Java %d scope=%s", minecraft, javaMajor, target.JavaMajor, target.Scope)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Vanilla %s для Java 16/17: ожидалась Java %d, область=client; получена Java %d, область=%s", minecraft, javaMajor, target.JavaMajor, target.Scope)
 				}
 			}
 		}
@@ -638,10 +638,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, scope := range java21VanillaCompatibility0167 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21 Vanilla 0.16.7 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Vanilla 0.16.7 для Java 21 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != 21 || target.Scope != scope {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21 Vanilla %s mismatch: expected Java 21 scope=%s, got Java %d scope=%s", minecraft, scope, target.JavaMajor, target.Scope)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Vanilla %s для Java 21: ожидалась Java 21, область=%s; получена Java %d, область=%s", minecraft, scope, target.JavaMajor, target.Scope)
 				}
 			}
 		}
@@ -649,10 +649,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, scope := range java25VanillaCompatibility0168 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 25 Vanilla 0.16.8 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Vanilla 0.16.8 для Java 25 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != 25 || target.Scope != scope {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 25 Vanilla %s mismatch: expected Java 25 scope=%s, got Java %d scope=%s", minecraft, scope, target.JavaMajor, target.Scope)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Vanilla %s для Java 25: ожидалась Java 25, область=%s; получена Java %d, область=%s", minecraft, scope, target.JavaMajor, target.Scope)
 				}
 			}
 		}
@@ -667,10 +667,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				key := platform.OS + "/" + platform.Arch
 				target, ok := platformTargets[key]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Vanilla 0.16.9 missing required 26.3 target %s", key)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В кроссплатформенной Vanilla 0.16.9 отсутствует обязательная цель 26.3 %s", key)
 				}
 				if target.JavaMajor != 25 || target.Scope != "client" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Vanilla 26.3 %s mismatch: expected Java 25 scope=client, got Java %d scope=%s", key, target.JavaMajor, target.Scope)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение кроссплатформенной Vanilla 26.3 %s: ожидалась Java 25, область=client; получена Java %d, область=%s", key, target.JavaMajor, target.Scope)
 				}
 			}
 		}
@@ -681,7 +681,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					if target.Required && target.Loader == "vanilla" && target.Minecraft == minecraft && target.OS == "linux" && target.Arch == "x86_64" && target.MatchingServer {
 						count++
 						if target.JavaMajor != javaMajor || target.Scope != "client" {
-							return releaseCompatibilityCertification{}, fmt.Errorf("Actual Client E2E II %s mismatch: expected Java %d scope=client linux/x86_64", minecraft, javaMajor)
+							return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение реального клиентского E2E II %s: ожидалась Java %d, область=client, linux/x86_64", minecraft, javaMajor)
 						}
 					}
 				}
@@ -694,10 +694,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for _, minecraft := range legacyVanilla0170v1Releases {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla 0.17.0v1 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Legacy Vanilla 0.17.0v1 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != 8 || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla %s 0.17.0v1 mismatch: expected Java 8 scope=client linux/x86_64, got Java %d scope=%s %s/%s", minecraft, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Legacy Vanilla %s 0.17.0v1: ожидалась Java 8, область=client linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 			}
 		}
@@ -705,10 +705,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range java16_17VanillaCompatibility0170v2 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 16/17 Vanilla 0.17.0v2 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Vanilla 0.17.0v2 для Java 16/17 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != javaMajor || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 16/17 Vanilla %s 0.17.0v2 mismatch: expected Java %d scope=client linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Vanilla %s 0.17.0v2 для Java 16/17: ожидалась Java %d, область=client linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 			}
 		}
@@ -716,10 +716,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range java21_25VanillaCompatibility0170v3 {
 				target, ok := requiredVanillaTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21/25 Vanilla 0.17.0v3 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Vanilla 0.17.0v3 для Java 21/25 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				if target.JavaMajor != javaMajor || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21/25 Vanilla %s 0.17.0v3 mismatch: expected Java %d scope=client linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Vanilla %s 0.17.0v3 для Java 21/25: ожидалась Java %d, область=client linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 			}
 		}
@@ -735,11 +735,11 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 			if vanillaTargets < 109 || len(vanillaVersions) < 104 {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA 0.17.0v3 requires >=109 required Vanilla targets and >=104 unique releases; got targets=%d releases=%d", vanillaTargets, len(vanillaVersions))
+				return releaseCompatibilityCertification{}, fmt.Errorf("Для сертификации совместимости Minecraft II GA 0.17.0v3 требуется не менее 109 целей Vanilla и 104 уникальных релизов; получено целей=%d, релизов=%d", vanillaTargets, len(vanillaVersions))
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
 				if !gaJava[major] {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA missing JRE major %d", major)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В сертификации совместимости Minecraft II GA отсутствует основная версия JRE %d", major)
 				}
 			}
 		}
@@ -753,7 +753,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 				fabricCount++
 				if _, exists := fabricTargets[target.Minecraft]; exists {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric Compatibility II 0.17.1 duplicate required target for Minecraft %s", target.Minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся обязательная цель Fabric Compatibility II 0.17.1 для Minecraft %s", target.Minecraft)
 				}
 				fabricTargets[target.Minecraft] = target
 				fabricJava[target.JavaMajor] = true
@@ -764,14 +764,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range fabricCompatibilityII0171 {
 				target, ok := fabricTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric Compatibility II 0.17.1 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Fabric Compatibility II 0.17.1 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				expectedScope := "client"
 				if minecraft == "1.21.1" {
 					expectedScope = "integration"
 				}
 				if target.JavaMajor != javaMajor || target.Scope != expectedScope || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric %s 0.17.1 mismatch: expected Java %d scope=%s linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Fabric %s 0.17.1: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
 					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric %s 0.17.1: требуется «loaderVersion=latest-stable selector»", minecraft)
@@ -779,7 +779,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
 				if !fabricJava[major] {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Fabric Compatibility II 0.17.1 missing JRE major %d", major)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Fabric Compatibility II 0.17.1 отсутствует основная версия JRE %d", major)
 				}
 			}
 		}
@@ -793,7 +793,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 				quiltCount++
 				if _, exists := quiltTargets[target.Minecraft]; exists {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt Compatibility II 0.17.2 duplicate required target for Minecraft %s", target.Minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся обязательная цель Quilt Compatibility II 0.17.2 для Minecraft %s", target.Minecraft)
 				}
 				quiltTargets[target.Minecraft] = target
 				quiltJava[target.JavaMajor] = true
@@ -804,14 +804,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range quiltCompatibilityII0172 {
 				target, ok := quiltTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt Compatibility II 0.17.2 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Quilt Compatibility II 0.17.2 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				expectedScope := "client"
 				if minecraft == "1.21.1" {
 					expectedScope = "integration"
 				}
 				if target.JavaMajor != javaMajor || target.Scope != expectedScope || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt %s 0.17.2 mismatch: expected Java %d scope=%s linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Quilt %s 0.17.2: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
 					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt %s 0.17.2: требуется «loaderVersion=latest-stable selector»", minecraft)
@@ -819,7 +819,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
 				if !quiltJava[major] {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Quilt Compatibility II 0.17.2 missing JRE major %d", major)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Quilt Compatibility II 0.17.2 отсутствует основная версия JRE %d", major)
 				}
 			}
 		}
@@ -843,11 +843,11 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					if compatibilityForgeLegacy1710_0175Required(ver) && target.Minecraft == "1.7.10" {
 						continue
 					}
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 unexpected required target for Minecraft %s", target.Minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Неожиданная обязательная цель Forge Modern 0.17.3 для Minecraft %s", target.Minecraft)
 				}
 				forgeCount++
 				if _, exists := forgeTargets[target.Minecraft]; exists {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 duplicate required target for Minecraft %s", target.Minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся обязательная цель Forge Modern 0.17.3 для Minecraft %s", target.Minecraft)
 				}
 				forgeTargets[target.Minecraft] = target
 				forgeJava[target.JavaMajor] = true
@@ -858,14 +858,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range forgeModern0173 {
 				target, ok := forgeTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Forge Modern 0.17.3 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				expectedScope := "client"
 				if minecraft == "1.21.1" {
 					expectedScope = "integration"
 				}
 				if target.JavaMajor != javaMajor || target.Scope != expectedScope || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge %s 0.17.3 mismatch: expected Java %d scope=%s linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Forge %s 0.17.3: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
 					return releaseCompatibilityCertification{}, fmt.Errorf("Forge %s 0.17.3: требуется «loaderVersion=latest-stable selector»", minecraft)
@@ -873,7 +873,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
 				if !forgeJava[major] {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 missing JRE major %d", major)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В Forge Modern 0.17.3 отсутствует основная версия JRE %d", major)
 				}
 			}
 		}
@@ -925,7 +925,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 				neoForgeCount++
 				if _, exists := neoForgeTargets[target.Minecraft]; exists {
-					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 duplicate required target for Minecraft %s", target.Minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся обязательная цель NeoForge Compatibility II 0.17.6 для Minecraft %s", target.Minecraft)
 				}
 				neoForgeTargets[target.Minecraft] = target
 				neoForgeJava[target.JavaMajor] = true
@@ -936,14 +936,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			for minecraft, javaMajor := range neoForgeCompatibilityII0176 {
 				target, ok := neoForgeTargets[minecraft]
 				if !ok {
-					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 missing required Minecraft %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В NeoForge Compatibility II 0.17.6 отсутствует обязательная версия Minecraft %s", minecraft)
 				}
 				expectedScope := "client"
 				if minecraft == "1.21.1" {
 					expectedScope = "integration"
 				}
 				if target.JavaMajor != javaMajor || target.Scope != expectedScope || target.OS != "linux" || target.Arch != "x86_64" {
-					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge %s 0.17.6 mismatch: expected Java %d scope=%s linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение NeoForge %s 0.17.6: ожидалась Java %d, область=%s linux/x86_64; получена Java %d, область=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
 				}
 				if target.LoaderVersion != "latest-stable" {
 					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge %s 0.17.6: требуется «loaderVersion=latest-stable selector»", minecraft)
@@ -951,7 +951,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			for _, major := range []int{17, 21, 25} {
 				if !neoForgeJava[major] {
-					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 missing JRE major %d", major)
+					return releaseCompatibilityCertification{}, fmt.Errorf("В NeoForge Compatibility II 0.17.6 отсутствует основная версия JRE %d", major)
 				}
 			}
 		}
@@ -971,7 +971,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					count++
 					key := target.OS + "/" + target.Arch
 					if !expectedPlatforms[key] || seen[key] {
-						return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Loaders 0.17.9 %s %s invalid/duplicate platform %s", loader, anchor.Minecraft, key)
+						return releaseCompatibilityCertification{}, fmt.Errorf("В кроссплатформенных загрузчиках 0.17.9 %s %s некорректная или повторяющаяся платформа %s", loader, anchor.Minecraft, key)
 					}
 					seen[key] = true
 					if target.JavaMajor != anchor.JavaMajor || target.Scope != "client" || target.LoaderVersion != "latest-stable" {
@@ -998,7 +998,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		resultByID[id] = result
 	}
 	if len(resultByID) != len(targetByID) {
-		return releaseCompatibilityCertification{}, fmt.Errorf("matrix target count mismatch: expected=%d actual=%d", len(targetByID), len(resultByID))
+		return releaseCompatibilityCertification{}, fmt.Errorf("Не совпадает число целей в матрице: ожидалось=%d, получено=%d", len(targetByID), len(resultByID))
 	}
 
 	legacyMandatoryChecks := []string{"actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy"}
@@ -1022,7 +1022,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	for id, target := range targetByID {
 		result, ok := resultByID[id]
 		if !ok {
-			return releaseCompatibilityCertification{}, fmt.Errorf("matrix missing target: %s", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("В матрице отсутствует цель: %s", id)
 		}
 		if result.SchemaVersion != "1.0" || result.ProductVersion != ver || result.Status != "passed" || result.ExitCode != 0 {
 			return releaseCompatibilityCertification{}, fmt.Errorf("target %s не имеет валидный PASS/exitCode=0", id)
@@ -1032,7 +1032,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		if enhanced {
 			if result.JavaMajor != target.JavaMajor || result.DetectedJavaMajor != target.JavaMajor || result.Scope != target.Scope || result.MatchingServer != target.MatchingServer {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s Java/scope/matching mismatch: target Java=%d scope=%s matchingServer=%t, result Java=%d detected=%d scope=%s matchingServer=%t", id, target.JavaMajor, target.Scope, target.MatchingServer, result.JavaMajor, result.DetectedJavaMajor, result.Scope, result.MatchingServer)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение Java, области или сервера для цели %s: цель Java=%d, область=%s, сервер=%t; результат Java=%d, обнаружено=%d, область=%s, сервер=%t", id, target.JavaMajor, target.Scope, target.MatchingServer, result.JavaMajor, result.DetectedJavaMajor, result.Scope, result.MatchingServer)
 			}
 		}
 		if result.Commit != matrix.Commit || result.RunID != matrix.RunID {
@@ -1072,7 +1072,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s required check %s != true", id, check)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Для цели %s обязательная проверка %s не пройдена", id, check)
 			}
 		}
 		if compatibilityLoaderNativeE2E0178Required(ver) && target.Loader != "vanilla" && target.Scope == "integration" {
@@ -1219,7 +1219,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityLoaderNativeE2E0178Required(ver) {
 		expectedNative := []string{"fabric-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64", "quilt-1.21.1-linux-x64"}
 		if strings.Join(loaderNativeTargets, "\x00") != strings.Join(expectedNative, "\x00") {
-			return releaseCompatibilityCertification{}, fmt.Errorf("Loader-native E2E 0.17.8 coverage mismatch: got=%v expected=%v", loaderNativeTargets, expectedNative)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение покрытия нативного E2E загрузчиков 0.17.8: получено=%v, ожидалось=%v", loaderNativeTargets, expectedNative)
 		}
 	}
 	if compatibilityCrossPlatformLoaders0179Required(ver) {
@@ -1232,13 +1232,13 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		sort.Strings(expectedCross)
 		if strings.Join(crossPlatformLoaderTargets, "\x00") != strings.Join(expectedCross, "\x00") {
-			return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Loaders 0.17.9 coverage mismatch: got=%v expected=%v", crossPlatformLoaderTargets, expectedCross)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение покрытия кроссплатформенных загрузчиков 0.17.9: получено=%v, ожидалось=%v", crossPlatformLoaderTargets, expectedCross)
 		}
 	}
 	if compatibilityLoaderHardening01710Required(ver) {
 		expectedHardening := []string{"fabric-26.3-linux-x64", "forge-26.3-linux-x64", "neoforge-26.2-linux-x64", "quilt-26.3-linux-x64"}
 		if strings.Join(loaderHardeningTargets, "\x00") != strings.Join(expectedHardening, "\x00") {
-			return releaseCompatibilityCertification{}, fmt.Errorf("Loader Hardening 0.17.10 coverage mismatch: got=%v expected=%v", loaderHardeningTargets, expectedHardening)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение покрытия усиленной защиты загрузчиков 0.17.10: получено=%v, ожидалось=%v", loaderHardeningTargets, expectedHardening)
 		}
 	}
 	matrixHash := sha256.Sum256(matrixRaw)
@@ -1390,7 +1390,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 	}
 	if compatibilityReleaseCertificate01711Required(ver) {
 		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, ver); err != nil {
-			return fmt.Errorf("Loader Compatibility RC 0.17.11: %w", err)
+			return fmt.Errorf("Ошибка совместимости загрузчиков RC 0.17.11: %w", err)
 		}
 	}
 	return nil

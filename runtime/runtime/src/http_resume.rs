@@ -204,7 +204,7 @@ async fn request_with_control(client: &reqwest::Client, url: &str,
     };
     if network_resilience::retryable_status(response.status()) {
         let wait = network_resilience::retry_after(&response);
-        return Err(network_resilience::transient(format!("transient HTTP {}", response.status()), wait));
+        return Err(network_resilience::transient(format!("Временная ошибка HTTP {}", response.status()), wait));
     }
     Ok(response)
 }

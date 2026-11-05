@@ -611,7 +611,7 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
     let signature_info = manifest
         .signature
         .clone()
-        .ok_or_else(|| "в манифесте отсутствует блок signature".to_string())?;
+        .ok_or_else(|| "В манифесте отсутствует блок подписи signature".to_string())?;
     if signature_info.algorithm != "Ed25519" {
         return Err(format!("неподдерживаемый алгоритм подписи: {}", signature_info.algorithm));
     }
@@ -887,14 +887,14 @@ pub async fn certify_vanilla_compatibility(
     if let Some(metadata_java) = resolution.java_major_version {
         if metadata_java != required_java_major {
             return Err(format!(
-                "Vanilla {version} Mojang metadata требует Java {metadata_java}, certification target требует Java {required_java_major}"
+                "Для Vanilla {version} метаданные Mojang требуют Java {metadata_java}, а целевая сертификация — Java {required_java_major}"
             ));
         }
     }
     let java_info = check_java(Some(java_path.clone()), Some(required_java_major)).await?;
     if !java_info.found || java_info.detected_major_version != Some(required_java_major) {
         return Err(format!(
-            "Vanilla {version} certification Java mismatch: требуется Java {required_java_major}, {}",
+            "Версия Java для сертификации Vanilla {version} не совпадает: требуется Java {required_java_major}, {}",
             java_info.message
         ));
     }
@@ -904,7 +904,7 @@ pub async fn certify_vanilla_compatibility(
         .map(|entry| safe_join(root, entry).map(|path| path.to_string_lossy().to_string()))
         .collect::<Result<Vec<_>, _>>()?;
     if classpath_entries.is_empty() {
-        return Err(format!("Vanilla {version} certification classpath пуст"));
+        return Err(format!("Для сертификации Vanilla {version} не указан путь к классам"));
     }
     let mut game_args = resolution.game_args.clone();
     let normalized_matching_server = matching_server.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
@@ -1060,11 +1060,11 @@ pub async fn certify_vanilla_compatibility(
     // подтверждение меню или рендеринга и не может сертифицировать успешный запуск.
     let observed = timed_out || success;
     let message = if timed_out {
-        format!("Vanilla {version}: timeout без подтверждения GUI/menu; startup INCONCLUSIVE")
+        format!("Vanilla {version}: истекло время ожидания подтверждения GUI/меню; результат запуска не определён")
     } else if success {
-        format!("Vanilla {version}: JVM завершилась, GUI/menu не подтверждены")
+        format!("Vanilla {version}: JVM завершилась без подтверждения GUI/меню")
     } else {
-        format!("Vanilla {version} завершился с ошибкой до certification timeout")
+        format!("Vanilla {version} завершился с ошибкой до окончания времени ожидания сертификации")
     };
     Ok(VanillaCompatibilityProbeResult {
         status: if observed { "inconclusive".to_string() } else { "failed".to_string() },
@@ -1192,7 +1192,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     apply_launch_command_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
-        .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
+        .map_err(|err| format!("Запуск заблокирован: ошибка подготовки датчика Guard: {err}"))?;
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
@@ -1206,13 +1206,13 @@ pub async fn launch_with_timeout_matching_authenticated(
         .spawn()
         .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
-        .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
+        .map_err(|err| format!("Запуск заблокирован: не удалось применить политику Runtime и процессов Windows: {err}"))?;
     #[cfg(windows)]
     sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
-        .map_err(|err| format!("launch заблокирован: Guard Sensor authentication failed: {err}"))?;
+        .map_err(|err| format!("Запуск заблокирован: ошибка аутентификации датчика Guard: {err}"))?;
 
     // Привязывайте наблюдения /proc к конкретному дочернему процессу после fork/exec. Ошибка
     // Терминальное состояние: никогда не продолжайте игру с JVM без мониторинга.
@@ -1790,7 +1790,7 @@ fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &Com
     }
     if let Some(path) = resolution.logging_file.as_ref() {
         if !trusted.contains(path) {
-            return Err(format!("Compatibility Engine отклонил неподписанный logging config: {path}"));
+            return Err(format!("Механизм совместимости отклонил неподписанную конфигурацию журналирования: {path}"));
         }
     }
     Ok(())
@@ -2154,10 +2154,10 @@ mod tests {
         manifest.schema_version = "2.0".into();
         let spec = ProfileSpec {
             project_id: "demo".into(), id: "vanilla".into(), name: "Vanilla".into(),
-            description: "Signed snapshot".into(), loader: "vanilla".into(),
+            description: "Подписанный снимок".into(), loader: "vanilla".into(),
             preset: "".into(), is_default: true,
         };
-        let bytes = ["demo", "vanilla", "Vanilla", "Signed snapshot", "vanilla", "", "true"].join("\0");
+        let bytes = ["demo", "vanilla", "Vanilla", "Подписанный снимок", "vanilla", "", "true"].join("\0");
         manifest.profile_snapshot = Some(ProfileSnapshot {
             schema_version: "2.0".into(), revision: 4,
             digest: hex::encode(Sha256::digest(bytes.as_bytes())), spec,

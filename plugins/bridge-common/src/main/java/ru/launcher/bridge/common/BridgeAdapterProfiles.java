@@ -91,7 +91,7 @@ public final class BridgeAdapterProfiles {
     public static BridgeAdapterProfile require(String platformId) {
         String id = normalize(platformId);
         BridgeAdapterProfile profile = PROFILES.get(id);
-        if (profile == null) throw new IllegalArgumentException("unsupported ServerBridge adapter platform: " + id);
+        if (profile == null) throw new IllegalArgumentException("Неподдерживаемая платформа адаптера ServerBridge: " + id);
         return profile;
     }
 

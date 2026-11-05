@@ -295,7 +295,7 @@ public final class LauncherApiClient {
             String securityProfile = extractJsonString(raw, "securityProfile");
             String capabilityDigest = extractJsonString(raw, "securityCapabilityDigest");
             if (!BridgeProtocolSecurity.PROFILE.equals(securityProfile) || !BridgeProtocolSecurity.expectedCapabilityDigest().equalsIgnoreCase(capabilityDigest)) {
-                throw new IOException("ServerBridge security profile/digest mismatch");
+                throw new IOException("Несовпадение профиля безопасности или контрольной суммы ServerBridge");
             }
             if (controlTrust == null || !controlTrust.verifyCapabilities(
                 securityProfile, capabilityDigest,
@@ -484,7 +484,7 @@ public final class LauncherApiClient {
         String previousV3Signature = extractJsonString(raw, "previousV3Signature");
         if (!config.serverId.equals(serverId) || !runtimeIdentity.runtimeId().equalsIgnoreCase(runtimeId) || commandId.isBlank() || type.isBlank() ||
             identityEpoch < 1 || deliverySequence <= resumeAfter || deliverySequence < 1 || !controlChannelId.equals(channelId) || leaseToken.length() < 16) {
-            throw new IOException("control command binding/resumption mismatch");
+            throw new IOException("Несовпадение привязки или возобновления управляющей команды");
         }
         long now = System.currentTimeMillis();
         if (issuedAt <= 0 || expiresAt <= now || issuedAt > now + 120_000L || expiresAt - issuedAt > 660_000L) {

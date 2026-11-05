@@ -15,7 +15,7 @@ final class BridgeBackendPool {
     private final long cooldownMillis;
 
     BridgeBackendPool(List<String> bases, long cooldownMillis) {
-        if (bases == null || bases.isEmpty()) throw new IllegalArgumentException("at least one backend endpoint is required");
+        if (bases == null || bases.isEmpty()) throw new IllegalArgumentException("Необходимо указать хотя бы одну конечную точку Backend");
         this.bases = List.copyOf(bases);
         this.blockedUntilMillis = new AtomicLongArray(this.bases.size());
         this.cooldownMillis = Math.max(250L, cooldownMillis);

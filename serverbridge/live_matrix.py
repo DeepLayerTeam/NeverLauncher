@@ -64,13 +64,13 @@ def verify_runtime(
     node_id, port = CORE[service]
     proof = read_json(runtime / f"live-{service}-04113.json")
     if proof.get("schemaVersion") != "1.0" or proof.get("productVersion") != version:
-        raise ValueError("Несовпадение: «product version»")
+        raise ValueError("Версия продукта не совпадает")
     if (proof.get("service"), proof.get("nodeId"), proof.get("minecraftPort")) != (
         service,
         node_id,
         port,
     ):
-        raise ValueError("wrong server/node/port identity")
+        raise ValueError("Не совпадают идентификаторы сервера, узла или порта")
     jar = ROOT if root is None else root  # использовать запрошенную рабочую копию исходников
     jar = jar / "artifacts/plugins" / f"launcher-{service}-bridge-{version}.jar"
     observed_digest = proof.get("bridgeJarSha256")
@@ -107,7 +107,7 @@ def verify_runtime(
             "missing platform observation after real network join/revocation"
         )
     if service == "paper" and observations.get("actualClientJoin") is not True:
-        raise ValueError("Paper actual Mojang JVM client join not confirmed")
+        raise ValueError("Не подтверждено реальное подключение JVM-клиента Mojang к Paper")
     log_ref = proof.get("log") or {}
     log_file = log_ref.get("path")
     if log_file != f"live-{service}-04113.log":
@@ -126,7 +126,7 @@ def verify_runtime(
             "Bridge platform log does not confirm join and subsequent revoke"
         )
     if service == "paper" and f"{player} joined the game" not in log:
-        raise ValueError("Paper log lacks real player join")
+        raise ValueError("В журнале Paper отсутствует запись о реальном подключении игрока")
     probes = proof.get("probes") or {}
     for kind in ("allow", "deny"):
         ref = probes.get(kind) or {}
@@ -146,7 +146,7 @@ def verify_runtime(
         if service == "paper" and kind == "allow":
             launch = json.loads(actual_probe)
             if launch.get("success") is not True and launch.get("timedOut") is not True:
-                raise ValueError("Paper Mojang client was not actually launched")
+                raise ValueError("Клиент Mojang для Paper фактически не запускался")
         elif (
             f"port={port} username={player} " not in actual_probe
             or "probe host=" not in actual_probe
@@ -173,14 +173,14 @@ def certify(
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
     targets = read_json(root / "serverbridge/targets.json")
     if targets.get("productVersion") != version:
-        raise ValueError("targets version drift")
+        raise ValueError("Версия целевых платформ не совпадает")
     ids = [r["id"] for r in targets.get("targets") or []]
     if (
         len(ids) != 14
         or len(set(ids)) != 14
         or set(ids) != set(CORE) | {"bukkit", "quilt", "sponge", "vanilla"}
     ):
-        raise ValueError("unexpected/incomplete ServerBridge target matrix")
+        raise ValueError("Неожиданная или неполная матрица целевых платформ ServerBridge")
     outcome = {
         "productVersion": version,
         "schemaVersion": "1.0",

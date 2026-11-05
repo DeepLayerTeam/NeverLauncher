@@ -73,7 +73,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     }
 
     public synchronized void start() throws Exception {
-        if (stopping.get()) throw new IllegalStateException("runtime is stopping");
+        if (stopping.get()) throw new IllegalStateException("Runtime завершает работу");
         if (state != null) return;
         state = loadState();
         scheduleHeartbeat(0);
@@ -214,7 +214,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             pluginSha256 = BridgeIntegrity.artifactSha256(artifactAnchor);
         }
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) {
-            throw new IllegalStateException("cannot measure running " + displayName + " bridge JAR SHA-256");
+            throw new IllegalStateException("Не удалось вычислить SHA-256 работающего " + displayName + " JAR моста");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "runtime descriptor");

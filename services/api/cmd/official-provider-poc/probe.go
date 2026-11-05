@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-var ErrNoOnlineModeChallenge = errors.New("server did not issue an online-mode encryption challenge")
+var ErrNoOnlineModeChallenge = errors.New("Сервер не выдал проверочный запрос шифрования для сетевого режима")
 
 func putVarInt(b []byte, x int) []byte {
 	for {
@@ -63,7 +63,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 		return errors.New("Некорректное значение: порт или протокол сервера")
 	}
 	if protocol < 764 {
-		return errors.New("probe supports Minecraft 1.20.2+ only")
+		return errors.New("Проверка поддерживает только Minecraft 1.20.2 и новее")
 	}
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
 	conn, err := dialer.DialContext(ctx, "tcp", address)
@@ -77,7 +77,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	payload := putVarInt(nil, 0)
 	payload = putVarInt(payload, protocol)
 	if len(host) > 255 {
-		return errors.New("hostname too long")
+		return errors.New("Имя хоста слишком длинное")
 	}
 	payload = putVarInt(payload, len(host))
 	payload = append(payload, host...)
@@ -95,7 +95,7 @@ func probeOnlineMode(ctx context.Context, address string, protocol int) error {
 	} else if protocol >= 759 {
 		// Современные варианты Login Start до 1.20.2 не сертифицируются этой пробой;
 		// не сообщайте о ложных ошибках шифрования.
-		return errors.New("probe supports Minecraft 1.20.2+ protocols only")
+		return errors.New("Проверка поддерживает только протоколы Minecraft 1.20.2 и новее")
 	}
 	if err := writeFrame(conn, login); err != nil {
 		return errors.New("Ошибка: начало входа на сервер")

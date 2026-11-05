@@ -69,7 +69,7 @@ fn safe_source(source: &Path) -> Result<PathBuf, String> {
         return Err("legacy root: требуется «an existing real directory»".into());
     }
     let root = fs::canonicalize(source).map_err(|e| e.to_string())?;
-    if !root.is_absolute() { return Err("legacy root is not absolute".into()); }
+    if !root.is_absolute() { return Err("Корневой путь старой установки должен быть абсолютным".into()); }
     Ok(root)
 }
 
@@ -150,7 +150,7 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
     verify_manifest_signature(manifest, pinned_public_key)?;
     file_ownership::validate_download_targets(manifest)?;
     let plan = resolved_download_0246::resolve(manifest, preset)?;
-    if plan.files.len() > MAX_SCAN_FILES { return Err("too many signed files for player migration".into()) }
+    if plan.files.len() > MAX_SCAN_FILES { return Err("Слишком много подписанных файлов для миграции игрока".into()) }
     let root = safe_source(legacy_root)?;
     let layouts = candidate_roots(&root, &manifest.profile_id)?;
     let mut verified = Vec::new();
@@ -158,9 +158,9 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
     let mut matched = 0u64;
     for file in manifest.files.iter().filter(|f| plan.selected_paths.contains(&f.path)) {
         if !manifest_file_applies(file) { continue }
-        if file.size > MAX_FILE_BYTES { return Err(format!("signed file exceeds player migration limit: {}", file.path)); }
+        if file.size > MAX_FILE_BYTES { return Err(format!("Подписанный файл превышает лимит миграции игрока: {}", file.path)); }
         total = total.checked_add(file.size).ok_or("signed total size overflow")?;
-        if total > MAX_SCAN_BYTES { return Err("signed release exceeds player migration scan limit".into()) }
+        if total > MAX_SCAN_BYTES { return Err("Подписанный релиз превышает лимит сканирования миграции игрока".into()) }
         if let Some(source) = locate_verified(&root, &layouts, file)? {
             matched += file.size;
             verified.push((file.clone(), source));
@@ -180,10 +180,10 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
                 if found.contains(path) { continue }
                 let Some(file) = by_path.get(path.as_str()) else { continue };
                 examined += 1;
-                if examined > MAX_SCAN_FILES { return Err("too many optional sources for player migration".into()) }
+                if examined > MAX_SCAN_FILES { return Err("Слишком много дополнительных источников миграции игрока".into()) }
                 if file.size > MAX_FILE_BYTES { continue }
                 optional_bytes = optional_bytes.checked_add(file.size).ok_or("optional source size overflow")?;
-                if optional_bytes > MAX_SCAN_BYTES { return Err("optional migration scan exceeds byte limit".into()) }
+                if optional_bytes > MAX_SCAN_BYTES { return Err("Сканирование дополнительных источников миграции превышает лимит размера".into()) }
                 if locate_verified(&root, &layouts, file)?.is_some() { found.insert(path.clone()); }
             }
         }
@@ -227,7 +227,7 @@ async fn adopt_scanned(scanned: Scan0339, cache: &CacheStore) -> Result<PlayerMi
         // Источник может измениться во время сканирования: проверяйте его перед публикацией.
         let source_root = PathBuf::from(&scanned.preview.source);
         if !is_safe_file(&source_root, &source, file.size) || !digest_file(&source, &file)? {
-            return Err(format!("legacy source changed during adoption: {}", file.path))
+            return Err(format!("Исходная старая установка изменилась во время переноса: {}", file.path))
         }
         lease.publish(&file, &source).await?; // copy, fsync, rehash, atomic publication
         count += 1;
@@ -237,7 +237,7 @@ async fn adopt_scanned(scanned: Scan0339, cache: &CacheStore) -> Result<PlayerMi
         unavailable_files: scanned.preview.missing_files,
         optional_component_candidates: scanned.preview.optional_component_candidates,
         suggested_settings: scanned.preview.suggested_settings,
-        message: "Verified Never content objects published to the shared cache. Install/repair through the ordinary signed release workflow; no Gravit credentials or executables were adopted.".into() })
+        message: "Проверенные файлы Never опубликованы в общем кэше. Выполняйте установку или восстановление через штатный механизм подписанных релизов; учётные данные и исполняемые файлы Gravit не переносились.".into() })
 }
 
 /// Только предлагаемые старые корневые каталоги; игрок самостоятельно выбирает и подтверждает фактическую папку.

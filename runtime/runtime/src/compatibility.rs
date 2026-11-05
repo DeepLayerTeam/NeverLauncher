@@ -696,7 +696,7 @@ fn resolve_libraries(
         } else if classified_native {
             // Нативная библиотека с классификатором, но без описателя артефакта, не является
             // JAR для classpath. Не выдумывайте файл и не пропускайте библиотеку молча.
-            return Err(format!("{}: native classifier missing downloads.artifact", library.name));
+            return Err(format!("{}: в нативном классификаторе отсутствует downloads.artifact", library.name));
         } else if library.downloads.classifiers.is_empty() {
             // Сохраняйте совместимость со старыми локальными метаданными, появившимися
             // до объекта downloads. В строгом режиме материализатор по-прежнему отказывает
@@ -1233,7 +1233,7 @@ fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
             }
             Ok(_) => {}
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => break,
-            Err(err) => return Err(format!("compatibility path metadata {}: {err}", current.display())),
+            Err(err) => return Err(format!("Ошибка метаданных пути совместимости {}: {err}", current.display())),
         }
     }
     Ok(root.join(normalized))

@@ -19,7 +19,7 @@ public record BridgeAdapterProfile(
         role = clean(role);
         capabilities = capabilities == null ? Set.of() : Set.copyOf(capabilities);
         if (platformId.isEmpty() || family.isEmpty() || role.isEmpty()) {
-            throw new IllegalArgumentException("adapter platform/family/role are required");
+            throw new IllegalArgumentException("Необходимо указать платформу, семейство и роль адаптера");
         }
         if (!role.equals("backend") && !role.equals("proxy")) {
             throw new IllegalArgumentException("Роль адаптера должна иметь значение backend или proxy");

@@ -394,15 +394,15 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	sort.Slice(m.Conflicts, func(i, j int) bool { return m.Conflicts[i].ID < m.Conflicts[j].ID })
 	if m.Admin != nil {
 		if _, ok := seenTargets["admin"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require an admin target")
+			return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений Admin необходимо указать целевую платформу admin")
 		}
 		for _, target := range m.Targets {
 			if target.Kind == "admin" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
-				return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require a standalone .html entrypoint")
+				return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений Admin требуется самостоятельная точка входа .html")
 			}
 		}
 		if _, ok := setOfStrings0208(m.Permissions)["ui:contribute"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require ui:contribute permission")
+			return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений Admin требуется разрешение ui:contribute")
 		}
 		if err := normalizeAdminContributions0208(m.Admin); err != nil {
 			return CanonicalExtensionManifest0201{}, "", err
@@ -410,15 +410,15 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	}
 	if m.Desktop != nil {
 		if _, ok := seenTargets["desktop"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require a desktop target")
+			return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений Desktop необходимо указать целевую платформу desktop")
 		}
 		for _, target := range m.Targets {
 			if target.Kind == "desktop" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
-				return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require a standalone .html entrypoint")
+				return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений Desktop требуется самостоятельная точка входа .html")
 			}
 		}
 		if _, ok := setOfStrings0208(m.Permissions)["desktop:contribute"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require desktop:contribute permission")
+			return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений Desktop требуется разрешение desktop:contribute")
 		}
 		if err := normalizeDesktopContributions0209(m.Desktop); err != nil {
 			return CanonicalExtensionManifest0201{}, "", err
@@ -426,10 +426,10 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	}
 	if m.CLI != nil {
 		if _, ok := seenTargets["cli"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("cli contributions require a cli target")
+			return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений CLI необходимо указать целевую платформу cli")
 		}
 		if _, ok := setOfStrings0208(m.Permissions)["cli:contribute"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("cli contributions require cli:contribute permission")
+			return CanonicalExtensionManifest0201{}, "", errors.New("Для дополнений CLI требуется разрешение cli:contribute")
 		}
 		if err := normalizeCLIContributions0209(m.CLI); err != nil {
 			return CanonicalExtensionManifest0201{}, "", err

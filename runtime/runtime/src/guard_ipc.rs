@@ -370,7 +370,7 @@ impl GuardSupervisor {
             Ok(job) => job,
             Err(err) => {
                 let _ = child.kill().await;
-                return Err(format!("launch заблокирован: Guard lifetime boundary failed: {err}"));
+                return Err(format!("Запуск заблокирован: ошибка контроля времени жизни Guard: {err}"));
             }
         };
 
@@ -527,7 +527,7 @@ impl GuardSupervisor {
     ) -> Result<GuardRemoteAttestation, String> {
         self.ensure_started().await?;
         if challenge_id.trim().is_empty() || challenge_id.len() > 160 {
-            return Err("Guard attestation challengeId malformed".to_string());
+            return Err("Некорректный challengeId запроса аттестации Guard".to_string());
         }
         if challenge.is_empty() || challenge.len() > 4096 {
             return Err("Некорректный проверочный запрос аттестации Guard".to_string());
@@ -606,7 +606,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     let guard_dir = std::fs::canonicalize(guard_dir)
         .map_err(|err| format!("не удалось canonicalize Guard directory: {err}"))?;
     if current_dir != guard_dir {
-        return Err("Guard package verification failed: Guard is not adjacent to Desktop".to_string());
+        return Err("Не пройдена проверка пакета Guard: Guard должен находиться рядом с Desktop".to_string());
     }
     let sensor_path = current_dir.join(GUARD_SENSOR_FILE_NAME);
     for path in [&current_exe, guard_executable, &sensor_path] {
@@ -652,7 +652,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         || manifest.guard_protocol_version != GUARD_PROTOCOL_VERSION
         || (!legacy_identity && !canonical_identity)
     {
-        return Err("Несовпадение: «Windows package manifest version/platform/protocol»".to_string());
+        return Err("Несовпадение версии, платформы или протокола манифеста пакета Windows".to_string());
     }
 
     if !manifest.authenticode_required {
@@ -813,7 +813,7 @@ async fn client_authenticate(
         || !ready.hardening_enforced
         || !ready.secure_pipe_acl
     {
-        return Err("Guard IPC ready response не соответствует handshake/policy/hardening".to_string());
+        return Err("Ответ о готовности Guard IPC не соответствует рукопожатию, политике или требованиям защиты".to_string());
     }
     let expected_ready = ready_proof(
         &session_key,
@@ -829,7 +829,7 @@ async fn client_authenticate(
     );
     let actual_ready = decode_hex_32(&ready.ready_proof, "readyProof")?;
     if !constant_time_eq(&expected_ready, &actual_ready) {
-        return Err("Ошибка: «Guard ready authentication»".to_string());
+        return Err("Ошибка аутентификации готовности Guard".to_string());
     }
 
     let status = GuardStatus {
@@ -887,7 +887,7 @@ async fn send_command_inner(
     payload: &str,
 ) -> Result<Value, String> {
     if payload.len() > 32 * 1024 {
-        return Err("Guard IPC request payload exceeds 32 KiB".to_string());
+        return Err("Данные запроса Guard IPC превышают 32 КиБ".to_string());
     }
     let sequence = handle.next_sequence;
     let request_id = random_id();
@@ -906,7 +906,7 @@ async fn send_command_inner(
         || response.sequence != sequence
         || response.request_id != request_id
     {
-        return Err("Несовпадение: «Guard IPC response sequence/requestId»".to_string());
+        return Err("Несовпадение последовательности ответа или requestId Guard IPC".to_string());
     }
     let expected = response_mac(
         &handle.session_key,
@@ -917,14 +917,14 @@ async fn send_command_inner(
     );
     let actual = decode_hex_32(&response.mac, "responseMac")?;
     if !constant_time_eq(&expected, &actual) {
-        return Err("Ошибка: «Guard IPC response MAC verification»".to_string());
+        return Err("Ошибка проверки MAC-кода ответа Guard IPC".to_string());
     }
     handle.next_sequence = handle
         .next_sequence
         .checked_add(1)
         .ok_or_else(|| "Исчерпана последовательность IPC Guard".to_string())?;
     let payload: Value = serde_json::from_str(&response.payload)
-        .map_err(|err| format!("Guard IPC response payload повреждён: {err}"))?;
+        .map_err(|err| format!("Повреждены данные ответа Guard IPC: {err}"))?;
     if response.ok {
         Ok(payload)
     } else {
@@ -983,7 +983,7 @@ fn validate_release_identity(status: &GuardStatus, expected_platform: &str) -> R
         || status.windows_capability_model_version != GUARD_WINDOWS_CAPABILITY_MODEL_VERSION
         || status.windows_protection_profile.is_empty()
     {
-        return Err("Guard Windows Protection Core status is incomplete".to_string());
+        return Err("Неполный статус ядра защиты Guard для Windows".to_string());
     }
     Ok(())
 }
@@ -1103,7 +1103,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
         let _ = GetTokenInformation(token.0, TokenUser, null_mut(), 0, &mut needed);
     }
     if needed < size_of::<TOKEN_USER>() as u32 || needed > 4096 {
-        return Err("Guard TokenUser size is invalid while building pipe ACL".to_string());
+        return Err("Некорректный размер TokenUser при создании ACL канала Guard".to_string());
     }
     let words = (needed as usize).div_ceil(size_of::<usize>());
     let mut buffer = vec![0usize; words];
@@ -1124,7 +1124,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
     }
     let token_user = unsafe { &*(buffer.as_ptr() as *const TOKEN_USER) };
     if token_user.User.Sid.is_null() {
-        return Err("Guard current user SID is null".to_string());
+        return Err("SID текущего пользователя Guard не определён".to_string());
     }
 
     let mut sid_text: *mut u16 = null_mut();
@@ -1142,7 +1142,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
             len += 1;
             if len > 256 {
                 let _ = LocalFree(sid_text as *mut c_void);
-                return Err("Guard current user SID text exceeds limit".to_string());
+                return Err("Текст SID текущего пользователя Guard превышает лимит".to_string());
             }
         }
     }
@@ -1217,10 +1217,10 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         || !hardening.current_directory_removed_from_dll_search
         || !hardening.restricted_default_dll_directories
     {
-        return Err("Guard Windows production hardening did not bind to guard PID".to_string());
+        return Err("Промышленная защита Guard для Windows не привязана к PID Guard".to_string());
     }
     if process_policy.pid != guard_pid || !process_policy.enforced {
-        return Err("Guard Windows process policy did not bind to guard PID".to_string());
+        return Err("Политика процессов Guard для Windows не привязана к PID Guard".to_string());
     }
     let server_profile = process_policy
         .windows
@@ -1348,7 +1348,7 @@ async fn server_authenticate(
         || hello.protocol_version != GUARD_PROTOCOL_VERSION
         || hello.client_pid != expected_parent_pid
     {
-        return Err("Guard client identity/protocol rejected".to_string());
+        return Err("Идентификатор клиента или протокол Guard отклонён".to_string());
     }
     let client_nonce = decode_hex_32(&hello.client_nonce, "clientNonce")?;
     let server_nonce = random_bytes_32();
@@ -1376,7 +1376,7 @@ async fn server_authenticate(
 
     let authentication: ClientAuthentication = read_frame(server).await?;
     if authentication.kind != "authenticate" {
-        return Err("Guard client authentication message rejected".to_string());
+        return Err("Сообщение аутентификации клиента Guard отклонено".to_string());
     }
     let expected_client_proof = handshake_proof(bootstrap_secret, b"client", &handshake);
     let actual_client_proof = decode_hex_32(&authentication.client_proof, "clientProof")?;
@@ -1442,7 +1442,7 @@ async fn serve_authenticated_session(
             ));
         }
         if request.request_id.len() != 32 || !request.request_id.bytes().all(|b| b.is_ascii_hexdigit()) {
-            return Err("Guard IPC requestId malformed".to_string());
+            return Err("Некорректный requestId запроса Guard IPC".to_string());
         }
         let expected_mac = request_mac(
             session_key,
@@ -1527,7 +1527,7 @@ async fn serve_authenticated_session(
                     || request.challenge.is_empty()
                     || request.challenge.len() > 4096
                 {
-                    return Err("Guard attestation request is malformed".to_string());
+                    return Err("Некорректный запрос аттестации Guard".to_string());
                 }
                 let mut evidence = tokio::task::spawn_blocking(move || {
                     collect_windows_integrity_evidence(parent_pid)
@@ -1566,7 +1566,7 @@ async fn serve_authenticated_session(
             ),
         };
         let payload = serde_json::to_string(&payload)
-            .map_err(|err| format!("Ошибка: «Guard response serialization»: {err}"))?;
+            .map_err(|err| format!("Ошибка сериализации ответа Guard: {err}"))?;
         let response = ResponseEnvelope {
             protocol_version: GUARD_PROTOCOL_VERSION,
             sequence: request.sequence,
@@ -1603,7 +1603,7 @@ fn validate_pipe_endpoint(endpoint: &str) -> Result<(), String> {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
     {
-        return Err("Guard IPC endpoint malformed".to_string());
+        return Err("Некорректная конечная точка Guard IPC".to_string());
     }
     Ok(())
 }
@@ -1655,7 +1655,7 @@ where
         bytes.push(one[0]);
     }
     if bytes.is_empty() {
-        return Err("Guard IPC empty frame rejected".to_string());
+        return Err("Пустой кадр Guard IPC отклонён".to_string());
     }
     serde_json::from_slice(&bytes).map_err(|err| format!("Guard IPC JSON rejected: {err}"))
 }
@@ -1852,7 +1852,7 @@ pub fn validate_guard_path(path: &Path) -> Result<(), String> {
     let name = path
         .file_name()
         .and_then(|value| value.to_str())
-        .ok_or_else(|| "Guard executable path не содержит file name".to_string())?;
+        .ok_or_else(|| "Путь к исполняемому файлу Guard не содержит имени файла".to_string())?;
     if !name.eq_ignore_ascii_case(guard_executable_name()) {
         return Err(format!(
             "Guard executable должен называться {}, получено {name}",

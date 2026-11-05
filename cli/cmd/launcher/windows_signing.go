@@ -173,7 +173,7 @@ func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
 	}
 	securityEntry := dataDirectoryOffset + 4*8
 	if securityEntry+8 > optionalOffset+optionalSize || securityEntry+8 > len(data) {
-		return windowsPEInfo0152{}, errors.New("PE security directory is outside optional header")
+		return windowsPEInfo0152{}, errors.New("Каталог безопасности PE находится за пределами необязательного заголовка")
 	}
 	certOffset := int(binary.LittleEndian.Uint32(data[securityEntry : securityEntry+4]))
 	certSize := int(binary.LittleEndian.Uint32(data[securityEntry+4 : securityEntry+8]))
@@ -209,7 +209,7 @@ func findSignTool0152() (string, error) {
 	}
 	programFilesX86 := strings.TrimSpace(os.Getenv("ProgramFiles(x86)"))
 	if programFilesX86 == "" {
-		return "", errors.New("ProgramFiles(x86) is unavailable while locating signtool.exe")
+		return "", errors.New("Переменная ProgramFiles(x86) недоступна при поиске signtool.exe")
 	}
 	candidates, err := filepath.Glob(filepath.Join(programFilesX86, "Windows Kits", "10", "bin", "*", "x64", "signtool.exe"))
 	if err != nil {
@@ -234,23 +234,23 @@ func verifyWindowsAuthenticodeNative0152(path, signerThumbprint, timestampThumbp
 	}
 	cmd := exec.Command(signTool, "verify", "/pa", "/all", "/v", path)
 	if output, runErr := cmd.CombinedOutput(); runErr != nil {
-		return fmt.Errorf("signtool verify failed for %s: %w: %s", filepath.Base(path), runErr, strings.TrimSpace(string(output)))
+		return fmt.Errorf("Ошибка проверки signtool для %s: %w: %s", filepath.Base(path), runErr, strings.TrimSpace(string(output)))
 	}
 
 	powerShell, err := exec.LookPath("powershell.exe")
 	if err != nil {
-		return errors.New("powershell.exe is required for Authenticode timestamp verification")
+		return errors.New("Для проверки временной метки Authenticode требуется powershell.exe")
 	}
 	const script = `$s = Get-AuthenticodeSignature -LiteralPath $env:NL_AUTHENTICODE_PATH; if ($s.Status -ne 'Valid' -or $null -eq $s.SignerCertificate -or $null -eq $s.TimeStamperCertificate) { exit 23 }; [Console]::Out.Write($s.SignerCertificate.Thumbprint + '|' + $s.TimeStamperCertificate.Thumbprint)`
 	ps := exec.Command(powerShell, "-NoProfile", "-NonInteractive", "-Command", script)
 	ps.Env = append(os.Environ(), "NL_AUTHENTICODE_PATH="+path)
 	out, runErr := ps.CombinedOutput()
 	if runErr != nil {
-		return fmt.Errorf("Get-AuthenticodeSignature failed for %s: %w: %s", filepath.Base(path), runErr, strings.TrimSpace(string(out)))
+		return fmt.Errorf("Ошибка Get-AuthenticodeSignature для %s: %w: %s", filepath.Base(path), runErr, strings.TrimSpace(string(out)))
 	}
 	parts := strings.Split(strings.TrimSpace(string(out)), "|")
 	if len(parts) != 2 || !strings.EqualFold(strings.TrimSpace(parts[0]), signerThumbprint) || !strings.EqualFold(strings.TrimSpace(parts[1]), timestampThumbprint) {
-		return fmt.Errorf("native Authenticode signer/timestamp mismatch for %s", filepath.Base(path))
+		return fmt.Errorf("Не совпадают подписант Authenticode или временная метка файла %s", filepath.Base(path))
 	}
 	return nil
 }
@@ -289,7 +289,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	}
 	actualManifestHash, _, err := hashFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("Windows %s package manifest: %w", arch, err)
+		return fmt.Errorf("Ошибка манифеста пакета Windows %s: %w", arch, err)
 	}
 	if !strings.EqualFold(target.Package.ManifestSHA256, actualManifestHash) {
 		return fmt.Errorf("Несоответствие: Windows %s пакет контрольная сумма манифеста", arch)
@@ -320,7 +320,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		return fmt.Errorf("Несовпадение: «Windows %s package manifest identity»", arch)
 	}
 	if requireSigned && (!manifest.AuthenticodeRequired || manifest.SigningMode != "authenticode-rfc3161") {
-		return fmt.Errorf("Windows %s package manifest does not require production Authenticode", arch)
+		return fmt.Errorf("Манифест пакета Windows %s не требует промышленной подписи Authenticode", arch)
 	}
 
 	manifestRows := map[string]struct {
@@ -329,10 +329,10 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	}{}
 	for _, row := range manifest.Artifacts {
 		if row.Name == "" || row.Architecture != arch {
-			return fmt.Errorf("Windows %s package manifest contains invalid artifact metadata", arch)
+			return fmt.Errorf("Манифест пакета Windows %s содержит некорректные метаданные артефакта", arch)
 		}
 		if _, exists := manifestRows[row.Component]; exists {
-			return fmt.Errorf("Windows %s package manifest contains duplicate component %s", arch, row.Component)
+			return fmt.Errorf("Манифест пакета Windows %s содержит повторяющийся компонент %s", arch, row.Component)
 		}
 		manifestRows[row.Component] = struct {
 			SHA256 string
@@ -349,11 +349,11 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	for _, component := range packageComponents {
 		evidenceArtifact, ok := artifactByComponent[component]
 		if !ok {
-			return fmt.Errorf("Windows %s evidence missing %s", arch, component)
+			return fmt.Errorf("В доказательных данных Windows %s отсутствует %s", arch, component)
 		}
 		row, ok := manifestRows[component]
 		if !ok || row.Size != evidenceArtifact.Size || !strings.EqualFold(row.SHA256, evidenceArtifact.SHA256) {
-			return fmt.Errorf("Windows %s package manifest does not bind %s", arch, component)
+			return fmt.Errorf("Манифест пакета Windows %s не привязывает %s", arch, component)
 		}
 	}
 
@@ -367,13 +367,13 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		name := filepath.ToSlash(entry.Name)
 		clean := filepath.ToSlash(filepath.Clean(name))
 		if name == "" || strings.HasPrefix(clean, "../") || clean == ".." || strings.HasPrefix(name, "/") {
-			return fmt.Errorf("Windows %s package contains unsafe path %q", arch, name)
+			return fmt.Errorf("Пакет Windows %s содержит небезопасный путь %q", arch, name)
 		}
 		if entry.FileInfo().IsDir() {
 			continue
 		}
 		if _, exists := zipFiles[clean]; exists {
-			return fmt.Errorf("Windows %s package contains duplicate entry %s", arch, clean)
+			return fmt.Errorf("Пакет Windows %s содержит повторяющийся элемент %s", arch, clean)
 		}
 		r, err := entry.Open()
 		if err != nil {
@@ -391,7 +391,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	}
 	zipManifest, ok := zipFiles["WINDOWS_PACKAGE_MANIFEST.json"]
 	if !ok || !bytes.Equal(bytes.TrimSpace(zipManifest), bytes.TrimSpace(manifestRaw)) {
-		return fmt.Errorf("Windows %s package embedded manifest differs from release manifest", arch)
+		return fmt.Errorf("Встроенный манифест пакета Windows %s отличается от манифеста релиза", arch)
 	}
 	packageEntries := map[string]string{
 		"desktop-launcher": "launcher-desktop-" + ver + "-windows-" + arch + ".exe",
@@ -411,25 +411,25 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	for component, entryName := range packageEntries {
 		data, ok := zipFiles[entryName]
 		if !ok {
-			return fmt.Errorf("Windows %s package missing %s", arch, entryName)
+			return fmt.Errorf("В пакете Windows %s отсутствует %s", arch, entryName)
 		}
 		evidenceArtifact := artifactByComponent[component]
 		sum := sha256Bytes0152(data)
 		if int64(len(data)) != evidenceArtifact.Size || !strings.EqualFold(sum, evidenceArtifact.SHA256) {
-			return fmt.Errorf("Windows %s package embedded %s differs from signed release artifact", arch, component)
+			return fmt.Errorf("Встроенный %s пакета Windows %s отличается от подписанного артефакта релиза", arch, component)
 		}
 		pe, err := inspectWindowsPEBytes0152(data)
 		if err != nil || pe.Architecture != arch {
-			return fmt.Errorf("Windows %s package embedded %s has invalid PE architecture: %v", arch, component, err)
+			return fmt.Errorf("Встроенный %s пакета Windows %s имеет некорректную архитектуру PE: %v", arch, component, err)
 		}
 		if requireSigned && !pe.HasSignature {
-			return fmt.Errorf("Windows %s package embedded %s lacks Authenticode certificate table", arch, component)
+			return fmt.Errorf("Во встроенном %s пакета Windows %s отсутствует таблица сертификатов Authenticode", arch, component)
 		}
 	}
 	if componentTransactionalUpdateRequired0157(ver) {
 		updateRaw, ok := zipFiles[componentUpdateManifestFile0157]
 		if !ok {
-			return fmt.Errorf("Windows %s package lacks %s", arch, componentUpdateManifestFile0157)
+			return fmt.Errorf("В пакете Windows %s отсутствует %s", arch, componentUpdateManifestFile0157)
 		}
 		var update componentUpdateManifest0157
 		if err := json.Unmarshal(updateRaw, &update); err != nil {
@@ -456,7 +456,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 			component, ok := aliases[row.Component]
 			evidenceArtifact, exists := artifactByComponent[component]
 			if !ok || !exists || row.SourcePath != expectedEntry[row.Component] || row.TargetPath != row.SourcePath || row.Size != evidenceArtifact.Size || !strings.EqualFold(row.SHA256, evidenceArtifact.SHA256) || !row.Executable {
-				return fmt.Errorf("Windows %s component update binding mismatch for %s", arch, row.Component)
+				return fmt.Errorf("Несовпадение привязки обновления компонента Windows %s для %s", arch, row.Component)
 			}
 		}
 	}
@@ -496,7 +496,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 	}
 	policy, ok := release.Platforms["windows"]
 	if !ok {
-		return errors.New("Windows delivery allowlist is missing windows policy")
+		return errors.New("В списке разрешённых поставок Windows отсутствует политика Windows")
 	}
 	expectedMode := "unsigned-development"
 	if productionSigned {
@@ -514,7 +514,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 		desktop, desktopOK := byComponent["desktop-launcher"]
 		guard, guardOK := byComponent["guard"]
 		if !desktopOK || !guardOK {
-			return fmt.Errorf("Windows %s evidence missing Guard/Desktop pair", target.Architecture)
+			return fmt.Errorf("В доказательных данных Windows %s отсутствует пара Guard/Desktop", target.Architecture)
 		}
 		expectedPairs[strings.ToLower(guard.SHA256)+":"+strings.ToLower(desktop.SHA256)] = true
 	}
@@ -522,7 +522,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 	for _, row := range policy.Artifacts {
 		key := strings.ToLower(row.GuardSHA256) + ":" + strings.ToLower(row.LauncherSHA256)
 		if !validDeliverySHA256(row.GuardSHA256) || !validDeliverySHA256(row.LauncherSHA256) || !expectedPairs[key] || seen[key] {
-			return errors.New("Windows delivery allowlist contains unexpected/duplicate artifact pair")
+			return errors.New("Список разрешённых поставок Windows содержит неожиданную или повторяющуюся пару артефактов")
 		}
 		if row.RequireAuthenticode != productionSigned {
 			return errors.New("Несовпадение: «Windows delivery allowlist requireAuthenticode»")
@@ -530,7 +530,7 @@ func verifyWindowsDeliveryAllowlist0152(dir, ver string, evidence WindowsSigning
 		seen[key] = true
 	}
 	if len(seen) != len(expectedPairs) {
-		return errors.New("Windows delivery allowlist does not cover both x64/ARM64 pairs")
+		return errors.New("Список разрешённых поставок Windows не охватывает пары x64 и ARM64")
 	}
 	return nil
 }
@@ -557,7 +557,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 	}
 	if productionSigned {
 		if evidence.Signer == nil || !windowsCertThumbprintRE0152.MatchString(evidence.Signer.Thumbprint) || strings.TrimSpace(evidence.TimestampServer) == "" {
-			return errors.New("production Windows signing evidence is missing signer/timestamp identity")
+			return errors.New("В доказательных данных промышленного подписания Windows отсутствуют подписант или временная метка")
 		}
 		generatedAt, _ := time.Parse(time.RFC3339Nano, evidence.GeneratedAt)
 		if generatedAt.IsZero() {
@@ -566,7 +566,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		notBefore, err1 := time.Parse(time.RFC3339, evidence.Signer.NotBefore)
 		notAfter, err2 := time.Parse(time.RFC3339, evidence.Signer.NotAfter)
 		if err1 != nil || err2 != nil || generatedAt.Before(notBefore) || generatedAt.After(notAfter) {
-			return errors.New("Windows signing certificate validity does not cover evidence generation time")
+			return errors.New("Срок действия сертификата подписи Windows не охватывает время формирования доказательных данных")
 		}
 	}
 
@@ -580,7 +580,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 	}
 
 	if len(evidence.Targets) != 2 {
-		return fmt.Errorf("Windows signing evidence must contain exactly x64+arm64 targets, got %d", len(evidence.Targets))
+		return fmt.Errorf("Доказательные данные подписания Windows должны содержать ровно x64 и ARM64; получено %d", len(evidence.Targets))
 	}
 	seenTargets := map[string]bool{}
 	for _, target := range evidence.Targets {
@@ -598,7 +598,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		}
 		expectedNames := expectedWindowsSignedArtifactsForVersion0157(ver, arch)
 		if len(target.Artifacts) != len(expectedNames) {
-			return fmt.Errorf("Windows %s target has invalid signed artifact set for %s", arch, ver)
+			return fmt.Errorf("Целевая платформа Windows %s имеет некорректный набор подписанных артефактов для %s", arch, ver)
 		}
 		artifactByComponent := map[string]WindowsSignedArtifact0152{}
 		for _, artifact := range target.Artifacts {
@@ -607,7 +607,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 				return fmt.Errorf("Несовпадение: «Windows %s signed artifact identity»: %s", arch, artifact.Name)
 			}
 			if _, exists := artifactByComponent[artifact.Component]; exists {
-				return fmt.Errorf("Windows %s duplicate signed component %s", arch, artifact.Component)
+				return fmt.Errorf("Повторяющийся подписанный компонент Windows %s: %s", arch, artifact.Component)
 			}
 			artifactByComponent[artifact.Component] = artifact
 			path, err := safeDeliveryArtifactPath(dir, artifact.Name)
@@ -616,14 +616,14 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 			}
 			actualHash, actualSize, err := hashFile(path)
 			if err != nil {
-				return fmt.Errorf("Windows signed artifact %s: %w", artifact.Name, err)
+				return fmt.Errorf("Ошибка подписанного артефакта Windows %s: %w", artifact.Name, err)
 			}
 			if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
 				return fmt.Errorf("Несовпадение: «Windows signed artifact %s checksum/size»", artifact.Name)
 			}
 			deliveryArtifact, ok := deliveryByName[artifact.Name]
 			if !ok || deliveryArtifact.Platform != "windows" || deliveryArtifact.Architecture != arch || deliveryArtifact.Size != actualSize || !strings.EqualFold(deliveryArtifact.SHA256, actualHash) {
-				return fmt.Errorf("Windows signed artifact %s is not bound to DELIVERY_MANIFEST.json", artifact.Name)
+				return fmt.Errorf("Подписанный артефакт Windows %s не привязан к DELIVERY_MANIFEST.json", artifact.Name)
 			}
 			pe, err := inspectWindowsPEFile0152(path)
 			if err != nil || pe.Architecture != arch || pe.Machine != expectedMachine {
@@ -631,7 +631,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 			}
 			if productionSigned {
 				if artifact.AuthenticodeStatus != "Valid" || !artifact.Timestamped || !artifact.SigntoolVerified || !pe.HasSignature {
-					return fmt.Errorf("Windows signed artifact %s lacks verified Authenticode+timestamp evidence", artifact.Name)
+					return fmt.Errorf("Для подписанного артефакта Windows %s отсутствуют подтверждённые данные Authenticode и временной метки", artifact.Name)
 				}
 				if !strings.EqualFold(artifact.SignerThumbprint, evidence.Signer.Thumbprint) || !windowsCertThumbprintRE0152.MatchString(artifact.TimestampSignerThumbprint) {
 					return fmt.Errorf("Несовпадение: «Windows signed artifact %s signer/timestamp identity»", artifact.Name)
@@ -640,7 +640,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 					return fmt.Errorf("Ошибка: «Windows signed artifact %s native Authenticode verification»: %w", artifact.Name, err)
 				}
 			} else if artifact.AuthenticodeStatus == "Valid" || artifact.Timestamped || artifact.SigntoolVerified {
-				return fmt.Errorf("unsigned-development Windows evidence overclaims signature status for %s", artifact.Name)
+				return fmt.Errorf("Данные неподписанной сборки Windows ошибочно заявляют наличие подписи для %s", artifact.Name)
 			}
 		}
 		if err := verifyWindowsPackage0152(dir, ver, arch, target, artifactByComponent, requireSigned || productionSigned); err != nil {
@@ -648,10 +648,10 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		}
 	}
 	if !seenTargets["x64"] || !seenTargets["arm64"] {
-		return errors.New("Windows signing evidence must cover both x64 and arm64")
+		return errors.New("Данные подписания Windows должны охватывать x64 и ARM64")
 	}
 	if err := verifyWindowsDeliveryAllowlist0152(dir, ver, evidence, productionSigned); err != nil {
-		return fmt.Errorf("Windows delivery Guard allowlist: %w", err)
+		return fmt.Errorf("Ошибка списка разрешённых поставок Guard для Windows: %w", err)
 	}
 
 	// Устойчивый порядок не является механизмом доверия, но детерминированные свидетельства предотвращают случайные расхождения между сборками.

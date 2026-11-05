@@ -54,7 +54,7 @@ public final class LauncherVanillaBridge implements AutoCloseable {
         config = BridgeConfig.load(configPath, "vanilla-main");
         serverProperties = loadProperties(serverDir.resolve("server.properties"));
         if (!Boolean.parseBoolean(serverProperties.getProperty("enable-rcon", "false"))) {
-            throw new IllegalStateException("Vanilla adapter requires enable-rcon=true; bind RCON to a protected local/private interface");
+            throw new IllegalStateException("Адаптер Vanilla требует enable-rcon=true; RCON должен быть доступен только через защищённый локальный или частный интерфейс");
         }
         rconHost = first(System.getenv("LAUNCHER_VANILLA_RCON_HOST"), "127.0.0.1");
         rconPort = parseInt(first(System.getenv("LAUNCHER_VANILLA_RCON_PORT"), serverProperties.getProperty("rcon.port"), "25575"), 25575);
@@ -87,7 +87,7 @@ public final class LauncherVanillaBridge implements AutoCloseable {
         workers.scheduleWithFixedDelay(this::heartbeatSafe, 0, Math.max(10, config.heartbeatIntervalSeconds), TimeUnit.SECONDS);
         workers.scheduleWithFixedDelay(this::telemetrySafe, 0, Math.max(5, config.telemetrySampleIntervalSeconds), TimeUnit.SECONDS);
         Thread tail = daemon(this::tailLog, "log-tail"); tail.start();
-        System.out.println("Launcher Vanilla ServerBridge " + BridgeDefaults.VERSION + " ready; serverId=" + config.serverId + "; runtimeId=" + api.runtimeId());
+        System.out.println("Launcher Vanilla ServerBridge " + BridgeDefaults.VERSION + " готов; идентификатор сервера=" + config.serverId + "; runtimeId=" + api.runtimeId());
     }
 
     private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {

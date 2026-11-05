@@ -63,7 +63,7 @@ func integrationAuditCommand0491(args []string) error {
 		return err
 	}
 	if fs.NArg() != 0 || *output == "" || !validEnvironmentName0491(*dsnEnv) {
-		return errors.New("--output, --dsn-env and no trailing arguments are required")
+		return errors.New("Требуются --output и --dsn-env; дополнительные аргументы запрещены")
 	}
 	opts := liveIntegrationOptions0491{*backend, *project, *run, *extension, *scope, *scopeID, os.Getenv(*dsnEnv), os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *psql, *output}
 	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
@@ -111,7 +111,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return record, "", fmt.Errorf("read-only PostgreSQL transaction failed (psql exit: %v)", err)
+		return record, "", fmt.Errorf("Ошибка транзакции PostgreSQL только для чтения (код завершения psql: %v)", err)
 	} // redact stderr: may include DSN
 	if stdout.Len() > 16<<10 {
 		return record, "", errors.New("Превышен допустимый размер: ответ аудита PostgreSQL")
@@ -120,7 +120,7 @@ func postgresSnapshot0491(ctx context.Context, opts liveIntegrationOptions0491) 
 		return record, "", errors.New("Некорректное значение: JSON, прочитанный из PostgreSQL")
 	}
 	if record.ReadOnly != "on" || record.Project != opts.Project || record.Migration == nil || record.Extension == nil {
-		return record, "", errors.New("PostgreSQL missing project/migration/extension or transaction not read-only")
+		return record, "", errors.New("В PostgreSQL отсутствуют проект, миграция или расширение либо транзакция не ограничена чтением")
 	}
 	return record, executableSHA, nil
 }
@@ -211,14 +211,14 @@ func auditProbe0491(ctx context.Context, client *http.Client, endpoint, token st
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		return result, fmt.Errorf("live Java probe refused HTTP %d", response.StatusCode)
+		return result, fmt.Errorf("Проверка работающей Java вернула отказ HTTP %d", response.StatusCode)
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, 64<<10+1))
 	if err != nil {
 		return result, err
 	}
 	if len(data) > 64<<10 {
-		return result, errors.New("Java probe response oversized")
+		return result, errors.New("Ответ проверки Java превышает допустимый размер")
 	}
 	var envelope struct {
 		Data json.RawMessage `json:"data"`
@@ -265,7 +265,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	if res.StatusCode != 200 {
 		res.Body.Close()
-		return fmt.Errorf("Backend not ready HTTP %d", res.StatusCode)
+		return fmt.Errorf("Backend не готов: HTTP %d", res.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, 16<<10+1))
 	res.Body.Close()
@@ -273,7 +273,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return err
 	}
 	if len(body) > 16<<10 || json.Unmarshal(body, &ready) != nil || ready.Status != "ready" || ready.Repository != "postgres" || ready.Checks["repository"] != "ok" || ready.Checks["migrations"] == "" {
-		return errors.New("Backend does not report a live migrated PostgreSQL repository")
+		return errors.New("Backend не подтверждает наличие работающего перенесённого репозитория PostgreSQL")
 	}
 	readRun := func() (migrationAuditRun0491, error) {
 		var r migrationAuditRun0491
@@ -285,7 +285,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return fmt.Errorf("Ошибка: «Backend migration read»: %w", err)
 	}
 	if run.ID != opts.Run || run.ProjectID != opts.Project || run.SourceKind != "gravit" {
-		return errors.New("Backend migration belongs to a different project/source")
+		return errors.New("Миграция Backend относится к другому проекту или источнику")
 	}
 	pg, psqlSHA, err := postgresSnapshot0491(ctx, opts)
 	if err != nil {
@@ -303,7 +303,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return err
 	}
 	if !probe.Java.Responsive || probe.Java.State != "RUNNING" {
-		return errors.New("Java JVM did not acknowledge a live RUNNING RPC")
+		return errors.New("JVM Java не подтвердила работающий RPC в состоянии RUNNING")
 	}
 	// Re-read both independent stores after JVM execution. A concurrent
 	// migration or extension update must not seal a stale cross-system result.
@@ -316,7 +316,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return err
 	}
 	if pgAfter.Migration == nil || pgAfter.Extension == nil || after != run || *pg.Migration != *pgAfter.Migration || *pg.Extension != *pgAfter.Extension {
-		return errors.New("migration or Java install changed during audit")
+		return errors.New("Миграция или установка Java изменились во время проверки")
 	}
 	if err = matchIntegrationSnapshot0491(opts, after, pgAfter, probe.Host); err != nil {
 		return err
@@ -332,23 +332,23 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	if err = writePrivate(opts.Output, append(data, '\n')); err != nil {
 		return err
 	}
-	fmt.Println("Live Backend/PostgreSQL/Java audit passed; evidence:", opts.Output)
+	fmt.Println("Проверка работающих Backend, PostgreSQL и Java пройдена; доказательные данные:", opts.Output)
 	return nil
 }
 func matchIntegrationSnapshot0491(opts liveIntegrationOptions0491, run migrationAuditRun0491, pg pgAudit0491, host hostAudit0491) error {
 	if pg.Migration == nil || pg.Extension == nil {
-		return errors.New("incomplete PostgreSQL migration/extension state")
+		return errors.New("Неполное состояние миграции или расширения PostgreSQL")
 	}
 	m, e := pg.Migration, pg.Extension
 	if m.ID != run.ID || m.ProjectID != run.ProjectID || m.SourceKind != run.SourceKind || m.Status != run.Status || m.Step != run.Step || m.Revision != run.Revision {
-		return errors.New("PostgreSQL migration differs from Backend API")
+		return errors.New("Миграция PostgreSQL не совпадает с данными Backend API")
 	}
 	if e.ExtensionID != opts.Extension || e.Scope != opts.Scope || e.ScopeID != opts.ScopeID || e.CurrentState != "enabled" || !e.Enabled || e.CurrentVersion == "" || e.Generation < 1 {
-		return errors.New("PostgreSQL Java extension is not an enabled install")
+		return errors.New("Расширение Java в PostgreSQL не является активной установкой")
 	}
 	if host.ExtensionID != "" {
 		if host.ExtensionID != e.ExtensionID || host.Scope != e.Scope || host.ScopeID != e.ScopeID || host.Generation != e.Generation || host.Version != e.CurrentVersion || host.Runtime != "java-jvm" || host.State != "running" || !host.Healthy || host.InstanceID == "" {
-			return errors.New("running Java JVM differs from PostgreSQL installation")
+			return errors.New("Работающая JVM Java отличается от установки, зарегистрированной в PostgreSQL")
 		}
 	}
 	return nil

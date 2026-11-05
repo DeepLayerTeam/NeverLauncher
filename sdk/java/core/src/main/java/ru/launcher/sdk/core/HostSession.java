@@ -29,7 +29,7 @@ public final class HostSession implements AutoCloseable {
         String raw=required(env,"LAUNCHER_EXTENSION_HOST_URL");
         URI origin=validateOrigin(raw);
         if(!"1.0".equals(required(env,"LAUNCHER_EXTENSION_HOST_PROTOCOL")) ||
-           !"1.0".equals(required(env,"LAUNCHER_EXTENSION_API_VERSION")))throw new IllegalArgumentException("Java host protocol/API incompatible");
+           !"1.0".equals(required(env,"LAUNCHER_EXTENSION_API_VERSION")))throw new IllegalArgumentException("Несовместимые протокол или API Java-хоста");
         try(HostSession bootstrap=new HostSession(origin,required(env,"LAUNCHER_EXTENSION_HOST_TOKEN"),
             required(env,"LAUNCHER_EXTENSION_ID"),required(env,"LAUNCHER_EXTENSION_INSTANCE_ID"))){
             return Json.encode(bootstrap.send("GET","/v1/manifest",null,200));
@@ -37,15 +37,15 @@ public final class HostSession implements AutoCloseable {
     }
     private static URI validateOrigin(String raw){
         URI url;
-        try{url=URI.create(raw);}catch(IllegalArgumentException e){throw new IllegalArgumentException("invalid local host URL",e);}
-        String host=url.getHost();if(!"http".equals(url.getScheme())||host==null||(!host.equals("127.0.0.1")&&!host.equals("::1"))||url.getPort()<1||url.getRawUserInfo()!=null||url.getRawQuery()!=null||url.getRawFragment()!=null||!(url.getPath().isEmpty()||url.getPath().equals("/")))throw new IllegalArgumentException("host URL must be a loopback HTTP origin");
+        try{url=URI.create(raw);}catch(IllegalArgumentException e){throw new IllegalArgumentException("Некорректный локальный URL хоста",e);}
+        String host=url.getHost();if(!"http".equals(url.getScheme())||host==null||(!host.equals("127.0.0.1")&&!host.equals("::1"))||url.getPort()<1||url.getRawUserInfo()!=null||url.getRawQuery()!=null||url.getRawFragment()!=null||!(url.getPath().isEmpty()||url.getPath().equals("/")))throw new IllegalArgumentException("URL хоста должен быть локальным HTTP-адресом loopback");
         return url;
     }
     public static HostSession fromEnvironment(Map<String,String> env,ExtensionManifest manifest) {
         URI url=validateOrigin(required(env,"LAUNCHER_EXTENSION_HOST_URL"));
         String id=required(env,"LAUNCHER_EXTENSION_ID");
-        if(!id.equals(manifest.id())||!required(env,"LAUNCHER_EXTENSION_VERSION").equals(manifest.versionText()))throw new IllegalArgumentException("host identity differs from manifest");
-        if(!required(env,"LAUNCHER_EXTENSION_HOST_PROTOCOL").equals("1.0")||!required(env,"LAUNCHER_EXTENSION_API_VERSION").equals("1.0"))throw new IllegalArgumentException("host protocol/API incompatible");
+        if(!id.equals(manifest.id())||!required(env,"LAUNCHER_EXTENSION_VERSION").equals(manifest.versionText()))throw new IllegalArgumentException("Идентификатор хоста отличается от манифеста");
+        if(!required(env,"LAUNCHER_EXTENSION_HOST_PROTOCOL").equals("1.0")||!required(env,"LAUNCHER_EXTENSION_API_VERSION").equals("1.0"))throw new IllegalArgumentException("Несовместимые протокол или API хоста");
         return new HostSession(url,required(env,"LAUNCHER_EXTENSION_HOST_TOKEN"),id,required(env,"LAUNCHER_EXTENSION_INSTANCE_ID"));
     }
     private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("missing "+key);return v;}
@@ -58,8 +58,8 @@ public final class HostSession implements AutoCloseable {
      * списка никогда не означает разрешение на выполнение операции.
      */
     public synchronized void connect(String callbackUrl,Set<String> requiredCapabilities) throws IOException,InterruptedException {
-        if(closed.get())throw new IllegalStateException("session closed");
-        if(connected)throw new IllegalStateException("host session already connected");
+        if(closed.get())throw new IllegalStateException("Сессия закрыта");
+        if(connected)throw new IllegalStateException("Сессия хоста уже подключена");
         Objects.requireNonNull(requiredCapabilities,"requiredCapabilities");
         for(String name:requiredCapabilities)validCapability(name);
         if(callbackUrl==null)throw new IllegalArgumentException("callbackUrl is null");
@@ -78,7 +78,7 @@ public final class HostSession implements AutoCloseable {
         // версию обязательно проверять.
         if(version!=null && !"1.0".equals(version))throw new CompatibilityError("HOST_EVENT_PROTOCOL_MISMATCH","unsupported event protocol: "+version);
         Set<String> supportedEvents=parseNames(response.get("events"),"events");
-        Object hb=response.get("heartbeatTimeoutSeconds");if(!(hb instanceof Number n)||n.longValue()<2||n.longValue()>3600||n.doubleValue()!=n.longValue())throw new IOException("invalid heartbeat interval");
+        Object hb=response.get("heartbeatTimeoutSeconds");if(!(hb instanceof Number n)||n.longValue()<2||n.longValue()>3600||n.doubleValue()!=n.longValue())throw new IOException("Некорректный интервал сигналов активности");
         capabilities=negotiated;
         events=supportedEvents;
         eventProtocol=version==null?"":"1.0";
@@ -89,7 +89,7 @@ public final class HostSession implements AutoCloseable {
             if(closed.get())return;
             try{
                 Map<String,Object> ack=send("POST","/v1/heartbeat",Map.of(),200,Duration.ofMillis(requestMillis));
-                if(!Boolean.TRUE.equals(ack.get("ok")))throw new IOException("host rejected heartbeat acknowledgement");
+                if(!Boolean.TRUE.equals(ack.get("ok")))throw new IOException("Хост отклонил подтверждение сигнала активности");
             }catch(Exception e){healthy=false;close();}
         },period,period,TimeUnit.SECONDS);
     }
@@ -105,21 +105,21 @@ public final class HostSession implements AutoCloseable {
     private static void validCapability(String name){
         if(name==null||!name.matches("[a-z][a-z0-9.]{1,96}"))throw new IllegalArgumentException("Некорректное имя разрешённой возможности");
     }
-    private void requireConnected(){if(!connected||closed.get()||!healthy)throw new IllegalStateException("extension host session is not connected or healthy");}
+    private void requireConnected(){if(!connected||closed.get()||!healthy)throw new IllegalStateException("Сессия хоста расширения не подключена или неисправна");}
     public void requireCapability(String name){
         validCapability(name);requireConnected();
-        if(!capabilities.contains(name))throw new SecurityException("host capability unavailable: "+name);
+        if(!capabilities.contains(name))throw new SecurityException("Возможность хоста недоступна: "+name);
     }
     public void requireEvent(String eventType){
         requireConnected();
-        if(!events.contains(eventType))throw new SecurityException("host event unavailable: "+eventType);
-        if(!eventProtocol.isEmpty()&&!"1.0".equals(eventProtocol))throw new SecurityException("event protocol unsupported");
+        if(!events.contains(eventType))throw new SecurityException("Событие хоста недоступно: "+eventType);
+        if(!eventProtocol.isEmpty()&&!"1.0".equals(eventProtocol))throw new SecurityException("Протокол событий не поддерживается");
     }
     /** Цель Java считается работающей только после завершения Extension.start(). */
     public void ready() throws IOException,InterruptedException {
         requireConnected();
         Map<String,Object> answer=post("/v1/ready",Map.of("protocolVersion","1.0","instanceId",instanceId));
-        if(!Boolean.TRUE.equals(answer.get("ready")))throw new IOException("host did not acknowledge Java readiness");
+        if(!Boolean.TRUE.equals(answer.get("ready")))throw new IOException("Хост не подтвердил готовность Java");
     }
     public boolean healthy(){return connected&&healthy&&!closed.get();}
     public Set<String> capabilities(){return capabilities;}

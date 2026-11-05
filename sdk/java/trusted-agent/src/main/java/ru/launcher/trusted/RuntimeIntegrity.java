@@ -49,16 +49,16 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
 
     static RuntimeIntegrity0505 from(Properties props) throws Exception {
         if (!"true".equals(props.getProperty("integrity.required")))
-            throw new SecurityException("Guard Runtime Integrity configuration missing");
+            throw new SecurityException("Отсутствует конфигурация контроля целостности Runtime Guard");
         String encodedRoot = props.getProperty("integrity.root");
-        if (encodedRoot == null) throw new SecurityException("Guard Runtime Integrity root missing");
+        if (encodedRoot == null) throw new SecurityException("Отсутствует корневой каталог контроля целостности Runtime Guard");
         Path root = new File(new String(Base64.getDecoder().decode(encodedRoot), "UTF-8")).getCanonicalFile().toPath();
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS))
-            throw new SecurityException("Guard Runtime Integrity root unavailable");
+            throw new SecurityException("Корневой каталог контроля целостности Runtime Guard недоступен");
         int count;
         try { count = Integer.parseInt(props.getProperty("integrity.count", "-1")); }
-        catch (NumberFormatException ex) { throw new SecurityException("Guard Runtime Integrity count invalid", ex); }
-        if (count < 1 || count > LIMIT) throw new SecurityException("Guard Runtime Integrity empty/oversized inventory");
+        catch (NumberFormatException ex) { throw new SecurityException("Некорректное количество элементов контроля целостности Runtime Guard", ex); }
+        if (count < 1 || count > LIMIT) throw new SecurityException("Список элементов контроля целостности Runtime Guard пуст или превышает лимит");
         Map<Path,String> digests = new HashMap<Path,String>();
         Map<Path,String> kinds = new HashMap<Path,String>();
         for (int i = 0; i < count; i++) {
@@ -67,27 +67,27 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             String kind = props.getProperty("integrity."+i+".kind");
             if (raw == null || hash == null || !hash.matches("[0-9a-f]{64}") ||
                     !("code".equals(kind) || "native".equals(kind)))
-                throw new SecurityException("Guard Runtime Integrity malformed inventory item " + i);
+                throw new SecurityException("Некорректный элемент списка контроля целостности Runtime Guard: " + i);
             Path path = new File(new String(Base64.getDecoder().decode(raw), "UTF-8")).toPath().toAbsolutePath().normalize();
             if (!path.startsWith(root) || path.equals(root) || digests.put(path, hash) != null)
-                throw new SecurityException("Guard Runtime Integrity outside/duplicate file " + i);
+                throw new SecurityException("Файл контроля целостности Runtime Guard находится вне каталога или повторяется: " + i);
             kinds.put(path, kind);
         }
         int externalCount;
         try {externalCount = Integer.parseInt(props.getProperty("integrity.external.count","0"));}
-        catch(NumberFormatException ex) {throw new SecurityException("Guard external overlay count invalid",ex);}
+        catch(NumberFormatException ex) {throw new SecurityException("Некорректное количество внешних оверлеев Guard",ex);}
         if (externalCount<0 || externalCount>64 || (externalCount!=0 && !System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("linux")))
-            throw new SecurityException("Guard external overlay count/platform invalid");
+            throw new SecurityException("Некорректное количество или платформа внешних оверлеев Guard");
         Map<Path,String> external = new HashMap<Path,String>();
         for(int i=0;i<externalCount;i++) {
             String raw=props.getProperty("integrity.external."+i+".path");
             String sha=props.getProperty("integrity.external."+i+".sha256");
             if(raw==null || sha==null || !sha.matches("[0-9a-f]{64}"))
-                throw new SecurityException("Guard external overlay malformed binding "+i);
+                throw new SecurityException("Некорректная привязка внешнего оверлея Guard: "+i);
             Path path=new File(new String(Base64.getDecoder().decode(raw),"UTF-8")).toPath();
             if(!path.isAbsolute() || path.normalize().equals(root) || path.normalize().startsWith(root) ||
                !path.equals(path.normalize()) || !isNative(path) || external.put(path,sha)!=null)
-                throw new SecurityException("Guard external overlay unsafe or duplicate path "+i);
+                throw new SecurityException("Небезопасный или повторяющийся путь внешнего оверлея Guard: "+i);
         }
         RuntimeIntegrity0505 guard = new RuntimeIntegrity0505(root,digests,kinds,external,
             "true".equals(props.getProperty("integrity.code.strict")),
@@ -99,13 +99,13 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
 
     private void verifyClasspath() throws Exception {
         String cp = System.getProperty("java.class.path", "");
-        if (cp.isEmpty()) throw new SecurityException("Guard JVM classpath unavailable");
+        if (cp.isEmpty()) throw new SecurityException("Путь к классам JVM Guard недоступен");
         for (String item : cp.split(java.util.regex.Pattern.quote(File.pathSeparator), -1)) {
             if (item.isEmpty() || item.endsWith("*") )
-                throw new SecurityException("Guard rejects wildcard/empty JVM classpath");
+                throw new SecurityException("Guard запрещает пустой путь к классам JVM или шаблон со звёздочкой");
             Path path = new File(item).toPath().toAbsolutePath().normalize();
             if (!path.startsWith(root) || !"code".equals(kinds.get(path)))
-                throw new SecurityException("Guard JVM classpath is not signed: " + path);
+                throw new SecurityException("Путь к классам JVM Guard не подписан: " + path);
             check(path);
         }
     }
@@ -147,18 +147,18 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
 
     private void check(Path path) throws Exception {
         Path absolute = path.toAbsolutePath().normalize();
-        if (!absolute.startsWith(root) || absolute.equals(root)) throw new SecurityException("path escaped game root");
+        if (!absolute.startsWith(root) || absolute.equals(root)) throw new SecurityException("Путь вышел за пределы корневого каталога игры");
         Path cursor = root;
         Path relative = root.relativize(absolute);
         for (Path component : relative) {
             cursor = cursor.resolve(component);
-            if (Files.isSymbolicLink(cursor)) throw new SecurityException("symbolic link: " + cursor);
+            if (Files.isSymbolicLink(cursor)) throw new SecurityException("Символическая ссылка: " + cursor);
         }
         if (!Files.isRegularFile(absolute,LinkOption.NOFOLLOW_LINKS))
-            throw new SecurityException("executable is not regular: " + absolute);
+            throw new SecurityException("Исполняемый объект не является обычным файлом: " + absolute);
         String expected=digests.get(absolute);
         if (expected==null || !expected.equals(digest(absolute)))
-            throw new SecurityException("missing/replaced signed runtime file: " + absolute);
+            throw new SecurityException("Подписанный файл Runtime отсутствует или заменён: " + absolute);
     }
 
     private void scan() throws Exception {
@@ -173,22 +173,22 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             if (linuxProcessRequired) LinuxProcessGuard0508.verify();
             scanLinuxMaps();
         } else if (linuxProcessRequired) {
-            throw new SecurityException("Linux process requirements on non-Linux JVM");
+            throw new SecurityException("Требования к процессу Linux применены к JVM другой ОС");
         }
     }
 
     private void checkTree(Path dir, boolean jars) throws Exception {
         if (!Files.exists(dir,LinkOption.NOFOLLOW_LINKS)) return;
         if (Files.isSymbolicLink(dir) || !Files.isDirectory(dir,LinkOption.NOFOLLOW_LINKS))
-            throw new SecurityException("Guard executable directory replaced: " + dir);
+            throw new SecurityException("Каталог исполняемого файла Guard подменён: " + dir);
         int[] remaining = new int[]{LIMIT};
         walk(dir,jars,remaining);
     }
     private void walk(Path dir, boolean jars, int[] remaining) throws Exception {
         try (DirectoryStream<Path> files = Files.newDirectoryStream(dir)) {
             for (Path path : files) {
-                if (--remaining[0] < 0) throw new SecurityException("Guard executable tree scan limit");
-                if (Files.isSymbolicLink(path)) throw new SecurityException("symlink in executable tree: "+path);
+                if (--remaining[0] < 0) throw new SecurityException("Превышен лимит сканирования каталога исполняемых файлов Guard");
+                if (Files.isSymbolicLink(path)) throw new SecurityException("Символическая ссылка в дереве исполняемых файлов: "+path);
                 if (Files.isDirectory(path,LinkOption.NOFOLLOW_LINKS)) { walk(path,jars,remaining); continue; }
                 String name=path.getFileName().toString().toLowerCase(Locale.ROOT);
                 boolean executable = jars ? name.endsWith(".jar") :
@@ -196,14 +196,14 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                      name.endsWith(".dylib") || name.endsWith(".jnilib"));
                 if (executable) {
                     Path normalized=path.toAbsolutePath().normalize();
-                    if (!digests.containsKey(normalized)) throw new SecurityException("unapproved runtime file: "+path);
+                    if (!digests.containsKey(normalized)) throw new SecurityException("Неодобренный файл Runtime: "+path);
                 }
             }
         }
     }
     private void scanLinuxMaps() throws Exception {
         Path maps = new File("/proc/self/maps").toPath();
-        if (!Files.isReadable(maps)) throw new SecurityException("Guard cannot read process mappings");
+        if (!Files.isReadable(maps)) throw new SecurityException("Guard не может прочитать отображения памяти процесса");
         try (java.io.BufferedReader reader=Files.newBufferedReader(maps)) {
             for (String line; (line=reader.readLine())!=null;) {
                 String[] parts=line.trim().split("\\s+",6);
@@ -213,7 +213,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                 if (pathname.endsWith(" (deleted)")) {
                     String name=pathname.substring(0,pathname.length()-10);
                     if (new File(name).toPath().normalize().startsWith(root))
-                        throw new SecurityException("mapped game library deleted: "+name);
+                        throw new SecurityException("Отображённая в память игровая библиотека удалена: "+name);
                     continue;
                 }
                 Path p = new File(pathname).toPath().normalize();
@@ -224,11 +224,11 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                 if (p.startsWith(javaHome) && !p.startsWith(root.resolve("mods")) && !p.startsWith(root.resolve("natives"))) continue;
                 if (p.startsWith(root) && isNative(p)) {
                     if (!"native".equals(kinds.get(p)))
-                        throw new SecurityException("unapproved mapped native module: "+p);
+                        throw new SecurityException("Неодобренный нативный модуль, отображённый в память: "+p);
                     check(p);
                 } else if (isNative(p) && !p.startsWith(javaHome) && !trustedOSNative(p)) {
                     if (!externalModules.containsKey(p))
-                        throw new SecurityException("unapproved external native module: "+p);
+                        throw new SecurityException("Неодобренный внешний нативный модуль: "+p);
                     checkExternal(p);
                 }
             }
@@ -256,15 +256,15 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
         } catch (IOException ex) {return false;}
     }
     private void checkExternal(Path path) throws Exception {
-        if (!path.isAbsolute() || !isNative(path)) throw new SecurityException("external native not an absolute library");
+        if (!path.isAbsolute() || !isNative(path)) throw new SecurityException("Внешний нативный модуль не является библиотекой с абсолютным путём");
         Path cursor=path.getRoot();
         for(Path part:path) {
             cursor=cursor.resolve(part);
-            if(Files.isSymbolicLink(cursor)) throw new SecurityException("external native symlink: "+cursor);
+            if(Files.isSymbolicLink(cursor)) throw new SecurityException("Символическая ссылка на внешний нативный модуль: "+cursor);
         }
         if (!Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS) || Files.size(path)>512L*1024*1024 ||
             !externalModules.get(path).equals(digest(path)))
-            throw new SecurityException("external native modified: "+path);
+            throw new SecurityException("Внешний нативный модуль изменён: "+path);
     }
     private static boolean isNative(Path file) {
         String s=file.getFileName().toString().toLowerCase(Locale.ROOT);

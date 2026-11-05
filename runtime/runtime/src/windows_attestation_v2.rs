@@ -83,7 +83,7 @@ fn now_unix_ms() -> Result<u64, String> {
 
 fn require_hash(label: &str, value: &str) -> Result<(), String> {
     if !is_sha256_hex(value) {
-        return Err(format!("Guard Attestation v2 {label} malformed"));
+        return Err(format!("Некорректное поле {label} в аттестации Guard v2"));
     }
     Ok(())
 }
@@ -167,7 +167,7 @@ pub fn validate_continuous_evidence_v2(
         || evidence.module_guard_version != crate::GUARD_MODULE_GUARD_VERSION
         || evidence.continuous_guard_version != crate::GUARD_CONTINUOUS_GUARD_VERSION
     {
-        return Err("Несовпадение: «Guard Attestation v2 continuous component version»".to_string());
+        return Err("Не совпадает версия компонента непрерывной защиты для аттестации Guard v2".to_string());
     }
     if !evidence.sensor_authenticated
         || !evidence.sensor_loaded_before_main
@@ -180,7 +180,7 @@ pub fn validate_continuous_evidence_v2(
         || !evidence.jvm_aware_healthy
         || !evidence.continuous_guard_healthy
     {
-        return Err("Guard Attestation v2 continuous protection is not healthy".to_string());
+        return Err("Непрерывная защита Guard неработоспособна по данным аттестации v2".to_string());
     }
     if evidence.module_event_count == 0
         || evidence.module_last_sequence == 0
@@ -190,12 +190,12 @@ pub fn validate_continuous_evidence_v2(
         || evidence.last_sensor_sequence == 0
         || evidence.last_guard_sequence == 0
     {
-        return Err("Guard Attestation v2 continuous counters are not armed".to_string());
+        return Err("Счётчики непрерывной защиты Guard не активированы по данным аттестации v2".to_string());
     }
     if evidence.sensor_heartbeat_count != evidence.guard_heartbeat_count
         || evidence.sensor_heartbeat_count != evidence.cross_check_count
     {
-        return Err("Guard Attestation v2 Sensor/Guard heartbeat counters diverged".to_string());
+        return Err("Счётчики сигналов активности Sensor и Guard расходятся в аттестации v2".to_string());
     }
     if evidence.java_major != 8
         && evidence.java_major != 16
@@ -203,7 +203,7 @@ pub fn validate_continuous_evidence_v2(
         && evidence.java_major != 21
         && evidence.java_major != 25
     {
-        return Err("Guard Attestation v2 Java major is not certified".to_string());
+        return Err("Основная версия Java не сертифицирована для аттестации Guard v2".to_string());
     }
     for (label, value) in [
         ("moduleEventChainSha256", evidence.module_event_chain_sha256.as_str()),
@@ -227,7 +227,7 @@ pub fn validate_continuous_evidence_v2(
         || now_ms.saturating_sub(evidence.last_sensor_heartbeat_unix_ms) > CONTINUOUS_EVIDENCE_MAX_STALENESS_MS
         || now_ms.saturating_sub(evidence.last_guard_heartbeat_unix_ms) > CONTINUOUS_EVIDENCE_MAX_STALENESS_MS
     {
-        return Err("Guard Attestation v2 continuous evidence is stale".to_string());
+        return Err("Данные непрерывной защиты в аттестации Guard v2 устарели".to_string());
     }
     let expected = recompute_continuous_evidence_sha256(evidence);
     if !expected.eq_ignore_ascii_case(&evidence.evidence_sha256) {
@@ -241,7 +241,7 @@ pub fn collect_windows_continuous_evidence_v2(
     status: &ProcessStatus,
 ) -> Result<WindowsContinuousEvidenceV2, String> {
     if status.id != process_id || status.state != "running" {
-        return Err("Guard Attestation v2: требуется «the requested running runtime process»".to_string());
+        return Err("Для аттестации Guard v2 требуется запрошенный работающий процесс Runtime".to_string());
     }
     let runtime_pid = status.pid.ok_or_else(|| "Guard Attestation v2 runtime PID unavailable".to_string())?;
     let sensor: &WindowsSensorReport = status.windows_sensor.as_ref().ok_or_else(|| {
@@ -265,7 +265,7 @@ pub fn collect_windows_continuous_evidence_v2(
         || !jvm.active || !jvm.certified_major || jvm.violation_count != 0 || jvm.foreign_executable_transition_count != 0 || jvm.unknown_executable_transition_count != 0
         || !continuous.active || continuous.violation_count != 0
     {
-        return Err("Guard Attestation v2 runtime protection reports a violation".to_string());
+        return Err("Защита Runtime сообщила о нарушении в аттестации Guard v2".to_string());
     }
     let collected_at_unix_ms = now_unix_ms()?;
     let mut evidence = WindowsContinuousEvidenceV2 {
@@ -349,7 +349,7 @@ pub fn build_windows_attestation_v2(
     continuous_evidence: WindowsContinuousEvidenceV2,
 ) -> Result<GuardRemoteAttestationV2, String> {
     if challenge_id.trim().is_empty() || challenge_id.len() > 160 || challenge.is_empty() || challenge.len() > 4096 {
-        return Err("Guard Attestation v2 challenge malformed".to_string());
+        return Err("Некорректный проверочный запрос аттестации Guard v2".to_string());
     }
     if base_attestation.challenge_id != challenge_id
         || base_attestation.challenge_sha256 != crate::attestation::challenge_sha256(challenge)

@@ -58,10 +58,10 @@ fn safe_argument(t:&str,arg:&str)->bool {
 pub fn validate_actions(cat:&ComponentCatalog)->Result<(),String> {
     for c in &cat.components {
         if cat.schema_version!="5.0" {
-            if !c.actions.is_empty(){return Err(format!("unsigned actions on pre-v5 component {}",c.id))}
+            if !c.actions.is_empty(){return Err(format!("Неподписанные действия компонента до v5: {}",c.id))}
             continue;
         }
-        if c.actions.len()>64{return Err(format!("too many optional actions in {}",c.id))}
+        if c.actions.len()>64{return Err(format!("Слишком много дополнительных действий в {}",c.id))}
         let owned:HashSet<&str>=c.files.iter().map(String::as_str).collect();
         let mut seen=HashSet::new();
         for a in &c.actions {
@@ -71,7 +71,7 @@ pub fn validate_actions(cat:&ComponentCatalog)->Result<(),String> {
                         a.path.starts_with('/')||a.path.bytes().any(|b|matches!(b,b'\\'|b':'|b'\0'|b'\r'|b'\n'))||
                         a.path.split('/').any(|x|x.is_empty()||x=="."||x=="..")||
                         (a.kind=="ClassPath"&&!a.path.to_ascii_lowercase().ends_with(".jar")) {
-                        return Err(format!("{} {} references unsafe/unowned file {}",c.id,a.kind,a.path))
+                        return Err(format!("{} {} ссылается на небезопасный или не принадлежащий компоненту файл {}",c.id,a.kind,a.path))
                     }
                     if !seen.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){
                         return Err(format!("Обнаружен дубликат: «action on {}»",c.id))
@@ -123,8 +123,8 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
             match action.kind.as_str() {
                 "File"=>{ /* подписанный файл уже подготовлен механизмом active_files */ },
                 "ClassPath"=>{
-                    if !plan.main_module.is_empty(){return Err(format!("component {} classpath action is incompatible with modular entrypoint",component.id))}
-                    if !active.contains(&action.path){return Err(format!("component {} classpath file is not installed: {}",component.id,action.path))}
+                    if !plan.main_module.is_empty(){return Err(format!("Действие classpath компонента {} несовместимо с модульной точкой входа",component.id))}
+                    if !active.contains(&action.path){return Err(format!("Файл classpath компонента {} не установлен: {}",component.id,action.path))}
                     let joined=crate::safe_join(root,&action.path)?.to_string_lossy().to_string();
                     if !seen_classpath.insert(joined.clone()){return Err(format!("Обнаружен дубликат: «optional classpath entry: {}»",action.path))}
                     plan.classpath_entries.push(joined);
@@ -141,7 +141,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
                         plan.game_args.push(arg.clone());
                     }
                 },
-                _=>return Err(format!("unsigned/unknown action in {}",component.id))
+                _=>return Err(format!("Неподписанное или неизвестное действие в {}",component.id))
             }
         }
     }

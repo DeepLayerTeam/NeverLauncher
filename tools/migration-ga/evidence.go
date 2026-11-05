@@ -33,7 +33,7 @@ func verifyExecutable(c Check) error {
 		return err
 	}
 	if actual != c.ExecutableSHA256 {
-		return errors.New("GA check executable SHA-256 differs from approved plan")
+		return errors.New("SHA-256 исполняемого файла проверки GA отличается от утверждённого плана")
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func verifyEvidence(b Bundle, dir string) error {
 		return err
 	}
 	if len(entries) != len(requiredForClass(b.ReferenceClass))*2 {
-		return errors.New("incomplete or unexpected evidence files")
+		return errors.New("Неполный или неожиданный набор файлов с доказательными данными")
 	}
 	approved := make(map[string]bool, len(requiredForClass(b.ReferenceClass))*2)
 	for _, name := range requiredForClass(b.ReferenceClass) {

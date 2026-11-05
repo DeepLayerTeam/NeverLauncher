@@ -116,7 +116,7 @@ impl GuardSupervisor {
             let image=File::open(&executable).map_err(|e|format!("Ошибка: «open verified Guard image»: {e}"))?;
             let observed=sha256_open_file(&image)?;
             if !ct_eq(observed.as_bytes(),expected.as_bytes()) {
-                return Err("Guard image changed after package manifest verification".into());
+                return Err("Исполняемый образ Guard изменился после проверки манифеста пакета".into());
             }
             Some(image)
         } else { None };
@@ -147,7 +147,7 @@ impl GuardSupervisor {
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
         let (stream,session_key,_handshake_status)=match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),client_authenticate(stream,&endpoint,parent_pid,guard_pid,&secret)).await {
-            Ok(Ok(v))=>v, Ok(Err(e))=>{secret.zeroize();let _=child.kill().await;return Err(e)}, Err(_)=>{secret.zeroize();let _=child.kill().await;return Err("Guard Linux authenticated IPC handshake timeout".into())}
+            Ok(Ok(v))=>v, Ok(Err(e))=>{secret.zeroize();let _=child.kill().await;return Err(e)}, Err(_)=>{secret.zeroize();let _=child.kill().await;return Err("Истекло время ожидания защищённого рукопожатия IPC Guard в Linux".into())}
         };
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
@@ -163,7 +163,7 @@ impl GuardSupervisor {
         let mut state=self.inner.lock().await;
         let handle=state.as_mut().ok_or("Linux Guard process was never authenticated")?;
         if handle.child.try_wait().map_err(|e|e.to_string())?.is_some(){
-            return Err("Linux Guard process exited during game".into());
+            return Err("Процесс Linux Guard завершился во время игры".into());
         }
         let value=send_command(handle,"ping","").await?;
         if value.get("pong").and_then(Value::as_bool)!=Some(true){
@@ -189,7 +189,7 @@ fn runtime_dir()->Result<PathBuf,String>{
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(format!("/run/user/{uid}")));
     let m=std::fs::metadata(&p).map_err(|e|format!("Ошибка: «stat Linux runtime directory {}»: {e}",p.display()))?;
-    if !m.is_dir()||m.uid()!=uid||(m.mode()&0o077)!=0{return Err("Linux runtime directory: требуется «owned by current uid with no group/world access»".into())}
+    if !m.is_dir()||m.uid()!=uid||(m.mode()&0o077)!=0{return Err("Каталог Linux Runtime должен принадлежать текущему UID и быть недоступным для группы и остальных пользователей".into())}
     let d=p.join("launcher"); std::fs::create_dir_all(&d).map_err(|e|format!("Ошибка: «create runtime dir»: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{ let mut r=[0u8;8];OsRng.fill_bytes(&mut r);Ok(runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)))) }
@@ -218,21 +218,21 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
     validate_secure_file(&detached,false)?;
     let bytes=std::fs::read(&detached).map_err(|e|format!("Отсутствует: подпись манифеста Linux: {e}"))?;
     if bytes.len()!=129 || bytes.last()!=Some(&b'\n') {
-        return Err("Некорректное значение: «Linux manifest detached signature format»".into());
+        return Err("Некорректный формат отдельной подписи манифеста Linux".into());
     }
-    let hex_text=std::str::from_utf8(&bytes[..128]).map_err(|_|"Некорректное значение: «Linux manifest signature encoding»")?;
-    let sig_bytes=hex::decode(hex_text).map_err(|_|"Некорректное значение: «Linux manifest signature hex»")?;
-    let signature=Signature::from_slice(&sig_bytes).map_err(|_|"Некорректное значение: «Linux manifest signature length»")?;
+    let hex_text=std::str::from_utf8(&bytes[..128]).map_err(|_|"Некорректная кодировка подписи манифеста Linux")?;
+    let sig_bytes=hex::decode(hex_text).map_err(|_|"Некорректная шестнадцатеричная подпись манифеста Linux")?;
+    let signature=Signature::from_slice(&sig_bytes).map_err(|_|"Некорректная длина подписи манифеста Linux")?;
     let mut message=Vec::with_capacity(GUARD_MANIFEST_DOMAIN.len()+raw.len());
     message.extend_from_slice(GUARD_MANIFEST_DOMAIN);
     message.extend_from_slice(raw);
     key.verify(&message,&signature)
-        .map_err(|_|"Ошибка: «Linux production package manifest signature verification»".to_string())
+        .map_err(|_|"Ошибка проверки подписи манифеста промышленного пакета Linux".to_string())
 }
 
 fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
-    let dd=desktop.parent().ok_or("Родительский процесс Desktop отсутствует")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует: «guard parent»")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and Guard: требуется «in same package directory»".into())}
+    let dd=desktop.parent().ok_or("Родительский процесс Desktop отсутствует")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует: «guard parent»")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop и Guard должны находиться в одном каталоге пакета".into())}
     let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?;
     verify_linux_manifest_signature(&mp,&raw)?;
     let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Некорректное значение: «Linux package manifest JSON»: {e}"))?;
@@ -304,7 +304,7 @@ pub async fn run_linux_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),
     if endpoint.exists(){return Err("Unix-сокет Guard уже существует".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("Не удалось выполнить bind для {}: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
     let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("Ошибка: проверка прав доступа к Unix-сокету Guard".into())}
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
-    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Истёк срок ожидания аутентификации Guard при запуске".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Guard accept timeout".to_string())?.map_err(|e|e.to_string())?;
+    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Истёк срок ожидания аутентификации Guard при запуске".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Истекло время ожидания соединения с Guard".to_string())?.map_err(|e|e.to_string())?;
         if verify_peer(&stream,parent_pid,current_uid()).is_err(){continue}
         match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),server_authenticate(stream,&endpoint,parent_pid,started,&secret,&policy,&hard)).await {Ok(Ok((stream,key)))=>{secret.zeroize();let r=serve_commands(stream,key,parent_pid,started,policy,hard).await;let _=std::fs::remove_file(&endpoint);return r},_=>continue}
     }
@@ -425,7 +425,7 @@ async fn serve_commands(
                     lifetime_job_enforced: true,
                     package_manifest_verified: false,
                     started_at_unix: started,
-                    message: "Guard Linux production boundary ready".into(),
+                    message: "Защищённая граница Guard для Linux готова к работе".into(),
                 })
                 .map_err(|err| format!("Ошибка: сериализация состояния Guard: {err}"))?,
                 false,

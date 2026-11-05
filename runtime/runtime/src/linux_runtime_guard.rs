@@ -103,7 +103,7 @@ fn collect_java_natives(home: &Path) -> Result<BTreeMap<PathBuf, String>, String
             }
             if ty.is_dir() { pending.push(entry.path()); }
             else if ty.is_file() && native_name(&entry.path()) {
-                if result.len() >= MAX_JRE_FILES { return Err("Linux Guard JRE native inventory limit".into()); }
+                if result.len() >= MAX_JRE_FILES { return Err("Превышен лимит проверки нативных файлов JRE в Linux Guard".into()); }
                 result.insert(entry.path(), sha256_file(&entry.path())?);
             }
         }
@@ -131,17 +131,17 @@ fn trusted_system_library(path:&Path)->Result<bool,String> {
 }
 fn check_process(pid: u32, start: u64) -> Result<(), String> {
     if start_ticks_from_stat(&read_proc(pid, "stat")?)? != start {
-        return Err("Linux Guard game process identity changed (PID reuse)".into());
+        return Err("Изменилась идентичность игрового процесса Linux Guard (PID использован повторно)".into());
     }
     let status = read_proc(pid, "status")?;
     if status_value(&status, "PPid:")? != std::process::id().to_string() {
         return Err("Обнаружено изменение: родительский процесс JVM Guard в Linux".into());
     }
     if status_value(&status, "TracerPid:")? != "0" {
-        return Err("Linux Guard JVM is being traced".into());
+        return Err("Обнаружена трассировка JVM в Linux Guard".into());
     }
     if status_value(&status, "NoNewPrivs:")? != "1" {
-        return Err("Linux Guard JVM no-new-privs disabled".into());
+        return Err("Для JVM Linux Guard отключён режим no-new-privs".into());
     }
     let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
     if pgid < 0 || pgid as u32 != pid {
@@ -160,7 +160,7 @@ fn verify_inode(path: &Path, proc_object: &Path) -> Result<(), String> {
         Err(e) => return Err(e.to_string()),
     };
     if on_disk.dev() != opened.dev() || on_disk.ino() != opened.ino() {
-        return Err(format!("Linux Guard opened object replaced: {}", path.display()));
+        return Err(format!("Подменён открытый объект Linux Guard: {}", path.display()));
     }
     Ok(())
 }
@@ -172,7 +172,7 @@ impl LinuxRuntimeGuard0508 {
         let java_home = java.parent().and_then(Path::parent)
             .ok_or("Linux Guard Java home unavailable")?.to_path_buf();
         let expected = fs::metadata(&java).map_err(|e| e.to_string())?;
-        if !expected.is_file() { return Err("Linux Guard Java executable not a file".into()); }
+        if !expected.is_file() { return Err("Исполняемый файл Java для Linux Guard не является обычным файлом".into()); }
         let root = verified.linux_root().to_path_buf();
         let signed = verified.linux_signed_artifacts().clone();
         let java_native_baseline = if java_home.starts_with(&root) {
@@ -205,11 +205,11 @@ impl LinuxRuntimeGuard0508 {
         let file = format!("/proc/{}/cmdline", self.pid);
         let bytes = fs::read(&file).map_err(|e| format!("Недоступно: аргументы запуска JVM Guard в Linux: {e}"))?;
         if bytes.is_empty() || bytes.len() > MAX_PROC_BYTES || bytes.last() != Some(&0) {
-            return Err("Linux Guard JVM argv incomplete".into());
+            return Err("Неполный список аргументов JVM в Linux Guard".into());
         }
         let argv = bytes.split(|c| *c == 0).filter(|a| !a.is_empty()).collect::<Vec<_>>();
         if argv.len() < 1 + self.expected_jvm_args.len() {
-            return Err("Linux Guard JVM argv truncated".into());
+            return Err("Обрезан список аргументов JVM в Linux Guard".into());
         }
         for (actual, expected) in argv.iter().skip(1).zip(&self.expected_jvm_args) {
             if *actual != expected.as_bytes() {
@@ -222,13 +222,13 @@ impl LinuxRuntimeGuard0508 {
     fn verify_mapped_file(&self, path: &Path, proc_object: Option<&Path>, executable: bool) -> Result<(), String> {
         if path.starts_with(&self.java_home) {
             if path.starts_with(&self.root) && executable && path != self.java_executable && !native_name(path) {
-                return Err(format!("Linux Guard unknown executable inside Java home: {}", path.display()));
+                return Err(format!("Неизвестный исполняемый файл в каталоге Java для Linux Guard: {}", path.display()));
             }
             if path.starts_with(&self.root) && native_name(path) {
                 let expected = self.java_native_baseline.get(path)
                     .ok_or_else(|| format!("Linux Guard unapproved Java native module: {}", path.display()))?;
                 if &sha256_file(path)? != expected {
-                    return Err(format!("Linux Guard Java native module modified: {}", path.display()));
+                    return Err(format!("Изменён нативный модуль Java в Linux Guard: {}", path.display()));
                 }
             }
             if let Some(fd) = proc_object { verify_inode(path, fd)?; }
@@ -240,7 +240,7 @@ impl LinuxRuntimeGuard0508 {
             let expected=self.external.get(path).ok_or_else(||format!(
                 "Linux Guard external native module not approved: {}",path.display()))?;
             if &crate::guard_compatibility_0502::verified_external_native_hash(path)?!=expected {
-                return Err(format!("Linux Guard external overlay modified: {}",path.display()));
+                return Err(format!("Изменён внешний оверлей Linux Guard: {}",path.display()));
             }
             if let Some(fd)=proc_object {verify_inode(path,fd)?;}
             return Ok(())
@@ -249,10 +249,10 @@ impl LinuxRuntimeGuard0508 {
         let expected = self.signed.get(path)
             .ok_or_else(|| format!("Linux Guard unauthorized game module: {}", path.display()))?;
         if fs::symlink_metadata(path).map_err(|e| e.to_string())?.file_type().is_symlink() {
-            return Err(format!("Linux Guard game module symlink: {}", path.display()));
+            return Err(format!("Обнаружена символическая ссылка на игровой модуль Linux Guard: {}", path.display()));
         }
         if &sha256_file(path)? != expected {
-            return Err(format!("Linux Guard modified game module: {}", path.display()));
+            return Err(format!("Изменён игровой модуль Linux Guard: {}", path.display()));
         }
         if let Some(fd) = proc_object { verify_inode(path, fd)?; }
         Ok(())
@@ -263,7 +263,7 @@ impl LinuxRuntimeGuard0508 {
         let mut lines = 0usize;
         for line in BufReader::new(maps).lines() {
             lines += 1;
-            if lines > MAX_MAPPINGS { return Err("Linux Guard maps limit exceeded".into()); }
+            if lines > MAX_MAPPINGS { return Err("Превышен лимит отображений памяти Linux Guard".into()); }
             let line = line.map_err(|e| e.to_string())?;
             let mut fields = line.split_whitespace();
             let _address = fields.next();
@@ -276,7 +276,7 @@ impl LinuxRuntimeGuard0508 {
             let original = if deleted { &filename[..filename.len()-10] } else { &filename };
             let path = Path::new(original);
             if deleted && (path.starts_with(&self.root) || path.starts_with(&self.java_home)) {
-                return Err(format!("Linux Guard mapped executable was deleted: {}", path.display()));
+                return Err(format!("Удалён исполняемый файл, отображённый в память Linux Guard: {}", path.display()));
             }
             // Любое исполняемое отображение файла из игрового корня считается
             // кодом независимо от расширения; .dat не служит обходом.
@@ -285,7 +285,7 @@ impl LinuxRuntimeGuard0508 {
                 let mapped_inode=inode.parse::<u64>().map_err(|_|"Linux Guard bad overlay mapping inode")?;
                 let actual_inode=fs::metadata(path).map_err(|e|format!("Linux Guard overlay map vanished: {e}"))?.ino();
                 if mapped_inode==0 || mapped_inode!=actual_inode {
-                    return Err(format!("Linux Guard external overlay inode replaced: {}",path.display()));
+                    return Err(format!("Заменён inode внешнего оверлея Linux Guard: {}",path.display()));
                 }
             }
         }
@@ -296,7 +296,7 @@ impl LinuxRuntimeGuard0508 {
         let dir = format!("/proc/{}/fd", self.pid);
         let entries = fs::read_dir(&dir).map_err(|e| format!("Недоступно: список файловых дескрипторов Guard в Linux: {e}"))?;
         for (i, entry) in entries.enumerate() {
-            if i >= MAX_FDS { return Err("Linux Guard fd inventory limit exceeded".into()); }
+            if i >= MAX_FDS { return Err("Превышен лимит открытых дескрипторов Linux Guard".into()); }
             let entry = entry.map_err(|e| e.to_string())?;
             let opened = match fs::read_link(entry.path()) {
                 Ok(path) => path,
@@ -309,7 +309,7 @@ impl LinuxRuntimeGuard0508 {
             let path = Path::new(name);
             if !path.is_absolute() { continue; } // pipe/socket/anon_inode
             if deleted && (path.starts_with(&self.root) || path.starts_with(&self.java_home)) && game_code_name(path) {
-                return Err(format!("Linux Guard opened game/JRE file deleted: {}", path.display()));
+                return Err(format!("Удалён открытый файл игры или JRE в Linux Guard: {}", path.display()));
             }
             if !game_code_name(path) { continue; }
             if path.starts_with(&self.root) || path.starts_with(&self.java_home) {

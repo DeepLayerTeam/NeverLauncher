@@ -33,7 +33,7 @@ struct Identity {
 
 fn process_identity(pid: u32) -> Result<Identity, String> {
     if pid == 0 || pid > i32::MAX as u32 {
-        return Err("macOS Guard invalid JVM PID".into());
+        return Err("Некорректный PID процесса JVM в macOS Guard".into());
     }
     // proc_bsdinfo — документированная структура Darwin из <sys/proc_info.h>. Проверяйте
     // возвращённый размер; неполная или запрещённая инспекция никогда не проходит.
@@ -63,7 +63,7 @@ fn actual_executable(pid: u32) -> Result<PathBuf, String> {
         return Err(format!("Guard для macOS: не удалось определить исполняемый файл JVM: {}", std::io::Error::last_os_error()));
     }
     if buffer[..count as usize].contains(&0) {
-        return Err("macOS Guard malformed JVM executable path".into());
+        return Err("Некорректный путь к исполняемому файлу JVM в macOS Guard".into());
     }
     let path = std::str::from_utf8(&buffer[..count as usize])
         .map_err(|_| "macOS Guard non-UTF8 JVM executable path")?;
@@ -89,13 +89,13 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 fn check_identity(current: Identity, original: Identity) -> Result<(), String> {
     if current.pid != original.pid || current.started_seconds != original.started_seconds ||
        current.started_microseconds != original.started_microseconds {
-        return Err("macOS Guard JVM PID was reused".into());
+        return Err("PID процесса JVM в macOS Guard использован повторно".into());
     }
     if current.parent != original.parent || current.owner != original.owner ||
        current.group != original.group || current.group != current.pid {
         return Err("Обнаружено изменение: родительский процесс, владелец или группа процессов JVM Guard в macOS".into());
     }
-    if current.traced { return Err("macOS Guard JVM is being traced".into()); }
+    if current.traced { return Err("Обнаружена трассировка JVM в macOS Guard".into()); }
     Ok(())
 }
 
@@ -114,11 +114,11 @@ impl MacOSRuntimeGuard0509 {
     pub fn attach(pid: u32, java: &Path) -> Result<Self, String> {
         let expected = fs::canonicalize(java).map_err(|e|format!("Отсутствует: настроенная Java для Guard в macOS: {e}"))?;
         let actual = actual_executable(pid)?;
-        if expected != actual { return Err(format!("macOS Guard unexpected JVM executable: {}",actual.display())); }
+        if expected != actual { return Err(format!("Неожиданный исполняемый файл JVM в macOS Guard: {}",actual.display())); }
         let identity = process_identity(pid)?;
         if identity.parent != std::process::id() || identity.owner != unsafe { libc::geteuid() } ||
             identity.group != pid || identity.traced {
-            return Err("macOS Guard JVM failed parent/owner/group/trace policy".into());
+            return Err("JVM не соответствует политике родителя, владельца, группы или трассировки macOS Guard".into());
         }
         let meta = fs::metadata(&actual).map_err(|e| e.to_string())?;
         let signature = verify_macos_code_signature(&actual)?;
@@ -145,7 +145,7 @@ impl MacOSRuntimeGuard0509 {
         if actual != self.executable { return Err("Обнаружено изменение: образ запущенной JVM Guard в macOS".into()); }
         let meta = fs::metadata(&actual).map_err(|e| e.to_string())?;
         if meta.dev() != self.device || meta.ino() != self.inode || sha256_file(&actual)? != self.digest {
-            return Err("macOS Guard JVM executable replaced or modified".into());
+            return Err("Исполняемый файл JVM в macOS Guard подменён или изменён".into());
         }
         let sig = verify_macos_code_signature(&actual)?;
         if !sig.valid || sig.team_identifier.as_deref() != Some(self.signing_team.as_str()) ||

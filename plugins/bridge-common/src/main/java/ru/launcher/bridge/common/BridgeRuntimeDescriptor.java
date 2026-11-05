@@ -35,7 +35,7 @@ public record BridgeRuntimeDescriptor(
             java.util.Set<String> allowed = java.util.Set.copyOf(adapterProfile.runtimeCapabilities(List.of()));
             for (String claimed : normalized) {
                 if (claimed.startsWith("adapter.") && !allowed.contains(claimed)) {
-                    throw new IllegalArgumentException("unsupported adapter capability claim: " + claimed);
+                    throw new IllegalArgumentException("Неподдерживаемое объявление возможности адаптера: " + claimed);
                 }
             }
             normalized.addAll(allowed);

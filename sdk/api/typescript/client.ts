@@ -10,7 +10,7 @@ export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string, readonly requestId: string) { super(message); this.name = 'ApiError'; }
 }
 export function resolvePath(template: string, parameters: Record<string, string> = {}): string {
-  if (!template.startsWith('/') || template.includes('?') || template.includes('#')) throw new Error('invalid route');
+  if (!template.startsWith('/') || template.includes('?') || template.includes('#')) throw new Error('Некорректный маршрут API');
   const used = new Set<string>();
   const path = template.replace(/\{([^{}]+)\}/g, (_, name: string) => {
     const value = parameters[name]; used.add(name);
@@ -18,7 +18,7 @@ export function resolvePath(template: string, parameters: Record<string, string>
     return encodeURIComponent(value);
   });
   for (const key of Object.keys(parameters)) if (!used.has(key)) throw new Error(`unexpected parameter: ${key}`);
-  if (/[{}]/.test(path)) throw new Error('unresolved parameter');
+  if (/[{}]/.test(path)) throw new Error('Не подставлено значение параметра маршрута');
   return path;
 }
 export type RequestOptions = {
@@ -34,8 +34,8 @@ export class NeverLauncherAPI {
   constructor(baseURL: string, private readonly token: string = '', private readonly transport: typeof fetch = fetch) {
     const u = new URL(baseURL);
     const host = u.hostname.replace(/^\[|\]$/g, '');
-    if (u.username || u.password || u.search || u.hash || (u.pathname !== '/' && u.pathname !== '')) throw new Error('invalid API base URL');
-    if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1', '::1'].includes(host))) throw new Error('API requires HTTPS');
+    if (u.username || u.password || u.search || u.hash || (u.pathname !== '/' && u.pathname !== '')) throw new Error('Некорректный базовый URL API');
+    if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1', '::1'].includes(host))) throw new Error('Для API требуется HTTPS');
     this.baseURL = u.origin;
   }
   async call<T = unknown>(operationId: OperationId, options: RequestOptions = {}): Promise<T> {
@@ -43,18 +43,18 @@ export class NeverLauncherAPI {
     return this.request<T>(op.method, resolvePath(op.path, options.params), options);
   }
   async request<T = unknown>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
-    if (!/^\/(?:api\/v1\/|health$|ready$|metrics$|api\/profiles\/minecraft|api\/user\/profile\/|authserver\/|sessionserver\/)/.test(path) || path.includes('..') || path.includes('?') || path.includes('#')) throw new Error('unsafe API route');
-    if (options.body !== undefined && options.rawBody !== undefined) throw new Error('select one request body');
+    if (!/^\/(?:api\/v1\/|health$|ready$|metrics$|api\/profiles\/minecraft|api\/user\/profile\/|authserver\/|sessionserver\/)/.test(path) || path.includes('..') || path.includes('?') || path.includes('#')) throw new Error('Небезопасный маршрут API');
+    if (options.body !== undefined && options.rawBody !== undefined) throw new Error('Выберите только один способ передачи тела запроса');
     const type = options.responseType ?? 'json';
-    if (!(['json', 'text', 'bytes', 'stream'] as ResponseType[]).includes(type)) throw new Error('unsupported response type');
+    if (!(['json', 'text', 'bytes', 'stream'] as ResponseType[]).includes(type)) throw new Error('Неподдерживаемый тип ответа');
     const limit = options.maxResponseBytes ?? (type === 'stream' ? MAX_STREAM_BODY : MAX_BODY);
-    if (!Number.isSafeInteger(limit) || limit <= 0 || limit > MAX_STREAM_BODY) throw new Error('invalid response size limit');
+    if (!Number.isSafeInteger(limit) || limit <= 0 || limit > MAX_STREAM_BODY) throw new Error('Некорректный лимит размера ответа');
     const url = new URL(path, this.baseURL);
     Object.entries(options.query ?? {}).forEach(([k, v]) => url.searchParams.set(k, String(v)));
     const headers: Record<string, string> = { Accept: type === 'json' ? 'application/json' : '*/*' };
     if (this.token) headers.Authorization = `Bearer ${this.token}`;
     if (options.idempotencyKey) {
-      if (/[\r\n]/.test(options.idempotencyKey)) throw new Error('invalid idempotency key');
+      if (/[\r\n]/.test(options.idempotencyKey)) throw new Error('Некорректный ключ идемпотентности');
       headers['Idempotency-Key'] = options.idempotencyKey;
     }
     let body: BodyInit | undefined;
@@ -68,7 +68,7 @@ export class NeverLauncherAPI {
     const declared = response.headers.get('content-length');
     if (declared !== null && (/^\d+$/.test(declared) === false || Number(declared) > max)) {
       await response.body?.cancel();
-      throw new Error('API response exceeds configured size limit');
+      throw new Error('Ответ API превышает установленный лимит размера');
     }
     if (!failed && type === 'stream') {
       if (!response.body) return new ReadableStream<Uint8Array>({ start(c) { c.close(); } }) as T;
@@ -81,7 +81,7 @@ export class NeverLauncherAPI {
             const { value, done } = await reader.read();
             if (done) { finished = true; reader.releaseLock(); controller.close(); return; }
             total += value.byteLength;
-            if (total > max) { await reader.cancel('response size limit'); throw new Error('API response exceeds configured size limit'); }
+            if (total > max) { await reader.cancel('Лимит размера ответа'); throw new Error('Ответ API превышает установленный лимит размера'); }
             controller.enqueue(value);
           } catch (error) {
             if (!finished) { finished = true; try { await reader.cancel(error); } catch { /* в потоке уже произошла ошибка */ } reader.releaseLock(); }
@@ -103,7 +103,7 @@ export class NeverLauncherAPI {
           const { value, done } = await reader.read();
           if (done) break;
           total += value.byteLength;
-          if (total > max) { await reader.cancel('response size limit'); throw new Error('API response exceeds configured size limit'); }
+          if (total > max) { await reader.cancel('Лимит размера ответа'); throw new Error('Ответ API превышает установленный лимит размера'); }
           parts.push(value);
         }
       } finally { reader.releaseLock(); }
@@ -122,7 +122,7 @@ export class NeverLauncherAPI {
     const text = new TextDecoder('utf-8', { fatal: true }).decode(raw);
     if (type === 'text') return text as T;
     if (!text.trim()) return undefined as T;
-    try { return JSON.parse(text) as T; } catch { throw new Error('invalid JSON API response'); }
+    try { return JSON.parse(text) as T; } catch { throw new Error('Некорректный ответ API в формате JSON'); }
   }
   async checkCompatibility(): Promise<void> {
     // Версия 0.45.11 не отправляла заголовок контракта; запасной источник — версия продукта в

@@ -112,7 +112,7 @@ func decodeStrict05011(raw []byte, dest any) error {
 		}
 		return err
 	}
-	return errors.New("trailing JSON")
+	return errors.New("Лишние данные после JSON")
 }
 func mergeRevocations05011(current, previous []string) ([]string, error) {
 	set := map[string]bool{}

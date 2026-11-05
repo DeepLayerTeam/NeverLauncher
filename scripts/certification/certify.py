@@ -363,7 +363,7 @@ def main():
                 or report.get("commit") != sha
                 or not sha
             ):
-                raise ValueError("Несовпадение: «report not passed or commit»")
+                raise ValueError("Отчёт не подтверждает успешную проверку или не совпадает коммит")
             suites.append(
                 {
                     "id": case,

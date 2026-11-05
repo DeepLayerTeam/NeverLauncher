@@ -85,7 +85,7 @@ pub fn validate_windows_guard_policy_report(
         || policy.policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
         || !policy.enforced
     {
-        return Err("Несовпадение: «Guard Windows process policy schema/version/enforcement»".to_string());
+        return Err("Не совпадает схема, версия или состояние применения политики процессов Guard в Windows".to_string());
     }
     let details = policy
         .windows
@@ -152,7 +152,7 @@ pub fn validate_windows_guard_policy_report(
         }
     }
     if !capabilities.guard_lifetime_job_bound || capabilities.architecture.trim().is_empty() {
-        return Err("Guard Windows capability model is incomplete".to_string());
+        return Err("Модель возможностей Guard в Windows заполнена не полностью".to_string());
     }
     Ok(())
 }
@@ -641,7 +641,7 @@ mod windows_impl {
             .checked_add(listed.saturating_mul(size_of::<usize>()))
             .ok_or_else(|| "Guard Job Object process-list size overflow".to_string())?;
         if required > buffer.len() {
-            return Err("Guard Job Object process list exceeds verification buffer".to_string());
+            return Err("Список процессов Job Object в Guard превышает размер буфера проверки".to_string());
         }
         let mut result = HashSet::with_capacity(listed);
         for index in 0..listed {
@@ -686,7 +686,7 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.0, &mut entry) } != 0;
         }
         if !parent_by_pid.contains_key(&root_pid) {
-            return Err(format!("Guard runtime root PID {root_pid} disappeared from process snapshot"));
+            return Err(format!("Корневой PID Runtime Guard {root_pid} отсутствует в снимке процессов"));
         }
         let job_members = job_process_ids(job)?;
         if !job_members.contains(&root_pid) {
@@ -741,7 +741,7 @@ mod windows_impl {
             if exit_code != STILL_ACTIVE_EXIT_CODE {
                 unsafe { let _ = CloseHandle(process); }
                 if pid == root_pid {
-                    return Err(format!("Guard runtime root PID {pid} terminated during Job Object verification"));
+                    return Err(format!("Корневой PID Runtime Guard {pid} завершился во время проверки Job Object"));
                 }
                 continue;
             }
@@ -894,7 +894,7 @@ mod windows_impl {
                 | windows_sys::Win32::System::JobObjects::JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK)
             != 0
         {
-            return Err("Windows runtime Job Object unexpectedly permits process breakaway".to_string());
+            return Err("Job Object в Windows Runtime неожиданно допускает выход процессов из группы".to_string());
         }
 
         resume_primary_thread(pid)?;

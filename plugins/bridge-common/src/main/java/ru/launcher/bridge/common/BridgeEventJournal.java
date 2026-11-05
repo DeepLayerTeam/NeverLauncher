@@ -45,7 +45,7 @@ public final class BridgeEventJournal {
         this.serverId = serverId == null ? "" : serverId.trim();
         this.runtimeId = runtimeId == null ? "" : runtimeId.trim().toLowerCase();
         this.identity = identity;
-        if (this.runtimeId.length() != 64) throw new IOException("event journal runtimeId is invalid");
+        if (this.runtimeId.length() != 64) throw new IOException("Некорректный runtimeId журнала событий");
         Path parent = this.path.getParent();
         if (parent != null) Files.createDirectories(parent);
         loadOrRotate();

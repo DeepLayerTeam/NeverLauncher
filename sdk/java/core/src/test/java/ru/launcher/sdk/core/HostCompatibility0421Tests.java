@@ -106,7 +106,7 @@ public final class HostCompatibility0421Tests {
             try{client.capability("runtime.config.get",Map.of());throw new AssertionError("pre-hello capability accepted");}catch(IllegalStateException ok){assertions++;}
             server.emptyReady=true;client.connect();
             try{client.ready();throw new AssertionError("missing ready acknowledgement accepted");}
-            catch(IOException ex){check(ex.getMessage().contains("readiness"),"missing readiness payload rejected");}
+            catch(IOException ex){check(ex.getMessage().contains("готовность"),"missing readiness payload rejected");}
             check(server.ready.get()==1,"ready was transmitted");
         }
     }

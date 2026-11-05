@@ -50,7 +50,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         ProxyServer proxy = getProxy();
         BungeeFamilyPlatform actual = BungeeFamilyPlatform.detect(proxy);
         if (actual != expectedPlatform) {
-            throw new IllegalStateException("Launcher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + "; install launcher-" + actual.id() + "-bridge instead");
+            throw new IllegalStateException("Launcher " + expectedPlatform.displayName() + " Bridge не может работать на обнаруженной платформе " + actual.displayName() + "; install launcher-" + actual.id() + "-bridge вместо него");
         }
         try {
             Path configPath = getDataFolder().toPath().resolve("config.yml");

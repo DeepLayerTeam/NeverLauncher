@@ -129,10 +129,10 @@ public final class BridgeAuthResponse0287 {
     }
 
     private static long wholeNumber(Object value) {
-        if (!(value instanceof Number number)) throw new IllegalArgumentException("integer missing");
+        if (!(value instanceof Number number)) throw new IllegalArgumentException("Отсутствует целое число");
         double d = number.doubleValue();
         if (!Double.isFinite(d) || d != Math.rint(d) || d > Long.MAX_VALUE || d < Long.MIN_VALUE)
-            throw new IllegalArgumentException("invalid integer");
+            throw new IllegalArgumentException("Некорректное целое число");
         return (long) d;
     }
 
@@ -172,7 +172,7 @@ public final class BridgeAuthResponse0287 {
             Json p = new Json(input);
             Map<String, Object> result = object(p.value(0));
             p.space();
-            if (p.index != input.length()) throw new IllegalArgumentException("trailing JSON");
+            if (p.index != input.length()) throw new IllegalArgumentException("Лишние данные после JSON");
             return result;
         }
         private void space() {
@@ -254,12 +254,12 @@ public final class BridgeAuthResponse0287 {
                         out.append((char) Integer.parseInt(hex, 16));
                         index += 4;
                     }
-                    default -> throw new IllegalArgumentException("invalid JSON escape");
+                    default -> throw new IllegalArgumentException("Некорректная экранирующая последовательность JSON");
                 }
             }
         }
         private Object literal(String expected, Object result) {
-            if (!input.startsWith(expected, index)) throw new IllegalArgumentException("invalid JSON literal");
+            if (!input.startsWith(expected, index)) throw new IllegalArgumentException("Некорректный литерал JSON");
             index += expected.length();
             return result;
         }

@@ -55,7 +55,7 @@ def validate_report(raw: object) -> dict:
             raise ValueError(f"Некорректный формат: «Guard check status»: {item['id']}")
         by_id[item["id"]] = item
     if missing := REQUIRED - by_id.keys():
-        raise ValueError(f"Отсутствует: «Guard check(s)»: {sorted(missing)}")
+        raise ValueError(f"Отсутствуют проверки Guard: {sorted(missing)}")
     # Это диагностика до игры: внутрипроцессные датчики ещё не задействованы.
     for sensor in ("sensor.windows.in-process", "sensor.jvm-awareness", "sensor.continuous"):
         required_status = "BLOCKED" if raw["os"] == "windows" else "UNSUPPORTED"
@@ -80,7 +80,7 @@ def run_local(args: argparse.Namespace) -> int:
     runtime = Path(args.runtime).resolve(strict=True)
     guard = Path(args.guard).resolve(strict=True)
     if not runtime.is_file() or not guard.is_file():
-        raise ValueError("native Runtime and Guard executables: требуется файлы")
+        raise ValueError("Необходимы нативные исполняемые файлы Runtime и Guard")
     command = [str(runtime), "guard-inventory", "--guard-executable", str(guard)]
     if args.java:
         command.extend(("--java", args.java))

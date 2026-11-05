@@ -70,7 +70,7 @@ func stateTree(root, child string) (treeDigest, error) {
 			return nil
 		}
 		if !entry.Type().IsRegular() {
-			return fmt.Errorf("nonregular snapshot member: %s", p)
+			return fmt.Errorf("Элемент снимка не является обычным файлом: %s", p)
 		}
 		rel, e := filepath.Rel(dir, p)
 		if e != nil || rel == "." || filepath.IsAbs(rel) {
@@ -82,7 +82,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		}
 		paths = append(paths, rel)
 		if len(paths) > stateMaxFiles {
-			return errors.New("too many snapshot files")
+			return errors.New("Слишком много файлов снимка")
 		}
 		return nil
 	})
@@ -106,7 +106,7 @@ func stateTree(root, child string) (treeDigest, error) {
 		}
 		total += before.Size()
 		if total > stateMaxBytes {
-			return result, errors.New("snapshot exceeds total byte limit")
+			return result, errors.New("Суммарный размер снимка превышает лимит")
 		}
 		f, err := os.Open(p)
 		if err != nil {
@@ -115,14 +115,14 @@ func stateTree(root, child string) (treeDigest, error) {
 		afterOpen, err := f.Stat()
 		if err != nil || !afterOpen.Mode().IsRegular() || !os.SameFile(before, afterOpen) {
 			f.Close()
-			return result, fmt.Errorf("snapshot file replaced: %s", rel)
+			return result, fmt.Errorf("Файл снимка заменён: %s", rel)
 		}
 		fh := sha256.New()
 		n, err := io.Copy(fh, io.LimitReader(f, before.Size()+1))
 		after, statErr := f.Stat()
 		closeErr := f.Close()
 		if err != nil || statErr != nil || closeErr != nil || n != before.Size() || after.Size() != before.Size() || !after.ModTime().Equal(before.ModTime()) {
-			return result, fmt.Errorf("snapshot file changed during audit: %s", rel)
+			return result, fmt.Errorf("Файл снимка изменён во время проверки: %s", rel)
 		}
 		// Stable framed encoding prevents path+content concatenation collisions.
 		pathBytes := []byte(filepath.ToSlash(rel))
@@ -165,7 +165,7 @@ func stateRoster(root string) ([]string, error) {
 		seen[id] = true
 		uuids = append(uuids, id)
 		if len(uuids) > 200000 {
-			return nil, errors.New("excessive player UUIDs")
+			return nil, errors.New("Слишком много UUID игроков")
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -255,7 +255,7 @@ func auditState(source, target string) (StateAudit, error) {
 	}
 	a.Matched = bytes.Equal([]byte(strings.Join(a.SourceUUIDs, "\n")), []byte(strings.Join(a.TargetUUIDs, "\n"))) && sw.hash == tw.hash && sp.hash == tp.hash
 	if !a.Matched {
-		return a, errors.New("migration data mismatch: UUIDs, world or plugin state differ")
+		return a, errors.New("Данные миграции не совпадают: различаются UUID, состояние мира или плагинов")
 	}
 	return a, nil
 }

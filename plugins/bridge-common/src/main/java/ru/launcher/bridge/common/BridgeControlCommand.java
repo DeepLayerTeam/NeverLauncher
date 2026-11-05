@@ -101,7 +101,7 @@ public record BridgeControlCommand(
             String key = readString(text,p); skipWs(text,p);
             if (p[0] >= text.length() || text.charAt(p[0]++) != ':') throw new IllegalArgumentException("Некорректный JSON данных управления");
             skipWs(text,p); String value = readString(text,p);
-            if (key.isEmpty() || key.length() > 64 || value.length() > 1024 || out.size() >= 16) throw new IllegalArgumentException("invalid control payload bounds");
+            if (key.isEmpty() || key.length() > 64 || value.length() > 1024 || out.size() >= 16) throw new IllegalArgumentException("Некорректные границы данных управляющей команды");
             out.put(key,value); skipWs(text,p);
             if (p[0] < text.length()-1 && text.charAt(p[0]) == ',') { p[0]++; continue; }
             if (p[0] == text.length()-1) break;
@@ -117,7 +117,7 @@ public record BridgeControlCommand(
             char c = text.charAt(p[0]++);
             if (c == '"') return out.toString();
             if (c == '\\') {
-                if (p[0] >= text.length()) throw new IllegalArgumentException("invalid escape");
+                if (p[0] >= text.length()) throw new IllegalArgumentException("Некорректная экранирующая последовательность");
                 char e = text.charAt(p[0]++);
                 switch (e) {
                     case '"','\\','/' -> out.append(e);
@@ -129,7 +129,7 @@ public record BridgeControlCommand(
                         catch (NumberFormatException ex) { throw new IllegalArgumentException("Некорректная Unicode-последовательность", ex); }
                         p[0] += 4;
                     }
-                    default -> throw new IllegalArgumentException("unsupported escape");
+                    default -> throw new IllegalArgumentException("Неподдерживаемая экранирующая последовательность");
                 }
             } else { out.append(c); }
         }
