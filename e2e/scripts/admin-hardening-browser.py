@@ -19,7 +19,7 @@ def required(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
         raise SystemExit(
-            f"[admin-hardening-02112] missing {name}; cannot certify browser E2E"
+            f"[admin-hardening-02112]: отсутствует {name}; cannot certify browser E2E"
         )
     return value
 

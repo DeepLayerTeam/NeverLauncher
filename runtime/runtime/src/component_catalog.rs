@@ -271,8 +271,8 @@ impl ComponentEnvironment0244 {
 }
 fn condition_unavailable_0244(c:&CatalogComponent,env:&ComponentEnvironment0244)->Result<Option<String>,String>{
     let Some(v)=&c.conditions else{return Ok(None)};
-    if !v.os.is_empty()&&!v.os.contains(&env.os){return Ok(Some(format!("OS {} not in {:?}",env.os,v.os)))}
-    if !v.arch.is_empty()&&!v.arch.contains(&env.arch){return Ok(Some(format!("arch {} not in {:?}",env.arch,v.arch)))}
+    if !v.os.is_empty()&&!v.os.contains(&env.os){return Ok(Some(format!("ОС {} отсутствует в списке {:?}",env.os,v.os)))}
+    if !v.arch.is_empty()&&!v.arch.contains(&env.arch){return Ok(Some(format!("Архитектура {} отсутствует в списке {:?}",env.arch,v.arch)))}
     if v.java_major_min!=0&&(env.java_major==0||env.java_major<v.java_major_min){return Ok(Some(format!("Java {} below {}",env.java_major,v.java_major_min)))}
     if v.java_major_max!=0&&(env.java_major==0||env.java_major>v.java_major_max){return Ok(Some(format!("Java {} above {}",env.java_major,v.java_major_max)))}
     if !v.minecraft_versions.is_empty()&&!v.minecraft_versions.contains(&env.minecraft_version){return Ok(Some(format!("Версия Minecraft {} не разрешена",env.minecraft_version)))}
@@ -426,7 +426,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
         for (kind,refs) in [("dependency",&c.dependencies),("conflict",&c.conflicts)] {
             let mut seen=HashSet::new();
             for r in refs {
-                let other=items.get(r.id.as_str()).ok_or_else(||format!("invalid_reference {} {}: unknown {}",c.id,kind,r.id))?;
+                let other=items.get(r.id.as_str()).ok_or_else(||format!("Некорректная ссылка {} {}: неизвестный идентификатор {}",c.id,kind,r.id))?;
                 if r.id==c.id||!seen.insert(r.id.as_str()){return Err(format!("Некорректная ссылка {} {}: повторяющаяся или ссылающаяся на себя {}",c.id,kind,r.id))}
                 matches_range_0243(&other.version,&r.version_range).map_err(|e|format!("invalid_range {} {} {}: {e}",c.id,kind,r.id))?;
             }

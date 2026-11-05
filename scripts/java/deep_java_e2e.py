@@ -41,7 +41,7 @@ def binary_jar(core: Path, sources: list[Path], main: str, dest: Path,
     payload.extend((source.relative_to(classes).as_posix(), source.read_bytes())
                    for source in sorted(classes.rglob('*.class')))
     if len(set(name for name, _ in payload)) != len(payload):
-        raise ValueError('extension overrides published SDK classes')
+        raise ValueError('Расширение переопределяет опубликованные классы SDK')
     manifest = (f'Manifest-Version: 1.0\r\nMain-Class: ru.launcher.sdk.host.JavaExtensionHost\r\n'
                 f'Launcher-Extension-Class: {main}\r\n\r\n').encode()
     deterministic_jar(dest, payload + [('META-INF/MANIFEST.MF', manifest)])

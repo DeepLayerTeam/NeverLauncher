@@ -267,7 +267,7 @@ if not (
     < runtime_e2e.index(deny_marker)
 ):
     raise SystemExit(
-        "proxy E2E reconnect cooldown is not between allow and deny network assertions"
+        "Интервал повторного подключения proxy E2E не расположен между проверками разрешения и отказа в сети"
     )
 
 migration_e2e = read("e2e/scripts/run-proxy-family-migration-e2e.sh")

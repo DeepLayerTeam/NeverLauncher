@@ -65,12 +65,12 @@ def exe_arch(data: bytes, platform: str, arch: str) -> None:
             cmd,length=struct.unpack_from('<II',data,offset)
             if length < 8 or offset+length > 32+sz:raise ValueError('Некорректный размер команды загрузки Mach-O')
             if cmd == 0x1d:
-                if length < 16:raise ValueError('truncated LC_CODE_SIGNATURE')
+                if length < 16:raise ValueError('Усечена структура LC_CODE_SIGNATURE')
                 start, size=struct.unpack_from('<II',data,offset+8)
                 if size <= 0 or start <= 0 or start+size > len(data):raise ValueError('Некорректные границы подписи Mach-O')
                 code_signed=True
             offset+=length
-        if not code_signed:raise ValueError('Mach-O lacks LC_CODE_SIGNATURE')
+        if not code_signed:raise ValueError('В Mach-O отсутствует LC_CODE_SIGNATURE')
 
 
 def read_archive(path: Path) -> dict[str, bytes]:
@@ -116,7 +116,7 @@ def verify_target(bundle: Path, target: str, name: str, version: str) -> dict:
     prefix = 'launcher/' if platform=='linux' else 'Launcher.app/' if platform=='darwin' else ''
     for binary in EXPECTED[platform]:
         key=prefix+binary
-        if key not in files:raise ValueError(f'{name}: missing executable {key}')
+        if key not in files:raise ValueError(f'{name}: отсутствует исполняемый файл {key}')
         exe_arch(files[key],platform,arch)
     if platform=='windows':
         manifest_name='WINDOWS_PACKAGE_MANIFEST.json'
@@ -134,41 +134,41 @@ def verify_target(bundle: Path, target: str, name: str, version: str) -> dict:
         if not isinstance(rows,list) or len(rows)<len(EXPECTED[platform]):
             raise ValueError(f'{name}: incomplete package artifact records')
         if manifest.get('productVersion')!=version:
-            raise ValueError(f'{name}: wrong embedded version')
+            raise ValueError(f'{name}: встроенная версия не совпадает')
         if platform=='windows':
             if manifest.get('architecture')!=arch or manifest.get('authenticodeRequired') is not True or manifest.get('signingMode')!='authenticode-rfc3161':
-                raise ValueError(f'{name}: not Windows signed production delivery')
+                raise ValueError(f'{name}: поставка Windows не имеет необходимой производственной подписи')
         else:
-            if manifest.get('architecture')!=arch: raise ValueError(f'{name}: wrong target architecture')
+            if manifest.get('architecture')!=arch: raise ValueError(f'{name}: неверная целевая архитектура')
         visited=set()
         for row in rows:
             key=(row.get('packagePath') if platform=='linux' else row.get('name'))
             if not isinstance(key,str) or key not in files or key in visited:
-                raise ValueError(f'{name}: invalid/duplicated manifest component {key}')
+                raise ValueError(f'{name}: некорректный или повторяющийся компонент манифеста {key}')
             visited.add(key)
             data=files[key]
             if (row.get('sha256')!=digest(data) or row.get('size')!=len(data)):
-                raise ValueError(f'{name}: wrong component hash/size {key}')
+                raise ValueError(f'{name}: неверные хеш или размер компонента {key}')
     else:
         # Финальное подписанное приложение macOS содержит запечатанные ресурсы, а
         # корневой манифест окончательно оформлен после codesign/notarization.
         # Проверяйте его по точным исполняемым байтам в архиве.
         root=bundle/manifest_name
-        if not root.is_file() or root.is_symlink():raise ValueError(f'{name}: missing finalized macOS package manifest')
+        if not root.is_file() or root.is_symlink():raise ValueError(f'{name}: отсутствует итоговый манифест пакета macOS')
         manifest=json.loads(root.read_bytes())
         if manifest.get('productVersion')!=version or manifest.get('architecture')!=arch or manifest.get('hashBindingMode')!='final-artifact-sha256':
-            raise ValueError(f'{name}: wrong macOS finalized package manifest')
+            raise ValueError(f'{name}: неверный итоговый манифест пакета macOS')
         rows=manifest.get('artifacts')
-        if not isinstance(rows,list) or len(rows)!=len(EXPECTED['darwin']):raise ValueError(f'{name}: incomplete macOS package manifest')
+        if not isinstance(rows,list) or len(rows)!=len(EXPECTED['darwin']):raise ValueError(f'{name}: неполный манифест пакета macOS')
         visited=set()
         for row in rows:
             key=row.get('bundlePath')
             if not isinstance(key,str) or key not in files or key in visited:
-                raise ValueError(f'{name}: missing/duplicate macOS manifest binary {key}')
+                raise ValueError(f'{name}: бинарный файл macOS отсутствует в манифесте или указан дважды — {key}')
             visited.add(key)
             data=files[key]
             if row.get('sha256')!=digest(data) or row.get('size')!=len(data):
-                raise ValueError(f'{name}: macOS final package executable mismatch {key}')
+                raise ValueError(f'{name}: исполняемый файл итогового пакета macOS не совпадает — {key}')
     return {'file':name,'sha256':sha,'bytes':size,'executablesVerified':len(EXPECTED[platform]),
             'packageManifest':manifest_name,'packageManifestVerified':True}
 

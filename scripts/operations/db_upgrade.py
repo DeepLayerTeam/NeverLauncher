@@ -326,7 +326,7 @@ def upgrade_postgres(project: str, source: Path, target: Path, snapshot_dir: Pat
     require(snapshot_dir.is_absolute() and not snapshot_dir.exists(), 'snapshot must be new, absolute path')
     require(snapshot_dir.parent.is_dir() and not snapshot_dir.parent.is_symlink(), 'snapshot parent unsafe')
     if network_ha:
-        raise UpgradeError('Network-HA schema upgrade requires world/server coordination; use maintenance-specific DR runbook, not this Standard upgrade path')
+        raise UpgradeError('Обновление схемы Network-HA требует согласованной работы мира и сервера; используйте регламент аварийного восстановления, а не стандартную процедуру обновления')
     # Блокировка должна быть независимой от самого снимка и сохраняться в течение всего DDL и
     # восстановления.
     with lock(snapshot_dir.parent):

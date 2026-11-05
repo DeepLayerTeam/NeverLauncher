@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Windows Protection Core II 0.18.1 gate: {label} missing {missing}"
+            f"[Launcher] Windows Protection Core II 0.18.1 gate: {label}: отсутствует {missing}"
         )
 
 
@@ -125,7 +125,7 @@ def main() -> int:
     )
     if "windows-protection-core-II-0181.py" not in preflight:
         raise SystemExit(
-            "[Launcher] Windows Protection Core II 0.18.1 gate: preflight wiring missing"
+            "[Launcher] Windows Protection Core II 0.18.1: не настроен запуск в предварительных проверках"
         )
 
     for path, body in [

@@ -37,7 +37,7 @@ rows = [
 ]
 if len(rows) != 1:
     raise SystemExit(
-        f"Forge Legacy 0.17.4 requires exactly one Forge 1.12.2 target, got {len(rows)}"
+        f"Forge Legacy 0.17.4: требуется ровно one Forge 1.12.2 target, получено {len(rows)}"
     )
 row = rows[0]
 if (

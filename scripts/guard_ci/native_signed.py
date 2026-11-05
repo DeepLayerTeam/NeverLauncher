@@ -30,7 +30,7 @@ SUPPORTED = ('windows-x64', 'windows-arm64', 'linux-x64', 'linux-arm64', 'darwin
 def run(argv, *, env=None, timeout=180):
     result = subprocess.run(argv, text=True, capture_output=True, timeout=timeout, env=env)
     if result.returncode != 0:
-        raise ValueError(f'native command {argv[0]} failed: {(result.stderr + result.stdout)[-900:]}')
+        raise ValueError(f'Нативная команда {argv[0]} завершилась ошибкой: {(result.stderr + result.stdout)[-900:]}')
     return result.stdout + result.stderr
 
 

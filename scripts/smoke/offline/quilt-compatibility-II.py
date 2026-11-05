@@ -47,7 +47,7 @@ quilt_rows = [
 ]
 if len(quilt_rows) != len(expected):
     raise SystemExit(
-        f"Quilt 0.17.2 requires exactly {len(expected)} catalogue targets, got {len(quilt_rows)}"
+        f"Quilt 0.17.2: требуется ровно {len(expected)} catalogue targets, получено {len(quilt_rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in quilt_rows:
@@ -57,7 +57,7 @@ for row in quilt_rows:
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
-        f"Quilt 0.17.2 release grid mismatch: missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
+        f"Quilt 0.17.2 release grid: несоответствие — missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
     )
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]
@@ -193,5 +193,5 @@ require(
 )
 
 print(
-    f"Quilt Compatibility II 0.17.2 gate: OK ({len(quilt_rows)} catalogue targets; {len(quilt_rows) - len(blocked)} required, {len(blocked)} NOT CERTIFIED; 1.14..26.3, Java 8/16/17/21/25)"
+    f"Quilt Compatibility II 0.17.2 gate: OK ({len(quilt_rows)} catalogue targets; {len(quilt_rows) - len(blocked)} required, {len(blocked)}: не сертифицировано; 1.14..26.3, Java 8/16/17/21/25)"
 )

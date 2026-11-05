@@ -59,7 +59,7 @@ def read_varint(sock):
         if n & 128 == 0:
             require(result <= 0x7fffffff, 'Minecraft VarInt overflow')
             return result
-    raise Blocked('Minecraft VarInt too long')
+    raise Blocked('Слишком длинное значение VarInt Minecraft')
 
 def status(host, port, expected_minecraft):
     require(host in ('127.0.0.1', '::1'), 'status must use local server interface')

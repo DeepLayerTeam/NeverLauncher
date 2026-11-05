@@ -25,7 +25,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 6):
     raise SystemExit(
-        f"Windows production hardening gate requires >=0.13.6, got {version}"
+        f"Windows production hardening gate: требуется версия >= 0.13.6, получено {version}"
     )
 
 policy = read("runtime/runtime/src/windows_policy.rs")
@@ -102,7 +102,7 @@ core_v2_pre_runtime = (
 )
 if not (legacy_pre_runtime or core_v2_pre_runtime):
     raise SystemExit(
-        "Guard pre-runtime hardening missing: legacy hardening/policy pair or Protection Core II initializer"
+        "Guard pre-runtime hardening: отсутствует legacy hardening/policy pair or Protection Core II initializer"
     )
 
 release = read("scripts/release/build-windows-desktop.ps1")

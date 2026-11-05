@@ -57,7 +57,7 @@ class Reader:
             item_tag = self.number('B')
             n = self.number('i')
             if n < 0 or n > MAX_NBT_BYTES or (item_tag == 0 and n):
-                raise NBTError('invalid NBT list')
+                raise NBTError('Некорректный список NBT')
             return item_tag, [self.payload(item_tag, depth + 1) for _ in range(n)]
         if tag == 10:
             result = {}
@@ -69,7 +69,7 @@ class Reader:
                 if name in result:
                     raise NBTError('duplicate NBT compound field')
                 result[name] = (child_tag, self.payload(child_tag, depth + 1))
-        raise NBTError(f'unknown NBT tag {tag}')
+        raise NBTError(f'Неизвестный тег NBT {tag}')
 
 
 def encode_name(s: str) -> bytes:
@@ -94,13 +94,13 @@ def encode_payload(tag: int, val, depth: int = 0) -> bytes:
     if tag == 10:
         return b''.join(bytes([kind]) + encode_name(name) + encode_payload(kind, item, depth + 1)
                         for name, (kind, item) in val.items()) + b'\0'
-    raise NBTError(f'unknown NBT tag {tag}')
+    raise NBTError(f'Неизвестный тег NBT {tag}')
 
 
 def compound(parent, key: str):
     entry = parent.get(key)
     if entry is None or entry[0] != 10:
-        raise NBTError(f'missing NBT compound: {key}')
+        raise NBTError(f'Отсутствует составной тег NBT: {key}')
     return entry[1]
 
 
@@ -108,7 +108,7 @@ def prepare(data: bytes) -> bytes:
     parser = Reader(data)
     tag = parser.number('B')
     if tag != 10:
-        raise NBTError('level.dat root must be NBT compound')
+        raise NBTError('Корень level.dat должен быть составным тегом NBT')
     root_name = parser.name()
     root = parser.payload(tag)
     if parser.pos != len(data):
@@ -119,10 +119,10 @@ def prepare(data: bytes) -> bytes:
     overworld = compound(dims, 'minecraft:overworld')
     generator = compound(overworld, 'generator')
     if generator.get('type') != (8, 'minecraft:flat'):
-        raise NBTError('1.17.1 world must use the server-generated flat generator')
+        raise NBTError('Мир 1.17.1 должен использовать плоский генератор, созданный сервером')
     settings = compound(generator, 'settings')
     if settings.get('layers', (0, None))[0] != 9:
-        raise NBTError('missing flat generator layers')
+        raise NBTError('Отсутствуют слои плоского генератора мира')
     # Сохраняйте исходные настройки реестра и структур, созданные сервером.
     # Замена одного списка полностью обходит ошибку кодека server.properties.
     settings['layers'] = (9, (10, [{'height': (3, 1), 'block': (8, 'minecraft:air')}]))
@@ -137,14 +137,14 @@ def main() -> int:
         raise SystemExit('usage: prepare-vanilla-1171-void-world.py path/to/world/level.dat')
     path = Path(sys.argv[1])
     if path.is_symlink() or not path.is_file():
-        raise SystemExit('level.dat must be a regular file, not a symlink')
+        raise SystemExit('level.dat должен быть обычным файлом, а не символической ссылкой')
     raw = path.read_bytes()
     uncompressed = gzip.decompress(raw)
     if len(uncompressed) > MAX_NBT_BYTES:
         raise SystemExit('oversized level.dat')
     changed = prepare(uncompressed)
     if changed == uncompressed:
-        raise SystemExit('level.dat generator did not change')
+        raise SystemExit('Генератор мира в level.dat не изменился')
     # Перед заменой файла проверьте, что данные полностью поддаются разбору.
     parsed = Reader(changed)
     assert parsed.number('B') == 10
@@ -170,4 +170,4 @@ if __name__ == '__main__':
     try:
         raise SystemExit(main())
     except (NBTError, EOFError, OSError, ValueError, struct.error) as exc:
-        raise SystemExit(f'[matching-e2e] level.dat validation failed: {exc}') from exc
+        raise SystemExit(f'[matching-e2e] level.dat validation: ошибка — {exc}') from exc

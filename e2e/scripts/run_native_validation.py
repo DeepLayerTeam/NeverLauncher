@@ -20,7 +20,7 @@ from runtime_capabilities_03410 import host_identity
 def requires_adversarial_acceptance(version: str) -> bool:
     match = re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?', version)
     if not match:
-        raise ValueError('invalid native validation product version')
+        raise ValueError('Некорректная версия продукта для нативной проверки')
     return tuple(map(int, match.groups())) >= (0, 43, 14)
 
 
@@ -100,13 +100,13 @@ def verify_game_observations_04314(destination, expected_os, expected_arch):
         return data
     host=read('host-capabilities.json')
     if host.get('os') != expected_os or host.get('arch') != expected_arch or host.get('status') != 'ready':
-        raise ValueError('native host identity or capability mismatch')
+        raise ValueError('native host identity or capability: обнаружено несоответствие')
     staged=read('staged-execution.json')
     stages=staged.get('stages')
     mandatory=('manifest-files', 'materialization', 'startup', 'loader-readiness',
                'authentication','server-readiness','matching-server','gameplay-smoke','update-recovery')
     if not isinstance(stages,dict) or any(not isinstance(stages.get(s),dict) or stages[s].get('status')!='passed' for s in mandatory):
-        raise ValueError('missing positive game execution stages')
+        raise ValueError('Отсутствуют успешные этапы реального игрового запуска')
     game=read('gameplay-smoke.json')
     negative=read('adversarial-gameplay-04314.json')
     proof=game.get('adversarialGameplay04314')
@@ -120,7 +120,7 @@ def verify_game_observations_04314(destination, expected_os, expected_arch):
         negative.get('installedFileTamper',{}).get('status')!='denied-and-restored' or
         negative.get('installedFileTamper',{}).get('baselineSha256') !=
         negative.get('installedFileTamper',{}).get('restoredFileSha256')):
-        raise ValueError('missing or mismatched real negative game outcomes')
+        raise ValueError('Реальные отрицательные игровые проверки отсутствуют или не совпадают с ожидаемыми')
     return True
 
 
@@ -134,13 +134,13 @@ def main():
     parser.add_argument('--expected-version',default='')
     args,remainder=parser.parse_known_args()
     if bool(args.expected_os)!=bool(args.expected_arch):
-        parser.error('native OS and architecture must be specified together')
+        parser.error('ОС и архитектуру нативной платформы необходимо указывать вместе')
     if args.expected_version and requires_adversarial_acceptance(args.expected_version) and not args.expected_os:
         parser.error('0.43.14+ native acceptance requires explicit OS and architecture')
     if args.expected_os:
         ident=host_identity()
         if ident.get('os')!=args.expected_os or ident.get('arch')!=args.expected_arch or not ident.get('supported'):
-            parser.error('physical runner OS or architecture does not match requested native target')
+            parser.error('ОС или архитектура физического исполнителя не соответствует запрошенной платформе')
     if args.expected_version:
         remainder += ['--expected-version', args.expected_version]
     if not 120<=args.deadline_seconds<=14400:
@@ -151,7 +151,7 @@ def main():
     if '--output' in remainder or '--execution-mode' in remainder:
         parser.error('worker controls output directory and execution mode')
     if Path(args.report_dir).exists() and any(Path(args.report_dir).iterdir()):
-        parser.error('report directory must be empty')
+        parser.error('Каталог отчётов должен быть пустым')
     old_umask=os.umask(0o077)
     try:
         with tempfile.TemporaryDirectory(prefix='nl-validation-v10-') as root:
@@ -179,10 +179,10 @@ def main():
                     stages=json.loads(report.read_text())['stages']
                     if (stages.get('manifest-files',{}).get('status')=='passed' and
                         stages.get('materialization',{}).get('status')=='passed'):
-                        print('headless materialization verified; gameplay BLOCKED (not a PASS)')
+                        print('Подготовка без графического интерфейса подтверждена; игровой процесс НЕ ПРОВЕРЕН (не PASS)')
                         return 3
             if rc:
-                print('native runtime target not certified; see stage statuses in redacted report',file=sys.stderr)
+                print('Нативное окружение не сертифицировано; см. статусы этапов в обезличенном отчёте',file=sys.stderr)
                 return 3
             if args.expected_version and requires_adversarial_acceptance(args.expected_version):
                 try:
@@ -190,7 +190,7 @@ def main():
                 except (ValueError, OSError, TypeError, KeyError) as exc:
                     print('native game observation BLOCKED: ' + str(exc),file=sys.stderr)
                     return 3
-            print('native observational runtime stages completed; not signed evidence')
+            print('Наблюдательные проверки нативного окружения завершены; результат не является подписанным свидетельством')
             return 0
     finally:
         os.umask(old_umask)

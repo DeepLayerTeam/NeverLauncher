@@ -123,7 +123,7 @@ for forbidden in [
 ]:
     if forbidden in host:
         raise SystemExit(
-            f"ServerBridge Host contains forbidden authlib/core patch behavior: {forbidden}"
+            f"ServerBridge Host содержит запрещённое изменение authlib или ядра: {forbidden}"
         )
 for text, needle, label in [
     (preflight, "serverbridge-host-01910.py", "preflight"),

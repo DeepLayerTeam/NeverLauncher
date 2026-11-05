@@ -34,7 +34,7 @@ def required(version: str) -> bool:
 def _positive(value: str, name: str) -> int:
     if not re.fullmatch(r"[1-9][0-9]*", value):
         raise CertificationBlocked(
-            f"missing or invalid {name}; current CI execution is required"
+            f"Отсутствует или некорректен {name}; необходим текущий запуск CI"
         )
     return int(value)
 
@@ -66,7 +66,7 @@ def identity(
     commit = commit.lower()
     if not COMMIT.fullmatch(commit) or env.get("GITHUB_SHA", "").lower() != commit:
         raise CertificationBlocked(
-            "current GitHub source commit does not match certification"
+            "Текущий коммит GitHub не соответствует сертификации"
         )
     if root is not None:
         head = subprocess.run(
@@ -111,16 +111,16 @@ def verify(
     received = doc.get("certificationRun")
     if not isinstance(received, dict) or set(received) != set(expected):
         raise CertificationBlocked(
-            "missing or malformed current-run certification identity"
+            "Данные сертификации текущего запуска отсутствуют или некорректны"
         )
     for field in expected:
         if field != "generatedAt" and received[field] != expected[field]:
             raise CertificationBlocked(
-                f"certification belongs to a different run: {field}"
+                f"Сертификация относится к другому запуску: {field}"
             )
     stamp = _timestamp(received["generatedAt"])
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     if not timedelta(0) <= current - stamp <= MAX_AGE:
         raise CertificationBlocked(
-            "historical, future-dated or expired certification is not fresh"
+            "Сертификация устарела, просрочена или датирована будущим"
         )

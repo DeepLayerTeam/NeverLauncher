@@ -194,7 +194,7 @@ if __name__ == "__main__":
         )
         try:
             urllib.request.urlopen(request, timeout=3)
-            raise AssertionError("invalid event schema was accepted by Java handler")
+            raise AssertionError("Обработчик Java ошибочно принял некорректную схему события")
         except urllib.error.HTTPError as exc:
             assert exc.code == 422, f"wrong invalid-event status: {exc.code}"
         with Handler.lock:

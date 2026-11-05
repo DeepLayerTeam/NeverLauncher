@@ -16,7 +16,7 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] JVM-Aware Protection 0.18.8 gate: {rel} missing {missing}"
+            f"[Launcher] JVM-Aware Protection 0.18.8 gate: {rel}: отсутствует {missing}"
         )
 
 
@@ -155,7 +155,7 @@ require(
 )
 if "guard-jvm-aware-protection-0188.py" not in preflight:
     raise SystemExit(
-        "[Launcher] JVM-Aware Protection 0.18.8 gate: preflight wiring missing"
+        "[Launcher] JVM-Aware Protection 0.18.8: не настроен запуск в предварительных проверках"
     )
 
 for rel, text in [

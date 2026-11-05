@@ -177,7 +177,7 @@ def validate_attestation(report: dict, commit: str, rc_hash: str):
         )
     ):
         raise Blocked(
-            "independently tested executable/package bytes must be pinned by SHA-256"
+            "Проверенные независимо байты исполняемого файла или пакета должны быть закреплены хешем SHA-256"
         )
 
 

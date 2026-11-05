@@ -45,7 +45,7 @@ def load(path: Path) -> dict[str, Any]:
         raise SystemExit("ServerBridge targets schemaVersion: требуется «1.0»")
     if str(data.get("productVersion", "")) != VERSION:
         raise SystemExit(
-            f"ServerBridge targets productVersion must equal VERSION={VERSION}"
+            f"Для целей ServerBridge productVersion должен совпадать с VERSION={VERSION}"
         )
     if data.get("protocolVersion") != 3:
         raise SystemExit("ServerBridge targets protocolVersion: требуется «3»")

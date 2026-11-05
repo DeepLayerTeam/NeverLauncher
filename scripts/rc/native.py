@@ -62,7 +62,7 @@ def process(
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise RCBlocked(
-            f"actual native process could not execute: {type(exc).__name__}"
+            f"Не удалось запустить нативный процесс: {type(exc).__name__}"
         ) from exc
     require(
         len(cmd.stdout) <= 2**20 and len(cmd.stderr) <= 2**20,

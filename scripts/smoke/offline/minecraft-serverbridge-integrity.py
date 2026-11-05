@@ -26,7 +26,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 5):
     raise SystemExit(
-        f"Minecraft/ServerBridge integrity gate requires >=0.13.5, got {version}"
+        f"Minecraft/ServerBridge integrity gate: требуется версия >= 0.13.5, получено {version}"
     )
 
 api_mig = read(

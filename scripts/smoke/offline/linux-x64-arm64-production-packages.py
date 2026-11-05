@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 3):
     raise SystemExit(
-        f"Linux x64+ARM64 production package gate requires VERSION>=0.15.3, got {VERSION}"
+        f"Linux x64+ARM64 production package gate: требуется VERSION >= 0.15.3, получено {VERSION}"
     )
 
 

@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = tuple(map(int, (ROOT / "VERSION").read_text().strip().split(".")[:3]))
 if version < (0, 19, 7):
     raise SystemExit(
-        f"Player Session Integration 3 gate requires VERSION>=0.19.7, got {version}"
+        f"Player Session Integration 3 gate: требуется VERSION >= 0.19.7, получено {version}"
     )
 required = [
     "services/api/internal/repository/server_bridge_player_sessions_0197.go",
@@ -139,6 +139,6 @@ for text, want, label in [
 for forbidden in ["ProcessBuilder(", "Runtime.getRuntime().exec"]:
     if forbidden in repo or forbidden in client:
         raise SystemExit(
-            f"player session integration must not invoke OS shell: {forbidden}"
+            f"Интеграция игровых сеансов не должна запускать командную оболочку ОС: {forbidden}"
         )
 print("ServerBridge 0.19.7: проверка интеграции игровых сессий 3: PASS")

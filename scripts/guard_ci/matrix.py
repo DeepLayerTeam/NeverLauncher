@@ -66,7 +66,7 @@ def sha256_file(path: Path) -> str:
 
 def artifact_record(path: Path) -> dict[str, Any]:
     if not path.is_file():
-        die(f"artifact is missing: {path}")
+        die(f"artifact is: отсутствует {path}")
     size = path.stat().st_size
     if size <= 0:
         die(f"artifact is empty: {path}")
@@ -196,7 +196,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
         manifest.get("schemaVersion") != "1.0"
         or manifest.get("productVersion") != PRODUCT_VERSION
     ):
-        die("package manifest version/schema mismatch")
+        die("package manifest version/schema: обнаружено несоответствие")
     if manifest.get("platform") != expected_platform:
         die(
             f"package manifest platform mismatch: expected {expected_platform!r}, got {manifest.get('platform')!r}"
@@ -206,7 +206,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
     if os_name in {"linux", "windows"}:
         rows = manifest.get("artifacts")
         if not isinstance(rows, list) or len(rows) < 2:
-            die("package manifest artifacts are missing")
+            die("Отсутствуют package manifest artifacts")
         by_name = {
             str(row.get("name", "")): row for row in rows if isinstance(row, dict)
         }
@@ -251,7 +251,7 @@ def verify_package_metadata(
         desktop_hash != artifacts["launcher"]["sha256"]
         or guard_hash != artifacts["guard"]["sha256"]
     ):
-        die("package manifest SHA-256 does not match emitted Desktop/Guard artifacts")
+        die("package manifest SHA-256: не совпадает с emitted Desktop/Guard artifacts")
     allowlist = load_json(allowlist_path)
     expected_policy_platform = {
         "linux": "linux",
@@ -409,7 +409,7 @@ def command_result(args: argparse.Namespace) -> int:
     if target is None:
         die(f"unknown Guard CI target: {args.target_id}")
     if args.signing_mode != target["ciSigningMode"]:
-        die(f"{args.target_id}: signing mode mismatch")
+        die(f"{args.target_id}: signing mode: обнаружено несоответствие")
     paths = {
         "package": args.package,
         "launcher": args.launcher,

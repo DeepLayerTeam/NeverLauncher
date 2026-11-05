@@ -83,7 +83,7 @@ fabric_rows = [
 ]
 if len(fabric_rows) != len(expected):
     raise SystemExit(
-        f"Fabric 0.17.1 requires exactly {len(expected)} required targets, got {len(fabric_rows)}"
+        f"Fabric 0.17.1: требуется ровно {len(expected)} required targets, получено {len(fabric_rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in fabric_rows:
@@ -93,7 +93,7 @@ for row in fabric_rows:
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
-        f"Fabric 0.17.1 release grid mismatch: missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
+        f"Fabric 0.17.1 release grid: несоответствие — missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
     )
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]

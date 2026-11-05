@@ -77,7 +77,7 @@ class ReleaseDeliveryTests(unittest.TestCase):
                 for row in rows:
                     data=elf('arm64');i=tarfile.TarInfo(row['packagePath']);i.size=len(data);t.addfile(i,io.BytesIO(data))
                 data=json.dumps(manifest).encode();i=tarfile.TarInfo('launcher/LINUX_PACKAGE_MANIFEST.json');i.size=len(data);t.addfile(i,io.BytesIO(data))
-            with self.assertRaisesRegex(ValueError,'hash/size'):
+            with self.assertRaisesRegex(ValueError,'хеш или размер'):
                 delivery.verify_target(root,'linux-arm64',archive.name,'0.46.2')
     def test_mac_finalized_manifest_binary_binding(self):
         with tempfile.TemporaryDirectory() as td:

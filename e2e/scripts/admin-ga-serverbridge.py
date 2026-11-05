@@ -158,5 +158,5 @@ if __name__ == "__main__":
         main()
     except Exception as exc:
         raise SystemExit(
-            f"[admin-ga-0220] live ServerBridge certification FAILED: {exc}"
+            f"[admin-ga-0220] live ServerBridge certification: ошибка — {exc}"
         )

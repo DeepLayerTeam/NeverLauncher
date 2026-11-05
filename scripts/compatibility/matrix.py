@@ -504,7 +504,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         target = required_vanilla.get(minecraft)
         if target is None:
             die(
-                f"Vanilla Compatibility Baseline II missing required Minecraft {minecraft}"
+                f"Vanilla Compatibility Baseline II: отсутствует required Minecraft {minecraft}"
             )
         if target["javaMajor"] != java_major:
             die(f"Vanilla {minecraft}: Baseline II requires Java {java_major}")
@@ -520,21 +520,21 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in LEGACY_VANILLA_JAVA8_0163:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Legacy Vanilla 0.16.3 missing required Minecraft {minecraft}")
+                die(f"Legacy Vanilla 0.16.3: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(f"Legacy Vanilla {minecraft}: 0.16.3 requires Java 8 scope=client")
     if legacy_vanilla_pre17_required():
         for minecraft in LEGACY_VANILLA_PRE17_0164:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Legacy Vanilla 0.16.4 missing required Minecraft {minecraft}")
+                die(f"Legacy Vanilla 0.16.4: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(f"Legacy Vanilla {minecraft}: 0.16.4 requires Java 8 scope=client")
     if java16_17_vanilla_required():
         for minecraft, java_major in JAVA16_17_VANILLA_0166.items():
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Java 16/17 Vanilla 0.16.6 missing required Minecraft {minecraft}")
+                die(f"Java 16/17 Vanilla 0.16.6: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(
                     f"Java 16/17 Vanilla {minecraft}: 0.16.6 requires Java {java_major} scope=client"
@@ -543,7 +543,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in JAVA21_VANILLA_0167:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Java 21 Vanilla 0.16.7 missing required Minecraft {minecraft}")
+                die(f"Java 21 Vanilla 0.16.7: отсутствует required Minecraft {minecraft}")
             expected_scope = "integration" if minecraft == "1.21.1" else "client"
             if target["javaMajor"] != 21 or target["scope"] != expected_scope:
                 die(
@@ -553,7 +553,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in JAVA25_VANILLA_0168:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Java 25 Vanilla 0.16.8 missing required Minecraft {minecraft}")
+                die(f"Java 25 Vanilla 0.16.8: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(
                     f"Java 25 Vanilla {minecraft}: 0.16.8 requires Java 25 scope=client"
@@ -570,7 +570,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = platform_targets.get((os_name, arch))
             if target is None:
                 die(
-                    f"Cross-platform Vanilla 0.16.9 missing required 26.3 target {os_name}/{arch}"
+                    f"Cross-platform Vanilla 0.16.9: отсутствует required 26.3 target {os_name}/{arch}"
                 )
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(
@@ -601,7 +601,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in LEGACY_VANILLA_0170V1:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Legacy Vanilla 0.17.0v1 missing required Minecraft {minecraft}")
+                die(f"Legacy Vanilla 0.17.0v1: отсутствует required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(
                     f"Legacy Vanilla {minecraft}: 0.17.0v1 requires Java 8 scope=client"
@@ -611,7 +611,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = required_vanilla.get(minecraft)
             if target is None:
                 die(
-                    f"Java 16/17 Vanilla 0.17.0v2 missing required Minecraft {minecraft}"
+                    f"Java 16/17 Vanilla 0.17.0v2: отсутствует required Minecraft {minecraft}"
                 )
             if (
                 target["javaMajor"] != java_major
@@ -627,7 +627,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = required_vanilla.get(minecraft)
             if target is None:
                 die(
-                    f"Java 21/25 Vanilla 0.17.0v3 missing required Minecraft {minecraft}"
+                    f"Java 21/25 Vanilla 0.17.0v3: отсутствует required Minecraft {minecraft}"
                 )
             if (
                 target["javaMajor"] != java_major
@@ -676,7 +676,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Fabric Compatibility II 0.17.1 release grid mismatch: missing={missing} extra={extra}"
+                f"Fabric Compatibility II 0.17.1 release grid: несоответствие — missing={missing} extra={extra}"
             )
         if len(required_fabric_rows) != len(FABRIC_COMPATIBILITY_II_0171):
             die(
@@ -722,7 +722,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Quilt Compatibility II 0.17.2 release grid mismatch: missing={missing} extra={extra}"
+                f"Quilt Compatibility II 0.17.2 release grid: несоответствие — missing={missing} extra={extra}"
             )
         if len(required_quilt_rows) != len(QUILT_COMPATIBILITY_II_0172):
             die(
@@ -772,7 +772,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Forge Modern 0.17.3 release grid mismatch: missing={missing} extra={extra}"
+                f"Forge Modern 0.17.3 release grid: несоответствие — missing={missing} extra={extra}"
             )
         if len(required_forge_rows) != len(FORGE_MODERN_0173):
             die(
@@ -816,7 +816,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             }
         )
         if unexpected:
-            die(f"Forge Modern 0.17.3 unexpected required targets: {unexpected}")
+            die(f"Forge Modern 0.17.3: неожиданный результат — required targets: {unexpected}")
 
     if forge_legacy_1122_0174_required():
         legacy_rows = [
@@ -828,7 +828,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         ]
         if len(legacy_rows) != 1:
             die(
-                f"Forge Legacy 1.12.2 0.17.4 requires exactly one required target, got {len(legacy_rows)}"
+                f"Forge Legacy 1.12.2 0.17.4: требуется ровно one required target, получено {len(legacy_rows)}"
             )
         target = legacy_rows[0]
         if target["javaMajor"] != 8 or target["scope"] != "client":
@@ -850,7 +850,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         ]
         if len(legacy_rows) != 1:
             die(
-                f"Forge Legacy 1.7.10 0.17.5 requires exactly one required target, got {len(legacy_rows)}"
+                f"Forge Legacy 1.7.10 0.17.5: требуется ровно one required target, получено {len(legacy_rows)}"
             )
         target = legacy_rows[0]
         if target["javaMajor"] != 8 or target["scope"] != "client":
@@ -877,7 +877,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"NeoForge Compatibility II 0.17.6 release grid mismatch: missing={missing} extra={extra}"
+                f"NeoForge Compatibility II 0.17.6 release grid: несоответствие — missing={missing} extra={extra}"
             )
         if len(required_rows) != len(NEOFORGE_COMPATIBILITY_II_0176):
             die(
@@ -923,7 +923,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 missing = sorted(expected_platforms - actual_platforms)
                 extra = sorted(actual_platforms - expected_platforms)
                 die(
-                    f"Cross-platform Loaders 0.17.9 {loader} {minecraft} grid mismatch: missing={missing} extra={extra} rows={len(rows)}"
+                    f"Cross-platform Loaders 0.17.9 {loader} {minecraft} grid: несоответствие — missing={missing} extra={extra} rows={len(rows)}"
                 )
             for target in rows:
                 if target["javaMajor"] != java_major or target["scope"] != "client":
@@ -945,7 +945,7 @@ def load_targets(path: Path) -> dict[str, Any]:
     declared_version = str(payload.get("productVersion", "")).strip()
     if declared_version and declared_version != PRODUCT_VERSION:
         die(
-            f"targets productVersion {declared_version!r} does not match VERSION={PRODUCT_VERSION}"
+            f"targets productVersion {declared_version!r}: не совпадает с VERSION={PRODUCT_VERSION}"
         )
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:

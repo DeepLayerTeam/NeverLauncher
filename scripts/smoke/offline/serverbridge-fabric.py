@@ -169,7 +169,7 @@ require(
 )
 if 'unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q' in build:
     raise SystemExit(
-        "Fabric release validation still uses pipefail-sensitive text grep"
+        "Проверка выпуска Fabric по-прежнему использует текстовый grep, чувствительный к pipefail"
     )
 certifier = read("serverbridge/certify_release.py")
 require(
@@ -183,7 +183,7 @@ require(
 )
 if "data.get('clientModRequired') is not False" in certifier:
     raise SystemExit(
-        "Fabric release certifier still reads clientModRequired from the descriptor root"
+        "Сертификатор выпуска Fabric по-прежнему считывает clientModRequired из корня дескриптора"
     )
 
 release = read("scripts/release/build-release.sh")

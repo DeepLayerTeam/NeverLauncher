@@ -32,7 +32,7 @@ if (
     or expected.get("26.3") != 25
 ):
     raise SystemExit(
-        "Forge Modern 0.17.3 canonical processor-based release grid is incomplete"
+        "Forge Modern 0.17.3 canonical processor-based release grid: проверка или реализация не завершена"
     )
 
 target_doc = json.loads(read("compatibility/targets.json"))
@@ -47,7 +47,7 @@ forge_rows = [
 ]
 if len(forge_rows) != len(expected):
     raise SystemExit(
-        f"Forge Modern 0.17.3 requires exactly {len(expected)} required targets, got {len(forge_rows)}"
+        f"Forge Modern 0.17.3: требуется ровно {len(expected)} required targets, получено {len(forge_rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in forge_rows:
@@ -57,7 +57,7 @@ for row in forge_rows:
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
-        f"Forge Modern 0.17.3 release grid mismatch: missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
+        f"Forge Modern 0.17.3 release grid: несоответствие — missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
     )
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]

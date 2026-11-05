@@ -9,7 +9,7 @@ version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(p) for p in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 0):
     raise SystemExit(
-        f"Minecraft Compatibility II GA requires VERSION>=0.17.0, got {version}"
+        f"Minecraft Compatibility II GA: требуется VERSION >= 0.17.0, получено {version}"
     )
 
 
@@ -101,7 +101,7 @@ legacy_rows = {
 missing_legacy = sorted(legacy_0170v1 - set(legacy_rows))
 if missing_legacy:
     raise SystemExit(
-        f"GA 0.17.0v1 complete Legacy Vanilla grid missing: {missing_legacy}"
+        f"GA 0.17.0v1 complete Legacy Vanilla grid: отсутствует {missing_legacy}"
     )
 for minecraft, row in legacy_rows.items():
     if row["javaMajor"] != 8 or row["scope"] != "client":
@@ -130,7 +130,7 @@ modern_rows = {
 missing_modern = sorted(set(java16_17_0170v2) - set(modern_rows))
 if missing_modern:
     raise SystemExit(
-        f"GA 0.17.0v2 complete Java 16/17 Vanilla grid missing: {missing_modern}"
+        f"GA 0.17.0v2 complete Java 16/17 Vanilla grid: отсутствует {missing_modern}"
     )
 for minecraft, major in java16_17_0170v2.items():
     row = modern_rows[minecraft]

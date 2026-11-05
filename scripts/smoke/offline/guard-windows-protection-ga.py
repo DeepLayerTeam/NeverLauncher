@@ -165,7 +165,7 @@ for text, path in [
         )
 if "TestWindowsProtectionGA" not in ci:
     raise SystemExit(
-        "[Launcher] Windows Protection GA 0.19.0 gate: Go GA tests are not wired into CI"
+        "[Launcher] Windows Protection GA 0.19.0 gate: Go GA tests: не подключены к CI"
     )
 
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:

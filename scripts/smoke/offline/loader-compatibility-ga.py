@@ -159,7 +159,7 @@ expected_families = {
 }
 if dict(family_counts) != expected_families:
     raise SystemExit(
-        f"Loader Compatibility GA family coverage mismatch: {dict(family_counts)}"
+        f"Loader Compatibility GA family coverage: несоответствие — {dict(family_counts)}"
     )
 
 unique_versions = {

@@ -9,7 +9,7 @@ version = tuple(
 )
 if version < (0, 19, 5):
     raise SystemExit(
-        f"ServerBridge Control API gate requires VERSION>=0.19.5, got {version}"
+        f"ServerBridge Control API gate: требуется VERSION >= 0.19.5, получено {version}"
     )
 
 required = [

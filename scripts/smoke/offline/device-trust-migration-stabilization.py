@@ -120,7 +120,7 @@ if len(protocol_targets) != 1 or "migrationStabilization01210" not in protocol_t
     0
 ].get("requiredChecks", []):
     raise SystemExit(
-        "public protocol trust target must require migrationStabilization01210"
+        "Публичная проверка протокола доверия должна требовать migrationStabilization01210"
     )
 
 matrix = read("scripts/device_trust/matrix.py")

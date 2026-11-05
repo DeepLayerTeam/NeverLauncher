@@ -172,7 +172,7 @@ def serve(args):
             time.sleep(.35)
         else:
             if running:
-                raise RuntimeError('real Minecraft join was not observed before deadline')
+                raise RuntimeError('Вход в реальный сервер Minecraft не подтверждён за отведённое время')
     finally:
         # Успешного наблюдения недостаточно, если выделенная игровая JVM завершилась до окончания
         # клиентского запуска у вызывающей стороны. Подтверждайте только штатное завершение.

@@ -132,7 +132,7 @@ fn optional_flag(args: &[String], name: &str) -> Result<Option<String>, String> 
         if args[index] == name {
             let value = args
                 .get(index + 1)
-                .ok_or_else(|| format!("argument {name} requires a value"))?;
+                .ok_or_else(|| format!("Для аргумента {name} требуется значение"))?;
             if found.replace(value.clone()).is_some() {
                 return Err(format!("Аргумент {name} можно указывать только один раз"));
             }

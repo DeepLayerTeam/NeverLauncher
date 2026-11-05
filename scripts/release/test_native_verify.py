@@ -17,7 +17,7 @@ class NativeTests(unittest.TestCase):
         struct.pack_into('<I',signed,off+64,0x12345678)
         native.normalize_pe(original,bytes(signed))
         signed[0x300]^=0xff
-        with self.assertRaisesRegex(ValueError,'altered executable bytes'):
+        with self.assertRaisesRegex(ValueError,'изменил байты исполняемого файла'):
             native.normalize_pe(original,bytes(signed))
 
     def test_native_host_only(self):

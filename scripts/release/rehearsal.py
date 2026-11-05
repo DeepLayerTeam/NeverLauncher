@@ -441,7 +441,7 @@ def verify_update_payload_0410(
         base64.binascii.Error,
     ) as exc:
         raise Blocked(
-            "installed component-set cryptographic trust verification failed"
+            "Криптографическая проверка доверия установленного набора компонентов не пройдена"
         ) from exc
 
 

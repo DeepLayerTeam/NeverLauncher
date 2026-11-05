@@ -23,7 +23,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 if triple(VERSION) < (0, 15, 11):
     raise SystemExit(
-        f"Production Release Candidate gate requires VERSION>=0.15.11, got {VERSION}"
+        f"Production Release Candidate gate: требуется VERSION >= 0.15.11, получено {VERSION}"
     )
 
 impl = (ROOT / "cli/cmd/launcher/production_release_candidate_01511.go").read_text(
@@ -148,12 +148,12 @@ def resolve_layout(root: Path, marker: str, *, expect_ok: bool) -> str:
         except ValueError as exc:
             if expect_ok:
                 raise SystemExit(
-                    f"artifact layout resolver unexpectedly failed: {exc}"
+                    f"Неожиданный сбой определения структуры артефактов: {exc}"
                 ) from exc
             return ""
         if not expect_ok:
             raise SystemExit(
-                f"artifact layout resolver unexpectedly accepted unsafe layout: {root}"
+                f"Определение структуры артефактов ошибочно приняло небезопасный каталог: {root}"
             )
         return bash_path(resolved)
     proc = subprocess.run(
@@ -170,11 +170,11 @@ def resolve_layout(root: Path, marker: str, *, expect_ok: bool) -> str:
     )
     if expect_ok and proc.returncode != 0:
         raise SystemExit(
-            f"artifact layout resolver unexpectedly failed: {proc.stderr.strip()}"
+            f"Неожиданный сбой определения структуры артефактов: {proc.stderr.strip()}"
         )
     if not expect_ok and proc.returncode == 0:
         raise SystemExit(
-            f"artifact layout resolver unexpectedly accepted unsafe layout: {root}"
+            f"Определение структуры артефактов ошибочно приняло небезопасный каталог: {root}"
         )
     return proc.stdout.strip()
 

@@ -137,7 +137,7 @@ with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:
         or artifacts[0].get("name") != f"launcher-desktop-{VERSION}-windows-arm64.exe"
     ):
         raise SystemExit(
-            f"delivery resolver selected unexpected artifacts: {artifacts}"
+            f"delivery resolver selected: неожиданный результат — artifacts: {artifacts}"
         )
 
     (bundle / linux_cli_name).write_bytes(b"tampered\n")

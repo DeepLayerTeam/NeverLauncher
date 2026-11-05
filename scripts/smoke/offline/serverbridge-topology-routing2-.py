@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = tuple(map(int, (ROOT / "VERSION").read_text().strip().split(".")[:3]))
 if version < (0, 19, 6):
     raise SystemExit(
-        f"Topology & Routing 2 gate requires VERSION>=0.19.6, got {version}"
+        f"Topology & Routing 2 gate: требуется VERSION >= 0.19.6, получено {version}"
     )
 required = [
     "services/api/internal/httpapi/server_bridge_routing_0196.go",

@@ -40,32 +40,32 @@ def verified_repo(repo: Path) -> dict[str, Path]:
         for suffix in ('.jar', '-sources.jar', '-javadoc.jar', '.pom'):
             path = folder / (stem + suffix)
             if path.is_symlink() or not path.is_file():
-                raise ValueError(f'missing/unsafe published artifact: {path}')
+                raise ValueError(f'Публикуемый артефакт отсутствует или небезопасен: {path}')
             content = path.read_bytes()
             for algo in ('sha256', 'sha512'):
                 checksum = path.with_name(path.name + '.' + algo)
                 if checksum.is_symlink() or not checksum.is_file() or checksum.read_text().strip() != getattr(hashlib, algo)(content).hexdigest():
-                    raise ValueError(f'{algo} mismatch: {path.name}')
+                    raise ValueError(f'{algo}: несоответствие — {path.name}')
         pom = ET.parse(folder / f'{stem}.pom').getroot()
         val = lambda key: pom.findtext('m:' + key, namespaces=NS)
         if val('groupId') != 'ru.launcher' or val('artifactId') != module or val('version') != VERSION:
-            raise ValueError(f'invalid Maven coordinates for {module}')
+            raise ValueError(f'Некорректные координаты Maven для {module}')
         dependencies = {(x.findtext('m:artifactId', namespaces=NS), x.findtext('m:version', namespaces=NS))
                         for x in pom.findall('m:dependencies/m:dependency', namespaces=NS)}
         if module != 'launcher-java-sdk-core' and ('launcher-java-sdk-core', VERSION) not in dependencies:
-            raise ValueError(f'missing core dependency for {module}')
+            raise ValueError(f'Отсутствует основная зависимость для {module}')
         jar = folder / f'{stem}.jar'
         with zipfile.ZipFile(jar) as binary:
             members = binary.namelist()
             if len(members) != len(set(members)) or not any(m.endswith('.class') for m in members):
-                raise ValueError(f'bad/empty classes in {jar}')
+                raise ValueError(f'Некорректные или пустые классы в {jar}')
             for name in members:
                 if name.startswith('/') or '..' in name.split('/') or '\\' in name:
                     raise ValueError(f'unsafe entry in {jar}: {name}')
                 if name.endswith('.class'):
                     header = binary.read(name)[:8]
                     if len(header) < 8 or header[:4] != b'\xca\xfe\xba\xbe' or int.from_bytes(header[6:8], 'big') > 61:
-                        raise ValueError(f'not Java 17 compatible: {module}/{name}')
+                        raise ValueError(f'Несовместимо с Java 17: {module}/{name}')
         jars[module] = jar
     return jars
 
@@ -82,7 +82,7 @@ def executable_from_public_sdk(core_jar: Path, extension_source: Path, output: P
     for java_class in sorted(classes.rglob('*.class')):
         payload.append((java_class.relative_to(classes).as_posix(), java_class.read_bytes()))
     if len({name for name, _ in payload}) != len(payload):
-        raise RuntimeError('duplicate extension class shadows published Java SDK')
+        raise RuntimeError('Дублирующийся класс расширения перекрывает опубликованный Java SDK')
     sys.path.insert(0, str(ROOT))
     from scripts.ga.java_sdk_ga_0310 import deterministic_jar
     manifest = (b'Manifest-Version: 1.0\r\nMain-Class: ru.launcher.sdk.host.JavaExtensionHost\r\n'
@@ -106,13 +106,13 @@ def main() -> None:
         jar = build(repo, package)
         with zipfile.ZipFile(jar) as built:
             if built.read('META-INF/MANIFEST.MF').find(b'JavaExtensionHost') == -1:
-                raise AssertionError('missing real Host main class')
+                raise AssertionError('Отсутствует настоящий главный класс Host')
             if not built.getinfo('example/developer/DeveloperExtension.class'):
-                raise AssertionError('missing extension bytecode')
+                raise AssertionError('Отсутствует байт-код расширения')
         if (package/'cli/workspace.jar').read_bytes() != jar.read_bytes():
-            raise AssertionError('CLI and backend JAR must use the same signed payload')
+            raise AssertionError('CLI и Backend JAR должны использовать одинаковое подписанное содержимое')
         if not (package/'admin/index.html').is_file() or not (package/'desktop/index.html').is_file():
-            raise AssertionError('missing real UI resources')
+            raise AssertionError('Отсутствуют необходимые ресурсы интерфейса')
         run(sys.executable, str(ROOT/'examples/extensions/java-ui/test-runner.py'),
             str(jar), str(fixture/'launcher-extension.json'), timeout=65)
     report = {

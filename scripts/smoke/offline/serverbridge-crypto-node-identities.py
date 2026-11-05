@@ -67,7 +67,7 @@ registration_repo = repo.split("func (r *SQLRepository) SaveServerBridgeNode", 1
 ].split("func timeArg", 1)[0]
 if "ON CONFLICT" in registration_repo:
     raise SystemExit(
-        "ServerBridge node registration must remain create-only; SQL upsert would bypass identity rotation step-up"
+        "Регистрация узла ServerBridge должна разрешать только создание; SQL upsert обошёл бы усиленную проверку при смене идентичности"
     )
 require(
     repo,
@@ -147,7 +147,7 @@ require(
 )
 if "X-Launcher-Server-Token" in java_client or "server.token" in java_config:
     raise SystemExit(
-        "legacy shared ServerBridge bearer secret remains in plugin runtime"
+        "В Runtime плагина остался устаревший общий секрет ServerBridge Bearer"
     )
 
 regression = read("services/api/internal/httpapi/server_bridge_identity_0142_test.go")
@@ -179,7 +179,7 @@ require(
 )
 if '"ServerToken"' in openapi or "X-Launcher-Server-Token" in openapi:
     raise SystemExit(
-        "OpenAPI still advertises legacy ServerBridge bearer authentication"
+        "В OpenAPI по-прежнему указана устаревшая Bearer-аутентификация ServerBridge"
     )
 
 
@@ -340,11 +340,11 @@ with tempfile.TemporaryDirectory(prefix="launcher-ed25519-") as td:
     )
     if verified.returncode != 0:
         raise SystemExit(
-            f"ServerBridge helper Ed25519 verification failed: {verified.stderr.strip()}"
+            f"ServerBridge helper Ed25519 verification: ошибка — {verified.stderr.strip()}"
         )
 if "X-Launcher-Server-Token" in main_e2e or ".data.serverToken" in main_e2e:
     raise SystemExit(
-        "Minecraft E2E still uses legacy ServerBridge bearer authentication"
+        "Minecraft E2E по-прежнему использует устаревшую Bearer-аутентификацию ServerBridge"
     )
 
 print(f"Launcher 0.14.2: проверка криптографических идентификаторов узлов: OK ({version})")

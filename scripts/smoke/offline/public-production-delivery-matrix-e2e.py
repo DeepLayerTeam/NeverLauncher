@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 9):
     raise SystemExit(
-        f"Public Production Delivery Matrix + E2E gate requires VERSION>=0.15.9, got {VERSION}"
+        f"Public Production Delivery Matrix + E2E gate: требуется VERSION >= 0.15.9, получено {VERSION}"
     )
 
 

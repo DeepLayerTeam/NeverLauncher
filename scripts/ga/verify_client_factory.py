@@ -62,7 +62,7 @@ def verify_signature(payload, public_key, hashed):
 
 def verify(root, runtime_key, join_key, version, commit):
     if version != "0.28.0" or not SHA.fullmatch(commit):
-        fail("invalid GA version or commit")
+        fail("Некорректная версия GA или коммит")
     if runtime_key == join_key:
         fail("Запуск клиента и подключение к серверу должны использовать независимые корни доверия")
     certificates = list(root.rglob("runtime-certificate.json"))

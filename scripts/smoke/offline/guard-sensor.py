@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Guard Sensor 0.18.2 gate: {label} missing {missing}"
+            f"[Launcher] Guard Sensor 0.18.2 gate: {label}: отсутствует {missing}"
         )
 
 
@@ -157,7 +157,7 @@ def main() -> int:
     )
     if "guard-sensor-0182.py" not in preflight:
         raise SystemExit(
-            "[Launcher] Guard Sensor 0.18.2 gate: preflight wiring missing"
+            "[Launcher] Guard Sensor 0.18.2: не настроен запуск в предварительных проверках"
         )
 
     for path, body in [

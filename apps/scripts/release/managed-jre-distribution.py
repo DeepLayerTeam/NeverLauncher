@@ -167,7 +167,7 @@ def download_exact(
         got = digest.hexdigest()
         if written != expected_size or got != expected_sha256:
             die(
-                f"JRE archive checksum/size mismatch: {got}/{written}, expected {expected_sha256}/{expected_size}"
+                f"JRE archive checksum/size: несоответствие — {got}/{written}, expected {expected_sha256}/{expected_size}"
             )
         os.replace(part, path)
     finally:

@@ -139,7 +139,7 @@ for text, path in [
         )
 if "TestWindowsProtection" not in ci:
     raise SystemExit(
-        "[Launcher] Windows Protection RC 0.18.12 gate: Go certificate tests are not wired into CI"
+        "[Launcher] Windows Protection RC 0.18.12 gate: Go certificate tests: не подключены к CI"
     )
 
 lowered = impl.lower()

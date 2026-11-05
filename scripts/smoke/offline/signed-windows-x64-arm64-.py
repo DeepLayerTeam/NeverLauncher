@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 2):
     raise SystemExit(
-        f"Signed Windows x64+ARM64 gate requires VERSION>=0.15.2, got {VERSION}"
+        f"Signed Windows x64+ARM64 gate: требуется VERSION >= 0.15.2, получено {VERSION}"
     )
 
 
@@ -126,14 +126,14 @@ if (
     or "launcher-windows-production-${{ github.sha }}" in ci
 ):
     raise SystemExit(
-        "ordinary main CI must not require production Authenticode credentials"
+        "Обычный основной CI не должен требовать промышленные учётные данные Authenticode"
     )
 if (
     "release-bundle"
     in ci.split("production-e2e:", 1)[1].split("needs:", 1)[1].split("\n", 1)[0]
 ):
     raise SystemExit(
-        "functional production E2E must not depend on publish-only signing"
+        "Рабочие производственные E2E-тесты не должны зависеть от подписи, предназначенной только для публикации"
     )
 
 subprocess.run(

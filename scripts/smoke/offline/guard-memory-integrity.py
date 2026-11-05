@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Memory Integrity 0.18.5 gate: {label} missing {missing}"
+            f"[Launcher] Memory Integrity 0.18.5 gate: {label}: отсутствует {missing}"
         )
 
 
@@ -153,7 +153,7 @@ def main() -> int:
     )
     if "guard-memory-integrity-0185.py" not in preflight:
         raise SystemExit(
-            "[Launcher] Memory Integrity 0.18.5 gate: preflight wiring missing"
+            "[Launcher] Memory Integrity 0.18.5: не настроен запуск в предварительных проверках"
         )
 
     for path, body in [

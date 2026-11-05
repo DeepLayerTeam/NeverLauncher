@@ -200,7 +200,7 @@ def get_json(backend, endpoint, bearer):
     class RejectRedirect(HTTPRedirectHandler):
         def redirect_request(self, request, fp, code, msg, headers, newurl):
             raise Blocked(
-                "Backend redirect rejected; access token cannot leave pinned origin"
+                "Переадресация Backend отклонена: токен доступа не должен покидать закреплённый адрес"
             )
 
     opener = build_opener(

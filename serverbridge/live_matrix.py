@@ -38,15 +38,15 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 def read_json(path: Path):
     obj = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
-        raise ValueError(f"{path.name}: expected JSON object")
+        raise ValueError(f"{path.name}:: ожидается объект JSON")
     return obj
 
 
 def checksum(path: Path, expected: str) -> None:
     if not isinstance(expected, str) or not HEX64.fullmatch(expected):
-        raise ValueError(f"{path.name}: invalid expected SHA-256")
+        raise ValueError(f"{path.name}:: некорректное ожидаемое значение SHA-256")
     if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-        raise ValueError(f"{path.name}: missing or altered evidence")
+        raise ValueError(f"{path.name}:: отсутствует or altered evidence")
 
 
 def verify_runtime(
@@ -59,7 +59,7 @@ def verify_runtime(
 ) -> dict:
     if service not in CORE:
         raise ValueError(
-            "no native server-side live runner (client/compile tests do not qualify)"
+            "Нет нативного исполнителя для живых серверных проверок (клиентские тесты и компиляция не подходят)"
         )
     node_id, port = CORE[service]
     proof = read_json(runtime / f"live-{service}-04113.json")
@@ -104,7 +104,7 @@ def verify_runtime(
         )
     ):
         raise ValueError(
-            "missing platform observation after real network join/revocation"
+            "Нет данных наблюдения за платформой после реального входа в сеть или отзыва доступа"
         )
     if service == "paper" and observations.get("actualClientJoin") is not True:
         raise ValueError("Не подтверждено реальное подключение JVM-клиента Mojang к Paper")
@@ -123,7 +123,7 @@ def verify_runtime(
         or log.index(deny) <= log.index(allow)
     ):
         raise ValueError(
-            "Bridge platform log does not confirm join and subsequent revoke"
+            "Журнал платформы Bridge не подтверждает вход и последующий отзыв доступа"
         )
     if service == "paper" and f"{player} joined the game" not in log:
         raise ValueError("В журнале Paper отсутствует запись о реальном подключении игрока")
@@ -140,7 +140,7 @@ def verify_runtime(
             else f"probe-{node_id}-{kind}.txt"
         )
         if ref.get("path") != path:
-            raise ValueError(f"{kind}: wrong probe reference")
+            raise ValueError(f"{kind}:: неверная ссылка на проверку")
         checksum(runtime / path, ref.get("sha256"))
         actual_probe = (runtime / path).read_text(encoding="utf-8")
         if service == "paper" and kind == "allow":
@@ -151,7 +151,7 @@ def verify_runtime(
             f"port={port} username={player} " not in actual_probe
             or "probe host=" not in actual_probe
         ):
-            raise ValueError(f"{kind}: wrong network probe")
+            raise ValueError(f"{kind}:: неверная сетевая проверка")
     # Нативные журналы, проверки здоровья и пробы взаимно подтверждают друг друга.
     # Одного поля status НИКОГДА недостаточно как доказательства настоящего запуска
     # JVM/платформы.
@@ -198,7 +198,7 @@ def certify(
             or result.get("status") != "passed"
         ):
             raise ValueError(
-                "full-stack Minecraft E2E result is missing or unsuccessful"
+                "Результат полного E2E Minecraft отсутствует или неуспешен"
             )
     except (OSError, ValueError) as exc:
         result = None

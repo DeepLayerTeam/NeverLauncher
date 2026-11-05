@@ -114,7 +114,7 @@ class AuthBoundaryTests(unittest.TestCase):
             return 204, None
 
         with patch.object(auth, "provider_request", side_effect=bad):
-            with self.assertRaisesRegex(auth.ProviderRejected, "replay"):
+            with self.assertRaisesRegex(auth.ProviderRejected, "повторно использованный билет"):
                 auth.custom_probe(CUSTOM, NEGATIVE)
 
     def test_guard_requires_actual_backend_policy_denial(self):
@@ -131,7 +131,7 @@ class AuthBoundaryTests(unittest.TestCase):
                 result = auth.guard_denial_probe(CUSTOM, f)
             self.assertTrue(result["negativeGuardJoinDenied"])
             with patch.object(auth, "provider_request", return_value=(204, None)):
-                with self.assertRaisesRegex(auth.ProviderRejected, "able to join"):
+                with self.assertRaisesRegex(auth.ProviderRejected, "смогла присоединиться"):
                     auth.guard_denial_probe(CUSTOM, f)
 
 

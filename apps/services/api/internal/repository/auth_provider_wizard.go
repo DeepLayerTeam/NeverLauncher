@@ -195,7 +195,7 @@ func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 		return errors.New("Некорректное значение: тип провайдера")
 	}
 	if len(v.Config) == 0 || len(v.Config) > 32768 || !json.Valid(v.Config) {
-		return errors.New("invalid configuration")
+		return errors.New("Некорректная конфигурация")
 	}
 	if len(v.Reason) < 3 || len(v.Reason) > 500 || strings.ContainsAny(v.Reason, "\r\n\x00") {
 		return errors.New("Некорректное значение: «reason»")

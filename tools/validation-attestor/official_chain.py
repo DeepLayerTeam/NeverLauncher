@@ -78,10 +78,10 @@ def request_live(url, payload=None, bearer="", form=False):
     except urllib.error.HTTPError as exc:
         if exc.code in (408, 425, 429) or exc.code >= 500:
             raise ExternalOutage(
-                "real official provider temporarily unavailable"
+                "Реальный официальный провайдер временно недоступен"
             ) from None
         raise AccountRejected(
-            "official provider denied dedicated test account"
+            "Официальный провайдер отклонил выделенную тестовую запись"
         ) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise ExternalOutage("Недоступно: транспорт официального провайдера") from None
@@ -196,7 +196,7 @@ def issue_minecraft_credentials(client_id, refresh_token_file, output):
         or not re.fullmatch(r"[a-fA-F0-9]{32}", uuid)
     ):
         raise AccountRejected(
-            "test account does not own a valid Minecraft Java profile"
+            "У тестовой учётной записи нет действительного профиля Minecraft Java"
         )
     record = {
         "username": username,

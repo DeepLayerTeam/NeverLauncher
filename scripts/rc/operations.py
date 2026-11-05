@@ -46,11 +46,11 @@ def check_args(
         or not PROJECT.fullmatch(target)
     ):
         raise OperationsBlocked(
-            "two distinct isolated nl-dr-* Compose projects are required"
+            "Необходимы два разных изолированных проекта Compose с именами nl-dr-*"
         )
     if source_url == target_url:
         raise OperationsBlocked(
-            "source and restored target must use distinct readiness endpoints"
+            "Источник и восстановленная целевая система должны иметь разные адреса проверки готовности"
         )
     for url in (source_url, target_url):
         p = urlsplit(url)
@@ -65,13 +65,13 @@ def check_args(
             or p.password
         ):
             raise OperationsBlocked(
-                "real source/target readiness must use loopback HTTP /ready"
+                "Проверка готовности источника и назначения должна использовать локальный HTTP /ready"
             )
     if not env_file.is_file() or env_file.is_symlink():
         raise OperationsBlocked("Файл изолированного окружения отсутствует или является символической ссылкой")
     if snapshot.exists() or snapshot.is_symlink():
         raise OperationsBlocked(
-            "fresh snapshot destination required; refusing overwrite"
+            "Нужен новый каталог снимка; перезапись запрещена"
         )
     if os.environ.get("LAUNCHER_RC_DR_ISOLATED") != "YES":
         raise OperationsBlocked("Требуется явное подтверждение использования только в тестовом окружении")
@@ -94,7 +94,7 @@ def actual(*args: str, timeout: int = 3600) -> dict:
         raise OperationsBlocked("Не удалось завершить реальную операцию аварийного восстановления") from exc
     if proc.returncode or len(proc.stdout) > 4 * 1024 * 1024:
         raise OperationsBlocked(
-            "actual DR command failed or returned oversized evidence"
+            "Команда аварийного восстановления завершилась ошибкой или вернула слишком большой отчёт"
         )
     try:
         value = json.loads(proc.stdout)
@@ -142,7 +142,7 @@ def run(
         or not b.get("files")
     ):
         raise OperationsBlocked(
-            "real DR backup not verified as current source snapshot"
+            "Резервная копия для аварийного восстановления не подтверждена как актуальный снимок источника"
         )
     v = actual(
         "verify", "--snapshot", str(snapshot), *(["--network-ha"] if network_ha else [])

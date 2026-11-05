@@ -22,9 +22,9 @@ def build(repository: Path, destination: Path) -> Path:
     manifest = json.loads((base/'launcher-extension.json').read_text())
     allowed = {'backend/workspace.jar', 'cli/workspace.jar', 'admin/index.html', 'desktop/index.html'}
     if {t['entrypoint'] for t in manifest['targets']} != allowed:
-        raise ValueError('example manifest has unexpected targets')
+        raise ValueError('В манифесте примера обнаружены неожиданные целевые платформы')
     if destination.exists() and (destination.is_symlink() or any(destination.iterdir())):
-        raise ValueError('output must be an empty/new directory')
+        raise ValueError('Выходной каталог должен быть новым или пустым')
     jars = verified_repo(repository.resolve())
     destination.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='java-dev-build-04812-') as tmp:

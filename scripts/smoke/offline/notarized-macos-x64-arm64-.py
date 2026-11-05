@@ -11,7 +11,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 4):
     raise SystemExit(
-        f"Notarized macOS x64+ARM64 gate requires VERSION>=0.15.4, got {VERSION}"
+        f"Notarized macOS x64+ARM64 gate: требуется VERSION >= 0.15.4, получено {VERSION}"
     )
 
 
@@ -60,7 +60,7 @@ require(
 )
 if "APP_SIGN_ARGS+=(--deep)" in builder or "codesign --deep --force" in builder:
     raise SystemExit(
-        "macOS builder must never use --deep for signing; nested code is signed explicitly inside-out"
+        "Сборщик macOS не должен использовать --deep при подписании; вложенный код подписывается явно от внутренних компонентов к внешним"
     )
 if (
     'codesign --verify --strict --verbose=2 "${file}"' not in builder
@@ -68,7 +68,7 @@ if (
     not in builder
 ):
     raise SystemExit(
-        "macOS builder must verify helper binaries both before and after outer bundle signing"
+        "Сборщик macOS должен проверять вспомогательные бинарные файлы до и после подписания внешнего пакета"
     )
 if (
     'file="${MACOS_DIR}/${binary}"' in builder
@@ -76,7 +76,7 @@ if (
     in builder
 ):
     raise SystemExit(
-        "macOS builder must not sign the bundle main executable as a standalone nested step"
+        "Сборщик macOS не должен отдельно подписывать главный исполняемый файл пакета как вложенный компонент"
     )
 helper_sign = builder.find("for binary in guard runtime launcher-cli; do")
 manifest_build = builder.find('macos-package.py" manifest')
@@ -87,7 +87,7 @@ if min(helper_sign, manifest_build, app_sign) < 0 or not (
     helper_sign < manifest_build < app_sign
 ):
     raise SystemExit(
-        "macOS signing order must be helpers -> Resources manifest -> APP_ROOT"
+        "Порядок подписания macOS: вспомогательные программы → манифест Resources → APP_ROOT"
     )
 
 packager = read("scripts/release/macos-package.py")
@@ -209,7 +209,7 @@ if (
     or "launcher-macos-notarized-${{ github.sha }}" in ci
 ):
     raise SystemExit(
-        "ordinary main CI must not require Apple production notarization credentials"
+        "Обычный основной CI не должен требовать промышленные учётные данные нотариального заверения Apple"
     )
 
 subprocess.run(

@@ -529,7 +529,7 @@ mod game_guard_lifetime_0438_tests {
         assert!(result.message.contains("Связь с аутентифицированным Guard потеряна"));
         let mut locked = child.lock().await;
         let exit = timeout(Duration::from_secs(3), locked.as_mut().unwrap().wait())
-            .await.expect("child exit timeout").expect("child wait failed");
+            .await.expect("child exit timeout").expect("Не удалось дождаться завершения дочернего процесса");
         assert!(!exit.success(), "При потере Guard игра должна принудительно завершаться");
     }
 }

@@ -184,11 +184,11 @@ def validate_matrix_document(
         if key == "commit":
             if str(actual).lower() != str(value).lower():
                 raise RuntimeError(
-                    f"{label} matrix {key} mismatch: expected={value} actual={actual}"
+                    f"{label} matrix {key}: несоответствие — expected={value} actual={actual}"
                 )
         elif str(actual) != str(value):
             raise RuntimeError(
-                f"{label} matrix {key} mismatch: expected={value} actual={actual}"
+                f"{label} matrix {key}: несоответствие — expected={value} actual={actual}"
             )
     targets = doc.get("targets")
     if not isinstance(targets, list) or not targets:

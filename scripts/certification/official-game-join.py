@@ -43,7 +43,7 @@ def check_evidence(
         or report.get("result") != "online_session_verified"
     ):
         raise CertificationFailure(
-            "report is not a successful live online session verification"
+            "Отчёт не подтверждает успешную проверку действующего сетевого сеанса"
         )
     if (
         report.get("onlineModeSession") != "verified_live_join_has_joined"
@@ -81,7 +81,7 @@ def check_evidence(
             values[key.strip()] = value.strip()
     if values.get("online-mode", "").lower() != "true":
         raise CertificationFailure(
-            "server.properties does not enforce online-mode=true"
+            "В server.properties не установлено обязательное online-mode=true"
         )
     if values.get("enforce-secure-profile", "").lower() == "false":
         # Этот параметр не зависит от online-mode; показывайте предупреждение, не
@@ -92,14 +92,14 @@ def check_evidence(
     # Сохраняйте ограниченный читатель, чтобы случайно не загрузить большие истории.
     if log_path.stat().st_size > 32 * 1024 * 1024:
         raise CertificationFailure(
-            "server log exceeds 32 MiB, provide the bounded actual run"
+            "Журнал сервера превышает 32 МиБ; предоставьте ограниченный по размеру журнал реального запуска"
         )
     log = log_path.read_text(encoding="utf-8", errors="replace")
     if kind in LOADER_MARKERS and not any(
         marker in log.lower() for marker in LOADER_MARKERS[kind]
     ):
         raise CertificationFailure(
-            f"server log does not establish {kind} loader startup"
+            f"Журнал сервера не подтверждает запуск загрузчика {kind}"
         )
     matches = []
     observed = {}
@@ -120,7 +120,7 @@ def check_evidence(
                 matches.append((original, line_no))
     if not matches:
         raise CertificationFailure(
-            "no matching official UUID followed by successful login event"
+            "Не найдено успешное событие входа с соответствующим официальным UUID"
         )
     return {
         "schema": "launcher.official-game-join-evidence.v1",

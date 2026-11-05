@@ -159,7 +159,7 @@ class RealAPI:
                     self._close_log()
                     return
                 raise AcceptanceFailure(
-                    "real API terminated before becoming ready (inspect private CI process logs)"
+                    "Реальный API завершился до готовности (см. закрытые журналы процессов CI)"
                 )
             if not expect_failure:
                 try:
@@ -187,7 +187,7 @@ class RealAPI:
         if expect_failure:
             raise AcceptanceFailure("API с некорректной конфигурацией или конфликтом портов не завершил работу")
         raise AcceptanceFailure(
-            "real SQLite API did not achieve /ready within deadline"
+            "API с SQLite не перешёл в состояние /ready за отведённое время"
         )
 
     def stop(self, *, crash=False):

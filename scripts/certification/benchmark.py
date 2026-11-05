@@ -89,7 +89,7 @@ def bench(baseline: Path, candidate: Path, signer: Path, repetitions: int = 3) -
                     elapsed = time.monotonic_ns() - start
                     if result.returncode != 0:
                         raise RuntimeError(
-                            f"{label} run {round_id} failed: {result.stderr[-1200:]}"
+                            f"{label} run {round_id}: ошибка — {result.stderr[-1200:]}"
                         )
                     for i, data_bytes in enumerate(data):
                         path = (

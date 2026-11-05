@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: {label} missing {missing}"
+            f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: {label}: отсутствует {missing}"
         )
 
 
@@ -171,7 +171,7 @@ def main() -> int:
     )
     if "guard-aggressive-hook-engine-0184.py" not in preflight:
         raise SystemExit(
-            "[Launcher] Aggressive Hook Engine I 0.18.4 gate: preflight wiring missing"
+            "[Launcher] Aggressive Hook Engine I 0.18.4: не настроен запуск в предварительных проверках"
         )
 
     for path, body in [

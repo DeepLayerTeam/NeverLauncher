@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Thread & Process Integrity 0.18.6 gate: {label} missing {missing}"
+            f"[Launcher] Thread & Process Integrity 0.18.6 gate: {label}: отсутствует {missing}"
         )
 
 
@@ -180,7 +180,7 @@ def main() -> int:
     )
     if "guard-thread-process-integrity-0186.py" not in preflight:
         raise SystemExit(
-            "[Launcher] Thread & Process Integrity 0.18.6 gate: preflight wiring missing"
+            "[Launcher] Thread & Process Integrity 0.18.6: не настроен запуск в предварительных проверках"
         )
 
     for path, body in [

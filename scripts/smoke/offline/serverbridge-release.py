@@ -6,7 +6,7 @@ version = (root / "VERSION").read_text().strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3])
 if parts < (0, 19, 1):
     raise SystemExit(
-        f"ServerBridge 3 release gate requires VERSION>=0.19.1, got {version}"
+        f"ServerBridge 3 release gate: требуется VERSION >= 0.19.1, получено {version}"
     )
 
 

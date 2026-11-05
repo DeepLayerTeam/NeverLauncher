@@ -29,7 +29,7 @@ from reproducible_0470 import (
 def call(argv: list[str]) -> None:
     completed = subprocess.run(argv, capture_output=True, text=True, timeout=180)
     if completed.returncode:
-        raise ValueError(f'native validator failed ({argv[0]}): {completed.stderr[-700:]} {completed.stdout[-700:]}')
+        raise ValueError(f'Нативный валидатор завершился ошибкой ({argv[0]}): {completed.stderr[-700:]} {completed.stdout[-700:]}')
 
 
 def normalize_pe(unsigned: bytes, signed: bytes) -> None:

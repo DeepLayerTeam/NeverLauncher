@@ -196,7 +196,7 @@ def main() -> int:
         not isinstance(target_rows, list)
         or [r.get("id") for r in target_rows] != EXPECTED
     ):
-        die("serverbridge target set/order mismatch")
+        die("serverbridge target set/order: обнаружено несоответствие")
     hybrid = load_json(ROOT / "serverbridge/hybrid-targets.json")
     hybrid_rows = hybrid.get("targets")
     if (
@@ -214,10 +214,10 @@ def main() -> int:
 
     manifest = load_json(manifest_path)
     if manifest.get("toolVersion") != VERSION or manifest.get("schemaVersion") != "1.2":
-        die("plugin manifest version/schema mismatch")
+        die("plugin manifest version/schema: обнаружено несоответствие")
     rows = manifest.get("artifacts")
     if not isinstance(rows, list) or [r.get("id") for r in rows] != EXPECTED:
-        die("plugin manifest artifact set/order mismatch")
+        die("plugin manifest artifact set/order: обнаружено несоответствие")
 
     allow = load_json(allowlist_path)
     if (
@@ -235,7 +235,7 @@ def main() -> int:
         != SECURITY_CAPABILITY_DIGEST
         or sorted(allow.get("requiredFeatures") or []) != sorted(SECURITY_FEATURES)
     ):
-        die("ServerBridge 3 release allowlist security metadata mismatch")
+        die("ServerBridge 3 release allowlist security metadata: обнаружено несоответствие")
     releases = allow.get("releases")
     if (
         not isinstance(releases, dict)
@@ -260,7 +260,7 @@ def main() -> int:
         if not HEX64.fullmatch(digest):
             die(f"{target}: internal SHA-256 failure")
         if row.get("sha256") != digest:
-            die(f"{target}: manifest SHA-256 does not match JAR")
+            die(f"{target}: manifest SHA-256: не совпадает с JAR")
         field = HASH_FIELDS[target]
         values = policy.get(field)
         if values != [digest]:
@@ -275,7 +275,7 @@ def main() -> int:
                 names = set(zf.namelist())
                 for entry in REQUIRED_ENTRIES[target]:
                     if entry not in names:
-                        die(f"{target}: JAR missing {entry}")
+                        die(f"{target}: JAR: отсутствует {entry}")
                 if target in {"fabric", "quilt"}:
                     nested = [
                         name
@@ -293,11 +293,11 @@ def main() -> int:
                         common_names = set(common.namelist())
                         for entry in COMMON_PROTOCOL_ENTRIES:
                             if entry not in common_names:
-                                die(f"{target}: embedded bridge-common missing {entry}")
+                                die(f"{target}: embedded bridge-common: отсутствует {entry}")
                 else:
                     for entry in COMMON_PROTOCOL_ENTRIES:
                         if entry not in names:
-                            die(f"{target}: JAR missing {entry}")
+                            die(f"{target}: JAR: отсутствует {entry}")
                 if target == "folia":
                     text = zf.read("plugin.yml").decode("utf-8", "replace")
                     if "folia-supported: true" not in text:
@@ -352,7 +352,7 @@ def main() -> int:
 
     sums_path = artifacts / "SHA256SUMS"
     if not sums_path.is_file():
-        die("SHA256SUMS is missing")
+        die("Отсутствует SHA256SUMS")
     sums = {}
     for line in sums_path.read_text(encoding="utf-8").splitlines():
         parts = line.split()
@@ -380,7 +380,7 @@ def main() -> int:
         result.returncode != 0
         or "CAPABILITY_POLICY_OK total=14 runtime_certified=false" not in result.stdout
     ):
-        die(f"adapter policy execution failed: {result.stderr[-2048:]}")
+        die(f"adapter policy execution: ошибка — {result.stderr[-2048:]}")
 
     report = {
         "schemaVersion": "1.1",

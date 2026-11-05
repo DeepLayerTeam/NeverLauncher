@@ -87,7 +87,7 @@ for test_name in [
 ]:
     if test_name not in windows_tests:
         raise SystemExit(
-            f"[Launcher] Windows Adversarial CI 0.18.11 gate: live test missing: {test_name}"
+            f"[Launcher] Windows Adversarial CI 0.18.11 gate: отсутствует live test — {test_name}"
         )
 
 ci = read(".github/workflows/ci.yml")
@@ -122,7 +122,7 @@ if (
     or "test_windows_adversarial.py" not in preflight
 ):
     raise SystemExit(
-        "[Launcher] Windows Adversarial CI 0.18.11 gate: release preflight/self-test wiring missing"
+        "[Launcher] Windows Adversarial CI 0.18.11: проверки выпуска и самотестирование не подключены"
     )
 
 for rel, text in [

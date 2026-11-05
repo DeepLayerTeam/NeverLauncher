@@ -12,7 +12,7 @@ core = tuple(
 )
 if core < (0, 17, 11):
     raise SystemExit(
-        f"Loader Compatibility RC requires VERSION>=0.17.11, got {version}"
+        f"Loader Compatibility RC: требуется VERSION >= 0.17.11, получено {version}"
     )
 
 
@@ -139,7 +139,7 @@ expected_families = {
 }
 if dict(family_counts) != expected_families:
     raise SystemExit(
-        f"Loader Compatibility RC family coverage mismatch: {dict(family_counts)} != {expected_families}"
+        f"Loader Compatibility RC family coverage: несоответствие — {dict(family_counts)} != {expected_families}"
     )
 platforms = {(row.get("os"), row.get("arch")) for row in targets}
 expected_platforms = {
@@ -152,7 +152,7 @@ expected_platforms = {
 }
 if platforms != expected_platforms:
     raise SystemExit(
-        f"Loader Compatibility RC platform coverage mismatch: {sorted(platforms)}"
+        f"Loader Compatibility RC platform coverage: несоответствие — {sorted(platforms)}"
     )
 if {row.get("javaMajor") for row in targets} != {8, 16, 17, 21, 25}:
     raise SystemExit("Кандидат совместимости загрузчиков должен покрывать Java 8/16/17/21/25")

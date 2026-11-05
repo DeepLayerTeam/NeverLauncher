@@ -117,7 +117,7 @@ def main() -> int:
     else:
         raise SystemExit(f"Проверка секретов: неподдерживаемый формат архива: {path}")
     if issues:
-        print("secret-scan: FAILED")
+        print("secret-scan:: операция завершилась ошибкой")
         for issue in issues:
             print(" -", issue)
         return 1

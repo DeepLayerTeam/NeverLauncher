@@ -19,7 +19,7 @@ version = read("VERSION").strip()
 base = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if base < (0, 19, 12):
     raise SystemExit(
-        f"Security & Certification gate requires VERSION>=0.19.12, got {version}"
+        f"Security & Certification gate: требуется VERSION >= 0.19.12, получено {version}"
     )
 security = read("services/api/internal/httpapi/server_bridge_security_01912.go")
 identity = read("services/api/internal/httpapi/server_bridge_identity_0142.go")
@@ -284,5 +284,5 @@ for text, needle, label in [
     (ci, "run-serverbridge-security-certification-01912-e2e.sh", "CI E2E"),
 ]:
     if needle not in text:
-        raise SystemExit(f"{label}: missing {needle}")
+        raise SystemExit(f"{label}: отсутствует {needle}")
 print("ServerBridge 0.19.12+: проверка безопасности и сертификации: OK")

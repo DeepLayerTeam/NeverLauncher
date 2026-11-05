@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Module Guard 0.18.3 gate: {label} missing {missing}"
+            f"[Launcher] Module Guard 0.18.3 gate: {label}: отсутствует {missing}"
         )
 
 
@@ -124,7 +124,7 @@ def main() -> int:
     )
     if "guard-module-guard-0183.py" not in preflight:
         raise SystemExit(
-            "[Launcher] Module Guard 0.18.3 gate: preflight wiring missing"
+            "[Launcher] Module Guard 0.18.3: не настроен запуск в предварительных проверках"
         )
 
     for path, body in [
