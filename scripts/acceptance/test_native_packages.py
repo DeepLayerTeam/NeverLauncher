@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native 0.52.2 security regressions; fixtures NEVER imply native acceptance."""
+"""Нативные регрессионные проверки безопасности 0.52.2; фикстуры НИКОГДА не означают нативную приёмку."""
 import hashlib
 import importlib.util
 import io

@@ -1,4 +1,4 @@
-"""Synthetic fixture tests exercise the verifier only; never GA evidence."""
+"""Синтетические фикстуры тестируют только верификатор; никогда не служат GA-свидетельствами."""
 
 import base64
 import hashlib

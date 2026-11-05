@@ -1,4 +1,4 @@
-"""Production GA security verifier regression. Synthetic FIXTURES are never GA receipts."""
+"""Регрессионные тесты промышленного верификатора безопасности GA. Синтетические ФИКСТУРЫ никогда не считаются GA-расписками."""
 from __future__ import annotations
 
 from datetime import timedelta

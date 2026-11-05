@@ -1,4 +1,4 @@
-"""Negative/unit regressions; not production machine/remote JVM evidence."""
+"""Отрицательные и модульные регрессии; не доказательство работы на производственной машине или удалённой JVM."""
 from __future__ import annotations
 
 import importlib.util

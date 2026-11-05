@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real executable JVM Host integration: dependency is used in Extension.start()."""
+"""Настоящая исполняемая интеграция JVM Host: зависимость применяется в Extension.start()."""
 import http.server
 import json
 import os

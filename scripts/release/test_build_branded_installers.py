@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke-test the actual Linux .deb packaging path with a signed fixture."""
+"""Smoke-тест действующей сборки Linux-пакета .deb с подписанной фикстурой."""
 
 import base64
 import hashlib

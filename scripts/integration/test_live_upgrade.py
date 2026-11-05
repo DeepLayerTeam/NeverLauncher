@@ -1,4 +1,4 @@
-"""Local regressions for real HTTP/SQLite acceptance tooling; NOT a production E2E."""
+"""Локальные регрессионные тесты действующего инструментария приёмки HTTP/SQLite; это НЕ промышленный E2E."""
 from __future__ import annotations
 
 from contextlib import closing

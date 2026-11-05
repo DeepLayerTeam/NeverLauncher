@@ -1,4 +1,4 @@
-"""Executable failure/recovery tests; simulated Docker/SSH calls are not HA certification."""
+"""Исполняемые тесты сбоев и восстановления; имитированные вызовы Docker/SSH не считаются сертификацией HA."""
 import argparse
 from datetime import datetime, timedelta, timezone
 import json

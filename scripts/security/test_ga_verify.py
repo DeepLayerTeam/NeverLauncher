@@ -1,4 +1,4 @@
-"""Cryptographic gate regression tests; synthetic fixtures NEVER count as live evidence."""
+"""Регрессионные тесты криптографического контроля допуска; синтетические фикстуры НИКОГДА не считаются реальными свидетельствами."""
 import datetime as dt
 import importlib.util
 import json

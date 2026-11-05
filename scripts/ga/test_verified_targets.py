@@ -1,4 +1,4 @@
-"""Signed release-policy regression tests. Fixtures test a verifier, not game execution."""
+"""Регрессионные тесты политики подписанного релиза. Фикстуры проверяют верификатор, а не выполнение игры."""
 
 from datetime import timedelta
 import hashlib

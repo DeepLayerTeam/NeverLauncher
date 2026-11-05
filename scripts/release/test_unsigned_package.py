@@ -1,4 +1,4 @@
-"""Deterministic packaging regressions; synthetic executable headers are test-only."""
+"""Детерминированные регрессии упаковки; синтетические заголовки исполняемых файлов используются только в тестах."""
 from __future__ import annotations
 import hashlib
 import os

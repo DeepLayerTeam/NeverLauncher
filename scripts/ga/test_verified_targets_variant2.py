@@ -1,4 +1,4 @@
-"""Executable Ed25519 approval and exact-release-byte negative acceptance tests."""
+"""Исполняемые отрицательные тесты подтверждения Ed25519 и точных байтов релиза."""
 
 from datetime import datetime, timedelta, timezone
 import hashlib

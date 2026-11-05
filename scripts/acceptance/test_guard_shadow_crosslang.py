@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verifies actual Go HMAC journaling bytes through the shipping Python reader."""
+"""Проверяет реальные байты HMAC-журнала Go с помощью поставляемого Python-читателя."""
 import importlib.util
 import os
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Real SQLite and atomic evidence tests; Compose is injected only at subprocess boundary."""
+"""Реальные тесты SQLite и атомарных свидетельств; Compose подменяется только на границе подпроцесса."""
 import importlib.util
 import io
 import json

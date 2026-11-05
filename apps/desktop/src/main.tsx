@@ -960,7 +960,7 @@ function App() {
     try {
       localStorage.setItem(UI_PREFERENCES_KEY0357, JSON.stringify(ui0357));
     } catch {
-      /* private browsing */
+      /* приватный режим браузера */
     }
     return () => {
       document.documentElement.style.zoom = "";
@@ -1833,7 +1833,7 @@ function App() {
       throw new Error(
         "Staged private key покинул native boundary; fail-closed.",
       );
-    setDeviceTrustStatus(mode === "rotate" ? "key rotation" : "key recovery");
+    setDeviceTrustStatus(mode === "rotate" ? "Ротация ключа" : "Восстановление ключа");
     let serverCommitted = false;
     try {
       const beginPath =
@@ -1998,7 +1998,7 @@ function App() {
       throw new Error(
         "Hardware attestation требует зарегистрированный deviceId.",
       );
-    setDeviceTrustStatus("hardware attestation");
+    setDeviceTrustStatus("Аппаратная аттестация");
     const beginResponse = await postDeviceJson(
       `/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/attest/begin`,
       session.accessToken,
@@ -5295,13 +5295,13 @@ function App() {
                   TPM2_Certify для существующего зарегистрированного P-256
                   ключа. AK должен быть заранее выпущен доверенным TPM
                   Attestation CA. Windows использует Platform Crypto Provider;
-                  Linux — предварительно provisioned persistent TPM AK handle
+                  Linux — предварительно созданный постоянный дескриптор TPM AK
                   0x81xxxxxx. Это не проверка Guard/PCR и не античит.
                 </p>
                 <div className="settings">
                   <label>
                     {/Linux/i.test(navigator.platform)
-                      ? "Linux AK persistent handle (0x81xxxxxx)"
+                      ? "Постоянный дескриптор AK в Linux (0x81xxxxxx)"
                       : "Имя AK в Windows Platform Crypto Provider"}
                     <input
                       value={windowsAkName0313}
@@ -5441,7 +5441,7 @@ function App() {
                           Yggdrasil проекта (идентификация Never / ServerBridge)
                         </option>
                         <option value="official" disabled={!officialProfile}>
-                          Official Minecraft (Microsoft){" "}
+                          Официальный Minecraft (Microsoft){" "}
                           {officialProfile?.name || ""}
                         </option>
                         <option
@@ -6259,10 +6259,10 @@ function AuthPanel({
       )}
       {macOSTrust0316 && (
         <p role="status">
-          macOS Device Trust: Secure Enclave —{" "}
+          Доверие к устройству macOS: Secure Enclave —{" "}
           {macOSTrust0316.localSecureEnclave}; App Attest —{" "}
-          {macOSTrust0316.appAttest}; remote provenance —{" "}
-          {macOSTrust0316.remoteDeviceKeyProvenance}; strict —{" "}
+          {macOSTrust0316.appAttest}; происхождение удалённого ключа —{" "}
+          {macOSTrust0316.remoteDeviceKeyProvenance}; строгий профиль —{" "}
           {macOSTrust0316.strictProfile}. При утрате ключа используйте
           восстановление через passkey; оно отзывает прежнюю identity и требует
           повторной аттестации нового ключа. Локальные сигналы не доказывают
@@ -6319,33 +6319,33 @@ function AuthPanel({
                     : ""}
                 </span>
                 <small>
-                  {device.platform || "platform n/a"} ·{" "}
-                  {device.clientVersion || "version n/a"} · last seen:{" "}
+                  {device.platform || "платформа не указана"} ·{" "}
+                  {device.clientVersion || "версия не указана"} · последний сеанс связи:{" "}
                   {device.lastSeenAt
                     ? new Date(device.lastSeenAt).toLocaleString()
                     : "—"}
                 </small>
                 <small>
-                  fingerprint: {device.keyFingerprint.slice(0, 20)}… ·
-                  attestation: {device.attestationState || "unattested"}
+                  отпечаток ключа: {device.keyFingerprint.slice(0, 20)}… ·
+                  аттестация: {device.attestationState || "не выполнена"}
                 </small>
                 <small>
-                  Device Trust: standard{" "}
+                  Доверие к устройству: стандартный профиль{" "}
                   <strong>
                     {device.trustAssessment?.profileDecisions?.standard
                       ?.result ?? "unknown"}
                   </strong>{" "}
-                  · strict{" "}
+                  · строгий профиль{" "}
                   <strong>
                     {device.trustAssessment?.profileDecisions?.strict?.result ??
                       "unknown"}
                   </strong>{" "}
-                  · remote provenance{" "}
+                  · подтверждение удалённого происхождения{" "}
                   {device.trustAssessment?.remoteHardwareProvenance ??
                     "not-verified"}
                 </small>
                 <small>
-                  Strict profile:{" "}
+                  Строгий профиль:{" "}
                   {device.trustAssessment?.profileDecisions?.strict?.reasonCodes?.join(
                     ", ",
                   ) || "нет проверенного заключения"}{" "}

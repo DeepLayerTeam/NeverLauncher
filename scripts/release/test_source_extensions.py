@@ -1,4 +1,4 @@
-"""Check that final source deliveries include executable extension build sources."""
+"""Проверяет наличие собираемых исходников расширений в окончательных поставках исходного кода."""
 import importlib.util
 from pathlib import Path
 import tempfile

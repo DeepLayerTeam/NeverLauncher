@@ -362,7 +362,7 @@ func Prepare(o Options) (*Handle, error) {
 }
 func (h *Handle) Started() error {
 	// Закройте унаследованные концы в родителе; ядро удерживает их у потомка. Порядок h.sources: cfd,
-	// hostFile, guestFile, sealedConfig, readyReader, readyWriter.
+	// далее по порядку: hostFile, guestFile, sealedConfig, readyReader, readyWriter.
 	for _, i := range []int{2, 3, 5} {
 		_ = h.sources[i].Close()
 	}

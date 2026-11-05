@@ -1,4 +1,4 @@
-"""Regression: later versions cannot disable signed-payload and input gates."""
+"""Регрессия: последующие версии не могут отключать проверки подписанных данных и входных сведений."""
 from pathlib import Path
 import re
 import subprocess

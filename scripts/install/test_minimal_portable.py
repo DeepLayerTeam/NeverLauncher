@@ -1,4 +1,4 @@
-"""Executable cross-host, encrypted SQLite/files/secrets recovery regressions."""
+"""Исполняемые регрессионные тесты восстановления между хостами зашифрованных SQLite, файлов и секретов."""
 
 import importlib.util
 import io

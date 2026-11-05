@@ -436,8 +436,8 @@ export function DesktopExtensions0209({
         <div>
           <h3>Расширения Desktop</h3>
           <p>
-            Standalone extension UI runs in an opaque-origin sandbox. Tauri
-            access is available only through the permission-aware parent bridge.
+            Автономный интерфейс расширения работает в изолированной среде с непрозрачным источником.
+            Доступ к Tauri возможен только через родительский мост с проверкой разрешений.
           </p>
         </div>
         <button onClick={() => void refresh()}>Обновить</button>
@@ -484,7 +484,7 @@ export function DesktopExtensions0209({
               <span>
                 {current?.bridgeAllowed
                   ? "Доступ к Tauri Bridge разрешён"
-                  : "sandbox only"}
+                  : "только изолированная среда"}
               </span>
               {actions.map((action) => (
                 <button key={action.id} onClick={() => triggerAction(action)}>

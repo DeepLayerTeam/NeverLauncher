@@ -1,4 +1,4 @@
-"""Tests for 0.51.3 edge and dependency failover executor."""
+"""Тесты исполнителя переключения сетевой точки входа и зависимостей при отказе в версии 0.51.3."""
 from __future__ import annotations
 
 import copy

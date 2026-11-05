@@ -1,4 +1,4 @@
-"""Local security and recovery orchestration tests. Live Docker lab is separate."""
+"""Локальные тесты безопасности и оркестрации восстановления. Лаборатория Docker проверяется отдельно."""
 from __future__ import annotations
 
 import hashlib

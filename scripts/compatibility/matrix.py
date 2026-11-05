@@ -1539,11 +1539,11 @@ def render_markdown(
     repository: str,
 ) -> str:
     lines = [
-        f"# Launcher {product_version} — CI Compatibility Matrix",
+        f"# Launcher {product_version} — матрица совместимости CI",
         "",
         "> Матрица сгенерирована автоматически из фактических E2E-результатов. Статусы PASS не хранятся и не редактируются вручную.",
         "",
-        "| Target | Minecraft | Loader | Java | JRE build | Scope | Actual client | Matching server | Paper join | Result |",
+        "| Цель | Minecraft | Загрузчик | Java | Сборка JRE | Область | Реальный клиент | Совпадающий сервер | Подключение к Paper | Результат |",
         "|---|---|---|---:|---|---|---:|---:|---:|---:|",
     ]
     for target in targets:
@@ -1583,12 +1583,12 @@ def render_markdown(
         )
     lines += [
         "",
-        f"Commit: `{commit}`  ",
-        f"GitHub Actions run: `{run_id}`  ",
-        f"Repository: `{repository}`",
+        f"Коммит: `{commit}`  ",
+        f"Запуск GitHub Actions: `{run_id}`  ",
+        f"Репозиторий: `{repository}`",
         "",
-        "Client scope: verified Mojang/Fabric/Quilt/Forge materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS). Vanilla matching-server targets additionally materialize verified Mojang server.jar for the exact same Minecraft version and require a real client join.",
-        "Integration scope: canonical API upload → signed immutable release → clean Runtime sync → actual client → Paper join → revoke/deny and health checks.",
+        "Проверка клиента: получение проверенных файлов Mojang/Fabric/Quilt/Forge → контроль целостности локального пакета → точная версия Java → привязка к ОС и архитектуре хоста → разрешение зависимостей Compatibility Engine → реальный процесс Minecraft (Xvfb в Linux; нативный запуск на Windows/macOS). Для целей Vanilla с совпадающим сервером дополнительно требуется проверенный server.jar Mojang той же версии Minecraft и фактическое подключение клиента.",
+        "Интеграционная проверка: загрузка через канонический API → подписанный неизменяемый релиз → чистая синхронизация Runtime → реальный клиент → подключение к Paper → отзыв/отказ в доступе и проверки состояния.",
         "",
     ]
     return "\n".join(lines)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative verifier tests: missing/stale/tampered evidence never means PASS."""
+"""Отрицательные тесты верификатора: отсутствующие, устаревшие и подменённые свидетельства никогда не дают PASS."""
 
 import json
 from pathlib import Path

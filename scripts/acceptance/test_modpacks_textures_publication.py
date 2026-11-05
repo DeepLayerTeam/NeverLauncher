@@ -1,4 +1,4 @@
-"""Negative and integrity regressions; not substitutes for live acceptance."""
+"""Отрицательные регрессионные тесты и проверки целостности; не заменяют действующую приёмку."""
 import json
 import os
 from pathlib import Path

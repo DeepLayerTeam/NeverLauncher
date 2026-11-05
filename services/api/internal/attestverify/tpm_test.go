@@ -252,5 +252,5 @@ func TestLinuxHardwareEnclaveECDSAKeyScheme0314(t *testing.T) {
 		})
 	}
 	// Корень, AK и подписанный сертификат всё ещё не устанавливают доверие
-	// Guard/PCR.
+	// Guard или состояние регистров PCR.
 }

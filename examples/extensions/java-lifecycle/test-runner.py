@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real subprocess smoke E2E against Extensions 1.0 HTTP host wire format."""
+"""Реальный smoke-тест подпроцесса для формата обмена Extensions 1.0 HTTP Host."""
 
 import http.server
 import json

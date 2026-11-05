@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hostile input / wire-format regressions. Fixtures are NOT live acceptance."""
+"""Регрессионные тесты враждебных входных данных и формата обмена. Фикстуры НЕ являются действующей приёмкой."""
 from __future__ import annotations
 import hashlib
 import json

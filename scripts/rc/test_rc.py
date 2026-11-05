@@ -1,4 +1,4 @@
-"""Fail-closed RC harness tests. Fixtures only exercise the verifier, never sign GA."""
+"""Строгие тесты RC-исполнителя. Фикстуры проверяют только верификатор и никогда не подписывают GA."""
 
 import json
 from pathlib import Path

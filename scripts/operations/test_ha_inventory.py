@@ -1,4 +1,4 @@
-"""0.51.1 execution, safety and false-positive regression tests (no Docker required)."""
+"""Регрессионные тесты выполнения, безопасности и ложных срабатываний 0.51.1 (Docker не нужен)."""
 from __future__ import annotations
 import json
 import os

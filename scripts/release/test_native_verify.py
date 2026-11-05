@@ -1,4 +1,4 @@
-"""Native verification regressions: no OS signature is ever mocked as PASS."""
+"""Регрессионные тесты нативной проверки: подпись ОС никогда не имитируется как PASS."""
 from __future__ import annotations
 import struct
 import unittest

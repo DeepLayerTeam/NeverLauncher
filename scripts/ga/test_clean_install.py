@@ -1,4 +1,4 @@
-"""Precondition regression tests. These fixtures do NOT launch Minecraft."""
+"""Регрессионные тесты предварительных условий. Эти фикстуры НЕ запускают Minecraft."""
 
 from pathlib import Path
 import sys

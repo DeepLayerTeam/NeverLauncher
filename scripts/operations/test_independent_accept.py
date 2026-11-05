@@ -1,4 +1,4 @@
-"""Regression and negative tests; real Docker/remote host runs are NOT simulated as GA."""
+"""Регрессионные и отрицательные тесты; реальные Docker и удалённые хосты НЕ имитируются как GA."""
 import copy
 import json
 import os

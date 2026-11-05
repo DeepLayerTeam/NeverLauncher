@@ -1,4 +1,4 @@
-"""Signed support claims must be derived from full, exact-byte GA verification."""
+"""Заявления о подписанной поддержке должны выводиться из полной GA-проверки точных байтов."""
 from __future__ import annotations
 
 from pathlib import Path

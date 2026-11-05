@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate actual method/path dispatch registries for public Go/TS/Java REST SDKs."""
+"""Генерирует действующие реестры маршрутизации методов и путей для публичных REST SDK на Go, TypeScript и Java."""
 import argparse
 import json
 import subprocess

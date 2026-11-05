@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate platform evidence; missing/failed/skipped cases cannot become GA."""
+"""Объединяет свидетельства разных платформ; отсутствующие, проваленные и пропущенные проверки не могут получить GA."""
 import argparse
 import datetime as dt
 import json

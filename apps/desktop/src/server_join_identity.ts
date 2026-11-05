@@ -6,7 +6,7 @@ export function assertOfficialJoin0397(result: OfficialJoin0397, expected: {uuid
   if (!result || !/^[a-f0-9]{32}$/.test(uuid(result.uuid)) || uuid(result.uuid)!==uuid(expected.uuid) ||
     !/^[a-zA-Z0-9_]{3,16}$/.test(result.username) || result.username!==expected.name ||
     result.serverId!==expected.serverId) {
-    throw new Error('ServerBridge returned a different official Minecraft UUID, name or server');
+    throw new Error('ServerBridge вернул другой официальный UUID Minecraft, имя игрока или сервер');
   }
   return result;
 }

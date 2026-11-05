@@ -27,7 +27,7 @@ var uuidPattern = regexp.MustCompile(`^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit
 
 // Account представляет лишь поля, необходимые для миграции пользователя
 // FileAuthSystem. Поля прав и ролей Gravit намеренно НЕ считаются доверенными для
-// RBAC Never.
+// систему контроля доступа RBAC NeverLauncher.
 type Account struct {
 	UUID         string
 	Username     string

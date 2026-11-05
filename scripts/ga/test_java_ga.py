@@ -1,4 +1,4 @@
-"""Publication repeatability, downstream ABI, digest validation and release refusal."""
+"""Воспроизводимость публикации, совместимость ABI, проверка хешей и запрет выпуска при ошибках."""
 
 from pathlib import Path
 import hashlib

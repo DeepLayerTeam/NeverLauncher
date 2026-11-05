@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run actual Java extension JAR backend + CLI against an authenticated test host."""
+"""Запускает настоящие JAR Backend и CLI Java-расширения на аутентифицированном тестовом хосте."""
 import http.server
 import json
 import os

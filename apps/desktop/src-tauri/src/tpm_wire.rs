@@ -193,7 +193,7 @@ mod test_vectors {
         let mut unsafe_reply=resp.clone();
         let marker=[0xff, 0x54, 0x43, 0x47];
         let start=unsafe_reply.windows(4).position(|w|w==marker).unwrap();
-        // magic+type+qualifiedSigner(2+34)+extraData(2+32)+clockInfo.safe
+        // Смещение флага безопасности: magic + type + qualifiedSigner(2+34) + extraData(2+32) + clockInfo.safe.
         let safe=start+6+36+34+16;
         assert_eq!(unsafe_reply[safe],1);
         unsafe_reply[safe]=0;

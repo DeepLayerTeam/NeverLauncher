@@ -1,4 +1,4 @@
-"""Real filesystem regression tests for the 0.48.0 in-place upgrade operator."""
+"""Реальные регрессионные тесты файловой системы для обновления на месте версии 0.48.0."""
 import argparse
 import json
 import zipfile

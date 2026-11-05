@@ -1,4 +1,4 @@
-"""Runner unit tests; these DO NOT count as live API acceptance."""
+"""Модульные тесты исполнителя; они НЕ считаются действующей приёмкой API."""
 import importlib.util
 import json
 import os

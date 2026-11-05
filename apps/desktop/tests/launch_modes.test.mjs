@@ -20,7 +20,7 @@ test('offline requires signed release permission and cannot auto-connect',()=>{
 });
 const settings={memoryMb:4096,screenWidth:1280,screenHeight:720,fullscreen:false,autoEnter:true,serverHost:'mc.example.org',serverPort:25565,serverId:'',offlineEnabled:false};
 test('Minecraft direct server auto-enter is enabled exclusively by explicit official mode',()=>{
-  assert.throws(()=>launchPreferences(settings,{minimumMb:512,maximumMb:8192},false,[]),/Select an available server/);
+  assert.throws(()=>launchPreferences(settings,{minimumMb:512,maximumMb:8192},false,[]),/Выберите доступный сервер/);
   const prefs=launchPreferences(settings,{minimumMb:512,maximumMb:8192},false,[],false,true);
   assert.equal(prefs.autoEnter,true);
   assert.equal(prefs.serverHost,'mc.example.org');

@@ -1,4 +1,4 @@
-"""Dependency-free unit and adversarial tests for DEP09."""
+"""Модульные тесты и проверки обходов для DEP09 без внешних зависимостей."""
 
 import importlib.util
 import json

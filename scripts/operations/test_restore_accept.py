@@ -1,4 +1,4 @@
-"""Fresh-host DR acceptance: time arithmetic, fail-closed and real DR call wiring."""
+"""Приёмка восстановления на новом хосте: арифметика времени, строгие отказы и реальное подключение процедур восстановления."""
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path

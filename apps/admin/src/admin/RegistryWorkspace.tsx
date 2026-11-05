@@ -822,7 +822,7 @@ export function RegistryWorkspace({
               ? "isolated"
               : "не поддерживается / не применяется"}
           </strong>{" "}
-          · {sandboxDiagnostics0311?.platform || "unknown platform"} ·{" "}
+          · {sandboxDiagnostics0311?.platform || "неизвестная платформа"} ·{" "}
           {sandboxDiagnostics0311?.reasonCodes?.join(", ") ||
             "нет проверенного заключения"}
           . Подпись пакета не даёт статус trusted. Старые расширения 2.0
@@ -863,7 +863,7 @@ export function RegistryWorkspace({
                 <code>
                   {item.currentPackageIdentity ||
                     item.packageIdentity ||
-                    "no package identity"}
+                    "идентификатор пакета отсутствует"}
                 </code>
               </p>
               {item.lastError && <p className="error">{item.lastError}</p>}

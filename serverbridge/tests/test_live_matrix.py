@@ -1,4 +1,4 @@
-"""Strict offline regression tests for the live evidence verifier (not game tests)."""
+"""Строгие автономные регрессионные тесты проверяющего механизма действующих свидетельств (не игровые тесты)."""
 
 import hashlib
 import importlib.util

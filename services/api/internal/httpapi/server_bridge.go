@@ -1046,7 +1046,7 @@ func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
 }
 
 // playerUUID910 — только устаревший алгоритм псевдонимов 0.25.0; никогда не выдавайте его как новый
-// Minecraft UUID.
+// UUID игрока Minecraft.
 func playerUUID910(seed string) string {
 	sum := sha256.Sum256([]byte("launcher-player:" + seed))
 	hexed := hex.EncodeToString(sum[:16])

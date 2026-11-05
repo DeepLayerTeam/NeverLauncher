@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative/positive regression tests for fresh 0.36.2+ certifications."""
+"""Положительные и отрицательные регрессионные тесты новых сертификаций версии 0.36.2 и новее."""
 
 from __future__ import annotations
 from datetime import datetime, timezone, timedelta

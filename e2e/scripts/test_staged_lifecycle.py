@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Actual CLI lifecycle round trips plus fail-closed V09 archive and downloader tests."""
+"""Реальные циклы жизненного цикла CLI и строгие проверки архива V09 и загрузчика с отказом по умолчанию."""
 
 import hashlib
 import json

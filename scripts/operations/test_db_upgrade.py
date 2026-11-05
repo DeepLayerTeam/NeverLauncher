@@ -1,4 +1,4 @@
-"""Regression tests for real SQLite backup/restore bytes and fail-closed PG DDL orchestration."""
+"""Регрессионные тесты реальных байтов резервного копирования/восстановления SQLite и безопасной оркестрации DDL PostgreSQL."""
 import os
 from pathlib import Path
 import sqlite3

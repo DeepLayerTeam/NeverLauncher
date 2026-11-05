@@ -1,4 +1,4 @@
-"""Synthetic signed fixtures exercise the verifier, not release certification."""
+"""Синтетические подписанные фикстуры проверяют верификатор, а не сертификацию релиза."""
 
 from pathlib import Path
 import hashlib

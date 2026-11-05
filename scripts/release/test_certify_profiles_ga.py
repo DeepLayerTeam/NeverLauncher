@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise certification evidence parsing, including the dangerous skipped-test case."""
+"""Проверяет разбор свидетельств сертификации, включая опасный случай пропущенного теста."""
 import json
 from pathlib import Path
 import sys

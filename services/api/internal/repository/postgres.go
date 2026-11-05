@@ -19,9 +19,9 @@ import (
 
 // SQLRepository — минимальная SQL-реализация Repository для PostgreSQL-схемы Launcher.
 //
-// Реализация намеренно ограничена: она охватывает основные производственные сущности API.
-// (projects, profiles, release_channels, release_versions, files, users, roles,
-// audit_events, telemetry_events, crash_reports) и больше не делегирует PostgreSQL-режим в MemoryRepository.
+// Реализация намеренно ограничена основными производственными сущностями API:
+// projects, profiles, release_channels, release_versions, files, users, roles,
+// audit_events, telemetry_events, crash_reports. PostgreSQL больше не делегирует операции в MemoryRepository.
 // Для работы требуется зарегистрированный database/sql driver.
 // По умолчанию используется имя драйвера "pgx" через github.com/jackc/pgx/v5/stdlib.
 // Для нестандартного driver-name используйте NewSQLRepository.

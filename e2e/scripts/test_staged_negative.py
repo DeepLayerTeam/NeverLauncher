@@ -1,4 +1,4 @@
-"""Regression tests for executable adversarial probes, not game certifications."""
+"""Регрессионные тесты исполняемых проверок обхода защиты, а не сертификация игры."""
 import hashlib
 import json
 import os

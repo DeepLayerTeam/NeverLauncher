@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests exercise negative paths; mocked responses are never release evidence."""
+"""Модульные тесты проверяют сценарии отказа; имитированные ответы никогда не служат доказательством готовности релиза."""
 
 import json
 from pathlib import Path

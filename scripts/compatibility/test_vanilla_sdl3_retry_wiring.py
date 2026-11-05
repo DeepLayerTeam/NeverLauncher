@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify real Vanilla 26.3 certification uses the fail-closed native SDL retry helper."""
+"""Проверяет, что сертификация Vanilla 26.3 использует нативный механизм безопасного повтора SDL."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration regression for the strict resource readiness gate, no game network required."""
+"""Интеграционная регрессия строгой проверки готовности ресурсов; игровая сеть не требуется."""
 
 import json
 from pathlib import Path

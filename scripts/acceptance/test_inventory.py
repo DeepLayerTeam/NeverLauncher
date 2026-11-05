@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tamper/replay/signature regression fixtures; fixtures are NEVER release evidence."""
+"""Регрессионные сценарии подмены, повторного воспроизведения и подписей; фикстуры НИКОГДА не служат свидетельствами выпуска."""
 import copy
 import hashlib
 import json

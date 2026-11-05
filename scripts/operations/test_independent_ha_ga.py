@@ -1,4 +1,4 @@
-"""Fail-closed independent GA acceptance regressions (no fake HA certification)."""
+"""Строгие регрессионные тесты независимой приёмки GA (без фиктивной HA-сертификации)."""
 from __future__ import annotations
 
 import argparse

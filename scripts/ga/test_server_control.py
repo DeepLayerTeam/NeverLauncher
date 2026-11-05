@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for fail-closed interpretation; NOT a real Minecraft E2E."""
+"""Модульные тесты строгой интерпретации отказов; НЕ настоящий Minecraft E2E."""
 
 import json
 from pathlib import Path

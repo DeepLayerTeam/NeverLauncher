@@ -195,11 +195,11 @@ export function BackendOperations0289({
             <code>{status.commit}</code> · время работы: {status.uptimeSeconds} с
           </p>
           <p>
-            Идентификатор Runtime: <code>{status.instanceId}</code> · конфигурация
-            revision: #{status.operationalConfigRevision}
+            Идентификатор Runtime: <code>{status.instanceId}</code> · ревизия
+            конфигурации: #{status.operationalConfigRevision}
           </p>
           <p>
-            Supervised restart:{" "}
+            Контролируемый перезапуск:{" "}
             <strong>
               {status.supervisedRestartEnabled ? "включён" : "отключён"}
             </strong>{" "}

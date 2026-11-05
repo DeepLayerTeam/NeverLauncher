@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regressions for bounded and secret-redacted Minecraft CI diagnostics."""
+"""Регрессионные проверки диагностики Minecraft CI с ограничением размера и удалением секретов."""
 
 from __future__ import annotations
 

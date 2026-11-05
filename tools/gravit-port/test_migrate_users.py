@@ -1,4 +1,4 @@
-"""Stateful, failure-oriented tests of the executable user migration operator."""
+"""Сохраняющие состояние тесты миграции пользователей с намеренными сценариями отказов."""
 import importlib.util
 import json
 import hashlib

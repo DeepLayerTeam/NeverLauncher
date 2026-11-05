@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a ported Gravit-shaped module in two real JVM processes, with authenticated host callbacks."""
+"""Запускает портированный модуль Gravit в двух реальных процессах JVM с аутентифицированными вызовами хоста."""
 
 import http.server
 import json

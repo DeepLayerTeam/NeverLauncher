@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export a bounded, redacted Minecraft launch failure trace for CI artifacts."""
+"""Экспортирует ограниченную по размеру обезличенную трассировку ошибки запуска Minecraft в артефакты CI."""
 
 from __future__ import annotations
 

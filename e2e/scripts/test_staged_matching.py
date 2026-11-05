@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests; synthetic messages must never certify actual gameplay."""
+"""Регрессионные тесты; синтетические сообщения никогда не подтверждают реальный игровой процесс."""
 
 import hashlib
 import io

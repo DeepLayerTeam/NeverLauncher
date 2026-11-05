@@ -171,7 +171,7 @@ function AdminExtensionFrame({
           data.protocol !== ADMIN_PROTOCOL ||
           data.extensionApiVersion !== EXTENSION_API_VERSION
         )
-          throw new Error("Admin extension protocol/API mismatch");
+          throw new Error("Несовместимы протокол и версия API расширения Admin");
         if (!cancelled) setHtml(data.html);
       })
       .catch((err: Error) => {
@@ -408,7 +408,7 @@ export function AdminExtensions({
         data.protocol !== ADMIN_PROTOCOL ||
         data.extensionApiVersion !== EXTENSION_API_VERSION
       )
-        throw new Error("Admin extension catalog protocol/API mismatch");
+        throw new Error("Несовместимы протокол и версия API каталога расширений Admin");
       if (generation !== refreshGeneration.current) return;
       setCatalog(data.items ?? []);
       if (mode === "workspace") {
@@ -422,7 +422,7 @@ export function AdminExtensions({
           management.emergency(),
         ]);
         if (!Array.isArray(m.items))
-          throw new Error("Invalid extension manager inventory");
+          throw new Error("Некорректный список расширений менеджера");
         if (generation !== refreshGeneration.current) return;
         setManager(m);
         setQuarantine(q);
@@ -644,7 +644,7 @@ export function AdminExtensions({
         management.emergency(),
       ]);
       if (!Array.isArray(nextManager.items))
-        throw new Error("Manager inventory unavailable after action");
+        throw new Error("После операции недоступен обновлённый список расширений");
       setManager(nextManager);
       setQuarantine(nextQuarantine);
       setEmergency(nextEmergency);
@@ -963,13 +963,13 @@ export function AdminExtensions({
                         ? "Без подтверждённой OS-изоляции"
                         : "Не подтверждено"}
                   </strong>{" "}
-                  · {runtime.state ?? "not running"}
+                  · {runtime.state ?? "не запущено"}
                 </p>
                 <p className="muted">
-                  ОС: {runtime.osSandbox ?? "none"} · ресурсы:{" "}
-                  {runtime.resourceIsolation ?? "not verified"} · сеть:{" "}
-                  {runtime.networkSandbox ?? "not verified"} · файлы:{" "}
-                  {runtime.filesystemSandbox ?? "not verified"}
+                  ОС: {runtime.osSandbox ?? "нет"} · ресурсы:{" "}
+                  {runtime.resourceIsolation ?? "не проверено"} · сеть:{" "}
+                  {runtime.networkSandbox ?? "не проверено"} · файлы:{" "}
+                  {runtime.filesystemSandbox ?? "не проверено"}
                 </p>
                 {!!runtime.isolationReasonCodes?.length && (
                   <p className="error">
@@ -1020,10 +1020,10 @@ export function AdminExtensions({
                 требования не подтверждают фактическую изоляцию.
               </p>
               <p className="muted">
-                Effective capabilities:{" "}
-                {(permissions.effective ?? []).join(", ") || "none"}
+                Фактически предоставленные возможности:{" "}
+                {(permissions.effective ?? []).join(", ") || "нет"}
                 {(permissions.missing ?? []).length
-                  ? ` · missing: ${(permissions.missing ?? []).join(", ")}`
+                  ? ` · отсутствуют: ${(permissions.missing ?? []).join(", ")}`
                   : ""}
               </p>
               <div className="buttonRow">

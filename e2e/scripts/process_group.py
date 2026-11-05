@@ -1,4 +1,4 @@
-"""Portable isolated process trees. Never kill an unrelated process group."""
+"""Переносимое управление изолированными деревьями процессов. Нельзя завершать посторонние группы процессов."""
 import os
 import signal
 import subprocess

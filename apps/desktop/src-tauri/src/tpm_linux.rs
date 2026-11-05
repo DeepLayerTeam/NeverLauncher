@@ -211,7 +211,7 @@ pub fn certify(
     let path=|p: &Path| p.to_string_lossy().into_owned();
     // Шаблон ограниченного родительского хранилища ECC P-256 владельца
     // hardware-enclave 0.2.10: fixedTPM/parent, sensitiveDataOrigin,
-    // userWithAuth, restricted decrypt, AES-128 CFB, SHA-256, null ECC scheme и KDF.
+    // userWithAuth, ограниченное расшифрование, AES-128 CFB, SHA-256, пустые схема ECC и KDF.
     tool("tpm2_createprimary", &arglist(&["-Q","-C","o","-g","sha256","-G","ecc256:aes128cfb",
         "-a","fixedtpm|fixedparent|sensitivedataorigin|userwithauth|restricted|decrypt", "-c",&path(&parent)]))?;
     tool("tpm2_load", &arglist(&["-Q","-C",&path(&parent),"-u",&path(&pub_path),"-r",&path(&private_path),"-c",&path(&subject)]))?;

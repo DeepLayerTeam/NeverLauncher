@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for NightConfig's Forge 1.14.4 first-launch failure."""
+"""Регрессионные тесты ошибки первого запуска Forge 1.14.4 с NightConfig."""
 import importlib.util
 from pathlib import Path
 import tempfile

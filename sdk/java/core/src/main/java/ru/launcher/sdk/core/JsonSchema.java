@@ -3,8 +3,8 @@ package ru.launcher.sdk.core;
 import java.util.*;
 
 /** Подмножество JSON Schema с отказом по умолчанию для событий, команд и конфигурации Runtime.
- * Supported: type, properties, required, additionalProperties, items, enum,
- * minLength, maxLength, minimum, maximum, minItems, maxItems. Unknown keywords
+ * Поддерживаются ключи: type, properties, required, additionalProperties, items, enum,
+ * minLength, maxLength, minimum, maximum, minItems, maxItems. Неизвестные ключи
  * отклоняются; это намеренно не полноценный движок JSON Schema без ограничений.
  */
 public final class JsonSchema {

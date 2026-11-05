@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the checked-in OpenAPI 3.1 contract for the canonical Launcher API v1."""
+"""Генерирует сохраняемый в репозитории контракт OpenAPI 3.1 для канонического API Launcher v1."""
 
 from __future__ import annotations
 import json, re

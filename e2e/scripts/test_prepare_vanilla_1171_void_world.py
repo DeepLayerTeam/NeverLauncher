@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pure-Python regression tests for the 1.17.1 offline void-world conversion."""
+"""Регрессионные Python-тесты автономного преобразования пустого мира для версии 1.17.1."""
 import importlib.util
 import json
 import struct

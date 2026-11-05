@@ -508,9 +508,9 @@ def render_markdown(
     repository: str,
 ) -> str:
     lines = [
-        f"# Launcher {PRODUCT_VERSION} Guard CI certification",
+        f"# Launcher {PRODUCT_VERSION} — сертификация Guard в CI",
         "",
-        "| Target | Runner | Platform | Runtime arch | Status | Package SHA-256 |",
+        "| Цель | Исполнитель | Платформа | Архитектура Runtime | Статус | SHA-256 пакета |",
         "|---|---|---|---|---|---|",
     ]
     for target in targets:
@@ -526,11 +526,11 @@ def render_markdown(
         )
     lines += [
         "",
-        f"Commit: `{commit}`  ",
-        f"GitHub Actions run: `{run_id}`  ",
-        f"Repository: `{repository}`",
+        f"Коммит: `{commit}`  ",
+        f"Запуск GitHub Actions: `{run_id}`  ",
+        f"Репозиторий: `{repository}`",
         "",
-        "Certification binds the exact CI-built package, Desktop, Guard, package manifest and release allowlist hashes for Linux, Windows and macOS. It deliberately does not claim possession or provenance of production Authenticode/Developer ID credentials.",
+        "Сертификация привязывает точные хеши собранного в CI пакета, Desktop, Guard, манифеста и разрешённого списка выпуска для Linux, Windows и macOS. Она намеренно не подтверждает наличие или происхождение производственных учётных данных Authenticode/Developer ID.",
         "",
     ]
     return "\n".join(lines)

@@ -1,4 +1,4 @@
-"""Receipt/schema negative tests; these are NOT live browser evidence."""
+"""Отрицательные тесты расписок и схем; это НЕ свидетельство настоящего браузерного сценария."""
 
 import importlib.util
 from pathlib import Path

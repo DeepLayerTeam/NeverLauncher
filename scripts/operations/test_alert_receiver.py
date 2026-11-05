@@ -1,4 +1,4 @@
-"""Real localhost HTTP/bearer/durable-file tests; not external delivery evidence."""
+"""Реальные локальные тесты HTTP, bearer-аутентификации и устойчивых файлов; не подтверждают внешнюю доставку."""
 import http.client
 import json
 from datetime import datetime, timezone

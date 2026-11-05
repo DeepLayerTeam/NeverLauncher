@@ -16,7 +16,7 @@ export class IndeterminateApiError extends Error {
 }
 
 export async function requestJSON<T>(backendUrl: string, path: string, token?: string, init: RequestInit = {}): Promise<T> {
-  if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Invalid API path');
+  if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Некорректный путь API');
   const method = (init.method ?? 'GET').toUpperCase();
   const mutation = !['GET','HEAD','OPTIONS'].includes(method);
   const headers = new Headers(init.headers);

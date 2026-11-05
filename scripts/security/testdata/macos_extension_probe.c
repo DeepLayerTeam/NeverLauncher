@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// A real child of the signed App Sandbox helper, not a mocked entitlement test.
+// Реальный дочерний процесс подписанного помощника App Sandbox, а не имитация проверки разрешений.
 int main(int argc, char **argv) {
     if (argc < 2) return 42;
     if (!strcmp(argv[1], "sandbox")) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed public compatibility matrix builder for Extensions 0.20.12."""
+"""Формирует публичную матрицу совместимости расширений 0.20.12 со строгим отказом при ошибках."""
 
 from __future__ import annotations
 import argparse, json, sys
@@ -68,12 +68,12 @@ def aggregate(targets: Path, evidence_dir: Path, out_json: Path, out_md: Path):
         json.dumps(matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     lines = [
-        "# Extensions Trust, Recovery & Certification — public compatibility matrix",
+        "# Доверие, восстановление и сертификация расширений — публичная матрица совместимости",
         "",
-        f"Version: `{matrix['productVersion']}`  ",
-        f"Status: **{matrix['status']}**",
+        f"Версия: `{matrix['productVersion']}`  ",
+        f"Статус: **{matrix['status']}**",
         "",
-        "| Target | OS | Architecture | Go | Status |",
+        "| Целевая платформа | ОС | Архитектура | Go | Статус |",
         "| --- | --- | --- | --- | --- |",
     ]
     for e in results:
@@ -82,7 +82,7 @@ def aggregate(targets: Path, evidence_dir: Path, out_json: Path, out_md: Path):
         )
     lines += [
         "",
-        "PASS is emitted only from CI evidence after all required trust/recovery, malicious-package, build and OpenAPI checks complete on that runner.",
+        "Статус PASS формируется только на основании свидетельств CI после завершения всех обязательных проверок доверия, восстановления, вредоносных пакетов, сборки и OpenAPI на соответствующем исполнителе.",
         "",
     ]
     out_md.write_text("\n".join(lines), encoding="utf-8")

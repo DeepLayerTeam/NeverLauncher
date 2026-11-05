@@ -11,7 +11,7 @@
 и неизменённые проверки шести точных файлов. Начиная с 0.43.1 к 15 обязательным
 проверкам каждой платформы добавлены шесть **отдельных** security checks:
 
-| Check | Разрешённая операция | Обязательный отказ | Где проверять |
+| Проверка | Разрешённая операция | Обязательный отказ | Где проверять |
 |---|---|---|---|
 | `securityDeviceTrust` | `deviceEnrollmentAllowed` | `staleDeviceEpochDenied` | Нативный клиент + backend |
 | `securityHwidPolicy` | `knownDeviceLoginAllowed` | `unapprovedHardwareChangeDenied` | Нативный клиент + backend |

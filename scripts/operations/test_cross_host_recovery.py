@@ -1,4 +1,4 @@
-"""0.51.9: real-byte DR regression; live PostgreSQL/S3/remote Docker are external gates."""
+"""0.51.9: регрессия аварийного восстановления реальных байтов; действующие PostgreSQL, S3 и удалённый Docker проверяются отдельно."""
 import argparse
 import hashlib
 import io

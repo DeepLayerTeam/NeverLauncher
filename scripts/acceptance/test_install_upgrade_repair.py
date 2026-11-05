@@ -1,4 +1,4 @@
-"""Fail-closed input and local native-process tests for the destructive runner."""
+"""Проверки входных данных и локальных нативных процессов с отказом по умолчанию для разрушающего сценария."""
 import importlib.util
 from pathlib import Path
 import os

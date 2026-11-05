@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative security fixtures only; NOT a real native game or GA acceptance."""
+"""Только отрицательные сценарии безопасности; это НЕ реальный запуск игры и НЕ приёмка GA."""
 import hashlib
 import json
 from pathlib import Path

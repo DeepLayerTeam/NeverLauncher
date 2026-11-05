@@ -1,4 +1,4 @@
-"""Real Ed25519 attestation test and negative scenarios; no fake GA receipts."""
+"""Реальные проверки аттестации Ed25519 и отрицательные сценарии; без фиктивных расписок GA."""
 from __future__ import annotations
 import json
 from pathlib import Path

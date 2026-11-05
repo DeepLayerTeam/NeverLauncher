@@ -301,11 +301,11 @@ def render_markdown(
     repository: str,
 ) -> str:
     lines = [
-        f"# Launcher {product_version} — Public Device Trust Matrix",
+        f"# Launcher {product_version} — публичная матрица доверия к устройствам",
         "",
         "> Матрица генерируется только из CI evidence для exact commit/run ID. PASS нельзя записать вручную в targets.json.",
         "",
-        "| Target | Scope | OS / target arch | Runtime arch | Checks | Result |",
+        "| Цель | Область проверки | ОС / архитектура цели | Архитектура Runtime | Проверки | Результат |",
         "|---|---|---|---|---:|---:|",
     ]
     for target in targets:
@@ -315,9 +315,9 @@ def render_markdown(
         total = len(target["requiredChecks"])
         status = "PASS" if record.get("status") == "passed" else "FAIL"
         scope = (
-            "PostgreSQL protocol E2E"
+            "Сквозные проверки протокола PostgreSQL"
             if target["kind"] == "protocol-e2e"
-            else "Native Tauri compile + key-policy unit tests"
+            else "Нативная компиляция Tauri и модульные проверки политики ключей"
         )
         lines.append(
             f"| `{target['id']}` | {scope} | `{target['os']}/{target['arch']}` | "
@@ -325,9 +325,9 @@ def render_markdown(
         )
     lines += [
         "",
-        f"Commit: `{commit}`  ",
-        f"GitHub Actions run: `{run_id}`  ",
-        f"Repository: `{repository}`",
+        f"Коммит: `{commit}`  ",
+        f"Запуск GitHub Actions: `{run_id}`  ",
+        f"Репозиторий: `{repository}`",
         "",
         "Protocol E2E проверяет Device Trust Release 0.13.0 на реальном PostgreSQL с migration stabilization 0.12.10: sealed migration baseline 0018, registration/replay protection, session binding epoch, device-bound refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge binding invalidation, revocation cascade, risk step-up, P-256 challenge-response attestation protocol и runtime release/readiness contract.",
         "",

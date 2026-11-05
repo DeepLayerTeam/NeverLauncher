@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live Linux integration: actual CLI supervisor, systemd notify, signal, persisted player data."""
+"""Действующая интеграция Linux: настоящий CLI Supervisor, уведомления systemd, сигналы и сохранённые данные игроков."""
 
 import argparse
 import json

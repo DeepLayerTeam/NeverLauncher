@@ -1,4 +1,4 @@
-"""Regression: 0.45.5 must not back up or reactivate HA with live workers."""
+"""Регрессия: версия 0.45.5 не должна создавать резервную копию или повторно активировать HA при действующих обработчиках."""
 import subprocess
 import unittest
 from pathlib import Path

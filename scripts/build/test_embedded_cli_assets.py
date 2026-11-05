@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression checks for the single-source embedded CLI bundle workflow."""
+"""Регрессионные проверки рабочего процесса единого встраиваемого пакета ресурсов CLI."""
 import importlib.util
 import tempfile
 import unittest

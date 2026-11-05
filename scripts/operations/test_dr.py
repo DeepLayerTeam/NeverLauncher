@@ -1,4 +1,4 @@
-"""Fail-closed tests for the real (Docker-backed) DR runner."""
+"""Строгие проверки отказов для реального сценария аварийного восстановления на Docker."""
 
 from __future__ import annotations
 

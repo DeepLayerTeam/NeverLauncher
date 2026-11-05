@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executable signing/compatibility tests using a throwaway Ed25519 key."""
+"""Исполняемые тесты подписания и совместимости с временным ключом Ed25519."""
 
 from __future__ import annotations
 

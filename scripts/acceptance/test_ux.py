@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative tests for the 0.35.1 acceptance runner (not client certification)."""
+"""Отрицательные тесты сценария приёмки 0.35.1 (не сертификация клиента)."""
 import importlib.util
 import json
 from pathlib import Path

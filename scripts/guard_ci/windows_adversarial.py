@@ -497,11 +497,11 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         json.dumps(certificate, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     lines = [
-        f"# Launcher {PRODUCT_VERSION} Windows Adversarial CI",
+        f"# Launcher {PRODUCT_VERSION} — проверки противодействия обходам в Windows CI",
         "",
-        f"Evidence root: `{certificate['evidenceRootSha256']}`",
+        f"Корневой хеш свидетельств: `{certificate['evidenceRootSha256']}`",
         "",
-        "| Java | Compatibility | Adversarial | Result |",
+        "| Java | Совместимость | Проверки обходов | Результат |",
         "|---:|---:|---:|---|",
     ]
     for major in CERTIFIED_JAVA_MAJORS:
@@ -510,7 +510,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         )
     lines += [
         "",
-        f"Total live scenario executions: **{certificate['scenarioExecutions']}**.",
+        f"Всего фактически выполненных сценариев: **{certificate['scenarioExecutions']}**.",
         "",
     ]
     (args.output_dir / "WINDOWS_ADVERSARIAL_CERTIFICATE.md").write_text(

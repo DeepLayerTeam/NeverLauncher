@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run TWO actual Java OS processes against an authenticated host, share durable broker state and deliver an event."""
+"""ДВА реальных процесса Java взаимодействуют с аутентифицированным хостом, разделяют состояние брокера и доставляют событие."""
 
 import base64
 import http.server

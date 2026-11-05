@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail CI when canonical Go routes and the checked-in OpenAPI contract diverge."""
+"""Завершает CI с ошибкой при расхождении канонических маршрутов Go и сохранённого в репозитории контракта OpenAPI."""
 from __future__ import annotations
 import json,re,sys
 from pathlib import Path

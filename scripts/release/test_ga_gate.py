@@ -1,4 +1,4 @@
-"""Adversarial signature/byte-binding checks. Synthetic fixtures are never GA evidence."""
+"""Проверки подделки подписи и привязки точных байтов. Синтетические фикстуры никогда не служат GA-свидетельствами."""
 from __future__ import annotations
 
 import hashlib

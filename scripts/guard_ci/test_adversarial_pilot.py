@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative tests of evidence authenticity; fixtures are never pilot evidence."""
+"""Отрицательные тесты подлинности свидетельств; фикстуры никогда не признаются результатами пилотного запуска."""
 from __future__ import annotations
 
 import importlib.util

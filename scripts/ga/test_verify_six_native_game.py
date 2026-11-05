@@ -1,4 +1,4 @@
-"""Adversarial fixtures for the real native-game aggregation code; NOT certification."""
+"""Враждебные фикстуры для агрегирования результатов нативной игры; НЕ сертификация."""
 from __future__ import annotations
 
 import hashlib

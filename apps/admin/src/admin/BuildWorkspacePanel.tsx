@@ -405,7 +405,7 @@ export function BuildWorkspacePanel({
       {!workspace && (
         <>
           <label className="field">
-            Java major{" "}
+            Основная версия Java{" "}
             <input
               type="number"
               min={8}
@@ -416,7 +416,7 @@ export function BuildWorkspacePanel({
             />
           </label>
           <label className="field">
-            RAM recommended (MB){" "}
+            Рекомендуемая память (МБ){" "}
             <input
               type="number"
               min={512}
@@ -495,7 +495,7 @@ export function BuildWorkspacePanel({
           />
           <p>
             Рабочая область: <code>{workspace.id}</code> · {workspace.state} ·
-            revision {workspace.revision} · Profile revision{" "}
+            ревизия {workspace.revision} · ревизия профиля{" "}
             {workspace.profileRevision}
           </p>
           <div className="buttonRow">
@@ -609,7 +609,7 @@ export function BuildWorkspacePanel({
           {comparison && (
             <>
               <p>
-                Diff revision {comparison.revision}:{" "}
+                Ревизия сравнения {comparison.revision}:{" "}
                 {Object.entries(counts)
                   .map(([kind, count]) => `${kind}: ${count}`)
                   .join(" · ") || "нет изменений"}
@@ -745,7 +745,7 @@ export function BuildWorkspacePanel({
           )}
           {validation && (
             <p>
-              Validated profile r{validation.profileRevision}:{" "}
+              Проверенный профиль, ревизия {validation.profileRevision}:{" "}
               <code>{validation.buildDigest}</code> · {validation.fileCount}{" "}
               файлов. Сервер повторно проверит все файлы при сборке.
             </p>

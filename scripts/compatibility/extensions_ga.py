@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed Extensions 0.21.0 GA compatibility/certificate builder."""
+"""Формирует матрицу совместимости и сертификат GA расширений 0.21.0 со строгим отказом при ошибках."""
 
 from __future__ import annotations
 import argparse, hashlib, json
@@ -113,13 +113,13 @@ def aggregate(
         json.dumps(matrix, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     lines = [
-        "# Extensions GA — public compatibility matrix",
+        "# Расширения GA — публичная матрица совместимости",
         "",
-        f"Version: `{product}`  ",
-        f"Frozen contract baseline: `{BASELINE_VERSION}`  ",
-        "Status: **certified**",
+        f"Версия: `{product}`  ",
+        f"Зафиксированная базовая версия контракта: `{BASELINE_VERSION}`  ",
+        "Статус: **сертифицировано**",
         "",
-        "| Target | OS | Architecture | Go | Status |",
+        "| Целевая платформа | ОС | Архитектура | Go | Статус |",
         "| --- | --- | --- | --- | --- |",
     ]
     for e in results:
@@ -128,7 +128,7 @@ def aggregate(
         )
     lines += [
         "",
-        "The certificate is emitted only after every required GA check has PASS evidence on Linux, Windows and macOS.",
+        "Сертификат выпускается только при наличии подтверждения PASS для всех обязательных GA-проверок на Linux, Windows и macOS.",
         "",
     ]
     out_md.write_text("\n".join(lines), encoding="utf-8")

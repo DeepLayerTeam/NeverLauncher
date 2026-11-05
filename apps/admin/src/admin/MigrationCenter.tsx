@@ -1699,11 +1699,10 @@ export function MigrationCenter0331({
           )}
           {security && (
             <p>
-              Security reset: {security.verified ? "проверен" : "зафиксирован"}{" "}
-              · sessions {security.sessionsRevoked} · devices{" "}
-              {security.devicesRevoked} · challenges{" "}
-              {security.challengesConsumed}. Требуются повторный вход, device
-              enrollment и свежая Guard attestation.
+              Сброс параметров безопасности: {security.verified ? "проверен" : "зафиксирован"}{" "}
+              · отозвано сеансов: {security.sessionsRevoked} · устройств:{" "}
+              {security.devicesRevoked} · запросов проверки:{" "}
+              {security.challengesConsumed}. Требуются повторный вход, регистрация устройства и новая аттестация Guard.
             </p>
           )}
           {credentials && (
@@ -2163,7 +2162,7 @@ export function MigrationCenter0331({
             />
           </label>
           <label className="field">
-            <span>Текущая revision channel_head (0, если канал пуст)</span>
+            <span>Текущая ревизия channel_head (0, если канал пуст)</span>
             <input
               type="number"
               min="0"
@@ -2237,9 +2236,9 @@ export function MigrationCenter0331({
                 <code>
                   {route.profileId}/{route.channel}
                 </code>{" "}
-                · {route.state} · rev {route.revision} · Never release{" "}
-                <code>{route.releaseId}</code> · original head{" "}
-                {route.baselineRevision} · active head{" "}
+                · {route.state} · ревизия {route.revision} · выпуск NeverLauncher{" "}
+                <code>{route.releaseId}</code> · исходная ревизия{" "}
+                {route.baselineRevision} · активная ревизия{" "}
                 {route.activatedRevision ?? "—"}
               </p>
               {route.state === "staged" && (

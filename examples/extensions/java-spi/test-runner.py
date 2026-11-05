@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real JVM host, nested dependency, broker-backed provider selection, switch and CLI."""
+"""Настоящий JVM Host, вложенная зависимость, выбор и смена провайдера через брокер и CLI."""
 import http.server
 import json
 import os

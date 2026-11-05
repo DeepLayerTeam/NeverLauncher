@@ -59,7 +59,7 @@ public final class Agent {
         if (guardPolicyActive) {
             // Устанавливайте наблюдатель до инициализации собственного загрузчика
             // Minecraft. Разрешённые классы загрузчика должны происходить из закреплённых
-            // JAR Runtime.
+            // JAR-файл Runtime.
             instrumentation.addTransformer(LoaderGuard0504.from(config), false);
             if ("true".equals(config.getProperty("integrity.required"))) {
                 RuntimeIntegrity0505 integrity = RuntimeIntegrity0505.from(config);

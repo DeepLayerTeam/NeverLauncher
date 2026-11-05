@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backwards-compatible 0.36.0 verifier entry point (unchanged signed format)."""
+"""Обратно совместимая точка входа верификатора 0.36.0 (формат подписи без изменений)."""
 from verified_targets import *  # noqa: F401,F403: historical public imports
 from verified_targets import main
 

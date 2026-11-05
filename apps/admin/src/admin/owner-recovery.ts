@@ -10,7 +10,7 @@ export function durableOwnerKey(
   workflow: "release" | "operations" | "bridge" = "release",
 ): string {
   if (!backend.trim() || !userId.trim() || !projectId.trim())
-    throw Error("Authenticated owner scope required");
+    throw Error("Требуется авторизация владельца");
   return `launcher.owner.0388.${workflow}.${encodeURIComponent(backend.replace(/\/$/, ""))}.${encodeURIComponent(userId)}.${encodeURIComponent(projectId)}`;
 }
 export async function findOriginalOwnerJob(
@@ -44,8 +44,8 @@ export async function findOriginalOwnerJob(
     job.kind !== pending.intent.kind ||
     job.resourceId !== resource
   )
-    throw Error("Backend journal does not match the saved operation");
+    throw Error("Журнал Backend не соответствует сохранённой операции");
   if (pending.jobId && pending.jobId !== job.id)
-    throw Error("Operation journal returned a different job");
+    throw Error("Журнал операций вернул другую задачу");
   return job;
 }

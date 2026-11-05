@@ -1,4 +1,4 @@
-"""Contract-free tests: real HTTP bytes, real local subprocess, fail-closed checks."""
+"""Тесты без зависимости от контракта: реальные байты HTTP, реальный локальный подпроцесс и строгие проверки отказов."""
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path

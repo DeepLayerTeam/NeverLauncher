@@ -1,4 +1,4 @@
-"""Adversarial tests for exact-byte freeze and independently re-run 0.52.12 acceptance."""
+"""Проверки обходов заморозки точных байтов и независимо повторённой приёмки 0.52.12."""
 from __future__ import annotations
 import hashlib
 import json

@@ -741,7 +741,7 @@ code {
 .subcard code {
   overflow-wrap: anywhere;
 }
-/* 0.21.8 Release Workspace */
+/* 0.21.8 Рабочая область выпуска */
 .releaseWorkspace {
   display: grid;
   gap: 16px;

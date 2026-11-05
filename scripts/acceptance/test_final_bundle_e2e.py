@@ -1,4 +1,4 @@
-"""Unit tests of fail-closed exact-binary evidence; not live E2E evidence."""
+"""Модульные тесты строгой проверки точных байтов бинарных файлов, а не реальные свидетельства E2E."""
 import importlib.util
 import json
 from pathlib import Path

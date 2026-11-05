@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise production Go updater, not a mocked command or fake JVM report."""
+"""Проверяется промышленный обновляющий механизм на Go, а не имитация команды или фиктивный отчёт JVM."""
 
 import hashlib
 import importlib.util

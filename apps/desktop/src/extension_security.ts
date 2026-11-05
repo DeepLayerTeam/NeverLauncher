@@ -77,7 +77,7 @@ export function verifiedEntrypoint0356(
   item: ExtensionIdentity0356,
 ): string {
   if (!data || typeof data !== "object")
-    throw new Error("Invalid extension entrypoint");
+    throw new Error("Некорректная точка входа расширения");
   const x = data as Record<string, unknown>;
   if (
     x.protocol !== EXTENSION_PROTOCOL_0356 ||
@@ -88,7 +88,7 @@ export function verifiedEntrypoint0356(
     typeof x.html !== "string" ||
     x.html.length > MAX_HTML
   )
-    throw new Error("Stale or oversized extension entrypoint");
+    throw new Error("Точка входа расширения устарела или превышает допустимый размер");
   return x.html;
 }
 export function validRPC0356(

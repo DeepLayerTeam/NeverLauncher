@@ -1,4 +1,4 @@
-"""Independent 0.53.0 publication gate: synthetic assets are tests only."""
+"""Независимый контроль публикации 0.53.0: синтетические артефакты используются только в тестах."""
 from __future__ import annotations
 import hashlib
 from pathlib import Path

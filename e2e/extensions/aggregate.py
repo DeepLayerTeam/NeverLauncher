@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject incomplete, mislabeled or stale platform evidence for extension E2E."""
+"""Отклоняет неполные, неправильно размеченные или устаревшие свидетельства E2E-проверок расширений по платформам."""
 
 import argparse
 import hashlib

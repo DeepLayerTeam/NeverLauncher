@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Byte-for-byte compare every public Maven artifact in independent staging builds."""
+"""Побайтово сравнивает каждый публичный Maven-артефакт независимых промежуточных сборок."""
 import hashlib
 from pathlib import Path
 import sys

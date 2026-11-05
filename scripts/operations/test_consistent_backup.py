@@ -1,4 +1,4 @@
-"""0.51.8 regression tests. Real pgBackRest, Docker, S3 and Minecraft require an external testbed."""
+"""Регрессионные тесты 0.51.8. Настоящие pgBackRest, Docker, S3 и Minecraft требуют внешнего испытательного окружения."""
 import io
 import hashlib
 from datetime import datetime, timezone

@@ -11,7 +11,7 @@
 
 Миграции находятся в `services/api/internal/repository/postgres/` и связанных модулях. CLI имеет команды `nl db migrations|migration-doctor|migrate|status|validate`. **Не применяйте миграции на production до резервного копирования.** Не изменяйте ранее применённые SQL-файлы: создавайте новую миграцию.
 
-## Desktop/Runtime/Extensions
+## Desktop (настольное приложение) / Runtime (среда выполнения) / Extensions (расширения)
 
 CLI содержит transactional updater `nl update plan|apply|status|recover` и операции rollback/update для расширений. Сначала проверяйте подписи и все SHA-256, затем осуществляйте замену; при сбое восстанавливайте согласованное состояние. Для дополнительной диагностики используйте `nl diagnostics ...` и `nl release doctor`.
 

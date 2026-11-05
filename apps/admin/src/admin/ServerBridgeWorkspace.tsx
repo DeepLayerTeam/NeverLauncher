@@ -819,7 +819,7 @@ export function ServerBridgeWorkspace({
               <dd>
                 {node.pluginVersion || "—"} ·{" "}
                 {node.integrityStatus || "unknown"}{" "}
-                {node.upgradeRecommended ? " · upgrade recommended" : ""}
+                {node.upgradeRecommended ? " · рекомендуется обновление" : ""}
               </dd>
               <dt>Идентификатор Runtime</dt>
               <dd>
@@ -993,8 +993,8 @@ export function ServerBridgeWorkspace({
                   </dd>
                   <dt>Runtime</dt>
                   <dd>
-                    <code>{network.runtimeId}</code> · epoch{" "}
-                    {network.runtimeEpoch} · routing revision{" "}
+                    <code>{network.runtimeId}</code> · эпоха{" "}
+                    {network.runtimeEpoch} · ревизия маршрутизации{" "}
                     {network.routingRevision}
                   </dd>
                   <dt>Готовность маршрута</dt>
@@ -1179,7 +1179,7 @@ export function ServerBridgeWorkspace({
                           <span
                             className={`badge ${e.status === "active" && snapshotFresh ? "ok" : "warn"}`}
                           >
-                            {snapshotFresh ? e.status : "stale snapshot"}
+                            {snapshotFresh ? e.status : "устаревший снимок"}
                           </span>
                         </td>
                         <td>

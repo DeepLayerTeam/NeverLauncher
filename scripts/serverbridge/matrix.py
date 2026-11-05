@@ -98,21 +98,21 @@ def load(path: Path) -> dict[str, Any]:
 
 def markdown(data: dict[str, Any]) -> str:
     lines = [
-        f"# Launcher {data['productVersion']} — Public ServerBridge Matrix",
+        f"# Launcher {data['productVersion']} — публичная матрица ServerBridge",
         "",
-        "> ServerBridge 3 GA compatibility matrix. Protocol v3 is frozen; Protocol v2 is compatibility/deprecation-only and must migrate with `nl server-bridge migrate-v3`. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.",
+        "> Матрица совместимости ServerBridge 3 GA. Протокол v3 зафиксирован; v2 поддерживается только для совместимости и подлежит миграции командой `nl server-bridge migrate-v3`. Свидетельства PASS при выполнении Runtime формируются в CI. Для Bukkit, Quilt и Sponge указывается совместимость сборки там, где полный целевой Runtime нельзя законно или практически распространять через CI. Vanilla сертифицируется через внешний компонент с RCON.",
         "",
-        "| Platform | Family | Role | Minecraft | Coverage | Protocol | v2 compatibility | Zero-patch | Node identity | One-time join | Handoff |",
+        "| Платформа | Семейство | Роль | Minecraft | Охват | Протокол | Совместимость с v2 | Без патчей | Идентичность узла | Одноразовый вход | Передача управления |",
         "|---|---|---|---|---|---:|---|---:|---:|---:|---:|",
     ]
     for row in data["targets"]:
-        handoff = "source" if row["role"] == "proxy" else "target"
+        handoff = "источник" if row["role"] == "proxy" else "цель"
         lines.append(
-            f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | {handoff} |"
+            f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 GA (зафиксирован) | устарел; переходите на v3 | да | Ed25519 | да | {handoff} |"
         )
     lines += [
         "",
-        "Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.",
+        "Состояние Runtime не прописано в документе вручную: свидетельства CI привязаны к точным коммиту и запуску.",
         "",
     ]
     return "\n".join(lines)

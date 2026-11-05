@@ -1,4 +1,4 @@
-"""Detached independent approval tests (delivery/live Backend mocked locally)."""
+"""Тесты независимого подтверждения с отделённой подписью (доставка и действующий Backend имитируются локально)."""
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 import hashlib

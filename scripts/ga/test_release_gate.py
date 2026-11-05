@@ -1,4 +1,4 @@
-"""Security regression tests for release attestations; fixtures are NOT GA evidence."""
+"""Регрессионные тесты безопасности аттестаций релиза; фикстуры НЕ являются GA-свидетельствами."""
 
 from pathlib import Path
 import hashlib

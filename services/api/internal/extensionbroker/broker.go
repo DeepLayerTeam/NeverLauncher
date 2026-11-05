@@ -57,8 +57,8 @@ func ParseRoots(raw string) (map[string]string, error) {
 }
 
 // OpenDirectory обходит путь от / с O_NOFOLLOW на каждом компоненте. Это исключает
-// символьные ссылки в родительских каталогах корня, в отличие от os.Open(path) +
-// filepath.EvalSymlinks.
+// символьные ссылки в родительских каталогах корня, чего не гарантирует сочетание
+// os.Open(path) и filepath.EvalSymlinks.
 func openDirectory(path string) (*os.File, error) {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return nil, ErrDenied

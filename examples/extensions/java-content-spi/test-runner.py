@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real java -jar lifecycle + Host storage reads + RPC content + CLI + shutdown."""
+"""Реальный цикл java -jar, чтение данных хранилища Host, RPC-контент, CLI и завершение."""
 import base64
 import hashlib
 import http.server

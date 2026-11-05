@@ -1,4 +1,4 @@
-"""Pure fixture/runner tests; real Rust execution is a separate mandatory gate."""
+"""Тесты фикстур и исполнителя; реальное выполнение Rust — отдельное обязательное условие."""
 import copy
 import hashlib
 from pathlib import Path

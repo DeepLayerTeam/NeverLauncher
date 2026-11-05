@@ -1,4 +1,4 @@
-"""Fail-closed checks; local fixtures never represent actual GA SDK evidence."""
+"""Строгие проверки отказов; локальные фикстуры никогда не представляют реальные GA-свидетельства SDK."""
 from __future__ import annotations
 from pathlib import Path
 import tempfile

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative tests for the external Java release verifier, without a fake Host."""
+"""Отрицательные тесты внешнего верификатора Java-релиза без фиктивного Host."""
 from __future__ import annotations
 import importlib.util
 from pathlib import Path

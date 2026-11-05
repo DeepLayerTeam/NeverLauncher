@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native SDL 3 startup retry eligibility must remain narrowly fail-closed."""
+"""Правила повторного запуска нативного SDL 3 должны оставаться узкими и запрещать небезопасные обходы."""
 
 from __future__ import annotations
 

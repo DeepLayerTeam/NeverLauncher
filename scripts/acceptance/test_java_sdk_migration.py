@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative regressions for live acceptance. Mocked inputs NEVER count as GA."""
+"""Отрицательные регрессии действующей приёмки. Имитированные входные данные НИКОГДА не засчитываются как GA."""
 from __future__ import annotations
 import hashlib
 import json

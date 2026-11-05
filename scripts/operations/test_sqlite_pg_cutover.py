@@ -1,4 +1,4 @@
-"""Safe offline cutover operator behavior, using real SQLite backup API."""
+"""Безопасное поведение оператора автономного переключения с использованием настоящего SQLite Backup API."""
 import importlib.util
 import json
 import os

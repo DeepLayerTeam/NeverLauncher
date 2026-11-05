@@ -1,4 +1,4 @@
-"""Exercise the actual Ed25519 operator release approval and fail-closed paths."""
+"""Проверяет настоящее операторское подтверждение релиза Ed25519 и строгие пути отказа."""
 import json
 from pathlib import Path
 import subprocess

@@ -1,4 +1,4 @@
-"""Executable positive and fail-closed 0.45.8 component upgrade regressions."""
+"""Исполняемые положительные и строгие отрицательные регрессионные тесты обновления компонентов 0.45.8."""
 import hashlib
 import json
 import os

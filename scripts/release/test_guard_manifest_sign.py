@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executable negative tests for the production Linux Guard manifest signature."""
+"""Исполняемые отрицательные тесты подписи промышленного манифеста Guard для Linux."""
 import os
 import unittest
 from unittest.mock import patch

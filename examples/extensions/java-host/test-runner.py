@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executes the actual signed-package-compatible Java JAR, not an in-process mock SDK."""
+"""Запускает настоящий Java JAR, совместимый с подписанным пакетом, а не внутрипроцессную имитацию SDK."""
 
 import http.server
 import json

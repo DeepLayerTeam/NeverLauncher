@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Negative/unit regressions. No fixtures in this module constitute live auth evidence."""
+"""Регрессионные модульные и отрицательные тесты. Фикстуры модуля не подтверждают реальную аутентификацию."""
 import contextlib
 import io
 import json
